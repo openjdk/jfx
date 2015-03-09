@@ -31,29 +31,26 @@
 #ifndef RenderRubyBase_h
 #define RenderRubyBase_h
 
-#include "RenderBlock.h"
+#include "RenderBlockFlow.h"
 
 namespace WebCore {
 
 class RenderRubyRun;
 
-class RenderRubyBase : public RenderBlock {
+class RenderRubyBase final : public RenderBlockFlow {
 public:
+    RenderRubyBase(Document&, PassRef<RenderStyle>);
     virtual ~RenderRubyBase();
-
-    static RenderRubyBase* createAnonymous(Document*);
-
+    
     virtual const char* renderName() const { return "RenderRubyBase (anonymous)"; }
 
     virtual bool isRubyBase() const { return true; }
 
-    virtual bool isChildAllowed(RenderObject*, RenderStyle*) const;
-
 private:
-    RenderRubyBase();
-
+    virtual bool isChildAllowed(const RenderObject&, const RenderStyle&) const;
     virtual ETextAlign textAlignmentForLine(bool endsWithSoftBreak) const;
     virtual void adjustInlineDirectionLineBounds(int expansionOpportunityCount, float& logicalLeft, float& logicalWidth) const;
+    void mergeChildrenWithBase(RenderRubyBase* toBlock);
 
     void moveChildren(RenderRubyBase* toBase, RenderObject* beforeChild = 0);
     void moveInlineChildren(RenderRubyBase* toBase, RenderObject* beforeChild = 0);

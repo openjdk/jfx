@@ -29,26 +29,14 @@
 #if ENABLE(VIDEO)
 #include "MediaControlsApple.h"
 
-#include "Chrome.h"
+#include "CSSValueKeywords.h"
 #include "ExceptionCodePlaceholder.h"
-#include "HTMLMediaElement.h"
 #include "HTMLNames.h"
-#include "MediaControlElements.h"
-#include "MouseEvent.h"
-#include "Page.h"
-#include "RenderTheme.h"
-#include "Text.h"
 #include "WheelEvent.h"
-
-#if ENABLE(VIDEO_TRACK)
-#include "TextTrackCue.h"
-#endif
-
-using namespace std;
 
 namespace WebCore {
 
-MediaControlsApple::MediaControlsApple(Document* document)
+MediaControlsApple::MediaControlsApple(Document& document)
     : MediaControls(document)
     , m_rewindButton(0)
     , m_returnToRealTimeButton(0)
@@ -67,14 +55,14 @@ MediaControlsApple::MediaControlsApple(Document* document)
 {
 }
 
-PassRefPtr<MediaControls> MediaControls::create(Document* document)
+PassRefPtr<MediaControls> MediaControls::create(Document& document)
 {
     return MediaControlsApple::createControls(document);
 }
 
-PassRefPtr<MediaControlsApple> MediaControlsApple::createControls(Document* document)
+PassRefPtr<MediaControlsApple> MediaControlsApple::createControls(Document& document)
 {
-    if (!document->page())
+    if (!document.page())
         return 0;
 
     RefPtr<MediaControlsApple> controls = adoptRef(new MediaControlsApple(document));
@@ -85,26 +73,26 @@ PassRefPtr<MediaControlsApple> MediaControlsApple::createControls(Document* docu
 
     RefPtr<MediaControlRewindButtonElement> rewindButton = MediaControlRewindButtonElement::create(document);
     controls->m_rewindButton = rewindButton.get();
-    panel->appendChild(rewindButton.release(), ec, AttachLazily);
+    panel->appendChild(rewindButton.release(), ec);
     if (ec)
         return 0;
 
     RefPtr<MediaControlPlayButtonElement> playButton = MediaControlPlayButtonElement::create(document);
     controls->m_playButton = playButton.get();
-    panel->appendChild(playButton.release(), ec, AttachLazily);
+    panel->appendChild(playButton.release(), ec);
     if (ec)
         return 0;
 
     RefPtr<MediaControlReturnToRealtimeButtonElement> returnToRealtimeButton = MediaControlReturnToRealtimeButtonElement::create(document);
     controls->m_returnToRealTimeButton = returnToRealtimeButton.get();
-    panel->appendChild(returnToRealtimeButton.release(), ec, AttachLazily);
+    panel->appendChild(returnToRealtimeButton.release(), ec);
     if (ec)
         return 0;
 
-    if (document->page()->theme()->usesMediaControlStatusDisplay()) {
+    if (document.page()->theme().usesMediaControlStatusDisplay()) {
         RefPtr<MediaControlStatusDisplayElement> statusDisplay = MediaControlStatusDisplayElement::create(document);
         controls->m_statusDisplay = statusDisplay.get();
-        panel->appendChild(statusDisplay.release(), ec, AttachLazily);
+        panel->appendChild(statusDisplay.release(), ec);
         if (ec)
             return 0;
     }
@@ -113,58 +101,58 @@ PassRefPtr<MediaControlsApple> MediaControlsApple::createControls(Document* docu
 
     RefPtr<MediaControlCurrentTimeDisplayElement> currentTimeDisplay = MediaControlCurrentTimeDisplayElement::create(document);
     controls->m_currentTimeDisplay = currentTimeDisplay.get();
-    timelineContainer->appendChild(currentTimeDisplay.release(), ec, AttachLazily);
+    timelineContainer->appendChild(currentTimeDisplay.release(), ec);
     if (ec)
         return 0;
 
     RefPtr<MediaControlTimelineElement> timeline = MediaControlTimelineElement::create(document, controls.get());
     controls->m_timeline = timeline.get();
-    timelineContainer->appendChild(timeline.release(), ec, AttachLazily);
+    timelineContainer->appendChild(timeline.release(), ec);
     if (ec)
         return 0;
 
     RefPtr<MediaControlTimeRemainingDisplayElement> timeRemainingDisplay = MediaControlTimeRemainingDisplayElement::create(document);
     controls->m_timeRemainingDisplay = timeRemainingDisplay.get();
-    timelineContainer->appendChild(timeRemainingDisplay.release(), ec, AttachLazily);
+    timelineContainer->appendChild(timeRemainingDisplay.release(), ec);
     if (ec)
         return 0;
 
     controls->m_timelineContainer = timelineContainer.get();
-    panel->appendChild(timelineContainer.release(), ec, AttachLazily);
+    panel->appendChild(timelineContainer.release(), ec);
     if (ec)
         return 0;
 
     // FIXME: Only create when needed <http://webkit.org/b/57163>
     RefPtr<MediaControlSeekBackButtonElement> seekBackButton = MediaControlSeekBackButtonElement::create(document);
     controls->m_seekBackButton = seekBackButton.get();
-    panel->appendChild(seekBackButton.release(), ec, AttachLazily);
+    panel->appendChild(seekBackButton.release(), ec);
     if (ec)
         return 0;
 
     // FIXME: Only create when needed <http://webkit.org/b/57163>
     RefPtr<MediaControlSeekForwardButtonElement> seekForwardButton = MediaControlSeekForwardButtonElement::create(document);
     controls->m_seekForwardButton = seekForwardButton.get();
-    panel->appendChild(seekForwardButton.release(), ec, AttachLazily);
+    panel->appendChild(seekForwardButton.release(), ec);
     if (ec)
         return 0;
 
-    if (document->page()->theme()->supportsClosedCaptioning()) {
+    if (document.page()->theme().supportsClosedCaptioning()) {
         RefPtr<MediaControlClosedCaptionsContainerElement> closedCaptionsContainer = MediaControlClosedCaptionsContainerElement::create(document);
 
         RefPtr<MediaControlClosedCaptionsTrackListElement> closedCaptionsTrackList = MediaControlClosedCaptionsTrackListElement::create(document, controls.get());
         controls->m_closedCaptionsTrackList = closedCaptionsTrackList.get();
-        closedCaptionsContainer->appendChild(closedCaptionsTrackList.release(), ec, AttachLazily);
+        closedCaptionsContainer->appendChild(closedCaptionsTrackList.release(), ec);
         if (ec)
             return 0;
 
         RefPtr<MediaControlToggleClosedCaptionsButtonElement> toggleClosedCaptionsButton = MediaControlToggleClosedCaptionsButtonElement::create(document, controls.get());
         controls->m_toggleClosedCaptionsButton = toggleClosedCaptionsButton.get();
-        panel->appendChild(toggleClosedCaptionsButton.release(), ec, AttachLazily);
+        panel->appendChild(toggleClosedCaptionsButton.release(), ec);
         if (ec)
             return 0;
 
         controls->m_closedCaptionsContainer = closedCaptionsContainer.get();
-        controls->appendChild(closedCaptionsContainer.release(), ec, AttachLazily);
+        controls->appendChild(closedCaptionsContainer.release(), ec);
         if (ec)
             return 0;
     }
@@ -172,17 +160,17 @@ PassRefPtr<MediaControlsApple> MediaControlsApple::createControls(Document* docu
     // FIXME: Only create when needed <http://webkit.org/b/57163>
     RefPtr<MediaControlFullscreenButtonElement> fullScreenButton = MediaControlFullscreenButtonElement::create(document);
     controls->m_fullScreenButton = fullScreenButton.get();
-    panel->appendChild(fullScreenButton.release(), ec, AttachLazily);
+    panel->appendChild(fullScreenButton.release(), ec);
 
     // The mute button and the slider element should be in the same div.
     RefPtr<HTMLDivElement> panelVolumeControlContainer = HTMLDivElement::create(document);
 
-    if (document->page()->theme()->usesMediaControlVolumeSlider()) {
+    if (document.page()->theme().usesMediaControlVolumeSlider()) {
         RefPtr<MediaControlVolumeSliderContainerElement> volumeSliderContainer = MediaControlVolumeSliderContainerElement::create(document);
 
         RefPtr<MediaControlPanelVolumeSliderElement> slider = MediaControlPanelVolumeSliderElement::create(document);
         controls->m_volumeSlider = slider.get();
-        volumeSliderContainer->appendChild(slider.release(), ec, AttachLazily);
+        volumeSliderContainer->appendChild(slider.release(), ec);
         if (ec)
             return 0;
 
@@ -190,48 +178,48 @@ PassRefPtr<MediaControlsApple> MediaControlsApple::createControls(Document* docu
         // It's important only when the volume bar is displayed below the controls.
         RefPtr<MediaControlVolumeSliderMuteButtonElement> volumeSliderMuteButton = MediaControlVolumeSliderMuteButtonElement::create(document);
         controls->m_volumeSliderMuteButton = volumeSliderMuteButton.get();
-        volumeSliderContainer->appendChild(volumeSliderMuteButton.release(), ec, AttachLazily);
+        volumeSliderContainer->appendChild(volumeSliderMuteButton.release(), ec);
 
         if (ec)
             return 0;
 
         controls->m_volumeSliderContainer = volumeSliderContainer.get();
-        panelVolumeControlContainer->appendChild(volumeSliderContainer.release(), ec, AttachLazily);
+        panelVolumeControlContainer->appendChild(volumeSliderContainer.release(), ec);
         if (ec)
             return 0;
     }
 
     RefPtr<MediaControlPanelMuteButtonElement> panelMuteButton = MediaControlPanelMuteButtonElement::create(document, controls.get());
     controls->m_panelMuteButton = panelMuteButton.get();
-    panelVolumeControlContainer->appendChild(panelMuteButton.release(), ec, AttachLazily);
+    panelVolumeControlContainer->appendChild(panelMuteButton.release(), ec);
     if (ec)
         return 0;
 
-    panel->appendChild(panelVolumeControlContainer, ec, AttachLazily);
+    panel->appendChild(panelVolumeControlContainer, ec);
     if (ec)
         return 0;
 
     // FIXME: Only create when needed <http://webkit.org/b/57163>
     RefPtr<MediaControlFullscreenVolumeMinButtonElement> fullScreenMinVolumeButton = MediaControlFullscreenVolumeMinButtonElement::create(document);
     controls->m_fullScreenMinVolumeButton = fullScreenMinVolumeButton.get();
-    panel->appendChild(fullScreenMinVolumeButton.release(), ec, AttachLazily);
+    panel->appendChild(fullScreenMinVolumeButton.release(), ec);
     if (ec)
         return 0;
 
     RefPtr<MediaControlFullscreenVolumeSliderElement> fullScreenVolumeSlider = MediaControlFullscreenVolumeSliderElement::create(document);
     controls->m_fullScreenVolumeSlider = fullScreenVolumeSlider.get();
-    panel->appendChild(fullScreenVolumeSlider.release(), ec, AttachLazily);
+    panel->appendChild(fullScreenVolumeSlider.release(), ec);
     if (ec)
         return 0;
 
     RefPtr<MediaControlFullscreenVolumeMaxButtonElement> fullScreenMaxVolumeButton = MediaControlFullscreenVolumeMaxButtonElement::create(document);
     controls->m_fullScreenMaxVolumeButton = fullScreenMaxVolumeButton.get();
-    panel->appendChild(fullScreenMaxVolumeButton.release(), ec, AttachLazily);
+    panel->appendChild(fullScreenMaxVolumeButton.release(), ec);
     if (ec)
         return 0;
 
     controls->m_panel = panel.get();
-    controls->appendChild(panel.release(), ec, AttachLazily);
+    controls->appendChild(panel.release(), ec);
     if (ec)
         return 0;
 
@@ -313,7 +301,7 @@ void MediaControlsApple::changedClosedCaptionsVisibility()
 
 void MediaControlsApple::reset()
 {
-    Page* page = document()->page();
+    Page* page = document().page();
     if (!page)
         return;
 
@@ -325,7 +313,7 @@ void MediaControlsApple::reset()
         m_fullScreenButton->hide();
 
     double duration = m_mediaController->duration();
-    if (std::isfinite(duration) || page->theme()->hasOwnDisabledStateHandlingFor(MediaSliderPart)) {
+    if (std::isfinite(duration) || page->theme().hasOwnDisabledStateHandlingFor(MediaSliderPart)) {
         m_timeline->setDuration(duration);
         m_timelineContainer->show();
         m_timeline->setPosition(m_mediaController->currentTime());
@@ -333,13 +321,13 @@ void MediaControlsApple::reset()
     } else
         m_timelineContainer->hide();
 
-    if (m_mediaController->hasAudio() || page->theme()->hasOwnDisabledStateHandlingFor(MediaMuteButtonPart))
+    if (m_mediaController->hasAudio() || page->theme().hasOwnDisabledStateHandlingFor(MediaMuteButtonPart))
         m_panelMuteButton->show();
     else
         m_panelMuteButton->hide();
 
     if (m_volumeSlider)
-        m_volumeSlider->setVolume(m_mediaController->volume());
+        setSliderVolume();
 
     if (m_toggleClosedCaptionsButton) {
         if (m_mediaController->hasClosedCaptions())
@@ -353,7 +341,7 @@ void MediaControlsApple::reset()
 
 #if ENABLE(FULLSCREEN_API)
     if (m_fullScreenVolumeSlider)
-        m_fullScreenVolumeSlider->setVolume(m_mediaController->volume());
+        setFullscreenSliderVolume();
 
     if (m_isFullscreen) {
         if (m_mediaController->isLiveStream()) {
@@ -385,34 +373,34 @@ void MediaControlsApple::updateCurrentTimeDisplay()
     double now = m_mediaController->currentTime();
     double duration = m_mediaController->duration();
 
-    Page* page = document()->page();
+    Page* page = document().page();
     if (!page)
         return;
 
     // Allow the theme to format the time.
-    m_currentTimeDisplay->setInnerText(page->theme()->formatMediaControlsCurrentTime(now, duration), IGNORE_EXCEPTION);
+    m_currentTimeDisplay->setInnerText(page->theme().formatMediaControlsCurrentTime(now, duration), IGNORE_EXCEPTION);
     m_currentTimeDisplay->setCurrentValue(now);
-    m_timeRemainingDisplay->setInnerText(page->theme()->formatMediaControlsRemainingTime(now, duration), IGNORE_EXCEPTION);
+    m_timeRemainingDisplay->setInnerText(page->theme().formatMediaControlsRemainingTime(now, duration), IGNORE_EXCEPTION);
     m_timeRemainingDisplay->setCurrentValue(now - duration);
 }
 
 void MediaControlsApple::reportedError()
 {
-    Page* page = document()->page();
+    Page* page = document().page();
     if (!page)
         return;
 
-    if (!page->theme()->hasOwnDisabledStateHandlingFor(MediaSliderPart))
+    if (!page->theme().hasOwnDisabledStateHandlingFor(MediaSliderPart))
         m_timelineContainer->hide();
 
-    if (!page->theme()->hasOwnDisabledStateHandlingFor(MediaMuteButtonPart))
+    if (!page->theme().hasOwnDisabledStateHandlingFor(MediaMuteButtonPart))
         m_panelMuteButton->hide();
 
     m_fullScreenButton->hide();
 
     if (m_volumeSliderContainer)
         m_volumeSliderContainer->hide();
-    if (m_toggleClosedCaptionsButton && !page->theme()->hasOwnDisabledStateHandlingFor(MediaToggleClosedCaptionsButtonPart))
+    if (m_toggleClosedCaptionsButton && !page->theme().hasOwnDisabledStateHandlingFor(MediaToggleClosedCaptionsButtonPart))
         m_toggleClosedCaptionsButton->hide();
     if (m_closedCaptionsContainer)
         hideClosedCaptionTrackList();
@@ -445,7 +433,7 @@ void MediaControlsApple::changedVolume()
     MediaControls::changedVolume();
 
     if (m_fullScreenVolumeSlider)
-        m_fullScreenVolumeSlider->setVolume(m_mediaController->volume());
+        setFullscreenSliderVolume();
 }
 
 void MediaControlsApple::enteredFullscreen()
@@ -515,9 +503,21 @@ void MediaControlsApple::showClosedCaptionTrackList()
 
     m_closedCaptionsContainer->show();
 
+    // Ensure the controls panel does not receive any events while the captions
+    // track list is visible as all events now need to be captured by the
+    // track list.
+    m_panel->setInlineStyleProperty(CSSPropertyPointerEvents, CSSValueNone);
+
     RefPtr<EventListener> listener = eventListener();
-    m_closedCaptionsContainer->addEventListener(eventNames().mousewheelEvent, listener, true);
-    document()->addEventListener(eventNames().clickEvent, listener, true);
+    m_closedCaptionsContainer->addEventListener(eventNames().wheelEvent, listener, true);
+
+    // Track click events in the capture phase at two levels, first at the document level
+    // such that a click outside of the <video> may dismiss the track list, second at the
+    // media controls level such that a click anywhere outside of the track list hides the
+    // track list. These two levels are necessary since it would not be possible to get a
+    // reference to the track list when handling the event outside of the shadow tree.
+    document().addEventListener(eventNames().clickEvent, listener, true);
+    addEventListener(eventNames().clickEvent, listener, true);
 }
 
 void MediaControlsApple::hideClosedCaptionTrackList()
@@ -527,9 +527,18 @@ void MediaControlsApple::hideClosedCaptionTrackList()
 
     m_closedCaptionsContainer->hide();
 
+    // Buttons in the controls panel may now be interactive.
+    m_panel->removeInlineStyleProperty(CSSPropertyPointerEvents);
+
     EventListener* listener = eventListener().get();
-    m_closedCaptionsContainer->removeEventListener(eventNames().mousewheelEvent, listener, true);
-    document()->removeEventListener(eventNames().clickEvent, listener, true);
+    m_closedCaptionsContainer->removeEventListener(eventNames().wheelEvent, listener, true);
+    document().removeEventListener(eventNames().clickEvent, listener, true);
+    removeEventListener(eventNames().clickEvent, listener, true);
+}
+
+void MediaControlsApple::setFullscreenSliderVolume()
+{
+    m_fullScreenVolumeSlider->setVolume(m_mediaController->muted() ? 0.0 : m_mediaController->volume());
 }
 
 bool MediaControlsApple::shouldClosedCaptionsContainerPreventPageScrolling(int wheelDeltaY)
@@ -542,6 +551,18 @@ bool MediaControlsApple::shouldClosedCaptionsContainerPreventPageScrolling(int w
     if (wheelDeltaY > 0 && scrollTop <= 0)
         return true;
     return false;
+}
+
+void MediaControlsApple::handleClickEvent(Event* event)
+{
+    Node* currentTarget = event->currentTarget()->toNode();
+    Node* target = event->target()->toNode();
+
+    if ((currentTarget == &document() && !shadowHost()->contains(target)) || (currentTarget == this && !m_closedCaptionsContainer->contains(target))) {
+        hideClosedCaptionTrackList();
+        event->stopImmediatePropagation();
+        event->setDefaultHandled();
+    }
 }
 
 void MediaControlsApple::closedCaptionTracksChanged()
@@ -565,11 +586,10 @@ PassRefPtr<MediaControlsAppleEventListener> MediaControlsApple::eventListener()
 
 void MediaControlsAppleEventListener::handleEvent(ScriptExecutionContext*, Event* event)
 {
-    if (event->type() == eventNames().clickEvent && !m_mediaControls->contains(event->target()->toNode()))
-        m_mediaControls->toggleClosedCaptionTrackList();
-
-    if (event->type() == eventNames().mousewheelEvent && event->hasInterface(eventNames().interfaceForWheelEvent)) {
-        WheelEvent* wheelEvent = static_cast<WheelEvent*>(event);
+    if (event->type() == eventNames().clickEvent)
+        m_mediaControls->handleClickEvent(event);
+    else if ((event->type() == eventNames().wheelEvent || event->type() == eventNames().mousewheelEvent) && event->eventInterface() == WheelEventInterfaceType) {
+        WheelEvent* wheelEvent = toWheelEvent(event);
         if (m_mediaControls->shouldClosedCaptionsContainerPreventPageScrolling(wheelEvent->wheelDeltaY()))
             event->preventDefault();
     }

@@ -20,13 +20,10 @@
 #ifndef SVGTextLayoutEngine_h
 #define SVGTextLayoutEngine_h
 
-#if ENABLE(SVG)
 #include "Path.h"
 #include "SVGTextChunkBuilder.h"
 #include "SVGTextFragment.h"
 #include "SVGTextLayoutAttributes.h"
-#include "SVGTextMetrics.h"
-#include <wtf/Vector.h>
 
 namespace WebCore {
 
@@ -108,5 +105,4 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(SVG)
 #endif

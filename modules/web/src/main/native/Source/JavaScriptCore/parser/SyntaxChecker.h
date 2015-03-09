@@ -27,7 +27,7 @@
 #define SyntaxChecker_h
 
 #include "Lexer.h"
-#include <yarr/YarrSyntaxChecker.h>
+#include "YarrSyntaxChecker.h"
 
 namespace JSC {
     
@@ -88,8 +88,8 @@ public:
         {
         }
         ALWAYS_INLINE Property(const Identifier* ident, PropertyNode::Type ty)
-        : name(ident)
-        , type(ty)
+            : name(ident)
+            , type(ty)
         {
         }
         ALWAYS_INLINE Property(PropertyNode::Type ty)
@@ -111,7 +111,10 @@ public:
     typedef int Clause;
     typedef int ConstDeclList;
     typedef int BinaryOperand;
-    
+    typedef int DeconstructionPattern;
+    typedef int ArrayPattern;
+    typedef int ObjectPattern;
+
     static const bool CreatesAST = false;
     static const bool NeedsFreeVariableInfo = false;
     static const bool CanUseFunctionCache = true;
@@ -149,69 +152,74 @@ public:
     ExpressionType createNewExpr(const JSTokenLocation&, ExpressionType, int, int) { return NewExpr; }
     ExpressionType createConditionalExpr(const JSTokenLocation&, ExpressionType, ExpressionType, ExpressionType) { return ConditionalExpr; }
     ExpressionType createAssignResolve(const JSTokenLocation&, const Identifier&, ExpressionType, int, int, int) { return AssignmentExpr; }
-    ExpressionType createFunctionExpr(const JSTokenLocation&, const Identifier*, int, int, int, int, int, int) { return FunctionExpr; }
-    int createFunctionBody(const JSTokenLocation&, const JSTokenLocation&, bool) { return 1; }
-    void setFunctionStart(int, int) { }
+    ExpressionType createFunctionExpr(const JSTokenLocation&, const Identifier*, int, int, int, int, int, int, int) { return FunctionExpr; }
+    int createFunctionBody(const JSTokenLocation&, const JSTokenLocation&, int, int, bool) { return 1; }
+    void setFunctionNameStart(int, int) { }
     int createArguments() { return 1; }
     int createArguments(int) { return 1; }
+    ExpressionType createSpreadExpression(const JSTokenLocation&, ExpressionType, int, int, int) { return 1; }
     int createArgumentsList(const JSTokenLocation&, int) { return 1; }
     int createArgumentsList(const JSTokenLocation&, int, int) { return 1; }
-    template <bool complete> Property createProperty(const Identifier* name, int, PropertyNode::Type type)
+    Property createProperty(const Identifier* name, int, PropertyNode::Type type, bool complete)
     {
         if (!complete)
             return Property(type);
         ASSERT(name);
         return Property(name, type);
     }
-    template <bool complete> Property createProperty(VM* vm, double name, int, PropertyNode::Type type)
+    Property createProperty(VM* vm, double name, int, PropertyNode::Type type, bool complete)
     {
         if (!complete)
             return Property(type);
         return Property(&vm->parserArena->identifierArena().makeNumericIdentifier(vm, name), type);
     }
+    Property createProperty(VM*, ExpressionNode*, int, PropertyNode::Type type, bool)
+    {
+        return Property(type);
+    }
     int createPropertyList(const JSTokenLocation&, Property) { return 1; }
     int createPropertyList(const JSTokenLocation&, Property, int) { return 1; }
     int createElementList(int, int) { return 1; }
     int createElementList(int, int, int) { return 1; }
-    int createFormalParameterList(const Identifier&) { return 1; }
-    int createFormalParameterList(int, const Identifier&) { return 1; }
+    int createFormalParameterList(DeconstructionPattern) { return 1; }
+    int createFormalParameterList(int, DeconstructionPattern) { return 1; }
     int createClause(int, int) { return 1; }
     int createClauseList(int) { return 1; }
     int createClauseList(int, int) { return 1; }
     void setUsesArguments(int) { }
-    int createFuncDeclStatement(const JSTokenLocation&, const Identifier*, int, int, int, int, int, int) { return 1; }
+    int createFuncDeclStatement(const JSTokenLocation&, const Identifier*, int, int, int, int, int, int, int) { return 1; }
     int createBlockStatement(const JSTokenLocation&, int, int, int) { return 1; }
     int createExprStatement(const JSTokenLocation&, int, int, int) { return 1; }
     int createIfStatement(const JSTokenLocation&, int, int, int, int) { return 1; }
     int createIfStatement(const JSTokenLocation&, int, int, int, int, int) { return 1; }
     int createForLoop(const JSTokenLocation&, int, int, int, int, int, int) { return 1; }
-    int createForInLoop(const JSTokenLocation&, const Identifier*, int, int, int, int, int, int, int, int, int, int) { return 1; }
     int createForInLoop(const JSTokenLocation&, int, int, int, int, int, int, int, int) { return 1; }
+    int createForOfLoop(const JSTokenLocation&, int, int, int, int, int, int, int, int) { return 1; }
     int createEmptyStatement(const JSTokenLocation&) { return 1; }
     int createVarStatement(const JSTokenLocation&, int, int, int) { return 1; }
-    int createReturnStatement(const JSTokenLocation&, int, int, int, int, int) { return 1; }
-    int createBreakStatement(const JSTokenLocation&, int, int, int, int) { return 1; }
-    int createBreakStatement(const JSTokenLocation&, const Identifier*, int, int, int, int) { return 1; }
-    int createContinueStatement(const JSTokenLocation&, int, int, int, int) { return 1; }
-    int createContinueStatement(const JSTokenLocation&, const Identifier*, int, int, int, int) { return 1; }
+    int createReturnStatement(const JSTokenLocation&, int, int, int) { return 1; }
+    int createBreakStatement(const JSTokenLocation&, int, int) { return 1; }
+    int createBreakStatement(const JSTokenLocation&, const Identifier*, int, int) { return 1; }
+    int createContinueStatement(const JSTokenLocation&, int, int) { return 1; }
+    int createContinueStatement(const JSTokenLocation&, const Identifier*, int, int) { return 1; }
     int createTryStatement(const JSTokenLocation&, int, const Identifier*, int, int, int, int) { return 1; }
     int createSwitchStatement(const JSTokenLocation&, int, int, int, int, int, int) { return 1; }
     int createWhileStatement(const JSTokenLocation&, int, int, int, int) { return 1; }
     int createWithStatement(const JSTokenLocation&, int, int, int, int, int, int) { return 1; }
     int createDoWhileStatement(const JSTokenLocation&, int, int, int, int) { return 1; }
     int createLabelStatement(const JSTokenLocation&, const Identifier*, int, int, int) { return 1; }
-    int createThrowStatement(const JSTokenLocation&, int, int, int, int, int) { return 1; }
+    int createThrowStatement(const JSTokenLocation&, int, int, int) { return 1; }
     int createDebugger(const JSTokenLocation&, int, int) { return 1; }
     int createConstStatement(const JSTokenLocation&, int, int, int) { return 1; }
     int appendConstDecl(const JSTokenLocation&, int, const Identifier*, int) { return 1; }
-    template <bool strict> Property createGetterOrSetterProperty(const JSTokenLocation&, PropertyNode::Type type, const Identifier* name, int, int, int, int, int, int)
+    Property createGetterOrSetterProperty(const JSTokenLocation&, PropertyNode::Type type, bool strict, const Identifier* name, int, int, int, int, int, int, int)
     {
         ASSERT(name);
         if (!strict)
             return Property(type);
         return Property(name, type);
     }
-    template <bool strict> Property createGetterOrSetterProperty(VM* vm, const JSTokenLocation&, PropertyNode::Type type, double name, int, int, int, int, int, int)
+    Property createGetterOrSetterProperty(VM* vm, const JSTokenLocation&, PropertyNode::Type type, bool strict, double name, int, int, int, int, int, int, int)
     {
         if (!strict)
             return Property(type);
@@ -242,15 +250,40 @@ public:
     
     void appendUnaryToken(int& stackDepth, int tok, int) { stackDepth = 1; m_topUnaryToken = tok; }
     int unaryTokenStackLastType(int&) { return m_topUnaryToken; }
-    int unaryTokenStackLastStart(int&) { return 0; }
+    JSTextPosition unaryTokenStackLastStart(int&) { return JSTextPosition(0, 0, 0); }
     void unaryTokenStackRemoveLast(int& stackDepth) { stackDepth = 0; }
     
     void assignmentStackAppend(int, int, int, int, int, Operator) { }
     int createAssignment(const JSTokenLocation&, int, int, int, int, int) { RELEASE_ASSERT_NOT_REACHED(); return 1; }
-    const Identifier& getName(const Property& property) const { ASSERT(property.name); return *property.name; }
+    const Identifier* getName(const Property& property) const { ASSERT(property.name); return property.name; }
     PropertyNode::Type getType(const Property& property) const { return property.type; }
     bool isResolve(ExpressionType expr) const { return expr == ResolveExpr || expr == ResolveEvalExpr; }
+    ExpressionType createDeconstructingAssignment(const JSTokenLocation&, int, ExpressionType)
+    {
+        return 1;
+    }
     
+    ArrayPattern createArrayPattern(const JSTokenLocation&)
+    {
+        return 1;
+    }
+    void appendArrayPatternSkipEntry(ArrayPattern, const JSTokenLocation&)
+    {
+    }
+    void appendArrayPatternEntry(ArrayPattern, const JSTokenLocation&, DeconstructionPattern)
+    {
+    }
+    ObjectPattern createObjectPattern(const JSTokenLocation&)
+    {
+        return 1;
+    }
+    void appendObjectPatternEntry(ArrayPattern, const JSTokenLocation&, bool, const Identifier&, DeconstructionPattern)
+    {
+    }
+    DeconstructionPattern createBindingLocation(const JSTokenLocation&, const Identifier&, const JSTextPosition&, const JSTextPosition&)
+    {
+        return 1;
+    }
 private:
     int m_topBinaryExpr;
     int m_topUnaryToken;

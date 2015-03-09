@@ -48,10 +48,8 @@ JLObject getJScrollBarTheme(ScrollbarThemeClient* sb)
     }
     ASSERT(sv->isFrameView());
     FrameView* fv = (FrameView*)sv;
-    ASSERT(fv->frame());
-    Page* page = fv->frame()->page();
-    ASSERT(page);
-    JLObject jWebPage = ((ChromeClientJava*)page->chrome().client())->platformPage();
+    Page* page = fv->frame().page();
+    JLObject jWebPage = ((ChromeClientJava*)&page->chrome().client())->platformPage();
 
     JNIEnv* env = WebCore_GetJavaEnv();
 

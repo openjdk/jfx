@@ -26,25 +26,26 @@
 #include "config.h"
 #include "RenderMultiColumnFlowThread.h"
 
-#include "RenderMultiColumnBlock.h"
+#include "LayoutState.h"
 #include "RenderMultiColumnSet.h"
 
 namespace WebCore {
 
-RenderMultiColumnFlowThread::RenderMultiColumnFlowThread()
+RenderMultiColumnFlowThread::RenderMultiColumnFlowThread(Document& document, PassRef<RenderStyle> style)
+    : RenderFlowThread(document, std::move(style))
+    , m_columnCount(1)
+    , m_columnWidth(0)
+    , m_columnHeightAvailable(0)
+    , m_inBalancingPass(false)
+    , m_needsRebalancing(false)
+    , m_progressionIsInline(false)
+    , m_progressionIsReversed(false)
 {
     setFlowThreadState(InsideInFlowThread);
 }
 
 RenderMultiColumnFlowThread::~RenderMultiColumnFlowThread()
 {
-}
-
-RenderMultiColumnFlowThread* RenderMultiColumnFlowThread::createAnonymous(Document* document)
-{
-    RenderMultiColumnFlowThread* renderer = new (document->renderArena()) RenderMultiColumnFlowThread();
-    renderer->setDocumentForAnonymous(document);
-    return renderer;
 }
 
 const char* RenderMultiColumnFlowThread::renderName() const
@@ -61,8 +62,7 @@ void RenderMultiColumnFlowThread::computeLogicalHeight(LayoutUnit logicalHeight,
 
 LayoutUnit RenderMultiColumnFlowThread::initialLogicalWidth() const
 {
-    RenderMultiColumnBlock* parentBlock = toRenderMultiColumnBlock(parent());
-    return parentBlock->columnWidth();
+    return columnWidth();
 }
 
 void RenderMultiColumnFlowThread::autoGenerateRegionsToBlockOffset(LayoutUnit /*offset*/)
@@ -91,18 +91,86 @@ void RenderMultiColumnFlowThread::autoGenerateRegionsToBlockOffset(LayoutUnit /*
     
     invalidateRegions();
 
-    RenderMultiColumnBlock* parentBlock = toRenderMultiColumnBlock(parent());
-    firstSet = RenderMultiColumnSet::createAnonymous(this);
-    firstSet->setStyle(RenderStyle::createAnonymousStyleWithDisplay(parentBlock->style(), BLOCK));
+    RenderBlockFlow* parentBlock = toRenderBlockFlow(parent());
+    firstSet = new RenderMultiColumnSet(*this, RenderStyle::createAnonymousStyleWithDisplay(&parentBlock->style(), BLOCK));
+    firstSet->initializeStyle();
     parentBlock->RenderBlock::addChild(firstSet);
-    
-    // Even though we aren't placed yet, we can go ahead and set up our size.
-    firstSet->updateLogicalWidth();
-    firstSet->updateLogicalHeight();
 
-    firstSet->setRequiresBalancing(parentBlock->requiresBalancing());
-    
+    // Even though we aren't placed yet, we can go ahead and set up our size. At this point we're
+    // typically in the middle of laying out the thread, attempting to paginate, and we need to do
+    // some rudimentary "layout" of the set now, so that pagination will work.
+    firstSet->prepareForLayout();
+
     validateRegions();
+}
+
+void RenderMultiColumnFlowThread::setPageBreak(const RenderBlock* block, LayoutUnit offset, LayoutUnit spaceShortage)
+{
+    if (RenderMultiColumnSet* multicolSet = toRenderMultiColumnSet(regionAtBlockOffset(block, offset)))
+        multicolSet->recordSpaceShortage(spaceShortage);
+}
+
+void RenderMultiColumnFlowThread::updateMinimumPageHeight(const RenderBlock* block, LayoutUnit offset, LayoutUnit minHeight)
+{
+    if (RenderMultiColumnSet* multicolSet = toRenderMultiColumnSet(regionAtBlockOffset(block, offset)))
+        multicolSet->updateMinimumColumnHeight(minHeight);
+}
+
+bool RenderMultiColumnFlowThread::addForcedRegionBreak(const RenderBlock* block, LayoutUnit offset, RenderBox* /*breakChild*/, bool /*isBefore*/, LayoutUnit* offsetBreakAdjustment)
+{
+    if (RenderMultiColumnSet* multicolSet = toRenderMultiColumnSet(regionAtBlockOffset(block, offset))) {
+        multicolSet->addForcedBreak(offset);
+        if (offsetBreakAdjustment)
+            *offsetBreakAdjustment = pageLogicalHeightForOffset(offset) ? pageRemainingLogicalHeightForOffset(offset, IncludePageBoundary) : LayoutUnit::fromPixel(0);
+        return true;
+    }
+    return false;
+}
+
+void RenderMultiColumnFlowThread::computeLineGridPaginationOrigin(LayoutState& layoutState) const
+{
+    if (!progressionIsInline())
+        return;
+    
+    // We need to cache a line grid pagination origin so that we understand how to reset the line grid
+    // at the top of each column.
+    // Get the current line grid and offset.
+    const auto lineGrid = layoutState.lineGrid();
+    if (!lineGrid)
+        return;
+
+    // Get the hypothetical line box used to establish the grid.
+    auto lineGridBox = lineGrid->lineGridBox();
+    if (!lineGridBox)
+        return;
+    
+    bool isHorizontalWritingMode = lineGrid->isHorizontalWritingMode();
+
+    LayoutUnit lineGridBlockOffset = isHorizontalWritingMode ? layoutState.lineGridOffset().height() : layoutState.lineGridOffset().width();
+
+    // Now determine our position on the grid. Our baseline needs to be adjusted to the nearest baseline multiple
+    // as established by the line box.
+    // FIXME: Need to handle crazy line-box-contain values that cause the root line box to not be considered. I assume
+    // the grid should honor line-box-contain.
+    LayoutUnit gridLineHeight = lineGridBox->lineBottomWithLeading() - lineGridBox->lineTopWithLeading();
+    if (!gridLineHeight)
+        return;
+
+    LayoutUnit firstLineTopWithLeading = lineGridBlockOffset + lineGridBox->lineTopWithLeading();
+    
+    if (layoutState.isPaginated() && layoutState.pageLogicalHeight()) {
+        LayoutUnit pageLogicalTop = isHorizontalWritingMode ? layoutState.pageOffset().height() : layoutState.pageOffset().width();
+        if (pageLogicalTop > firstLineTopWithLeading) {
+            // Shift to the next highest line grid multiple past the page logical top. Cache the delta
+            // between this new value and the page logical top as the pagination origin.
+            LayoutUnit remainder = roundToInt(pageLogicalTop - firstLineTopWithLeading) % roundToInt(gridLineHeight);
+            LayoutUnit paginationDelta = gridLineHeight - remainder;
+            if (isHorizontalWritingMode)
+                layoutState.setLineGridPaginationOrigin(LayoutSize(layoutState.lineGridPaginationOrigin().width(), paginationDelta));
+            else
+                layoutState.setLineGridPaginationOrigin(LayoutSize(paginationDelta, layoutState.lineGridPaginationOrigin().height()));
+        }
+    }
 }
 
 }

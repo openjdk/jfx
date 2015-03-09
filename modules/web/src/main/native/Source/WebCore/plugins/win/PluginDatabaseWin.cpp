@@ -29,9 +29,9 @@
 #include "PluginDatabase.h"
 
 #include "Frame.h"
-#include "KURL.h"
+#include "URL.h"
 #include "PluginPackage.h"
-#include "WindowsExtras.h"
+#include <wtf/WindowsExtras.h>
 
 #if OS(WINCE)
 // WINCE doesn't support Registry Key Access Rights. The parameter should always be 0
@@ -115,7 +115,7 @@ void PluginDatabase::getPluginPathsInDirectories(HashSet<String>& paths) const
     for (Vector<String>::const_iterator it = m_pluginDirectories.begin(); it != end; ++it) {
         String pattern = *it + "\\*";
 
-        hFind = FindFirstFileW(pattern.charactersWithNullTermination(), &findFileData);
+        hFind = FindFirstFileW(pattern.charactersWithNullTermination().data(), &findFileData);
 
         if (hFind == INVALID_HANDLE_VALUE)
             continue;
@@ -215,7 +215,7 @@ static inline void addMozillaPluginDirectories(Vector<String>& directories)
             HKEY extensionsKey;
 
             // Try opening the key
-            result = RegOpenKeyEx(key, extensionsPath.charactersWithNullTermination(), 0, KEY_READ, &extensionsKey);
+            result = RegOpenKeyEx(key, extensionsPath.charactersWithNullTermination().data(), 0, KEY_READ, &extensionsKey);
 
             if (result == ERROR_SUCCESS) {
                 // Now get the plugins directory
@@ -305,7 +305,7 @@ static inline void addAdobeAcrobatPluginDirectory(Vector<String>& directories)
         DWORD acrobatInstallPathSize = sizeof(acrobatInstallPathStr);
 
         String acrobatPluginKeyPath = "Software\\Adobe\\Acrobat Reader\\" + latestAcrobatVersionString + "\\InstallPath";
-        result = getRegistryValue(HKEY_LOCAL_MACHINE, acrobatPluginKeyPath.charactersWithNullTermination(), 0, &type, acrobatInstallPathStr, &acrobatInstallPathSize);
+        result = getRegistryValue(HKEY_LOCAL_MACHINE, acrobatPluginKeyPath.charactersWithNullTermination().data(), 0, &type, acrobatInstallPathStr, &acrobatInstallPathSize);
 
         if (result == ERROR_SUCCESS) {
             String acrobatPluginDirectory = String(acrobatInstallPathStr, acrobatInstallPathSize / sizeof(WCHAR) - 1) + "\\browser";
@@ -352,10 +352,10 @@ static inline void addJavaPluginDirectory(Vector<String>& directories)
         DWORD useNewPluginSize;
 
         String javaPluginKeyPath = "Software\\JavaSoft\\Java Plug-in\\" + latestJavaVersionString;
-        result = getRegistryValue(HKEY_LOCAL_MACHINE, javaPluginKeyPath.charactersWithNullTermination(), L"UseNewJavaPlugin", &type, &useNewPluginValue, &useNewPluginSize);
+        result = getRegistryValue(HKEY_LOCAL_MACHINE, javaPluginKeyPath.charactersWithNullTermination().data(), L"UseNewJavaPlugin", &type, &useNewPluginValue, &useNewPluginSize);
 
         if (result == ERROR_SUCCESS && useNewPluginValue == 1) {
-            result = getRegistryValue(HKEY_LOCAL_MACHINE, javaPluginKeyPath.charactersWithNullTermination(), L"JavaHome", &type, javaInstallPathStr, &javaInstallPathSize);
+            result = getRegistryValue(HKEY_LOCAL_MACHINE, javaPluginKeyPath.charactersWithNullTermination().data(), L"JavaHome", &type, javaInstallPathStr, &javaInstallPathSize);
             if (result == ERROR_SUCCESS) {
                 String javaPluginDirectory = String(javaInstallPathStr, javaInstallPathSize / sizeof(WCHAR) - 1) + "\\bin\\new_plugin";
                 directories.append(javaPluginDirectory);
@@ -407,16 +407,6 @@ static inline void addMacromediaPluginDirectories(Vector<String>& directories)
 #endif
 }
 
-#if PLATFORM(QT)
-static inline void addQtWebKitPluginPath(Vector<String>& directories)
-{
-    Vector<String> qtPaths;
-    String qtPath(qgetenv("QTWEBKIT_PLUGIN_PATH").constData());
-    qtPath.split(UChar(';'), false, qtPaths);
-    directories.appendVector(qtPaths);
-}
-#endif
-
 Vector<String> PluginDatabase::defaultPluginDirectories()
 {
     Vector<String> directories;
@@ -429,10 +419,6 @@ Vector<String> PluginDatabase::defaultPluginDirectories()
     addMozillaPluginDirectories(directories);
     addWindowsMediaPlayerPluginDirectory(directories);
     addMacromediaPluginDirectories(directories);
-#if PLATFORM(QT)
-    addJavaPluginDirectory(directories);
-    addQtWebKitPluginPath(directories);
-#endif
 
     return directories;
 }

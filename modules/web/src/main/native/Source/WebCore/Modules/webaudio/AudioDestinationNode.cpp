@@ -40,7 +40,7 @@ AudioDestinationNode::AudioDestinationNode(AudioContext* context, float sampleRa
     : AudioNode(context, sampleRate)
     , m_currentSampleFrame(0)
 {
-    addInput(adoptPtr(new AudioNodeInput(this)));
+    addInput(std::make_unique<AudioNodeInput>(this));
     
     setNodeType(NodeTypeDestination);
 }
@@ -60,6 +60,16 @@ void AudioDestinationNode::render(AudioBus* sourceBus, AudioBus* destinationBus,
     context()->setAudioThread(currentThread());
     
     if (!context()->isRunnable()) {
+        destinationBus->zero();
+        return;
+    }
+
+    if (context()->userGestureRequiredForAudioStart()) {
+        destinationBus->zero();
+        return;
+    }
+
+    if (context()->pageConsentRequiredForAudioStart()) {
         destinationBus->zero();
         return;
     }

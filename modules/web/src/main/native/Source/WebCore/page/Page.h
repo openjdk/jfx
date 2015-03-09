@@ -26,331 +26,321 @@
 #include "FrameLoaderTypes.h"
 #include "LayoutMilestones.h"
 #include "LayoutRect.h"
+#include "PageThrottler.h"
 #include "PageVisibilityState.h"
 #include "Pagination.h"
 #include "PlatformScreen.h"
 #include "Region.h"
 #include "Supplementable.h"
+#include "ViewState.h"
 #include "ViewportArguments.h"
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/Ref.h>
+#include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
 
 #if OS(SOLARIS)
 #include <sys/time.h> // For time_t structure.
 #endif
 
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
 #include <wtf/SchedulePair.h>
 #endif
 
+#if PLATFORM(IOS)
+#include "Settings.h"
+#endif
+
 namespace JSC {
-    class Debugger;
+class Debugger;
 }
 
 namespace WebCore {
 
-    class AlternativeTextClient;
-    class BackForwardController;
-    class BackForwardList;
-    class Chrome;
-    class ChromeClient;
+class AlternativeTextClient;
+class BackForwardController;
+class BackForwardClient;
+class Chrome;
+class ChromeClient;
 class ClientRectList;
-    class ContextMenuClient;
-    class ContextMenuController;
-    class Document;
-    class DragCaretController;
-    class DragClient;
-    class DragController;
-    class EditorClient;
-    class FocusController;
-    class Frame;
-    class FrameSelection;
-    class HaltablePlugin;
-    class HistoryItem;
-    class InspectorClient;
-    class InspectorController;
-    class MediaCanStartListener;
-    class Node;
+class ContextMenuClient;
+class ContextMenuController;
+class Document;
+class DragCaretController;
+class DragClient;
+class DragController;
+class EditorClient;
+class FocusController;
+class Frame;
+class FrameLoaderClient;
+class FrameSelection;
+class HaltablePlugin;
+class HistoryItem;
+class InspectorClient;
+class InspectorController;
+class MainFrame;
+class MediaCanStartListener;
+class Node;
+class PageActivityAssertionToken;
 class PageConsole;
-    class PageGroup;
+class PageDebuggable;
+class PageGroup;
+class PageThrottler;
 class PlugInClient;
-    class PluginData;
+class PluginData;
 class PluginViewBase;
-    class PointerLockController;
-    class ProgressTracker;
-    class Range;
-    class RenderObject;
-    class RenderTheme;
-    class VisibleSelection;
-    class ScrollableArea;
-    class ScrollingCoordinator;
-    class Settings;
-    class StorageNamespace;
+class PointerLockController;
+class ProgressTracker;
+class ProgressTrackerClient;
+class Range;
+class RenderObject;
+class RenderTheme;
+class VisibleSelection;
+class ScrollableArea;
+class ScrollingCoordinator;
+class Settings;
+class StorageNamespace;
+class UserContentController;
 class ValidationMessageClient;
 
-    typedef uint64_t LinkHash;
+typedef uint64_t LinkHash;
 
-    enum FindDirection { FindDirectionForward, FindDirectionBackward };
+enum FindDirection { FindDirectionForward, FindDirectionBackward };
 
-    float deviceScaleFactor(Frame*);
+float deviceScaleFactor(Frame*);
 
-    struct ArenaSize {
-        ArenaSize(size_t treeSize, size_t allocated)
-            : treeSize(treeSize)
-            , allocated(allocated)
-        {
-        }
-        size_t treeSize;
-        size_t allocated;
+class Page : public Supplementable<Page> {
+    WTF_MAKE_NONCOPYABLE(Page);
+    friend class Settings;
+    friend class PageThrottler;
+
+public:
+    static void updateStyleForAllPagesAfterGlobalChangeInEnvironment();
+    static void jettisonStyleResolversInAllDocuments();
+
+    // It is up to the platform to ensure that non-null clients are provided where required.
+    struct PageClients {
+        WTF_MAKE_NONCOPYABLE(PageClients); WTF_MAKE_FAST_ALLOCATED;
+    public:
+        PageClients();
+        ~PageClients();
+
+        AlternativeTextClient* alternativeTextClient;
+        ChromeClient* chromeClient;
+#if ENABLE(CONTEXT_MENUS)
+        ContextMenuClient* contextMenuClient;
+#endif
+        EditorClient* editorClient;
+        DragClient* dragClient;
+        InspectorClient* inspectorClient;
+        PlugInClient* plugInClient;
+        ProgressTrackerClient* progressTrackerClient;
+        RefPtr<BackForwardClient> backForwardClient;
+        ValidationMessageClient* validationMessageClient;
+        FrameLoaderClient* loaderClientForMainFrame;
     };
 
-    class Page : public Supplementable<Page> {
-        WTF_MAKE_NONCOPYABLE(Page);
-        friend class Settings;
-    public:
-    static void updateStyleForAllPagesAfterGlobalChangeInEnvironment();
-
-        // It is up to the platform to ensure that non-null clients are provided where required.
-        struct PageClients {
-            WTF_MAKE_NONCOPYABLE(PageClients); WTF_MAKE_FAST_ALLOCATED;
-        public:
-            PageClients();
-            ~PageClients();
-
-            AlternativeTextClient* alternativeTextClient;
-            ChromeClient* chromeClient;
-#if ENABLE(CONTEXT_MENUS)
-            ContextMenuClient* contextMenuClient;
-#endif
-            EditorClient* editorClient;
-            DragClient* dragClient;
-            InspectorClient* inspectorClient;
-        PlugInClient* plugInClient;
-            RefPtr<BackForwardList> backForwardClient;
-        ValidationMessageClient* validationMessageClient;
-        };
-
     explicit Page(PageClients&);
-        ~Page();
+    ~Page();
 
-        ArenaSize renderTreeSize() const;
+    uint64_t renderTreeSize() const;
 
-        void setNeedsRecalcStyleInAllFrames();
+    void setNeedsRecalcStyleInAllFrames();
 
-    RenderTheme* theme() const { return m_theme.get(); }
+    RenderTheme& theme() const { return *m_theme; }
 
-        ViewportArguments viewportArguments() const;
+    ViewportArguments viewportArguments() const;
 
-        static void refreshPlugins(bool reload);
-        PluginData* pluginData() const;
+    static void refreshPlugins(bool reload);
+    PluginData& pluginData() const;
 
-        void setCanStartMedia(bool);
-        bool canStartMedia() const { return m_canStartMedia; }
+    void setCanStartMedia(bool);
+    bool canStartMedia() const { return m_canStartMedia; }
 
-        EditorClient* editorClient() const { return m_editorClient; }
+    EditorClient* editorClient() const { return m_editorClient; }
     PlugInClient* plugInClient() const { return m_plugInClient; }
 
-        void setMainFrame(PassRefPtr<Frame>);
-        Frame* mainFrame() const { return m_mainFrame.get(); }
+    MainFrame& mainFrame() { ASSERT(m_mainFrame); return *m_mainFrame; }
+    const MainFrame& mainFrame() const { ASSERT(m_mainFrame); return *m_mainFrame; }
 
-        bool openedByDOM() const;
-        void setOpenedByDOM();
+    bool openedByDOM() const;
+    void setOpenedByDOM();
 
-        // DEPRECATED. Use backForward() instead of the following 6 functions.
-        BackForwardList* backForwardList() const;
-        bool goBack();
-        bool goForward();
-        bool canGoBackOrForward(int distance) const;
-        void goBackOrForward(int distance);
-        int getHistoryLength();
+    void goToItem(HistoryItem*, FrameLoadType);
 
-        void goToItem(HistoryItem*, FrameLoadType);
-
-        void setGroupName(const String&);
-        const String& groupName() const;
+    void setGroupName(const String&);
+    const String& groupName() const;
 
     PageGroup& group();
-        PageGroup* groupPtr() { return m_group; } // can return 0
+    PageGroup* groupPtr() { return m_group; } // can return 0
 
     void incrementSubframeCount() { ++m_subframeCount; }
     void decrementSubframeCount() { ASSERT(m_subframeCount); --m_subframeCount; }
     int subframeCount() const { checkSubframeCountConsistency(); return m_subframeCount; }
 
-    Chrome& chrome() const { return *m_chrome; }
-        DragCaretController* dragCaretController() const { return m_dragCaretController.get(); }
-#if ENABLE(DRAG_SUPPORT)
-        DragController* dragController() const { return m_dragController.get(); }
+#if ENABLE(REMOTE_INSPECTOR)
+    bool remoteInspectionAllowed() const;
+    void setRemoteInspectionAllowed(bool);
+    void remoteInspectorInformationDidChange() const;
 #endif
-        FocusController* focusController() const { return m_focusController.get(); }
+
+    Chrome& chrome() const { return *m_chrome; }
+    DragCaretController& dragCaretController() const { return *m_dragCaretController; }
+#if ENABLE(DRAG_SUPPORT)
+    DragController& dragController() const { return *m_dragController; }
+#endif
+    FocusController& focusController() const { return *m_focusController; }
 #if ENABLE(CONTEXT_MENUS)
-        ContextMenuController* contextMenuController() const { return m_contextMenuController.get(); }
+    ContextMenuController& contextMenuController() const { return *m_contextMenuController; }
 #endif
 #if ENABLE(INSPECTOR)
-        InspectorController* inspectorController() const { return m_inspectorController.get(); }
+    InspectorController& inspectorController() const { return *m_inspectorController; }
 #endif
 #if ENABLE(POINTER_LOCK)
-        PointerLockController* pointerLockController() const { return m_pointerLockController.get(); }
+    PointerLockController* pointerLockController() const { return m_pointerLockController.get(); }
 #endif
     ValidationMessageClient* validationMessageClient() const { return m_validationMessageClient; }
 
-        ScrollingCoordinator* scrollingCoordinator();
+    ScrollingCoordinator* scrollingCoordinator();
 
     String scrollingStateTreeAsText();
-    String mainThreadScrollingReasonsAsText();
+    String synchronousScrollingReasonsAsText();
     PassRefPtr<ClientRectList> nonFastScrollableRects(const Frame*);
 
-        Settings* settings() const { return m_settings.get(); }
-        ProgressTracker* progress() const { return m_progress.get(); }
-        BackForwardController* backForward() const { return m_backForwardController.get(); }
+    Settings& settings() const { return *m_settings; }
+    ProgressTracker& progress() const { return *m_progress; }
+    BackForwardController& backForward() const { return *m_backForwardController; }
 
     FeatureObserver* featureObserver() { return &m_featureObserver; }
 
 #if ENABLE(VIEW_MODE_CSS_MEDIA)
-        enum ViewMode {
-            ViewModeInvalid,
-            ViewModeWindowed,
-            ViewModeFloating,
-            ViewModeFullscreen,
-            ViewModeMaximized,
-            ViewModeMinimized
-        };
-        static ViewMode stringToViewMode(const String&);
+    enum ViewMode {
+        ViewModeInvalid,
+        ViewModeWindowed,
+        ViewModeFloating,
+        ViewModeFullscreen,
+        ViewModeMaximized,
+        ViewModeMinimized
+    };
+    static ViewMode stringToViewMode(const String&);
 
-        ViewMode viewMode() const { return m_viewMode; }
-        void setViewMode(ViewMode);
+    ViewMode viewMode() const { return m_viewMode; }
+    void setViewMode(ViewMode);
 #endif // ENABLE(VIEW_MODE_CSS_MEDIA)
-        
-        void setTabKeyCyclesThroughElements(bool b) { m_tabKeyCyclesThroughElements = b; }
-        bool tabKeyCyclesThroughElements() const { return m_tabKeyCyclesThroughElements; }
 
-        bool findString(const String&, FindOptions);
-        // FIXME: Switch callers over to the FindOptions version and retire this one.
-        bool findString(const String&, TextCaseSensitivity, FindDirection, bool shouldWrap);
+    void setTabKeyCyclesThroughElements(bool b) { m_tabKeyCyclesThroughElements = b; }
+    bool tabKeyCyclesThroughElements() const { return m_tabKeyCyclesThroughElements; }
 
-        PassRefPtr<Range> rangeOfString(const String&, Range*, FindOptions);
+    bool findString(const String&, FindOptions);
+
+    PassRefPtr<Range> rangeOfString(const String&, Range*, FindOptions);
 
     unsigned countFindMatches(const String&, FindOptions, unsigned maxMatchCount);
     unsigned markAllMatchesForText(const String&, FindOptions, bool shouldHighlight, unsigned maxMatchCount);
 
-        void unmarkAllTextMatches();
+    void unmarkAllTextMatches();
 
     // find all the Ranges for the matching text.
     // Upon return, indexForSelection will be one of the following:
     // 0 if there is no user selection
     // the index of the first range after the user selection
-    // NoMatchBeforeUserSelection if there is no matching text after the user selection.
-    enum { NoMatchBeforeUserSelection = -1 };
-    void findStringMatchingRanges(const String&, FindOptions, int maxCount, Vector<RefPtr<Range> >*, int& indexForSelection);
-#if PLATFORM(MAC)
-        void addSchedulePair(PassRefPtr<SchedulePair>);
-        void removeSchedulePair(PassRefPtr<SchedulePair>);
-        SchedulePairHashSet* scheduledRunLoopPairs() { return m_scheduledRunLoopPairs.get(); }
+    // NoMatchAfterUserSelection if there is no matching text after the user selection.
+    enum { NoMatchAfterUserSelection = -1 };
+    void findStringMatchingRanges(const String&, FindOptions, int maxCount, Vector<RefPtr<Range>>*, int& indexForSelection);
+#if PLATFORM(COCOA)
+    void addSchedulePair(PassRefPtr<SchedulePair>);
+    void removeSchedulePair(PassRefPtr<SchedulePair>);
+    SchedulePairHashSet* scheduledRunLoopPairs() { return m_scheduledRunLoopPairs.get(); }
 
-        OwnPtr<SchedulePairHashSet> m_scheduledRunLoopPairs;
+    OwnPtr<SchedulePairHashSet> m_scheduledRunLoopPairs;
 #endif
 
-        const VisibleSelection& selection() const;
+    const VisibleSelection& selection() const;
 
-        void setDefersLoading(bool);
-        bool defersLoading() const { return m_defersLoading; }
-        
-        void clearUndoRedoOperations();
+    void setDefersLoading(bool);
+    bool defersLoading() const { return m_defersLoading; }
 
-        bool inLowQualityImageInterpolationMode() const;
-        void setInLowQualityImageInterpolationMode(bool = true);
+    void clearUndoRedoOperations();
 
-        float mediaVolume() const { return m_mediaVolume; }
+    bool inLowQualityImageInterpolationMode() const;
+    void setInLowQualityImageInterpolationMode(bool = true);
+
+    float mediaVolume() const { return m_mediaVolume; }
     void setMediaVolume(float);
 
-        void setPageScaleFactor(float scale, const IntPoint& origin);
-        float pageScaleFactor() const { return m_pageScaleFactor; }
+    void setPageScaleFactor(float scale, const IntPoint& origin);
+    float pageScaleFactor() const { return m_pageScaleFactor; }
 
-        float deviceScaleFactor() const { return m_deviceScaleFactor; }
-        void setDeviceScaleFactor(float);
+    float deviceScaleFactor() const { return m_deviceScaleFactor; }
+    void setDeviceScaleFactor(float);
 
     bool shouldSuppressScrollbarAnimations() const { return m_suppressScrollbarAnimations; }
     void setShouldSuppressScrollbarAnimations(bool suppressAnimations);
-
-    bool rubberBandsAtBottom();
-    void setRubberBandsAtBottom(bool);
-    bool rubberBandsAtTop();
-    void setRubberBandsAtTop(bool);
+    void lockAllOverlayScrollbarsToHidden(bool lockOverlayScrollbars);
 
     // Page and FrameView both store a Pagination value. Page::pagination() is set only by API,
     // and FrameView::pagination() is set only by CSS. Page::pagination() will affect all
     // FrameViews in the page cache, but FrameView::pagination() only affects the current
     // FrameView.
-        const Pagination& pagination() const { return m_pagination; }
-        void setPagination(const Pagination&);
+    const Pagination& pagination() const { return m_pagination; }
+    void setPagination(const Pagination&);
 
-        unsigned pageCount() const;
+    unsigned pageCount() const;
 
-        // Notifications when the Page starts and stops being presented via a native window.
-        void didMoveOnscreen();
-        void willMoveOffscreen();
-        bool isOnscreen() const { return m_isOnscreen; }
+    // Notifications when the Page starts and stops being presented via a native window.
+    void setViewState(ViewState::Flags);
+    void setIsVisible(bool);
+    void setIsPrerender();
+    bool isVisible() const { return m_viewState & ViewState::IsVisible; }
 
     // Notification that this Page was moved into or out of a native window.
     void setIsInWindow(bool);
-    bool isInWindow() const { return m_isInWindow; }
+    bool isInWindow() const { return m_viewState & ViewState::IsInWindow; }
 
-        void windowScreenDidChange(PlatformDisplayID);
-        
-        void suspendScriptedAnimations();
-        void resumeScriptedAnimations();
-        bool scriptedAnimationsSuspended() const { return m_scriptedAnimationsSuspended; }
-    void setThrottled(bool);
-        
-        void userStyleSheetLocationChanged();
-        const String& userStyleSheet() const;
+    void suspendScriptedAnimations();
+    void resumeScriptedAnimations();
+    bool scriptedAnimationsSuspended() const { return m_scriptedAnimationsSuspended; }
 
-        void dnsPrefetchingStateChanged();
+    void userStyleSheetLocationChanged();
+    const String& userStyleSheet() const;
+
+    void dnsPrefetchingStateChanged();
     void storageBlockingStateChanged();
-        void privateBrowsingStateChanged();
+    void privateBrowsingStateChanged();
 
-        static void setDebuggerForAllPages(JSC::Debugger*);
-        void setDebugger(JSC::Debugger*);
-        JSC::Debugger* debugger() const { return m_debugger; }
+    void setDebugger(JSC::Debugger*);
+    JSC::Debugger* debugger() const { return m_debugger; }
 
-        static void removeAllVisitedLinks();
+    static void removeAllVisitedLinks();
 
-        static void allVisitedStateChanged(PageGroup*);
-        static void visitedStateChanged(PageGroup*, LinkHash visitedHash);
+    static void allVisitedStateChanged(PageGroup*);
+    static void visitedStateChanged(PageGroup*, LinkHash visitedHash);
 
-        StorageNamespace* sessionStorage(bool optionalCreate = true);
-        void setSessionStorage(PassRefPtr<StorageNamespace>);
+    StorageNamespace* sessionStorage(bool optionalCreate = true);
+    void setSessionStorage(PassRefPtr<StorageNamespace>);
 
-        void setCustomHTMLTokenizerTimeDelay(double);
-        bool hasCustomHTMLTokenizerTimeDelay() const { return m_customHTMLTokenizerTimeDelay != -1; }
-        double customHTMLTokenizerTimeDelay() const { ASSERT(m_customHTMLTokenizerTimeDelay != -1); return m_customHTMLTokenizerTimeDelay; }
+    bool hasCustomHTMLTokenizerTimeDelay() const;
+    double customHTMLTokenizerTimeDelay() const;
 
-        void setCustomHTMLTokenizerChunkSize(int);
-        bool hasCustomHTMLTokenizerChunkSize() const { return m_customHTMLTokenizerChunkSize != -1; }
-        int customHTMLTokenizerChunkSize() const { ASSERT(m_customHTMLTokenizerChunkSize != -1); return m_customHTMLTokenizerChunkSize; }
+    void setMemoryCacheClientCallsEnabled(bool);
+    bool areMemoryCacheClientCallsEnabled() const { return m_areMemoryCacheClientCallsEnabled; }
 
-        void setMemoryCacheClientCallsEnabled(bool);
-        bool areMemoryCacheClientCallsEnabled() const { return m_areMemoryCacheClientCallsEnabled; }
+    // Don't allow more than a certain number of frames in a page.
+    // This seems like a reasonable upper bound, and otherwise mutually
+    // recursive frameset pages can quickly bring the program to its knees
+    // with exponential growth in the number of frames.
+    static const int maxNumberOfFrames = 1000;
 
-        // Don't allow more than a certain number of frames in a page.
-        // This seems like a reasonable upper bound, and otherwise mutually
-        // recursive frameset pages can quickly bring the program to its knees
-        // with exponential growth in the number of frames.
-        static const int maxNumberOfFrames = 1000;
-
-        void setEditable(bool isEditable) { m_isEditable = isEditable; }
-        bool isEditable() { return m_isEditable; }
+    void setEditable(bool isEditable) { m_isEditable = isEditable; }
+    bool isEditable() { return m_isEditable; }
 
 #if ENABLE(PAGE_VISIBILITY_API)
-        PageVisibilityState visibilityState() const;
+    PageVisibilityState visibilityState() const;
 #endif
-#if ENABLE(PAGE_VISIBILITY_API) || ENABLE(HIDDEN_PAGE_DOM_TIMER_THROTTLING)
-        void setVisibilityState(PageVisibilityState, bool);
-#endif
-
-        PlatformDisplayID displayID() const { return m_displayID; }
+    void resumeAnimatingImages();
 
     void addLayoutMilestones(LayoutMilestones);
     void removeLayoutMilestones(LayoutMilestones);
@@ -364,20 +354,20 @@ class ValidationMessageClient;
     int headerHeight() const { return m_headerHeight; }
     int footerHeight() const { return m_footerHeight; }
 
-        bool isCountingRelevantRepaintedObjects() const;
-        void startCountingRelevantRepaintedObjects();
-        void resetRelevantPaintedObjectCounter();
-        void addRelevantRepaintedObject(RenderObject*, const LayoutRect& objectPaintRect);
-        void addRelevantUnpaintedObject(RenderObject*, const LayoutRect& objectPaintRect);
+    bool isCountingRelevantRepaintedObjects() const;
+    void startCountingRelevantRepaintedObjects();
+    void resetRelevantPaintedObjectCounter();
+    void addRelevantRepaintedObject(RenderObject*, const LayoutRect& objectPaintRect);
+    void addRelevantUnpaintedObject(RenderObject*, const LayoutRect& objectPaintRect);
 
-        void suspendActiveDOMObjectsAndAnimations();
-        void resumeActiveDOMObjectsAndAnimations();
+    void suspendActiveDOMObjectsAndAnimations();
+    void resumeActiveDOMObjectsAndAnimations();
 #ifndef NDEBUG
-        void setIsPainting(bool painting) { m_isPainting = painting; }
-        bool isPainting() const { return m_isPainting; }
+    void setIsPainting(bool painting) { m_isPainting = painting; }
+    bool isPainting() const { return m_isPainting; }
 #endif
 
-        AlternativeTextClient* alternativeTextClient() const { return m_alternativeTextClient; }
+    AlternativeTextClient* alternativeTextClient() const { return m_alternativeTextClient; }
 
     bool hasSeenPlugin(const String& serviceType) const;
     bool hasSeenAnyPlugin() const;
@@ -389,11 +379,10 @@ class ValidationMessageClient;
     void sawMediaEngine(const String& engineName);
     void resetSeenMediaEngines();
 
-    PageConsole* console() { return m_console.get(); }
+    PageThrottler& pageThrottler() { return m_pageThrottler; }
 
-#if ENABLE(HIDDEN_PAGE_DOM_TIMER_THROTTLING)
-    void hiddenPageDOMTimerThrottlingStateChanged();
-#endif
+    PageConsole& console() { return *m_console; }
+
 #if ENABLE(PAGE_VISIBILITY_API)
     void hiddenPageCSSAnimationSuspensionStateChanged();
 #endif
@@ -402,8 +391,21 @@ class ValidationMessageClient;
     void captionPreferencesChanged();
 #endif
 
-    private:
-        void initGroup();
+    void incrementFrameHandlingBeforeUnloadEventCount();
+    void decrementFrameHandlingBeforeUnloadEventCount();
+    bool isAnyFrameHandlingBeforeUnloadEvent();
+    void setLastSpatialNavigationCandidateCount(unsigned count) { m_lastSpatialNavigationCandidatesCount = count; }
+    unsigned lastSpatialNavigationCandidateCount() const { return m_lastSpatialNavigationCandidatesCount; }
+
+    void setUserContentController(UserContentController*);
+    UserContentController* userContentController() { return m_userContentController.get(); }
+
+private:
+    void initGroup();
+
+    void setIsInWindowInternal(bool);
+    void setIsVisibleInternal(bool);
+    void setIsVisuallyIdleInternal(bool);
 
 #if ASSERT_DISABLED
     void checkSubframeCountConsistency() const { }
@@ -411,127 +413,133 @@ class ValidationMessageClient;
     void checkSubframeCountConsistency() const;
 #endif
 
-    unsigned findMatchesForText(const String&, FindOptions, unsigned maxMatchCount, bool shouldHighlight, bool markMatches);
+    enum ShouldHighlightMatches { DoNotHighlightMatches, HighlightMatches };
+    enum ShouldMarkMatches { DoNotMarkMatches, MarkMatches };
 
-        MediaCanStartListener* takeAnyMediaCanStartListener();
+    unsigned findMatchesForText(const String&, FindOptions, unsigned maxMatchCount, ShouldHighlightMatches, ShouldMarkMatches);
 
-        void setMinimumTimerInterval(double);
-        double minimumTimerInterval() const;
+    MediaCanStartListener* takeAnyMediaCanStartListener();
 
-    void setTimerAlignmentInterval(double);
-    double timerAlignmentInterval() const;
+    void setMinimumTimerInterval(double);
+    double minimumTimerInterval() const;
 
-    void collectPluginViews(Vector<RefPtr<PluginViewBase>, 32>& pluginViewBases);
+    double timerAlignmentInterval() const { return m_timerAlignmentInterval; }
 
-    const OwnPtr<Chrome> m_chrome;
-        OwnPtr<DragCaretController> m_dragCaretController;
+    Vector<Ref<PluginViewBase>> pluginViews();
+
+    void setTimerThrottlingEnabled(bool);
+
+    const std::unique_ptr<Chrome> m_chrome;
+    const std::unique_ptr<DragCaretController> m_dragCaretController;
 
 #if ENABLE(DRAG_SUPPORT)
-        OwnPtr<DragController> m_dragController;
+    const std::unique_ptr<DragController> m_dragController;
 #endif
-        OwnPtr<FocusController> m_focusController;
+    const std::unique_ptr<FocusController> m_focusController;
 #if ENABLE(CONTEXT_MENUS)
-        OwnPtr<ContextMenuController> m_contextMenuController;
+    const std::unique_ptr<ContextMenuController> m_contextMenuController;
 #endif
 #if ENABLE(INSPECTOR)
-        OwnPtr<InspectorController> m_inspectorController;
+    const std::unique_ptr<InspectorController> m_inspectorController;
 #endif
 #if ENABLE(POINTER_LOCK)
-        OwnPtr<PointerLockController> m_pointerLockController;
+    OwnPtr<PointerLockController> m_pointerLockController;
 #endif
-        RefPtr<ScrollingCoordinator> m_scrollingCoordinator;
+    RefPtr<ScrollingCoordinator> m_scrollingCoordinator;
 
-        OwnPtr<Settings> m_settings;
-        OwnPtr<ProgressTracker> m_progress;
-        
-        OwnPtr<BackForwardController> m_backForwardController;
-        RefPtr<Frame> m_mainFrame;
+    const RefPtr<Settings> m_settings;
+    const std::unique_ptr<ProgressTracker> m_progress;
 
-        mutable RefPtr<PluginData> m_pluginData;
+    const std::unique_ptr<BackForwardController> m_backForwardController;
+    const RefPtr<MainFrame> m_mainFrame;
 
-        RefPtr<RenderTheme> m_theme;
+    mutable RefPtr<PluginData> m_pluginData;
 
-        EditorClient* m_editorClient;
+    RefPtr<RenderTheme> m_theme;
+
+    EditorClient* m_editorClient;
     PlugInClient* m_plugInClient;
     ValidationMessageClient* m_validationMessageClient;
 
     FeatureObserver m_featureObserver;
 
     int m_subframeCount;
-        String m_groupName;
-        bool m_openedByDOM;
+    String m_groupName;
+    bool m_openedByDOM;
 
-        bool m_tabKeyCyclesThroughElements;
-        bool m_defersLoading;
-        unsigned m_defersLoadingCallCount;
+    bool m_tabKeyCyclesThroughElements;
+    bool m_defersLoading;
+    unsigned m_defersLoadingCallCount;
 
-        bool m_inLowQualityInterpolationMode;
-        bool m_cookieEnabled;
-        bool m_areMemoryCacheClientCallsEnabled;
-        float m_mediaVolume;
+    bool m_inLowQualityInterpolationMode;
+    bool m_areMemoryCacheClientCallsEnabled;
+    float m_mediaVolume;
 
-        float m_pageScaleFactor;
-        float m_deviceScaleFactor;
+    float m_pageScaleFactor;
+    float m_deviceScaleFactor;
 
     bool m_suppressScrollbarAnimations;
 
-        Pagination m_pagination;
+    Pagination m_pagination;
 
-        String m_userStyleSheetPath;
-        mutable String m_userStyleSheet;
-        mutable bool m_didLoadUserStyleSheet;
-        mutable time_t m_userStyleSheetModificationTime;
+    String m_userStyleSheetPath;
+    mutable String m_userStyleSheet;
+    mutable bool m_didLoadUserStyleSheet;
+    mutable time_t m_userStyleSheetModificationTime;
 
-        OwnPtr<PageGroup> m_singlePageGroup;
-        PageGroup* m_group;
+    std::unique_ptr<PageGroup> m_singlePageGroup;
+    PageGroup* m_group;
 
-        JSC::Debugger* m_debugger;
+    JSC::Debugger* m_debugger;
 
-        double m_customHTMLTokenizerTimeDelay;
-        int m_customHTMLTokenizerChunkSize;
+    bool m_canStartMedia;
 
-        bool m_canStartMedia;
-
-        RefPtr<StorageNamespace> m_sessionStorage;
+    RefPtr<StorageNamespace> m_sessionStorage;
 
 #if ENABLE(VIEW_MODE_CSS_MEDIA)
-        ViewMode m_viewMode;
+    ViewMode m_viewMode;
 #endif // ENABLE(VIEW_MODE_CSS_MEDIA)
 
-        double m_minimumTimerInterval;
+    double m_minimumTimerInterval;
 
+    bool m_timerThrottlingEnabled;
     double m_timerAlignmentInterval;
 
-        bool m_isEditable;
-        bool m_isOnscreen;
-    bool m_isInWindow;
-
-#if ENABLE(PAGE_VISIBILITY_API)
-        PageVisibilityState m_visibilityState;
-#endif
-        PlatformDisplayID m_displayID;
+    bool m_isEditable;
+    bool m_isPrerender;
+    ViewState::Flags m_viewState;
 
     LayoutMilestones m_requestedLayoutMilestones;
 
     int m_headerHeight;
     int m_footerHeight;
 
-        HashSet<RenderObject*> m_relevantUnpaintedRenderObjects;
+    HashSet<RenderObject*> m_relevantUnpaintedRenderObjects;
     Region m_topRelevantPaintedRegion;
     Region m_bottomRelevantPaintedRegion;
-        Region m_relevantUnpaintedRegion;
-        bool m_isCountingRelevantRepaintedObjects;
+    Region m_relevantUnpaintedRegion;
+    bool m_isCountingRelevantRepaintedObjects;
 #ifndef NDEBUG
-        bool m_isPainting;
+    bool m_isPainting;
 #endif
-        AlternativeTextClient* m_alternativeTextClient;
+    AlternativeTextClient* m_alternativeTextClient;
 
-        bool m_scriptedAnimationsSuspended;
-    OwnPtr<PageConsole> m_console;
+    bool m_scriptedAnimationsSuspended;
+    PageThrottler m_pageThrottler;
+    const std::unique_ptr<PageConsole> m_console;
+
+#if ENABLE(REMOTE_INSPECTOR)
+    const std::unique_ptr<PageDebuggable> m_inspectorDebuggable;
+#endif
 
     HashSet<String> m_seenPlugins;
     HashSet<String> m_seenMediaEngines;
-    };
+
+    unsigned m_lastSpatialNavigationCandidatesCount;
+    unsigned m_framesHandlingBeforeUnloadEvent;
+
+    RefPtr<UserContentController> m_userContentController;
+};
 
 inline PageGroup& Page::group()
 {

@@ -29,16 +29,19 @@
 #if ENABLE(DFG_JIT)
 
 #include "DFGNode.h"
+#include "JSCInlines.h"
 
 namespace JSC { namespace DFG {
 
 void Edge::dump(PrintStream& out) const
 {
-    if (useKind() != UntypedUse) {
+    if (useKindUnchecked() != UntypedUse) {
         if (needsCheck())
             out.print("Check:");
         out.print(useKind(), ":");
     }
+    if (DFG::doesKill(killStatusUnchecked()))
+        out.print("Kill:");
     out.print(node());
 }
 

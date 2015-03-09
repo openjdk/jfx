@@ -26,9 +26,15 @@
 #ifndef Timer_h
 #define Timer_h
 
+#include <chrono>
+#include <functional>
 #include <wtf/Noncopyable.h>
 #include <wtf/Threading.h>
 #include <wtf/Vector.h>
+
+#if PLATFORM(IOS)
+#include "WebCoreThread.h"
+#endif
 
 namespace WebCore {
 
@@ -37,7 +43,8 @@ namespace WebCore {
 class TimerHeapElement;
 
 class TimerBase {
-    WTF_MAKE_NONCOPYABLE(TimerBase); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(TimerBase);
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     TimerBase();
     virtual ~TimerBase();
@@ -46,6 +53,7 @@ public:
 
     void startRepeating(double repeatInterval) { start(repeatInterval, repeatInterval); }
     void startOneShot(double interval) { start(interval, 0); }
+    void startOneShot(std::chrono::milliseconds interval) { startOneShot(interval.count() * 0.001); }
 
     void stop();
     bool isActive() const;
@@ -95,6 +103,7 @@ private:
 
 #ifndef NDEBUG
     ThreadIdentifier m_thread;
+    bool m_wasDeleted;
 #endif
 
     friend class ThreadTimers;
@@ -104,31 +113,52 @@ private:
 
 template <typename TimerFiredClass> class Timer : public TimerBase {
 public:
-    typedef void (TimerFiredClass::*TimerFiredFunction)(Timer*);
+    typedef void (TimerFiredClass::*TimerFiredFunction)(Timer&);
+    typedef void (TimerFiredClass::*DeprecatedTimerFiredFunction)(Timer*);
 
-    Timer(TimerFiredClass* o, TimerFiredFunction f)
-        : m_object(o), m_function(f) { }
+    Timer(TimerFiredClass* object , TimerFiredFunction function)
+        : m_function(std::bind(function, object, std::ref(*this)))
+    {
+    }
+
+    Timer(TimerFiredClass* object, DeprecatedTimerFiredFunction function)
+        : m_function(std::bind(function, object, this))
+    {
+    }
 
 private:
-    virtual void fired() { (m_object->*m_function)(this); }
+    virtual void fired() override
+    {
+        m_function();
+    }
 
-    TimerFiredClass* m_object;
-    TimerFiredFunction m_function;
+    std::function<void ()> m_function;
 };
 
 inline bool TimerBase::isActive() const
 {
+    // FIXME: Write this in terms of USE(WEB_THREAD) instead of PLATFORM(IOS).
+#if !PLATFORM(IOS)
     ASSERT(m_thread == currentThread());
+#else
+    // On iOS timers are always run on the main thread or the Web Thread.
+    // Unless we have workers enabled in which case timers can run on other threads.
+#if ENABLE(WORKERS)
+    ASSERT(WebThreadIsCurrent() || pthread_main_np() || m_thread == currentThread());
+#else
+    ASSERT(WebThreadIsCurrent() || pthread_main_np());
+#endif
+#endif // PLATFORM(IOS)
     return m_nextFireTime;
 }
 
 template <typename TimerFiredClass> class DeferrableOneShotTimer : protected TimerBase {
 public:
-    typedef void (TimerFiredClass::*TimerFiredFunction)(DeferrableOneShotTimer*);
+    typedef void (TimerFiredClass::*TimerFiredFunction)(DeferrableOneShotTimer&);
 
-    DeferrableOneShotTimer(TimerFiredClass* o, TimerFiredFunction f, double delay)
-        : m_object(o)
-        , m_function(f)
+    DeferrableOneShotTimer(TimerFiredClass* object, TimerFiredFunction function, double delay)
+        : m_object(object)
+        , m_function(function)
         , m_delay(delay)
         , m_shouldRestartWhenTimerFires(false)
     {
@@ -147,10 +177,16 @@ public:
         startOneShot(m_delay);
     }
 
-    using TimerBase::stop;
+    void stop()
+    {
+        m_shouldRestartWhenTimerFires = false;
+        TimerBase::stop();
+    }
+
     using TimerBase::isActive;
+
 private:
-    virtual void fired()
+    virtual void fired() override
     {
         if (m_shouldRestartWhenTimerFires) {
             m_shouldRestartWhenTimerFires = false;
@@ -158,7 +194,7 @@ private:
             return;
         }
 
-        (m_object->*m_function)(this);
+        (m_object->*m_function)(*this);
     }
 
     TimerFiredClass* m_object;

@@ -47,32 +47,19 @@
 #include "npruntime_internal.h"
 #endif
 
-#if OS(WINDOWS) && (PLATFORM(GTK) || PLATFORM(QT))
+#if OS(WINDOWS) && PLATFORM(GTK)
 typedef struct HWND__* HWND;
 typedef HWND PlatformPluginWidget;
 #else
 typedef PlatformWidget PlatformPluginWidget;
-#if defined(XP_MACOSX) && PLATFORM(QT)
-#include <QPixmap>
-#endif
-#endif
-#if PLATFORM(QT)
-#if USE(TEXTURE_MAPPER)
-#include "TextureMapperPlatformLayer.h"
-#endif
-
-#include <QImage>
-QT_BEGIN_NAMESPACE
-class QPainter;
-QT_END_NAMESPACE
-#endif
-#if PLATFORM(QT) && USE(ACCELERATED_COMPOSITING) && ENABLE(NETSCAPE_PLUGIN_API) && defined(XP_UNIX)
-#ifndef WTF_USE_ACCELERATED_COMPOSITING_PLUGIN_LAYER
-#define WTF_USE_ACCELERATED_COMPOSITING_PLUGIN_LAYER 1
-#endif
 #endif
 #if PLATFORM(GTK)
 typedef struct _GtkSocket GtkSocket;
+#endif
+
+#if PLATFORM(X11)
+typedef unsigned long Window;
+typedef struct _XDisplay Display;
 #endif
 
 namespace JSC {
@@ -83,11 +70,12 @@ namespace JSC {
 
 namespace WebCore {
     class Frame;
+    class FrameView;
     class Image;
     class HTMLPlugInElement;
     class KeyboardEvent;
     class MouseEvent;
-    class KURL;
+    class URL;
 #if OS(WINDOWS) && ENABLE(NETSCAPE_PLUGIN_API)
     class PluginMessageThrottlerWin;
 #endif
@@ -140,7 +128,7 @@ namespace WebCore {
                      , public PluginManualLoader
                      , private MediaCanStartListener {
     public:
-        static PassRefPtr<PluginView> create(Frame* parentFrame, const IntSize&, HTMLPlugInElement*, const KURL&, const Vector<String>& paramNames, const Vector<String>& paramValues, const String& mimeType, bool loadManually);
+        static PassRefPtr<PluginView> create(Frame* parentFrame, const IntSize&, HTMLPlugInElement*, const URL&, const Vector<String>& paramNames, const Vector<String>& paramValues, const String& mimeType, bool loadManually);
         virtual ~PluginView();
 
         PluginPackage* plugin() const { return m_plugin.get(); }
@@ -206,7 +194,7 @@ namespace WebCore {
         virtual void show();
         virtual void hide();
         virtual void paint(GraphicsContext*, const IntRect&);
-        virtual void clipRectChanged() OVERRIDE;
+        virtual void clipRectChanged() override;
 
         // This method is used by plugins on all platforms to obtain a clip rect that includes clips set by WebCore,
         // e.g., in overflow:auto sections.  The clip rects coordinates are in the containing window's coordinate space.
@@ -217,7 +205,7 @@ namespace WebCore {
         virtual void setParent(ScrollView*);
         virtual void setParentVisible(bool);
 
-        virtual bool isPluginView() const OVERRIDE { return true; }
+        virtual bool isPluginView() const override { return true; }
 
         Frame* parentFrame() const { return m_parentFrame.get(); }
 
@@ -225,7 +213,7 @@ namespace WebCore {
 
         const String& pluginsPage() const { return m_pluginsPage; }
         const String& mimeType() const { return m_mimeType; }
-        const KURL& url() const { return m_url; }
+        const URL& url() const { return m_url; }
 
 #if defined(XP_MACOSX) && ENABLE(NETSCAPE_PLUGIN_API)
         bool popUpContextMenu(NPMenu*);
@@ -252,22 +240,13 @@ namespace WebCore {
 #endif
         void keepAlive();
 
-#if USE(ACCELERATED_COMPOSITING)
-#if USE(ACCELERATED_COMPOSITING_PLUGIN_LAYER)
-        virtual PlatformLayer* platformLayer() const;
-        bool shouldUseAcceleratedCompositing() const;
-#else
-        virtual PlatformLayer* platformLayer() const { return 0; }
-#endif
-#endif
-
-#if PLATFORM(QT) && ENABLE(NETSCAPE_PLUGIN_API) && defined(XP_UNIX)
-        // PluginViewQt (X11) needs a few workarounds when running under DRT
-        static void setIsRunningUnderDRT(bool flag) { s_isRunningUnderDRT = flag; }
+#if PLATFORM(X11)
+        static Display* getPluginDisplay(Frame*);
+        static Window getRootWindow(Frame* parentFrame);
 #endif
 
     private:
-        PluginView(Frame* parentFrame, const IntSize&, PluginPackage*, HTMLPlugInElement*, const KURL&, const Vector<String>& paramNames, const Vector<String>& paramValues, const String& mimeType, bool loadManually);
+        PluginView(Frame* parentFrame, const IntSize&, PluginPackage*, HTMLPlugInElement*, const URL&, const Vector<String>& paramNames, const Vector<String>& paramValues, const String& mimeType, bool loadManually);
 
         void setParameters(const Vector<String>& paramNames, const Vector<String>& paramValues);
         bool startOrAddToUnstartedList();
@@ -303,7 +282,7 @@ namespace WebCore {
         RefPtr<PluginPackage> m_plugin;
         HTMLPlugInElement* m_element;
         bool m_isStarted;
-        KURL m_url;
+        URL m_url;
         PluginStatus m_status;
         Vector<IntRect> m_invalidRects;
 
@@ -320,16 +299,13 @@ namespace WebCore {
         void lifeSupportTimerFired(Timer<PluginView>*);
         Timer<PluginView> m_lifeSupportTimer;
 
-#ifndef NP_NO_CARBON
 #if ENABLE(NETSCAPE_PLUGIN_API)
         bool dispatchNPEvent(NPEvent&);
-#endif // ENABLE(NETSCAPE_PLUGIN_API)
 #endif
 #if defined(XP_MACOSX) && ENABLE(NETSCAPE_PLUGIN_API)
         int16_t dispatchNPCocoaEvent(NPCocoaEvent&);
         bool m_updatedCocoaTextInputRequested;
         bool m_keyDownSent;
-        bool m_usePixmap;
         uint16_t m_disregardKeyUpCounter;
 #endif
 
@@ -389,7 +365,7 @@ namespace WebCore {
         bool m_haveUpdatedPluginWidget;
 #endif
 
-#if ((PLATFORM(GTK) || PLATFORM(QT)) && OS(WINDOWS)) || defined(XP_MACOSX) || PLATFORM(EFL)
+#if (PLATFORM(GTK) && OS(WINDOWS)) || PLATFORM(EFL)
         // On Mac OSX and Qt/Windows the plugin does not have its own native widget,
         // but is using the containing window as its reference for positioning/painting.
         PlatformPluginWidget m_window;
@@ -408,20 +384,9 @@ private:
         void setNPWindowIfNeeded();
 #elif defined(XP_MACOSX)
         NP_CGContext m_npCgContext;
-        OwnPtr<Timer<PluginView> > m_nullEventTimer;
-        NPDrawingModel m_drawingModel;
-        NPEventModel m_eventModel;
         CGContextRef m_contextRef;
-        WindowRef m_fakeWindow;
-#if PLATFORM(QT)
-        QPixmap m_pixmap;
-#endif
 
-        Point m_lastMousePos;
         void setNPWindowIfNeeded();
-        void nullEventTimerFired(Timer<PluginView>*);
-        Point globalMousePosForPlugin() const;
-        Point mousePosForPlugin(MouseEvent* event = 0) const;
 #endif
 
 #if defined(XP_UNIX) && ENABLE(NETSCAPE_PLUGIN_API)
@@ -433,19 +398,6 @@ private:
 
         void initXEvent(XEvent* event);
 #endif
-
-#if PLATFORM(QT)
-#if defined(XP_UNIX) && ENABLE(NETSCAPE_PLUGIN_API)
-        static bool s_isRunningUnderDRT;
-        static void setXKeyEventSpecificFields(XEvent*, KeyboardEvent*);
-        void paintUsingXPixmap(QPainter* painter, const QRect &exposedRect);
-        QWebPageClient* platformPageClient() const;
-#endif
-#if USE(ACCELERATED_COMPOSITING_PLUGIN_LAYER)
-        OwnPtr<PlatformLayer> m_platformLayer;
-        friend class PluginGraphicsLayerQt;
-#endif // USE(ACCELERATED_COMPOSITING_PLUGIN_LAYER)
-#endif // PLATFORM(QT)
 
 #if PLATFORM(GTK)
         static gboolean plugRemovedCallback(GtkSocket*, PluginView*);

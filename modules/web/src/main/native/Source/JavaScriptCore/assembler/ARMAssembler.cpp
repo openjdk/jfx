@@ -391,15 +391,15 @@ void ARMAssembler::baseIndexTransferFloat(DataTransferTypeFloat transferType, FP
     dataTransferFloat(transferType, srcDst, ARMRegisters::S1, offset);
 }
 
-PassRefPtr<ExecutableMemoryHandle> ARMAssembler::executableCopy(VM& vm, void* ownerUID, JITCompilationEffort effort)
+void ARMAssembler::prepareExecutableCopy(void* to)
 {
     // 64-bit alignment is required for next constant pool and JIT code as well
     m_buffer.flushWithoutBarrier(true);
     if (!m_buffer.isAligned(8))
         bkpt(0);
 
-    RefPtr<ExecutableMemoryHandle> result = m_buffer.executableCopy(vm, ownerUID, effort);
-    char* data = reinterpret_cast<char*>(result->start());
+    char* data = reinterpret_cast<char*>(m_buffer.data());
+    ptrdiff_t delta = reinterpret_cast<char*>(to) - data;
 
     for (Jumps::Iterator iter = m_jumps.begin(); iter != m_jumps.end(); ++iter) {
         // The last bit is set if the constant must be placed on constant pool.
@@ -415,29 +415,10 @@ PassRefPtr<ExecutableMemoryHandle> ARMAssembler::executableCopy(VM& vm, void* ow
                     continue;
                 }
             }
-            *addr = reinterpret_cast<ARMWord>(data + *addr);
+            *addr = reinterpret_cast<ARMWord>(data + delta + *addr);
         }
     }
-
-    return result;
 }
-
-#if OS(LINUX) && COMPILER(RVCT)
-
-__asm void ARMAssembler::cacheFlush(void* code, size_t size)
-{
-    ARM
-    push {r7}
-    add r1, r1, r0
-    mov r7, #0xf0000
-    add r7, r7, #0x2
-    mov r2, #0x0
-    svc #0x0
-    pop {r7}
-    bx lr
-}
-
-#endif
 
 } // namespace JSC
 

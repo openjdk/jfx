@@ -49,15 +49,14 @@ namespace WebCore {
         class EventData {
             WTF_MAKE_NONCOPYABLE(EventData); WTF_MAKE_FAST_ALLOCATED;
         public:
-            static PassOwnPtr<EventData> create(PassRefPtr<SerializedScriptValue>, PassOwnPtr<MessagePortChannelArray>);
+            EventData(PassRefPtr<SerializedScriptValue> message, std::unique_ptr<MessagePortChannelArray>);
 
             PassRefPtr<SerializedScriptValue> message() { return m_message; }
-            PassOwnPtr<MessagePortChannelArray> channels() { return m_channels.release(); }
+            std::unique_ptr<MessagePortChannelArray> channels() { return std::move(m_channels); }
 
         private:
-            EventData(PassRefPtr<SerializedScriptValue> message, PassOwnPtr<MessagePortChannelArray>);
             RefPtr<SerializedScriptValue> m_message;
-            OwnPtr<MessagePortChannelArray> m_channels;
+            std::unique_ptr<MessagePortChannelArray> m_channels;
         };
 
         // Wrapper for MessageQueue that allows us to do thread safe sharing by two proxies.
@@ -65,14 +64,14 @@ namespace WebCore {
         public:
             static PassRefPtr<MessagePortQueue> create() { return adoptRef(new MessagePortQueue()); }
 
-            PassOwnPtr<PlatformMessagePortChannel::EventData> tryGetMessage()
+            std::unique_ptr<PlatformMessagePortChannel::EventData> tryGetMessage()
             {
                 return m_queue.tryGetMessage();
             }
 
-            bool appendAndCheckEmpty(PassOwnPtr<PlatformMessagePortChannel::EventData> message)
+            bool appendAndCheckEmpty(std::unique_ptr<PlatformMessagePortChannel::EventData> message)
             {
-                return m_queue.appendAndCheckEmpty(message);
+                return m_queue.appendAndCheckEmpty(std::move(message));
             }
 
             bool isEmpty()

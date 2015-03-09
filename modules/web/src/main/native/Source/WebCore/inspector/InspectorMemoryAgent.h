@@ -33,36 +33,30 @@
 
 #if ENABLE(INSPECTOR)
 
-#include "InspectorBaseAgent.h"
-#include "InspectorFrontend.h"
-#include <wtf/PassOwnPtr.h>
+#include "InspectorWebAgentBase.h"
+#include "InspectorWebBackendDispatchers.h"
 #include <wtf/RefPtr.h>
 
 namespace WebCore {
 
 class InspectorDOMStorageAgent;
-class InspectorState;
 class InstrumentingAgents;
 
 typedef String ErrorString;
 
-class InspectorMemoryAgent : public InspectorBaseAgent<InspectorMemoryAgent>, public InspectorBackendDispatcher::MemoryCommandHandler {
+class InspectorMemoryAgent : public InspectorAgentBase, public Inspector::InspectorMemoryBackendDispatcherHandler {
     WTF_MAKE_NONCOPYABLE(InspectorMemoryAgent);
 public:
-    typedef Vector<OwnPtr<InspectorBaseAgentInterface> > InspectorAgents;
-
-    static PassOwnPtr<InspectorMemoryAgent> create(InstrumentingAgents* instrumentingAgents, InspectorCompositeState* state);
+    explicit InspectorMemoryAgent(InstrumentingAgents*);
     virtual ~InspectorMemoryAgent();
 
-    virtual void getDOMCounters(ErrorString*, int* documents, int* nodes, int* jsEventListeners);
+    virtual void didCreateFrontendAndBackend(Inspector::InspectorFrontendChannel*, Inspector::InspectorBackendDispatcher*) override;
+    virtual void willDestroyFrontendAndBackend(Inspector::InspectorDisconnectReason) override;
 
-    virtual void setFrontend(InspectorFrontend*);
-    virtual void clearFrontend();
+    virtual void getDOMCounters(ErrorString*, int* documents, int* nodes, int* jsEventListeners) override;
 
 private:
-    InspectorMemoryAgent(InstrumentingAgents*, InspectorCompositeState*);
-
-    InspectorFrontend::Memory* m_frontend;
+    RefPtr<Inspector::InspectorMemoryBackendDispatcher> m_backendDispatcher;
 };
 
 } // namespace WebCore

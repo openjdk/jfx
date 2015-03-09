@@ -38,12 +38,12 @@ namespace WebCore {
 void JSXPathResult::visitChildren(JSCell* cell, SlotVisitor& visitor)
 {
     JSXPathResult* thisObject = jsCast<JSXPathResult*>(cell);
-    ASSERT_GC_OBJECT_INHERITS(thisObject, &s_info);
+    ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     COMPILE_ASSERT(StructureFlags & OverridesVisitChildren, OverridesVisitChildrenWithoutSettingFlag);
     ASSERT(thisObject->structure()->typeInfo().overridesVisitChildren());
     Base::visitChildren(thisObject, visitor);
 
-    const XPath::Value& xpathValue = thisObject->impl()->value();
+    const XPath::Value& xpathValue = thisObject->impl().value();
     if (xpathValue.isNodeSet()) {
         const XPath::NodeSet& nodesToMark = xpathValue.toNodeSet();
         for (size_t i = 0; i < nodesToMark.size(); ++i) {

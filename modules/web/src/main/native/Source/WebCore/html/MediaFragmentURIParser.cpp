@@ -75,7 +75,7 @@ double MediaFragmentURIParser::invalidTimeValue()
     return MediaPlayer::invalidTime();
 }
 
-MediaFragmentURIParser::MediaFragmentURIParser(const KURL& url)
+MediaFragmentURIParser::MediaFragmentURIParser(const URL& url)
     : m_url(url)
     , m_timeFormat(None)
     , m_startTime(MediaPlayer::invalidTime())
@@ -132,22 +132,22 @@ void MediaFragmentURIParser::parseFragments()
         //  a. Decode percent-encoded octets in name and value as defined by RFC 3986. If either
         //     name or value are not valid percent-encoded strings, then remove the name-value pair
         //     from the list.
-        const UChar* fragmentStart = fragmentString.characters();
-        String name = decodeURLEscapeSequences(String(fragmentStart + parameterStart, equalOffset - parameterStart));
+        String name = decodeURLEscapeSequences(fragmentString.substring(parameterStart, equalOffset - parameterStart));
         String value;
         if (equalOffset != parameterEnd)
-            value = decodeURLEscapeSequences(String(fragmentStart + equalOffset + 1, parameterEnd - equalOffset - 1));
+            value = decodeURLEscapeSequences(fragmentString.substring(equalOffset + 1, parameterEnd - equalOffset - 1));
         
         //  b. Convert name and value to Unicode strings by interpreting them as UTF-8. If either
         //     name or value are not valid UTF-8 strings, then remove the name-value pair from the list.
-        bool validUTF8 = true;
-        if (!name.isEmpty()) {
-            name = name.utf8(String::StrictConversion).data();
+        bool validUTF8 = false;
+        if (!name.isEmpty() && !value.isEmpty()) {
+            name = name.utf8(StrictConversion).data();
             validUTF8 = !name.isEmpty();
-        }
-        if (validUTF8 && !value.isEmpty()) {
-            value = value.utf8(String::StrictConversion).data();
-            validUTF8 = !value.isEmpty();
+
+            if (validUTF8) {
+                value = value.utf8(StrictConversion).data();
+                validUTF8 = !value.isEmpty();
+            }
         }
         
         if (validUTF8)
@@ -167,7 +167,7 @@ void MediaFragmentURIParser::parseTimeFragment()
     m_timeFormat = Invalid;
 
     for (unsigned i = 0; i < m_fragments.size(); ++i) {
-        pair<String, String>& fragment = m_fragments[i];
+        std::pair<String, String>& fragment = m_fragments[i];
 
         ASSERT(fragment.first.is8Bit());
         ASSERT(fragment.second.is8Bit());
@@ -206,7 +206,7 @@ bool MediaFragmentURIParser::parseNPTFragment(const LChar* timeString, unsigned 
 {
     unsigned offset = 0;
     if (length >= nptIdentiferLength && timeString[0] == 'n' && timeString[1] == 'p' && timeString[2] == 't' && timeString[3] == ':')
-            offset += nptIdentiferLength;
+        offset += nptIdentiferLength;
 
     if (offset == length)
         return false;

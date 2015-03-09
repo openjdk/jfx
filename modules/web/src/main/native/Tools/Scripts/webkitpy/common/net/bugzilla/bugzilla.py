@@ -1,6 +1,7 @@
 # Copyright (c) 2011 Google Inc. All rights reserved.
 # Copyright (c) 2009 Apple Inc. All rights reserved.
 # Copyright (c) 2010 Research In Motion Limited. All rights reserved.
+# Copyright (c) 2013 University of Szeged. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -180,15 +181,36 @@ class BugzillaQueries(object):
         return [int(bug_link_cell.find("a").string)
                 for bug_link_cell in soup('td', "first-child")]
 
-    def _parse_attachment_ids_request_query(self, page):
+    def _parse_attachment_ids_request_query(self, page, since=None):
+        # Formats
         digits = re.compile("\d+")
         attachment_href = re.compile("attachment.cgi\?id=\d+&action=review")
-        attachment_links = SoupStrainer("a", href=attachment_href)
-        return [int(digits.search(tag["href"]).group(0))
+        # if no date is given, return all ids
+        if not since:
+            attachment_links = SoupStrainer("a", href=attachment_href)
+            return [int(digits.search(tag["href"]).group(0))
                 for tag in BeautifulSoup(page, parseOnlyThese=attachment_links)]
 
-    def _fetch_attachment_ids_request_query(self, query):
-        return self._parse_attachment_ids_request_query(self._load_query(query))
+        # Parse the main table only
+        date_format = re.compile("\d{4}-\d{2}-\d{2} \d{2}:\d{2}")
+        mtab = SoupStrainer("table", {"class": "requests"})
+        soup = BeautifulSoup(page, parseOnlyThese=mtab)
+        patch_ids = []
+
+        for row in soup.findAll("tr"):
+            patch_tag = row.find("a", {"href": attachment_href})
+            if not patch_tag:
+                continue
+            patch_id = int(digits.search(patch_tag["href"]).group(0))
+            date_tag = row.find("td", text=date_format)
+            if date_tag and datetime.strptime(date_format.search(date_tag).group(0), "%Y-%m-%d %H:%M") < since:
+                _log.info("Patch is old: %d (%s)" % (patch_id, date_tag))
+                continue
+            patch_ids.append(patch_id)
+        return patch_ids
+
+    def _fetch_attachment_ids_request_query(self, query, since=None):
+        return self._parse_attachment_ids_request_query(self._load_query(query), since)
 
     def _parse_quips(self, page):
         soup = BeautifulSoup(page, convertEntities=BeautifulSoup.HTML_ENTITIES)
@@ -252,9 +274,9 @@ class BugzillaQueries(object):
 
     # NOTE: This is the only client of _fetch_attachment_ids_request_query
     # This method only makes one request to bugzilla.
-    def fetch_attachment_ids_from_review_queue(self):
+    def fetch_attachment_ids_from_review_queue(self, since=None):
         review_queue_url = "request.cgi?action=queue&type=review&group=type"
-        return self._fetch_attachment_ids_request_query(review_queue_url)
+        return self._fetch_attachment_ids_request_query(review_queue_url, since)
 
     # This only works if your account has edituser privileges.
     # We could easily parse https://bugs.webkit.org/userprefs.cgi?tab=permissions to
@@ -271,6 +293,12 @@ class BugzillaQueries(object):
         return map(lambda pair: pair[0], pairs)
 
 
+class CommitQueueFlag(object):
+    mark_for_nothing = 0
+    mark_for_commit_queue = 1
+    mark_for_landing = 2
+
+
 class Bugzilla(object):
     def __init__(self, committers=committers.CommitterList()):
         self.authenticated = False
@@ -285,7 +313,6 @@ class Bugzilla(object):
             self.setdefaulttimeout(600)
             from webkitpy.thirdparty.autoinstalled.mechanize import Browser
             self._browser = Browser()
-            # Ignore bugs.webkit.org/robots.txt until we fix it to allow this script.
             self._browser.set_handle_robots(False)
         return self._browser
 
@@ -528,31 +555,25 @@ class Bugzilla(object):
                 self.authenticated = True
                 self.username = username
 
-    # FIXME: Use enum instead of two booleans
-    def _commit_queue_flag(self, mark_for_landing, mark_for_commit_queue):
-        if mark_for_landing:
+    def _commit_queue_flag(self, commit_flag):
+        if commit_flag == CommitQueueFlag.mark_for_landing:
             user = self.committers.contributor_by_email(self.username)
-            mark_for_commit_queue = True
             if not user:
-                _log.warning("Your Bugzilla login is not listed in committers.py. Uploading with cq? instead of cq+")
-                mark_for_landing = False
+                _log.warning("Your Bugzilla login is not listed in contributors.json. Uploading with cq? instead of cq+")
             elif not user.can_commit:
-                _log.warning("You're not a committer yet or haven't updated committers.py yet. Uploading with cq? instead of cq+")
-                mark_for_landing = False
+                _log.warning("You're not a committer yet or haven't updated contributors.json yet. Uploading with cq? instead of cq+")
+            else:
+                return '+'
 
-        if mark_for_landing:
-            return '+'
-        if mark_for_commit_queue:
+        if commit_flag != CommitQueueFlag.mark_for_nothing:
             return '?'
         return 'X'
 
-    # FIXME: mark_for_commit_queue and mark_for_landing should be joined into a single commit_flag argument.
     def _fill_attachment_form(self,
                               description,
                               file_object,
                               mark_for_review=False,
-                              mark_for_commit_queue=False,
-                              mark_for_landing=False,
+                              commit_flag=CommitQueueFlag.mark_for_nothing,
                               is_patch=False,
                               filename=None,
                               mimetype=None):
@@ -561,7 +582,7 @@ class Bugzilla(object):
             self.browser['ispatch'] = ("1",)
         # FIXME: Should this use self._find_select_element_for_flag?
         self.browser['flag_type-1'] = ('?',) if mark_for_review else ('X',)
-        self.browser['flag_type-3'] = (self._commit_queue_flag(mark_for_landing, mark_for_commit_queue),)
+        self.browser['flag_type-3'] = (self._commit_queue_flag(commit_flag),)
 
         filename = filename or "%s.patch" % timestamp()
         if not mimetype:
@@ -615,11 +636,16 @@ class Bugzilla(object):
         self.browser.select_form(name="entryform")
         file_object = self._file_object_for_upload(file_or_string)
         filename = self._filename_for_upload(file_object, bug_id, extension="patch")
+        commit_flag = CommitQueueFlag.mark_for_nothing
+        if mark_for_landing:
+            commit_flag = CommitQueueFlag.mark_for_landing
+        elif mark_for_commit_queue:
+            commit_flag = CommitQueueFlag.mark_for_commit_queue
+
         self._fill_attachment_form(description,
                                    file_object,
                                    mark_for_review=mark_for_review,
-                                   mark_for_commit_queue=mark_for_commit_queue,
-                                   mark_for_landing=mark_for_landing,
+                                   commit_flag=commit_flag,
                                    is_patch=True,
                                    filename=filename)
         if comment_text:
@@ -686,11 +712,15 @@ class Bugzilla(object):
             # Patch files are already binary, so no encoding needed.
             assert(isinstance(diff, str))
             patch_file_object = StringIO.StringIO(diff)
+            commit_flag = CommitQueueFlag.mark_for_nothing
+            if mark_for_commit_queue:
+                commit_flag = CommitQueueFlag.mark_for_commit_queue
+
             self._fill_attachment_form(
                     patch_description,
                     patch_file_object,
                     mark_for_review=mark_for_review,
-                    mark_for_commit_queue=mark_for_commit_queue,
+                    commit_flag=commit_flag,
                     is_patch=True)
 
         response = self.browser.submit()

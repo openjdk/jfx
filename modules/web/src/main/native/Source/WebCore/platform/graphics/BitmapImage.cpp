@@ -28,6 +28,7 @@
 #include "BitmapImage.h"
 
 #include "FloatRect.h"
+#include "ImageBuffer.h"
 #include "ImageObserver.h"
 #include "IntRect.h"
 #include "MIMETypeRegistry.h"
@@ -36,13 +37,18 @@
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
+#if PLATFORM(IOS)
+#include <limits>
+#endif
+
 namespace WebCore {
 
+// FIXME: We should better integrate the iOS and non-iOS code in this class. Unlike other ports, the
+// iOS port caches the metadata for a frame without decoding the image.
 BitmapImage::BitmapImage(ImageObserver* observer)
     : Image(observer)
     , m_currentFrame(0)
     , m_frames(0)
-    , m_frameTimer(0)
     , m_repetitionCount(cAnimationNone)
     , m_repetitionCountStatus(Unknown)
     , m_repetitionsComplete(0)
@@ -50,6 +56,11 @@ BitmapImage::BitmapImage(ImageObserver* observer)
     , m_decodedSize(0)
     , m_decodedPropertiesSize(0)
     , m_frameCount(0)
+#if PLATFORM(IOS)
+    // FIXME: We should expose a setting to enable/disable progressive loading remove the PLATFORM(IOS)-guard.
+    , m_progressiveLoadChunkTime(0)
+    , m_progressiveLoadChunkCount(0)
+#endif
     , m_isSolidColor(false)
     , m_checkedForSolidColor(false)
     , m_animationFinished(false)
@@ -58,6 +69,7 @@ BitmapImage::BitmapImage(ImageObserver* observer)
     , m_sizeAvailable(false)
     , m_hasUniformFrameSize(true)
     , m_haveFrameCount(false)
+    , m_cachedImage(0)
 {
 }
 
@@ -67,22 +79,20 @@ BitmapImage::~BitmapImage()
     stopAnimation();
 }
 
-bool BitmapImage::isBitmapImage() const
-{
-    return true;
-}
-
 bool BitmapImage::hasSingleSecurityOrigin() const
 {
     return true;
 }
 
-
 void BitmapImage::destroyDecodedData(bool destroyAll)
 {
     unsigned frameBytesCleared = 0;
     const size_t clearBeforeFrame = destroyAll ? m_frames.size() : m_currentFrame;
-    for (size_t i = 0; i < clearBeforeFrame; ++i) {
+
+    // Because we can advance frames without always needing to decode the actual
+    // bitmap data, |m_currentFrame| may be larger than m_frames.size();
+    // make sure not to walk off the end of the container in this case.
+    for (size_t i = 0; i <  std::min(clearBeforeFrame, m_frames.size()); ++i) {
         // The underlying frame isn't actually changing (we're just trying to
         // save the memory for the framebuffer data), so we don't need to clear
         // the metadata.
@@ -101,7 +111,22 @@ void BitmapImage::destroyDecodedDataIfNecessary(bool destroyAll)
 {
     // Animated images >5MB are considered large enough that we'll only hang on
     // to one frame at a time.
+#if PLATFORM(IOS)
+    static const unsigned cLargeAnimationCutoff = 2097152;
+
+     // If we have decoded frames but there is no encoded data, we shouldn't destroy
+     // the decoded image since we won't be able to reconstruct it later.
+     if (!data() && m_frames.size())
+         return;
+#else
     static const unsigned cLargeAnimationCutoff = 5242880;
+#endif
+
+    // If we have decoded frames but there is no encoded data, we shouldn't destroy
+    // the decoded image since we won't be able to reconstruct it later.
+    if (!data() && m_frames.size())
+        return;
+
     unsigned allFrameBytes = 0;
     for (size_t i = 0; i < m_frames.size(); ++i)
         allFrameBytes += m_frames[i].m_frameBytes;
@@ -126,7 +151,11 @@ void BitmapImage::destroyMetadataAndNotify(unsigned frameBytesCleared)
         imageObserver()->decodedSizeChanged(this, -safeCast<int>(frameBytesCleared));
 }
 
+#if PLATFORM(IOS)
+void BitmapImage::cacheFrame(size_t index, float scaleHint)
+#else
 void BitmapImage::cacheFrame(size_t index)
+#endif
 {
     size_t numFrames = frameCount();
     ASSERT(m_decodedSize == 0 || numFrames > 1);
@@ -134,7 +163,12 @@ void BitmapImage::cacheFrame(size_t index)
     if (m_frames.size() < numFrames)
         m_frames.grow(numFrames);
 
+#if PLATFORM(IOS)
+    m_frames[index].m_frame = m_source.createFrameAtIndex(index, &scaleHint);
+    m_frames[index].m_scale = scaleHint;
+#else
     m_frames[index].m_frame = m_source.createFrameAtIndex(index);
+#endif
     if (numFrames == 1 && m_frames[index].m_frame)
         checkForSolidColor();
 
@@ -161,6 +195,23 @@ void BitmapImage::cacheFrame(size_t index)
     }
 }
 
+#if PLATFORM(IOS)
+void BitmapImage::cacheFrameInfo(size_t index)
+{
+    size_t numFrames = frameCount();
+
+    if (m_frames.size() < numFrames)
+        m_frames.resize(numFrames);
+
+    ASSERT(!m_frames[index].m_haveInfo);
+
+    if (shouldAnimate())
+        m_frames[index].m_duration = m_source.frameDurationAtIndex(index);
+    m_frames[index].m_hasAlpha = m_source.frameHasAlphaAtIndex(index);
+    m_frames[index].m_haveInfo = true;
+}
+#endif
+
 void BitmapImage::didDecodeProperties() const
 {
     if (m_decodedSize)
@@ -179,13 +230,19 @@ void BitmapImage::didDecodeProperties() const
         imageObserver()->decodedSizeChanged(this, deltaBytes);
 }
 
-void BitmapImage::updateSize() const
+void BitmapImage::updateSize(ImageOrientationDescription description) const
 {
     if (!m_sizeAvailable || m_haveSize)
         return;
 
-    m_size = m_source.size();
-    m_sizeRespectingOrientation = m_source.size(RespectImageOrientation);
+    m_size = m_source.size(description);
+    m_sizeRespectingOrientation = m_source.size(ImageOrientationDescription(RespectImageOrientation, description.imageOrientation()));
+    m_imageOrientation = static_cast<unsigned>(description.imageOrientation());
+    m_shouldRespectImageOrientation = static_cast<unsigned>(description.respectImageOrientation());
+#if PLATFORM(IOS)
+    m_originalSize = m_source.originalSize();
+    m_originalSizeRespectingOrientation = m_source.originalSize(RespectImageOrientation);
+#endif
     m_haveSize = true;
     didDecodeProperties();
 }
@@ -196,11 +253,25 @@ IntSize BitmapImage::size() const
     return m_size;
 }
 
-IntSize BitmapImage::sizeRespectingOrientation() const
+IntSize BitmapImage::sizeRespectingOrientation(ImageOrientationDescription description) const
 {
-    updateSize();
+    updateSize(description);
     return m_sizeRespectingOrientation;
 }
+
+#if PLATFORM(IOS)
+IntSize BitmapImage::originalSize() const
+{
+    updateSize();
+    return m_originalSize;
+}
+
+IntSize BitmapImage::originalSizeRespectingOrientation() const
+{
+    updateSize();
+    return m_originalSizeRespectingOrientation;
+}
+#endif
 
 IntSize BitmapImage::currentFrameSize() const
 {
@@ -220,6 +291,9 @@ bool BitmapImage::getHotSpot(IntPoint& hotSpot) const
 
 bool BitmapImage::dataChanged(bool allDataReceived)
 {
+    // Because we're modifying the current frame, clear its (now possibly
+    // inaccurate) metadata as well.
+#if !PLATFORM(IOS)
     // Clear all partially-decoded frames. For most image formats, there is only
     // one frame, but at least GIF and ICO can have more. With GIFs, the frames
     // come in order and we ask to decode them in order, waiting to request a
@@ -247,11 +321,40 @@ bool BitmapImage::dataChanged(bool allDataReceived)
             frameBytesCleared += (m_frames[i].clear(true) ? frameBytes : 0);
     }
     destroyMetadataAndNotify(frameBytesCleared);
+#else
+    int deltaBytes = 0;
+    if (!m_frames.isEmpty()) {
+        int bytes = m_frames[m_frames.size() - 1].m_frameBytes;
+        if (m_frames[m_frames.size() - 1].clear(true)) {
+            deltaBytes += bytes;
+            deltaBytes += m_decodedPropertiesSize;
+            m_decodedPropertiesSize = 0;
+        }
+    }
+    destroyMetadataAndNotify(deltaBytes);
+#endif
     
     // Feed all the data we've seen so far to the image decoder.
     m_allDataReceived = allDataReceived;
+#if PLATFORM(IOS)
+    // FIXME: We should expose a setting to enable/disable progressive loading and make this
+    // code conditional on it. Then we can remove the PLATFORM(IOS)-guard.
+    static const double chunkLoadIntervals[] = {0, 1, 3, 6, 15};
+    double interval = chunkLoadIntervals[std::min(m_progressiveLoadChunkCount, static_cast<uint16_t>(4))];
+
+    bool needsUpdate = false;
+    if (currentTime() - m_progressiveLoadChunkTime > interval) { // The first time through, the chunk time will be 0 and the image will get an update.
+        needsUpdate = true;
+        m_progressiveLoadChunkTime = currentTime();
+        ASSERT(m_progressiveLoadChunkCount <= std::numeric_limits<uint16_t>::max());
+        ++m_progressiveLoadChunkCount;
+    }
+    if (needsUpdate || allDataReceived)
+        m_source.setData(data(), allDataReceived);
+#else
     m_source.setData(data(), allDataReceived);
-    
+#endif
+
     m_haveFrameCount = false;
     m_hasUniformFrameSize = true;
     return isSizeAvailable();
@@ -286,6 +389,7 @@ bool BitmapImage::isSizeAvailable()
     return m_sizeAvailable;
 }
 
+#if !PLATFORM(IOS)
 bool BitmapImage::ensureFrameIsCached(size_t index)
 {
     if (index >= frameCount())
@@ -295,25 +399,75 @@ bool BitmapImage::ensureFrameIsCached(size_t index)
         cacheFrame(index);
     return true;
 }
+#else
+bool BitmapImage::ensureFrameInfoIsCached(size_t index)
+{
+    if (index >= frameCount())
+        return false;
+
+    if (index >= m_frames.size() || !m_frames[index].m_haveInfo)
+        cacheFrameInfo(index);
+    return true;
+}
+#endif
 
 PassNativeImagePtr BitmapImage::frameAtIndex(size_t index)
 {
+#if PLATFORM(IOS)
+    return frameAtIndex(index, 1.0f);
+#else
     if (!ensureFrameIsCached(index))
-        return 0;
+        return nullptr;
+    return m_frames[index].m_frame;
+#endif
+}
+
+#if PLATFORM(IOS)
+PassNativeImagePtr BitmapImage::frameAtIndex(size_t index, float scaleHint)
+{
+    if (index >= frameCount())
+        return nullptr;
+
+    if (index >= m_frames.size() || !m_frames[index].m_frame)
+        cacheFrame(index, scaleHint);
+    else if (std::min(1.0f, scaleHint) > m_frames[index].m_scale) {
+        // If the image is already cached, but at too small a size, re-decode a larger version.
+        int sizeChange = -m_frames[index].m_frameBytes;
+        ASSERT(static_cast<int>(m_decodedSize) + sizeChange >= 0);
+        m_frames[index].clear(true);
+        invalidatePlatformData();
+        m_decodedSize += sizeChange;
+        if (imageObserver())
+            imageObserver()->decodedSizeChanged(this, sizeChange);
+
+        cacheFrame(index, scaleHint);
+    }
     return m_frames[index].m_frame;
 }
+#endif
 
 bool BitmapImage::frameIsCompleteAtIndex(size_t index)
 {
+#if PLATFORM(IOS)
+    // FIXME: cacheFrameInfo does not set m_isComplete. Should it?
+    if (!ensureFrameInfoIsCached(index))
+        return false;
+#else
     if (!ensureFrameIsCached(index))
         return false;
+#endif
     return m_frames[index].m_isComplete;
 }
 
 float BitmapImage::frameDurationAtIndex(size_t index)
 {
+#if PLATFORM(IOS)
+    if (!ensureFrameInfoIsCached(index))
+        return 0;
+#else
     if (!ensureFrameIsCached(index))
         return 0;
+#endif
     return m_frames[index].m_duration;
 }
 
@@ -324,11 +478,15 @@ PassNativeImagePtr BitmapImage::nativeImageForCurrentFrame()
 
 bool BitmapImage::frameHasAlphaAtIndex(size_t index)
 {
+#if PLATFORM(IOS)
+    if (!ensureFrameInfoIsCached(index))
+        return true; // FIXME: Why would an invalid index return true here?
+#else
     if (m_frames.size() <= index)
         return true;
-
+#endif
     if (m_frames[index].m_haveMetadata)
-    return m_frames[index].m_hasAlpha;
+        return m_frames[index].m_hasAlpha;
 
     return m_source.frameHasAlphaAtIndex(index);
 }
@@ -338,18 +496,19 @@ bool BitmapImage::currentFrameKnownToBeOpaque()
     return !frameHasAlphaAtIndex(currentFrame());
 }
 
-ImageOrientation BitmapImage::currentFrameOrientation()
-{
-    return frameOrientationAtIndex(currentFrame());
-}
-
 ImageOrientation BitmapImage::frameOrientationAtIndex(size_t index)
 {
-    if (m_frames.size() <= index)
+#if PLATFORM(IOS)
+    // FIXME: cacheFrameInfo does not set m_orientation. Should it?
+    if (!ensureFrameInfoIsCached(index))
         return DefaultImageOrientation;
+#else
+    if (!ensureFrameIsCached(index))
+        return DefaultImageOrientation;
+#endif
 
     if (m_frames[index].m_haveMetadata)
-    return m_frames[index].m_orientation;
+        return m_frames[index].m_orientation;
 
     return m_source.orientationAtIndex(index);
 }
@@ -360,8 +519,6 @@ bool BitmapImage::notSolidColor()
     return size().width() != 1 || size().height() != 1 || frameCount() > 1;
 }
 #endif
-
-
 
 int BitmapImage::repetitionCount(bool imageKnownToBeComplete)
 {
@@ -410,12 +567,18 @@ void BitmapImage::startAnimation(bool catchUpIfNecessary)
     const double currentDuration = frameDurationAtIndex(m_currentFrame);
     m_desiredFrameStartTime += currentDuration;
 
+#if !PLATFORM(IOS)
     // When an animated image is more than five minutes out of date, the
     // user probably doesn't care about resyncing and we could burn a lot of
     // time looping through frames below.  Just reset the timings.
     const double cAnimationResyncCutoff = 5 * 60;
     if ((time - m_desiredFrameStartTime) > cAnimationResyncCutoff)
         m_desiredFrameStartTime = time + currentDuration;
+#else
+    // Maintaining frame-to-frame delays is more important than
+    // maintaining absolute animation timing, so reset the timings each frame.
+    m_desiredFrameStartTime = time + currentDuration;
+#endif
 
     // The image may load more slowly than it's supposed to animate, so that by
     // the time we reach the end of the first repetition, we're well behind.
@@ -432,7 +595,7 @@ void BitmapImage::startAnimation(bool catchUpIfNecessary)
 
     if (!catchUpIfNecessary || time < m_desiredFrameStartTime) {
         // Haven't yet reached time for next frame to start; delay until then.
-        m_frameTimer = new Timer<BitmapImage>(this, &BitmapImage::advanceAnimation);
+        m_frameTimer = std::make_unique<Timer<BitmapImage>>(this, &BitmapImage::advanceAnimation);
         m_frameTimer->startOneShot(std::max(m_desiredFrameStartTime - time, 0.));
     } else {
         // We've already reached or passed the time for the next frame to start.
@@ -482,8 +645,7 @@ void BitmapImage::stopAnimation()
 {
     // This timer is used to animate all occurrences of this image.  Don't invalidate
     // the timer unless all renderers have stopped drawing.
-    delete m_frameTimer;
-    m_frameTimer = 0;
+    m_frameTimer = nullptr;
 }
 
 void BitmapImage::resetAnimation()
@@ -498,14 +660,43 @@ void BitmapImage::resetAnimation()
     destroyDecodedDataIfNecessary(true);
 }
 
-unsigned BitmapImage::decodedSize() const
+void BitmapImage::drawPattern(GraphicsContext* ctxt, const FloatRect& tileRect, const AffineTransform& transform,
+    const FloatPoint& phase, ColorSpace styleColorSpace, CompositeOperator op, const FloatRect& destRect, BlendMode blendMode)
 {
-    return m_decodedSize;
+    if (tileRect.isEmpty())
+        return;
+
+    if (!ctxt->drawLuminanceMask()) {
+        Image::drawPattern(ctxt, tileRect, transform, phase, styleColorSpace, op, destRect, blendMode);
+        return;
+    }
+    if (!m_cachedImage) {
+        std::unique_ptr<ImageBuffer> buffer = ImageBuffer::create(expandedIntSize(tileRect.size()));
+        ASSERT(buffer.get());
+
+        ImageObserver* observer = imageObserver();
+        ASSERT(observer);
+
+        // Temporarily reset image observer, we don't want to receive any changeInRect() calls due to this relayout.
+        setImageObserver(0);
+
+        draw(buffer->context(), tileRect, tileRect, styleColorSpace, op, blendMode, ImageOrientationDescription());
+
+        setImageObserver(observer);
+        buffer->convertToLuminanceMask();
+
+        m_cachedImage = buffer->copyImage(DontCopyBackingStore, Unscaled);
+        m_cachedImage->setSpaceSize(spaceSize());
+
+        setImageObserver(observer);
+    }
+
+    ctxt->setDrawLuminanceMask(false);
+    m_cachedImage->drawPattern(ctxt, tileRect, transform, phase, styleColorSpace, op, destRect, blendMode);
 }
 
 
-
-void BitmapImage::advanceAnimation(Timer<BitmapImage>*)
+void BitmapImage::advanceAnimation(Timer<BitmapImage>&)
 {
     internalAdvanceAnimation(false);
     // At this point the image region has been marked dirty, and if it's
@@ -518,11 +709,6 @@ bool BitmapImage::internalAdvanceAnimation(bool skippingFrames)
     // Stop the animation.
     stopAnimation();
     
-    // See if anyone is still paying attention to this animation.  If not, we don't
-    // advance and will remain suspended at the current frame until the animation is resumed.
-    if (!skippingFrames && imageObserver()->shouldPauseAnimation(this))
-        return false;
-
     ++m_currentFrame;
     bool advancedAnimation = true;
     bool destroyAll = false;
@@ -570,7 +756,7 @@ Color BitmapImage::solidColor() const
 {
     return m_solidColor;
 }
-
+    
 bool BitmapImage::canAnimate()
 {
     return shouldAnimate() && frameCount() > 1;

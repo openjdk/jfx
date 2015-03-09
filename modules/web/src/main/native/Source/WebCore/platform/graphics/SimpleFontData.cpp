@@ -38,8 +38,6 @@
 #include "OpenTypeVerticalData.h"
 #endif
 
-using namespace std;
-
 namespace WebCore {
 
 const float smallCapsFontSizeMultiplier = 0.7f;
@@ -70,9 +68,9 @@ SimpleFontData::SimpleFontData(const FontPlatformData& platformData, bool isCust
 #endif
 }
 
-SimpleFontData::SimpleFontData(PassOwnPtr<AdditionalFontData> fontData, float fontSize, bool syntheticBold, bool syntheticItalic)
+SimpleFontData::SimpleFontData(std::unique_ptr<AdditionalFontData> fontData, float fontSize, bool syntheticBold, bool syntheticItalic)
     : m_platformData(FontPlatformData(fontSize, syntheticBold, syntheticItalic))
-    , m_fontData(fontData)
+    , m_fontData(std::move(fontData))
     , m_treatAsFixedPitch(false)
     , m_isCustomFont(true)
     , m_isLoading(false)
@@ -82,6 +80,9 @@ SimpleFontData::SimpleFontData(PassOwnPtr<AdditionalFontData> fontData, float fo
     , m_verticalData(0)
 #endif
     , m_hasVerticalGlyphs(false)
+#if PLATFORM(IOS)
+    , m_shouldNotBeUsedForArabic(false)
+#endif
 {
     m_fontData->initializeFontData(this, fontSize);
 }
@@ -104,7 +105,7 @@ void SimpleFontData::initCharWidths()
         m_avgCharWidth = m_fontMetrics.xHeight();
 
     if (m_maxCharWidth <= 0.f)
-        m_maxCharWidth = max(m_avgCharWidth, m_fontMetrics.floatAscent());
+        m_maxCharWidth = std::max(m_avgCharWidth, m_fontMetrics.floatAscent());
 }
 
 void SimpleFontData::platformGlyphInit()
@@ -229,6 +230,20 @@ PassRefPtr<SimpleFontData> SimpleFontData::brokenIdeographFontData() const
     return m_derivedFontData->brokenIdeograph;
 }
 
+PassRefPtr<SimpleFontData> SimpleFontData::nonSyntheticItalicFontData() const
+{
+    if (!m_derivedFontData)
+        m_derivedFontData = DerivedFontData::create(isCustomFont());
+    if (!m_derivedFontData->nonSyntheticItalic) {
+        FontPlatformData nonSyntheticItalicFontPlatformData(m_platformData);
+#if PLATFORM(COCOA)
+        nonSyntheticItalicFontPlatformData.m_syntheticOblique = false;
+#endif
+        m_derivedFontData->nonSyntheticItalic = create(nonSyntheticItalicFontPlatformData, isCustomFont(), false, true);
+    }
+    return m_derivedFontData->nonSyntheticItalic;
+}
+
 #ifndef NDEBUG
 String SimpleFontData::description() const
 {
@@ -261,7 +276,7 @@ SimpleFontData::DerivedFontData::~DerivedFontData()
         GlyphPageTreeNode::pruneTreeCustomFontData(verticalRightOrientation.get());
     if (uprightOrientation)
         GlyphPageTreeNode::pruneTreeCustomFontData(uprightOrientation.get());
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
     if (compositeFontReferences) {
         CFDictionaryRef dictionary = CFDictionaryRef(compositeFontReferences.get());
         CFIndex count = CFDictionaryGetCount(dictionary);

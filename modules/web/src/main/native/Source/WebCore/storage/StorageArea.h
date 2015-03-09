@@ -33,21 +33,21 @@
 
 namespace WebCore {
 
-    class Frame;
-    class StorageSyncManager;
-    typedef int ExceptionCode;
-    enum StorageType { LocalStorage, SessionStorage };
+class Frame;
+class StorageSyncManager;
+typedef int ExceptionCode;
+enum StorageType { LocalStorage, SessionStorage };
 
-    class StorageArea : public RefCounted<StorageArea> {
-    public:
-        virtual ~StorageArea() { }
+class StorageArea : public RefCounted<StorageArea> {
+public:
+    virtual ~StorageArea() { }
 
     virtual unsigned length() = 0;
     virtual String key(unsigned index) = 0;
     virtual String item(const String& key) = 0;
     virtual void setItem(Frame* sourceFrame, const String& key, const String& value, bool& quotaException) = 0;
     virtual void removeItem(Frame* sourceFrame, const String& key) = 0;
-        virtual void clear(Frame* sourceFrame) = 0;
+    virtual void clear(Frame* sourceFrame) = 0;
     virtual bool contains(const String& key) = 0;
 
     virtual bool canAccessStorage(Frame*) = 0;
@@ -55,10 +55,10 @@ namespace WebCore {
 
     virtual size_t memoryBytesUsedByCache() = 0;
 
-        virtual void incrementAccessCount() { }
-        virtual void decrementAccessCount() { }
+    virtual void incrementAccessCount() { }
+    virtual void decrementAccessCount() { }
     virtual void closeDatabaseIfIdle() { }
-    };
+};
 
 } // namespace WebCore
 

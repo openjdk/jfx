@@ -28,6 +28,7 @@
 
 #include <wtf/Assertions.h>
 #include <wtf/HashMap.h>
+#include <wtf/MainThread.h>
 #include <wtf/OwnPtr.h>
 #include <wtf/PassOwnPtr.h>
 
@@ -83,7 +84,7 @@ public:
     virtual bool isRefCountedWrapper() const { return false; }
 #endif
 
-    static void provideTo(Supplementable<T>* host, const char* key, PassOwnPtr<Supplement<T> > supplement)
+    static void provideTo(Supplementable<T>* host, const char* key, PassOwnPtr<Supplement<T>> supplement)
     {
         host->provideSupplement(key, supplement);
     }
@@ -97,22 +98,22 @@ public:
 template<typename T>
 class Supplementable {
 public:
-    void provideSupplement(const char* key, PassOwnPtr<Supplement<T> > supplement)
+    void provideSupplement(const char* key, PassOwnPtr<Supplement<T>> supplement)
     {
-        ASSERT(m_threadId == currentThread());
+        ASSERT(canAccessThreadLocalDataForThread(m_threadId));
         ASSERT(!m_supplements.get(key));
         m_supplements.set(key, supplement);
     }
 
     void removeSupplement(const char* key)
     {
-        ASSERT(m_threadId == currentThread());
+        ASSERT(canAccessThreadLocalDataForThread(m_threadId));
         m_supplements.remove(key);
     }
 
     Supplement<T>* requireSupplement(const char* key)
     {
-        ASSERT(m_threadId == currentThread());
+        ASSERT(canAccessThreadLocalDataForThread(m_threadId));
         return m_supplements.get(key);
     }
 
@@ -122,7 +123,7 @@ protected:
 #endif
 
 private:
-    typedef HashMap<const char*, OwnPtr<Supplement<T> >, PtrHash<const char*> > SupplementMap;
+    typedef HashMap<const char*, OwnPtr<Supplement<T>>, PtrHash<const char*>> SupplementMap;
     SupplementMap m_supplements;
 #if !ASSERT_DISABLED
     ThreadIdentifier m_threadId;

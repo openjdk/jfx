@@ -32,9 +32,9 @@ namespace WebCore {
 class HTMLPlugInElement;
 class Widget;
 
-class PluginDocument FINAL : public HTMLDocument {
+class PluginDocument final : public HTMLDocument {
 public:
-    static PassRefPtr<PluginDocument> create(Frame* frame, const KURL& url)
+    static PassRefPtr<PluginDocument> create(Frame* frame, const URL& url)
     {
         return adoptRef(new PluginDocument(frame, url));
     }
@@ -44,38 +44,28 @@ public:
     Widget* pluginWidget();
     HTMLPlugInElement* pluginElement() { return m_pluginElement.get(); }
 
-    virtual void detach() OVERRIDE;
+    void detachFromPluginElement();
 
     void cancelManualPluginLoad();
 
     bool shouldLoadPluginManually() { return m_shouldLoadPluginManually; }
 
 private:
-    PluginDocument(Frame*, const KURL&);
+    PluginDocument(Frame*, const URL&);
 
-    virtual PassRefPtr<DocumentParser> createParser() OVERRIDE;
-        
+    virtual PassRefPtr<DocumentParser> createParser() override;
+
     void setShouldLoadPluginManually(bool loadManually) { m_shouldLoadPluginManually = loadManually; }
 
     bool m_shouldLoadPluginManually;
     RefPtr<HTMLPlugInElement> m_pluginElement;
 };
 
-inline PluginDocument* toPluginDocument(Document* document)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!document || document->isPluginDocument());
-    return static_cast<PluginDocument*>(document);
-}
+inline bool isPluginDocument(const Document& document) { return document.isPluginDocument(); }
+void isPluginDocument(const PluginDocument&); // Catch unnecessary runtime check of type known at compile time.
 
-inline const PluginDocument* toPluginDocument(const Document* document)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!document || document->isPluginDocument());
-    return static_cast<const PluginDocument*>(document);
-}
+DOCUMENT_TYPE_CASTS(PluginDocument)
 
-// This will catch anyone doing an unnecessary cast.
-void toPluginDocument(const PluginDocument*);
-    
 }
 
 #endif // PluginDocument_h

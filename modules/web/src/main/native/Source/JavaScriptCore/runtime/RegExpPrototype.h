@@ -30,27 +30,26 @@ namespace JSC {
     public:
         typedef RegExpObject Base;
 
-        static RegExpPrototype* create(ExecState* exec, JSGlobalObject* globalObject, Structure* structure, RegExp* regExp)
+        static RegExpPrototype* create(VM& vm, Structure* structure, RegExp* regExp)
         {
-            RegExpPrototype* prototype = new (NotNull, allocateCell<RegExpPrototype>(*exec->heap())) RegExpPrototype(globalObject, structure, regExp);
-            prototype->finishCreation(globalObject);
+            RegExpPrototype* prototype = new (NotNull, allocateCell<RegExpPrototype>(vm.heap)) RegExpPrototype(vm, structure, regExp);
+            prototype->finishCreation(vm);
             return prototype;
         }
-
-        static const ClassInfo s_info;
+        
+        DECLARE_INFO;
 
         static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
         {
-            return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), &s_info);
+            return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
         }
 
     protected:
-        RegExpPrototype(JSGlobalObject*, Structure*, RegExp*);
+        RegExpPrototype(VM&, Structure*, RegExp*);
         static const unsigned StructureFlags = OverridesGetOwnPropertySlot | RegExpObject::StructureFlags;
 
     private:
-        static bool getOwnPropertySlot(JSCell*, ExecState*, PropertyName, PropertySlot&);
-        static bool getOwnPropertyDescriptor(JSObject*, ExecState*, PropertyName, PropertyDescriptor&);
+        static bool getOwnPropertySlot(JSObject*, ExecState*, PropertyName, PropertySlot&);
     };
 
 } // namespace JSC

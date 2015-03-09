@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2011, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,10 +38,9 @@ class MediaPlayerPrivateAVFoundationCF : public MediaPlayerPrivateAVFoundation {
 public:
     virtual ~MediaPlayerPrivateAVFoundationCF();
 
-    static void registerMediaEngine(MediaEngineRegistrar);
+    virtual void tracksChanged() override;
 
-    //FIXME: this needs to be implemented
-    virtual InbandTextTrackPrivateAVF* currentTrack() const { return 0; }
+    static void registerMediaEngine(MediaEngineRegistrar);
 
 private:
     MediaPlayerPrivateAVFoundationCF(MediaPlayer*);
@@ -49,7 +48,7 @@ private:
     // Engine support
     static PassOwnPtr<MediaPlayerPrivateInterface> create(MediaPlayer*);
     static void getSupportedTypes(HashSet<String>& types);
-    static MediaPlayer::SupportsType supportsType(const String& type, const String& codecs, const KURL&);
+    static MediaPlayer::SupportsType supportsType(const MediaEngineSupportParameters&);
     static bool isAvailable();
 
     virtual void cancelLoad();
@@ -77,16 +76,16 @@ private:
     virtual void checkPlayability();
     virtual void updateRate();
     virtual float rate() const;
-    virtual void seekToTime(double time);
-    virtual unsigned totalBytes() const;
+    virtual void seekToTime(double time, double negativeTolerance, double positiveTolerance);
+    virtual unsigned long long totalBytes() const;
     virtual PassRefPtr<TimeRanges> platformBufferedTimeRanges() const;
     virtual double platformMinTimeSeekable() const;
     virtual double platformMaxTimeSeekable() const;
     virtual float platformDuration() const;
     virtual float platformMaxTimeLoaded() const;
     virtual void beginLoadingMetadata();
-    virtual void tracksChanged();
     virtual void sizeChanged();
+    virtual bool requiresImmediateCompositing() const override;
 
     virtual bool hasAvailableVideoFrame() const;
 
@@ -99,11 +98,27 @@ private:
     virtual bool hasContextRenderer() const;
     virtual bool hasLayerRenderer() const;
 
+    virtual void updateVideoLayerGravity() override;
+
     virtual void contentsNeedsDisplay();
+
+    virtual String languageOfPrimaryAudioTrack() const override;
+
+#if HAVE(AVFOUNDATION_MEDIA_SELECTION_GROUP)
+    void processMediaSelectionOptions();
+#endif
+
+    virtual void setCurrentTrack(InbandTextTrackPrivateAVF*) override;
+    virtual InbandTextTrackPrivateAVF* currentTrack() const override;
+
+#if !HAVE(AVFOUNDATION_LEGIBLE_OUTPUT_SUPPORT)
+    void processLegacyClosedCaptionsTracks();
+#endif
 
     friend class AVFWrapper;
     AVFWrapper* m_avfWrapper;
     
+    mutable String m_languageOfPrimaryAudioTrack;
     bool m_videoFrameHasDrawn;
 };
 

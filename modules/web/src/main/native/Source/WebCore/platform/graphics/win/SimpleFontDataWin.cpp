@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2008 Apple Inc.  All rights reserved.
+ * Copyright (C) 2006, 2007, 2008, 2013 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,6 +36,7 @@
 #include "HWndDC.h"
 #include <mlang.h>
 #include <wtf/MathExtras.h>
+#include <wtf/win/GDIObject.h>
 
 namespace WebCore {
 
@@ -80,32 +81,32 @@ void SimpleFontData::initGDIFont()
         return;
     }
 
-     HWndDC hdc(0);
-     HGDIOBJ oldFont = SelectObject(hdc, m_platformData.hfont());
-     OUTLINETEXTMETRIC metrics;
-     GetOutlineTextMetrics(hdc, sizeof(metrics), &metrics);
-     TEXTMETRIC& textMetrics = metrics.otmTextMetrics;
-     float ascent = textMetrics.tmAscent;
-     float descent = textMetrics.tmDescent;
-     float lineGap = textMetrics.tmExternalLeading;
-     m_fontMetrics.setAscent(ascent);
-     m_fontMetrics.setDescent(descent);
-     m_fontMetrics.setLineGap(lineGap);
-     m_fontMetrics.setLineSpacing(lroundf(ascent) + lroundf(descent) + lroundf(lineGap));
-     m_avgCharWidth = textMetrics.tmAveCharWidth;
-     m_maxCharWidth = textMetrics.tmMaxCharWidth;
-     float xHeight = ascent * 0.56f; // Best guess for xHeight if no x glyph is present.
+    HWndDC hdc(0);
+    HGDIOBJ oldFont = SelectObject(hdc, m_platformData.hfont());
+    OUTLINETEXTMETRIC metrics;
+    GetOutlineTextMetrics(hdc, sizeof(metrics), &metrics);
+    TEXTMETRIC& textMetrics = metrics.otmTextMetrics;
+    float ascent = textMetrics.tmAscent;
+    float descent = textMetrics.tmDescent;
+    float lineGap = textMetrics.tmExternalLeading;
+    m_fontMetrics.setAscent(ascent);
+    m_fontMetrics.setDescent(descent);
+    m_fontMetrics.setLineGap(lineGap);
+    m_fontMetrics.setLineSpacing(lroundf(ascent) + lroundf(descent) + lroundf(lineGap));
+    m_avgCharWidth = textMetrics.tmAveCharWidth;
+    m_maxCharWidth = textMetrics.tmMaxCharWidth;
+    float xHeight = ascent * 0.56f; // Best guess for xHeight if no x glyph is present.
 #if !OS(WINCE)
-     GLYPHMETRICS gm;
+    GLYPHMETRICS gm;
     static const MAT2 identity = { 0, 1,  0, 0,  0, 0,  0, 1 };
     DWORD len = GetGlyphOutline(hdc, 'x', GGO_METRICS, &gm, 0, 0, &identity);
-     if (len != GDI_ERROR && gm.gmptGlyphOrigin.y > 0)
-         xHeight = gm.gmptGlyphOrigin.y;
+    if (len != GDI_ERROR && gm.gmptGlyphOrigin.y > 0)
+        xHeight = gm.gmptGlyphOrigin.y;
 #endif
-     m_fontMetrics.setXHeight(xHeight);
-     m_fontMetrics.setUnitsPerEm(metrics.otmEMSquare);
+    m_fontMetrics.setXHeight(xHeight);
+    m_fontMetrics.setUnitsPerEm(metrics.otmEMSquare);
 
-     SelectObject(hdc, oldFont);
+    SelectObject(hdc, oldFont);
 }
 
 void SimpleFontData::platformCharWidthInit()
@@ -138,8 +139,8 @@ PassRefPtr<SimpleFontData> SimpleFontData::platformCreateScaledFontData(const Fo
     LOGFONT winfont;
     GetObject(m_platformData.hfont(), sizeof(LOGFONT), &winfont);
     winfont.lfHeight = -lroundf(scaledSize * (m_platformData.useGDI() ? 1 : 32));
-    HFONT hfont = CreateFontIndirect(&winfont);
-    return SimpleFontData::create(FontPlatformData(hfont, scaledSize, m_platformData.syntheticBold(), m_platformData.syntheticOblique(), m_platformData.useGDI()), isCustomFont(), false);
+    auto hfont = adoptGDIObject(::CreateFontIndirect(&winfont));
+    return SimpleFontData::create(FontPlatformData(std::move(hfont), scaledSize, m_platformData.syntheticBold(), m_platformData.syntheticOblique(), m_platformData.useGDI()), isCustomFont(), false);
 }
 
 bool SimpleFontData::containsCharacters(const UChar* characters, int length) const
@@ -205,18 +206,18 @@ FloatRect SimpleFontData::boundsForGDIGlyph(Glyph glyph) const
     HWndDC hdc(0);
     SetGraphicsMode(hdc, GM_ADVANCED);
     HGDIOBJ oldFont = SelectObject(hdc, m_platformData.hfont());
-    
+
     GLYPHMETRICS gdiMetrics;
     static const MAT2 identity = { 0, 1,  0, 0,  0, 0,  0, 1 };
     GetGlyphOutline(hdc, glyph, GGO_METRICS | GGO_GLYPH_INDEX, &gdiMetrics, 0, 0, &identity);
-    
+
     SelectObject(hdc, oldFont);
-    
+
     return FloatRect(gdiMetrics.gmptGlyphOrigin.x, -gdiMetrics.gmptGlyphOrigin.y,
         gdiMetrics.gmBlackBoxX + m_syntheticBoldOffset, gdiMetrics.gmBlackBoxY); 
 #endif
 }
-    
+
 float SimpleFontData::widthForGDIGlyph(Glyph glyph) const
 {
     HWndDC hdc(0);

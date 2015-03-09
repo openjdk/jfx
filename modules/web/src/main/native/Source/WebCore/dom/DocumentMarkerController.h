@@ -53,8 +53,18 @@ public:
     void addMarkerToNode(Node*, unsigned startOffset, unsigned length, DocumentMarker::MarkerType);
     void addMarkerToNode(Node*, unsigned startOffset, unsigned length, DocumentMarker::MarkerType, PassRefPtr<DocumentMarkerDetails>);
     void addTextMatchMarker(const Range*, bool activeMatch);
+#if PLATFORM(IOS)
+    void addMarker(Range*, DocumentMarker::MarkerType, String description, const Vector<String>& interpretations, const RetainPtr<id>& metadata);
+    void addDictationPhraseWithAlternativesMarker(Range*, const Vector<String>& interpretations);
+    void addDictationResultMarker(Range*, const RetainPtr<id>& metadata);
+#endif
 
     void copyMarkers(Node* srcNode, unsigned startOffset, int length, Node* dstNode, int delta);
+    bool hasMarkers() const
+    {
+        ASSERT(m_markers.isEmpty() == !m_possiblyExistingMarkerTypes.intersects(DocumentMarker::AllMarkers()));
+        return !m_markers.isEmpty();
+    }
     bool hasMarkers(Range*, DocumentMarker::MarkerTypes = DocumentMarker::AllMarkers());
 
     // When a marker partially overlaps with range, if removePartiallyOverlappingMarkers is true, we completely
@@ -75,7 +85,6 @@ public:
     DocumentMarker* markerContainingPoint(const LayoutPoint&, DocumentMarker::MarkerType);
     Vector<DocumentMarker*> markersFor(Node*, DocumentMarker::MarkerTypes = DocumentMarker::AllMarkers());
     Vector<DocumentMarker*> markersInRange(Range*, DocumentMarker::MarkerTypes);
-    Vector<DocumentMarker> markersForNode(Node*);
     Vector<IntRect> renderedRectsForMarkers(DocumentMarker::MarkerType);
     void clearDescriptionOnMarkersIntersectingRange(Range*, DocumentMarker::MarkerTypes);
 
@@ -87,7 +96,7 @@ private:
     void addMarker(Node*, const DocumentMarker&);
 
     typedef Vector<RenderedDocumentMarker> MarkerList;
-    typedef HashMap<RefPtr<Node>, OwnPtr<MarkerList> > MarkerMap;
+    typedef HashMap<RefPtr<Node>, OwnPtr<MarkerList>> MarkerMap;
     bool possiblyHasMarkers(DocumentMarker::MarkerTypes);
     void removeMarkersFromList(MarkerMap::iterator, DocumentMarker::MarkerTypes);
 

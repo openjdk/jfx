@@ -25,13 +25,10 @@
 #ifndef SVGAnimationElement_h
 #define SVGAnimationElement_h
 
-#if ENABLE(SVG)
-#include "ElementTimeControl.h"
 #include "SMILTime.h"
 #include "SVGAnimatedBoolean.h"
 #include "SVGExternalResourcesRequired.h"
 #include "SVGSMILElement.h"
-#include "SVGStringList.h"
 #include "SVGTests.h"
 #include "UnitBezier.h"
 
@@ -68,23 +65,21 @@ class SVGAnimatedType;
 
 class SVGAnimationElement : public SVGSMILElement,
                             public SVGTests,
-                            public SVGExternalResourcesRequired,
-                            public ElementTimeControl {
+                            public SVGExternalResourcesRequired {
 public:
     // SVGAnimationElement
     float getStartTime() const;
     float getCurrentTime() const;
     float getSimpleDuration(ExceptionCode&) const;
 
-    // ElementTimeControl
-    virtual void beginElement();
-    virtual void beginElementAt(float offset);
-    virtual void endElement();
-    virtual void endElementAt(float offset);
+    void beginElement();
+    void beginElementAt(float offset);
+    void endElement();
+    void endElementAt(float offset);
 
     static bool isTargetAttributeCSSProperty(SVGElement*, const QualifiedName&);
 
-    virtual bool isAdditive() const;
+    virtual bool isAdditive() const override;
     bool isAccumulated() const;
     AnimationMode animationMode() const { return m_animationMode; }
     CalcMode calcMode() const { return m_calcMode; }
@@ -168,14 +163,14 @@ public:
     }
 
 protected:
-    SVGAnimationElement(const QualifiedName&, Document*);
+    SVGAnimationElement(const QualifiedName&, Document&);
 
     void computeCSSPropertyValue(SVGElement*, CSSPropertyID, String& value);
     virtual void determinePropertyValueTypes(const String& from, const String& to);
 
     bool isSupportedAttribute(const QualifiedName&);
-    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
-    virtual void svgAttributeChanged(const QualifiedName&) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
+    virtual void svgAttributeChanged(const QualifiedName&) override;
 
     enum AttributeType {
         AttributeTypeCSS,
@@ -191,14 +186,14 @@ protected:
     String targetAttributeBaseValue();
 
     // from SVGSMILElement
-    virtual void startedActiveInterval() OVERRIDE;
-    virtual void updateAnimation(float percent, unsigned repeat, SVGSMILElement* resultElement) OVERRIDE;
+    virtual void startedActiveInterval() override;
+    virtual void updateAnimation(float percent, unsigned repeat, SVGSMILElement* resultElement) override;
 
     AnimatedPropertyValueType m_fromPropertyValueType;
     AnimatedPropertyValueType m_toPropertyValueType;
 
-    virtual void setTargetElement(SVGElement*) OVERRIDE;
-    virtual void setAttributeName(const QualifiedName&) OVERRIDE;
+    virtual void setTargetElement(SVGElement*) override;
+    virtual void setAttributeName(const QualifiedName&) override;
     bool hasInvalidCSSAttributeType() const { return m_hasInvalidCSSAttributeType; }
 
     virtual void updateAnimationMode();
@@ -206,7 +201,7 @@ protected:
     void setCalcMode(CalcMode calcMode) { m_calcMode = calcMode; }
 
 private:
-    virtual void animationAttributeChanged() OVERRIDE;
+    virtual void animationAttributeChanged() override;
     void setAttributeType(const AtomicString&);
 
     void checkInvalidCSSAttributeType(SVGElement*);
@@ -233,9 +228,9 @@ private:
     END_DECLARE_ANIMATED_PROPERTIES
 
     // SVGTests
-    virtual void synchronizeRequiredFeatures() { SVGTests::synchronizeRequiredFeatures(this); }
-    virtual void synchronizeRequiredExtensions() { SVGTests::synchronizeRequiredExtensions(this); }
-    virtual void synchronizeSystemLanguage() { SVGTests::synchronizeSystemLanguage(this); }
+    virtual void synchronizeRequiredFeatures() override { SVGTests::synchronizeRequiredFeatures(this); }
+    virtual void synchronizeRequiredExtensions() override { SVGTests::synchronizeRequiredExtensions(this); }
+    virtual void synchronizeSystemLanguage() override { SVGTests::synchronizeSystemLanguage(this); }
 
     void setCalcMode(const AtomicString&);
 
@@ -255,5 +250,4 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(SVG)
 #endif // SVGAnimationElement_h

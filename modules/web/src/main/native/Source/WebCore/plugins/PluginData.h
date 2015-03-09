@@ -56,7 +56,7 @@ public:
     const Vector<PluginInfo>& plugins() const { return m_plugins; }
     const Vector<MimeClassInfo>& mimes() const { return m_mimes; }
     const Vector<size_t>& mimePluginIndices() const { return m_mimePluginIndices; }
-    
+
     enum AllowedPluginTypes {
         AllPlugins,
         OnlyApplicationPlugins

@@ -28,11 +28,9 @@
 #include "HTMLElementStack.h"
 
 #include "DocumentFragment.h"
-#include "Element.h"
-#include "HTMLNames.h"
-#include "MathMLNames.h"
-#include "SVGNames.h"
-#include <wtf/PassOwnPtr.h>
+#include "HTMLOptGroupElement.h"
+#include "HTMLOptionElement.h"
+#include "HTMLTableElement.h"
 
 namespace WebCore {
 
@@ -53,7 +51,7 @@ inline bool isScopeMarker(HTMLStackItem* item)
         || item->hasTagName(captionTag)
         || item->hasTagName(marqueeTag)
         || item->hasTagName(objectTag)
-        || item->hasTagName(tableTag)
+        || isHTMLTableElement(item->node())
         || item->hasTagName(tdTag)
         || item->hasTagName(thTag)
         || item->hasTagName(MathMLNames::miTag)
@@ -80,7 +78,7 @@ inline bool isListItemScopeMarker(HTMLStackItem* item)
 
 inline bool isTableScopeMarker(HTMLStackItem* item)
 {
-    return item->hasTagName(tableTag)
+    return isHTMLTableElement(item->node())
 #if ENABLE(TEMPLATE_ELEMENT)
         || item->hasTagName(templateTag)
 #endif
@@ -122,15 +120,14 @@ inline bool isButtonScopeMarker(HTMLStackItem* item)
 
 inline bool isSelectScopeMarker(HTMLStackItem* item)
 {
-    return !item->hasTagName(optgroupTag)
-        && !item->hasTagName(optionTag);
+    return !isHTMLOptGroupElement(item->node()) && !isHTMLOptionElement(item->node());
 }
 
 }
 
-HTMLElementStack::ElementRecord::ElementRecord(PassRefPtr<HTMLStackItem> item, PassOwnPtr<ElementRecord> next)
+HTMLElementStack::ElementRecord::ElementRecord(PassRefPtr<HTMLStackItem> item, std::unique_ptr<ElementRecord> next)
     : m_item(item)
-    , m_next(next)
+    , m_next(std::move(next))
 {
     ASSERT(m_item);
 }
@@ -367,7 +364,7 @@ void HTMLElementStack::insertAbove(PassRefPtr<HTMLStackItem> item, ElementRecord
     ASSERT(!item->hasTagName(HTMLNames::headTag));
     ASSERT(!item->hasTagName(HTMLNames::bodyTag));
     ASSERT(m_rootNode);
-    if (recordBelow == m_top) {
+    if (recordBelow == m_top.get()) {
         push(item);
         return;
     }
@@ -377,7 +374,7 @@ void HTMLElementStack::insertAbove(PassRefPtr<HTMLStackItem> item, ElementRecord
             continue;
 
         m_stackDepth++;
-        recordAbove->setNext(adoptPtr(new ElementRecord(item, recordAbove->releaseNext())));
+        recordAbove->setNext(std::make_unique<ElementRecord>(item, recordAbove->releaseNext()));
         recordAbove->next()->element()->beginParsingChildren();
         return;
     }
@@ -575,7 +572,7 @@ void HTMLElementStack::pushCommon(PassRefPtr<HTMLStackItem> item)
     ASSERT(m_rootNode);
 
     m_stackDepth++;
-    m_top = adoptPtr(new ElementRecord(item, m_top.release()));
+    m_top = std::make_unique<ElementRecord>(item, std::move(m_top));
 }
 
 void HTMLElementStack::popCommon()

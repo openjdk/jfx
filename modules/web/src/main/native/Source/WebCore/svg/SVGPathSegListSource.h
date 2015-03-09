@@ -20,40 +20,33 @@
 #ifndef SVGPathSegListSource_h
 #define SVGPathSegListSource_h
 
-#if ENABLE(SVG)
 #include "FloatPoint.h"
 #include "SVGPathSeg.h"
 #include "SVGPathSegList.h"
 #include "SVGPathSource.h"
-#include <wtf/PassOwnPtr.h>
 #include <wtf/RefPtr.h>
 
 namespace WebCore {
 
 class SVGPathSegListSource : public SVGPathSource {
 public:
-    static PassOwnPtr<SVGPathSegListSource> create(const SVGPathSegList& pathSegList)
-    {
-        return adoptPtr(new SVGPathSegListSource(pathSegList));
-    }
+    explicit SVGPathSegListSource(const SVGPathSegList&);
 
 private:
-    SVGPathSegListSource(const SVGPathSegList&);
+    virtual bool hasMoreData() const override;
+    virtual bool moveToNextToken() override { return true; }
+    virtual bool parseSVGSegmentType(SVGPathSegType&) override;
+    virtual SVGPathSegType nextCommand(SVGPathSegType) override;
 
-    virtual bool hasMoreData() const;
-    virtual bool moveToNextToken() { return true; }
-    virtual bool parseSVGSegmentType(SVGPathSegType&);
-    virtual SVGPathSegType nextCommand(SVGPathSegType);
-
-    virtual bool parseMoveToSegment(FloatPoint&);
-    virtual bool parseLineToSegment(FloatPoint&);
-    virtual bool parseLineToHorizontalSegment(float&);
-    virtual bool parseLineToVerticalSegment(float&);
-    virtual bool parseCurveToCubicSegment(FloatPoint&, FloatPoint&, FloatPoint&);
-    virtual bool parseCurveToCubicSmoothSegment(FloatPoint&, FloatPoint&);
-    virtual bool parseCurveToQuadraticSegment(FloatPoint&, FloatPoint&);
-    virtual bool parseCurveToQuadraticSmoothSegment(FloatPoint&);
-    virtual bool parseArcToSegment(float&, float&, float&, bool&, bool&, FloatPoint&);
+    virtual bool parseMoveToSegment(FloatPoint&) override;
+    virtual bool parseLineToSegment(FloatPoint&) override;
+    virtual bool parseLineToHorizontalSegment(float&) override;
+    virtual bool parseLineToVerticalSegment(float&) override;
+    virtual bool parseCurveToCubicSegment(FloatPoint&, FloatPoint&, FloatPoint&) override;
+    virtual bool parseCurveToCubicSmoothSegment(FloatPoint&, FloatPoint&) override;
+    virtual bool parseCurveToQuadraticSegment(FloatPoint&, FloatPoint&) override;
+    virtual bool parseCurveToQuadraticSmoothSegment(FloatPoint&) override;
+    virtual bool parseArcToSegment(float&, float&, float&, bool&, bool&, FloatPoint&) override;
 
     const SVGPathSegList& m_pathSegList;
     RefPtr<SVGPathSeg> m_segment;
@@ -63,5 +56,4 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(SVG)
 #endif // SVGPathSegListSource_h

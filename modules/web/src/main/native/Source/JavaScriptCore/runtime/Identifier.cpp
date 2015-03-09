@@ -25,7 +25,7 @@
 #include "JSObject.h"
 #include "JSScope.h"
 #include "NumericStrings.h"
-#include "Operations.h"
+#include "JSCInlines.h"
 #include <new>
 #include <string.h>
 #include <wtf/Assertions.h>
@@ -62,7 +62,7 @@ struct IdentifierASCIIStringTranslator {
     static void translate(StringImpl*& location, const LChar* c, unsigned hash)
     {
         size_t length = strlen(reinterpret_cast<const char*>(c));
-        location = StringImpl::createFromLiteral(reinterpret_cast<const char*>(c), length).leakRef();
+        location = &StringImpl::createFromLiteral(reinterpret_cast<const char*>(c), length).leakRef();
         location->setHash(hash);
     }
 };
@@ -81,14 +81,14 @@ struct IdentifierLCharFromUCharTranslator {
     static void translate(StringImpl*& location, const CharBuffer<UChar>& buf, unsigned hash)
     {
         LChar* d;
-        StringImpl* r = StringImpl::createUninitialized(buf.length, d).leakRef();
+        StringImpl& r = StringImpl::createUninitialized(buf.length, d).leakRef();
         WTF::copyLCharsFromUCharSource(d, buf.s, buf.length);
-        r->setHash(hash);
-        location = r; 
+        r.setHash(hash);
+        location = &r;
     }
 };
 
-PassRefPtr<StringImpl> Identifier::add(VM* vm, const char* c)
+PassRef<StringImpl> Identifier::add(VM* vm, const char* c)
 {
     ASSERT(c);
     ASSERT(c[0]);
@@ -96,11 +96,6 @@ PassRefPtr<StringImpl> Identifier::add(VM* vm, const char* c)
         return add(vm, vm->smallStrings.singleCharacterStringRep(c[0]));
 
     IdentifierTable& identifierTable = *vm->identifierTable;
-    LiteralIdentifierTable& literalIdentifierTable = identifierTable.literalTable();
-
-    const LiteralIdentifierTable::iterator& iter = literalIdentifierTable.find(c);
-    if (iter != literalIdentifierTable.end())
-        return iter->value;
 
     HashSet<StringImpl*>::AddResult addResult = identifierTable.add<const LChar*, IdentifierASCIIStringTranslator>(reinterpret_cast<const LChar*>(c));
 
@@ -108,17 +103,15 @@ PassRefPtr<StringImpl> Identifier::add(VM* vm, const char* c)
     // The boolean in the pair tells us if that is so.
     RefPtr<StringImpl> addedString = addResult.isNewEntry ? adoptRef(*addResult.iterator) : *addResult.iterator;
 
-    literalIdentifierTable.add(c, addedString.get());
-
-    return addedString.release();
+    return addedString.releaseNonNull();
 }
 
-PassRefPtr<StringImpl> Identifier::add(ExecState* exec, const char* c)
+PassRef<StringImpl> Identifier::add(ExecState* exec, const char* c)
 {
     return add(&exec->vm(), c);
 }
 
-PassRefPtr<StringImpl> Identifier::add8(VM* vm, const UChar* s, int length)
+PassRef<StringImpl> Identifier::add8(VM* vm, const UChar* s, int length)
 {
     if (length == 1) {
         UChar c = s[0];
@@ -128,17 +121,19 @@ PassRefPtr<StringImpl> Identifier::add8(VM* vm, const UChar* s, int length)
     }
     
     if (!length)
-        return StringImpl::empty();
+        return *StringImpl::empty();
     CharBuffer<UChar> buf = { s, static_cast<unsigned>(length) };
     HashSet<StringImpl*>::AddResult addResult = vm->identifierTable->add<CharBuffer<UChar>, IdentifierLCharFromUCharTranslator >(buf);
     
     // If the string is newly-translated, then we need to adopt it.
     // The boolean in the pair tells us if that is so.
-    return addResult.isNewEntry ? adoptRef(*addResult.iterator) : *addResult.iterator;
+    return addResult.isNewEntry ? adoptRef(**addResult.iterator) : **addResult.iterator;
 }
 
-PassRefPtr<StringImpl> Identifier::addSlowCase(VM* vm, StringImpl* r)
+PassRef<StringImpl> Identifier::addSlowCase(VM* vm, StringImpl* r)
 {
+    if (r->isEmptyUnique())
+        return *r;
     ASSERT(!r->isIdentifier());
     // The empty & null strings are static singletons, and static strings are handled
     // in ::add() in the header, so we should never get here with a zero length string.
@@ -149,13 +144,13 @@ PassRefPtr<StringImpl> Identifier::addSlowCase(VM* vm, StringImpl* r)
         if (c <= maxSingleCharacterString)
             r = vm->smallStrings.singleCharacterStringRep(c);
             if (r->isIdentifier())
-                return r;
+                return *r;
     }
 
-    return *vm->identifierTable->add(r).iterator;
+    return **vm->identifierTable->add(r).iterator;
 }
 
-PassRefPtr<StringImpl> Identifier::addSlowCase(ExecState* exec, StringImpl* r)
+PassRef<StringImpl> Identifier::addSlowCase(ExecState* exec, StringImpl* r)
 {
     return addSlowCase(&exec->vm(), r);
 }

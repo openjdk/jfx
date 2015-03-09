@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
 #ifndef BatchedTransitionOptimizer_h
@@ -31,25 +31,25 @@
 
 namespace JSC {
 
-    class BatchedTransitionOptimizer {
-        WTF_MAKE_NONCOPYABLE(BatchedTransitionOptimizer);
-    public:
+class BatchedTransitionOptimizer {
+    WTF_MAKE_NONCOPYABLE(BatchedTransitionOptimizer);
+public:
     BatchedTransitionOptimizer(VM& vm, JSObject* object)
         : m_vm(&vm)
-            , m_object(object)
-        {
-        }
+        , m_object(object)
+    {
+    }
 
-        ~BatchedTransitionOptimizer()
-        {
-            if (m_object->structure()->isDictionary())
+    ~BatchedTransitionOptimizer()
+    {
+        if (m_object->structure()->isDictionary())
             m_object->flattenDictionaryObject(*m_vm);
-        }
+    }
 
-    private:
+private:
     VM* m_vm;
-        JSObject* m_object;
-    };
+    JSObject* m_object;
+};
 
 } // namespace JSC
 

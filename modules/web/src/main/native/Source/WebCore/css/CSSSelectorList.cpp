@@ -39,9 +39,9 @@ CSSSelectorList::~CSSSelectorList()
 
 CSSSelectorList::CSSSelectorList(const CSSSelectorList& other)
 {
-    unsigned otherLength = other.length();
-    m_selectorArray = reinterpret_cast<CSSSelector*>(fastMalloc(sizeof(CSSSelector) * otherLength));
-    for (unsigned i = 0; i < otherLength; ++i)
+    unsigned otherComponentCount = other.componentCount();
+    m_selectorArray = reinterpret_cast<CSSSelector*>(fastMalloc(sizeof(CSSSelector) * otherComponentCount));
+    for (unsigned i = 0; i < otherComponentCount; ++i)
         new (NotNull, &m_selectorArray[i]) CSSSelector(other.m_selectorArray[i]);
 }
 
@@ -52,7 +52,7 @@ void CSSSelectorList::adopt(CSSSelectorList& list)
     list.m_selectorArray = 0;
 }
 
-void CSSSelectorList::adoptSelectorVector(Vector<OwnPtr<CSSParserSelector> >& selectorVector)
+void CSSSelectorList::adoptSelectorVector(Vector<std::unique_ptr<CSSParserSelector>>& selectorVector)
 {
     deleteSelectors();
     size_t flattenedSize = 0;
@@ -68,9 +68,11 @@ void CSSSelectorList::adoptSelectorVector(Vector<OwnPtr<CSSParserSelector> >& se
         while (current) {
             {
                 // Move item from the parser selector vector into m_selectorArray without invoking destructor (Ugh.)
-                CSSSelector* currentSelector = current->releaseSelector().leakPtr();
+                CSSSelector* currentSelector = current->releaseSelector().release();
                 memcpy(&m_selectorArray[arrayIndex], currentSelector, sizeof(CSSSelector));
-                fastDeleteSkippingDestructor(currentSelector);
+
+                // Free the underlying memory without invoking the destructor.
+                operator delete (currentSelector);
             }
             current = current->tagHistory();
             ASSERT(!m_selectorArray[arrayIndex].isLastInSelectorList());
@@ -85,7 +87,7 @@ void CSSSelectorList::adoptSelectorVector(Vector<OwnPtr<CSSParserSelector> >& se
     selectorVector.clear();
 }
 
-unsigned CSSSelectorList::length() const
+unsigned CSSSelectorList::componentCount() const
 {
     if (!m_selectorArray)
         return 0;
@@ -101,12 +103,12 @@ void CSSSelectorList::deleteSelectors()
         return;
 
     for (CSSSelector* s = m_selectorArray; ; ++s) {
-            s->~CSSSelector();
+        s->~CSSSelector();
         if (s->isLastInSelectorList())
-                break;
-        }
-        fastFree(m_selectorArray);
+            break;
     }
+    fastFree(m_selectorArray);
+}
 
 String CSSSelectorList::selectorsText() const
 {

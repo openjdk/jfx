@@ -31,9 +31,8 @@
 #include <wtf/PassRefPtr.h>
 #include <wtf/text/AtomicString.h>
 
-#if ENABLE(CSS_VARIABLES)
-#include "DataRef.h"
-#include "StyleVariableData.h"
+#if ENABLE(IOS_TEXT_AUTOSIZING)
+#include "TextSizeAdjustment.h"
 #endif
 
 namespace WebCore {
@@ -48,8 +47,8 @@ class StyleImage;
 // actually uses one of these properties.
 class StyleRareInheritedData : public RefCounted<StyleRareInheritedData> {
 public:
-    static PassRefPtr<StyleRareInheritedData> create() { return adoptRef(new StyleRareInheritedData); }
-    PassRefPtr<StyleRareInheritedData> copy() const { return adoptRef(new StyleRareInheritedData(*this)); }
+    static PassRef<StyleRareInheritedData> create() { return adoptRef(*new StyleRareInheritedData); }
+    PassRef<StyleRareInheritedData> copy() const;
     ~StyleRareInheritedData();
 
     bool operator==(const StyleRareInheritedData& o) const;
@@ -70,12 +69,13 @@ public:
     Color visitedLinkTextFillColor;
     Color visitedLinkTextEmphasisColor;    
 
-    OwnPtr<ShadowData> textShadow; // Our text shadow information for shadowed text drawing.
-    AtomicString highlight; // Apple-specific extension for custom highlight rendering.
+    std::unique_ptr<ShadowData> textShadow; // Our text shadow information for shadowed text drawing.
     
     RefPtr<CursorList> cursorData;
     Length indent;
     float m_effectiveZoom;
+    
+    Length wordSpacing;
 
     // Paged media properties.
     short widows;
@@ -96,7 +96,7 @@ public:
     unsigned hyphens : 2; // Hyphens
     unsigned textEmphasisFill : 1; // TextEmphasisFill
     unsigned textEmphasisMark : 3; // TextEmphasisMark
-    unsigned textEmphasisPosition : 1; // TextEmphasisPosition
+    unsigned textEmphasisPosition : 4; // TextEmphasisPosition
     unsigned m_textOrientation : 2; // TextOrientation
 #if ENABLE(CSS3_TEXT)
     unsigned m_textIndentLine : 1; // TextIndentLine
@@ -121,7 +121,13 @@ public:
     unsigned m_textAlignLast : 3; // TextAlignLast
     unsigned m_textJustify : 3; // TextJustify
 #endif // CSS3_TEXT
+    unsigned m_textDecorationSkip : 5; // TextDecorationSkip
+    unsigned m_textUnderlinePosition : 3; // TextUnderlinePosition
     unsigned m_rubyPosition : 1; // RubyPosition
+
+#if PLATFORM(IOS)
+    unsigned touchCalloutEnabled : 1;
+#endif
 
     AtomicString hyphenationString;
     short hyphenationLimitBefore;
@@ -136,16 +142,19 @@ public:
     AtomicString m_lineGrid;
     unsigned m_tabSize;
 
+#if PLATFORM(IOS)
+    Color compositionFillColor;
+#endif
+#if ENABLE(IOS_TEXT_AUTOSIZING)
+    TextSizeAdjustment textSizeAdjust;
+#endif
+
 #if ENABLE(CSS_IMAGE_RESOLUTION)
     float m_imageResolution;
 #endif
 
 #if ENABLE(TOUCH_EVENTS)
     Color tapHighlightColor;
-#endif
-
-#if ENABLE(CSS_VARIABLES)
-    DataRef<StyleVariableData> m_variables;
 #endif
 
 private:

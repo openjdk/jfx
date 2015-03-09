@@ -17,19 +17,19 @@
  * Boston, MA 02110-1301, USA.
  */
 
-    // Introduced in DOM Level 2:
-    interface MutationEvent : Event {
+// Introduced in DOM Level 2:
+interface MutationEvent : Event {
 
-        // attrChangeType
-        const unsigned short MODIFICATION = 1;
-        const unsigned short ADDITION     = 2;
-        const unsigned short REMOVAL      = 3;
+    // attrChangeType
+    const unsigned short MODIFICATION = 1;
+    const unsigned short ADDITION     = 2;
+    const unsigned short REMOVAL      = 3;
 
-        readonly attribute Node           relatedNode;
-        readonly attribute DOMString      prevValue;
-        readonly attribute DOMString      newValue;
-        readonly attribute DOMString      attrName;
-        readonly attribute unsigned short attrChange;
+    readonly attribute Node           relatedNode;
+    readonly attribute DOMString      prevValue;
+    readonly attribute DOMString      newValue;
+    readonly attribute DOMString      attrName;
+    readonly attribute unsigned short attrChange;
 
     [ObjCLegacyUnnamedParameters] void initMutationEvent([Default=Undefined] optional DOMString type, 
                                           [Default=Undefined] optional boolean canBubble, 
@@ -40,5 +40,5 @@
                                           [Default=Undefined] optional DOMString attrName, 
                                           [Default=Undefined] optional unsigned short attrChange);
 
-    };
+};
 

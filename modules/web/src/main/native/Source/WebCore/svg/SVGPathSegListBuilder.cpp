@@ -22,23 +22,30 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SVG)
 #include "SVGPathSegListBuilder.h"
 
 #include "ExceptionCode.h"
 #include "SVGPathElement.h"
-#include "SVGPathSegArc.h"
+#include "SVGPathSegArcAbs.h"
+#include "SVGPathSegArcRel.h"
 #include "SVGPathSegClosePath.h"
-#include "SVGPathSegCurvetoCubic.h"
-#include "SVGPathSegCurvetoCubicSmooth.h"
-#include "SVGPathSegCurvetoQuadratic.h"
-#include "SVGPathSegCurvetoQuadraticSmooth.h"
-#include "SVGPathSegLineto.h"
-#include "SVGPathSegLinetoHorizontal.h"
-#include "SVGPathSegLinetoVertical.h"
+#include "SVGPathSegCurvetoCubicAbs.h"
+#include "SVGPathSegCurvetoCubicRel.h"
+#include "SVGPathSegCurvetoCubicSmoothAbs.h"
+#include "SVGPathSegCurvetoCubicSmoothRel.h"
+#include "SVGPathSegCurvetoQuadraticAbs.h"
+#include "SVGPathSegCurvetoQuadraticRel.h"
+#include "SVGPathSegCurvetoQuadraticSmoothAbs.h"
+#include "SVGPathSegCurvetoQuadraticSmoothRel.h"
+#include "SVGPathSegLinetoAbs.h"
+#include "SVGPathSegLinetoHorizontalAbs.h"
+#include "SVGPathSegLinetoHorizontalRel.h"
+#include "SVGPathSegLinetoRel.h"
+#include "SVGPathSegLinetoVerticalAbs.h"
+#include "SVGPathSegLinetoVerticalRel.h"
 #include "SVGPathSegList.h"
-#include "SVGPathSegMoveto.h"
+#include "SVGPathSegMovetoAbs.h"
+#include "SVGPathSegMovetoRel.h"
 
 namespace WebCore {
 
@@ -147,5 +154,3 @@ void SVGPathSegListBuilder::closePath()
 }
 
 }
-
-#endif // ENABLE(SVG)

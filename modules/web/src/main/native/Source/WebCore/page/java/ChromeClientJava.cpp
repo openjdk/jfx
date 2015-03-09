@@ -16,13 +16,14 @@
 #include "FileIconLoader.h"
 #include "FloatRect.h"
 #include "Frame.h"
+#include "MainFrame.h"
 #include "FrameLoadRequest.h"
 #include "FrameLoader.h"
 #include "FrameView.h"
 #include "HitTestResult.h"
 #include "Icon.h"
 #include "IntRect.h"
-#include "KURL.h"
+#include "URL.h"
 #include "NotImplemented.h"
 #include "Page.h"
 #include "PopupMenuJava.h"
@@ -282,7 +283,7 @@ void ChromeClientJava::takeFocus(FocusDirection direction)
     CheckAndClearException(env);
 }
 
-void ChromeClientJava::focusedNodeChanged(Node* node)
+void ChromeClientJava::focusedElementChanged(Element*)
 {
     notImplemented();
 }
@@ -316,7 +317,7 @@ Page* ChromeClientJava::createWindow(
 
     Page* p = WebPage::pageFromJObject(newWebPage);
     if (!req.isEmpty()) {
-        p->mainFrame()->loader()->load(req);
+        p->mainFrame().loader().load(req);
     }
 
     return p;
@@ -421,7 +422,7 @@ void ChromeClientJava::setCursor(const Cursor& c)
 
     ASSERT(m_webPage);
 
-    env->CallVoidMethod(m_webPage, setCursorMID, c.impl());
+    env->CallVoidMethod(m_webPage, setCursorMID, c.platformCursor());
     CheckAndClearException(env);
 }
 
@@ -575,7 +576,7 @@ void ChromeClientJava::mouseDidMoveOverElement(const HitTestResult& htr, unsigne
     static Node* mouseOverNode = 0;
     if (htr.isLiveLink()) {
         Node* overNode = htr.innerNode();
-        KURL url = htr.absoluteLinkURL();
+        URL url = htr.absoluteLinkURL();
         if (!url.isEmpty() && (overNode != mouseOverNode)) {
             setStatusbarText(url.deprecatedString());
             mouseOverNode = overNode;
@@ -623,12 +624,6 @@ void ChromeClientJava::reachedMaxAppCacheSize(int64_t spaceNeeded)
 }
 
 void ChromeClientJava::reachedApplicationCacheOriginQuota(SecurityOrigin*, int64_t)
-{
-    notImplemented();
-}
-
-
-void ChromeClientJava::formStateDidChange(const Node*)
 {
     notImplemented();
 }
@@ -763,12 +758,6 @@ PassRefPtr<PopupMenu> ChromeClientJava::createPopupMenu(PopupMenuClient* client)
 PassRefPtr<SearchPopupMenu> ChromeClientJava::createSearchPopupMenu(PopupMenuClient* client) const
 {
     return adoptRef(new SearchPopupMenuJava(client));
-}
-
-bool ChromeClientJava::shouldRubberBandInDirection(ScrollDirection direction) const
-{
-    //utatodo: goto Chromium for better implementation (history tricks).
-    return true;
 }
 
 // End of HostWindow methods

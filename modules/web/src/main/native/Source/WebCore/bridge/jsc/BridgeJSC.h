@@ -28,8 +28,8 @@
 #define BridgeJSC_h
 
 #include "Bridge.h"
+#include <runtime/JSCInlines.h>
 #include <runtime/JSString.h>
-#include <runtime/Operations.h>
 #include <wtf/HashMap.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
@@ -105,7 +105,6 @@ public:
     virtual ~Instance();
 
     virtual bool getOwnPropertySlot(JSObject*, ExecState*, PropertyName, PropertySlot&) { return false; }
-    virtual bool getOwnPropertyDescriptor(JSObject*, ExecState*, PropertyName, PropertyDescriptor&) { return false; }
     virtual void put(JSObject*, ExecState*, PropertyName, JSValue, PutPropertySlot&) { }
 
 protected:
@@ -135,12 +134,12 @@ protected:
 
 const char* signatureForParameters(const ArgList&);
 
-typedef HashMap<RefPtr<StringImpl>, Method*> MethodMap;
 #if ENABLE(JAVA_BRIDGE)
 typedef Vector<Method*> MethodList;
 typedef HashMap<RefPtr<StringImpl>, MethodList*> MethodListMap;
-#endif
+typedef HashMap<RefPtr<StringImpl>, Method*> MethodMap;
 typedef HashMap<RefPtr<StringImpl>, Field*> FieldMap;
+#endif
 
 } // namespace Bindings
 

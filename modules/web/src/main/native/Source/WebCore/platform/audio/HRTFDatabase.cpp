@@ -34,8 +34,6 @@
 
 #include "HRTFElevation.h"
 
-using namespace std;
-
 namespace WebCore {
 
 const int HRTFDatabase::MinElevation = -45;
@@ -45,24 +43,18 @@ const unsigned HRTFDatabase::NumberOfRawElevations = 10; // -45 -> +90 (each 15 
 const unsigned HRTFDatabase::InterpolationFactor = 1;
 const unsigned HRTFDatabase::NumberOfTotalElevations = NumberOfRawElevations * InterpolationFactor;
 
-PassOwnPtr<HRTFDatabase> HRTFDatabase::create(float sampleRate)
-{
-    OwnPtr<HRTFDatabase> hrtfDatabase = adoptPtr(new HRTFDatabase(sampleRate));
-    return hrtfDatabase.release();
-}
-
 HRTFDatabase::HRTFDatabase(float sampleRate)
     : m_elevations(NumberOfTotalElevations)
     , m_sampleRate(sampleRate)
 {
     unsigned elevationIndex = 0;
     for (int elevation = MinElevation; elevation <= MaxElevation; elevation += RawElevationAngleSpacing) {
-        OwnPtr<HRTFElevation> hrtfElevation = HRTFElevation::createForSubject("Composite", elevation, sampleRate);
+        std::unique_ptr<HRTFElevation> hrtfElevation = HRTFElevation::createForSubject("Composite", elevation, sampleRate);
         ASSERT(hrtfElevation.get());
         if (!hrtfElevation.get())
             return;
         
-        m_elevations[elevationIndex] = hrtfElevation.release();
+        m_elevations[elevationIndex] = std::move(hrtfElevation);
         elevationIndex += InterpolationFactor;
     }
 
@@ -112,8 +104,8 @@ void HRTFDatabase::getKernelsFromAzimuthElevation(double azimuthBlend, unsigned 
 unsigned HRTFDatabase::indexFromElevationAngle(double elevationAngle)
 {
     // Clamp to allowed range.
-    elevationAngle = max(static_cast<double>(MinElevation), elevationAngle);
-    elevationAngle = min(static_cast<double>(MaxElevation), elevationAngle);
+    elevationAngle = std::max(static_cast<double>(MinElevation), elevationAngle);
+    elevationAngle = std::min(static_cast<double>(MaxElevation), elevationAngle);
 
     unsigned elevationIndex = static_cast<int>(InterpolationFactor * (elevationAngle - MinElevation) / RawElevationAngleSpacing);    
     return elevationIndex;

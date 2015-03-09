@@ -74,11 +74,6 @@ void Widget::setFrameRect(const IntRect& rect)
     Widget::frameRectsChanged();
 }
 
-void Widget::frameRectsChanged()
-{
-    notImplemented();
-}
-
 void Widget::setFocus(bool)
 {
 }
@@ -111,7 +106,7 @@ void Widget::setIsSelected(bool)
     notImplemented();
 }
 
-void Widget::setEvasObject(Evas_Object *object)
+void Widget::setEvasObject(Evas_Object* object)
 {
     m_evasObject = object;
 }

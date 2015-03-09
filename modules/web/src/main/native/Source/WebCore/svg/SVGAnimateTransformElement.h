@@ -23,7 +23,6 @@
 #ifndef SVGAnimateTransformElement_h
 #define SVGAnimateTransformElement_h
 
-#if ENABLE(SVG)
 #include "SVGAnimateElement.h"
 #include "SVGTransform.h"
 
@@ -31,24 +30,25 @@ namespace WebCore {
 
 class AffineTransform;
 
-class SVGAnimateTransformElement FINAL : public SVGAnimateElement {
+class SVGAnimateTransformElement final : public SVGAnimateElement {
 public:
-    static PassRefPtr<SVGAnimateTransformElement> create(const QualifiedName&, Document*);
+    static PassRefPtr<SVGAnimateTransformElement> create(const QualifiedName&, Document&);
 
     SVGTransform::SVGTransformType transformType() const { return m_type; }
 
 private:
-    SVGAnimateTransformElement(const QualifiedName&, Document*);
+    SVGAnimateTransformElement(const QualifiedName&, Document&);
     
-    virtual bool hasValidAttributeType();
+    virtual bool hasValidAttributeType() override;
 
     bool isSupportedAttribute(const QualifiedName&);
-    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
 
     SVGTransform::SVGTransformType m_type;
 };
 
+NODE_TYPE_CASTS(SVGAnimateTransformElement)
+
 } // namespace WebCore
 
-#endif // ENABLE(SVG)
 #endif // SVGAnimateTransformElement_h

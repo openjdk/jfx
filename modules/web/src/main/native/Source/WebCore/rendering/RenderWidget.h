@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
- * Copyright (C) 2004, 2005, 2006, 2009, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2004, 2005, 2006, 2009, 2010, 2013 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -22,9 +22,11 @@
 #ifndef RenderWidget_h
 #define RenderWidget_h
 
+#include "HTMLFrameOwnerElement.h"
 #include "OverlapTestRequestClient.h"
 #include "RenderReplaced.h"
 #include "Widget.h"
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -58,66 +60,51 @@ class RenderWidget : public RenderReplaced, private OverlapTestRequestClient {
 public:
     virtual ~RenderWidget();
 
+    HTMLFrameOwnerElement& frameOwnerElement() const { return toHTMLFrameOwnerElement(nodeForNonAnonymous()); }
+
     Widget* widget() const { return m_widget.get(); }
-    virtual void setWidget(PassRefPtr<Widget>);
+    void setWidget(PassRefPtr<Widget>);
 
     static RenderWidget* find(const Widget*);
 
     void updateWidgetPosition();
-    void widgetPositionsUpdated();
     IntRect windowClipRect() const;
 
-    void notifyWidget(WidgetNotification);
-    
-    RenderArena* ref() { ++m_refCount; return renderArena(); }
-    void deref(RenderArena*);
+    bool requiresAcceleratedCompositing() const;
+
+    WeakPtr<RenderWidget> createWeakPtr() { return m_weakPtrFactory.createWeakPtr(); }
 
 protected:
-    RenderWidget(Element*);
+    RenderWidget(HTMLFrameOwnerElement&, PassRef<RenderStyle>);
 
-    FrameView* frameView() const { return m_frameView; }
-
-    void clearWidget();
-
-    virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle);
-    virtual void layout();
-    virtual void paint(PaintInfo&, const LayoutPoint&);
-    virtual CursorDirective getCursor(const LayoutPoint&, Cursor&) const;
-    virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) OVERRIDE;
-
+    virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override final;
+    virtual void layout() override;
+    virtual void paint(PaintInfo&, const LayoutPoint&) override;
+    virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) override;
     virtual void paintContents(PaintInfo&, const LayoutPoint&);
+    virtual bool requiresLayer() const override;
 
 private:
-    virtual bool isWidget() const { return true; }
+    void element() const = delete;
 
-    virtual void willBeDestroyed();
-    virtual void destroy();
-    virtual void setSelectionState(SelectionState);
-    virtual void setOverlapTestResult(bool);
+    virtual bool isWidget() const override final { return true; }
+
+    virtual bool needsPreferredWidthsRecalculation() const override final;
+    virtual RenderBox* embeddedContentBox() const override final;
+
+    virtual void willBeDestroyed() override final;
+    virtual void setSelectionState(SelectionState) override final;
+    virtual void setOverlapTestResult(bool) override final;
 
     bool setWidgetGeometry(const LayoutRect&);
     bool updateWidgetGeometry();
 
+    WeakPtrFactory<RenderWidget> m_weakPtrFactory;
     RefPtr<Widget> m_widget;
-    FrameView* m_frameView;
     IntRect m_clipRect; // The rectangle needs to remain correct after scrolling, so it is stored in content view coordinates, and not clipped to window.
-    int m_refCount;
 };
 
-inline RenderWidget* toRenderWidget(RenderObject* object)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isWidget());
-    return static_cast<RenderWidget*>(object);
-}
-
-inline const RenderWidget* toRenderWidget(const RenderObject* object)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isWidget());
-    return static_cast<const RenderWidget*>(object);
-}
-
-// This will catch anyone doing an unnecessary cast.
-void toRenderWidget(const RenderWidget*);
+RENDER_OBJECT_TYPE_CASTS(RenderWidget, isWidget())
 
 } // namespace WebCore
 

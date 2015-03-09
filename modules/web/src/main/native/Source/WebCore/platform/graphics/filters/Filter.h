@@ -35,7 +35,7 @@ public:
     Filter() : m_renderingMode(Unaccelerated) { }
     virtual ~Filter() { }
 
-    void setSourceImage(PassOwnPtr<ImageBuffer> sourceImage) { m_sourceImage = sourceImage; }
+    void setSourceImage(std::unique_ptr<ImageBuffer> sourceImage) { m_sourceImage = std::move(sourceImage); }
     ImageBuffer* sourceImage() { return m_sourceImage.get(); }
 
     FloatSize filterResolution() const { return m_filterResolution; }
@@ -43,6 +43,8 @@ public:
 
     RenderingMode renderingMode() const { return m_renderingMode; }
     void setRenderingMode(RenderingMode renderingMode) { m_renderingMode = renderingMode; }
+
+    virtual bool isSVGFilter() const { return false; }
 
     virtual float applyHorizontalScale(float value) const { return value * m_filterResolution.width(); }
     virtual float applyVerticalScale(float value) const { return value * m_filterResolution.height(); }
@@ -53,10 +55,13 @@ public:
     virtual FloatPoint mapAbsolutePointToLocalPoint(const FloatPoint&) const { return FloatPoint(); }
 
 private:
-    OwnPtr<ImageBuffer> m_sourceImage;
+    std::unique_ptr<ImageBuffer> m_sourceImage;
     FloatSize m_filterResolution;
     RenderingMode m_renderingMode;
 };
+
+#define FILTER_TYPE_CASTS(ToValueTypeName, predicate) \
+    TYPE_CASTS_BASE(ToValueTypeName, Filter, filter, filter->predicate, filter.predicate)
 
 } // namespace WebCore
 

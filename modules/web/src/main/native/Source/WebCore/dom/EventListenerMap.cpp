@@ -153,11 +153,11 @@ bool EventListenerMap::remove(const AtomicString& eventType, EventListener* list
             bool wasRemoved = removeListenerFromVector(m_entries[i].second.get(), listener, useCapture, indexOfRemovedListener);
             if (m_entries[i].second->isEmpty())
                 m_entries.remove(i);
-        return wasRemoved;
-    }
+            return wasRemoved;
+        }
     }
 
-        return false;
+    return false;
 }
 
 EventListenerVector* EventListenerMap::find(const AtomicString& eventType)
@@ -171,8 +171,6 @@ EventListenerVector* EventListenerMap::find(const AtomicString& eventType)
 
     return 0;
 }
-
-#if ENABLE(SVG)
 
 static void removeFirstListenerCreatedFromMarkup(EventListenerVector* listenerVector)
 {
@@ -198,8 +196,8 @@ void EventListenerMap::removeFirstEventListenerCreatedFromMarkup(const AtomicStr
             removeFirstListenerCreatedFromMarkup(m_entries[i].second.get());
             if (m_entries[i].second->isEmpty())
                 m_entries.remove(i);
-        return;
-    }
+            return;
+        }
     }
 }
 
@@ -220,8 +218,6 @@ void EventListenerMap::copyEventListenersNotCreatedFromMarkupToTarget(EventTarge
     for (unsigned i = 0; i < m_entries.size(); ++i)
         copyListenersNotCreatedFromMarkupToTarget(m_entries[i].first, m_entries[i].second.get(), target);
 }
-
-#endif // ENABLE(SVG)
 
 EventListenerIterator::EventListenerIterator()
     : m_map(0)
@@ -268,10 +264,10 @@ EventListener* EventListenerIterator::nextListener()
 
     for (; m_entryIndex < m_map->m_entries.size(); ++m_entryIndex) {
         EventListenerVector& listeners = *m_map->m_entries[m_entryIndex].second;
-            if (m_index < listeners.size())
-                return listeners[m_index++].listener.get();
-            m_index = 0;
-        }
+        if (m_index < listeners.size())
+            return listeners[m_index++].listener.get();
+        m_index = 0;
+    }
 
     return 0;
 }

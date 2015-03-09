@@ -29,26 +29,6 @@
 #include "config.h"
 
 // Public APIs not available on versions of Mac on which we build
-#if __MAC_OS_X_VERSION_MAX_ALLOWED == 1060
-enum {
-    NSScrollerStyleLegacy       = 0,
-    NSScrollerStyleOverlay      = 1
-};
-typedef NSInteger NSScrollerStyle;
-
-enum {
-    NSScrollerKnobStyleDefault = 0,
-    NSScrollerKnobStyleDark = 1,
-    NSScrollerKnobStyleLight = 2
-};
-typedef NSInteger NSScrollerKnobStyle;
-#endif
-
-#if __MAC_OS_X_VERSION_MAX_ALLOWED == 1060
-@interface NSScroller(NSObject)
-+ (NSScrollerStyle)preferredScrollerStyle;
-@end
-#endif
 
 @interface NSObject (ScrollbarPainter)
 + (id)scrollerImpWithStyle:(NSScrollerStyle)newScrollerStyle controlSize:(NSControlSize)newControlSize horizontal:(BOOL)horizontal replacingScrollerImp:(id)previous;
@@ -59,6 +39,8 @@ typedef NSInteger NSScrollerKnobStyle;
 - (void)setEnabled:(BOOL)enabled;
 - (void)setBoundsSize:(NSSize)boundsSize;
 - (void)setDoubleValue:(double)doubleValue;
+- (void)setPresentationValue:(double)presentationValue;
+- (void)setUsePresentationValue:(BOOL)usePresentationValue;
 - (void)setKnobProportion:(CGFloat)proportion;
 - (void)setKnobStyle:(NSScrollerKnobStyle)knobStyle;
 - (void)setExpanded:(BOOL)expanded;
@@ -87,6 +69,9 @@ typedef NSInteger NSScrollerKnobStyle;
 - (void)setDelegate:(id)delegate;
 - (void)hideOverlayScrollers;
 - (void)flashScrollers;
+- (void)lockOverlayScrollerState:(NSUInteger)state;
+- (BOOL)overlayScrollerStateIsLocked;
+- (void)unlockOverlayScrollerState;
 - (id)horizontalScrollerImp;
 - (void)setHorizontalScrollerImp:(id)horizontal;
 - (id)verticalScrollerImp;
@@ -109,15 +94,6 @@ typedef NSInteger NSScrollerKnobStyle;
 @end
 
 namespace WebCore {
-
-static inline bool isScrollbarOverlayAPIAvailable()
-{
-#if USE(SCROLLBAR_PAINTER)
-    return true;
-#else
-    return false;
-#endif
-}
 
 NSScrollerStyle recommendedScrollerStyle();
 

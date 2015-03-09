@@ -28,19 +28,33 @@
 
 #include "ResourceErrorBase.h"
 
+#if PLATFORM(WIN)
+#include <windows.h>
+#include <winsock2.h>
+#endif
+
+#include <curl/curl.h>
+
 namespace WebCore {
 
 class ResourceError : public ResourceErrorBase
 {
 public:
-    ResourceError()
+    ResourceError() : m_sslErrors(0)
     {
     }
 
     ResourceError(const String& domain, int errorCode, const String& failingURL, const String& localizedDescription)
-        : ResourceErrorBase(domain, errorCode, failingURL, localizedDescription)
+        : ResourceErrorBase(domain, errorCode, failingURL, localizedDescription), m_sslErrors(0)
     {
     }
+
+    unsigned sslErrors() const { return m_sslErrors; }
+    void setSSLErrors(unsigned sslVerifyResult) { m_sslErrors = sslVerifyResult; }
+    bool hasSSLConnectError() const { return errorCode() == CURLE_SSL_CONNECT_ERROR; }
+
+private:
+    unsigned m_sslErrors;
 };
 
 }

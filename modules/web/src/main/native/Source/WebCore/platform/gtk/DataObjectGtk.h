@@ -20,7 +20,7 @@
 #define DataObjectGtk_h
 
 #include "FileList.h"
-#include "KURL.h"
+#include "URL.h"
 #include "Range.h"
 #include <wtf/RefCounted.h>
 #include <wtf/gobject/GRefPtr.h>
@@ -36,13 +36,14 @@ public:
         return adoptRef(new DataObjectGtk());
     }
 
-    const KURL& url() const { return m_url; }
+    const URL& url() const { return m_url; }
     const String& uriList() const { return m_uriList; }
     const Vector<String>& filenames() const { return m_filenames; }
     GdkPixbuf* image() const { return m_image.get(); }
     void setRange(PassRefPtr<Range> newRange) { m_range = newRange; }
     void setImage(GdkPixbuf* newImage) { m_image = newImage; }
-    void setURL(const KURL&, const String&);
+    void setURL(const URL&, const String&);
+    bool hasUnknownTypeData() const { return !m_unknownTypeData.isEmpty(); }
     bool hasText() const { return m_range || !m_text.isEmpty(); }
     bool hasMarkup() const { return m_range || !m_markup.isEmpty(); }
     bool hasURIList() const { return !m_uriList.isEmpty(); }
@@ -50,13 +51,16 @@ public:
     bool hasFilenames() const { return !m_filenames.isEmpty(); }
     bool hasImage() const { return m_image; }
     void clearURIList() { m_uriList = ""; }
-    void clearURL() { m_url = KURL(); }
+    void clearURL() { m_url = URL(); }
     void clearImage() { m_image = 0; }
 
     String text() const;
     String markup() const;
+    String unknownTypeData(const String& type) const { return m_unknownTypeData.get(type); }
+    HashMap<String, String> unknownTypes() const;
     void setText(const String&);
     void setMarkup(const String&);
+    void setUnknownTypeData(const String& type, const String& data) { m_unknownTypeData.set(type, data); }
     void setURIList(const String&);
     String urlLabel() const;
 
@@ -70,11 +74,12 @@ public:
 private:
     String m_text;
     String m_markup;
-    KURL m_url;
+    URL m_url;
     String m_uriList;
     Vector<String> m_filenames;
     GRefPtr<GdkPixbuf> m_image;
     RefPtr<Range> m_range;
+    HashMap<String, String> m_unknownTypeData;
 };
 
 }

@@ -28,12 +28,13 @@
 
 #include "DatabaseThread.h"
 #include "FileSystem.h"
-#include "StorageThread.h"
 #include "Logging.h"
 #include "PageGroup.h"
+#include "SQLiteDatabaseTracker.h"
 #include "SQLiteFileSystem.h"
 #include "SQLiteStatement.h"
 #include "SecurityOrigin.h"
+#include "StorageThread.h"
 #include "StorageTrackerClient.h"
 #include "TextEncoding.h"
 #include <wtf/Functional.h>
@@ -90,7 +91,7 @@ StorageTracker& StorageTracker::tracker()
 StorageTracker::StorageTracker(const String& storagePath)
     : m_storageDirectoryPath(storagePath.isolatedCopy())
     , m_client(0)
-    , m_thread(StorageThread::create())
+    , m_thread(std::make_unique<StorageThread>())
     , m_isActive(false)
     , m_needsInitialization(false)
     , m_StorageDatabaseIdleInterval(DefaultStorageDatabaseIdleInterval)
@@ -132,6 +133,9 @@ void StorageTracker::openTrackerDatabase(bool createIfDoesNotExist)
 {
     ASSERT(m_isActive);
     ASSERT(!isMainThread());
+
+    SQLiteTransactionInProgressAutoCounter transactionCounter;
+
     ASSERT(!m_databaseMutex.tryLock());
 
     if (m_database.isOpen())
@@ -192,6 +196,8 @@ void StorageTracker::syncImportOriginIdentifiers()
         openTrackerDatabase(false);
 
         if (m_database.isOpen()) {
+            SQLiteTransactionInProgressAutoCounter transactionCounter;
+
             SQLiteStatement statement(m_database, "SELECT origin FROM Origins");
             if (statement.prepare() != SQLResultOk) {
                 LOG_ERROR("Failed to prepare statement.");
@@ -232,6 +238,9 @@ void StorageTracker::syncImportOriginIdentifiers()
 void StorageTracker::syncFileSystemAndTrackerDatabase()
 {
     ASSERT(!isMainThread());
+
+    SQLiteTransactionInProgressAutoCounter transactionCounter;
+
     ASSERT(m_isActive);
 
     Vector<String> paths;
@@ -298,12 +307,14 @@ void StorageTracker::setOriginDetails(const String& originIdentifier, const Stri
     } else {
         // FIXME: This weird ping-ponging was done to fix a deadlock. We should figure out a cleaner way to avoid it instead.
         callOnMainThread(bind(&StorageThread::dispatch, m_thread.get(), function));
-}
+    }
 }
 
 void StorageTracker::syncSetOriginDetails(const String& originIdentifier, const String& databaseFile)
 {
     ASSERT(!isMainThread());
+
+    SQLiteTransactionInProgressAutoCounter transactionCounter;
 
     MutexLocker locker(m_databaseMutex);
 
@@ -337,7 +348,7 @@ void StorageTracker::syncSetOriginDetails(const String& originIdentifier, const 
     }
 }
 
-void StorageTracker::origins(Vector<RefPtr<SecurityOrigin> >& result)
+void StorageTracker::origins(Vector<RefPtr<SecurityOrigin>>& result)
 {
     ASSERT(m_isActive);
     
@@ -366,13 +377,15 @@ void StorageTracker::deleteAllOrigins()
     }
 
     PageGroup::clearLocalStorageForAllOrigins();
-    
+
     m_thread->dispatch(bind(&StorageTracker::syncDeleteAllOrigins, this));
 }
     
 void StorageTracker::syncDeleteAllOrigins()
 {
     ASSERT(!isMainThread());
+
+    SQLiteTransactionInProgressAutoCounter transactionCounter;
     
     MutexLocker locker(m_databaseMutex);
     
@@ -402,10 +415,15 @@ void StorageTracker::syncDeleteAllOrigins()
     
     if (result != SQLResultDone)
         LOG_ERROR("Failed to read in all origins from the database.");
-    
-    if (m_database.isOpen())
+
+    if (m_database.isOpen()) {
+#if PLATFORM(IOS)
+        SQLiteFileSystem::truncateDatabaseFile(m_database.sqlite3Handle());
+#endif
         m_database.close();
-    
+    }
+
+#if !PLATFORM(IOS)
     if (!SQLiteFileSystem::deleteDatabaseFile(trackerDatabasePath())) {
         // In the case where it is not possible to delete the database file (e.g some other program
         // like a virus scanner is accessing it), make sure to remove all entries.
@@ -423,6 +441,7 @@ void StorageTracker::syncDeleteAllOrigins()
         }
     }
     SQLiteFileSystem::deleteEmptyDatabaseDirectory(m_storageDirectoryPath);
+#endif
 }
 
 void StorageTracker::deleteOriginWithIdentifier(const String& originIdentifier)
@@ -454,13 +473,15 @@ void StorageTracker::deleteOrigin(SecurityOrigin* origin)
         willDeleteOrigin(originId);
         m_originSet.remove(originId);
     }
-    
+
     m_thread->dispatch(bind(&StorageTracker::syncDeleteOrigin, this, originId.isolatedCopy()));
 }
 
 void StorageTracker::syncDeleteOrigin(const String& originIdentifier)
 {
     ASSERT(!isMainThread());
+
+    SQLiteTransactionInProgressAutoCounter transactionCounter;
 
     MutexLocker locker(m_databaseMutex);
     
@@ -501,9 +522,14 @@ void StorageTracker::syncDeleteOrigin(const String& originIdentifier)
     }
 
     if (shouldDeleteTrackerFiles) {
+#if PLATFORM(IOS)
+        SQLiteFileSystem::truncateDatabaseFile(m_database.sqlite3Handle());
+#endif
         m_database.close();
+#if !PLATFORM(IOS)
         SQLiteFileSystem::deleteDatabaseFile(trackerDatabasePath());
         SQLiteFileSystem::deleteEmptyDatabaseDirectory(m_storageDirectoryPath);
+#endif
     }
 
     {
@@ -545,11 +571,11 @@ void StorageTracker::cancelDeletingOrigin(const String& originIdentifier)
     MutexLocker locker(m_databaseMutex);
     {
         MutexLocker locker(m_originSetMutex);
-    if (!m_originsBeingDeleted.isEmpty())
-        m_originsBeingDeleted.remove(originIdentifier);
+        if (!m_originsBeingDeleted.isEmpty())
+            m_originsBeingDeleted.remove(originIdentifier);
+    }
 }
-}
-    
+
 bool StorageTracker::isActive()
 {
     return m_isActive;
@@ -567,7 +593,9 @@ String StorageTracker::databasePathForOrigin(const String& originIdentifier)
     
     if (!m_database.isOpen())
         return String();
-    
+
+    SQLiteTransactionInProgressAutoCounter transactionCounter;
+
     SQLiteStatement pathStatement(m_database, "SELECT path FROM Origins WHERE origin=?");
     if (pathStatement.prepare() != SQLResultOk) {
         LOG_ERROR("Unable to prepare selection of path for origin '%s'", originIdentifier.ascii().data());

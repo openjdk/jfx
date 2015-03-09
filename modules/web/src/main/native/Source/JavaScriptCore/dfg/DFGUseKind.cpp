@@ -28,6 +28,8 @@
 
 #if ENABLE(DFG_JIT)
 
+#include "JSCInlines.h"
+
 namespace WTF {
 
 using namespace JSC::DFG;
@@ -43,6 +45,9 @@ void printInternal(PrintStream& out, UseKind useKind)
         break;
     case KnownInt32Use:
         out.print("KnownInt32");
+        break;
+    case MachineIntUse:
+        out.print("MachineInt");
         break;
     case RealNumberUse:
         out.print("RealNumber");
@@ -65,8 +70,14 @@ void printInternal(PrintStream& out, UseKind useKind)
     case ObjectUse:
         out.print("Object");
         break;
+    case FinalObjectUse:
+        out.print("FinalObject");
+        break;
     case ObjectOrOtherUse:
         out.print("ObjectOrOther");
+        break;
+    case StringIdentUse:
+        out.print("StringIdent");
         break;
     case StringUse:
         out.print("String");

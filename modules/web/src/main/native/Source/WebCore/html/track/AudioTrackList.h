@@ -40,7 +40,7 @@ public:
     {
         return adoptRef(new AudioTrackList(owner, context));
     }
-    ~AudioTrackList();
+    virtual ~AudioTrackList();
 
     AudioTrack* getTrackById(const AtomicString&) const;
 
@@ -49,7 +49,7 @@ public:
     void append(PassRefPtr<AudioTrack>);
 
     // EventTarget
-    virtual const AtomicString& interfaceName() const OVERRIDE;
+    virtual EventTargetInterface eventTargetInterface() const override;
 
 private:
     AudioTrackList(HTMLMediaElement*, ScriptExecutionContext*);

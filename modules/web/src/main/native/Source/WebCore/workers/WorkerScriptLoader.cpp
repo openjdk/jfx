@@ -27,8 +27,6 @@
 
 #include "config.h"
 
-#if ENABLE(WORKERS)
-
 #include "WorkerScriptLoader.h"
 
 #include "CrossThreadTask.h"
@@ -36,10 +34,11 @@
 #include "ScriptExecutionContext.h"
 #include "SecurityOrigin.h"
 #include "TextResourceDecoder.h"
-#include "WorkerContext.h"
+#include "WorkerGlobalScope.h"
 #include "WorkerScriptLoaderClient.h"
 #include "WorkerThreadableLoader.h"
 #include <wtf/OwnPtr.h>
+#include <wtf/Ref.h>
 #include <wtf/RefPtr.h>
 
 namespace WebCore {
@@ -56,7 +55,7 @@ WorkerScriptLoader::~WorkerScriptLoader()
 {
 }
 
-void WorkerScriptLoader::loadSynchronously(ScriptExecutionContext* scriptExecutionContext, const KURL& url, CrossOriginRequestPolicy crossOriginRequestPolicy)
+void WorkerScriptLoader::loadSynchronously(ScriptExecutionContext* scriptExecutionContext, const URL& url, CrossOriginRequestPolicy crossOriginRequestPolicy)
 {
     m_url = url;
 
@@ -64,17 +63,17 @@ void WorkerScriptLoader::loadSynchronously(ScriptExecutionContext* scriptExecuti
     if (!request)
         return;
 
-    ASSERT_WITH_SECURITY_IMPLICATION(scriptExecutionContext->isWorkerContext());
+    ASSERT_WITH_SECURITY_IMPLICATION(scriptExecutionContext->isWorkerGlobalScope());
 
     ThreadableLoaderOptions options;
     options.allowCredentials = AllowStoredCredentials;
     options.crossOriginRequestPolicy = crossOriginRequestPolicy;
     options.sendLoadCallbacks = SendCallbacks;
 
-    WorkerThreadableLoader::loadResourceSynchronously(static_cast<WorkerContext*>(scriptExecutionContext), *request, *this, options);
+    WorkerThreadableLoader::loadResourceSynchronously(toWorkerGlobalScope(scriptExecutionContext), *request, *this, options);
 }
     
-void WorkerScriptLoader::loadAsynchronously(ScriptExecutionContext* scriptExecutionContext, const KURL& url, CrossOriginRequestPolicy crossOriginRequestPolicy, WorkerScriptLoaderClient* client)
+void WorkerScriptLoader::loadAsynchronously(ScriptExecutionContext* scriptExecutionContext, const URL& url, CrossOriginRequestPolicy crossOriginRequestPolicy, WorkerScriptLoaderClient* client)
 {
     ASSERT(client);
     m_client = client;
@@ -90,11 +89,11 @@ void WorkerScriptLoader::loadAsynchronously(ScriptExecutionContext* scriptExecut
     options.sendLoadCallbacks = SendCallbacks;
 
     // During create, callbacks may happen which remove the last reference to this object.
-    RefPtr<WorkerScriptLoader> protect(this);
+    Ref<WorkerScriptLoader> protect(*this);
     m_threadableLoader = ThreadableLoader::create(scriptExecutionContext, this, *request, options);
 }
 
-const KURL& WorkerScriptLoader::responseURL() const
+const URL& WorkerScriptLoader::responseURL() const
 {
     ASSERT(!failed());
     return m_responseURL;
@@ -104,9 +103,6 @@ PassOwnPtr<ResourceRequest> WorkerScriptLoader::createResourceRequest()
 {
     OwnPtr<ResourceRequest> request = adoptPtr(new ResourceRequest(m_url));
     request->setHTTPMethod("GET");
-#if PLATFORM(BLACKBERRY)
-    request->setTargetType(m_targetType);
-#endif
     return request.release();
 }
     
@@ -172,7 +168,7 @@ void WorkerScriptLoader::notifyError()
     m_failed = true;
     notifyFinished();
 }
-    
+
 String WorkerScriptLoader::script()
 {
     return m_script.toString();
@@ -188,5 +184,3 @@ void WorkerScriptLoader::notifyFinished()
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(WORKERS)

@@ -36,8 +36,6 @@
 #include "AccessibilityTableRow.h"
 #include "RenderObject.h"
 
-using namespace std;
-
 namespace WebCore {
 
 AccessibilityARIAGrid::AccessibilityARIAGrid(RenderObject* renderer)
@@ -59,7 +57,7 @@ bool AccessibilityARIAGrid::addTableCellChild(AccessibilityObject* child, HashSe
     if (!child || !child->isTableRow() || child->ariaRoleAttribute() != RowRole)
         return false;
         
-    AccessibilityTableRow* row = static_cast<AccessibilityTableRow*>(child);
+    AccessibilityTableRow* row = toAccessibilityTableRow(child);
     if (appendedRows.contains(row))
         return false;
         
@@ -81,7 +79,7 @@ bool AccessibilityARIAGrid::addTableCellChild(AccessibilityObject* child, HashSe
     appendedRows.add(row);
     return true;
 }
-    
+
 void AccessibilityARIAGrid::addRowDescendant(AccessibilityObject* rowChild, HashSet<AccessibilityObject*>& appendedRows, unsigned& columnCount)
 {
     if (!rowChild)
@@ -90,10 +88,8 @@ void AccessibilityARIAGrid::addRowDescendant(AccessibilityObject* rowChild, Hash
     if (!rowChild->isTableRow()) {
         // Although a "grid" should have rows as its direct descendants, if this is not a table row,
         // dive deeper into the descendants to try to find a valid row.
-        AccessibilityChildrenVector children = rowChild->children();
-        size_t length = children.size();
-        for (size_t i = 0; i < length; ++i)
-            addRowDescendant(children[i].get(), appendedRows, columnCount);
+        for (const auto& child : rowChild->children())
+            addRowDescendant(child.get(), appendedRows, columnCount);
     } else
         addTableCellChild(rowChild, appendedRows, columnCount);
 }
@@ -111,7 +107,7 @@ void AccessibilityARIAGrid::addChildren()
     if (!m_renderer)
         return;
     
-    AXObjectCache* axCache = m_renderer->document()->axObjectCache();
+    AXObjectCache* axCache = m_renderer->document().axObjectCache();
     
     // add only rows that are labeled as aria rows
     HashSet<AccessibilityObject*> appendedRows;
@@ -121,7 +117,7 @@ void AccessibilityARIAGrid::addChildren()
     
     // make the columns based on the number of columns in the first body
     for (unsigned i = 0; i < columnCount; ++i) {
-        AccessibilityTableColumn* column = static_cast<AccessibilityTableColumn*>(axCache->getOrCreate(ColumnRole));
+        AccessibilityTableColumn* column = toAccessibilityTableColumn(axCache->getOrCreate(ColumnRole));
         column->setColumnIndex((int)i);
         column->setParent(this);
         m_columns.append(column);

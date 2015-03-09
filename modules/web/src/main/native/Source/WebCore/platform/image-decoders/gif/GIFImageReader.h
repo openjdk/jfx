@@ -131,7 +131,7 @@ private:
     WebCore::GIFImageDecoder* m_client;
     const GIFFrameContext* m_frameContext;
 };
-    
+
 // Data structure for one LZW block.
 struct GIFLZWBlock {
     WTF_MAKE_FAST_ALLOCATED;
@@ -141,7 +141,7 @@ public:
         , blockSize(size)
     {
     }
-    
+
     size_t blockPosition;
     size_t blockSize;
 };
@@ -166,9 +166,9 @@ public:
     bool progressiveDisplay : 1; // If true, do Haeberli interlace hack.
     bool interlaced : 1; // True, if scanlines arrive interlaced order.
     bool isTransparent : 1; // TRUE, if tpixel is valid.
-    
+
     unsigned delayTime; // Display time, in milliseconds, for this image in a multi-image GIF.
-    
+
     GIFFrameContext(int id)
         : frameId(id)
         , xOffset(0)
@@ -191,7 +191,7 @@ public:
         , m_isDataSizeDefined(false)
     {
     }
-
+    
     ~GIFFrameContext()
     {
     }

@@ -36,7 +36,6 @@
 #include "TextCheckerClient.h"
 #include <wtf/Deque.h>
 #include <wtf/Forward.h>
-#include <wtf/gobject/GOwnPtr.h>
 #include <wtf/gobject/GRefPtr.h>
 
 #if ENABLE(SPELLCHECK)
@@ -71,7 +70,6 @@ class EditorClient : public WebCore::EditorClient {
 
         // from EditorClient
         virtual void pageDestroyed();
-        virtual void frameWillDetachPage(WebCore::Frame*) { }
 
         virtual bool shouldDeleteRange(WebCore::Range*);
         virtual bool smartInsertDeleteEnabled();
@@ -88,7 +86,7 @@ class EditorClient : public WebCore::EditorClient {
         virtual bool shouldInsertText(const WTF::String&, WebCore::Range*, WebCore::EditorInsertAction);
         virtual bool shouldChangeSelectedRange(WebCore::Range* fromRange, WebCore::Range* toRange, WebCore::EAffinity, bool stillSelecting);
 
-        virtual bool shouldApplyStyle(WebCore::StylePropertySet*, WebCore::Range*);
+        virtual bool shouldApplyStyle(WebCore::StyleProperties*, WebCore::Range*);
 
         virtual bool shouldMoveRangeAfterDelete(WebCore::Range*, WebCore::Range*);
 
@@ -99,7 +97,6 @@ class EditorClient : public WebCore::EditorClient {
         virtual void willWriteSelectionToPasteboard(WebCore::Range*);
         virtual void didWriteSelectionToPasteboard();
         virtual void getClientPasteboardDataForRange(WebCore::Range*, Vector<String>& pasteboardTypes, Vector<RefPtr<WebCore::SharedBuffer> >& pasteboardData);
-        virtual void didSetSelectionTypesForPasteboard();
 
         virtual void registerUndoStep(WTF::PassRefPtr<WebCore::UndoStep>);
         virtual void registerRedoStep(WTF::PassRefPtr<WebCore::UndoStep>);
@@ -134,7 +131,7 @@ class EditorClient : public WebCore::EditorClient {
 
         virtual bool shouldShowUnicodeMenu();
 
-        virtual bool supportsGlobalSelection() OVERRIDE;
+        virtual bool supportsGlobalSelection() override;
 
     private:
 #if ENABLE(SPELLCHECK)

@@ -29,30 +29,28 @@ namespace JSC {
 
     class DatePrototype : public DateInstance {
     private:
-        DatePrototype(ExecState*, Structure*);
+        DatePrototype(VM&, Structure*);
 
     public:
         typedef DateInstance Base;
 
-        static DatePrototype* create(ExecState* exec, JSGlobalObject* globalObject, Structure* structure)
+        static DatePrototype* create(VM& vm, JSGlobalObject* globalObject, Structure* structure)
         {
-            DatePrototype* prototype = new (NotNull, allocateCell<DatePrototype>(*exec->heap())) DatePrototype(exec, structure);
-            prototype->finishCreation(exec, globalObject);
+            DatePrototype* prototype = new (NotNull, allocateCell<DatePrototype>(vm.heap)) DatePrototype(vm, structure);
+            prototype->finishCreation(vm, globalObject);
             return prototype;
         }
-        static bool getOwnPropertySlot(JSCell*, ExecState*, PropertyName, PropertySlot&);
+        static bool getOwnPropertySlot(JSObject*, ExecState*, PropertyName, PropertySlot&);
 
-        static bool getOwnPropertyDescriptor(JSObject*, ExecState*, PropertyName, PropertyDescriptor&);
-
-        static const ClassInfo s_info;
+        DECLARE_INFO;
 
         static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
         {
-            return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), &s_info);
+            return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
         }
 
     protected:
-        void finishCreation(ExecState*, JSGlobalObject*);
+        void finishCreation(VM&, JSGlobalObject*);
         static const unsigned StructureFlags = OverridesGetOwnPropertySlot | DateInstance::StructureFlags;
     };
 

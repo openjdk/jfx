@@ -56,8 +56,8 @@ public:
         m_operations.clear();
     }
     
-    Vector<RefPtr<FilterOperation> >& operations() { return m_operations; }
-    const Vector<RefPtr<FilterOperation> >& operations() const { return m_operations; }
+    Vector<RefPtr<FilterOperation>>& operations() { return m_operations; }
+    const Vector<RefPtr<FilterOperation>>& operations() const { return m_operations; }
 
     bool isEmpty() const { return !m_operations.size(); }
     size_t size() const { return m_operations.size(); }
@@ -71,12 +71,9 @@ public:
     bool hasFilterThatAffectsOpacity() const;
     bool hasFilterThatMovesPixels() const;
 
-#if ENABLE(CSS_SHADERS)
-    bool hasCustomFilter() const;
-#endif
     bool hasReferenceFilter() const;
 private:
-    Vector<RefPtr<FilterOperation> > m_operations;
+    Vector<RefPtr<FilterOperation>> m_operations;
 };
 
 } // namespace WebCore

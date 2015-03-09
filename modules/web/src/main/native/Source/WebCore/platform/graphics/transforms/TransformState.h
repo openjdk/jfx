@@ -81,7 +81,7 @@ public:
         m_accumulatedOffset = LayoutSize();
         m_lastPlanarQuad = quad;
     }
-    
+
     void move(LayoutUnit x, LayoutUnit y, TransformAccumulation accumulate = FlattenTransform)
     {
         move(LayoutSize(x, y), accumulate);

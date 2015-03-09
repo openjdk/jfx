@@ -28,33 +28,25 @@
 #if ENABLE(VIDEO)
 #include "RenderMedia.h"
 
-#include "HTMLMediaElement.h"
 #include "RenderFlowThread.h"
 #include "RenderView.h"
 #include <wtf/StackStats.h>
 
 namespace WebCore {
 
-RenderMedia::RenderMedia(HTMLMediaElement* video)
-    : RenderImage(video)
+RenderMedia::RenderMedia(HTMLMediaElement& element, PassRef<RenderStyle> style)
+    : RenderImage(element, std::move(style))
 {
-    setImageResource(RenderImageResource::create());
 }
 
-RenderMedia::RenderMedia(HTMLMediaElement* video, const IntSize& intrinsicSize)
-    : RenderImage(video)
+RenderMedia::RenderMedia(HTMLMediaElement& element, PassRef<RenderStyle> style, const IntSize& intrinsicSize)
+    : RenderImage(element, std::move(style))
 {
-    setImageResource(RenderImageResource::create());
     setIntrinsicSize(intrinsicSize);
 }
 
 RenderMedia::~RenderMedia()
 {
-}
-
-HTMLMediaElement* RenderMedia::mediaElement() const
-{ 
-    return toMediaElement(node()); 
 }
 
 void RenderMedia::layout()
@@ -64,7 +56,7 @@ void RenderMedia::layout()
 
     RenderImage::layout();
 
-    RenderBox* controlsRenderer = toRenderBox(m_children.firstChild());
+    RenderBox* controlsRenderer = toRenderBox(firstChild());
     if (!controlsRenderer)
         return;
 
@@ -84,14 +76,14 @@ void RenderMedia::layout()
     // When calling layout() on a child node, a parent must either push a LayoutStateMaintainter, or 
     // instantiate LayoutStateDisabler. Since using a LayoutStateMaintainer is slightly more efficient,
     // and this method will be called many times per second during playback, use a LayoutStateMaintainer:
-    LayoutStateMaintainer statePusher(view(), this, locationOffset(), hasTransform() || hasReflection() || style()->isFlippedBlocksWritingMode());
+    LayoutStateMaintainer statePusher(view(), *this, locationOffset(), hasTransform() || hasReflection() || style().isFlippedBlocksWritingMode());
 
     controlsRenderer->setLocation(LayoutPoint(borderLeft(), borderTop()) + LayoutSize(paddingLeft(), paddingTop()));
-    controlsRenderer->style()->setHeight(Length(newSize.height(), Fixed));
-    controlsRenderer->style()->setWidth(Length(newSize.width(), Fixed));
-    controlsRenderer->setNeedsLayout(true, MarkOnlyThis);
+    controlsRenderer->style().setHeight(Length(newSize.height(), Fixed));
+    controlsRenderer->style().setWidth(Length(newSize.width(), Fixed));
+    controlsRenderer->setNeedsLayout(MarkOnlyThis);
     controlsRenderer->layout();
-    setChildNeedsLayout(false);
+    clearChildNeedsLayout();
 
     statePusher.pop();
 }

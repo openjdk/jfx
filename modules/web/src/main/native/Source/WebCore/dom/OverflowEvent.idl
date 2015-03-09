@@ -24,12 +24,12 @@
  */
 
 [
-        ConstructorTemplate=Event
+    ConstructorTemplate=Event
 ] interface OverflowEvent : Event {
-        const unsigned short HORIZONTAL = 0;
-        const unsigned short VERTICAL   = 1;
-        const unsigned short BOTH       = 2;
-        
+    const unsigned short HORIZONTAL = 0;
+    const unsigned short VERTICAL   = 1;
+    const unsigned short BOTH       = 2;
+    
     [InitializedByEventConstructor] readonly attribute unsigned short orient;
     [InitializedByEventConstructor] readonly attribute boolean horizontalOverflow;
     [InitializedByEventConstructor] readonly attribute boolean verticalOverflow;
@@ -39,5 +39,5 @@
                            [Default=Undefined] optional boolean horizontalOverflow,
                            [Default=Undefined] optional boolean verticalOverflow);
 #endif
-    };
+};
 

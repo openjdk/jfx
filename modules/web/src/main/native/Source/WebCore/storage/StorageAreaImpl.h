@@ -35,65 +35,65 @@
 
 namespace WebCore {
 
-    class SecurityOrigin;
-    class StorageMap;
-    class StorageAreaSync;
+class SecurityOrigin;
+class StorageMap;
+class StorageAreaSync;
 
-    class StorageAreaImpl : public StorageArea {
-    public:
-        static PassRefPtr<StorageAreaImpl> create(StorageType, PassRefPtr<SecurityOrigin>, PassRefPtr<StorageSyncManager>, unsigned quota);
-        virtual ~StorageAreaImpl();
+class StorageAreaImpl : public StorageArea {
+public:
+    static PassRefPtr<StorageAreaImpl> create(StorageType, PassRefPtr<SecurityOrigin>, PassRefPtr<StorageSyncManager>, unsigned quota);
+    virtual ~StorageAreaImpl();
 
-    virtual unsigned length() OVERRIDE;
-    virtual String key(unsigned index) OVERRIDE;
-    virtual String item(const String& key) OVERRIDE;
-    virtual void setItem(Frame* sourceFrame, const String& key, const String& value, bool& quotaException) OVERRIDE;
-    virtual void removeItem(Frame* sourceFrame, const String& key) OVERRIDE;
-    virtual void clear(Frame* sourceFrame) OVERRIDE;
-    virtual bool contains(const String& key) OVERRIDE;
+    virtual unsigned length() override;
+    virtual String key(unsigned index) override;
+    virtual String item(const String& key) override;
+    virtual void setItem(Frame* sourceFrame, const String& key, const String& value, bool& quotaException) override;
+    virtual void removeItem(Frame* sourceFrame, const String& key) override;
+    virtual void clear(Frame* sourceFrame) override;
+    virtual bool contains(const String& key) override;
 
-    virtual bool canAccessStorage(Frame* sourceFrame) OVERRIDE;
-    virtual StorageType storageType() const OVERRIDE;
+    virtual bool canAccessStorage(Frame* sourceFrame) override;
+    virtual StorageType storageType() const override;
 
-    virtual size_t memoryBytesUsedByCache() OVERRIDE;
+    virtual size_t memoryBytesUsedByCache() override;
 
-        virtual void incrementAccessCount();
-        virtual void decrementAccessCount();
+    virtual void incrementAccessCount();
+    virtual void decrementAccessCount();
     virtual void closeDatabaseIfIdle();
 
-        PassRefPtr<StorageAreaImpl> copy();
-        void close();
+    PassRefPtr<StorageAreaImpl> copy();
+    void close();
 
-        // Only called from a background thread.
+    // Only called from a background thread.
     void importItems(const HashMap<String, String>& items);
 
-        // Used to clear a StorageArea and close db before backing db file is deleted.
-        void clearForOriginDeletion();
+    // Used to clear a StorageArea and close db before backing db file is deleted.
+    void clearForOriginDeletion();
 
-        void sync();
+    void sync();
 
-    private:
-        StorageAreaImpl(StorageType, PassRefPtr<SecurityOrigin>, PassRefPtr<StorageSyncManager>, unsigned quota);
+private:
+    StorageAreaImpl(StorageType, PassRefPtr<SecurityOrigin>, PassRefPtr<StorageSyncManager>, unsigned quota);
     explicit StorageAreaImpl(StorageAreaImpl*);
 
-        void blockUntilImportComplete() const;
-        void closeDatabaseTimerFired(Timer<StorageAreaImpl>*);
+    void blockUntilImportComplete() const;
+    void closeDatabaseTimerFired(Timer<StorageAreaImpl>*);
 
     void dispatchStorageEvent(const String& key, const String& oldValue, const String& newValue, Frame* sourceFrame);
 
-        StorageType m_storageType;
-        RefPtr<SecurityOrigin> m_securityOrigin;
-        RefPtr<StorageMap> m_storageMap;
+    StorageType m_storageType;
+    RefPtr<SecurityOrigin> m_securityOrigin;
+    RefPtr<StorageMap> m_storageMap;
 
-        RefPtr<StorageAreaSync> m_storageAreaSync;
-        RefPtr<StorageSyncManager> m_storageSyncManager;
+    RefPtr<StorageAreaSync> m_storageAreaSync;
+    RefPtr<StorageSyncManager> m_storageSyncManager;
 
 #ifndef NDEBUG
-        bool m_isShutdown;
+    bool m_isShutdown;
 #endif
-        unsigned m_accessCount;
-        Timer<StorageAreaImpl> m_closeDatabaseTimer;
-    };
+    unsigned m_accessCount;
+    Timer<StorageAreaImpl> m_closeDatabaseTimer;
+};
 
 } // namespace WebCore
 

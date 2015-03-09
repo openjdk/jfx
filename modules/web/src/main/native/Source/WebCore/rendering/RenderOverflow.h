@@ -22,6 +22,7 @@
 #define RenderOverflow_h
 
 #include "LayoutRect.h"
+#include <wtf/RefCounted.h>
 
 namespace WebCore
 {
@@ -37,7 +38,7 @@ namespace WebCore
 // Examples of visual overflow are shadows, text stroke (and eventually outline and border-image).
 
 // This object is allocated only when some of these fields have non-default values in the owning box.
-class RenderOverflow {
+class RenderOverflow : public WTF::RefCounted<RenderOverflow> {
     WTF_MAKE_NONCOPYABLE(RenderOverflow); WTF_MAKE_FAST_ALLOCATED;
 public:
     RenderOverflow(const LayoutRect& layoutRect, const LayoutRect& visualRect) 
@@ -48,7 +49,7 @@ public:
    
     const LayoutRect layoutOverflowRect() const { return m_layoutOverflow; }
     const LayoutRect visualOverflowRect() const { return m_visualOverflow; }
-
+    
     void move(LayoutUnit dx, LayoutUnit dy);
     
     void addLayoutOverflow(const LayoutRect&);

@@ -28,6 +28,8 @@
 
 #if ENABLE(INDEXED_DATABASE)
 
+#include "IDBKeyData.h"
+
 namespace WebCore {
 
 IDBKey::~IDBKey()
@@ -74,6 +76,7 @@ int IDBKey::compare(const IDBKey* other) const
                 (m_number > other-> m_number) ? 1 : 0;
     case InvalidType:
     case MinType:
+    case MaxType:
         ASSERT_NOT_REACHED();
         return 0;
     }
@@ -95,6 +98,13 @@ bool IDBKey::isEqual(const IDBKey* other) const
 
     return !compare(other);
 }
+
+#ifndef NDEBUG
+String IDBKey::loggingString() const
+{
+    return IDBKeyData(this).loggingString();
+}
+#endif
 
 } // namespace WebCore
 

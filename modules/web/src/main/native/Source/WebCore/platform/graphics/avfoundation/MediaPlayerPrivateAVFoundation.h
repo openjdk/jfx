@@ -32,17 +32,17 @@
 #include "InbandTextTrackPrivateAVF.h"
 #include "MediaPlayerPrivate.h"
 #include "Timer.h"
+#include <functional>
+#include <wtf/Functional.h>
 #include <wtf/RetainPtr.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
 class InbandTextTrackPrivateAVF;
 class GenericCueData;
 
-class MediaPlayerPrivateAVFoundation : public MediaPlayerPrivateInterface
-#if !PLATFORM(WIN)
-    , public AVFInbandTrackParent
-#endif
+class MediaPlayerPrivateAVFoundation : public MediaPlayerPrivateInterface, public AVFInbandTrackParent
 {
 public:
 
@@ -56,11 +56,9 @@ public:
     virtual void seekCompleted(bool);
     virtual void didEnd();
     virtual void contentsNeedsDisplay() { }
-#if !PLATFORM(WIN)
     virtual void configureInbandTracks();
     virtual void setCurrentTrack(InbandTextTrackPrivateAVF*) { }
     virtual InbandTextTrackPrivateAVF* currentTrack() const = 0;
-#endif
 
     class Notification {
     public:
@@ -88,6 +86,7 @@ public:
 #define DEFINE_TYPE_ENUM(type) type,
             FOR_EACH_MEDIAPLAYERPRIVATEAVFOUNDATION_NOTIFICATION_TYPE(DEFINE_TYPE_ENUM)
 #undef DEFINE_TYPE_ENUM
+            FunctionType,
         };
         
         Notification()
@@ -105,9 +104,17 @@ public:
         }
         
         Notification(Type type, bool finished)
-        : m_type(type)
-        , m_time(0)
-        , m_finished(finished)
+            : m_type(type)
+            , m_time(0)
+            , m_finished(finished)
+        {
+        }
+
+        Notification(WTF::Function<void ()> function)
+            : m_type(FunctionType)
+            , m_time(0)
+            , m_finished(false)
+            , m_function(function)
         {
         }
         
@@ -115,11 +122,13 @@ public:
         bool isValid() { return m_type != None; }
         double time() { return m_time; }
         bool finished() { return m_finished; }
+        Function<void ()>& function() { return m_function; }
         
     private:
         Type m_type;
         double m_time;
         bool m_finished;
+        Function<void ()> m_function;
     };
 
     void scheduleMainThreadNotification(Notification);
@@ -132,50 +141,58 @@ protected:
     MediaPlayerPrivateAVFoundation(MediaPlayer*);
     virtual ~MediaPlayerPrivateAVFoundation();
 
+    WeakPtr<MediaPlayerPrivateAVFoundation> createWeakPtr() { return m_weakPtrFactory.createWeakPtr(); }
+
     // MediaPlayerPrivatePrivateInterface overrides.
-    virtual void load(const String& url);
+    virtual void load(const String& url) override;
+#if ENABLE(MEDIA_SOURCE)
+    virtual void load(const String&, MediaSourcePrivateClient*);
+#endif
     virtual void cancelLoad() = 0;
 
-    virtual void prepareToPlay();
+    virtual void prepareToPlay() override;
     virtual PlatformMedia platformMedia() const = 0;
 
-    virtual void play();
-    virtual void pause();
+    virtual void play() override;
+    virtual void pause() override;
 
-    virtual IntSize naturalSize() const;
-    virtual bool hasVideo() const { return m_cachedHasVideo; }
-    virtual bool hasAudio() const { return m_cachedHasAudio; }
-    virtual void setVisible(bool);
-    virtual float duration() const;
+    virtual IntSize naturalSize() const override;
+    virtual bool hasVideo() const override { return m_cachedHasVideo; }
+    virtual bool hasAudio() const override { return m_cachedHasAudio; }
+    virtual void setVisible(bool) override;
+    virtual float duration() const override;
     virtual float currentTime() const = 0;
-    virtual void seek(float);
-    virtual bool seeking() const;
-    virtual void setRate(float);
-    virtual bool paused() const;
+    virtual void seek(float) override;
+    virtual void seekWithTolerance(double, double, double) override;
+    virtual bool seeking() const override;
+    virtual void setRate(float) override;
+    virtual bool paused() const override;
     virtual void setVolume(float) = 0;
-    virtual bool hasClosedCaptions() const { return m_cachedHasCaptions; }
+    virtual bool hasClosedCaptions() const override { return m_cachedHasCaptions; }
     virtual void setClosedCaptionsVisible(bool) = 0;
-    virtual MediaPlayer::NetworkState networkState() const { return m_networkState; }
-    virtual MediaPlayer::ReadyState readyState() const { return m_readyState; }
-    virtual double maxTimeSeekableDouble() const;
-    virtual double minTimeSeekable() const;
-    virtual PassRefPtr<TimeRanges> buffered() const;
-    virtual bool didLoadingProgress() const;
-    virtual void setSize(const IntSize&);
+    virtual MediaPlayer::NetworkState networkState() const override { return m_networkState; }
+    virtual MediaPlayer::ReadyState readyState() const override { return m_readyState; }
+    virtual double maxTimeSeekableDouble() const override;
+    virtual double minTimeSeekable() const override;
+    virtual PassRefPtr<TimeRanges> buffered() const override;
+    virtual bool didLoadingProgress() const override;
+    virtual void setSize(const IntSize&) override;
     virtual void paint(GraphicsContext*, const IntRect&) = 0;
     virtual void paintCurrentFrameInContext(GraphicsContext*, const IntRect&) = 0;
-    virtual void setPreload(MediaPlayer::Preload);
-#if USE(ACCELERATED_COMPOSITING)
+    virtual void setPreload(MediaPlayer::Preload) override;
     virtual PlatformLayer* platformLayer() const { return 0; }
     virtual bool supportsAcceleratedRendering() const = 0;
-    virtual void acceleratedRenderingStateChanged();
-#endif
+    virtual void acceleratedRenderingStateChanged() override;
+    virtual bool shouldMaintainAspectRatio() const override { return m_shouldMaintainAspectRatio; }
+    virtual void setShouldMaintainAspectRatio(bool) override;
+
     virtual MediaPlayer::MovieLoadType movieLoadType() const;
     virtual void prepareForRendering();
     virtual float mediaTimeForTimeValue(float) const = 0;
 
     virtual bool supportsFullscreen() const;
     virtual bool supportsScanning() const { return true; }
+    unsigned long long fileSize() const { return totalBytes(); }
 
     // Required interfaces for concrete derived classes.
     virtual void createAVAssetForURL(const String&) = 0;
@@ -210,8 +227,8 @@ protected:
     virtual void checkPlayability() = 0;
     virtual void updateRate() = 0;
     virtual float rate() const = 0;
-    virtual void seekToTime(double time) = 0;
-    virtual unsigned totalBytes() const = 0;
+    virtual void seekToTime(double time, double negativeTolerance, double positiveTolerance) = 0;
+    virtual unsigned long long totalBytes() const = 0;
     virtual PassRefPtr<TimeRanges> platformBufferedTimeRanges() const = 0;
     virtual double platformMaxTimeSeekable() const = 0;
     virtual double platformMinTimeSeekable() const = 0;
@@ -233,12 +250,16 @@ protected:
     virtual bool hasContextRenderer() const = 0;
     virtual bool hasLayerRenderer() const = 0;
 
+    virtual void updateVideoLayerGravity() = 0;
+
 protected:
     void updateStates();
 
     void setHasVideo(bool);
     void setHasAudio(bool);
     void setHasClosedCaptions(bool);
+    void characteristicsChanged();
+    void setDelayCharacteristicsChangedNotification(bool);
     void setDelayCallbacks(bool) const;
     void setIgnoreLoadStateChanges(bool delay) { m_ignoreLoadStateChanges = delay; }
     void setNaturalSize(IntSize);
@@ -266,13 +287,19 @@ protected:
 
     virtual String engineDescription() const { return "AVFoundation"; }
 
-#if !PLATFORM(WIN)
-    virtual void trackModeChanged() OVERRIDE;
-    Vector<RefPtr<InbandTextTrackPrivateAVF> > m_textTracks;
-#endif
+    virtual size_t extraMemoryCost() const override;
+
+    virtual void trackModeChanged() override;
+    void processNewAndRemovedTextTracks(const Vector<RefPtr<InbandTextTrackPrivateAVF>>&);
+    void clearTextTracks();
+    Vector<RefPtr<InbandTextTrackPrivateAVF>> m_textTracks;
     
 private:
     MediaPlayer* m_player;
+
+    WeakPtrFactory<MediaPlayerPrivateAVFoundation> m_weakPtrFactory;
+
+    std::function<void()> m_pendingSeek;
 
     Vector<Notification> m_queuedNotifications;
     mutable Mutex m_queueMutex;
@@ -292,9 +319,9 @@ private:
     mutable float m_cachedDuration;
     float m_reportedDuration;
     mutable float m_maxTimeLoadedAtLastDidLoadingProgress;
-    double m_seekTo;
     float m_requestedRate;
     mutable int m_delayCallbacks;
+    int m_delayCharacteristicsChangedNotification;
     bool m_mainThreadCallPending;
     bool m_assetIsPlayable;
     bool m_visible;
@@ -306,9 +333,10 @@ private:
     bool m_ignoreLoadStateChanges;
     bool m_haveReportedFirstVideoFrame;
     bool m_playWhenFramesAvailable;
-#if !PLATFORM(WIN)
     bool m_inbandTrackConfigurationPending;
-#endif
+    bool m_characteristicsChanged;
+    bool m_shouldMaintainAspectRatio;
+    bool m_seeking;
 };
 
 } // namespace WebCore

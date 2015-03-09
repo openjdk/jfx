@@ -21,10 +21,11 @@
 #ifndef WTF_FastMalloc_h
 #define WTF_FastMalloc_h
 
+#include <new>
+#include <stdlib.h>
 #include <wtf/Platform.h>
 #include <wtf/PossiblyNull.h>
-#include <stdlib.h>
-#include <new>
+#include <wtf/StdLibExtras.h>
 
 namespace WTF {
 
@@ -99,8 +100,6 @@ namespace WTF {
             AllocTypeMalloc = 0x375d6750,   // Encompasses fastMalloc, fastZeroedMalloc, fastCalloc, fastRealloc.
             AllocTypeClassNew,              // Encompasses class operator new from FastAllocBase.
             AllocTypeClassNewArray,         // Encompasses class operator new[] from FastAllocBase.
-            AllocTypeFastNew,               // Encompasses fastNew.
-            AllocTypeFastNewArray,          // Encompasses fastNewArray.
             AllocTypeNew,                   // Encompasses global operator new.
             AllocTypeNewArray               // Encompasses global operator new[].
         };
@@ -243,41 +242,48 @@ using WTF::fastMallocAllow;
 #define WTF_PRIVATE_INLINE __private_extern__ inline __attribute__((always_inline))
 #elif COMPILER(GCC)
 #define WTF_PRIVATE_INLINE inline __attribute__((always_inline))
-#elif COMPILER(MSVC) || COMPILER(RVCT)
+#elif COMPILER(MSVC)
 #define WTF_PRIVATE_INLINE __forceinline
 #else
 #define WTF_PRIVATE_INLINE inline
 #endif
 
-#if !defined(_CRTDBG_MAP_ALLOC) && !(defined(USE_SYSTEM_MALLOC) && USE_SYSTEM_MALLOC)
-
-// The nothrow functions here are actually not all that helpful, because fastMalloc will
-// call CRASH() rather than returning 0, and returning 0 is what nothrow is all about.
-// But since WebKit code never uses exceptions or nothrow at all, this is probably OK.
-// Long term we will adopt FastAllocBase.h everywhere, and and replace this with
-// debug-only code to make sure we don't use the system malloc via the default operator
-// new by accident.
-
-#if ENABLE(GLOBAL_FASTMALLOC_NEW)
-
-#if COMPILER(MSVC)
-#pragma warning(push)
-#pragma warning(disable: 4290) // Disable the C++ exception specification ignored warning.
-#endif
-WTF_PRIVATE_INLINE void* operator new(size_t size) throw (std::bad_alloc) { return fastMalloc(size); }
-WTF_PRIVATE_INLINE void* operator new(size_t size, const std::nothrow_t&) throw() { return fastMalloc(size); }
-WTF_PRIVATE_INLINE void operator delete(void* p) throw() { fastFree(p); }
-WTF_PRIVATE_INLINE void operator delete(void* p, const std::nothrow_t&) throw() { fastFree(p); }
-WTF_PRIVATE_INLINE void* operator new[](size_t size) throw (std::bad_alloc) { return fastMalloc(size); }
-WTF_PRIVATE_INLINE void* operator new[](size_t size, const std::nothrow_t&) throw() { return fastMalloc(size); }
-WTF_PRIVATE_INLINE void operator delete[](void* p) throw() { fastFree(p); }
-WTF_PRIVATE_INLINE void operator delete[](void* p, const std::nothrow_t&) throw() { fastFree(p); }
-#if COMPILER(MSVC)
-#pragma warning(pop)
-#endif
-
-#endif
-
-#endif
+#define WTF_MAKE_FAST_ALLOCATED \
+public: \
+    void* operator new(size_t, void* p) { return p; } \
+    void* operator new[](size_t, void* p) { return p; } \
+    \
+    void* operator new(size_t size) \
+    { \
+        void* p = ::WTF::fastMalloc(size); \
+        ::WTF::fastMallocMatchValidateMalloc(p, ::WTF::Internal::AllocTypeClassNew); \
+        return p; \
+    } \
+    \
+    void operator delete(void* p) \
+    { \
+        ::WTF::fastMallocMatchValidateFree(p, ::WTF::Internal::AllocTypeClassNew); \
+        ::WTF::fastFree(p); \
+    } \
+    \
+    void* operator new[](size_t size) \
+    { \
+        void* p = ::WTF::fastMalloc(size); \
+        ::WTF::fastMallocMatchValidateMalloc(p, ::WTF::Internal::AllocTypeClassNewArray); \
+        return p; \
+    } \
+    \
+    void operator delete[](void* p) \
+    { \
+        ::WTF::fastMallocMatchValidateFree(p, ::WTF::Internal::AllocTypeClassNewArray); \
+        ::WTF::fastFree(p); \
+    } \
+    void* operator new(size_t, NotNullTag, void* location) \
+    { \
+        ASSERT(location); \
+        return location; \
+    } \
+private: \
+typedef int __thisIsHereToForceASemicolonAfterThisMacro
 
 #endif /* WTF_FastMalloc_h */

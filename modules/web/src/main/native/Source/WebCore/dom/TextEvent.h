@@ -51,7 +51,7 @@ namespace WebCore {
     
         String data() const { return m_data; }
 
-        virtual const AtomicString& interfaceName() const;
+        virtual EventInterface eventInterface() const override;
 
         bool isLineBreak() const { return m_inputType == TextEventInputLineBreak; }
         bool isComposition() const { return m_inputType == TextEventInputComposition; }
@@ -73,6 +73,8 @@ namespace WebCore {
                   bool shouldSmartReplace, bool shouldMatchStyle);
         TextEvent(PassRefPtr<AbstractView>, const String& data, const Vector<DictationAlternative>& dictationAlternatives);
 
+        virtual bool isTextEvent() const override;
+
         TextEventInputType m_inputType;
         String m_data;
 
@@ -81,6 +83,8 @@ namespace WebCore {
         bool m_shouldMatchStyle;
         Vector<DictationAlternative> m_dictationAlternatives;
     };
+
+EVENT_TYPE_CASTS(TextEvent)
 
 } // namespace WebCore
 

@@ -19,19 +19,19 @@
  */
 
 #include "config.h"
-#if ENABLE(SVG)
 #include "SVGDescElement.h"
+
 #include "SVGNames.h"
 
 namespace WebCore {
 
-inline SVGDescElement::SVGDescElement(const QualifiedName& tagName, Document* document)
-    : SVGStyledElement(tagName, document)
+inline SVGDescElement::SVGDescElement(const QualifiedName& tagName, Document& document)
+    : SVGElement(tagName, document)
 {
     ASSERT(hasTagName(SVGNames::descTag));
 }
 
-PassRefPtr<SVGDescElement> SVGDescElement::create(const QualifiedName& tagName, Document* document)
+PassRefPtr<SVGDescElement> SVGDescElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(new SVGDescElement(tagName, document));
 }
@@ -42,7 +42,3 @@ String SVGDescElement::description() const
 }
 
 }
-
-// vim:ts=4:noet
-#endif // ENABLE(SVG)
-

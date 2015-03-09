@@ -29,7 +29,7 @@
 
 #include <gtk/gtk.h>
 #include <wtf/Platform.h>
-#include <wtf/gobject/GOwnPtr.h>
+#include <wtf/gobject/GUniquePtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WTR {
@@ -68,8 +68,10 @@ static gboolean timeoutCallback(gpointer)
 void TestController::platformRunUntil(bool&, double timeout)
 {
     cancelTimeout();
-    if (timeout != m_noTimeout)
+    if (timeout != m_noTimeout) {
         gTimeoutSourceId = g_timeout_add(timeout * 1000, timeoutCallback, 0);
+        g_source_set_name_by_id(gTimeoutSourceId, "[WebKit] timeoutCallback");
+    }
     gtk_main();
 }
 
@@ -86,18 +88,23 @@ static char* getEnvironmentVariableAsUTF8String(const char* variableName)
 
 void TestController::initializeInjectedBundlePath()
 {
-    GOwnPtr<char> utf8BundlePath(getEnvironmentVariableAsUTF8String("TEST_RUNNER_INJECTED_BUNDLE_FILENAME"));
+    GUniquePtr<char> utf8BundlePath(getEnvironmentVariableAsUTF8String("TEST_RUNNER_INJECTED_BUNDLE_FILENAME"));
     m_injectedBundlePath.adopt(WKStringCreateWithUTF8CString(utf8BundlePath.get()));
 }
 
 void TestController::initializeTestPluginDirectory()
 {
-    GOwnPtr<char> testPluginPath(getEnvironmentVariableAsUTF8String("TEST_RUNNER_TEST_PLUGIN_PATH"));
+    GUniquePtr<char> testPluginPath(getEnvironmentVariableAsUTF8String("TEST_RUNNER_TEST_PLUGIN_PATH"));
     m_testPluginDirectory.adopt(WKStringCreateWithUTF8CString(testPluginPath.get()));
 }
 
 void TestController::platformInitializeContext()
 {
+}
+
+void TestController::setHidden(bool)
+{
+    // FIXME: Need to implement this to test visibilityState.
 }
 
 void TestController::runModal(PlatformWebView*)

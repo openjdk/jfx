@@ -34,11 +34,13 @@
 
 #include "InspectorClient.h"
 
-#include "Frame.h"
+#include "MainFrame.h"
 #include "Page.h"
 #include "ScriptController.h"
 #include "ScriptSourceCode.h"
-#include "ScriptValue.h"
+#include <bindings/ScriptValue.h>
+
+using namespace Inspector;
 
 namespace WebCore {
 
@@ -47,18 +49,10 @@ bool InspectorClient::doDispatchMessageOnFrontendPage(Page* frontendPage, const 
     if (!frontendPage)
         return false;
 
-    Frame* frame = frontendPage->mainFrame();
-    if (!frame)
-        return false;
-
-    ScriptController* scriptController = frame->script();
-    if (!scriptController)
-        return false;
-
     String dispatchToFrontend = "InspectorFrontendAPI.dispatchMessageAsync(" + message + ");";
 
     // FIXME: This should execute the script in the appropriate world.
-    scriptController->evaluate(ScriptSourceCode(dispatchToFrontend));
+    frontendPage->mainFrame().script().evaluate(ScriptSourceCode(dispatchToFrontend));
     return true;
 }
 

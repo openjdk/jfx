@@ -32,16 +32,9 @@
 #if ENABLE(INPUT_TYPE_DATE)
 #include "DateInputType.h"
 
-#include "DateComponents.h"
-#include "DateTimeFieldsState.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
 #include "InputTypeNames.h"
-#include "KeyboardEvent.h"
-#include "LocalizedStrings.h"
-#include "PickerIndicatorElement.h"
-#include "PlatformLocale.h"
-#include <wtf/PassOwnPtr.h>
 
 namespace WebCore {
 
@@ -51,14 +44,9 @@ static const int dateDefaultStep = 1;
 static const int dateDefaultStepBase = 0;
 static const int dateStepScaleFactor = 86400000;
 
-inline DateInputType::DateInputType(HTMLInputElement* element)
-    : BaseDateInputType(element)
+DateInputType::DateInputType(HTMLInputElement& element)
+    : BaseChooserOnlyDateAndTimeInputType(element)
 {
-}
-
-PassOwnPtr<InputType> DateInputType::create(HTMLInputElement* element)
-{
-    return adoptPtr(new DateInputType(element));
 }
 
 void DateInputType::attach()
@@ -80,10 +68,10 @@ StepRange DateInputType::createStepRange(AnyStepHandling anyStepHandling) const
 {
     DEFINE_STATIC_LOCAL(const StepRange::StepDescription, stepDescription, (dateDefaultStep, dateDefaultStepBase, dateStepScaleFactor, StepRange::ParsedStepValueShouldBeInteger));
 
-    const Decimal stepBase = parseToNumber(element()->fastGetAttribute(minAttr), 0);
-    const Decimal minimum = parseToNumber(element()->fastGetAttribute(minAttr), Decimal::fromDouble(DateComponents::minimumDate()));
-    const Decimal maximum = parseToNumber(element()->fastGetAttribute(maxAttr), Decimal::fromDouble(DateComponents::maximumDate()));
-    const Decimal step = StepRange::parseStep(anyStepHandling, stepDescription, element()->fastGetAttribute(stepAttr));
+    const Decimal stepBase = parseToNumber(element().fastGetAttribute(minAttr), 0);
+    const Decimal minimum = parseToNumber(element().fastGetAttribute(minAttr), Decimal::fromDouble(DateComponents::minimumDate()));
+    const Decimal maximum = parseToNumber(element().fastGetAttribute(maxAttr), Decimal::fromDouble(DateComponents::maximumDate()));
+    const Decimal step = StepRange::parseStep(anyStepHandling, stepDescription, element().fastGetAttribute(stepAttr));
     return StepRange(stepBase, minimum, maximum, step, stepDescription);
 }
 
@@ -104,34 +92,6 @@ bool DateInputType::isDateField() const
 {
     return true;
 }
-
-#if ENABLE(INPUT_MULTIPLE_FIELDS_UI)
-String DateInputType::formatDateTimeFieldsState(const DateTimeFieldsState& dateTimeFieldsState) const
-{
-    if (!dateTimeFieldsState.hasDayOfMonth() || !dateTimeFieldsState.hasMonth() || !dateTimeFieldsState.hasYear())
-        return emptyString();
-
-    return String::format("%04u-%02u-%02u", dateTimeFieldsState.year(), dateTimeFieldsState.month(), dateTimeFieldsState.dayOfMonth());
-}
-
-void DateInputType::setupLayoutParameters(DateTimeEditElement::LayoutParameters& layoutParameters, const DateComponents& date) const
-{
-    layoutParameters.dateTimeFormat = layoutParameters.locale.dateFormat();
-    layoutParameters.fallbackDateTimeFormat = ASCIILiteral("yyyy-MM-dd");
-    if (!parseToDateComponents(element()->fastGetAttribute(minAttr), &layoutParameters.minimum))
-        layoutParameters.minimum = DateComponents();
-    if (!parseToDateComponents(element()->fastGetAttribute(maxAttr), &layoutParameters.maximum))
-        layoutParameters.maximum = DateComponents();
-    layoutParameters.placeholderForDay = placeholderForDayOfMonthField();
-    layoutParameters.placeholderForMonth = placeholderForMonthField();
-    layoutParameters.placeholderForYear = placeholderForYearField();
-}
-
-bool DateInputType::isValidFormat(bool hasYear, bool hasMonth, bool hasWeek, bool hasDay, bool hasAMPM, bool hasHour, bool hasMinute, bool hasSecond) const
-{
-    return hasYear && hasMonth && hasDay;
-}
-#endif
 
 } // namespace WebCore
 #endif

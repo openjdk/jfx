@@ -34,35 +34,31 @@
 
 #include "InspectorMemoryAgent.h"
 
-#include "BindingVisitors.h"
 #include "CharacterData.h"
 #include "Document.h"
 #include "EventListenerMap.h"
 #include "Frame.h"
 #include "InspectorDOMStorageAgent.h"
-#include "InspectorFrontend.h"
-#include "InspectorState.h"
-#include "InspectorValues.h"
+#include "InspectorWebFrontendDispatchers.h"
 #include "InstrumentingAgents.h"
 #include "MemoryCache.h"
 #include "Node.h"
 #include "NodeTraversal.h"
-#include "ScriptGCEvent.h"
 #include "ScriptProfiler.h"
 #include "StyledElement.h"
-#include <wtf/ArrayBufferView.h>
+#include <inspector/InspectorValues.h>
+#include <runtime/ArrayBufferView.h>
 #include <wtf/HashSet.h>
-#include <wtf/NonCopyingSort.h>
-#include <wtf/OwnPtr.h>
-#include <wtf/PassOwnPtr.h>
 #include <wtf/Vector.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringImpl.h>
 #include <wtf/text/WTFString.h>
 
 // Use a type alias instead of 'using' here which would cause a conflict on Mac.
-typedef WebCore::TypeBuilder::Memory::MemoryBlock InspectorMemoryBlock;
-typedef WebCore::TypeBuilder::Array<InspectorMemoryBlock> InspectorMemoryBlocks;
+typedef Inspector::TypeBuilder::Memory::MemoryBlock InspectorMemoryBlock;
+typedef Inspector::TypeBuilder::Array<InspectorMemoryBlock> InspectorMemoryBlocks;
+
+using namespace Inspector;
 
 namespace WebCore {
 
@@ -70,34 +66,26 @@ InspectorMemoryAgent::~InspectorMemoryAgent()
 {
 }
 
+void InspectorMemoryAgent::didCreateFrontendAndBackend(Inspector::InspectorFrontendChannel*, InspectorBackendDispatcher* backendDispatcher)
+{
+    m_backendDispatcher = InspectorMemoryBackendDispatcher::create(backendDispatcher, this);
+}
+
+void InspectorMemoryAgent::willDestroyFrontendAndBackend(InspectorDisconnectReason)
+{
+    m_backendDispatcher.clear();
+}
+
 void InspectorMemoryAgent::getDOMCounters(ErrorString*, int* documents, int* nodes, int* jsEventListeners)
 {
     *documents = InspectorCounters::counterValue(InspectorCounters::DocumentCounter);
     *nodes = InspectorCounters::counterValue(InspectorCounters::NodeCounter);
     *jsEventListeners = ThreadLocalInspectorCounters::current().counterValue(ThreadLocalInspectorCounters::JSEventListenerCounter);
-    }
+}
 
-InspectorMemoryAgent::InspectorMemoryAgent(InstrumentingAgents* instrumentingAgents, InspectorCompositeState* state)
-    : InspectorBaseAgent<InspectorMemoryAgent>("Memory", instrumentingAgents, state)
-    , m_frontend(0)
-    {
-    }
-
-PassOwnPtr<InspectorMemoryAgent> InspectorMemoryAgent::create(InstrumentingAgents* instrumentingAgents, InspectorCompositeState* state)
-    {
-    return adoptPtr(new InspectorMemoryAgent(instrumentingAgents, state));
-    }
-
-
-void InspectorMemoryAgent::setFrontend(InspectorFrontend* frontend)
-    {
-    ASSERT(!m_frontend);
-    m_frontend = frontend->memory();
-    }
-
-void InspectorMemoryAgent::clearFrontend()
-    {
-    m_frontend = 0;
+InspectorMemoryAgent::InspectorMemoryAgent(InstrumentingAgents* instrumentingAgents)
+    : InspectorAgentBase(ASCIILiteral("Memory"), instrumentingAgents)
+{
 }
 
 } // namespace WebCore

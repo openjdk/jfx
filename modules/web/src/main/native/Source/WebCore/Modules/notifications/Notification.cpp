@@ -49,7 +49,7 @@
 #include "ResourceResponse.h"
 #include "ThreadableLoader.h"
 #include "WindowFocusAllowedIndicator.h"
-#include "WorkerContext.h"
+#include "WorkerGlobalScope.h"
 
 namespace WebCore {
 
@@ -71,7 +71,7 @@ Notification::Notification(const String& title, const String& body, const String
         return;
     }
 
-    m_icon = iconURI.isEmpty() ? KURL() : scriptExecutionContext()->completeURL(iconURI);
+    m_icon = iconURI.isEmpty() ? URL() : scriptExecutionContext()->completeURL(iconURI);
     if (!m_icon.isEmpty() && !m_icon.isValid()) {
         ec = SYNTAX_ERR;
         return;
@@ -80,13 +80,13 @@ Notification::Notification(const String& title, const String& body, const String
 #endif
 
 #if ENABLE(NOTIFICATIONS)
-Notification::Notification(ScriptExecutionContext* context, const String& title)
-    : ActiveDOMObject(context)
+Notification::Notification(ScriptExecutionContext& context, const String& title)
+    : ActiveDOMObject(&context)
     , m_title(title)
     , m_state(Idle)
     , m_taskTimer(adoptPtr(new Timer<Notification>(this, &Notification::taskTimerFired)))
 {
-    m_notificationCenter = DOMWindowNotifications::webkitNotifications(toDocument(context)->domWindow());
+    m_notificationCenter = DOMWindowNotifications::webkitNotifications(toDocument(context).domWindow());
     
     ASSERT(m_notificationCenter->client());
     m_taskTimer->startOneShot(0);
@@ -107,7 +107,7 @@ PassRefPtr<Notification> Notification::create(const String& title, const String&
 #endif
 
 #if ENABLE(NOTIFICATIONS)
-PassRefPtr<Notification> Notification::create(ScriptExecutionContext* context, const String& title, const Dictionary& options)
+PassRefPtr<Notification> Notification::create(ScriptExecutionContext& context, const String& title, const Dictionary& options)
 {
     RefPtr<Notification> notification(adoptRef(new Notification(context, title)));
     String argument;
@@ -120,7 +120,7 @@ PassRefPtr<Notification> Notification::create(ScriptExecutionContext* context, c
     if (options.get("dir", argument))
         notification->setDir(argument);
     if (options.get("icon", argument)) {
-        KURL iconURI = argument.isEmpty() ? KURL() : context->completeURL(argument);
+        URL iconURI = argument.isEmpty() ? URL() : context.completeURL(argument);
         if (!iconURI.isEmpty() && iconURI.isValid())
             notification->setIconURL(iconURI);
     }
@@ -129,11 +129,6 @@ PassRefPtr<Notification> Notification::create(ScriptExecutionContext* context, c
     return notification.release();
 }
 #endif
-
-const AtomicString& Notification::interfaceName() const
-{
-    return eventNames().interfaceForNotification;
-}
 
 void Notification::show() 
 {
@@ -148,10 +143,10 @@ void Notification::show()
         }
 #endif
         if (m_notificationCenter->client()->show(this)) {
-        m_state = Showing;
-        setPendingActivity(this);
+            m_state = Showing;
+            setPendingActivity(this);
+        }
     }
-}
 }
 
 void Notification::close()
@@ -166,16 +161,6 @@ void Notification::close()
     case Closed:
         break;
     }
-}
-
-EventTargetData* Notification::eventTargetData()
-{
-    return &m_eventTargetData;
-}
-
-EventTargetData* Notification::ensureEventTargetData()
-{
-    return &m_eventTargetData;
 }
 
 void Notification::contextDestroyed()
@@ -216,10 +201,10 @@ void Notification::dispatchErrorEvent()
 }
 
 #if ENABLE(NOTIFICATIONS)
-void Notification::taskTimerFired(Timer<Notification>* timer)
+void Notification::taskTimerFired(Timer<Notification>& timer)
 {
     ASSERT(scriptExecutionContext()->isDocument());
-    ASSERT_UNUSED(timer, timer == m_taskTimer.get());
+    ASSERT_UNUSED(timer, &timer == m_taskTimer.get());
     show();
 }
 #endif

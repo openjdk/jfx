@@ -31,6 +31,8 @@
 #include "SlotVisitorInlines.h"
 #include "StructureInlines.h"
 
+#include <wtf/CryptographicallyRandomNumber.h>
+
 namespace JSC {
 
 const ClassInfo PropertyTable::s_info = { "PropertyTable", 0, 0, 0, CREATE_METHOD_TABLE(PropertyTable) };
@@ -82,7 +84,7 @@ PropertyTable::PropertyTable(VM& vm, JSCell* owner, const PropertyTable& other)
     iterator end = this->end();
     for (iterator iter = begin(); iter != end; ++iter) {
         iter->key->ref();
-        Heap::writeBarrier(owner, iter->specificValue.get());
+        vm.heap.writeBarrier(owner, iter->specificValue.get());
     }
 
     // Copy the m_deletedOffsets vector.
@@ -107,7 +109,7 @@ PropertyTable::PropertyTable(VM& vm, JSCell* owner, unsigned initialCapacity, co
         ASSERT(canInsert());
         reinsert(*iter);
         iter->key->ref();
-        Heap::writeBarrier(owner, iter->specificValue.get());
+        vm.heap.writeBarrier(owner, iter->specificValue.get());
     }
 
     // Copy the m_deletedOffsets vector.
@@ -133,7 +135,7 @@ PropertyTable::~PropertyTable()
 void PropertyTable::visitChildren(JSCell* cell, SlotVisitor& visitor)
 {
     PropertyTable* thisObject = jsCast<PropertyTable*>(cell);
-    ASSERT_GC_OBJECT_INHERITS(thisObject, &s_info);
+    ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     ASSERT(thisObject->structure()->typeInfo().overridesVisitChildren());
 
     JSCell::visitChildren(thisObject, visitor);

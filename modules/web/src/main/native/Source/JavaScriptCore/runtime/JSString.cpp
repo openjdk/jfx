@@ -26,14 +26,12 @@
 #include "JSGlobalObject.h"
 #include "JSGlobalObjectFunctions.h"
 #include "JSObject.h"
-#include "Operations.h"
+#include "JSCInlines.h"
 #include "StringObject.h"
 #include "StringPrototype.h"
 
 namespace JSC {
     
-static const unsigned substringFromRopeCutoff = 4;
-
 const ClassInfo JSString::s_info = { "string", 0, 0, 0, CREATE_METHOD_TABLE(JSString) };
 
 void JSRopeString::RopeBuilder::expand()
@@ -71,6 +69,11 @@ void JSString::visitChildren(JSCell* cell, SlotVisitor& visitor)
 
     if (thisObject->isRope())
         static_cast<JSRopeString*>(thisObject)->visitFibers(visitor);
+    else {
+        StringImpl* impl = thisObject->m_value.impl();
+        ASSERT(impl);
+        visitor.reportExtraMemoryUsage(thisObject, impl->costDuringGC());
+    }
 }
 
 void JSRopeString::visitFibers(SlotVisitor& visitor)
@@ -259,39 +262,23 @@ double JSString::toNumber(ExecState* exec) const
     return jsToNumber(value(exec));
 }
 
-inline StringObject* StringObject::create(ExecState* exec, JSGlobalObject* globalObject, JSString* string)
+inline StringObject* StringObject::create(VM& vm, JSGlobalObject* globalObject, JSString* string)
 {
-    StringObject* object = new (NotNull, allocateCell<StringObject>(*exec->heap())) StringObject(exec->vm(), globalObject->stringObjectStructure());
-    object->finishCreation(exec->vm(), string);
+    StringObject* object = new (NotNull, allocateCell<StringObject>(vm.heap)) StringObject(vm, globalObject->stringObjectStructure());
+    object->finishCreation(vm, string);
     return object;
 }
 
 JSObject* JSString::toObject(ExecState* exec, JSGlobalObject* globalObject) const
 {
-    return StringObject::create(exec, globalObject, const_cast<JSString*>(this));
+    return StringObject::create(exec->vm(), globalObject, const_cast<JSString*>(this));
 }
 
-JSObject* JSString::toThisObject(JSCell* cell, ExecState* exec)
+JSValue JSString::toThis(JSCell* cell, ExecState* exec, ECMAMode ecmaMode)
 {
-    return StringObject::create(exec, exec->lexicalGlobalObject(), jsCast<JSString*>(cell));
-}
-
-bool JSString::getOwnPropertySlot(JSCell* cell, ExecState* exec, PropertyName propertyName, PropertySlot& slot)
-{
-    JSString* thisObject = jsCast<JSString*>(cell);
-    // The semantics here are really getPropertySlot, not getOwnPropertySlot.
-    // This function should only be called by JSValue::get.
-    if (thisObject->getStringPropertySlot(exec, propertyName, slot))
-        return true;
-    slot.setBase(thisObject);
-    JSObject* object;
-    for (JSValue prototype = exec->lexicalGlobalObject()->stringPrototype(); !prototype.isNull(); prototype = object->prototype()) {
-        object = asObject(prototype);
-        if (object->methodTable()->getOwnPropertySlot(object, exec, propertyName, slot))
-            return true;
-    }
-    slot.setUndefined();
-    return true;
+    if (ecmaMode == StrictMode)
+        return cell;
+    return StringObject::create(exec->vm(), exec->lexicalGlobalObject(), jsCast<JSString*>(cell));
 }
 
 bool JSString::getStringPropertyDescriptor(ExecState* exec, PropertyName propertyName, PropertyDescriptor& descriptor)
@@ -311,14 +298,11 @@ bool JSString::getStringPropertyDescriptor(ExecState* exec, PropertyName propert
     return false;
 }
 
-bool JSString::getOwnPropertySlotByIndex(JSCell* cell, ExecState* exec, unsigned propertyName, PropertySlot& slot)
+void JSString::WeakOwner::finalize(Handle<Unknown>, void* context)
 {
-    JSString* thisObject = jsCast<JSString*>(cell);
-    // The semantics here are really getPropertySlot, not getOwnPropertySlot.
-    // This function should only be called by JSValue::get.
-    if (thisObject->getStringPropertySlot(exec, propertyName, slot))
-        return true;
-    return JSString::getOwnPropertySlot(thisObject, exec, Identifier::from(exec, propertyName), slot);
+    StringImpl* impl = static_cast<StringImpl*>(context);
+    WeakSet::deallocate(impl->weakJSString());
+    impl->setWeakJSString(nullptr);
 }
 
 } // namespace JSC

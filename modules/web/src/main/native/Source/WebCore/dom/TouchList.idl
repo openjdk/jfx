@@ -24,11 +24,10 @@
  */
 
 [
-        Conditional=TOUCH_EVENTS,
-    IndexedGetter,
-    ImplementationLacksVTable
+    Conditional=TOUCH_EVENTS,
+    ImplementationLacksVTable,
 ] interface TouchList {
-        readonly attribute unsigned long length;
+    readonly attribute unsigned long length;
 
-    Touch item(unsigned long index);
-    };
+    getter Touch item(unsigned long index);
+};

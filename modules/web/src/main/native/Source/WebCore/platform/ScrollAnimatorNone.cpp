@@ -36,16 +36,11 @@
 
 #include "FloatPoint.h"
 #include "NotImplemented.h"
-#include <wtf/OwnArrayPtr.h>
 #include "ScrollableArea.h"
 #include "ScrollbarTheme.h"
 #include <algorithm>
 #include <wtf/CurrentTime.h>
 #include <wtf/PassOwnPtr.h>
-
-#if ENABLE(GESTURE_EVENTS)
-#include "PlatformGestureEvent.h"
-#endif
 
 using namespace std;
 
@@ -56,14 +51,12 @@ const double kTickTime = 1 / kFrameRate;
 const double kMinimumTimerInterval = .001;
 const double kZoomTicks = 11;
 
-#if !(PLATFORM(BLACKBERRY))
 PassOwnPtr<ScrollAnimator> ScrollAnimator::create(ScrollableArea* scrollableArea)
 {
     if (scrollableArea && scrollableArea->scrollAnimatorEnabled())
         return adoptPtr(new ScrollAnimatorNone(scrollableArea));
     return adoptPtr(new ScrollAnimator(scrollableArea));
 }
-#endif
 
 ScrollAnimatorNone::Parameters::Parameters()
     : m_isEnabled(false)
@@ -395,7 +388,6 @@ ScrollAnimatorNone::~ScrollAnimatorNone()
 
 ScrollAnimatorNone::Parameters ScrollAnimatorNone::parametersForScrollGranularity(ScrollGranularity granularity) const
 {
-#if !PLATFORM(QT)
 #if PLATFORM(JAVA)
     return Parameters();
 #endif
@@ -411,22 +403,6 @@ ScrollAnimatorNone::Parameters ScrollAnimatorNone::parametersForScrollGranularit
     default:
         ASSERT_NOT_REACHED();
     }
-#else
-    // This is a slightly different strategy for the animation with a steep attack curve and natural release curve.
-    // The fast acceleration makes the animation look more responsive to user input.
-    switch (granularity) {
-    case ScrollByDocument:
-        return Parameters(true, 20 * kTickTime, 10 * kTickTime, Cubic, 6 * kTickTime, Quadratic, 10 * kTickTime, Quadratic, 22 * kTickTime);
-    case ScrollByLine:
-        return Parameters(true, 6 * kTickTime, 5 * kTickTime, Cubic, 1 * kTickTime, Quadratic, 4 * kTickTime, Linear, 1);
-    case ScrollByPage:
-        return Parameters(true, 12 * kTickTime, 10 * kTickTime, Cubic, 3 * kTickTime, Quadratic, 6 * kTickTime, Linear, 1);
-    case ScrollByPixel:
-        return Parameters(true, 8 * kTickTime, 3 * kTickTime, Cubic, 2 * kTickTime, Quadratic, 5 * kTickTime, Quadratic, 1.25);
-    default:
-        ASSERT_NOT_REACHED();
-    }
-#endif
     return Parameters();
 }
 
@@ -457,7 +433,7 @@ bool ScrollAnimatorNone::scroll(ScrollbarOrientation orientation, ScrollGranular
     float scrollableSize = static_cast<float>(m_scrollableArea->scrollSize(orientation));
 
     PerAxisData& data = (orientation == VerticalScrollbar) ? m_verticalData : m_horizontalData;
-    bool needToScroll = data.updateDataFromParameters(step, multiplier, scrollableSize, WTF::monotonicallyIncreasingTime(), &parameters);
+    bool needToScroll = data.updateDataFromParameters(step, multiplier, scrollableSize, monotonicallyIncreasingTime(), &parameters);
     if (needToScroll && !animationTimerActive()) {
         m_startTime = data.m_startTime;
         animationWillStart();
@@ -526,7 +502,7 @@ void ScrollAnimatorNone::animationTimerFired(Timer<ScrollAnimatorNone>* timer)
 
 void ScrollAnimatorNone::animationTimerFired()
 {
-    double currentTime = WTF::monotonicallyIncreasingTime();
+    double currentTime = monotonicallyIncreasingTime();
     double deltaToNextFrame = ceil((currentTime - m_startTime) * kFrameRate) / kFrameRate - (currentTime - m_startTime);
     currentTime += deltaToNextFrame;
 

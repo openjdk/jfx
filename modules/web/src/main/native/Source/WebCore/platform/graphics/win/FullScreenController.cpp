@@ -94,7 +94,7 @@ LRESULT FullScreenController::Private::fullscreenClientWndProc(HWND hwnd, UINT m
             m_controller->exitFullScreen();
             break;
         }
-        // Fall through.
+        FALLTHROUGH;
     default:
         lResult = ::DefWindowProc(hwnd, msg, wParam, lParam);
     }
@@ -123,6 +123,8 @@ void FullScreenController::enterFullScreen()
         return;
     m_private->m_isFullScreen = true;
     m_private->m_isEnteringFullScreen = true;
+
+    m_private->m_client->fullScreenClientSaveScrollPosition();
 
     m_private->m_originalHost = m_private->m_client->fullScreenClientParentWindow();
     RECT originalFrame = {0, 0, 0, 0};
@@ -178,6 +180,7 @@ void FullScreenController::exitFullScreen()
 
     ::SetWindowPos(m_private->m_client->fullScreenClientWindow(), 0, m_private->m_originalFrame.x(), m_private->m_originalFrame.y(), m_private->m_originalFrame.width(), m_private->m_originalFrame.height(), SWP_NOACTIVATE | SWP_NOZORDER);
 
+    m_private->m_client->fullScreenClientRestoreScrollPosition();
     m_private->m_client->fullScreenClientDidExitFullScreen();
     m_private->m_client->fullScreenClientForceRepaint();
 }

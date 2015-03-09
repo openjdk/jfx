@@ -28,7 +28,7 @@
 #include "CalculationValue.h"
 #include <wtf/ASCIICType.h>
 #include <wtf/Assertions.h>
-#include <wtf/OwnArrayPtr.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/text/StringBuffer.h>
 #include <wtf/text/WTFString.h>
 
@@ -85,10 +85,10 @@ static int countCharacter(const UChar* data, unsigned length, UChar character)
     return count;
 }
 
-PassOwnArrayPtr<Length> newCoordsArray(const String& string, int& len)
+std::unique_ptr<Length[]> newCoordsArray(const String& string, int& len)
 {
     unsigned length = string.length();
-    const UChar* data = string.characters();
+    const UChar* data = string.deprecatedCharacters();
     StringBuffer<UChar> spacified(length);
     for (unsigned i = 0; i < length; i++) {
         UChar cc = data[i];
@@ -101,25 +101,25 @@ PassOwnArrayPtr<Length> newCoordsArray(const String& string, int& len)
 
     str = str->simplifyWhiteSpace();
 
-    len = countCharacter(str->characters(), str->length(), ' ') + 1;
-    OwnArrayPtr<Length> r = adoptArrayPtr(new Length[len]);
+    len = countCharacter(str->deprecatedCharacters(), str->length(), ' ') + 1;
+    auto r = std::make_unique<Length[]>(len);
 
     int i = 0;
     unsigned pos = 0;
     size_t pos2;
 
     while ((pos2 = str->find(' ', pos)) != notFound) {
-        r[i++] = parseLength(str->characters() + pos, pos2 - pos);
+        r[i++] = parseLength(str->deprecatedCharacters() + pos, pos2 - pos);
         pos = pos2+1;
     }
-    r[i] = parseLength(str->characters() + pos, str->length() - pos);
+    r[i] = parseLength(str->deprecatedCharacters() + pos, str->length() - pos);
 
     ASSERT(i == len - 1);
 
-    return r.release();
+    return r;
 }
 
-PassOwnArrayPtr<Length> newLengthArray(const String& string, int& len)
+std::unique_ptr<Length[]> newLengthArray(const String& string, int& len)
 {
     RefPtr<StringImpl> str = string.impl()->simplifyWhiteSpace();
     if (!str->length()) {
@@ -127,15 +127,15 @@ PassOwnArrayPtr<Length> newLengthArray(const String& string, int& len)
         return nullptr;
     }
 
-    len = countCharacter(str->characters(), str->length(), ',') + 1;
-    OwnArrayPtr<Length> r = adoptArrayPtr(new Length[len]);
+    len = countCharacter(str->deprecatedCharacters(), str->length(), ',') + 1;
+    auto r = std::make_unique<Length[]>(len);
 
     int i = 0;
     unsigned pos = 0;
     size_t pos2;
 
     while ((pos2 = str->find(',', pos)) != notFound) {
-        r[i++] = parseLength(str->characters() + pos, pos2 - pos);
+        r[i++] = parseLength(str->deprecatedCharacters() + pos, pos2 - pos);
         pos = pos2+1;
     }
 
@@ -143,11 +143,11 @@ PassOwnArrayPtr<Length> newLengthArray(const String& string, int& len)
 
     // IE Quirk: If the last comma is the last char skip it and reduce len by one.
     if (str->length()-pos > 0)
-        r[i] = parseLength(str->characters() + pos, str->length() - pos);
+        r[i] = parseLength(str->deprecatedCharacters() + pos, str->length() - pos);
     else
         len--;
 
-    return r.release();
+    return r;
 }
         
 class CalculationValueHandleMap {
@@ -177,16 +177,28 @@ public:
         ASSERT(m_map.contains(index));
         m_map.remove(index);
     }
-    
+
+    void remove(HashMap<int, RefPtr<CalculationValue>>::iterator it)
+    {
+        ASSERT(it != m_map.end());
+        m_map.remove(it);
+    }
+
     PassRefPtr<CalculationValue> get(int index)
     {
         ASSERT(m_map.contains(index));
         return m_map.get(index);
     }
-    
+
+    HashMap<int, RefPtr<CalculationValue>>::iterator find(int index)
+    {
+        ASSERT(m_map.contains(index));
+        return m_map.find(index);
+    }
+
 private:        
     int m_index;
-    HashMap<int, RefPtr<CalculationValue> > m_map;
+    HashMap<int, RefPtr<CalculationValue>> m_map;
 };
     
 static CalculationValueHandleMap& calcHandles()
@@ -211,8 +223,8 @@ Length Length::blendMixedTypes(const Length& from, double progress) const
     if (progress >= 1.0)
         return *this;
         
-    OwnPtr<CalcExpressionNode> blend = adoptPtr(new CalcExpressionBlendLength(from, *this, progress));
-    return Length(CalculationValue::create(blend.release(), CalculationRangeAll));
+    auto blend = std::make_unique<CalcExpressionBlendLength>(from, *this, progress);
+    return Length(CalculationValue::create(std::move(blend), CalculationRangeAll));
 }
           
 PassRefPtr<CalculationValue> Length::calculationValue() const
@@ -230,11 +242,10 @@ void Length::incrementCalculatedRef() const
 void Length::decrementCalculatedRef() const
 {
     ASSERT(isCalculated());
-    RefPtr<CalculationValue> calcLength = calculationValue();
-    if (calcLength->hasOneRef())
-        calcHandles().remove(calculationHandle());
-    calcLength->deref();
-}    
+    auto it = calcHandles().find(calculationHandle());
+    if (it->value->hasOneRef())
+        calcHandles().remove(it);
+}
 
 float Length::nonNanCalculatedValue(int maxValue) const
 {

@@ -24,6 +24,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
+#if !PLATFORM(IOS)
+
 #include "config.h"
 #include "TextCodecMac.h"
 
@@ -36,8 +38,6 @@
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
 #include <wtf/unicode/CharacterNames.h>
-
-using namespace std;
 
 namespace WebCore {
 
@@ -142,7 +142,7 @@ OSStatus TextCodecMac::decode(const unsigned char* inputBuffer, int inputBufferL
         // First, fill the partial character buffer with as many bytes as are available.
         ASSERT_WITH_SECURITY_IMPLICATION(m_numBufferedBytes < sizeof(m_bufferedBytes));
         const int spaceInBuffer = sizeof(m_bufferedBytes) - m_numBufferedBytes;
-        const int bytesToPutInBuffer = min(spaceInBuffer, inputBufferLength);
+        const int bytesToPutInBuffer = std::min(spaceInBuffer, inputBufferLength);
         ASSERT(bytesToPutInBuffer != 0);
         memcpy(m_bufferedBytes + m_numBufferedBytes, inputBuffer, bytesToPutInBuffer);
 
@@ -327,3 +327,5 @@ CString TextCodecMac::encode(const UChar* characters, size_t length, Unencodable
 }
 
 } // namespace WebCore
+
+#endif // !PLATFORM(IOS)

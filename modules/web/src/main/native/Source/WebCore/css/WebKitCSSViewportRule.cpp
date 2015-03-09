@@ -34,7 +34,7 @@
 #if ENABLE(CSS_DEVICE_ADAPTATION)
 
 #include "PropertySetCSSStyleDeclaration.h"
-#include "StylePropertySet.h"
+#include "StyleProperties.h"
 #include "StyleRule.h"
 #include <wtf/text/StringBuilder.h>
 
@@ -55,7 +55,7 @@ WebKitCSSViewportRule::~WebKitCSSViewportRule()
 CSSStyleDeclaration* WebKitCSSViewportRule::style()
 {
     if (!m_propertiesCSSOMWrapper)
-        m_propertiesCSSOMWrapper = StyleRuleCSSStyleDeclaration::create(m_viewportRule->mutableProperties(), this);
+        m_propertiesCSSOMWrapper = StyleRuleCSSStyleDeclaration::create(m_viewportRule->mutableProperties(), *this);
 
     return m_propertiesCSSOMWrapper.get();
 }
@@ -65,7 +65,7 @@ String WebKitCSSViewportRule::cssText() const
     StringBuilder result;
     result.appendLiteral("@-webkit-viewport { ");
 
-    String decls = m_viewportRule->properties()->asText();
+    String decls = m_viewportRule->properties().asText();
     result.append(decls);
     if (!decls.isEmpty())
         result.append(' ');

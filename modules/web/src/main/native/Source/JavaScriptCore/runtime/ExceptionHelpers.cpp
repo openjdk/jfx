@@ -31,17 +31,18 @@
 
 #include "CodeBlock.h"
 #include "CallFrame.h"
+#include "ErrorHandlingScope.h"
 #include "ErrorInstance.h"
 #include "JSGlobalObjectFunctions.h"
 #include "JSObject.h"
 #include "JSNotAnObject.h"
 #include "Interpreter.h"
 #include "Nodes.h"
-#include "Operations.h"
+#include "JSCInlines.h"
 
 namespace JSC {
 
-ASSERT_HAS_TRIVIAL_DESTRUCTOR(TerminatedExecutionError);
+STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(TerminatedExecutionError);
 
 const ClassInfo TerminatedExecutionError::s_info = { "TerminatedExecutionError", &Base::s_info, 0, 0, CREATE_METHOD_TABLE(TerminatedExecutionError) };
 
@@ -59,12 +60,12 @@ JSObject* createTerminatedExecutionException(VM* vm)
 
 bool isTerminatedExecutionException(JSObject* object)
 {
-    return object->inherits(&TerminatedExecutionError::s_info);
+    return object->inherits(TerminatedExecutionError::info());
 }
 
 bool isTerminatedExecutionException(JSValue value)
 {
-    return value.inherits(&TerminatedExecutionError::s_info);
+    return value.inherits(TerminatedExecutionError::info());
 }
 
 
@@ -80,44 +81,72 @@ JSObject* createStackOverflowError(JSGlobalObject* globalObject)
 
 JSObject* createUndefinedVariableError(ExecState* exec, const Identifier& ident)
 {
+    
+    if (ident.impl()->isEmptyUnique()) {
+        String message(makeString("Can't find private variable: @", exec->propertyNames().getPublicName(ident).string()));
+        return createReferenceError(exec, message);
+    }
     String message(makeString("Can't find variable: ", ident.string()));
     return createReferenceError(exec, message);
 }
-
-JSObject* createInvalidParamError(ExecState* exec, const char* op, JSValue value)
+    
+JSString* errorDescriptionForValue(ExecState* exec, JSValue v)
 {
-    String errorMessage = makeString("'", value.toString(exec)->value(exec), "' is not a valid argument for '", op, "'");
-    JSObject* exception = createTypeError(exec, errorMessage);
+    VM& vm = exec->vm();
+    if (v.isNull())
+        return vm.smallStrings.nullString();
+    if (v.isUndefined())
+        return vm.smallStrings.undefinedString();
+    if (v.isInt32())
+        return jsString(&vm, vm.numericStrings.add(v.asInt32()));
+    if (v.isDouble())
+        return jsString(&vm, vm.numericStrings.add(v.asDouble()));
+    if (v.isTrue())
+        return vm.smallStrings.trueString();
+    if (v.isFalse())
+        return vm.smallStrings.falseString();
+    if (v.isString())
+        return jsCast<JSString*>(v.asCell());
+    if (v.isObject()) {
+        CallData callData;
+        JSObject* object = asObject(v);
+        if (object->methodTable()->getCallData(object, callData) != CallTypeNone)
+            return vm.smallStrings.functionString();
+        return jsString(exec, object->methodTable()->className(object));
+    }
+    
+    // The JSValue should never be empty, so this point in the code should never be reached.
+    ASSERT_NOT_REACHED();
+    return vm.smallStrings.emptyString();
+}
+    
+JSObject* createError(ExecState* exec, ErrorFactory errorFactory, JSValue value, const String& message)
+{
+    String errorMessage = makeString(errorDescriptionForValue(exec, value)->value(exec), " ", message);
+    JSObject* exception = errorFactory(exec, errorMessage);
     ASSERT(exception->isErrorInstance());
     static_cast<ErrorInstance*>(exception)->setAppendSourceToMessage();
     return exception;
+}
+
+JSObject* createInvalidParameterError(ExecState* exec, const char* op, JSValue value)
+{
+    return createError(exec, createTypeError, value, makeString("is not a valid argument for '", op, "'"));
 }
 
 JSObject* createNotAConstructorError(ExecState* exec, JSValue value)
 {
-    String errorMessage = makeString("'", value.toString(exec)->value(exec), "' is not a constructor");
-    JSObject* exception = createTypeError(exec, errorMessage);
-    ASSERT(exception->isErrorInstance());
-    static_cast<ErrorInstance*>(exception)->setAppendSourceToMessage();
-    return exception;
+    return createError(exec, createTypeError, value, "is not a constructor");
 }
 
 JSObject* createNotAFunctionError(ExecState* exec, JSValue value)
 {
-    String errorMessage = makeString("'", value.toString(exec)->value(exec), "' is not a function");
-    JSObject* exception = createTypeError(exec, errorMessage);
-    ASSERT(exception->isErrorInstance());
-    static_cast<ErrorInstance*>(exception)->setAppendSourceToMessage();
-    return exception;
+    return createError(exec, createTypeError, value, "is not a function");
 }
 
 JSObject* createNotAnObjectError(ExecState* exec, JSValue value)
 {
-    String errorMessage = makeString("'", value.toString(exec)->value(exec), "' is not an object");
-    JSObject* exception = createTypeError(exec, errorMessage);
-    ASSERT(exception->isErrorInstance());
-    static_cast<ErrorInstance*>(exception)->setAppendSourceToMessage();
-    return exception;
+    return createError(exec, createTypeError, value, "is not an object");
 }
 
 JSObject* createErrorForInvalidGlobalAssignment(ExecState* exec, const String& propertyName)
@@ -132,19 +161,21 @@ JSObject* createOutOfMemoryError(JSGlobalObject* globalObject)
 
 JSObject* throwOutOfMemoryError(ExecState* exec)
 {
-    return throwError(exec, createOutOfMemoryError(exec->lexicalGlobalObject()));
+    return exec->vm().throwException(exec, createOutOfMemoryError(exec->lexicalGlobalObject()));
 }
 
 JSObject* throwStackOverflowError(ExecState* exec)
 {
-    Interpreter::ErrorHandlingMode mode(exec);
-    return throwError(exec, createStackOverflowError(exec));
+    VM& vm = exec->vm();
+    ErrorHandlingScope errorScope(vm);
+    return vm.throwException(exec, createStackOverflowError(exec));
 }
 
 JSObject* throwTerminatedExecutionException(ExecState* exec)
 {
-    Interpreter::ErrorHandlingMode mode(exec);
-    return throwError(exec, createTerminatedExecutionException(&exec->vm()));
+    VM& vm = exec->vm();
+    ErrorHandlingScope errorScope(vm);
+    return vm.throwException(exec, createTerminatedExecutionException(&vm));
 }
 
 } // namespace JSC

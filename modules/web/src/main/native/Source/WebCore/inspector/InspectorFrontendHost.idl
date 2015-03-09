@@ -35,9 +35,9 @@
     Conditional=INSPECTOR,
     ImplementationLacksVTable
 ] interface InspectorFrontendHost {
-        void loaded();
-        void closeWindow();
-        void bringToFront();
+    void loaded();
+    void closeWindow();
+    void bringToFront();
     void setZoomFactor(float zoom);
     void inspectedURLChanged(DOMString newURL);
 
@@ -48,38 +48,34 @@
     void setToolbarHeight(float height);
 
     void moveWindowBy(float x, float y);
-    void setInjectedScriptForOrigin(DOMString origin, DOMString script);
 
-        DOMString localizedStringsURL();
+    DOMString localizedStringsURL();
+    DOMString debuggableType();
 
     void copyText(DOMString text);
     void openInNewTab(DOMString url);
-        boolean canSave();
-    void save(DOMString url, DOMString content, boolean forceSaveAs);
+    boolean canSave();
+    void save(DOMString url, DOMString content, boolean base64Encoded, boolean forceSaveAs);
     void append(DOMString url, DOMString content);
     void close(DOMString url);
 
-        [Custom] DOMString platform();
-        [Custom] DOMString port();
+    [Custom] DOMString platform();
+    [Custom] DOMString port();
     [Custom] void showContextMenu(MouseEvent event, any items);
+    void dispatchEventAsContextMenuEvent(Event event);
     void sendMessageToBackend(DOMString message);
 
     [Custom] void recordActionTaken(unsigned long actionCode);
     [Custom] void recordPanelShown(unsigned long panelCode);
     [Custom] void recordSettingChanged(unsigned long settingChanged);
-        
+
     DOMString loadResourceSynchronously(DOMString url);
 
-    boolean supportsFileSystems();
-    void requestFileSystems();
-    void addFileSystem();
-    void removeFileSystem(DOMString fileSystemPath);
-    [Conditional=FILE_SYSTEM] DOMFileSystem isolatedFileSystem(DOMString fileSystemId, DOMString registeredName);
-
     boolean isUnderTest();
+
+    void beep();
 
     // Deprecated
     boolean canInspectWorkers();
     boolean canSaveAs();
-    DOMString hiddenPanels();
-    };
+};

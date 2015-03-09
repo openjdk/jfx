@@ -22,7 +22,8 @@
 #ifndef WTF_StringHasher_h
 #define WTF_StringHasher_h
 
-#include <wtf/unicode/Unicode.h>
+#include <unicode/utypes.h>
+#include <wtf/text/LChar.h>
 
 namespace WTF {
 
@@ -248,7 +249,7 @@ public:
 
     template<size_t length> static unsigned hashMemory(const void* data)
     {
-        COMPILE_ASSERT(!(length % 2), length_must_be_a_multiple_of_two);
+        static_assert(!(length % 2), "length must be a multiple of two!");
         return hashMemory(data, length);
     }
 

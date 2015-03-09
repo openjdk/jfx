@@ -3,7 +3,7 @@
  */
 #include "config.h"
 #include "PlatformCookieJar.h"
-#include "KURL.h"
+#include "URL.h"
 
 #include "JavaEnv.h"
 #include "NotImplemented.h"
@@ -35,7 +35,7 @@ static void initRefs(JNIEnv* env)
 
 namespace WebCore {
 
-static String getCookies(const KURL& url, bool includeHttpOnlyCookies)
+static String getCookies(const URL& url, bool includeHttpOnlyCookies)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
@@ -50,7 +50,7 @@ static String getCookies(const KURL& url, bool includeHttpOnlyCookies)
     return result ? String(env, result) : emptyString();
 }
 
-void setCookiesFromDOM(const NetworkStorageSession&, const KURL&, const KURL& url, const String& value)
+void setCookiesFromDOM(const NetworkStorageSession&, const URL&, const URL& url, const String& value)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
@@ -63,29 +63,29 @@ void setCookiesFromDOM(const NetworkStorageSession&, const KURL&, const KURL& ur
     CheckAndClearException(env);    
 }
 
-String cookiesForDOM(const NetworkStorageSession&, const KURL&, const KURL& url)
+String cookiesForDOM(const NetworkStorageSession&, const URL&, const URL& url)
 {
     // 'HttpOnly' cookies should no be accessible from scripts, so we filter them out here.
     return getCookies(url, false);
 }
 
-String cookieRequestHeaderFieldValue(const NetworkStorageSession&, const KURL&, const KURL& url)
+String cookieRequestHeaderFieldValue(const NetworkStorageSession&, const URL&, const URL& url)
 {
     return getCookies(url, true);
 }
 
-bool cookiesEnabled(const NetworkStorageSession&, const KURL&, const KURL&)
+bool cookiesEnabled(const NetworkStorageSession&, const URL&, const URL&)
 {
     return true;
 }
 
-bool getRawCookies(const NetworkStorageSession&, const KURL&, const KURL& url, Vector<Cookie>& rawCookies)
+bool getRawCookies(const NetworkStorageSession&, const URL&, const URL& url, Vector<Cookie>& rawCookies)
 {
     notImplemented();
     return false;
 }
 
-void deleteCookie(const NetworkStorageSession&, const KURL& url, const String& name)
+void deleteCookie(const NetworkStorageSession&, const URL& url, const String& name)
 {
     notImplemented();
 }
