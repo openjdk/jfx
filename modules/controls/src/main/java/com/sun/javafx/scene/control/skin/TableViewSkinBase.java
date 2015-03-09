@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,11 +29,13 @@ import com.sun.javafx.scene.control.behavior.BehaviorBase;
 
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
+import javafx.collections.ObservableMap;
 import javafx.geometry.Insets;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
@@ -47,6 +49,7 @@ import javafx.util.Callback;
 import javafx.collections.WeakListChangeListener;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
 
+import java.lang.ref.WeakReference;
 import java.util.List;
 import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.BooleanProperty;
@@ -57,6 +60,7 @@ import javafx.geometry.VPos;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.Map;
 
 /**
  *
@@ -200,9 +204,22 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
         getVisibleLeafColumns().addListener(weakVisibleLeafColumnsListener);
         
         updateTableItems(null, itemsProperty().get());
+        itemsChangeListener = new InvalidationListener() {
+            private WeakReference<ObservableList<S>> weakItemsRef = new WeakReference<>(itemsProperty().get());
+
+            @Override public void invalidated(Observable observable) {
+                ObservableList<S> oldItems = weakItemsRef.get();
+                weakItemsRef = new WeakReference<>(itemsProperty().get());
+                updateTableItems(oldItems, itemsProperty().get());
+            }
+        };
+        weakItemsChangeListener = new WeakInvalidationListener(itemsChangeListener);
         itemsProperty().addListener(weakItemsChangeListener);
 
-        control.getProperties().addListener(propertiesMapListener);
+        final ObservableMap<Object, Object> properties = control.getProperties();
+        properties.remove(REFRESH);
+        properties.remove(RECREATE);
+        properties.addListener(propertiesMapListener);
         
         control.addEventHandler(ScrollToEvent.<TC>scrollToColumn(), event -> {
             scrollHorizontally(event.getScrollTarget());
@@ -300,10 +317,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
         }
     };
     
-    private ChangeListener<ObservableList<S>> itemsChangeListener =
-            (observable, oldList, newList) -> {
-                updateTableItems(oldList, newList);
-            };
+    private InvalidationListener itemsChangeListener;
     
     private WeakListChangeListener<S> weakRowCountListener =
             new WeakListChangeListener<S>(rowCountListener);
@@ -311,8 +325,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
             new WeakListChangeListener<TC>(visibleLeafColumnsListener);
     private WeakInvalidationListener weakWidthListener = 
             new WeakInvalidationListener(widthListener);
-    private WeakChangeListener<ObservableList<S>> weakItemsChangeListener = 
-            new WeakChangeListener<ObservableList<S>>(itemsChangeListener);
+    private WeakInvalidationListener weakItemsChangeListener;
     
     
     

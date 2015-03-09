@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -160,7 +160,7 @@ public final class KeyCodeCombination extends KeyCombination {
         // such that each individual word is capitalized and the underline replaced
         // by spaces.
 
-        String[] words = com.sun.javafx.Utils.split(name, "_");
+        String[] words = com.sun.javafx.util.Utils.split(name, "_");
         for (String word : words) {
             if (sb.length() > initialLength) {
                 sb.append(' ');

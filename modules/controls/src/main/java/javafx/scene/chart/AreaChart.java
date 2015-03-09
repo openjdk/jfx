@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -485,12 +485,24 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
                 Collections.sort(constructedPath, (e1, e2) -> Double.compare(e1.getX(), e2.getX()));
                 LineTo first = constructedPath.get(0);
 
-                seriesLine.add(new MoveTo(first.getX(), first.getY()));
-                fillPath.add(new MoveTo(first.getX(), getYAxis().getHeight()));
+                final double displayYPos = first.getY();
+                final double numericYPos = getYAxis().toNumericValue(getYAxis().getValueForDisplay(displayYPos));
+
+                // RT-34626: We can't always use getZeroPosition(), as it may be the case
+                // that the zero position of the y-axis is not visible on the chart. In these
+                // cases, we need to use the height between the point and the y-axis line.
+                final double yAxisZeroPos = getYAxis().getZeroPosition();
+                final boolean isYAxisZeroPosVisible = !Double.isNaN(yAxisZeroPos);
+                final double yAxisHeight = getYAxis().getHeight();
+                final double yFillPos = isYAxisZeroPosVisible ? yAxisZeroPos :
+                                        numericYPos < 0 ? numericYPos - yAxisHeight : yAxisHeight;
+
+                seriesLine.add(new MoveTo(first.getX(), displayYPos));
+                fillPath.add(new MoveTo(first.getX(), yFillPos));
 
                 seriesLine.addAll(constructedPath);
                 fillPath.addAll(constructedPath);
-                fillPath.add(new LineTo(lastX, getYAxis().getHeight()));
+                fillPath.add(new LineTo(lastX, yFillPos));
                 fillPath.add(new ClosePath());
             }
         }

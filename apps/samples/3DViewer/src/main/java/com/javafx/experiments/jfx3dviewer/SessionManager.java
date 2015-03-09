@@ -98,6 +98,7 @@ public class SessionManager {
         if (ENABLE_SAVE_SESSION) {
             try {
                 props.store(new FileWriter(SESSION_PROPERTIES_FILENAME), name + " session properties");
+            } catch (FileNotFoundException ignored) {
             } catch (IOException ex) {
                 Logger.getLogger(SessionManager.class.getName()).
                         log(Level.SEVERE, null, ex);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,6 @@
 package javafx.scene.control;
 
 import com.sun.javafx.application.PlatformImpl;
-import com.sun.javafx.scene.control.behavior.ListCellBehavior;
 import com.sun.javafx.scene.control.behavior.TreeCellBehavior;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.KeyModifier;
@@ -40,6 +39,7 @@ import com.sun.javafx.scene.control.test.RT_22463_Person;
 import com.sun.javafx.tk.Toolkit;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
@@ -51,7 +51,6 @@ import static org.junit.Assert.assertEquals;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
-import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
@@ -62,7 +61,6 @@ import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.cell.CheckBoxTreeCell;
-import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.control.cell.TextFieldTreeCell;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
@@ -379,11 +377,11 @@ public class TreeViewTest {
         root.setExpanded(false);
         assertEquals(0, treeView.getRow(root));
         
-        // note that the indices are still positive, representing what the values
-        // would be if this row is visible
-        assertEquals(1, treeView.getRow(child1));
-        assertEquals(2, treeView.getRow(child2));
-        assertEquals(3, treeView.getRow(child3));
+        // note that the indices are negative, as these children rows are not
+        // visible in the tree
+        assertEquals(-1, treeView.getRow(child1));
+        assertEquals(-1, treeView.getRow(child2));
+        assertEquals(-1, treeView.getRow(child3));
     }
     
     @Test public void removingLastTest() {
@@ -494,15 +492,15 @@ public class TreeViewTest {
         assertTrue("Focused index: " + fm.getFocusedIndex(), fm.isFocused(1));
     }
     
-    @Test public void test_rt17522_focusShouldBeResetWhenFocusedItemIsRemoved() {
+    @Test public void test_rt17522_focusShouldBeMovedWhenFocusedItemIsRemoved_1() {
         installChildren();
         FocusModel fm = treeView.getFocusModel();
         fm.focus(1);
         assertTrue(fm.isFocused(1));
         
         root.getChildren().remove(child1);
-        assertEquals(-1, fm.getFocusedIndex());
-        assertNull(fm.getFocusedItem());
+        assertEquals(0, fm.getFocusedIndex());
+        assertEquals(treeView.getTreeItem(0), fm.getFocusedItem());
     }
     
     @Test public void test_rt17522_focusShouldMoveWhenItemRemovedBeforeFocusIndex() {
@@ -2674,5 +2672,570 @@ public class TreeViewTest {
         assertEquals(b, sm.getSelectedItems().get(1));
 
         sl.dispose();
+    }
+
+    @Test public void test_rt_16068_firstElement_selectAndRemoveSameRow() {
+        // select and then remove the 'a' item, selection and focus should both
+        // stay at the first row, now 'b'
+        test_rt_16068(0, 0, 0);
+    }
+
+    @Test public void test_rt_16068_firstElement_selectRowAndRemoveLaterSibling() {
+        // select row 'a', and remove row 'c', selection and focus should not change
+        test_rt_16068(0, 2, 0);
+    }
+
+    @Test public void test_rt_16068_middleElement_selectAndRemoveSameRow() {
+        // select and then remove the 'b' item, selection and focus should both
+        // move up one row to the 'a' item
+        test_rt_16068(1, 1, 0);
+    }
+
+    @Test public void test_rt_16068_middleElement_selectRowAndRemoveLaterSibling() {
+        // select row 'b', and remove row 'c', selection and focus should not change
+        test_rt_16068(1, 2, 1);
+    }
+
+    @Test public void test_rt_16068_middleElement_selectRowAndRemoveEarlierSibling() {
+        // select row 'b', and remove row 'a', selection and focus should move up
+        // one row, remaining on 'b'
+        test_rt_16068(1, 0, 0);
+    }
+
+    @Test public void test_rt_16068_lastElement_selectAndRemoveSameRow() {
+        // select and then remove the 'd' item, selection and focus should both
+        // move up one row to the 'c' item
+        test_rt_16068(3, 3, 2);
+    }
+
+    @Test public void test_rt_16068_lastElement_selectRowAndRemoveEarlierSibling() {
+        // select row 'd', and remove row 'a', selection and focus should move up
+        // one row, remaining on 'd'
+        test_rt_16068(3, 0, 2);
+    }
+
+    private void test_rt_16068(int indexToSelect, int indexToRemove, int expectedIndex) {
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        root.getChildren().addAll(
+                new TreeItem<>("a"), // 0
+                new TreeItem<>("b"), // 1
+                new TreeItem<>("c"), // 2
+                new TreeItem<>("d")  // 3
+        );
+
+        TreeView<String> stringTreeView = new TreeView<>(root);
+        stringTreeView.setShowRoot(false);
+        MultipleSelectionModel<TreeItem<String>> sm = stringTreeView.getSelectionModel();
+        FocusModel<TreeItem<String>> fm = stringTreeView.getFocusModel();
+
+        sm.select(indexToSelect);
+        assertEquals(indexToSelect, sm.getSelectedIndex());
+        assertEquals(root.getChildren().get(indexToSelect).getValue(), sm.getSelectedItem().getValue());
+        assertEquals(indexToSelect, fm.getFocusedIndex());
+        assertEquals(root.getChildren().get(indexToSelect).getValue(), fm.getFocusedItem().getValue());
+
+        root.getChildren().remove(indexToRemove);
+        assertEquals(expectedIndex, sm.getSelectedIndex());
+        assertEquals(root.getChildren().get(expectedIndex).getValue(), sm.getSelectedItem().getValue());
+        assertEquals(debug(), expectedIndex, fm.getFocusedIndex());
+        assertEquals(root.getChildren().get(expectedIndex).getValue(), fm.getFocusedItem().getValue());
+    }
+
+
+    private ObservableList<String> test_rt_39661_setup() {
+        ObservableList<String>  rawItems = FXCollections.observableArrayList(
+                "9-item", "8-item", "7-item", "6-item",
+                "5-item", "4-item", "3-item", "2-item", "1-item");
+        root = createSubTree("root", rawItems);
+        root.setExpanded(true);
+        treeView = new TreeView(root);
+        return rawItems;
+    }
+
+    private TreeItem createSubTree(Object item, ObservableList<String> rawItems) {
+        TreeItem child = new TreeItem(item);
+        child.getChildren().setAll(rawItems.stream()
+                .map(rawItem -> new TreeItem(rawItem))
+                .collect(Collectors.toList()));
+        return child;
+    }
+
+    @Test public void test_rt_39661_rowLessThanExpandedItemCount() {
+        ObservableList<String> rawItems = test_rt_39661_setup();
+        TreeItem child = createSubTree("child", rawItems);
+        TreeItem grandChild = (TreeItem) child.getChildren().get(rawItems.size() - 1);
+        root.getChildren().add(child);
+        assertTrue("row of item must be less than expandedItemCount, but was: " + treeView.getRow(grandChild),
+                treeView.getRow(grandChild) < treeView.getExpandedItemCount());
+    }
+
+    @Test public void test_rt_39661_rowOfGrandChildParentCollapsedUpdatedOnInsertAbove() {
+        ObservableList<String> rawItems = test_rt_39661_setup();
+        int grandIndex = 2;
+        int childIndex = 3;
+
+        TreeItem child = createSubTree("addedChild2", rawItems);
+        TreeItem grandChild = (TreeItem) child.getChildren().get(grandIndex);
+        root.getChildren().add(childIndex, child);
+
+        int rowOfGrand = treeView.getRow(grandChild);
+        root.getChildren().add(childIndex - 1, createSubTree("other", rawItems));
+
+        assertEquals(-1, treeView.getRow(grandChild));
+    }
+
+    @Test public void test_rt_39661_rowOfGrandChildParentCollapsedUpdatedOnInsertAboveWithoutAccess() {
+        ObservableList<String> rawItems = test_rt_39661_setup();
+        int grandIndex = 2;
+        int childIndex = 3;
+
+        TreeItem child = createSubTree("addedChild2", rawItems);
+        TreeItem grandChild = (TreeItem) child.getChildren().get(grandIndex);
+        root.getChildren().add(childIndex, child);
+
+        int rowOfGrand = 7; //treeView.getRow(grandChild);
+        root.getChildren().add(childIndex, createSubTree("other", rawItems));
+
+        assertEquals(-1, treeView.getRow(grandChild));
+    }
+
+    @Test public void test_rt_39661_rowOfGrandChildParentExpandedUpdatedOnInsertAbove() {
+        ObservableList<String> rawItems = test_rt_39661_setup();
+        int grandIndex = 2;
+        int childIndex = 3;
+        TreeItem child = createSubTree("addedChild2", rawItems);
+        TreeItem grandChild = (TreeItem) child.getChildren().get(grandIndex);
+        child.setExpanded(true);
+        root.getChildren().add(childIndex, child);
+        int rowOfGrand = treeView.getRow(grandChild);
+        root.getChildren().add(childIndex -1, createSubTree("other", rawItems));
+        assertEquals(rowOfGrand + 1, treeView.getRow(grandChild));
+    }
+
+    /**
+     * Testing getRow on grandChild: compare collapsed/expanded parent.
+     */
+    @Test public void test_rt_39661_rowOfGrandChildDependsOnParentExpansion() {
+        ObservableList<String> rawItems = test_rt_39661_setup();
+        int grandIndex = 2;
+        int childIndex = 3;
+        TreeItem collapsedChild = createSubTree("addedChild", rawItems);
+        TreeItem collapsedGrandChild = (TreeItem) collapsedChild.getChildren().get(grandIndex);
+        root.getChildren().add(childIndex, collapsedChild);
+        int collapedGrandIndex = treeView.getRow(collapsedGrandChild);
+        int collapsedRowCount = treeView.getExpandedItemCount();
+        // start again
+        test_rt_39661_setup();
+        assertEquals(collapsedRowCount - 1, treeView.getExpandedItemCount());
+        TreeItem expandedChild = createSubTree("addedChild2", rawItems);
+        TreeItem expandedGrandChild = (TreeItem) expandedChild.getChildren().get(grandIndex);
+        expandedChild.setExpanded(true);
+        root.getChildren().add(childIndex, expandedChild);
+        assertNotSame("getRow must depend on expansionState " + collapedGrandIndex,
+                collapedGrandIndex, treeView.getRow(expandedGrandChild));
+    }
+
+    @Test public void test_rt_39661_rowOfGrandChildInCollapsedChild() {
+        ObservableList<String> rawItems = test_rt_39661_setup();
+
+        // create a collapsed new child to insert into the root
+        TreeItem newChild = createSubTree("added-child", rawItems);
+        TreeItem grandChild = (TreeItem) newChild.getChildren().get(2);
+        root.getChildren().add(6, newChild);
+
+        // query the row of a grand-child
+        int row = treeView.getRow(grandChild);
+
+        // grandChild not visible, row coordinate in tree is not available
+        assertEquals("grandChild not visible", -1, row);
+
+        // the other way round: if we get a row, expect the item at the row be the grandChild
+        if (row > -1) {
+            assertEquals(grandChild, treeView.getTreeItem(row));
+        }
+    }
+
+    @Test public void test_rt_39661_rowOfRootChild() {
+        ObservableList<String> rawItems = test_rt_39661_setup();
+        int index = 2;
+
+        TreeItem child = (TreeItem) root.getChildren().get(index);
+        assertEquals(index + 1, treeView.getRow(child));
+    }
+
+    @Test public void test_rt_39661_expandedItemCount() {
+        ObservableList<String> rawItems = test_rt_39661_setup();
+        int initialRowCount = treeView.getExpandedItemCount();
+        assertEquals(root.getChildren().size() + 1, initialRowCount);
+
+        TreeItem collapsedChild = createSubTree("collapsed-child", rawItems);
+        root.getChildren().add(collapsedChild);
+        assertEquals(initialRowCount + 1, treeView.getExpandedItemCount());
+
+        TreeItem expandedChild = createSubTree("expanded-child", rawItems);
+        expandedChild.setExpanded(true);
+        root.getChildren().add(0, expandedChild);
+        assertEquals(2 * initialRowCount + 1, treeView.getExpandedItemCount());
+    }
+
+    @Test public void test_rt_22599() {
+        TreeItem<RT22599_DataType> root = new TreeItem<>();
+        root.getChildren().setAll(
+                new TreeItem<>(new RT22599_DataType(1, "row1")),
+                new TreeItem<>(new RT22599_DataType(2, "row2")),
+                new TreeItem<>(new RT22599_DataType(3, "row3")));
+        root.setExpanded(true);
+
+        TreeView<RT22599_DataType> tree = new TreeView<>(root);
+        tree.setShowRoot(false);
+
+        StageLoader sl = new StageLoader(tree);
+
+        // testing initial state
+        assertNotNull(tree.getSkin());
+        assertEquals("row1", VirtualFlowTestUtils.getCell(tree, 0).getText());
+        assertEquals("row2", VirtualFlowTestUtils.getCell(tree, 1).getText());
+        assertEquals("row3", VirtualFlowTestUtils.getCell(tree, 2).getText());
+
+        // change row 0 (where "row1" currently resides), keeping same id.
+        // Because 'set' is called, the control should update to the new content
+        // without any user interaction
+        TreeItem<RT22599_DataType> data;
+        root.getChildren().set(0, data = new TreeItem<>(new RT22599_DataType(0, "row1a")));
+        Toolkit.getToolkit().firePulse();
+        assertEquals("row1a", VirtualFlowTestUtils.getCell(tree, 0).getText());
+
+        // change the row 0 (where we currently have "row1a") value directly.
+        // Because there is no associated property, this won't be observed, so
+        // the control should still show "row1a" rather than "row1b"
+        data.getValue().text = "row1b";
+        Toolkit.getToolkit().firePulse();
+        assertEquals("row1a", VirtualFlowTestUtils.getCell(tree, 0).getText());
+
+        // call refresh() to force a refresh of all visible cells
+        tree.refresh();
+        Toolkit.getToolkit().firePulse();
+        assertEquals("row1b", VirtualFlowTestUtils.getCell(tree, 0).getText());
+
+        sl.dispose();
+    }
+
+    private static class RT22599_DataType {
+        public int id = 0;
+        public String text = "";
+
+        public RT22599_DataType(int id, String text) {
+            this.id = id;
+            this.text = text;
+        }
+
+        @Override public String toString() {
+            return text;
+        }
+
+        @Override public boolean equals(Object obj) {
+            if (obj == null) return false;
+            return id == ((RT22599_DataType)obj).id;
+        }
+    }
+
+    private int rt_39966_count = 0;
+    @Test public void test_rt_39966() {
+        TreeItem<String> root = new TreeItem<>("Root");
+        TreeView<String> table = new TreeView<>(root);
+        table.setShowRoot(true);
+
+        StageLoader sl = new StageLoader(table);
+
+        // initially there is no selection
+        assertTrue(table.getSelectionModel().isEmpty());
+
+        table.getSelectionModel().selectedItemProperty().addListener((value, s1, s2) -> {
+            if (rt_39966_count == 0) {
+                rt_39966_count++;
+                assertFalse(table.getSelectionModel().isEmpty());
+            } else {
+                assertTrue(debug(), table.getSelectionModel().isEmpty());
+            }
+        });
+
+        // our assertion two lines down always succeeds. What fails is our
+        // assertion above within the listener.
+        table.getSelectionModel().select(0);
+        assertFalse(table.getSelectionModel().isEmpty());
+
+        table.setRoot(null);
+        assertTrue(debug(),table.getSelectionModel().isEmpty());
+
+        sl.dispose();
+    }
+
+    /**
+     * Bullet 1: selected index must be updated
+     * Corner case: last selected. Fails for core
+     */
+    @Test public void test_rt_40012_selectedAtLastOnDisjointRemoveItemsAbove() {
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        root.getChildren().addAll(
+                new TreeItem<>("0"),
+                new TreeItem<>("1"),
+                new TreeItem<>("2"),
+                new TreeItem<>("3"),
+                new TreeItem<>("4"),
+                new TreeItem<>("5")
+        );
+
+        TreeView<String> treeView = new TreeView<>(root);
+        treeView.setShowRoot(false);
+        sm = treeView.getSelectionModel();
+
+        int last = root.getChildren().size() - 1;
+
+        // selecting item "5"
+        sm.select(last);
+
+        // disjoint remove of 2 elements above the last selected
+        // Removing "1" and "3"
+        root.getChildren().removeAll(root.getChildren().get(1), root.getChildren().get(3));
+
+        // selection should move up two places such that it remains on item "5",
+        // but in index (last - 2).
+        int expected = last - 2;
+        assertEquals("5", sm.getSelectedItem().getValue());
+        assertEquals("selected index after disjoint removes above", expected, sm.getSelectedIndex());
+    }
+
+    /**
+     * Variant of 1: if selectedIndex is not updated,
+     * the old index is no longer valid
+     * for accessing the items.
+     */
+    @Test public void test_rt_40012_accessSelectedAtLastOnDisjointRemoveItemsAbove() {
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        root.getChildren().addAll(
+                new TreeItem<>("0"),
+                new TreeItem<>("1"),
+                new TreeItem<>("2"),
+                new TreeItem<>("3"),
+                new TreeItem<>("4"),
+                new TreeItem<>("5")
+        );
+
+        TreeView<String> treeView = new TreeView<>(root);
+        treeView.setShowRoot(false);
+        sm = treeView.getSelectionModel();
+
+        int last = root.getChildren().size() - 1;
+
+        // selecting item "5"
+        sm.select(last);
+
+        // disjoint remove of 2 elements above the last selected
+        root.getChildren().removeAll(root.getChildren().get(1), root.getChildren().get(3));
+        int selected = sm.getSelectedIndex();
+        if (selected > -1) {
+            root.getChildren().get(selected);
+        }
+    }
+
+    /**
+     * Bullet 2: selectedIndex notification count
+     *
+     * Note that we don't use the corner case of having the last index selected
+     * (which fails already on updating the index)
+     */
+    private int rt_40012_count = 0;
+    @Test public void test_rt_40012_selectedIndexNotificationOnDisjointRemovesAbove() {
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        root.getChildren().addAll(
+                new TreeItem<>("0"),
+                new TreeItem<>("1"),
+                new TreeItem<>("2"),
+                new TreeItem<>("3"),
+                new TreeItem<>("4"),
+                new TreeItem<>("5")
+        );
+
+        TreeView<String> treeView = new TreeView<>(root);
+        treeView.setShowRoot(false);
+        sm = treeView.getSelectionModel();
+
+        int last = root.getChildren().size() - 2;
+        sm.select(last);
+        assertEquals(last, sm.getSelectedIndex());
+
+        rt_40012_count = 0;
+        sm.selectedIndexProperty().addListener(o -> rt_40012_count++);
+
+        // disjoint remove of 2 elements above the last selected
+        root.getChildren().removeAll(root.getChildren().get(1), root.getChildren().get(3));
+        assertEquals("sanity: selectedIndex must be shifted by -2", last - 2, sm.getSelectedIndex());
+        assertEquals("must fire single event on removes above", 1, rt_40012_count);
+    }
+
+    /**
+     * Bullet 3: unchanged selectedItem must not fire change
+     */
+    @Test
+    public void test_rt_40012_selectedItemNotificationOnDisjointRemovesAbove() {
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        root.getChildren().addAll(
+                new TreeItem<>("0"),
+                new TreeItem<>("1"),
+                new TreeItem<>("2"),
+                new TreeItem<>("3"),
+                new TreeItem<>("4"),
+                new TreeItem<>("5")
+        );
+
+        TreeView<String> treeView = new TreeView<>(root);
+        treeView.setShowRoot(false);
+        sm = treeView.getSelectionModel();
+
+        int last = root.getChildren().size() - 2;
+        Object lastItem = root.getChildren().get(last);
+        sm.select(last);
+        assertEquals(lastItem, sm.getSelectedItem());
+
+        rt_40012_count = 0;
+        sm.selectedItemProperty().addListener(o -> rt_40012_count++);
+
+        // disjoint remove of 2 elements above the last selected
+        root.getChildren().removeAll(root.getChildren().get(1), root.getChildren().get(3));
+        assertEquals("sanity: selectedItem unchanged", lastItem, sm.getSelectedItem());
+        assertEquals("must not fire on unchanged selected item", 0, rt_40012_count);
+    }
+
+    private int rt_40010_count = 0;
+    @Test public void test_rt_40010() {
+        TreeItem<String> root = new TreeItem<>("Root");
+        TreeItem<String> child = new TreeItem<>("child");
+        root.setExpanded(true);
+        root.getChildren().addAll(child);
+
+        TreeView<String> treeView = new TreeView<>(root);
+        sm = treeView.getSelectionModel();
+
+        sm.getSelectedIndices().addListener((ListChangeListener<? super Integer>) l -> rt_40010_count++);
+        sm.getSelectedItems().addListener((ListChangeListener<? super TreeItem<String>>) l -> rt_40010_count++);
+
+        assertEquals(0, rt_40010_count);
+
+        sm.select(1);
+        assertEquals(1, sm.getSelectedIndex());
+        assertEquals(child, sm.getSelectedItem());
+        assertEquals(2, rt_40010_count);
+
+        root.getChildren().remove(child);
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals(root, sm.getSelectedItem());
+        assertEquals(4, rt_40010_count);
+    }
+
+    @Test public void test_rt_39674_staticChildren() {
+        TreeItem<String> item2;
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        root.getChildren().addAll(
+            new TreeItem<>("0"),
+            new TreeItem<>("1"),
+            item2 = new TreeItem<>("2"),
+            new TreeItem<>("3"),
+            new TreeItem<>("4"),
+            new TreeItem<>("5")
+        );
+
+        item2.getChildren().addAll(
+            new TreeItem<>("0"),
+            new TreeItem<>("1"),
+            new TreeItem<>("2"),
+            new TreeItem<>("3"),
+            new TreeItem<>("4"),
+            new TreeItem<>("5")
+        );
+
+        TreeView<String> treeView = new TreeView<>(root);
+        sm = treeView.getSelectionModel();
+
+        StageLoader sl = new StageLoader(treeView);
+
+        sm.select(4); // select treeitem "3" in index 4
+        assertEquals(4, sm.getSelectedIndex());
+        assertEquals("3", sm.getSelectedItem().getValue());
+
+        item2.setExpanded(true); // expand item 2. Selection should move to position 9
+        assertEquals(10, sm.getSelectedIndex());
+        assertEquals("3", sm.getSelectedItem().getValue());
+
+        sl.dispose();
+    }
+
+    @Ignore("RT-39674 not yet fixed")
+    @Test public void test_rt_39674_dynamicChildren() {
+        TreeItem<Integer> root = createTreeItem(0);
+        root.setExpanded(true);
+
+        TreeView<Integer> treeView = new TreeView<>(root);
+        SelectionModel<TreeItem<Integer>> sm = treeView.getSelectionModel();
+
+        StageLoader sl = new StageLoader(treeView);
+
+        sm.select(5);
+        assertEquals(5, sm.getSelectedIndex());
+        assertEquals(4, (int)sm.getSelectedItem().getValue());
+
+        root.getChildren().get(2).setExpanded(true);
+        assertEquals(12, sm.getSelectedIndex());
+        assertEquals(4, (int)sm.getSelectedItem().getValue());
+
+        sl.dispose();
+    }
+
+    private TreeItem<Integer> createTreeItem(final int index) {
+        final TreeItem<Integer> node = new TreeItem<Integer>(index) {
+            private boolean isLeaf;
+            private boolean isFirstTimeChildren = true;
+            private boolean isFirstTimeLeaf = true;
+
+            @Override
+            public ObservableList<TreeItem<Integer>> getChildren() {
+                if (isFirstTimeChildren) {
+                    isFirstTimeChildren = false;
+                    super.getChildren().setAll(buildChildren(this));
+                }
+                return super.getChildren();
+            }
+
+            @Override
+            public boolean isLeaf() {
+                if (isFirstTimeLeaf) {
+                    isFirstTimeLeaf = false;
+                    int index = getValue();
+                    isLeaf = index % 2 != 0;
+                }
+
+                return isLeaf;
+            }
+        };
+        return node;
+    }
+
+    private ObservableList<TreeItem<Integer>> buildChildren(TreeItem<Integer> TreeItem) {
+        Integer index = TreeItem.getValue();
+        if (index % 2 == 0) {
+            ObservableList<TreeItem<Integer>> children = FXCollections.observableArrayList();
+            for (int i = 0; i < 5; i++) {
+                children.add(createTreeItem(i));
+            }
+
+            return children;
+        }
+
+        return FXCollections.emptyObservableList();
     }
 }

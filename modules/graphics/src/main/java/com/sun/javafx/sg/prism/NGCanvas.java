@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package com.sun.javafx.sg.prism;
 
+import com.sun.glass.ui.Screen;
 import javafx.geometry.VPos;
 import javafx.scene.text.Font;
 import java.nio.IntBuffer;
@@ -47,6 +48,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.NoninvertibleTransformException;
 import com.sun.javafx.text.PrismTextLayout;
 import com.sun.javafx.tk.RenderJob;
+import com.sun.javafx.tk.ScreenConfigurationAccessor;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.prism.BasicStroke;
 import com.sun.prism.CompositeMode;
@@ -311,6 +313,7 @@ public class NGCanvas extends NGNode {
 
     private GrowableDataBuffer thebuf;
 
+    private final float highestPixelScale;
     private int tw, th;
     private int cw, ch;
     private RenderBuf cv;
@@ -348,6 +351,14 @@ public class NGCanvas extends NGNode {
     private static RectBounds TEMP_RECTBOUNDS = new RectBounds();
 
     public NGCanvas() {
+        Toolkit tk = Toolkit.getToolkit();
+        ScreenConfigurationAccessor screenAccessor = tk.getScreenConfigurationAccessor();
+        float hPS = 1.0f;
+        for (Object screen : tk.getScreens()) {
+            hPS = Math.max(screenAccessor.getScale(screen), hPS);
+        }
+        highestPixelScale = hPS;
+
         cv = new RenderBuf(InitType.PRESERVE_UPPER_LEFT);
         temp = new RenderBuf(InitType.CLEAR);
         clip = new RenderBuf(InitType.FILL_WHITE);

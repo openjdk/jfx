@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -97,7 +97,7 @@ extern "C" {
         IosImageLoader_setInputParametersID = (*env)->GetMethodID(env,
                                                                   klazz,
                                                                   "setInputParameters",
-                                                                  "(III)V");
+                                                                  "(IIII)V");
         IosImageLoader_updateImageProgressID = (*env)->GetMethodID(env,
                                                                    klazz,
                                                                    "updateProgress",
@@ -140,7 +140,8 @@ extern "C" {
                                IosImageLoader_setInputParametersID,
                                (jint) [loader width],
                                (jint) [loader height],
-                               (jint) [loader nImages]);
+                               (jint) [loader nImages],
+                               (jint) [loader loopCount]);
 
         (*env)->CallVoidMethod(env,
                                obj,
@@ -208,7 +209,8 @@ extern "C" {
                                IosImageLoader_setInputParametersID,
                                (jint) [loader width],
                                (jint) [loader height],
-                               (jint) [loader nImages]);
+                               (jint) [loader nImages],
+                               (jint) [loader loopCount]);
 
         (*env)->CallVoidMethod(env,
                                obj,

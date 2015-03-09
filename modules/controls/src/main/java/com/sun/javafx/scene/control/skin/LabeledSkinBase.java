@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -733,17 +733,21 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
 
         double textWidth = emptyText ? 0 : Utils.computeTextWidth(font, string, 0);
 
+        // Fix for RT-39889
+        double graphicWidth = graphic == null ? 0.0 :
+                Utils.boundedSize(graphic.prefWidth(-1), graphic.minWidth(-1), graphic.maxWidth(-1));
+
         // Now add on the graphic, gap, and padding as appropriate
         final Node graphic = labeled.getGraphic();
         if (isIgnoreGraphic()) {
             return textWidth + widthPadding;
         } else if (isIgnoreText()) {
-            return graphic.prefWidth(-1) + widthPadding;
+            return graphicWidth + widthPadding;
         } else if (labeled.getContentDisplay() == ContentDisplay.LEFT
                 || labeled.getContentDisplay() == ContentDisplay.RIGHT) {
-            return textWidth + labeled.getGraphicTextGap() + graphic.prefWidth(-1) + widthPadding;
+            return textWidth + labeled.getGraphicTextGap() + graphicWidth + widthPadding;
         } else {
-            return Math.max(textWidth, graphic.prefWidth(-1)) + widthPadding;
+            return Math.max(textWidth, graphicWidth) + widthPadding;
         }
     }
 

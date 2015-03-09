@@ -114,7 +114,7 @@ JavaException::JavaException(JNIEnv *Env, const char* const message) {
 #ifdef DEBUG
     Platform& platform = Platform::GetInstance();
 
-    if (platform.GetDebugState() == Platform::dsNone) {
+    if (platform.GetDebugState() == dsNone) {
         jclass ThrowableClass = Env->FindClass("java/lang/Throwable");
 
         if (FEnv->ExceptionCheck() == JNI_TRUE) {

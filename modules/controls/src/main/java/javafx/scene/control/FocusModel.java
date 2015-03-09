@@ -142,7 +142,13 @@ public abstract class FocusModel<T> {
         if (index < 0 || index >= getItemCount()) {
             setFocusedIndex(-1);
         } else {
+            int oldFocusIndex = getFocusedIndex();
             setFocusedIndex(index);
+
+            if (oldFocusIndex == index) {
+                // manually update the focus item to ensure consistency
+                setFocusedItem(getModelItem(index));
+            }
         }
     }
 

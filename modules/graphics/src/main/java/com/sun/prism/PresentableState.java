@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,6 +44,7 @@ public class PresentableState {
     protected View view;
     
     // Captured state
+    protected int nativeFrameBuffer;
     protected int windowX, windowY;
     protected float windowAlpha;
     protected long nativeWindowHandle;
@@ -54,7 +55,7 @@ public class PresentableState {
     protected boolean isWindowVisible;
     protected boolean isWindowMinimized;
     protected float screenScale;
-    protected static boolean hasWindowManager =
+    protected static final boolean hasWindowManager =
             Application.GetApplication().hasWindowManager();
     // Between PaintCollector and *Painter, there is a window where
     // the associated View can be closed. This variable allows us
@@ -230,18 +231,30 @@ public class PresentableState {
     }
 
     /**
-     * Locks the underlying view for rendering
+     * @return native native frame buffer
      *
      * May be called on any thread.
      */
+    public int getNativeFrameBuffer() {
+        return nativeFrameBuffer;
+    }
+
+    /**
+     * Locks the underlying view for rendering
+     *
+     * Must be called on Prism renderer thread.
+     */
     public void lock() {
-        if (view != null) view.lock();
+        if (view != null) {
+            view.lock();
+            nativeFrameBuffer = view.getNativeFrameBuffer();
+        }
     }
 
     /**
      * Unlocks the underlying view after rendering
      *
-     * May be called on any thread.
+     * Must be called on Prism renderer thread.
      */
     public void unlock() {
         if (view != null) view.unlock();

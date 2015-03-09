@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,6 +63,7 @@ public final class ImageCursor_getCurrentFrame_Test {
         final Image animatedImage =
                 TestImages.createAnimatedTestImage(
                         300, 400,        // width, height
+                        0,               // loop count
                         2000, 1000, 3000 // frame delays
                 );
         final ImageCursor animatedImageCursor = new ImageCursor(animatedImage);
@@ -108,6 +109,7 @@ public final class ImageCursor_getCurrentFrame_Test {
         final Image animatedImage =
                 TestImages.createAnimatedTestImage(
                         300, 400,        // width, height
+                        0,               // loop count
                         2000, 1000, 3000 // frame delays
                 );
         final ImageCursor animatedImageCursor = new ImageCursor(animatedImage);

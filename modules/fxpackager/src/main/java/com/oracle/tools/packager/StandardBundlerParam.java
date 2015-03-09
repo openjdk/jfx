@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -70,6 +70,17 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     null // no string translation, tool must provide complex type
             );
 
+    @SuppressWarnings("unchecked")
+    public static final StandardBundlerParam<List<RelativeFileSet>> APP_RESOURCES_LIST =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.app-resources-list.name"),
+                    I18N.getString("param.app-resource-list.description"),
+                    BundleParams.PARAM_APP_RESOURCES + "List",
+                    (Class<List<RelativeFileSet>>) (Object) List.class,
+                    p -> new ArrayList<>(Arrays.asList(APP_RESOURCES.fetchFrom(p))), // Default is appResources, as a single item list
+                    null // no string translation, tool must provide complex type
+            );
+
     public static final StandardBundlerParam<File> ICON =
             new StandardBundlerParam<>(
                     I18N.getString("param.icon-file.name"),
@@ -113,7 +124,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     (s, p) -> s
             );
 
-    private static Pattern TO_FS_NAME = Pattern.compile("\\s|[\\/?:*<>|]"); // keep out invalid/undesireable filename characters
+    private static Pattern TO_FS_NAME = Pattern.compile("\\s|[\\\\/?:*<>|]"); // keep out invalid/undesireable filename characters
 
     public static final StandardBundlerParam<String> APP_FS_NAME =
             new StandardBundlerParam<>(
@@ -180,15 +191,17 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                         return (RelativeFileSet) params.get("mainJar");
                     },
                     (s, p) -> {
-                        File appResourcesRoot = APP_RESOURCES.fetchFrom(p).getBaseDirectory();
-                        File f = new File(appResourcesRoot, s);
-                        if (!f.exists()) {
-                            throw new IllegalArgumentException(
-                                new ConfigException(
-                                    MessageFormat.format(I18N.getString("error.main-jar-does-not-exist"), s),
-                                    I18N.getString("error.main-jar-does-not-exist.advice")));
+                        for (RelativeFileSet rfs : APP_RESOURCES_LIST.fetchFrom(p)) {
+                            File appResourcesRoot = rfs.getBaseDirectory();
+                            File f = new File(appResourcesRoot, s);
+                            if (f.exists()) {
+                                return new RelativeFileSet(appResourcesRoot, new LinkedHashSet<>(Arrays.asList(f)));
+                            }
                         }
-                        return new RelativeFileSet(appResourcesRoot, new LinkedHashSet<>(Arrays.asList(f)));
+                        throw new IllegalArgumentException(
+                                new ConfigException(
+                                        MessageFormat.format(I18N.getString("error.main-jar-does-not-exist"), s),
+                                        I18N.getString("error.main-jar-does-not-exist.advice")));
                     }
             );
 
@@ -566,34 +579,41 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
         if (hasMainClass && hasMainJar && hasMainJarClassPath) {
             return;
         }
-        Iterable<String> files;
-        File srcdir;
-
+        // it's a pair.  The [0] is the srcdir [1] is the file relative to sourcedir
+        List<String[]> filesToCheck = new ArrayList<>();
+        
         if (hasMainJar) {
             RelativeFileSet rfs = MAIN_JAR.fetchFrom(params);
-            files = rfs.getIncludedFiles();
-            srcdir = rfs.getBaseDirectory();
+            for (String s : rfs.getIncludedFiles()) {
+                filesToCheck.add(new String[]{rfs.getBaseDirectory().toString(), s});
+            }
         } else if (hasMainJarClassPath) {
-            files = Arrays.asList(CLASSPATH.fetchFrom(params).split("\\s+"));
-            srcdir = APP_RESOURCES.fetchFrom(params).getBaseDirectory();
+            for (String s : CLASSPATH.fetchFrom(params).split("\\s+")) {
+                filesToCheck.add(new String[] {APP_RESOURCES.fetchFrom(params).getBaseDirectory().toString(), s});
+            }
         } else {
-            RelativeFileSet rfs = APP_RESOURCES.fetchFrom(params);
-            if (rfs == null) {
+            List<RelativeFileSet> rfsl = APP_RESOURCES_LIST.fetchFrom(params);
+            if (rfsl == null || rfsl.isEmpty()) {
                 return;
             }
-            files = rfs.getIncludedFiles();
-            srcdir = rfs.getBaseDirectory();
+            for (RelativeFileSet rfs : rfsl) {
+                if (rfs == null) continue;
+                
+                for (String s : rfs.getIncludedFiles()) {
+                    filesToCheck.add(new String[]{rfs.getBaseDirectory().toString(), s});
+                }
+            }
         }
 
         String declaredMainClass = (String) params.get(MAIN_CLASS.getID());
 
         // presume the set iterates in-order
-        for (String fname : files) {
+        for (String[] fnames : filesToCheck) {
             try {
                 // only sniff jars
-                if (!fname.toLowerCase().endsWith(".jar")) continue;
+                if (!fnames[1].toLowerCase().endsWith(".jar")) continue;
 
-                File file = new File(srcdir, fname);
+                File file = new File(fnames[0], fnames[1]);
                 // that actually exist
                 if (!file.exists()) continue;
 
@@ -612,10 +632,10 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                             params.put(USE_FX_PACKAGING.getID(), false);
                         } else {
                             if (fxMain != null) {
-                                Log.info(MessageFormat.format(I18N.getString("message.fx-app-does-not-match-specified-main"), fname, fxMain, declaredMainClass));
+                                Log.info(MessageFormat.format(I18N.getString("message.fx-app-does-not-match-specified-main"), fnames[1], fxMain, declaredMainClass));
                             }
                             if (mainClass != null) {
-                                Log.info(MessageFormat.format(I18N.getString("message.main-class-does-not-match-specified-main"), fname, mainClass, declaredMainClass));
+                                Log.info(MessageFormat.format(I18N.getString("message.main-class-does-not-match-specified-main"), fnames[1], mainClass, declaredMainClass));
                             }
                             continue;
                         }
@@ -634,10 +654,10 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                         params.put(PRELOADER_CLASS.getID(), preloaderClass);
                     }
                     if (!hasMainJar) {
-                        if (srcdir == null) {
-                            srcdir = file.getParentFile();
+                        if (fnames[0] == null) {
+                            fnames[0] = file.getParentFile().toString();
                         }
-                        params.put(MAIN_JAR.getID(), new RelativeFileSet(srcdir, new LinkedHashSet<>(Arrays.asList(file))));
+                        params.put(MAIN_JAR.getID(), new RelativeFileSet(new File(fnames[0]), new LinkedHashSet<>(Arrays.asList(file))));
                     }
                     if (!hasMainJarClassPath) {
                         String cp = attrs.getValue(Attributes.Name.CLASS_PATH);

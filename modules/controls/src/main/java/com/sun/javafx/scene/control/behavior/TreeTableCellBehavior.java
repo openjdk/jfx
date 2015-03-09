@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TablePositionBase;
@@ -121,7 +122,13 @@ public class TreeTableCellBehavior<S,T> extends TableCellBehaviorBase<TreeItem<S
         if (column == treeColumn) {
             final Node disclosureNode = getControl().getTreeTableRow().getDisclosureNode();
             if (disclosureNode != null) {
-                if (disclosureNode.getBoundsInParent().contains(x, y)) {
+                double startX = 0;
+                for (TreeTableColumn<S,?> tc : treeTableView.getVisibleLeafColumns()) {
+                    if (tc == treeColumn) break;
+                    startX += tc.getWidth();
+                }
+                final double endX = disclosureNode.getBoundsInParent().getMaxX();
+                if (x < (endX - startX)) {
                     if (treeItem != null) {
                         treeItem.setExpanded(!treeItem.isExpanded());
                     }

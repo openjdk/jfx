@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@ package javafx.scene.layout;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+
 import javafx.beans.NamedArg;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
@@ -39,6 +40,7 @@ import com.sun.javafx.css.converters.InsetsConverter;
 import com.sun.javafx.css.converters.URLConverter;
 import com.sun.javafx.scene.layout.region.BorderImageSlices;
 import com.sun.javafx.scene.layout.region.BorderImageWidthConverter;
+import com.sun.javafx.scene.layout.region.CornerRadiiConverter;
 import com.sun.javafx.scene.layout.region.LayeredBorderPaintConverter;
 import com.sun.javafx.scene.layout.region.LayeredBorderStyleConverter;
 import com.sun.javafx.scene.layout.region.Margins;

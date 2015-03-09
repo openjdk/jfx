@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,8 +42,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -181,6 +183,7 @@ public class MacAppStoreBundlerTest {
                 new RelativeFileSet(fakeMainJar.getParentFile(),
                         new HashSet<>(Arrays.asList(fakeMainJar)))
         );
+        bundleParams.put(MAC_CF_BUNDLE_VERSION.getID(), "1.0." + new SimpleDateFormat("YYYYMMddHHmm").format(new Date()));
         bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
         bundleParams.put(IDENTIFIER.getID(), "com.example.javapacakger.hello.TestPackager");
         bundleParams.put(MacAppBundler.MAC_CATEGORY.getID(), "public.app-category.developer-tools");
@@ -233,6 +236,7 @@ public class MacAppStoreBundlerTest {
         bundleParams.put(BUNDLE_ID_SIGNING_PREFIX.getID(), "everything.signing.prefix.");
         bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
         bundleParams.put(ICON_ICNS.getID(), hdpiIcon);
+        bundleParams.put(INSTALLER_SUFFIX.getID(), "-MAS-TEST");
         bundleParams.put(JVM_OPTIONS.getID(), "-Xms128M");
         bundleParams.put(JVM_PROPERTIES.getID(), "everything.jvm.property=everything.jvm.property.value");
         bundleParams.put(MAC_CATEGORY.getID(), "public.app-category.developer-tools");
@@ -244,6 +248,7 @@ public class MacAppStoreBundlerTest {
         bundleParams.put(MAIN_JAR.getID(), "mainApp.jar");
         bundleParams.put(PREFERENCES_ID.getID(), "everything/preferences/id");
         bundleParams.put(PRELOADER_CLASS.getID(), "hello.HelloPreloader");
+        bundleParams.put(SIGNING_KEYCHAIN.getID(), "");
         bundleParams.put(USER_JVM_OPTIONS.getID(), "-Xmx=256M\n");
         bundleParams.put(VERSION.getID(), "1.2.3.4");
 

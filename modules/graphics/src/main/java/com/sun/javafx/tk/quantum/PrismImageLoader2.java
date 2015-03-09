@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,6 +58,7 @@ class PrismImageLoader2 implements com.sun.javafx.tk.ImageLoader {
 
     private Image[] images;
     private int[] delayTimes;
+    private int loopCount;
     private int width;
     private int height;
     private float pixelScale;
@@ -103,6 +104,13 @@ class PrismImageLoader2 implements com.sun.javafx.tk.ImageLoader {
             return 0;
         }
         return delayTimes[index];
+    }
+
+    public int getLoopCount() {
+        if (images == null) {
+            return 0;
+        }
+        return loopCount;
     }
 
     public Exception getException() {
@@ -170,6 +178,10 @@ class PrismImageLoader2 implements com.sun.javafx.tk.ImageLoader {
                 if (delay != null) {
                     delayTimes[i] = delay.intValue();
                 }
+                Integer loopCount = metadata.loopCount;
+                if (loopCount != null) {
+                    this.loopCount = loopCount;
+                }
             }
             if (i == 0) {
                 width = frame.getWidth();
@@ -183,7 +195,7 @@ class PrismImageLoader2 implements com.sun.javafx.tk.ImageLoader {
      */
     private static synchronized PlatformLogger getImageioLogger() {
         if (imageioLogger == null) {
-            imageioLogger = PlatformLogger.getLogger("imageio");
+            imageioLogger = PlatformLogger.getLogger("javafx.scene.image");
         }
 
         return imageioLogger;

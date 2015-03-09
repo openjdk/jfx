@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,16 +25,19 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.scene.control.behavior.ListCellBehavior;
+import com.sun.javafx.scene.control.behavior.TableCellBehavior;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.scene.input.KeyCode;
 import java.util.List;
 import com.sun.javafx.PlatformUtil;
-import com.sun.javafx.Utils;
+import com.sun.javafx.util.Utils;
 import com.sun.javafx.scene.control.behavior.ListViewAnchorRetriever;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.KeyModifier;
@@ -63,7 +66,7 @@ public class ListViewKeyInputTest {
     private StageLoader stageLoader;
     
     @Before public void setup() {
-        listView = new ListView<String>();
+        listView = new ListView<>();
         sm = listView.getSelectionModel();
         fm = listView.getFocusModel();
         
@@ -102,7 +105,10 @@ public class ListViewKeyInputTest {
     // Returns true if ALL indices are selected
     private boolean isSelected(int... indices) {
         for (int index : indices) {
-            if (! sm.isSelected(index)) return false;
+            if (! sm.isSelected(index)) {
+                System.out.println("Index " + index + " is not selected, but it is expected to be");
+                return false;
+            }
         }
         return true;
     }
@@ -110,7 +116,10 @@ public class ListViewKeyInputTest {
     // Returns true if ALL indices are NOT selected
     private boolean isNotSelected(int... indices) {
         for (int index : indices) {
-            if (sm.isSelected(index)) return false;
+            if (sm.isSelected(index)) {
+                System.out.println("Index " + index + " is selected, but it is not expected to be");
+                return false;
+            }
         }
         return true;
     }
@@ -2161,5 +2170,178 @@ public class ListViewKeyInputTest {
         assertEquals(3, items.size());
 
         sl.dispose();
+    }
+
+    @Test public void test_rt_27709_singleSelection_rowSelection() {
+        test_rt_27709(SelectionMode.SINGLE, false);
+    }
+
+    @Test public void test_rt_27709_multipleSelection_rowSelection() {
+        test_rt_27709(SelectionMode.MULTIPLE, false);
+    }
+
+    @Test public void test_rt_27709_singleSelection_rowSelection_resetSelection() {
+        test_rt_27709(SelectionMode.SINGLE, true);
+    }
+
+    @Test public void test_rt_27709_multipleSelection_rowSelection_resetSelection() {
+        test_rt_27709(SelectionMode.MULTIPLE, true);
+    }
+
+    private void test_rt_27709(SelectionMode mode, boolean resetSelection) {
+        ObservableList<String> itemsList = FXCollections.observableArrayList();
+        for (int i = 0; i < 10; i++) {
+            itemsList.add("Row " + i);
+        }
+
+        listView.setItems(itemsList);
+
+        MultipleSelectionModel<String> sm = listView.getSelectionModel();
+        sm.setSelectionMode(mode);
+
+        ObservableList<Integer> indices = sm.getSelectedIndices();
+
+        int expectedSize = mode == SelectionMode.SINGLE ? 1 : 10;
+        int lookupIndex = mode == SelectionMode.SINGLE ? 0 : 9;
+
+        sm.select(0);
+        assertEquals(1, indices.size());
+
+        keyboard.doKeyPress(KeyCode.END, KeyModifier.SHIFT);
+        assertEquals(expectedSize, indices.size());
+        assertEquals(9, (int) indices.get(lookupIndex));
+
+        if (resetSelection) {
+            sm.clearAndSelect(9);
+            int anchor = ListCellBehavior.getAnchor(listView, null);
+            assertEquals(9, anchor);
+        } else {
+            expectedSize = 1;
+        }
+
+        keyboard.doKeyPress(KeyCode.HOME, KeyModifier.SHIFT);
+        assertEquals(expectedSize, indices.size());
+        assertTrue(debug(),sm.isSelected(0));
+
+        if (resetSelection) {
+            sm.clearAndSelect(0);
+
+            int anchor = ListCellBehavior.getAnchor(listView, null);
+            assertEquals(0, anchor);
+        } else {
+            expectedSize = mode == SelectionMode.SINGLE ? 1 : 10;
+        }
+
+        keyboard.doKeyPress(KeyCode.END, KeyModifier.SHIFT);
+        assertEquals(expectedSize, indices.size());
+        assertTrue(sm.isSelected(9));
+    }
+
+    @Test public void test_rt_24865_moveDownwards() {
+        listView.getItems().clear();
+        for (int i = 0; i < 100; i++) {
+            listView.getItems().add("Row " + i);
+        }
+
+        Toolkit.getToolkit().firePulse();
+
+        ObservableList<Integer> indices = sm.getSelectedIndices();
+
+        sm.select(0);
+        assertTrue(isSelected(0));
+        assertTrue(fm.isFocused(0));
+        assertEquals(1, indices.size());
+        assertEquals(0, (int) ListCellBehavior.getAnchor(listView, -1));
+
+        keyboard.doDownArrowPress(KeyModifier.SHIFT);
+        keyboard.doDownArrowPress(KeyModifier.SHIFT);
+        keyboard.doDownArrowPress(KeyModifier.SHIFT);
+        assertTrue(isSelected(0, 1, 2, 3));
+        assertTrue(fm.isFocused(3));
+        assertEquals(4, indices.size());
+        assertEquals(0, (int) ListCellBehavior.getAnchor(listView, -1));
+
+        keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
+        assertTrue(isSelected(0, 1, 2, 3));
+        assertTrue(isNotSelected(4, 5, 6, 7, 8, 9));
+        assertTrue(fm.isFocused(6));
+        assertEquals(4, indices.size());
+        assertEquals(0, (int) ListCellBehavior.getAnchor(listView, -1));
+
+        // main point of test: selection between the last index (3) and the focus
+        // index (6) should now be true
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        final int selectedRowCount = indices.size();
+        for (int i = 0; i < selectedRowCount; i++) {
+            assertTrue(isSelected(i));
+        }
+        assertTrue(fm.isFocused(selectedRowCount - 1));
+        assertEquals(0, (int) ListCellBehavior.getAnchor(listView, -1));
+
+        keyboard.doDownArrowPress(KeyModifier.SHIFT);
+        int newSelectedRowCount = selectedRowCount + 1;
+        for (int i = 0; i < newSelectedRowCount; i++) {
+            assertTrue(isSelected(i));
+        }
+        assertTrue(fm.isFocused(newSelectedRowCount - 1));
+        assertEquals(0, (int) ListCellBehavior.getAnchor(listView, -1));
+    }
+
+    @Test public void test_rt_24865_moveUpwards() {
+        listView.getItems().clear();
+        for (int i = 0; i < 100; i++) {
+            listView.getItems().add("Row " + i);
+        }
+
+        Toolkit.getToolkit().firePulse();
+
+        ObservableList<Integer> indices = sm.getSelectedIndices();
+
+        sm.select(50);
+        listView.scrollTo(50);
+
+        Toolkit.getToolkit().firePulse();
+
+        assertTrue(isSelected(50));
+        assertTrue(fm.isFocused(50));
+        assertEquals(1, indices.size());
+        assertEquals(50, (int) ListCellBehavior.getAnchor(listView, -1));
+
+        keyboard.doUpArrowPress(KeyModifier.SHIFT);
+        keyboard.doUpArrowPress(KeyModifier.SHIFT);
+        keyboard.doUpArrowPress(KeyModifier.SHIFT);
+        assertTrue(isSelected(50, 49, 48, 47));
+        assertTrue(fm.isFocused(47));
+        assertEquals(4, indices.size());
+        assertEquals(50, (int) ListCellBehavior.getAnchor(listView, -1));
+
+        keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
+        assertTrue(isSelected(50, 49, 48, 47));
+        assertTrue(isNotSelected(46, 45, 44, 43, 42, 41));
+        assertTrue(fm.isFocused(44));
+        assertEquals(4, indices.size());
+        assertEquals(50, (int) ListCellBehavior.getAnchor(listView, -1));
+
+        // main point of test: selection between the last index (47) and the focus
+        // index (44) should now be true
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        final int selectedRowCount = indices.size();
+        for (int i = 0; i < selectedRowCount; i++) {
+            assertTrue(isSelected(50 - i));
+        }
+        assertTrue(fm.isFocused(50 - selectedRowCount + 1));
+        assertEquals(50, (int) ListCellBehavior.getAnchor(listView, -1));
+
+        keyboard.doUpArrowPress(KeyModifier.SHIFT);
+        int newSelectedRowCount = selectedRowCount + 1;
+        for (int i = 0; i < newSelectedRowCount; i++) {
+            assertTrue(isSelected(50 - i));
+        }
+        assertTrue(fm.isFocused(50 - newSelectedRowCount + 1));
+        assertEquals(50, (int) ListCellBehavior.getAnchor(listView, -1));
     }
 }

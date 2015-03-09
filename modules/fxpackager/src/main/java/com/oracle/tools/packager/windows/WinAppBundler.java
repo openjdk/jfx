@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -383,14 +383,19 @@ public class WinAppBundler extends AbstractBundler {
     }
 
     private void copyApplication(Map<String, ? super Object> params, File appDirectory) throws IOException {
-        RelativeFileSet appResource = APP_RESOURCES.fetchFrom(params);
-        if (appResource == null) {
+        List<RelativeFileSet> appResourcesList = APP_RESOURCES_LIST.fetchFrom(params);
+        if (appResourcesList == null) {
             throw new RuntimeException("Null app resources?");
         }
-        File srcdir = appResource.getBaseDirectory();
-        for (String fname : appResource.getIncludedFiles()) {
-            IOUtils.copyFile(
-                    new File(srcdir, fname), new File(appDirectory, fname));
+        for (RelativeFileSet appResources : appResourcesList) {
+            if (appResources == null) {
+                throw new RuntimeException("Null app resources?");
+            }
+            File srcdir = appResources.getBaseDirectory();
+            for (String fname : appResources.getIncludedFiles()) {
+                IOUtils.copyFile(
+                        new File(srcdir, fname), new File(appDirectory, fname));
+            }
         }
     }
 
@@ -501,6 +506,7 @@ public class WinAppBundler extends AbstractBundler {
         return Arrays.asList(
                 APP_NAME,
                 APP_RESOURCES,
+                // APP_RESOURCES_LIST, // ??
                 ARGUMENTS,
                 CLASSPATH,
                 ICON_ICO,

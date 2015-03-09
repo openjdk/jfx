@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -96,14 +96,6 @@ class ES2Context extends BaseShaderContext {
         quadIndices = vb.genQuadsIndexBuffer(NUM_QUADS);
         setIndexBuffer(quadIndices);
         state = new State();
-
-        // JIRA: RT-21739
-        // TODO: This is a temporary mechanism to work well with Glass on Mac due
-        // to the CALayer work. Need to be removed in the early future for 3.0
-        if (PlatformUtil.isMac() || PlatformUtil.isIOS()) {
-           HashMap devDetails = (HashMap) ES2Pipeline.getInstance().getDeviceDetails();
-           ES2Pipeline.glFactory.updateDeviceDetails(devDetails, glContext);
-        }
     }
     
     final void clearContext() {
@@ -130,32 +122,15 @@ class ES2Context extends BaseShaderContext {
         return ES2PhongShader.getShader(meshView, this);
     }
 
-    // JIRA: RT-21738
-    // TODO: If we can't resolve this platform specific treatment code
-    // by 3.0, we need to refactor it to platform specific project
-    private int savedFBO = 0;
     void makeCurrent(GLDrawable drawable) {
         if (drawable == null) {
             drawable = dummyGLDrawable;
         }
-        if (PlatformUtil.isMac() || PlatformUtil.isIOS()) {
-            if (drawable != currentDrawable) {
-                if (drawable == dummyGLDrawable) {
-                    // Need to restore FBO to Glass' boundFBO
-                    glContext.bindFBO(savedFBO);
-                } else {
-                    savedFBO = glContext.getBoundFBO();
-                    glContext.makeCurrent(drawable);
-                }
-                currentDrawable = drawable;
-            }
-        } else { // Linux and Windows
-            if (drawable != currentDrawable) {
-                glContext.makeCurrent(drawable);
-                // Need to restore FBO to on screen framebuffer
-                glContext.bindFBO(0);
-                currentDrawable = drawable;
-            }
+        if (drawable != currentDrawable) {
+            glContext.makeCurrent(drawable);
+            // Need to restore FBO to on screen framebuffer
+            glContext.bindFBO(0);
+            currentDrawable = drawable;
         }
     }
 

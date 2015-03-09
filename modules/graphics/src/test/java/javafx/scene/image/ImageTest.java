@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -308,6 +308,7 @@ public final class ImageTest {
         final Image animatedImage = 
                 TestImages.createAnimatedTestImage(
                         300, 400,        // width, height
+                        0,               // loop count
                         2000, 1000, 3000 // frame delays
                 );
 
@@ -324,6 +325,34 @@ public final class ImageTest {
         
         toolkit.setAnimationTime(7000);
         assertEquals(0, getPlatformImage(animatedImage).getFrame());
+
+        TestImages.disposeAnimatedImage(animatedImage);
+    }
+
+    @Test
+    public void animatedImageTestLoopOnce() {
+        // reset time
+        toolkit.setAnimationTime(0);
+        final Image animatedImage = 
+                TestImages.createAnimatedTestImage(
+                        300, 400,        // width, height
+                        1,               // loop count
+                        2000, 1000, 3000 // frame delays
+                );
+
+        verifyLoadedImage(animatedImage, 0, 0, false, false, 300, 400);
+
+        toolkit.setAnimationTime(1000);
+        assertEquals(0, getPlatformImage(animatedImage).getFrame());
+
+        toolkit.setAnimationTime(2500);
+        assertEquals(1, getPlatformImage(animatedImage).getFrame());
+        
+        toolkit.setAnimationTime(4500);
+        assertEquals(2, getPlatformImage(animatedImage).getFrame());
+        
+        toolkit.setAnimationTime(7000);
+        assertEquals(2, getPlatformImage(animatedImage).getFrame());
 
         TestImages.disposeAnimatedImage(animatedImage);
     }

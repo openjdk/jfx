@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,7 +31,6 @@ if (!WIN.canBuild) return;
 WIN.compileSwing = true;
 WIN.compileSWT = true;
 WIN.compileFXPackager = true;
-WIN.compileDesignTime = true;
 
 WIN.includeNull3d = true
 
@@ -86,6 +85,14 @@ setupTools("windows_tools",
                 System.getenv().get("PATH"))
     }
 )
+
+if (WINDOWS_SDK_DIR == null || WINDOWS_SDK_DIR == "") {
+    throw new GradleException("FAIL: WINSDK_DIR not defined");
+}
+
+if (WINDOWS_DXSDK_DIR == null || WINDOWS_DXSDK_DIR == "") {
+    throw new GradleException("FAIL: DXSDK_DIR not defined");
+}
 
 // Define set of flags shared for all targets that support debug compilation
 def ccDebugFlags =
@@ -142,7 +149,8 @@ ext.MC = cygpath("$winSdkBinDir/mt.exe")
 ext.MSVCR = cygpath("${WINDOWS_VS_MSVCDIR}/redist/${IS_64 ? 'x64' : 'x86'}/Microsoft.VC${WINDOWS_VS_VER}.CRT/msvcr${WINDOWS_VS_VER}.dll")
 ext.MSVCP = cygpath("${WINDOWS_VS_MSVCDIR}/redist/${IS_64 ? 'x64' : 'x86'}/Microsoft.VC${WINDOWS_VS_VER}.CRT/msvcp${WINDOWS_VS_VER}.dll")
 
-if (!file(RC).exists()) throw new GradleException("FAIL: cannot find RC")
+if (!file(RC).exists()) throw new GradleException("FAIL: cannot find RC: " + RC)
+if (!file(FXC).exists()) throw new GradleException("FAIL: cannot find FXC: " + FXC)
 
 def rcFlags = [
     "/d", "\"JFX_COMPANY=${COMPANY_NAME}\"",

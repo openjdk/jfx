@@ -197,11 +197,11 @@ TString WindowsPlatform::GetSystemJRE() {
     return result;
 }
 
-void WindowsPlatform::ShowError(TString title, TString description) {
+void WindowsPlatform::ShowMessage(TString title, TString description) {
     MessageBox(NULL, description.data(), !title.empty() ? title.data() : description.data(), MB_ICONERROR | MB_OK);
 }
 
-void WindowsPlatform::ShowError(TString description) {
+void WindowsPlatform::ShowMessage(TString description) {
     TString appname = GetModuleFileName();
     appname = FilePath::ExtractFileName(appname);
     MessageBox(NULL, appname.data(), description.data(), MB_ICONERROR | MB_OK);

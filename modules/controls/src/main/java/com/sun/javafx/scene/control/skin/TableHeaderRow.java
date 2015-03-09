@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -166,7 +166,7 @@ public class TableHeaderRow extends StackPane {
         // popup menu for hiding/showing columns
         columnPopupMenu = new ContextMenu();
         updateTableColumnListeners(tableSkin.getColumns(), Collections.<TableColumnBase<?,?>>emptyList());
-        tableSkin.getColumns().addListener(weakTableColumnsListener);
+        tableSkin.getVisibleLeafColumns().addListener(weakTableColumnsListener);
 
         // drag header region. Used to indicate the current column being reordered
         dragHeader = new StackPane();
@@ -338,7 +338,7 @@ public class TableHeaderRow extends StackPane {
     }
 
     // protected to allow subclasses access to the TableViewSkinBase instance
-    protected TableViewSkinBase getTableSkin() {
+    protected TableViewSkinBase<?,?,?,?,?,?> getTableSkin() {
         return this.tableSkin;
     }
 
@@ -458,10 +458,7 @@ public class TableHeaderRow extends StackPane {
             remove(tc);
         }
 
-        // add listeners to all added items
-        for (final TableColumnBase tc : added) {
-            add(tc);
-        }
+        rebuildColumnMenu();
     }
 
     private void remove(TableColumnBase<?,?> col) {
@@ -482,10 +479,10 @@ public class TableHeaderRow extends StackPane {
         }
     }
 
-    private void add(final TableColumnBase<?,?> col) {
-        if (col == null) return;
+    private void rebuildColumnMenu() {
+        columnPopupMenu.getItems().clear();
 
-        if (col.getColumns().isEmpty()) {
+        for (TableColumnBase<?,?> col : getTableSkin().getVisibleLeafColumns()) {
             CheckMenuItem item = columnMenuItems.get(col);
             if (item == null) {
                 item = new CheckMenuItem();
@@ -498,10 +495,6 @@ public class TableHeaderRow extends StackPane {
             item.selectedProperty().bindBidirectional(col.visibleProperty());
 
             columnPopupMenu.getItems().add(item);
-        } else {
-            for (TableColumnBase tc : col.getColumns()) {
-                add(tc);
-            }
         }
     }
 

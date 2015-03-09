@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,8 +27,8 @@ package javafx.scene;
 
 import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Accessible;
-import com.sun.javafx.Logging;
-import com.sun.javafx.Utils;
+import com.sun.javafx.util.Logging;
+import com.sun.javafx.util.Utils;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.css.StyleManager;
@@ -5695,6 +5695,9 @@ public class Scene implements EventTarget {
      * appearance to a user that the data has been moved by the drag and drop
      * gesture. A {@code transferMode} that has the value {@code NONE}
      * indicates that no data was transferred during the drag and drop gesture.
+     * Positional data for the {@code DragEvent} is invalid.  Valid positional
+     * data for the {@code DragEvent} is presented in the {@link onDragDropped}
+     * event handler.
      */
     public final ObjectProperty<EventHandler<? super DragEvent>> onDragDoneProperty() {
         if (onDragDone == null) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -78,7 +78,6 @@ ARMV6HF.library = { name -> return "lib${name}.so" as String }
 ARMV6HF.compileSwing = false;
 ARMV6HF.compileSWT = false;
 ARMV6HF.compileFXPackager = false;
-ARMV6HF.compileDesignTime = false;
 ARMV6HF.compileWebnodeNative = false;
 
 ARMV6HF.includeLens = false
