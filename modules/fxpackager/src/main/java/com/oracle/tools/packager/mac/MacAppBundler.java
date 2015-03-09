@@ -557,7 +557,9 @@ public class MacAppBundler extends AbstractBundler {
         plugInsDirectory.mkdirs();
 
         File srcdir = runTime.getBaseDirectory();
-        File destDir = new File(plugInsDirectory, "Java");
+        // the name in .../Contents/PlugIns/ must have a dot to be verified 
+        // properly by the Mac App Store.
+        File destDir = new File(plugInsDirectory, "Java.runtime");
         Set<String> filesToCopy = runTime.getIncludedFiles();
 
         for (String fname : filesToCopy) {
@@ -627,7 +629,7 @@ public class MacAppBundler extends AbstractBundler {
                 COPYRIGHT.fetchFrom(params) != null ? COPYRIGHT.fetchFrom(params) : "Unknown");
         data.put("DEPLOY_LAUNCHER_NAME", getLauncherName(params));
         if (MAC_RUNTIME.fetchFrom(params) != null) {
-            data.put("DEPLOY_JAVA_RUNTIME_NAME", "$APPDIR/plugins/Java");
+            data.put("DEPLOY_JAVA_RUNTIME_NAME", "$APPDIR/PlugIns/Java.runtime");
         } else {
             data.put("DEPLOY_JAVA_RUNTIME_NAME", "");
         }
@@ -926,14 +928,6 @@ public class MacAppBundler extends AbstractBundler {
             rules.add(Rule.substrNeg("/contents/frameworks/"));
         }
         
-        // strip the link to the DLL for the plugin
-        if (isJDK) {
-            rules.add(Rule.suffixNeg("/macos/libjli.dylib"));
-        }
-        if (isJRE) {
-            rules.add(Rule.suffixNeg("/macos/javaappletplugin"));
-        }
-
         // strip out command line tools
         rules.add(Rule.suffixNeg("home/bin"));
         if (isJDK) {
