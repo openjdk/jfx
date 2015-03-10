@@ -2551,14 +2551,10 @@ load(qt_config)""")
 
                 if (IS_COMPILE_PARFAIT) {
                     environment([
-                        "CC"        : "parfait-gcc",
-                        "QMAKE_CC"  : "parfait-gcc",
-                        "CXX"       : "parfait-g++",
-                        "QMAKE_CXX" : "parfait-g++",
-                        "CPP"       : "parfait-g++",
-                        "cc"        : "parfait-gcc",
-                        "LINK"      : "parfait-g++",
-                        "QMAKE_LINK": "parfait-g++",
+                        "COMPILE_PARFAIT" : "true",
+                        "QMAKE_CC"        : "parfait-gcc",
+                        "QMAKE_CXX"       : "parfait-g++",
+                        "QMAKE_LINK"      : "parfait-g++",
                     ])
                 }
                 commandLine("perl", "Tools/Scripts/build-webkit", "--java", "--imageio", "--icu-unicode")
