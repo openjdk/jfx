@@ -41,7 +41,7 @@
 
 Messages::Messages(void) {
     FMessages.SetReadOnly(false);
-    FMessages.SetValue(LIBRARY_NOT_FOUND, _T("Failed to find library"));
+    FMessages.SetValue(LIBRARY_NOT_FOUND, _T("Failed to find library."));
     FMessages.SetValue(FAILED_CREATING_JVM, _T("Failed to create JVM"));
     FMessages.SetValue(FAILED_LOCATING_JVM_ENTRY_POINT, _T("Failed to locate JNI_CreateJavaVM"));
     FMessages.SetValue(NO_MAIN_CLASS_SPECIFIED, _T("No main class specified"));

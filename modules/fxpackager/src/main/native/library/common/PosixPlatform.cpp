@@ -68,4 +68,14 @@ Procedure PosixPlatform::GetProcAddress(Module AModule, std::string MethodName) 
     return dlsym(AModule, PlatformString(MethodName));
 }
 
+std::vector<std::string> PosixPlatform::GetLibraryImports(const TString FileName) {
+	std::vector<TString> result;
+	return result;
+}
+
+std::vector<TString> PosixPlatform::FilterOutRuntimeDependenciesForPlatform(std::vector<TString> Imports) {
+	std::vector<TString> result;
+	return result;
+}
+
 #endif //POSIX

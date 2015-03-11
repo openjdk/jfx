@@ -46,7 +46,6 @@
 
 #include <map>
 #include <list>
-#include <algorithm>
 
 
 // Private typedef for function pointer casting
@@ -68,51 +67,23 @@ typedef int (JNICALL *JVM_CREATE)(int argc, char ** argv,
                                     jint ergo);
 #endif //USE_JLI_LAUNCH
 
-#ifdef WINDOWS
-class MicrosoftRuntimeLibrary {
-private:
-    Library* FLibrary;
-
-public:
-    MicrosoftRuntimeLibrary() {
-        Package& package = Package::GetInstance();
-        TString runtimeDir = package.GetJVMRuntimeDirectory();
-    
-        Macros& macros = Macros::GetInstance();
-        TString msvcr100FileName = FilePath::IncludeTrailingSlash(runtimeDir) + _T("jre\\bin\\msvcr100.dll");
-        msvcr100FileName = macros.ExpandMacros(msvcr100FileName);
-        if (FilePath::FileExists(msvcr100FileName) == false) {
-            msvcr100FileName = FilePath::IncludeTrailingSlash(runtimeDir) + _T("bin\\msvcr100.dll");
-            msvcr100FileName = macros.ExpandMacros(msvcr100FileName);
-        }
-    
-        FLibrary = new Library(msvcr100FileName);
-    }
-
-    ~MicrosoftRuntimeLibrary() {
-        if (FLibrary != NULL) {
-            delete FLibrary;
-        }
-    }
-};
-#endif //WINDOWS
-
 class JavaLibrary : public Library {
-private:
-#ifdef WINDOWS
-    MicrosoftRuntimeLibrary microsoftRuntime;
-#endif //WINDOWS
-
     JVM_CREATE FCreateProc;
 
+    JavaLibrary(const TString &FileName);
+
 public:
-    JavaLibrary(TString FileName) : Library(FileName) {
-        FCreateProc = (JVM_CREATE)GetProcAddress(LAUNCH_FUNC);
+    JavaLibrary() : Library() {
+        FCreateProc = NULL;
     }
 
 #ifndef USE_JLI_LAUNCH
 bool JavaVMCreate(JavaVM** jvm, JNIEnv** env, void* jvmArgs) {
         bool result = true;
+
+        if (FCreateProc == NULL) {
+            FCreateProc = (JVM_CREATE)GetProcAddress(LAUNCH_FUNC);
+        }
 
         if (FCreateProc == NULL) {
             Platform& platform = Platform::GetInstance();
@@ -133,6 +104,13 @@ bool JavaVMCreate(JavaVM** jvm, JNIEnv** env, void* jvmArgs) {
 #else
     bool JavaVMCreate(size_t argc, char *argv[]) {
         if (FCreateProc == NULL) {
+            FCreateProc = (JVM_CREATE)GetProcAddress(LAUNCH_FUNC);
+        }
+
+        if (FCreateProc == NULL) {
+            Platform& platform = Platform::GetInstance();
+            Messages& messages = Messages::GetInstance();
+            platform.ShowMessage(messages.GetMessage(FAILED_LOCATING_JVM_ENTRY_POINT));
             return false;
         }
 
@@ -366,7 +344,7 @@ bool JavaVirtualMachine::StartJVM() {
     options.AppendValue(_T("-Dapp.preferences.id"), package.GetAppID());
     options.AppendValues(package.GetJVMArgs());
     options.AppendValues(RemoveTrailingEquals(package.GetJVMUserArgs()));
-
+ 
 #ifdef DEBUG
     if (package.Debugging() == dsJava) {
         options.AppendValue(_T("-Xdebug"), _T(""));
@@ -374,7 +352,7 @@ bool JavaVirtualMachine::StartJVM() {
         platform.ShowMessage(_T("localhost:8000"));
     }
 #endif //DEBUG
-    
+
     TString maxHeapSizeOption;
     TString minHeapSizeOption;
 
@@ -401,7 +379,9 @@ bool JavaVirtualMachine::StartJVM() {
         return false;
     }
 
-    JavaLibrary javaLibrary(package.GetJVMLibraryFileName());
+    JavaLibrary javaLibrary;
+    javaLibrary.AddDependencies(platform.FilterOutRuntimeDependenciesForPlatform(platform.GetLibraryImports(package.GetJVMLibraryFileName())));
+    javaLibrary.Load(package.GetJVMLibraryFileName());
     
 #ifndef USE_JLI_LAUNCH
     if (package.HasSplashScreen() == true) {

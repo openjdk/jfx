@@ -72,6 +72,8 @@ public:
     virtual Module LoadLibrary(TString FileName);
     virtual void FreeLibrary(Module AModule);
     virtual Procedure GetProcAddress(Module AModule, std::string MethodName);
+    virtual std::vector<TString> GetLibraryImports(const TString FileName);
+    virtual std::vector<TString> FilterOutRuntimeDependenciesForPlatform(std::vector<TString> Imports);
 
     virtual bool IsMainThread();
     virtual TPlatformNumber GetMemorySize();
@@ -92,6 +94,62 @@ public:
     virtual bool Load(TString Appid);
 };
 
+
+class FileHandle {
+private:
+    HANDLE FHandle;
+
+public:
+    FileHandle(std::wstring FileName);
+    ~FileHandle();
+
+    bool IsValid();
+    HANDLE GetHandle();
+};
+
+
+class FileMappingHandle {
+private:
+    HANDLE FHandle;
+
+public:
+    FileMappingHandle(HANDLE FileHandle);
+    ~FileMappingHandle();
+
+    bool IsValid();
+    HANDLE GetHandle();
+};
+
+
+class FileData {
+private:
+    LPVOID FBaseAddress;
+
+public:
+    FileData(HANDLE Handle);
+    ~FileData();
+
+    bool IsValid();
+    LPVOID GetBaseAddress();
+};
+
+
+class WindowsLibrary {
+private:
+    TString FFileName;
+
+    // Given an RVA, look up the section header that encloses it and return a
+    // pointer to its IMAGE_SECTION_HEADER
+    static PIMAGE_SECTION_HEADER GetEnclosingSectionHeader(DWORD rva, PIMAGE_NT_HEADERS pNTHeader);
+    static LPVOID GetPtrFromRVA(DWORD rva, PIMAGE_NT_HEADERS pNTHeader, DWORD imageBase);
+    static std::vector<TString> GetImportsSection(DWORD base, PIMAGE_NT_HEADERS pNTHeader);
+    static std::vector<TString> DumpPEFile(PIMAGE_DOS_HEADER dosHeader);
+
+public:
+    WindowsLibrary(const TString FileName);
+
+    std::vector<TString> GetImports();
+};
 
 #endif //WINDOWSPLATFORM_H
 

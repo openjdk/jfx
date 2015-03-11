@@ -71,7 +71,7 @@ public:
 
     virtual bool IsMainThread();
     virtual TPlatformNumber GetMemorySize();
-    
+
     virtual std::map<TString, TString> GetKeys();
     
 #ifdef DEBUG
