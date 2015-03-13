@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -186,7 +186,7 @@ public class CustomColorDialog extends HBox {
     
     private void fixPosition() {
         Window w = dialog.getOwner();
-        Screen s = com.sun.javafx.Utils.getScreen(w);
+        Screen s = com.sun.javafx.util.Utils.getScreen(w);
         Rectangle2D sb = s.getBounds();
         double xR = w.getX() + w.getWidth();
         double xL = w.getX() - dialog.getWidth();

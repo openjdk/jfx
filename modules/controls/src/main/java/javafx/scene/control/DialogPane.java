@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -818,7 +818,8 @@ public class DialogPane extends Pane {
     @Override protected void layoutChildren() {
         final boolean hasHeader = hasHeader();
 
-        final double w = Math.max(minWidth(-1), getWidth()) - (snappedLeftInset() + snappedRightInset());
+        // snapped insets code commented out to resolve RT-39738
+        final double w = Math.max(minWidth(-1), getWidth());// - (snappedLeftInset() + snappedRightInset());
 
         final double minHeight = minHeight(w);
         final double prefHeight = prefHeight(w);
@@ -890,10 +891,10 @@ public class DialogPane extends Pane {
                 x += graphicPrefWidth;
             }
         } else {
-            header.resizeRelocate(leftPadding, topPadding, w - rightPadding, headerPrefHeight);
+            header.resizeRelocate(x, y, w - (leftPadding + rightPadding), headerPrefHeight);
             y += headerPrefHeight;
         }
-        
+
         content.resizeRelocate(x, y, availableContentWidth, contentAreaHeight);
         y += hasHeader ? contentAreaHeight : contentAndGraphicHeight;
         
@@ -903,7 +904,10 @@ public class DialogPane extends Pane {
         }
         
         if (buttonBar != null) {
-            buttonBar.resizeRelocate(leftPadding, (h - buttonBarPrefHeight - bottomPadding), w - rightPadding, buttonBarPrefHeight);
+            buttonBar.resizeRelocate(leftPadding,
+                                     y,
+                                     w - (leftPadding + rightPadding),
+                                     buttonBarPrefHeight);
         }
     }
 

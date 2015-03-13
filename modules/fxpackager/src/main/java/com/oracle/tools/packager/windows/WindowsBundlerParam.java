@@ -222,4 +222,14 @@ public class WindowsBundlerParam<T> extends StandardBundlerParam<T> {
             params.put(".runtime.version.modifiers", "");
         }
     }
+    
+    public static final BundlerParamInfo<Boolean> INSTALLDIR_CHOOSER = new StandardBundlerParam<> (
+        I18N.getString("param.installdir-chooser.name"),
+        I18N.getString("param.installdir-chooser.description"),
+        BundleParams.PARAM_INSTALLDIR_CHOOSER,
+        Boolean.class,
+        params -> Boolean.FALSE,
+        (s, p) -> Boolean.valueOf(s)
+    );
+
 }

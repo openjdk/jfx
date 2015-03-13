@@ -162,10 +162,16 @@ public class LinuxDebBundler extends AbstractBundler {
             params -> {
                 try {
                     List<String> licenseFiles = LICENSE_FILE.fetchFrom(params);
-                    com.oracle.tools.packager.RelativeFileSet appRoot = APP_RESOURCES.fetchFrom(params);
+                    
                     //need to copy license file to the root of linux-app.image
                     if (licenseFiles.size() > 0) {
-                        return new String(IOUtils.readFully(new File(appRoot.getBaseDirectory(), licenseFiles.get(0))));
+                        String licFileStr = licenseFiles.get(0);
+            
+                        for (RelativeFileSet rfs : APP_RESOURCES_LIST.fetchFrom(params)) {
+                            if (rfs.contains(licFileStr)) {
+                                return new String(IOUtils.readFully(new File(rfs.getBaseDirectory(), licFileStr)));
+                            }
+                        }                        
                     }
                 } catch (Exception e) {
                     if (Log.isDebug()) {
@@ -249,20 +255,25 @@ public class LinuxDebBundler extends AbstractBundler {
                         I18N.getString("error.tool-not-found.advice"));
             }
 
+            
             // validate license file, if used, exists in the proper place
             if (p.containsKey(LICENSE_FILE.getID())) {
-                com.oracle.tools.packager.RelativeFileSet appResources = APP_RESOURCES.fetchFrom(p);
+                List<RelativeFileSet> appResourcesList = APP_RESOURCES_LIST.fetchFrom(p);
                 for (String license : LICENSE_FILE.fetchFrom(p)) {
-                    if (!appResources.contains(license)) {
+                    boolean found = false;
+                    for (RelativeFileSet appResources : appResourcesList) {
+                        found = found || appResources.contains(license);
+                    }
+                    if (!found) {
                         throw new ConfigException(
                                 I18N.getString("error.license-missing"),
                                 MessageFormat.format(I18N.getString("error.license-missing.advice"),
-                                        license, appResources.getBaseDirectory().toString()));
+                                        license));
                     }
                 }
             } else {
                 Log.info(I18N.getString("message.debs-like-licenses"));
-            }
+            }            
 
             boolean serviceHint = p.containsKey(SERVICE_HINT.getID()) && SERVICE_HINT.fetchFrom(p);
             

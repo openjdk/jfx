@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -37,9 +37,7 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-import javafx.event.EventHandler;
 import javafx.geometry.HPos;
 import javafx.geometry.Point2D;
 import javafx.geometry.VPos;
@@ -47,7 +45,6 @@ import javafx.scene.Node;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.shape.Path;
-import javafx.scene.shape.PathBuilder;
 import javafx.util.Duration;
 import static ensemble.control.BendingPages.State.*;
 import static ensemble.control.BendingPages.AnimationState.*;
@@ -58,16 +55,9 @@ import javafx.scene.paint.Color;
 public class BendingPages extends Region {
 
     private BookBend bookBend;
-    private Path frontPageBack = PathBuilder.create()
-        .stroke(null)
-        .id("frontPageBack")
-        .build();
+    private Path frontPageBack = new Path();
 
-    private Path shadow = PathBuilder.create()
-        .stroke(null)
-        .id("frontPageShadow")
-        .mouseTransparent(true)
-        .build();
+    private Path shadow = new Path();
 
     private ObjectProperty<Node> frontPage = new SimpleObjectProperty<Node>(new Region());
     
@@ -185,6 +175,11 @@ public class BendingPages extends Region {
     private Timeline animation;
 
     public BendingPages() {
+        frontPageBack.setStroke(null);
+        frontPageBack.setId("frontPageBack");
+        shadow.setStroke(null);
+        shadow.setId("frontPageShadow");
+        shadow.setMouseTransparent(true);
         getChildren().setAll(backPage.get(), frontPage.get(), frontPageBack, shadow);
         
         backPage.addListener((ObservableValue<? extends Node> arg0, Node arg1, Node arg2) -> {
@@ -332,12 +327,12 @@ public class BendingPages extends Region {
         t.addListener((ObservableValue<? extends Number> arg0, Number arg1, Number t1) -> {
             bookBend.update(fx + (targetX - fx) * t1.doubleValue(), fy + (targetY - fy) * t1.doubleValue());
         });
-        animation = TimelineBuilder.create()
-                .keyFrames(new KeyFrame(Duration.millis(200), (ActionEvent arg0) -> {
-                    animState = NO_ANIMATION;
-        },
-                    new KeyValue(t, 1, Interpolator.EASE_OUT)))
-                .build();
+
+        Timeline animation = new Timeline(
+                new KeyFrame(Duration.millis(200), (ActionEvent arg0) -> { animState = NO_ANIMATION; },
+                new KeyValue(t, 1, Interpolator.EASE_OUT))
+        );
+
         animation.play();
         animState = ANIMATION;
         fixMouseTransparency();

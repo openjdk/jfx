@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,6 +33,7 @@ import java.net.ProtocolException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.Charset;
+import java.util.Base64;
 import java.util.LinkedList;
 
 /**
@@ -120,7 +121,7 @@ final class DataURLConnection extends URLConnection {
         if (base64) {
             String s = urlDecode(dataString, US_ASCII);
             s = s.replaceAll("\\s+", "");
-            data = new sun.misc.BASE64Decoder().decodeBuffer(s);
+            data = Base64.getMimeDecoder().decode(s);
         } else {
             String s = urlDecode(dataString, charset);
             data = s.getBytes(charset);

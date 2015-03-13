@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,6 +48,7 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.PopupControl;
 import javafx.scene.control.Separator;
 import javafx.scene.control.Tooltip;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
@@ -223,6 +224,12 @@ public class ColorPalette extends Region {
         for (int i = 0; i < customColors.size(); i++) {
             Color c = customColors.get(i);
             ColorSquare square = new ColorSquare(c, i, true);
+            square.addEventHandler(KeyEvent.KEY_PRESSED, e -> {
+                if (e.getCode() == KeyCode.DELETE) {
+                    customColors.remove(square.rectangle.getFill());
+                    buildCustomColors();
+                }
+            });
             customColorGrid.add(square, customColumnIndex, customRowIndex);
             customColumnIndex++;
             if (customColumnIndex == NUM_OF_COLUMNS) {
@@ -512,9 +519,9 @@ public class ColorPalette extends Region {
                     dragDetected = true;
                     mouseDragColor = colorPicker.getValue();
                 }
-                int xIndex = com.sun.javafx.Utils.clamp(0,
+                int xIndex = com.sun.javafx.util.Utils.clamp(0,
                         (int)t.getX()/(SQUARE_SIZE + 1), NUM_OF_COLUMNS - 1);
-                int yIndex = com.sun.javafx.Utils.clamp(0,
+                int yIndex = com.sun.javafx.util.Utils.clamp(0,
                         (int)t.getY()/(SQUARE_SIZE + 1), NUM_OF_ROWS - 1);
                 int index = xIndex + yIndex*NUM_OF_COLUMNS;
                 colorPicker.setValue((Color) squares.get(index).rectangle.getFill());

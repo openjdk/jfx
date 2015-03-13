@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -106,6 +106,11 @@
     return [self->_offscreen height];
 }
 
+- (GLuint)fbo
+{
+    return [self->_offscreen fbo];
+}
+
 - (CAOpenGLLayer*)getLayer
 {
     return _layer;
@@ -132,14 +137,8 @@
 
 - (void)bindForWidth:(GLuint)width andHeight:(GLuint)height
 {
-    [self setContext];       
+    [self setContext];
     [self->_offscreen bindForWidth:width andHeight:height];
-}
-
-- (void)unbind
-{
-    assert(CGLGetCurrentContext() == self->_ctx);
-    [self->_offscreen unbind];
     [self unsetContext];
 }
 

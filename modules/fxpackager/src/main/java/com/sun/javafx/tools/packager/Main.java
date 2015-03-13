@@ -286,6 +286,8 @@ public class Main {
                             deployParams.setApplicationClass(nextArg(args, i++));
                         } else if(arg.equalsIgnoreCase("-daemon")) {
                             deployParams.setServiceHint(true);
+                        } else if(arg.equalsIgnoreCase("-installdirChooser")) {
+                            deployParams.setInstalldirChooser(true);
                         } else if (arg.equalsIgnoreCase("-preloader")) {
                             deployParams.setPreloader(nextArg(args, i++));
                         } else if (arg.equalsIgnoreCase("-paramFile")) {

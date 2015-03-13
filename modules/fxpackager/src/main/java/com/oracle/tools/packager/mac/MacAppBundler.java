@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,6 +45,7 @@ import java.text.MessageFormat;
 import java.util.*;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
+import static com.oracle.tools.packager.mac.MacBaseInstallerBundler.SIGNING_KEYCHAIN;
 import static com.oracle.tools.packager.mac.MacBaseInstallerBundler.SIGNING_KEY_USER;
 import static com.oracle.tools.packager.mac.MacBaseInstallerBundler.getPredefinedImage;
 
@@ -215,7 +216,7 @@ public class MacAppBundler extends AbstractBundler {
             I18N.getString("param.signing-key-developer-id-app.description"),
             "mac.signing-key-developer-id-app",
             String.class,
-            params -> MacBaseInstallerBundler.findKey("Developer ID Application: " + SIGNING_KEY_USER.fetchFrom(params), VERBOSE.fetchFrom(params)),
+            params -> MacBaseInstallerBundler.findKey("Developer ID Application: " + SIGNING_KEY_USER.fetchFrom(params), SIGNING_KEYCHAIN.fetchFrom(params), VERBOSE.fetchFrom(params)),
             (s, p) -> s);
 
     public static final BundlerParamInfo<String> BUNDLE_ID_SIGNING_PREFIX = new StandardBundlerParam<>(
@@ -537,14 +538,17 @@ public class MacAppBundler extends AbstractBundler {
     }
 
     private void copyClassPathEntries(File javaDirectory, Map<String, ? super Object> params) throws IOException {
-        RelativeFileSet classPath = APP_RESOURCES.fetchFrom(params);
-        if (classPath == null) {
+        List<RelativeFileSet> resourcesList = APP_RESOURCES_LIST.fetchFrom(params);
+        if (resourcesList == null) {
             throw new RuntimeException(I18N.getString("message.null-classpath"));
         }
-        File srcdir = classPath.getBaseDirectory();
-        for (String fname : classPath.getIncludedFiles()) {
-            IOUtils.copyFile(
-                    new File(srcdir, fname), new File(javaDirectory, fname));
+        
+        for (RelativeFileSet classPath : resourcesList) {
+            File srcdir = classPath.getBaseDirectory();
+            for (String fname : classPath.getIncludedFiles()) {
+                IOUtils.copyFile(
+                        new File(srcdir, fname), new File(javaDirectory, fname));
+            }
         }
     }
 
@@ -557,7 +561,9 @@ public class MacAppBundler extends AbstractBundler {
         plugInsDirectory.mkdirs();
 
         File srcdir = runTime.getBaseDirectory();
-        File destDir = new File(plugInsDirectory, "Java");
+        // the name in .../Contents/PlugIns/ must have a dot to be verified 
+        // properly by the Mac App Store.
+        File destDir = new File(plugInsDirectory, "Java.runtime");
         Set<String> filesToCopy = runTime.getIncludedFiles();
 
         for (String fname : filesToCopy) {
@@ -627,7 +633,7 @@ public class MacAppBundler extends AbstractBundler {
                 COPYRIGHT.fetchFrom(params) != null ? COPYRIGHT.fetchFrom(params) : "Unknown");
         data.put("DEPLOY_LAUNCHER_NAME", getLauncherName(params));
         if (MAC_RUNTIME.fetchFrom(params) != null) {
-            data.put("DEPLOY_JAVA_RUNTIME_NAME", "$APPDIR/plugins/Java");
+            data.put("DEPLOY_JAVA_RUNTIME_NAME", "$APPDIR/PlugIns/Java.runtime");
         } else {
             data.put("DEPLOY_JAVA_RUNTIME_NAME", "");
         }
@@ -926,14 +932,6 @@ public class MacAppBundler extends AbstractBundler {
             rules.add(Rule.substrNeg("/contents/frameworks/"));
         }
         
-        // strip the link to the DLL for the plugin
-        if (isJDK) {
-            rules.add(Rule.suffixNeg("/macos/libjli.dylib"));
-        }
-        if (isJRE) {
-            rules.add(Rule.suffixNeg("/macos/javaappletplugin"));
-        }
-
         // strip out command line tools
         rules.add(Rule.suffixNeg("home/bin"));
         if (isJDK) {
@@ -1023,6 +1021,7 @@ public class MacAppBundler extends AbstractBundler {
         return Arrays.asList(
                 APP_NAME,
                 APP_RESOURCES,
+                // APP_RESOURCES_LIST, // ??
                 ARGUMENTS,
                 BUNDLE_ID_SIGNING_PREFIX,
                 CLASSPATH,
@@ -1039,6 +1038,7 @@ public class MacAppBundler extends AbstractBundler {
                 MAIN_JAR,
                 PREFERENCES_ID,
                 PRELOADER_CLASS,
+                SIGNING_KEYCHAIN,
                 USER_JVM_OPTIONS,
                 VERSION
         );

@@ -126,12 +126,12 @@ class ControlUtils {
                     return true;
                 }
 
-                if (atFirstRange) {
+                if (atFirstRange && !secondRemovedRange.isEmpty()) {
                     atFirstRange = false;
 
                     // point 'from' to the second position, relative to
                     // the underlying selectedCells index.
-                    from = secondRemovedRange.isEmpty() ? 0 : 1;
+                    from = 1;
                     return true;
                 }
 

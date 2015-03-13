@@ -39,9 +39,11 @@
 #include "Package.h"
 #include "Helpers.h"
 #include "PlatformString.h"
+#include "Macros.h"
 
 #include <map>
 #include <vector>
+#include <regex>
 
 
 //--------------------------------------------------------------------------------------------------
@@ -197,11 +199,11 @@ TString WindowsPlatform::GetSystemJRE() {
     return result;
 }
 
-void WindowsPlatform::ShowError(TString title, TString description) {
+void WindowsPlatform::ShowMessage(TString title, TString description) {
     MessageBox(NULL, description.data(), !title.empty() ? title.data() : description.data(), MB_ICONERROR | MB_OK);
 }
 
-void WindowsPlatform::ShowError(TString description) {
+void WindowsPlatform::ShowMessage(TString description) {
     TString appname = GetModuleFileName();
     appname = FilePath::ExtractFileName(appname);
     MessageBox(NULL, appname.data(), description.data(), MB_ICONERROR | MB_OK);
@@ -282,6 +284,56 @@ TPlatformNumber WindowsPlatform::GetMemorySize() {
     size_t result = (size_t)si.lpMaximumApplicationAddress;
     result = result / 1048576; // Convert from bytes to megabytes.
     return result;
+}
+
+std::vector<TString> WindowsPlatform::GetLibraryImports(const TString FileName) {
+	std::vector<TString> result;
+    WindowsLibrary library(FileName);
+    result = library.GetImports();
+	return result;
+}
+
+std::vector<TString> FilterList(std::vector<TString> &Items, std::wregex Pattern) {
+    std::vector<TString> result;
+ 
+    for (std::vector<TString>::iterator it = Items.begin(); it != Items.end(); ++it) {
+        TString item = *it;
+        std::wsmatch match;
+
+        if (std::regex_search(item, match, Pattern)) {
+            result.push_back(item);
+        }
+    }
+    return result;
+}
+
+std::vector<TString> WindowsPlatform::FilterOutRuntimeDependenciesForPlatform(std::vector<TString> Imports) {
+	std::vector<TString> result;
+
+    Package& package = Package::GetInstance();
+    Macros& macros = Macros::GetInstance();
+    TString runtimeDir = macros.ExpandMacros(package.GetJVMRuntimeDirectory());
+    std::vector<TString> filelist = FilterList(Imports, std::wregex(_T("MSVCR.*.DLL"), std::regex_constants::icase));
+
+    for (std::vector<TString>::iterator it = filelist.begin(); it != filelist.end(); ++it) {
+        TString filename = *it;
+        TString msvcr100FileName = FilePath::IncludeTrailingSlash(runtimeDir) + _T("jre\\bin\\") + filename;
+
+        if (FilePath::FileExists(msvcr100FileName) == true) {
+            result.push_back(msvcr100FileName);
+            break;
+        }
+        else {
+            msvcr100FileName = FilePath::IncludeTrailingSlash(runtimeDir) + _T("bin\\") + filename;
+
+            if (FilePath::FileExists(msvcr100FileName) == true) {
+                result.push_back(msvcr100FileName);
+                break;
+            }
+        }
+    }
+
+	return result;
 }
 
 #ifdef DEBUG
@@ -408,6 +460,169 @@ bool WindowsJavaUserPreferences::Load(TString Appid) {
         }
 
         FMap = mapOfKeysAndValues;
+    }
+
+    return result;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+FileHandle::FileHandle(std::wstring FileName) {
+    FHandle = ::CreateFile(FileName.data(), GENERIC_READ, FILE_SHARE_READ, NULL,
+                            OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+}
+
+FileHandle::~FileHandle() {
+    if (IsValid() == true) {
+        ::CloseHandle(FHandle);
+    }
+}
+
+bool FileHandle::IsValid() {
+    return FHandle != INVALID_HANDLE_VALUE;
+}
+
+HANDLE FileHandle::GetHandle() {
+    return FHandle;
+}
+
+FileMappingHandle::FileMappingHandle(HANDLE FileHandle) {
+    FHandle = ::CreateFileMapping(FileHandle, NULL, PAGE_READONLY, 0, 0, NULL);
+}
+
+bool FileMappingHandle::IsValid() {
+    return FHandle != NULL;
+}
+
+FileMappingHandle::~FileMappingHandle() {
+    if (IsValid() == true) {
+        ::CloseHandle(FHandle);
+    }
+}
+
+HANDLE FileMappingHandle::GetHandle() {
+    return FHandle;
+}
+
+FileData::FileData(HANDLE Handle) {
+    FBaseAddress = ::MapViewOfFile(Handle, FILE_MAP_READ, 0, 0, 0);
+}
+
+FileData::~FileData() {
+    if (IsValid() == true) {
+        ::UnmapViewOfFile(FBaseAddress);
+    }
+}
+
+bool FileData::IsValid() {
+    return FBaseAddress != NULL;
+}
+
+LPVOID FileData::GetBaseAddress() {
+    return FBaseAddress;
+}
+
+
+WindowsLibrary::WindowsLibrary(std::wstring FileName) {
+    FFileName = FileName;
+}
+
+std::vector<TString> WindowsLibrary::GetImports() {
+    std::vector<TString> result;
+    FileHandle library(FFileName);
+
+    if (library.IsValid() == true) {
+        FileMappingHandle mapping(library.GetHandle());
+
+        if (mapping.IsValid() == true) {
+            FileData fileData(mapping.GetHandle());
+
+            if (fileData.IsValid() == true) {
+                PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)fileData.GetBaseAddress();
+                PIMAGE_FILE_HEADER pImgFileHdr = (PIMAGE_FILE_HEADER)fileData.GetBaseAddress();
+
+                if (dosHeader->e_magic == IMAGE_DOS_SIGNATURE) {
+                    result = DumpPEFile(dosHeader);
+                }
+            }
+        }
+    }
+
+    return result;
+}
+
+// Given an RVA, look up the section header that encloses it and return a
+// pointer to its IMAGE_SECTION_HEADER
+PIMAGE_SECTION_HEADER WindowsLibrary::GetEnclosingSectionHeader(DWORD rva,
+                                                PIMAGE_NT_HEADERS pNTHeader) {
+    PIMAGE_SECTION_HEADER result = 0;
+    PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION(pNTHeader);
+
+    for (unsigned index = 0; index < pNTHeader->FileHeader.NumberOfSections; index++, section++) {
+        // Is the RVA is within this section?
+        if ((rva >= section->VirtualAddress) && 
+            (rva < (section->VirtualAddress + section->Misc.VirtualSize))) {
+            result = section;
+        }
+    }
+
+    return result;
+}
+
+LPVOID WindowsLibrary::GetPtrFromRVA(DWORD rva, PIMAGE_NT_HEADERS pNTHeader, DWORD imageBase) {
+    LPVOID result = 0;
+    PIMAGE_SECTION_HEADER pSectionHdr = GetEnclosingSectionHeader(rva, pNTHeader);
+
+    if (pSectionHdr != NULL) {
+        INT delta = (INT)(pSectionHdr->VirtualAddress-pSectionHdr->PointerToRawData);
+        result = (PVOID)(imageBase + rva - delta);
+    }
+
+    return result;
+}
+
+std::vector<TString> WindowsLibrary::GetImportsSection(DWORD base, PIMAGE_NT_HEADERS pNTHeader) {
+    std::vector<TString> result;
+
+    // Look up where the imports section is located. Normally in the .idata section,
+    // but not necessarily so. Therefore, grab the RVA from the data dir.
+    DWORD importsStartRVA = pNTHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress;
+
+    if (importsStartRVA != NULL) {
+        // Get the IMAGE_SECTION_HEADER that contains the imports. This is
+        // usually the .idata section, but doesn't have to be.
+        PIMAGE_SECTION_HEADER pSection = GetEnclosingSectionHeader(importsStartRVA, pNTHeader);
+
+        if (pSection != NULL) {
+            PIMAGE_IMPORT_DESCRIPTOR importDesc = (PIMAGE_IMPORT_DESCRIPTOR)GetPtrFromRVA(importsStartRVA, pNTHeader,base);
+
+            if (importDesc != NULL) {
+                while (true)
+                {
+                    // See if we've reached an empty IMAGE_IMPORT_DESCRIPTOR
+                    if ((importDesc->TimeDateStamp == 0) && (importDesc->Name == 0))
+                        break;
+
+                    std::string filename = (char*)GetPtrFromRVA(importDesc->Name, pNTHeader, base);
+                    result.push_back(PlatformString(filename));
+                    importDesc++;   // advance to next IMAGE_IMPORT_DESCRIPTOR
+                }
+            }
+        }
+    }
+
+    return result;
+}
+
+std::vector<TString> WindowsLibrary::DumpPEFile(PIMAGE_DOS_HEADER dosHeader) {
+    std::vector<TString> result;
+    PIMAGE_NT_HEADERS pNTHeader = (PIMAGE_NT_HEADERS)((DWORD)(dosHeader) + (DWORD)(dosHeader->e_lfanew));
+
+    // Verify that the e_lfanew field gave us a reasonable
+    // pointer and the PE signature.
+    if (pNTHeader->Signature == IMAGE_NT_SIGNATURE) {
+        DWORD base = (DWORD)dosHeader;
+        result = GetImportsSection(base, pNTHeader);
     }
 
     return result;

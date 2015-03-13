@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -138,6 +138,14 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
             params -> "",
             null);
 
+    public static final BundlerParamInfo<String> SIGNING_KEYCHAIN = new StandardBundlerParam<>(
+            I18N.getString("param.signing-keychain.name"),
+            I18N.getString("param.signing-keychain.description"),
+            "mac.signing-keychain",
+            String.class,
+            params -> "",
+            null);
+
     public static final BundlerParamInfo<String> INSTALLER_NAME = new StandardBundlerParam<> (
             I18N.getString("param.installer-name.name"),
             I18N.getString("param.installer-name.description"),
@@ -212,9 +220,10 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
     }
 
     public static void signAppBundle(Map<String, ? super Object> params, File appLocation, String signingIdentity, String identifierPrefix, String entitlementsFile, String inheritedEntitlements) throws IOException {
-
         AtomicReference<IOException> toThrow = new AtomicReference<>();
-
+        String appExecutable = "/Contents/MacOS/" + APP_NAME.fetchFrom(params);
+        String keyChain = SIGNING_KEYCHAIN.fetchFrom(params);
+        
         // sign all dylibs and jars
         Files.walk(appLocation.toPath())
                 // while we are searching let's fix permissions
@@ -230,87 +239,50 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
                         Log.debug(e);
                     }
                 })
-                // now only care about jars and dylibs
-                .filter(p -> (p.toString().endsWith(".jar")
-                                || p.toString().endsWith(".dylib"))
+                .filter(p -> Files.isRegularFile(p) && 
+                                !(p.toString().contains("/Contents/MacOS/libjli.dylib")
+                                  || p.toString().contains("/Contents/MacOS/JavaAppletPlugin")
+                                  || p.toString().endsWith(appExecutable))
                 ).forEach(p -> {
-                    //noinspection ThrowableResultOfMethodCallIgnored
-                    if (toThrow.get() != null) return;
+            //noinspection ThrowableResultOfMethodCallIgnored
+            if (toThrow.get() != null) return;
 
-                    List<String> args = new ArrayList<>();
-                    args.addAll(Arrays.asList(
-                            "codesign",
-                            "-f")); // replace all existing signatures
-                    if (signingIdentity != null) {
-                        args.add("-s");
-                        args.add(signingIdentity); // sign with this key
-                    }
-                    if (entitlementsFile != null) {
-                        args.add("--entitlements");
-                        args.add(entitlementsFile); // entitlements
-                    }
-                    args.add("-vvvv"); // super verbo1se output
-                    args.add(p.toString());
+            List<String> args = new ArrayList<>();
+            args.addAll(Arrays.asList("codesign",
+                    "-s", signingIdentity, // sign with this key
+                    "--prefix", identifierPrefix, // use the identifier as a prefix
+                    "-vvvv"));
+            if (entitlementsFile != null && 
+                    (p.toString().endsWith(".jar")
+                      || p.toString().endsWith(".dylib"))) 
+            {
+                args.add("--entitlements");
+                args.add(entitlementsFile); // entitlements
+            } else if (inheritedEntitlements != null && Files.isExecutable(p)) {
+                args.add("--entitlements");
+                args.add(inheritedEntitlements); // inherited entitlements for executable processes
+            }
+            if (keyChain != null && !keyChain.isEmpty()) {
+                args.add("--keychain");
+                args.add(keyChain);
+            }
+            args.add(p.toString());
 
+            try {
+                Set<PosixFilePermission> oldPermissions = Files.getPosixFilePermissions(p);
+                File f = p.toFile();
+                f.setWritable(true, true);
 
-                    try {
-                        Set<PosixFilePermission> oldPermissions = Files.getPosixFilePermissions(p);
-                        File f = p.toFile();
-                        f.setWritable(true, true);
+                ProcessBuilder pb = new ProcessBuilder(args);
+                IOUtils.exec(pb, VERBOSE.fetchFrom(params));
 
-                        ProcessBuilder pb = new ProcessBuilder(args);
-                        IOUtils.exec(pb, VERBOSE.fetchFrom(params));
-
-                        Files.setPosixFilePermissions(p, oldPermissions);
-                    } catch (IOException ioe) {
-                        toThrow.set(ioe);
-                    }
-                });
+                Files.setPosixFilePermissions(p, oldPermissions);
+            } catch (IOException ioe) {
+                toThrow.set(ioe);
+            }
+        });
 
         IOException ioe = toThrow.get();
-        if (ioe != null) {
-            throw ioe;
-        }
-
-        // sign all contained executables with an inherit entitlement
-        Files.find(appLocation.toPath().resolve("Contents"), Integer.MAX_VALUE,
-                (path, attr) -> (Files.isExecutable(path) && Files.isRegularFile(path)))
-                .filter(path -> (!path.toString().endsWith(".dylib") && !path.toString().contains("/Contents/MacOS/")))
-                .forEachOrdered(path -> {
-                    //noinspection ThrowableResultOfMethodCallIgnored
-                    if (toThrow.get() != null) return;
-
-                    List<String> args = new ArrayList<>();
-                    args.addAll(Arrays.asList("codesign",
-                            "--deep",
-//                            "--prefix", identifierPrefix, // use the identifier as a prefix
-                            "-f")); // replace all existing signatures
-                    if (signingIdentity != null) {
-                        args.add("-s");
-                        args.add(signingIdentity); // sign with this key
-                    }
-                    if (inheritedEntitlements != null) {
-                        args.add("--entitlements");
-                        args.add(inheritedEntitlements); // entitlements
-                    }
-                    args.add("-vvvv"); // super verbose output
-                    args.add(path.toString()); // this is what we are signing
-
-                    try {
-                        Set<PosixFilePermission> oldPermissions = Files.getPosixFilePermissions(path);
-                        File f = path.toFile();
-                        f.setWritable(true, true);
-
-                        ProcessBuilder pb = new ProcessBuilder(args);
-                        IOUtils.exec(pb, VERBOSE.fetchFrom(params));
-
-                        Files.setPosixFilePermissions(path, oldPermissions);
-                    } catch (IOException e) {
-                        toThrow.set(e);
-                    }
-                });
-
-        ioe = toThrow.get();
         if (ioe != null) {
             throw ioe;
         }
@@ -324,16 +296,27 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
                 List<String> args = new ArrayList<>();
                 args.addAll(Arrays.asList("codesign",
                         "-s", signingIdentity, // sign with this key
-                        "-f", // replace all existing signatures
                         "--prefix", identifierPrefix, // use the identifier as a prefix
-                        //"-i", bundleID, // sign the bundle's CFBundleIdentifier
                         "-vvvv"));
-                if (signingIdentity != null) {
-                    args.add("-s");
-                    args.add(signingIdentity); // sign with this key
+                if (keyChain != null && !keyChain.isEmpty()) {
+                    args.add("--keychain");
+                    args.add(keyChain);
                 }
                 args.add(path.toString());
                 ProcessBuilder pb = new ProcessBuilder(args);
+                IOUtils.exec(pb, VERBOSE.fetchFrom(params));
+
+                args = new ArrayList<>();
+                args.addAll(Arrays.asList("codesign",
+                        "-s", signingIdentity, // sign with this key
+                        "--prefix", identifierPrefix, // use the identifier as a prefix
+                        "-vvvv"));
+                if (keyChain != null && !keyChain.isEmpty()) {
+                    args.add("--keychain");
+                    args.add(keyChain);
+                }
+                args.add(path.toString() + "/Contents/_CodeSignature/CodeResources");
+                pb = new ProcessBuilder(args);
                 IOUtils.exec(pb, VERBOSE.fetchFrom(params));
             } catch (IOException e) {
                 toThrow.set(e);
@@ -365,13 +348,15 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
         List<String> args = new ArrayList<>();
         args.addAll(Arrays.asList("codesign",
                 "-s", signingIdentity, // sign with this key
-                "--deep", // sign deeply, including plugins
-                "-f")); // replace all existing signatures
+                "-vvvv")); // super verbose output
         if (entitlementsFile != null) {
             args.add("--entitlements");
             args.add(entitlementsFile); // entitlements
         }
-        args.add("-vvvv"); // super verbose output
+        if (keyChain != null && !keyChain.isEmpty()) {
+            args.add("--keychain");
+            args.add(keyChain);
+        }
         args.add(appLocation.toString());
 
         ProcessBuilder pb = new ProcessBuilder(args.toArray(new String[args.size()]));
@@ -398,13 +383,20 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
         return "INSTALLER";
     }
     
-    public static String findKey(String key, boolean verbose) {
+    public static String findKey(String key, String keychainName, boolean verbose) {
+
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream(); PrintStream ps = new PrintStream(baos)) {
-            ProcessBuilder pb = new ProcessBuilder(
-                    "security", "find-certificate", 
-                    "-c", key, // look for key in common name
-                    "-a" // return all matches, not just the first
-            );
+            List<String> searchOptions = new ArrayList<>();
+            searchOptions.add("security");
+            searchOptions.add("find-certificate");
+            searchOptions.add("-c");
+            searchOptions.add(key);
+            searchOptions.add("-a");
+            if (keychainName != null && !keychainName.isEmpty()) {
+                searchOptions.add(keychainName);
+            }
+
+            ProcessBuilder pb = new ProcessBuilder(searchOptions);
 
             IOUtils.exec(pb, verbose, false, ps);
             Pattern p = Pattern.compile("\"alis\"<blob>=\"([^\"]+)\"");

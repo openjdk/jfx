@@ -50,6 +50,8 @@ public:
     virtual Module LoadLibrary(TString FileName);
     virtual void FreeLibrary(Module AModule);
     virtual Procedure GetProcAddress(Module AModule, std::string MethodName);
+    virtual std::vector<TString> GetLibraryImports(const TString FileName);
+    virtual std::vector<TString> FilterOutRuntimeDependenciesForPlatform(std::vector<TString> Imports);
 };
 
 #endif //POSIXPLATFORM_H

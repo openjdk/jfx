@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,6 +35,9 @@ import javafx.collections.ObservableList;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.event.ActionEvent;
+import javafx.event.Event;
+import javafx.event.EventHandler;
+import javafx.event.EventType;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
@@ -79,6 +82,44 @@ import javafx.beans.DefaultProperty;
  */
 @DefaultProperty("items")
 public class ChoiceBox<T> extends Control {
+
+    /***************************************************************************
+     *                                                                         *
+     * Static properties and methods                                           *
+     *                                                                         *
+     **************************************************************************/
+
+    /**
+     * Called prior to the ChoiceBox showing its popup after the user
+     * has clicked or otherwise interacted with the ChoiceBox.
+     * @since JavaFX 8u60
+     */
+    public static final EventType<Event> ON_SHOWING =
+            new EventType<Event>(Event.ANY, "CHOICE_BOX_ON_SHOWING");
+
+    /**
+     * Called after the ChoiceBox has shown its popup.
+     * @since JavaFX 8u60
+     */
+    public static final EventType<Event> ON_SHOWN =
+            new EventType<Event>(Event.ANY, "CHOICE_BOX_ON_SHOWN");
+
+    /**
+     * Called when the ChoiceBox popup <b>will</b> be hidden.
+     * @since JavaFX 8u60
+     */
+    public static final EventType<Event> ON_HIDING =
+            new EventType<Event>(Event.ANY, "CHOICE_BOX_ON_HIDING");
+
+    /**
+     * Called when the ChoiceBox popup has been hidden.
+     * @since JavaFX 8u60
+     */
+    public static final EventType<Event> ON_HIDDEN =
+            new EventType<Event>(Event.ANY, "CHOICE_BOX_ON_HIDDEN");
+
+
+
     /***************************************************************************
      *                                                                         *
      * Constructors                                                            *
@@ -179,6 +220,14 @@ public class ChoiceBox<T> extends Control {
     };
     public final boolean isShowing() { return showing.get(); }
     public final ReadOnlyBooleanProperty showingProperty() { return showing.getReadOnlyProperty(); }
+    private void setShowing(boolean value) {
+        // these events will not fire if the showing property is bound
+        Event.fireEvent(this, value ? new Event(ComboBoxBase.ON_SHOWING) :
+                new Event(ComboBoxBase.ON_HIDING));
+        showing.set(value);
+        Event.fireEvent(this, value ? new Event(ComboBoxBase.ON_SHOWN) :
+                new Event(ComboBoxBase.ON_HIDDEN));
+    }
 
     /**
      * The items to display in the choice box. The selected item (as indicated in the
@@ -287,6 +336,127 @@ public class ChoiceBox<T> extends Control {
     public final void setValue(T value) { valueProperty().set(value); }
     public final T getValue() { return valueProperty().get(); }
 
+
+    // --- On Action
+    /**
+     * The ChoiceBox action, which is invoked whenever the ChoiceBox
+     * {@link #valueProperty() value} property is changed. This
+     * may be due to the value property being programmatically changed or when the
+     * user selects an item in a popup menu.
+     *
+     * @since JavaFX 8u60
+     */
+    public final ObjectProperty<EventHandler<ActionEvent>> onActionProperty() { return onAction; }
+    public final void setOnAction(EventHandler<ActionEvent> value) { onActionProperty().set(value); }
+    public final EventHandler<ActionEvent> getOnAction() { return onActionProperty().get(); }
+    private ObjectProperty<EventHandler<ActionEvent>> onAction = new ObjectPropertyBase<EventHandler<ActionEvent>>() {
+        @Override protected void invalidated() {
+            setEventHandler(ActionEvent.ACTION, get());
+        }
+
+        @Override
+        public Object getBean() {
+            return ChoiceBox.this;
+        }
+
+        @Override
+        public String getName() {
+            return "onAction";
+        }
+    };
+
+
+    // --- On Showing
+    /**
+     * Called just prior to the {@code ChoiceBox} popup being shown.
+     * @since JavaFX 8u60
+     */
+    public final ObjectProperty<EventHandler<Event>> onShowingProperty() { return onShowing; }
+    public final void setOnShowing(EventHandler<Event> value) { onShowingProperty().set(value); }
+    public final EventHandler<Event> getOnShowing() { return onShowingProperty().get(); }
+    private ObjectProperty<EventHandler<Event>> onShowing = new ObjectPropertyBase<EventHandler<Event>>() {
+        @Override protected void invalidated() {
+            setEventHandler(ON_SHOWING, get());
+        }
+
+        @Override public Object getBean() {
+            return ChoiceBox.this;
+        }
+
+        @Override public String getName() {
+            return "onShowing";
+        }
+    };
+
+
+    // -- On Shown
+    /**
+     * Called just after the {@link ChoiceBox} popup is shown.
+     * @since JavaFX 8u60
+     */
+    public final ObjectProperty<EventHandler<Event>> onShownProperty() { return onShown; }
+    public final void setOnShown(EventHandler<Event> value) { onShownProperty().set(value); }
+    public final EventHandler<Event> getOnShown() { return onShownProperty().get(); }
+    private ObjectProperty<EventHandler<Event>> onShown = new ObjectPropertyBase<EventHandler<Event>>() {
+        @Override protected void invalidated() {
+            setEventHandler(ON_SHOWN, get());
+        }
+
+        @Override public Object getBean() {
+            return ChoiceBox.this;
+        }
+
+        @Override public String getName() {
+            return "onShown";
+        }
+    };
+
+
+    // --- On Hiding
+    /**
+     * Called just prior to the {@link ChoiceBox} popup being hidden.
+     * @since JavaFX 8u60
+     */
+    public final ObjectProperty<EventHandler<Event>> onHidingProperty() { return onHiding; }
+    public final void setOnHiding(EventHandler<Event> value) { onHidingProperty().set(value); }
+    public final EventHandler<Event> getOnHiding() { return onHidingProperty().get(); }
+    private ObjectProperty<EventHandler<Event>> onHiding = new ObjectPropertyBase<EventHandler<Event>>() {
+        @Override protected void invalidated() {
+            setEventHandler(ON_HIDING, get());
+        }
+
+        @Override public Object getBean() {
+            return ChoiceBox.this;
+        }
+
+        @Override public String getName() {
+            return "onHiding";
+        }
+    };
+
+
+    // --- On Hidden
+    /**
+     * Called just after the {@link ChoiceBox} popup has been hidden.
+     * @since JavaFX 8u60
+     */
+    public final ObjectProperty<EventHandler<Event>> onHiddenProperty() { return onHidden; }
+    public final void setOnHidden(EventHandler<Event> value) { onHiddenProperty().set(value); }
+    public final EventHandler<Event> getOnHidden() { return onHiddenProperty().get(); }
+    private ObjectProperty<EventHandler<Event>> onHidden = new ObjectPropertyBase<EventHandler<Event>>() {
+        @Override protected void invalidated() {
+            setEventHandler(ON_HIDDEN, get());
+        }
+
+        @Override public Object getBean() {
+            return ChoiceBox.this;
+        }
+
+        @Override public String getName() {
+            return "onHidden";
+        }
+    };
+
     /***************************************************************************
      *                                                                         *
      * Methods                                                                 *
@@ -297,14 +467,14 @@ public class ChoiceBox<T> extends Control {
      * Opens the list of choices.
      */
     public void show() {
-        if (!isDisabled()) showing.set(true);
+        if (!isDisabled()) setShowing(true);
     }
 
     /**
      * Closes the list of choices.
      */
     public void hide() {
-        showing.set(false);
+        setShowing(false);
     }
 
     /** {@inheritDoc} */

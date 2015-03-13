@@ -41,6 +41,7 @@
 #include <string>
 #include <map>
 #include <list>
+#include <vector>
 
 
 #ifdef WIN32
@@ -153,6 +154,7 @@ public:
     virtual size_t GetCount() = 0;
 };
 
+enum DebugState {dsNone, dsNative, dsJava};
 
 class Platform {
 protected:
@@ -163,11 +165,9 @@ public:
 
     virtual ~Platform(void) {}
 
-    enum DebugState {dsNone, dsNative, dsJava};
-
 public:
-    virtual void ShowError(TString title, TString description) = 0;
-    virtual void ShowError(TString description) = 0;
+    virtual void ShowMessage(TString title, TString description) = 0;
+    virtual void ShowMessage(TString description) = 0;
 
     virtual void SetCurrentDirectory(TString Value) = 0;
     
@@ -193,6 +193,7 @@ public:
     virtual TString GetSystemJVMLibraryFileName() = 0;
     virtual TString GetSystemJRE() = 0;
 
+    // Caller must free result.
     virtual PropertyContainer* GetConfigFile(TString FileName) = 0;
 
     virtual TString GetModuleFileName() = 0;
@@ -201,6 +202,8 @@ public:
     virtual Module LoadLibrary(TString FileName) = 0;
     virtual void FreeLibrary(Module Module) = 0;
     virtual Procedure GetProcAddress(Module Module, std::string MethodName) = 0;
+    virtual std::vector<TString> GetLibraryImports(const TString FileName) = 0;
+    virtual std::vector<TString> FilterOutRuntimeDependenciesForPlatform(std::vector<TString> Imports) = 0;
     
     virtual bool IsMainThread() = 0;
 
@@ -213,7 +216,7 @@ public:
     virtual void SaveToFile(TString FileName, std::list<TString> Contents, bool ownerOnly) = 0;
 
 #ifdef DEBUG
-    virtual Platform::DebugState GetDebugState() = 0;
+    virtual DebugState GetDebugState() = 0;
     virtual int GetProcessID() = 0;
     virtual bool IsNativeDebuggerPresent() = 0;
 #endif //DEBUG
@@ -222,14 +225,28 @@ public:
 
 class Library {
 private:
+    std::vector<TString> *FDependentLibraryNames;
+    std::vector<Library*> *FDependenciesLibraries;
     Module FModule;
+
+    void Initialize();
+    void InitializeDependencies();
+    void LoadDependencies();
+    void UnloadDependencies();
 
 protected:
     void* GetProcAddress(std::string MethodName);
 
 public:
-    Library(TString FileName);
+    Library();
+    Library(const TString &FileName);
     ~Library();
+
+    bool Load(const TString &FileName);
+    bool Unload();
+
+    void AddDependency(const TString &FileName);
+    void AddDependencies(const std::vector<TString> &Dependencies);
 };
 
 #endif //PLATFORM_H

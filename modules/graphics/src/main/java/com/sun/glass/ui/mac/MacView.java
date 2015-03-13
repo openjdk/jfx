@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -65,6 +65,7 @@ final class MacView extends View {
         return multiClickMaxY;
     }
  
+    @Override native protected int _getNativeFrameBuffer(long ptr);
     @Override native protected long _create(Map caps);
     @Override native protected int _getX(long ptr);
     @Override native protected int _getY(long ptr);

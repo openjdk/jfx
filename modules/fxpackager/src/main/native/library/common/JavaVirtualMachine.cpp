@@ -46,7 +46,6 @@
 
 #include <map>
 #include <list>
-#include <algorithm>
 
 
 // Private typedef for function pointer casting
@@ -68,46 +67,14 @@ typedef int (JNICALL *JVM_CREATE)(int argc, char ** argv,
                                     jint ergo);
 #endif //USE_JLI_LAUNCH
 
-#ifdef WINDOWS
-class MicrosoftRuntimeLibrary {
-private:
-    Library* FLibrary;
-
-public:
-    MicrosoftRuntimeLibrary() {
-        Package& package = Package::GetInstance();
-        TString runtimeDir = package.GetJVMRuntimeDirectory();
-    
-        Macros& macros = Macros::GetInstance();
-        TString msvcr100FileName = FilePath::IncludeTrailingSlash(runtimeDir) + _T("jre\\bin\\msvcr100.dll");
-        msvcr100FileName = macros.ExpandMacros(msvcr100FileName);
-        if (FilePath::FileExists(msvcr100FileName) == false) {
-            msvcr100FileName = FilePath::IncludeTrailingSlash(runtimeDir) + _T("bin\\msvcr100.dll");
-            msvcr100FileName = macros.ExpandMacros(msvcr100FileName);
-        }
-    
-        FLibrary = new Library(msvcr100FileName);
-    }
-
-    ~MicrosoftRuntimeLibrary() {
-        if (FLibrary != NULL) {
-            delete FLibrary;
-        }
-    }
-};
-#endif //WINDOWS
-
 class JavaLibrary : public Library {
-private:
-#ifdef WINDOWS
-    MicrosoftRuntimeLibrary microsoftRuntime;
-#endif //WINDOWS
-
     JVM_CREATE FCreateProc;
 
+    JavaLibrary(const TString &FileName);
+
 public:
-    JavaLibrary(TString FileName) : Library(FileName) {
-        FCreateProc = (JVM_CREATE)GetProcAddress(LAUNCH_FUNC);
+    JavaLibrary() : Library() {
+        FCreateProc = NULL;
     }
 
 #ifndef USE_JLI_LAUNCH
@@ -115,16 +82,20 @@ bool JavaVMCreate(JavaVM** jvm, JNIEnv** env, void* jvmArgs) {
         bool result = true;
 
         if (FCreateProc == NULL) {
+            FCreateProc = (JVM_CREATE)GetProcAddress(LAUNCH_FUNC);
+        }
+
+        if (FCreateProc == NULL) {
             Platform& platform = Platform::GetInstance();
             Messages& messages = Messages::GetInstance();
-            platform.ShowError(messages.GetMessage(FAILED_LOCATING_JVM_ENTRY_POINT));
+            platform.ShowMessage(messages.GetMessage(FAILED_LOCATING_JVM_ENTRY_POINT));
             return false;
         }
 
         if ((*FCreateProc)(jvm, env, jvmArgs) < 0) {
             Platform& platform = Platform::GetInstance();
             Messages& messages = Messages::GetInstance();
-            platform.ShowError(messages.GetMessage(FAILED_CREATING_JVM));
+            platform.ShowMessage(messages.GetMessage(FAILED_CREATING_JVM));
             return false;
         }
 
@@ -133,6 +104,13 @@ bool JavaVMCreate(JavaVM** jvm, JNIEnv** env, void* jvmArgs) {
 #else
     bool JavaVMCreate(size_t argc, char *argv[]) {
         if (FCreateProc == NULL) {
+            FCreateProc = (JVM_CREATE)GetProcAddress(LAUNCH_FUNC);
+        }
+
+        if (FCreateProc == NULL) {
+            Platform& platform = Platform::GetInstance();
+            Messages& messages = Messages::GetInstance();
+            platform.ShowMessage(messages.GetMessage(FAILED_LOCATING_JVM_ENTRY_POINT));
             return false;
         }
 
@@ -205,7 +183,7 @@ public:
 #ifdef DEBUG
         Platform& platform = Platform::GetInstance();
 
-        if (platform.GetDebugState() == Platform::dsNative) {
+        if (platform.GetDebugState() == dsNative) {
             AppendValue(_T("vfprintf"), _T(""), (void*)vfprintfHook);
         }
 #endif //DEBUG
@@ -367,8 +345,17 @@ bool JavaVirtualMachine::StartJVM() {
     options.AppendValues(package.GetJVMArgs());
     options.AppendValues(RemoveTrailingEquals(package.GetJVMUserArgs()));
  
+#ifdef DEBUG
+    if (package.Debugging() == dsJava) {
+        options.AppendValue(_T("-Xdebug"), _T(""));
+        options.AppendValue(_T("-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=localhost:8000"), _T(""));
+        platform.ShowMessage(_T("localhost:8000"));
+    }
+#endif //DEBUG
+
     TString maxHeapSizeOption;
     TString minHeapSizeOption;
+
 
     if (package.GetMemoryState() == PackageBootFields::msAuto) {
         TPlatformNumber memorySize = package.GetMemorySize();
@@ -388,11 +375,13 @@ bool JavaVirtualMachine::StartJVM() {
 
     if (mainClassName.empty() == true) {
         Messages& messages = Messages::GetInstance();
-        platform.ShowError(messages.GetMessage(NO_MAIN_CLASS_SPECIFIED));
+        platform.ShowMessage(messages.GetMessage(NO_MAIN_CLASS_SPECIFIED));
         return false;
     }
 
-    JavaLibrary javaLibrary(package.GetJVMLibraryFileName());
+    JavaLibrary javaLibrary;
+    javaLibrary.AddDependencies(platform.FilterOutRuntimeDependenciesForPlatform(platform.GetLibraryImports(package.GetJVMLibraryFileName())));
+    javaLibrary.Load(package.GetJVMLibraryFileName());
     
 #ifndef USE_JLI_LAUNCH
     if (package.HasSplashScreen() == true) {
@@ -420,7 +409,7 @@ bool JavaVirtualMachine::StartJVM() {
             return true;
         }
         catch (JavaException& exception) {
-            platform.ShowError(PlatformString(exception.what()).toString());
+            platform.ShowMessage(PlatformString(exception.what()).toString());
             return false;
         }
     }
@@ -509,7 +498,7 @@ void JavaVirtualMachine::ShutdownJVM() {
         // I.e. this will happen when EDT and other app thread will exit.
         if (FJvm->DetachCurrentThread() != JNI_OK) {
             Platform& platform = Platform::GetInstance();
-            platform.ShowError(_T("Detach failed."));
+            platform.ShowMessage(_T("Detach failed."));
         }
 
         FJvm->DestroyJavaVM();
