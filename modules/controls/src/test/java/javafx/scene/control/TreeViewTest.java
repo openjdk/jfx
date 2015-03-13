@@ -3238,4 +3238,42 @@ public class TreeViewTest {
 
         return FXCollections.emptyObservableList();
     }
+
+    /**
+     * ClearAndSelect fires invalid change event if selectedIndex is unchanged.
+     */
+    private int rt_40212_count = 0;
+    @Test public void test_rt_40212() {
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        root.getChildren().addAll(
+                new TreeItem<>("0"),
+                new TreeItem<>("1"),
+                new TreeItem<>("2"),
+                new TreeItem<>("3"),
+                new TreeItem<>("4"),
+                new TreeItem<>("5")
+        );
+
+        TreeView<String> stringTreeView = new TreeView<>(root);
+        stringTreeView.setShowRoot(false);
+
+        MultipleSelectionModel<TreeItem<String>> sm = stringTreeView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        sm.selectRange(3, 5);
+        int selected = sm.getSelectedIndex();
+
+        sm.getSelectedIndices().addListener((ListChangeListener<Integer>) change -> {
+            assertEquals("sanity: selectedIndex unchanged", selected, sm.getSelectedIndex());
+            while(change.next()) {
+                assertEquals("single event on clearAndSelect already selected", 1, ++rt_40212_count);
+
+                boolean type = change.wasAdded() || change.wasRemoved() || change.wasPermutated() || change.wasUpdated();
+                assertTrue("at least one of the change types must be true", type);
+            }
+        });
+
+        sm.clearAndSelect(selected);
+    }
 }

@@ -280,6 +280,8 @@ void Package::SetJVMUserArgOverrides(TOrderedMap Value) {
     
     FJVMUserArgsOverrides = orderedOverrides;
 
+    FJVMUserArgsOverrides = orderedOverrides;
+
     // 3. Overwrite JVM user config overrides with provided key/value pair.
     SaveJVMUserArgOverrides(orderedOverrides);
 
@@ -414,7 +416,7 @@ TString Package::GetJVMLibraryFileName() {
         Platform& platform = Platform::GetInstance();
         if (IsRuntimeBundled() == true) {
             Macros& macros = Macros::GetInstance();
-            TString jvmRuntimePath = macros.ExpandMacros(FBootFields->FJVMRuntimeDirectory);
+            TString jvmRuntimePath = macros.ExpandMacros(GetJVMRuntimeDirectory());
             FBootFields->FJVMLibraryFileName = platform.GetBundledJVMLibraryFileName(jvmRuntimePath);
         }
         else {

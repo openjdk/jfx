@@ -5066,4 +5066,37 @@ public class TableViewTest {
         assertEquals("sanity: selectedItem unchanged", lastItem, sm.getSelectedItem());
         assertEquals("must not fire on unchanged selected item", 0, rt_40012_count);
     }
+
+    /**
+     * ClearAndSelect fires invalid change event if selectedIndex is unchanged.
+     */
+    private int rt_40212_count = 0;
+    @Test public void test_rt_40212() {
+        final TableView<Number> table = new TableView<>();
+        for (int i = 0; i < 10; i++) {
+            table.getItems().add(i);
+        }
+
+        TableColumn<Number,Number> column = new TableColumn<>("Column");
+        column.setCellValueFactory(cdf -> new ReadOnlyIntegerWrapper((int) cdf.getValue()));
+        table.getColumns().add(column);
+
+        MultipleSelectionModel<Number> sm = table.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        sm.selectRange(3, 5);
+        int selected = sm.getSelectedIndex();
+
+        sm.getSelectedIndices().addListener((ListChangeListener<Integer>) change -> {
+            assertEquals("sanity: selectedIndex unchanged", selected, sm.getSelectedIndex());
+            while(change.next()) {
+                assertEquals("single event on clearAndSelect already selected", 1, ++rt_40212_count);
+
+                boolean type = change.wasAdded() || change.wasRemoved() || change.wasPermutated() || change.wasUpdated();
+                assertTrue("at least one of the change types must be true", type);
+            }
+        });
+
+        sm.clearAndSelect(selected);
+    }
 }

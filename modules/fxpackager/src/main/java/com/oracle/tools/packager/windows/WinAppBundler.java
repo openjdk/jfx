@@ -40,8 +40,11 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.file.Files;
 import java.text.MessageFormat;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Pattern;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
 import static com.oracle.tools.packager.windows.WindowsBundlerParam.BIT_ARCH_64;
@@ -254,7 +257,7 @@ public class WinAppBundler extends AbstractBundler {
     }
 
     File doBundle(Map<String, ? super Object> p, File outputDirectory, boolean dependentTask) {
-        Map<String, ? super Object> originalParams = new HashMap<>(p);
+        Map<String, ? super Object> originalParams = new HashMap<String, Object>(p);
         if (!outputDirectory.isDirectory() && !outputDirectory.mkdirs()) {
             throw new RuntimeException(MessageFormat.format(I18N.getString("error.cannot-create-output-dir"), outputDirectory.getAbsolutePath()));
         }
@@ -278,24 +281,24 @@ public class WinAppBundler extends AbstractBundler {
             // create the .exe launchers
             createLauncherForEntryPoint(p, rootDirectory);
 
+            // Copy runtime 
+            File runtimeDirectory = new File(rootDirectory, "runtime");
+            copyRuntime(p, runtimeDirectory);
+
             // copy in the needed libraries
             IOUtils.copyFromURL(
                     WinResources.class.getResource(LIBRARY_NAME),
                     new File(rootDirectory, LIBRARY_NAME));
 
-            copyMSVCDLLs(rootDirectory);
+            copyMSVCDLLs(rootDirectory, runtimeDirectory);
 
             // create the secondary launchers, if any
             List<Map<String, ? super Object>> entryPoints = StandardBundlerParam.SECONDARY_LAUNCHERS.fetchFrom(p);
             for (Map<String, ? super Object> entryPoint : entryPoints) {
-                Map<String, ? super Object> tmp = new HashMap<>(originalParams);
+                Map<String, ? super Object> tmp = new HashMap<String, Object>(originalParams);
                 tmp.putAll(entryPoint);
                 createLauncherForEntryPoint(tmp, rootDirectory);
             }
-
-            // Copy runtime to PlugIns folder
-            File runtimeDirectory = new File(rootDirectory, "runtime");
-            copyRuntime(p, runtimeDirectory);
 
             if (!dependentTask) {
                 Log.info(MessageFormat.format(I18N.getString("message.result-dir"), outputDirectory.getAbsolutePath()));
@@ -316,13 +319,37 @@ public class WinAppBundler extends AbstractBundler {
 
     }
 
-    private void copyMSVCDLLs(File rootDirectory) throws IOException {
-        for (String VS_VER : VS_VERS) {
-             if (copyMSVCDLLs(rootDirectory, VS_VER))
-                 return; // found and copied
+    private void copyMSVCDLLs(File rootDirectory, File jreDir) throws IOException {
+        String vsVer = null;
+
+        // first copy the ones needed for the launcher
+        for (String thisVer : VS_VERS) {
+            if (copyMSVCDLLs(rootDirectory, thisVer)) {
+                vsVer = thisVer;
+                break;
+            }
+        }
+        if (vsVer == null) {
+            throw new RuntimeException("Not found MSVC dlls");
         }
 
-        throw new RuntimeException("Not found MSVC dlls");
+        AtomicReference<IOException> ioe = new AtomicReference<>();
+        final String finalVsVer = vsVer;
+        Files.list(jreDir.toPath().resolve("bin"))
+                .filter(p -> Pattern.matches("msvc(r|p)\\d\\d\\d.dll", p.toFile().getName().toLowerCase()))
+                .filter(p -> !p.toString().toLowerCase().endsWith(finalVsVer + ".dll"))
+                .forEach(p -> {
+                    try {
+                        IOUtils.copyFile(p.toFile(), new File(rootDirectory, p.toFile().getName()));
+                    } catch (IOException e) {
+                        ioe.set(e);
+                    }
+                });
+
+        IOException e = ioe.get();
+        if (e != null) {
+            throw e;
+        }
     }
 
     private boolean copyMSVCDLLs(File rootDirectory, String VS_VER) throws IOException {

@@ -64,8 +64,8 @@ public final class NumberAxis extends ValueAxis<Number> {
 
     private Object currentAnimationID;
     private final ChartLayoutAnimator animator = new ChartLayoutAnimator(this);
-    private StringProperty currentFormatterProperty = new SimpleStringProperty(this, "", "");
-    private DefaultFormatter defaultFormatter = new DefaultFormatter(this);
+    private final StringProperty currentFormatterProperty = new SimpleStringProperty(this, "currentFormatter", "");
+    private final DefaultFormatter defaultFormatter = new DefaultFormatter(this);
 
     // -------------- PUBLIC PROPERTIES --------------------------------------------------------------------------------
 
@@ -535,7 +535,11 @@ public final class NumberAxis extends ValueAxis<Number> {
         }
 
         private String toString(Number object, String numFormatter) {
-            return toString(object, new DecimalFormat(numFormatter));
+            if (numFormatter == null || numFormatter.isEmpty()) {
+                return toString(object, formatter);
+            } else {
+                return toString(object, new DecimalFormat(numFormatter));
+            }
         }
 
         private String toString(Number object, DecimalFormat formatter) {
