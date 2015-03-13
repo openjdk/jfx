@@ -23,6 +23,8 @@ bool GlyphPage::fill(
     JLocalRef<jcharArray> jchars(env->NewCharArray(bufferLength));
     CheckAndClearException(env); // OOME
     ASSERT(jchars);
+    if (!jchars)
+        return false;
 
     jchar* chars = (jchar*)env->GetPrimitiveArrayCritical(jchars, NULL);
     ASSERT(chars);
@@ -33,6 +35,9 @@ bool GlyphPage::fill(
     ASSERT(mid);
     JLocalRef<jintArray> jglyphs(static_cast<jintArray>(env->CallObjectMethod(*jFont, mid, (jcharArray)jchars)));
     CheckAndClearException(env);
+    ASSERT(jglyphs);
+    if (!jglyphs)
+        return false;
 
     Glyph* glyphs = (Glyph*)env->GetPrimitiveArrayCritical(jglyphs, NULL);
     ASSERT(glyphs);
