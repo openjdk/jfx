@@ -241,6 +241,11 @@ if (isAppleMacWebKit()) {
     foreach (@features) {
         push @options, "DEFINES+=$_->{define}=${$_->{value}}" if ${$_->{value}} != $_->{default};
     }
+    if (defined($ENV{COMPILE_PARFAIT})) {
+	push @options, "QMAKE_CC=$ENV{QMAKE_CC}";
+	push @options, "QMAKE_CXX=$ENV{QMAKE_CXX}";
+	push @options, "QMAKE_LINK=$ENV{QMAKE_LINK}";
+    }
 }
 
 # If asked to build just the WebKit project, overwrite the projects
