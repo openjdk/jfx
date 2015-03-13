@@ -150,8 +150,12 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 {
     LOG("GlassApplicationDidChangeScreenParameters");
 
-    GET_MAIN_JENV;
-    GlassScreenDidChangeScreenParameters(env);
+    assert(pthread_main_np() == 1);
+    JNIEnv *env = jEnv;
+    if (env != NULL)
+    {
+        GlassScreenDidChangeScreenParameters(env);
+    }
 }
 
 - (void)applicationWillFinishLaunching:(NSNotification *)aNotification
