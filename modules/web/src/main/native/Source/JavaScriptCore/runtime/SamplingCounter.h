@@ -32,6 +32,10 @@
 #include <stdint.h>
 #include <wtf/Assertions.h>
 
+#if PLATFORM(JAVA) // tav todo temp
+#include <JSExportMacros.h>
+#endif
+
 namespace JSC {
 
 // AbstractSamplingCounter:

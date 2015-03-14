@@ -35,6 +35,7 @@
 #include "Geoposition.h"
 #include "Page.h"
 #include <wtf/CurrentTime.h>
+#include <wtf/Ref.h>
 
 #include "Coordinates.h"
 #include "GeolocationController.h"
@@ -141,13 +142,13 @@ void Geolocation::GeoNotifier::stopTimer()
     m_timer.stop();
 }
 
-void Geolocation::GeoNotifier::timerFired(Timer<GeoNotifier>*)
+void Geolocation::GeoNotifier::timerFired(Timer<GeoNotifier>&)
 {
     m_timer.stop();
 
     // Protect this GeoNotifier object, since it
     // could be deleted by a call to clearWatch in a callback.
-    RefPtr<GeoNotifier> protect(this);
+    Ref<GeoNotifier> protect(*this);
 
     // Test for fatal error first. This is required for the case where the Frame is
     // disconnected and requests are cancelled.
@@ -187,29 +188,20 @@ bool Geolocation::Watchers::add(int id, PassRefPtr<GeoNotifier> prpNotifier)
 Geolocation::GeoNotifier* Geolocation::Watchers::find(int id)
 {
     ASSERT(id > 0);
-    IdToNotifierMap::iterator iter = m_idToNotifierMap.find(id);
-    if (iter == m_idToNotifierMap.end())
-        return 0;
-    return iter->value.get();
+    return m_idToNotifierMap.get(id);
 }
 
 void Geolocation::Watchers::remove(int id)
 {
     ASSERT(id > 0);
-    IdToNotifierMap::iterator iter = m_idToNotifierMap.find(id);
-    if (iter == m_idToNotifierMap.end())
-        return;
-    m_notifierToIdMap.remove(iter->value);
-    m_idToNotifierMap.remove(iter);
+    if (auto notifier = m_idToNotifierMap.take(id))
+        m_notifierToIdMap.remove(notifier);
 }
 
 void Geolocation::Watchers::remove(GeoNotifier* notifier)
 {
-    NotifierToIdMap::iterator iter = m_notifierToIdMap.find(notifier);
-    if (iter == m_notifierToIdMap.end())
-        return;
-    m_idToNotifierMap.remove(iter->value);
-    m_notifierToIdMap.remove(iter);
+    if (auto identifier = m_notifierToIdMap.take(notifier))
+        m_idToNotifierMap.remove(identifier);
 }
 
 bool Geolocation::Watchers::contains(GeoNotifier* notifier) const
@@ -243,6 +235,11 @@ PassRefPtr<Geolocation> Geolocation::create(ScriptExecutionContext* context)
 Geolocation::Geolocation(ScriptExecutionContext* context)
     : ActiveDOMObject(context)
     , m_allowGeolocation(Unknown)
+#if PLATFORM(IOS)
+    , m_isSuspended(false)
+    , m_hasChangedPosition(false)
+    , m_resumeTimer(this, &Geolocation::resumeTimerFired)
+#endif
 {
 }
 
@@ -266,6 +263,123 @@ Page* Geolocation::page() const
     return document() ? document()->page() : 0;
 }
 
+#if PLATFORM(IOS)
+bool Geolocation::canSuspend() const
+{
+    return !hasListeners();
+}
+
+void Geolocation::suspend(ReasonForSuspension reason)
+{
+    // Allow pages that no longer have listeners to enter the page cache.
+    // Have them stop updating and reset geolocation permissions when the page is resumed.
+    if (reason == ActiveDOMObject::DocumentWillBecomeInactive) {
+        ASSERT(!hasListeners());
+        stop();
+        m_resetOnResume = true;
+    }
+
+    // Suspend GeoNotifier timeout timers.
+    if (hasListeners())
+        stopTimers();
+
+    m_isSuspended = true;
+    m_resumeTimer.stop();
+    ActiveDOMObject::suspend(reason);
+}
+
+void Geolocation::resume()
+{
+    ASSERT(WebThreadIsLockedOrDisabled());
+    ActiveDOMObject::resume();
+
+    if (!m_resumeTimer.isActive())
+        m_resumeTimer.startOneShot(0);
+}
+
+void Geolocation::resumeTimerFired(Timer<Geolocation>&)
+{
+    m_isSuspended = false;
+
+    if (m_resetOnResume) {
+        resetAllGeolocationPermission();
+        m_resetOnResume = false;
+    }
+
+    // Resume GeoNotifier timeout timers.
+    if (hasListeners()) {
+        GeoNotifierSet::const_iterator end = m_oneShots.end();
+        for (GeoNotifierSet::const_iterator it = m_oneShots.begin(); it != end; ++it)
+            (*it)->startTimerIfNeeded();
+        GeoNotifierVector watcherCopy;
+        m_watchers.getNotifiersVector(watcherCopy);
+        for (size_t i = 0; i < watcherCopy.size(); ++i)
+            watcherCopy[i]->startTimerIfNeeded();
+    }
+
+    if ((isAllowed() || isDenied()) && !m_pendingForPermissionNotifiers.isEmpty()) {
+        // The pending permission was granted while the object was suspended.
+        setIsAllowed(isAllowed());
+        ASSERT(!m_hasChangedPosition);
+        ASSERT(!m_errorWaitingForResume);
+        return;
+    }
+
+    if (isDenied() && hasListeners()) {
+        // The permission was revoked while the object was suspended.
+        setIsAllowed(false);
+        return;
+    }
+
+    if (m_hasChangedPosition) {
+        positionChanged();
+        m_hasChangedPosition = false;
+    }
+
+    if (m_errorWaitingForResume) {
+        handleError(m_errorWaitingForResume.get());
+        m_errorWaitingForResume = nullptr;
+    }
+}
+
+void Geolocation::resetAllGeolocationPermission()
+{
+    if (m_isSuspended) {
+        m_resetOnResume = true;
+        return;
+    }
+
+    if (m_allowGeolocation == InProgress) {
+        Page* page = this->page();
+        if (page)
+            GeolocationController::from(page)->cancelPermissionRequest(this);
+
+        // This return is not technically correct as GeolocationController::cancelPermissionRequest() should have cleared the active request.
+        // Neither iOS nor OS X supports cancelPermissionRequest() (https://bugs.webkit.org/show_bug.cgi?id=89524), so we workaround that and let ongoing requests complete. :(
+        return;
+    }
+
+    // 1) Reset our own state.
+    stopUpdating();
+    m_allowGeolocation = Unknown;
+    m_hasChangedPosition = false;
+    m_errorWaitingForResume = nullptr;
+
+    // 2) Request new permission for the active notifiers.
+    stopTimers();
+
+    // Go over the one shot and re-request permission.
+    GeoNotifierSet::iterator end = m_oneShots.end();
+    for (GeoNotifierSet::iterator it = m_oneShots.begin(); it != end; ++it)
+        startRequest((*it).get());
+    // Go over the watchers and re-request permission.
+    GeoNotifierVector watcherCopy;
+    m_watchers.getNotifiersVector(watcherCopy);
+    for (size_t i = 0; i < watcherCopy.size(); ++i)
+        startRequest(watcherCopy[i].get());
+}
+#endif // PLATFORM(IOS)
+
 void Geolocation::stop()
 {
     Page* page = this->page();
@@ -275,6 +389,10 @@ void Geolocation::stop()
     m_allowGeolocation = Unknown;
     cancelAllRequests();
     stopUpdating();
+#if PLATFORM(IOS)
+    m_hasChangedPosition = false;
+    m_errorWaitingForResume = nullptr;
+#endif // PLATFORM(IOS)
     m_pendingForPermissionNotifiers.clear();
 }
 
@@ -379,9 +497,7 @@ void Geolocation::makeCachedPositionCallbacks()
 
         // If this is a one-shot request, stop it. Otherwise, if the watch still
         // exists, start the service to get updates.
-        if (m_oneShots.contains(notifier))
-            m_oneShots.remove(notifier);
-        else if (m_watchers.contains(notifier)) {
+        if (!m_oneShots.remove(notifier) && m_watchers.contains(notifier)) {
             if (notifier->hasZeroTimeout() || startUpdating(notifier))
                 notifier->startTimerIfNeeded();
             else
@@ -433,12 +549,17 @@ void Geolocation::clearWatch(int watchID)
 void Geolocation::setIsAllowed(bool allowed)
 {
     // Protect the Geolocation object from garbage collection during a callback.
-    RefPtr<Geolocation> protect(this);
+    Ref<Geolocation> protect(*this);
 
     // This may be due to either a new position from the service, or a cached
     // position.
     m_allowGeolocation = allowed ? Yes : No;
     
+#if PLATFORM(IOS)
+    if (m_isSuspended)
+        return;
+#endif
+
     // Permission request was made during the startRequest process
     if (!m_pendingForPermissionNotifiers.isEmpty()) {
         handlePendingPermissionNotifiers();
@@ -451,6 +572,11 @@ void Geolocation::setIsAllowed(bool allowed)
         error->setIsFatal(true);
         handleError(error.get());
         m_requestsAwaitingCachedPosition.clear();
+#if PLATFORM(IOS)
+        m_hasChangedPosition = false;
+        m_errorWaitingForResume = nullptr;
+#endif
+
         return;
     }
 
@@ -630,11 +756,24 @@ void Geolocation::positionChanged()
     // Stop all currently running timers.
     stopTimers();
 
+#if PLATFORM(IOS)
+    if (m_isSuspended) {
+        m_hasChangedPosition = true;
+        return;
+    }
+#endif
+
     makeSuccessCallbacks();
 }
 
 void Geolocation::setError(GeolocationError* error)
 {
+#if PLATFORM(IOS)
+    if (m_isSuspended) {
+        m_errorWaitingForResume = createPositionError(error);
+        return;
+    }
+#endif
     RefPtr<PositionError> positionError = createPositionError(error);
     handleError(positionError.get());
 }

@@ -31,27 +31,25 @@
 #include "WebKit.h"
 #include "WebFrame.h"
 #include "WebPreferences.h"
+#include <WebCore/CACFLayerTreeHostClient.h>
 #include <WebCore/COMPtr.h>
 #include <WebCore/DragActions.h>
+#include <WebCore/GraphicsLayer.h>
+#include <WebCore/GraphicsLayerClient.h>
 #include <WebCore/IntRect.h>
-#include <WebCore/RefCountedGDIHandle.h>
+#include <WebCore/SharedGDIObject.h>
 #include <WebCore/SuspendableTimer.h>
 #include <WebCore/WindowMessageListener.h>
 #include <wtf/HashSet.h>
 #include <wtf/OwnPtr.h>
 #include <wtf/RefPtr.h>
 
-#if USE(ACCELERATED_COMPOSITING)
-#include <WebCore/CACFLayerTreeHostClient.h>
-#include <WebCore/GraphicsLayerClient.h>
-#endif
-
 #if ENABLE(FULLSCREEN_API)
 #include <WebCore/FullScreenControllerClient.h>
 #endif
 
 namespace WebCore {
-#if USE(ACCELERATED_COMPOSITING)
+#if USE(CA)
     class CACFLayerTreeHost;
 #endif
     class FullScreenController;
@@ -70,9 +68,6 @@ class WebFrame;
 class WebInspector;
 class WebInspectorClient;
 
-typedef WebCore::RefCountedGDIHandle<HBITMAP> RefCountedHBITMAP;
-typedef WebCore::RefCountedGDIHandle<HRGN> RefCountedHRGN;
-
 WebView* kit(WebCore::Page*);
 WebCore::Page* core(IWebView*);
 
@@ -89,10 +84,8 @@ class WebView
     , public IWebNotificationObserver
     , public IDropTarget
     , WebCore::WindowMessageListener
-#if USE(ACCELERATED_COMPOSITING)
     , WebCore::GraphicsLayerClient
     , WebCore::CACFLayerTreeHostClient
-#endif
 #if ENABLE(FULLSCREEN_API)
     , WebCore::FullScreenControllerClient
 #endif
@@ -138,6 +131,12 @@ public:
         /* [in] */ RECT frame,
         /* [in] */ BSTR frameName,
         /* [in] */ BSTR groupName);
+
+    virtual HRESULT STDMETHODCALLTYPE setAccessibilityDelegate(
+        /* [in] */ IAccessibilityDelegate *d);
+
+    virtual HRESULT STDMETHODCALLTYPE accessibilityDelegate(
+        /* [out][retval] */ IAccessibilityDelegate **d);
 
     virtual HRESULT STDMETHODCALLTYPE setUIDelegate( 
         /* [in] */ IWebUIDelegate *d);
@@ -874,7 +873,7 @@ public:
     void paintIntoWindow(HDC bitmapDC, HDC windowDC, const WebCore::IntRect& dirtyRect);
     bool ensureBackingStore();
     void addToDirtyRegion(const WebCore::IntRect&);
-    void addToDirtyRegion(HRGN);
+    void addToDirtyRegion(GDIObject<HRGN>);
     void scrollBackingStore(WebCore::FrameView*, int dx, int dy, const WebCore::IntRect& scrollViewRect, const WebCore::IntRect& clipRect);
     void deleteBackingStore();
     void repaint(const WebCore::IntRect&, bool contentChanged, bool immediate = false, bool repaintContentOnly = false);
@@ -886,6 +885,7 @@ public:
 
     bool transparent() const { return m_transparent; }
     bool usesLayeredWindow() const { return m_usesLayeredWindow; }
+    bool needsDisplay() const { return m_needsDisplay; }
 
     bool onIMEStartComposition();
     bool onIMEComposition(LPARAM);
@@ -904,7 +904,7 @@ public:
 
     // Convenient to be able to violate the rules of COM here for easy movement to the frame.
     WebFrame* topLevelFrame() const { return m_mainFrame; }
-    const WTF::String& userAgentForKURL(const WebCore::KURL& url);
+    const WTF::String& userAgentForKURL(const WebCore::URL& url);
 
     static bool canHandleRequest(const WebCore::ResourceRequest&);
 
@@ -943,12 +943,10 @@ public:
     bool onGetObject(WPARAM, LPARAM, LRESULT&) const;
     static STDMETHODIMP AccessibleObjectFromWindow(HWND, DWORD objectID, REFIID, void** ppObject);
 
-    void downloadURL(const WebCore::KURL&);
+    void downloadURL(const WebCore::URL&);
 
-#if USE(ACCELERATED_COMPOSITING)
     void flushPendingGraphicsLayerChangesSoon();
     void setRootChildLayer(WebCore::GraphicsLayer*);
-#endif
 
 #if PLATFORM(WIN) && USE(AVFOUNDATION)
     WebCore::GraphicsDeviceAdapter* graphicsDeviceAdapter() const;
@@ -968,6 +966,9 @@ public:
     void setFullScreenElement(PassRefPtr<WebCore::Element>);
     WebCore::Element* fullScreenElement() const { return m_fullScreenElement.get(); }
 #endif
+
+    bool canShowMIMEType(const String& mimeType);
+    bool canShowMIMETypeAsHTML(const String& mimeType);
 
     // Used by TextInputController in DumpRenderTree
 
@@ -1015,15 +1016,13 @@ private:
     // (see https://bugs.webkit.org/show_bug.cgi?id=29264)
     DWORD m_lastDropEffect;
 
-#if USE(ACCELERATED_COMPOSITING)
     // GraphicsLayerClient
     virtual void notifyAnimationStarted(const WebCore::GraphicsLayer*, double time);
     virtual void notifyFlushRequired(const WebCore::GraphicsLayer*);
-    virtual void paintContents(const WebCore::GraphicsLayer*, WebCore::GraphicsContext&, WebCore::GraphicsLayerPaintingPhase, const WebCore::IntRect& inClip);
+    virtual void paintContents(const WebCore::GraphicsLayer*, WebCore::GraphicsContext&, WebCore::GraphicsLayerPaintingPhase, const WebCore::FloatRect& inClip);
 
     // CACFLayerTreeHostClient
     virtual void flushPendingGraphicsLayerChanges();
-#endif
 
     bool m_shouldInvertColors;
     void setShouldInvertColors(bool);
@@ -1061,6 +1060,8 @@ protected:
     virtual void fullScreenClientWillExitFullScreen();
     virtual void fullScreenClientDidExitFullScreen();
     virtual void fullScreenClientForceRepaint();
+    virtual void fullScreenClientSaveScrollPosition();
+    virtual void fullScreenClientRestoreScrollPosition();
 #endif
 
     ULONG m_refCount;
@@ -1075,10 +1076,11 @@ protected:
     WebInspectorClient* m_inspectorClient;
 #endif // ENABLE(INSPECTOR)
     
-    RefPtr<RefCountedHBITMAP> m_backingStoreBitmap;
+    RefPtr<WebCore::SharedGDIObject<HBITMAP>> m_backingStoreBitmap;
     SIZE m_backingStoreSize;
-    RefPtr<RefCountedHRGN> m_backingStoreDirtyRegion;
+    RefPtr<WebCore::SharedGDIObject<HRGN>> m_backingStoreDirtyRegion;
 
+    COMPtr<IAccessibilityDelegate> m_accessibilityDelegate;
     COMPtr<IWebEditingDelegate> m_editingDelegate;
     COMPtr<IWebFrameLoadDelegate> m_frameLoadDelegate;
     COMPtr<IWebFrameLoadDelegatePrivate> m_frameLoadDelegatePrivate;
@@ -1141,17 +1143,17 @@ protected:
     OwnPtr<FullscreenVideoController> m_fullScreenVideoController;
 #endif
 
-#if USE(ACCELERATED_COMPOSITING)
     bool isAcceleratedCompositing() const { return m_isAcceleratedCompositing; }
     void setAcceleratedCompositing(bool);
-
+#if USE(CA)
     RefPtr<WebCore::CACFLayerTreeHost> m_layerTreeHost;
-    OwnPtr<WebCore::GraphicsLayer> m_backingLayer;
-    bool m_isAcceleratedCompositing;
 #endif
+    std::unique_ptr<WebCore::GraphicsLayer> m_backingLayer;
+    bool m_isAcceleratedCompositing;
 
     bool m_nextDisplayIsSynchronous;
     bool m_usesLayeredWindow;
+    bool m_needsDisplay;
 
     HCURSOR m_lastSetCursor;
 
@@ -1160,6 +1162,7 @@ protected:
 #if ENABLE(FULLSCREEN_API)
     RefPtr<WebCore::Element> m_fullScreenElement;
     OwnPtr<WebCore::FullScreenController> m_fullscreenController;
+    WebCore::IntPoint m_scrollPosition;
 #endif
 };
 

@@ -231,7 +231,7 @@ typedef enum {
      UCOL_STRENGTH,  
      /** When turned on, this attribute positions Hiragana before all  
       * non-ignorables on quaternary level This is a sneaky way to produce JIS
-      * sort order */     
+      * sort order */
      UCOL_HIRAGANA_QUATERNARY_MODE,
      /** When turned on, this attribute generates a collation key
       * for the numeric value of substrings of digits.
@@ -769,7 +769,7 @@ ucol_normalizeShortDefinitionString(const char *source,
                                     int32_t capacity,
                                     UParseError *parseError,
                                     UErrorCode *status);
-        
+
 
 /**
  * Get a sort key for a string from a UCollator.

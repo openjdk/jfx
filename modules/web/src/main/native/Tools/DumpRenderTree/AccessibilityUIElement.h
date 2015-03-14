@@ -31,7 +31,7 @@
 #include <wtf/Platform.h>
 #include <wtf/Vector.h>
 
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
 #ifdef __OBJC__
 typedef id PlatformUIElement;
 #else
@@ -46,13 +46,14 @@ typedef struct objc_object* PlatformUIElement;
 
 typedef COMPtr<IAccessible> PlatformUIElement;
 #elif HAVE(ACCESSIBILITY) && (PLATFORM(GTK) || PLATFORM(EFL))
+#include "AccessibilityNotificationHandlerAtk.h"
 #include <atk/atk.h>
 typedef AtkObject* PlatformUIElement;
 #else
 typedef void* PlatformUIElement;
 #endif
 
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
 #ifdef __OBJC__
 typedef id NotificationHandler;
 #else
@@ -66,7 +67,7 @@ public:
     AccessibilityUIElement(const AccessibilityUIElement&);
     ~AccessibilityUIElement();
 
-    PlatformUIElement platformUIElement() { return m_element; }
+    PlatformUIElement platformUIElement() const { return m_element; }
 
     static JSObjectRef makeJSAccessibilityUIElement(JSContextRef, const AccessibilityUIElement&);
 
@@ -105,6 +106,7 @@ public:
     // Attributes - platform-independent implementations
     JSStringRef stringAttributeValue(JSStringRef attribute);
     double numberAttributeValue(JSStringRef attribute);
+    void uiElementArrayAttributeValue(JSStringRef attribute, Vector<AccessibilityUIElement>& elements) const;
     AccessibilityUIElement uiElementAttributeValue(JSStringRef attribute) const;    
     bool boolAttributeValue(JSStringRef attribute);
     bool isAttributeSupported(JSStringRef attribute);
@@ -115,6 +117,7 @@ public:
     JSStringRef role();
     JSStringRef subrole();
     JSStringRef roleDescription();
+    JSStringRef computedRoleString();
     JSStringRef title();
     JSStringRef description();
     JSStringRef language();
@@ -152,6 +155,7 @@ public:
     bool isOffScreen() const;
     bool isCollapsed() const;
     bool isIgnored() const;
+    bool isIndeterminate() const;
     bool hasPopup() const;
     int hierarchicalLevel() const;
     double clickPointX();
@@ -159,6 +163,7 @@ public:
     JSStringRef documentEncoding();
     JSStringRef documentURI();
     JSStringRef url();
+    JSStringRef classList() const;
 
     // CSS3-speech properties.
     JSStringRef speak();
@@ -175,6 +180,8 @@ public:
     JSStringRef columnIndexRange();
     int rowCount();
     int columnCount();
+    void rowHeaders(Vector<AccessibilityUIElement>& elements) const;
+    void columnHeaders(Vector<AccessibilityUIElement>& elements) const;
     
     // Tree/Outline specific attributes
     AccessibilityUIElement selectedRowAtIndex(unsigned);
@@ -185,6 +192,7 @@ public:
     // ARIA specific
     AccessibilityUIElement ariaOwnsElementAtIndex(unsigned);
     AccessibilityUIElement ariaFlowToElementAtIndex(unsigned);
+    AccessibilityUIElement ariaControlsElementAtIndex(unsigned);
 
     // ARIA Drag and Drop
     bool ariaIsGrabbed() const;
@@ -200,7 +208,9 @@ public:
     JSStringRef stringForRange(unsigned location, unsigned length);
     JSStringRef attributedStringForRange(unsigned location, unsigned length);
     bool attributedStringRangeIsMisspelled(unsigned location, unsigned length);
-    AccessibilityUIElement uiElementForSearchPredicate(JSContextRef, AccessibilityUIElement* startElement, bool isDirectionNext, JSValueRef searchKey, JSStringRef searchText);
+    unsigned uiElementCountForSearchPredicate(JSContextRef, AccessibilityUIElement* startElement, bool isDirectionNext, JSValueRef searchKey, JSStringRef searchText, bool visibleOnly, bool immediateDescendantsOnly);
+    AccessibilityUIElement uiElementForSearchPredicate(JSContextRef, AccessibilityUIElement* startElement, bool isDirectionNext, JSValueRef searchKey, JSStringRef searchText, bool visibleOnly, bool immediateDescendantsOnly);
+    JSStringRef selectTextWithCriteria(JSContextRef, JSStringRef ambiguityResolution, JSValueRef searchStrings, JSStringRef replacementString);
 #if PLATFORM(IOS)
     void elementsForRange(unsigned location, unsigned length, Vector<AccessibilityUIElement>& elements);
     JSStringRef stringForSelection();
@@ -208,7 +218,15 @@ public:
     void decreaseTextSelection();
     AccessibilityUIElement linkedElement();
 #endif
-    
+
+#if PLATFORM(GTK) || PLATFORM(EFL)
+    // Text-specific
+    JSStringRef characterAtOffset(int offset);
+    JSStringRef wordAtOffset(int offset);
+    JSStringRef lineAtOffset(int offset);
+    JSStringRef sentenceAtOffset(int offset);
+#endif
+
     // Table-specific
     AccessibilityUIElement cellForColumnAndRow(unsigned column, unsigned row);
 
@@ -221,10 +239,15 @@ public:
     AccessibilityTextMarkerRange textMarkerRangeForMarkers(AccessibilityTextMarker* startMarker, AccessibilityTextMarker* endMarker);
     AccessibilityTextMarker startTextMarkerForTextMarkerRange(AccessibilityTextMarkerRange*);
     AccessibilityTextMarker endTextMarkerForTextMarkerRange(AccessibilityTextMarkerRange*);
+    AccessibilityTextMarker endTextMarkerForBounds(int x, int y, int width, int height);
+    AccessibilityTextMarker startTextMarkerForBounds(int x, int y, int width, int height);
     AccessibilityTextMarker textMarkerForPoint(int x, int y);
     AccessibilityTextMarker previousTextMarker(AccessibilityTextMarker*);
     AccessibilityTextMarker nextTextMarker(AccessibilityTextMarker*);
     AccessibilityUIElement accessibilityElementForTextMarker(AccessibilityTextMarker*);
+    AccessibilityTextMarker startTextMarker();
+    AccessibilityTextMarker endTextMarker();
+    
     JSStringRef stringForTextMarkerRange(AccessibilityTextMarkerRange*);
     int textMarkerRangeLength(AccessibilityTextMarkerRange*);
     bool attributedStringForTextMarkerRangeContainsAttribute(JSStringRef, AccessibilityTextMarkerRange*);
@@ -259,15 +282,25 @@ public:
 #if PLATFORM(MAC) && !PLATFORM(IOS)
     // Returns an ordered list of supported actions for an element.
     JSStringRef supportedActions();
+    
+    // A general description of the elements making up multiscript pre/post objects.
+    JSStringRef mathPostscriptsDescription() const;
+    JSStringRef mathPrescriptsDescription() const;
 #endif
     
 private:
     static JSClassRef getJSClass();
     PlatformUIElement m_element;
     
+#if PLATFORM(IOS) 
+    JSObjectRef m_notificationFunctionCallback;
+#elif PLATFORM(MAC)
     // A retained, platform specific object used to help manage notifications for this object.
-#if PLATFORM(MAC)
     NotificationHandler m_notificationHandler;
+#endif
+
+#if HAVE(ACCESSIBILITY) && (PLATFORM(GTK) || PLATFORM(EFL))
+    RefPtr<AccessibilityNotificationHandler> m_notificationHandler;
 #endif
 };
 

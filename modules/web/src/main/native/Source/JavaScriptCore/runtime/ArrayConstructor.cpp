@@ -32,7 +32,7 @@
 #include "JSArray.h"
 #include "JSFunction.h"
 #include "Lookup.h"
-#include "Operations.h"
+#include "JSCInlines.h"
 
 namespace JSC {
 
@@ -44,7 +44,7 @@ static EncodedJSValue JSC_HOST_CALL arrayConstructorIsArray(ExecState*);
 
 namespace JSC {
 
-ASSERT_HAS_TRIVIAL_DESTRUCTOR(ArrayConstructor);
+STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(ArrayConstructor);
 
 const ClassInfo ArrayConstructor::s_info = { "Function", &InternalFunction::s_info, 0, ExecState::arrayConstructorTable, CREATE_METHOD_TABLE(ArrayConstructor) };
 
@@ -54,26 +54,21 @@ const ClassInfo ArrayConstructor::s_info = { "Function", &InternalFunction::s_in
 @end
 */
 
-ArrayConstructor::ArrayConstructor(JSGlobalObject* globalObject, Structure* structure)
-    : InternalFunction(globalObject, structure)
+ArrayConstructor::ArrayConstructor(VM& vm, Structure* structure)
+    : InternalFunction(vm, structure)
 {
 }
 
-void ArrayConstructor::finishCreation(ExecState* exec, ArrayPrototype* arrayPrototype)
+void ArrayConstructor::finishCreation(VM& vm, ArrayPrototype* arrayPrototype)
 {
-    Base::finishCreation(exec->vm(), arrayPrototype->classInfo()->className);
-    putDirectWithoutTransition(exec->vm(), exec->propertyNames().prototype, arrayPrototype, DontEnum | DontDelete | ReadOnly);
-    putDirectWithoutTransition(exec->vm(), exec->propertyNames().length, jsNumber(1), ReadOnly | DontEnum | DontDelete);
+    Base::finishCreation(vm, arrayPrototype->classInfo()->className);
+    putDirectWithoutTransition(vm, vm.propertyNames->prototype, arrayPrototype, DontEnum | DontDelete | ReadOnly);
+    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(1), ReadOnly | DontEnum | DontDelete);
 }
 
-bool ArrayConstructor::getOwnPropertySlot(JSCell* cell, ExecState* exec, PropertyName propertyName, PropertySlot &slot)
+bool ArrayConstructor::getOwnPropertySlot(JSObject* object, ExecState* exec, PropertyName propertyName, PropertySlot &slot)
 {
-    return getStaticFunctionSlot<InternalFunction>(exec, ExecState::arrayConstructorTable(exec), jsCast<ArrayConstructor*>(cell), propertyName, slot);
-}
-
-bool ArrayConstructor::getOwnPropertyDescriptor(JSObject* object, ExecState* exec, PropertyName propertyName, PropertyDescriptor& descriptor)
-{
-    return getStaticFunctionDescriptor<InternalFunction>(exec, ExecState::arrayConstructorTable(exec), jsCast<ArrayConstructor*>(object), propertyName, descriptor);
+    return getStaticFunctionSlot<InternalFunction>(exec, ExecState::arrayConstructorTable(exec->vm()), jsCast<ArrayConstructor*>(object), propertyName, slot);
 }
 
 // ------------------------------ Functions ---------------------------
@@ -81,11 +76,11 @@ bool ArrayConstructor::getOwnPropertyDescriptor(JSObject* object, ExecState* exe
 JSObject* constructArrayWithSizeQuirk(ExecState* exec, ArrayAllocationProfile* profile, JSGlobalObject* globalObject, JSValue length)
 {
     if (!length.isNumber())
-        return constructArray(exec, profile, globalObject, &length, 1);
+        return constructArrayNegativeIndexed(exec, profile, globalObject, &length, 1);
     
     uint32_t n = length.toUInt32(exec);
     if (n != length.toNumber(exec))
-        return throwError(exec, createRangeError(exec, ASCIILiteral("Array size is not a small enough positive integer.")));
+        return exec->vm().throwException(exec, createRangeError(exec, ASCIILiteral("Array size is not a small enough positive integer.")));
     return constructEmptyArray(exec, profile, globalObject, n);
 }
 
@@ -128,7 +123,7 @@ CallType ArrayConstructor::getCallData(JSCell*, CallData& callData)
 
 EncodedJSValue JSC_HOST_CALL arrayConstructorIsArray(ExecState* exec)
 {
-    return JSValue::encode(jsBoolean(exec->argument(0).inherits(&JSArray::s_info)));
+    return JSValue::encode(jsBoolean(exec->argument(0).inherits(JSArray::info())));
 }
 
 } // namespace JSC

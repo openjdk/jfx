@@ -35,6 +35,7 @@
 namespace WebCore {
 
 class InlineFlowBox;
+class RenderBlockFlow;
 
 class RenderLineBoxList {
 public:
@@ -53,17 +54,17 @@ public:
 
     void checkConsistency() const;
 
-    void appendLineBox(InlineFlowBox*);
+    void appendLineBox(std::unique_ptr<InlineFlowBox>);
 
-    void deleteLineBoxTree(RenderArena*);
-    void deleteLineBoxes(RenderArena*);
+    void deleteLineBoxTree();
+    void deleteLineBoxes();
 
     void extractLineBox(InlineFlowBox*);
     void attachLineBox(InlineFlowBox*);
     void removeLineBox(InlineFlowBox*);
     
     void dirtyLineBoxes();
-    void dirtyLinesFromChangedChild(RenderObject* parent, RenderObject* child);
+    void dirtyLinesFromChangedChild(RenderBoxModelObject* parent, RenderObject* child);
 
     void paint(RenderBoxModelObject*, PaintInfo&, const LayoutPoint&) const;
     bool hitTest(RenderBoxModelObject*, const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) const;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007 Apple Inc. All rights reserved.
+ * Copyright (C) 2006, 2007, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,7 +36,7 @@
 #include "JSLock.h"
 #include "JSObject.h"
 #include "OpaqueJSString.h"
-#include "Operations.h"
+#include "JSCInlines.h"
 #include "SourceCode.h"
 #include <wtf/text/StringHash.h>
 
@@ -53,8 +53,10 @@ JSValueRef JSEvaluateScript(JSContextRef ctx, JSStringRef script, JSObjectRef th
 
     JSObject* jsThisObject = toJS(thisObject);
 
+    startingLineNumber = std::max(1, startingLineNumber);
+
     // evaluate sets "this" to the global object if it is NULL
-    JSGlobalObject* globalObject = exec->dynamicGlobalObject();
+    JSGlobalObject* globalObject = exec->vmEntryGlobalObject();
     SourceCode source = makeSource(script->string(), sourceURL->string(), TextPosition(OrdinalNumber::fromOneBasedInt(startingLineNumber), OrdinalNumber::first()));
 
     JSValue evaluationException;
@@ -82,10 +84,12 @@ bool JSCheckScriptSyntax(JSContextRef ctx, JSStringRef script, JSStringRef sourc
     ExecState* exec = toJS(ctx);
     APIEntryShim entryShim(exec);
 
+    startingLineNumber = std::max(1, startingLineNumber);
+
     SourceCode source = makeSource(script->string(), sourceURL->string(), TextPosition(OrdinalNumber::fromOneBasedInt(startingLineNumber), OrdinalNumber::first()));
     
     JSValue syntaxException;
-    bool isValidSyntax = checkSyntax(exec->dynamicGlobalObject()->globalExec(), source, &syntaxException);
+    bool isValidSyntax = checkSyntax(exec->vmEntryGlobalObject()->globalExec(), source, &syntaxException);
 
     if (!isValidSyntax) {
         if (exception)
@@ -134,3 +138,25 @@ void JSSynchronousGarbageCollectForDebugging(JSContextRef ctx)
     APIEntryShim entryShim(exec);
     exec->vm().heap.collectAllGarbage();
 }
+
+void JSDisableGCTimer(void)
+{
+    GCActivityCallback::s_shouldCreateGCTimer = false;
+}
+
+#if PLATFORM(IOS)
+// FIXME: Expose symbols to tell dyld where to find JavaScriptCore on older versions of
+// iOS (< 7.0). We should remove these symbols once we no longer need to support such
+// versions of iOS. See <rdar://problem/13696872> for more details.
+JS_EXPORT extern const char iosInstallName43 __asm("$ld$install_name$os4.3$/System/Library/PrivateFrameworks/JavaScriptCore.framework/JavaScriptCore");
+JS_EXPORT extern const char iosInstallName50 __asm("$ld$install_name$os5.0$/System/Library/PrivateFrameworks/JavaScriptCore.framework/JavaScriptCore");
+JS_EXPORT extern const char iosInstallName51 __asm("$ld$install_name$os5.1$/System/Library/PrivateFrameworks/JavaScriptCore.framework/JavaScriptCore");
+JS_EXPORT extern const char iosInstallName60 __asm("$ld$install_name$os6.0$/System/Library/PrivateFrameworks/JavaScriptCore.framework/JavaScriptCore");
+JS_EXPORT extern const char iosInstallName61 __asm("$ld$install_name$os6.1$/System/Library/PrivateFrameworks/JavaScriptCore.framework/JavaScriptCore");
+
+const char iosInstallName43 = 0;
+const char iosInstallName50 = 0;
+const char iosInstallName51 = 0;
+const char iosInstallName60 = 0;
+const char iosInstallName61 = 0;
+#endif

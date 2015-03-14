@@ -30,6 +30,7 @@
 import logging
 import os
 import time
+import re
 
 from webkitpy.common.system.crashlogs import CrashLogs
 from webkitpy.common.system.executive import ScriptError
@@ -43,7 +44,7 @@ _log = logging.getLogger(__name__)
 class MacPort(ApplePort):
     port_name = "mac"
 
-    VERSION_FALLBACK_ORDER = ['mac-snowleopard', 'mac-lion', 'mac-mountainlion']
+    VERSION_FALLBACK_ORDER = ['mac-snowleopard', 'mac-lion', 'mac-mountainlion', 'mac-mavericks']
 
     ARCHITECTURES = ['x86_64', 'x86']
 
@@ -77,10 +78,12 @@ class MacPort(ApplePort):
 
     def default_baseline_search_path(self):
         name = self._name.replace('-wk2', '')
+        wk_version = [] if self.get_option('webkit_test_runner') else ['mac-wk1']
         if name.endswith(self.FUTURE_VERSION):
-            fallback_names = [self.port_name]
+            fallback_names = wk_version + [self.port_name]
         else:
-            fallback_names = self.VERSION_FALLBACK_ORDER[self.VERSION_FALLBACK_ORDER.index(name):-1] + [self.port_name]
+            fallback_names = self.VERSION_FALLBACK_ORDER[self.VERSION_FALLBACK_ORDER.index(name):-1] + wk_version + [self.port_name]
+        # FIXME: mac-wk2 should appear at the same place as mac-wk1.
         if self.get_option('webkit_test_runner'):
             fallback_names = [self._wk2_port_name(), 'wk2'] + fallback_names
         return map(self._webkit_baseline_path, fallback_names)
@@ -140,6 +143,7 @@ class MacPort(ApplePort):
         return min(supportable_instances, default_count)
 
     def _build_java_test_support(self):
+        return True
         java_tests_path = self._filesystem.join(self.layout_tests_dir(), "java")
         build_java = [self.make_command(), "-C", java_tests_path]
         if self._executive.run_command(build_java, return_exit_code=True):  # Paths are absolute, so we don't need to set a cwd.
@@ -168,7 +172,7 @@ class MacPort(ApplePort):
         _log.info("%s unique leaks found!" % unique_leaks)
 
     def _check_port_build(self):
-        return self._build_java_test_support()
+        return self.get_option('nojava') or self._build_java_test_support()
 
     def _path_to_webcore_library(self):
         return self._build_path('WebCore.framework/Versions/A/WebCore')
@@ -270,15 +274,29 @@ class MacPort(ApplePort):
         binary_name = 'LayoutTestHelper'
         return self._build_path(binary_name)
 
-    def start_helper(self):
+    def start_helper(self, pixel_tests=False):
         helper_path = self._path_to_helper()
         if helper_path:
             _log.debug("Starting layout helper %s" % helper_path)
-            self._helper = self._executive.popen([helper_path],
+            arguments = [helper_path]
+            if pixel_tests:
+                arguments.append('--install-color-profile')
+            self._helper = self._executive.popen(arguments,
                 stdin=self._executive.PIPE, stdout=self._executive.PIPE, stderr=None)
             is_ready = self._helper.stdout.readline()
             if not is_ready.startswith('ready'):
                 _log.error("LayoutTestHelper failed to be ready")
+
+    def reset_preferences(self):
+        _log.debug("Resetting persistent preferences")
+
+        for domain in ["DumpRenderTree", "WebKitTestRunner"]:
+            try:
+                self._executive.run_command(["defaults", "delete", domain])
+            except ScriptError, e:
+                # 'defaults' returns 1 if the domain did not exist
+                if e.exit_code != 1:
+                    raise e
 
     def stop_helper(self):
         if self._helper:
@@ -303,3 +321,7 @@ class MacPort(ApplePort):
         except ScriptError:
             _log.warn("xcrun failed; falling back to '%s'." % fallback)
             return fallback
+
+    def logging_patterns_to_strip(self):
+        # FIXME: Remove this after <rdar://problem/15605007> is fixed
+        return [(re.compile('(AVF|GVA) info:.*\n'), '')]

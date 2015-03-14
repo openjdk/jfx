@@ -154,7 +154,7 @@ static inline bool featureWithoutValue(const AtomicString& mediaFeature)
         || mediaFeature == MediaFeatureNames::resolutionMediaFeature;
 }
 
-inline MediaQueryExp::MediaQueryExp(const AtomicString& mediaFeature, CSSParserValueList* valueList)
+MediaQueryExp::MediaQueryExp(const AtomicString& mediaFeature, CSSParserValueList* valueList)
     : m_mediaFeature(mediaFeature)
     , m_value(0)
     , m_isValid(false)
@@ -203,7 +203,7 @@ inline MediaQueryExp::MediaQueryExp(const AtomicString& mediaFeature, CSSParserV
                 if (i != 1 && value->unit == CSSPrimitiveValue::CSS_NUMBER && value->fValue > 0 && value->isInt) {
                     if (!i)
                         numeratorValue = value->fValue;
-                else
+                    else
                         denominatorValue = value->fValue;
                 } else if (i == 1 && value->unit == CSSParserValue::Operator && value->iValue == '/')
                     continue;
@@ -216,15 +216,10 @@ inline MediaQueryExp::MediaQueryExp(const AtomicString& mediaFeature, CSSParserV
             if (isValid)
                 m_value = CSSAspectRatioValue::create(numeratorValue, denominatorValue);
 
-        m_isValid = m_value;
-    }
+            m_isValid = m_value;
+        }
     } else if (featureWithoutValue(mediaFeature))
         m_isValid = true;
-}
-
-PassOwnPtr<MediaQueryExp> MediaQueryExp::create(const AtomicString& mediaFeature, CSSParserValueList* values)
-{
-    return adoptPtr(new MediaQueryExp(mediaFeature, values));
 }
 
 MediaQueryExp::~MediaQueryExp()

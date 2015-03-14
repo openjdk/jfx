@@ -35,10 +35,10 @@ class WebGLRenderingContext;
 
 class WebGLLoseContext : public WebGLExtension {
 public:
-    static PassOwnPtr<WebGLLoseContext> create(WebGLRenderingContext*);
+    static OwnPtr<WebGLLoseContext> create(WebGLRenderingContext*);
 
     virtual ~WebGLLoseContext();
-    virtual ExtensionName getName() const;
+    virtual ExtensionName getName() const override;
 
     void loseContext();
     void restoreContext();

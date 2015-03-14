@@ -28,54 +28,39 @@
 
 #if ENABLE(VIDEO)
 
+#include "HTMLMediaElement.h"
 #include "RenderImage.h"
 
 namespace WebCore {
 
-class HTMLMediaElement;
-
 class RenderMedia : public RenderImage {
 public:
-    explicit RenderMedia(HTMLMediaElement*);
-    RenderMedia(HTMLMediaElement*, const IntSize& intrinsicSize);
+    RenderMedia(HTMLMediaElement&, PassRef<RenderStyle>);
+    RenderMedia(HTMLMediaElement&, PassRef<RenderStyle>, const IntSize& intrinsicSize);
     virtual ~RenderMedia();
 
-    RenderObject* firstChild() const { ASSERT(children() == virtualChildren()); return children()->firstChild(); }
-    RenderObject* lastChild() const { ASSERT(children() == virtualChildren()); return children()->lastChild(); }
-
-    const RenderObjectChildList* children() const { return &m_children; }
-    RenderObjectChildList* children() { return &m_children; }
-
-    HTMLMediaElement* mediaElement() const;
+    HTMLMediaElement& mediaElement() const { return toHTMLMediaElement(nodeForNonAnonymous()); }
 
 protected:
     virtual void layout();
 
 private:
-    virtual RenderObjectChildList* virtualChildren() { return children(); }
-    virtual const RenderObjectChildList* virtualChildren() const { return children(); }
-    virtual bool canHaveChildren() const { return true; }
+    void element() const = delete;
 
-    virtual const char* renderName() const { return "RenderMedia"; }
-    virtual bool isMedia() const { return true; }
-    virtual bool isImage() const { return false; }
-    virtual void paintReplaced(PaintInfo&, const LayoutPoint&);
+    virtual bool canHaveChildren() const override final { return true; }
 
-    virtual bool requiresForcedStyleRecalcPropagation() const { return true; }
+    virtual const char* renderName() const override { return "RenderMedia"; }
+    virtual bool isMedia() const override final { return true; }
+    virtual bool isImage() const override final { return false; }
+    virtual void paintReplaced(PaintInfo&, const LayoutPoint&) override;
 
-    RenderObjectChildList m_children;
+    virtual bool requiresForcedStyleRecalcPropagation() const override final { return true; }
 };
 
-inline RenderMedia* toRenderMedia(RenderObject* object)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isMedia());
-    return static_cast<RenderMedia*>(object);
-}
-
-// This will catch anyone doing an unnecessary cast.
-void toRenderMedia(const RenderMedia*);
+RENDER_OBJECT_TYPE_CASTS(RenderMedia, isMedia())
 
 } // namespace WebCore
 
 #endif
+
 #endif // RenderMedia_h

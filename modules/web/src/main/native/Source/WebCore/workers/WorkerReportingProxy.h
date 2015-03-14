@@ -31,9 +31,7 @@
 #ifndef WorkerReportingProxy_h
 #define WorkerReportingProxy_h
 
-#if ENABLE(WORKERS)
-
-#include "ConsoleTypes.h"
+#include <inspector/ConsoleTypes.h>
 #include <wtf/Forward.h>
 
 namespace WebCore {
@@ -48,17 +46,14 @@ namespace WebCore {
         virtual void postConsoleMessageToWorkerObject(MessageSource, MessageLevel, const String& message, int lineNumber, int columnNumber, const String& sourceURL) = 0;
 #if ENABLE(INSPECTOR)
         virtual void postMessageToPageInspector(const String&) = 0;
-        virtual void updateInspectorStateCookie(const String&) = 0;
 #endif
         // Invoked when close() is invoked on the worker context.
-        virtual void workerContextClosed() = 0;
+        virtual void workerGlobalScopeClosed() = 0;
 
         // Invoked when the thread has stopped.
-        virtual void workerContextDestroyed() = 0;
+        virtual void workerGlobalScopeDestroyed() = 0;
     };
 
 } // namespace WebCore
-
-#endif // ENABLE(WORKERS)
 
 #endif // WorkerReportingProxy_h

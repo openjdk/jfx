@@ -35,7 +35,6 @@
 #include <wtf/OwnPtr.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
-#include <wtf/unicode/Unicode.h>
 
 #ifndef NDEBUG
 void showGlyphPageTrees();
@@ -118,7 +117,7 @@ private:
     static HashMap<int, GlyphPageTreeNode*>* roots;
     static GlyphPageTreeNode* pageZeroRoot;
 
-    typedef HashMap<const FontData*, OwnPtr<GlyphPageTreeNode> > GlyphPageTreeNodeMap;
+    typedef HashMap<const FontData*, OwnPtr<GlyphPageTreeNode>> GlyphPageTreeNodeMap;
 
     GlyphPageTreeNodeMap m_children;
     GlyphPageTreeNode* m_parent;

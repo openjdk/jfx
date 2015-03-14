@@ -21,7 +21,6 @@
 #ifndef SVGPreserveAspectRatio_h
 #define SVGPreserveAspectRatio_h
 
-#if ENABLE(SVG)
 #include "SVGPropertyTraits.h"
 
 namespace WebCore {
@@ -76,6 +75,8 @@ public:
 private:
     SVGPreserveAspectRatioType m_align;
     SVGMeetOrSliceType m_meetOrSlice;
+
+    bool parseInternal(const UChar*& currParam, const UChar* end, bool validate);
 };
 
 template<>
@@ -86,5 +87,4 @@ struct SVGPropertyTraits<SVGPreserveAspectRatio> {
 
 } // namespace WebCore
 
-#endif // ENABLE(SVG)
 #endif // SVGPreserveAspectRatio_h

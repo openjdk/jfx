@@ -2,8 +2,8 @@
 
 math {
     -webkit-line-box-contain: glyphs replaced;
-    line-height: 0;
     text-indent: 0;
+    direction: ltr;
 }
 mtext {
     line-height: 1.0;
@@ -11,11 +11,21 @@ mtext {
 
 /* Keep font-family and other defaults here consistent with http://mxr.mozilla.org/mozilla-central/source/layout/mathml/mathml.css and feedback from www-math. */
 math, mfenced > * {
+#if defined(WTF_PLATFORM_IOS) && WTF_PLATFORM_IOS
+    /* We explicitly include the font Symbol as it's the iOS equivalent of font STIXGeneral. */
+    font-family: STIXGeneral, Symbol, "Times New Roman", sans-serif;
+#else
     font-family: MathJax_Main, STIXGeneral, "DejaVu Serif", Cambria, "Cambria Math", Times, serif;
+#endif
 }
 mo, mfenced {
+#if defined(WTF_PLATFORM_IOS) && WTF_PLATFORM_IOS
+    /* We explicitly include the font Symbol as it's the iOS equivalent of font STIXGeneral. */
+    font-family: STIXGeneral, Symbol, "Times New Roman", sans-serif;
+#else
     font-family: MathJax_Main, STIXGeneral, STIXSizeOneSym, "DejaVu Sans", "DejaVu Serif", Cambria, "Cambria Math",
         "Lucida Sans Unicode", "Arial Unicode MS", "Lucida Grande", OpenSymbol, "Standard Symbols L", sans-serif;
+#endif
 }
 
 math {
@@ -32,19 +42,11 @@ math[display="block"] {
     -webkit-margin-after: 1em;
 }
 
-mo, mrow, mfenced, mfrac, msub, msup, msubsup, munder, mover, munderover, msqrt, mroot {
+mi, mo, mrow, mfenced, mfrac, msub, msup, msubsup, mmultiscripts, mprescripts, none, munder, mover, munderover, msqrt, mroot, merror, mphantom, mstyle, menclose {
     display: -webkit-inline-flex !important;
 }
 
-msup {
-    -webkit-align-items: flex-start;
-}
-
-msub {
-    -webkit-align-items: flex-end;
-}
-
-math, mrow, mfenced, msqrt, mroot {
+math, mrow, mfenced, msqrt, mroot, merror, mphantom, mstyle, menclose {
     -webkit-align-items: baseline;
 }
 msqrt > * { /* This rule is needed because of <msqrt>'s anonymous <mrow>. */
@@ -85,16 +87,15 @@ mfrac {
     -webkit-margin-end: 1px;
 }
 
-msubsup > :last-child, mover > :last-child, munderover > :last-child {
+mover > :last-child, munderover > :last-child {
     -webkit-order: -1;
 }
 
-msub > * + *, msup > * + *, msubsup > * + *, munder > * + *, mover > * + *, munderover > * + * {
+msub > * + *, msup > * + *, msubsup > * + *, mmultiscripts > * + *, munder > * + *, mover > * + *, munderover > * + * {
     font-size: 0.75em; /* FIXME: MathML standard is 0.71em */
 }
 
 mi {
-    font-style: italic;
     -webkit-padding-end: 0.1em;
 }
 msub > mi:first-child, msubsup > mi:first-child {
@@ -161,15 +162,16 @@ math[mathsize="big"], mstyle[mathsize="big"], mo[mathsize="big"], mn[mathsize="b
     font-size: 1.5em;
 }
  
-annotation, annotation-xml {
-    display:none;
-}
-
 mphantom {
     visibility: hidden;
 }
 
-merror {
+/* This is a special style for erroneous markup:
+  - <merror> element.
+  - extra children in script elements.
+  - <mprescripts/> and <none/> elements in msub/msup/msubsup.
+ */
+merror, msub > * + * + *, msup > * + * + *, msubsup > * + * + * + *, msub > mprescripts, msup > mprescripts, msubsup > mprescripts, msub > none, msup > none, msubsup > none, mmultiscripts > mprescripts ~ mprescripts, mmultiscripts > mprescripts ~ mprescripts ~ * {
     outline: solid thin red;
     font-weight: bold;
     font-family: sans-serif;
@@ -236,8 +238,4 @@ mtable[columnlines="solid"] > mtr > mtd + mtd {
 
 mtable[columnlines="dashed"] > mtr > mtd + mtd {
     border-left: dashed thin;
-}
-
-mspace[linebreak="newline"] {
-    display: block;
 }

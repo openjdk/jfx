@@ -33,10 +33,10 @@ namespace WebCore {
 
 class OESTextureHalfFloat : public WebGLExtension {
 public:
-    static PassOwnPtr<OESTextureHalfFloat> create(WebGLRenderingContext*);
+    static OwnPtr<OESTextureHalfFloat> create(WebGLRenderingContext*);
 
     virtual ~OESTextureHalfFloat();
-    virtual ExtensionName getName() const;
+    virtual ExtensionName getName() const override;
 
 private:
     OESTextureHalfFloat(WebGLRenderingContext*);

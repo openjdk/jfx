@@ -71,7 +71,7 @@ static jobject convertArrayInstanceToJavaArray(ExecState* exec, JSArray* jsArray
                     JSValue item = jsArray->get(exec, i);
                     String stringValue = item.toString(exec)->value(exec);
                     env->SetObjectArrayElement(jarray, i,
-                        env->functions->NewString(env, (const jchar *)stringValue.characters(), stringValue.length()));
+                        env->functions->NewString(env, (const jchar *)stringValue.deprecatedCharacters(), stringValue.length()));
                 }
             }
             break;
@@ -107,7 +107,7 @@ static jobject convertArrayInstanceToJavaArray(ExecState* exec, JSArray* jsArray
                 String stringValue = item.toString(exec)->value(exec);
                 jchar value = 0;
                 if (stringValue.length() > 0)
-                    value = ((const jchar*)stringValue.characters())[0];
+                    value = ((const jchar*)stringValue.deprecatedCharacters())[0];
                 env->SetCharArrayRegion((jcharArray)jarray, (jsize)i, (jsize)1, &value);
             }
             break;
@@ -208,13 +208,13 @@ jvalue convertValueToJValue(ExecState* exec, RootObject* rootObject, JSValue val
 
             if (value.isObject()) {
                 JSObject* object = asObject(value);
-                if (object->inherits(&JavaRuntimeObject::s_info)) {
+                if (object->inherits(JavaRuntimeObject::info())) {
                     // Unwrap a Java instance.
                     JavaRuntimeObject* runtimeObject = static_cast<JavaRuntimeObject*>(object);
                     JavaInstance* instance = runtimeObject->getInternalJavaInstance();
                     if (instance)
                         result.l = instance->javaInstance();
-                } else if (object->classInfo() == &RuntimeArray::s_info) {
+                } else if (object->classInfo() == RuntimeArray::info()) {
                     // Input is a JavaScript Array that was originally created from a Java Array
                     RuntimeArray* imp = static_cast<RuntimeArray*>(object);
                     JavaArray* array = static_cast<JavaArray*>(imp->getConcreteArray());
@@ -223,12 +223,12 @@ jvalue convertValueToJValue(ExecState* exec, RootObject* rootObject, JSValue val
                            || (!strcmp(javaClassName, "netscape.javascript.JSObject"))) {
                     // Wrap objects in JSObject instances.
                     JNIEnv* env = getJNIEnv();
-                    if (object->inherits(&WebCore::JSNode::s_info)) {
+                    if (object->inherits(WebCore::JSNode::info())) {
                         WebCore::JSNode* jsnode = static_cast<WebCore::JSNode*>(object);
                         static JGClass nodeImplClass = env->FindClass("com/sun/webkit/dom/NodeImpl");
                         static jmethodID getImplID = env->GetStaticMethodID(nodeImplClass, "getCachedImpl",
                                                                      "(J)Lorg/w3c/dom/Node;");
-                        WebCore::Node *peer = jsnode->impl();
+                        WebCore::Node *peer = &jsnode->impl();
                         peer->ref(); //deref is in NodeImpl disposer
                         result.l = env->CallStaticObjectMethod(
                             nodeImplClass,
@@ -253,7 +253,7 @@ jvalue convertValueToJValue(ExecState* exec, RootObject* rootObject, JSValue val
                 if (value.isString()) {
                     String stringValue = asString(value)->value(exec);
                     JNIEnv* env = getJNIEnv();
-                    jobject javaString = env->functions->NewString(env, (const jchar*)stringValue.characters(), stringValue.length());
+                    jobject javaString = env->functions->NewString(env, (const jchar*)stringValue.deprecatedCharacters(), stringValue.length());
                     result.l = javaString;
                 } else if (value.isNumber()) {
                     JNIEnv* env = getJNIEnv();
@@ -286,7 +286,7 @@ jvalue convertValueToJValue(ExecState* exec, RootObject* rootObject, JSValue val
                 if (!value.isNull()) {
                     String stringValue = value.toString(exec)->value(exec);
                     JNIEnv* env = getJNIEnv();
-                    jobject javaString = env->functions->NewString(env, (const jchar*)stringValue.characters(), stringValue.length());
+                    jobject javaString = env->functions->NewString(env, (const jchar*)stringValue.deprecatedCharacters(), stringValue.length());
                     result.l = javaString;
                 }
             }

@@ -23,7 +23,7 @@
  */
 
 [
-        Conditional=GEOLOCATION,
+    Conditional=GEOLOCATION,
 ] callback interface PositionErrorCallback {
     boolean handleEvent(PositionError error);
-    };
+};

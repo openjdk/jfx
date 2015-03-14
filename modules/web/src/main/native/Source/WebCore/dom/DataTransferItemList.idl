@@ -30,17 +30,16 @@
 
 [
     NoInterfaceObject,
-        Conditional=DATA_TRANSFER_ITEMS,
-        IndexedGetter,
-        JSGenerateToNativeObject,
-    ImplementationLacksVTable
+    Conditional=DATA_TRANSFER_ITEMS,
+    JSGenerateToNativeObject,
+    ImplementationLacksVTable,
 ] interface DataTransferItemList {
-        readonly attribute long length;
-    DataTransferItem item([Default=Undefined] optional unsigned long index);
+    readonly attribute long length;
+    getter DataTransferItem item([Default=Undefined] optional unsigned long index);
 
-        void clear();
+    void clear();
     void add(File? file);
-    void add([Default=Undefined] optional DOMString data, 
-             [Default=Undefined] optional DOMString type) raises(DOMException);
-    };
+    [RaisesException] void add([Default=Undefined] optional DOMString data, 
+             [Default=Undefined] optional DOMString type);
+};
 

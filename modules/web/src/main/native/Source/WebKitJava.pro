@@ -4,9 +4,14 @@ CONFIG += ordered
 include(WebKitJava.pri)
 
 SUBDIRS += \
+    LLIntOffsetsExtractor \
     javascriptcore \
     webcore \
-    dumprendertree \
+    dumprendertree
+
+
+LLIntOffsetsExtractor.file = JavaScriptCore/LLIntOffsetsExtractor.pro
+LLIntOffsetsExtractor.makefile = Makefile.LLIntOffsetsExtractor
 
 javascriptcore.file = JavaScriptCore/JavaScriptCoreJava.pro
 webcore.file = WebCore/WebCoreJava.pro

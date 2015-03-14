@@ -39,7 +39,9 @@ public:
         EXTDrawBuffersName,
         EXTTextureFilterAnisotropicName,
         OESTextureFloatName,
+        OESTextureFloatLinearName,
         OESTextureHalfFloatName,
+        OESTextureHalfFloatLinearName,
         OESStandardDerivativesName,
         OESVertexArrayObjectName,
         WebGLDebugRendererInfoName,
@@ -49,6 +51,7 @@ public:
         OESElementIndexUintName,
         WebGLCompressedTextureATCName,
         WebGLCompressedTexturePVRTCName,
+        ANGLEInstancedArraysName,
     };
 
     void ref() { m_context->ref(); }

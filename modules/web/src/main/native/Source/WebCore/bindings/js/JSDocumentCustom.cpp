@@ -31,17 +31,16 @@
 #include "JSDOMWindowCustom.h"
 #include "JSHTMLDocument.h"
 #include "JSLocation.h"
+#include "JSSVGDocument.h"
+#if PLATFORM(JAVA) && ENABLE(TOUCH_EVENTS) // todo tav
 #include "JSTouch.h"
 #include "JSTouchList.h"
+#endif
 #include "Location.h"
 #include "NodeTraversal.h"
 #include "ScriptController.h"
-#include "TouchList.h"
-
-#if ENABLE(SVG)
-#include "JSSVGDocument.h"
 #include "SVGDocument.h"
-#endif
+#include "TouchList.h"
 
 #include <wtf/GetPtr.h>
 
@@ -51,22 +50,22 @@ namespace WebCore {
 
 JSValue JSDocument::location(ExecState* exec) const
 {
-    Frame* frame = static_cast<Document*>(impl())->frame();
+    Frame* frame = impl().frame();
     if (!frame)
         return jsNull();
 
     Location* location = frame->document()->domWindow()->location();
-    if (JSDOMWrapper* wrapper = getCachedWrapper(currentWorld(exec), location))
+    if (JSObject* wrapper = getCachedWrapper(currentWorld(exec), location))
         return wrapper;
 
-    JSLocation* jsLocation = JSLocation::create(getDOMStructure<JSLocation>(exec, globalObject()), globalObject(), location);
+    JSLocation* jsLocation = JSLocation::create(getDOMStructure<JSLocation>(exec->vm(), globalObject()), globalObject(), location);
     cacheWrapper(currentWorld(exec), location, jsLocation);
     return jsLocation;
 }
 
 void JSDocument::setLocation(ExecState* exec, JSValue value)
 {
-    Frame* frame = static_cast<Document*>(impl())->frame();
+    Frame* frame = impl().frame();
     if (!frame)
         return;
 
@@ -83,7 +82,7 @@ JSValue toJS(ExecState* exec, JSDOMGlobalObject* globalObject, Document* documen
     if (!document)
         return jsNull();
 
-    JSDOMWrapper* wrapper = getCachedWrapper(currentWorld(exec), document);
+    JSObject* wrapper = getCachedWrapper(currentWorld(exec), document);
     if (wrapper)
         return wrapper;
 
@@ -97,10 +96,8 @@ JSValue toJS(ExecState* exec, JSDOMGlobalObject* globalObject, Document* documen
 
     if (document->isHTMLDocument())
         wrapper = CREATE_DOM_WRAPPER(exec, globalObject, HTMLDocument, document);
-#if ENABLE(SVG)
     else if (document->isSVGDocument())
         wrapper = CREATE_DOM_WRAPPER(exec, globalObject, SVGDocument, document);
-#endif
     else
         wrapper = CREATE_DOM_WRAPPER(exec, globalObject, Document, document);
 

@@ -31,61 +31,64 @@
 #ifndef WorkerInspectorController_h
 #define WorkerInspectorController_h
 
-#if ENABLE(INSPECTOR) && ENABLE(WORKERS)
+#if ENABLE(INSPECTOR)
 
-#include "InspectorBaseAgent.h"
-#include <wtf/FastAllocBase.h>
+#include "InspectorInstrumentationCookie.h"
+#include "InspectorWebAgentBase.h"
+#include <inspector/InspectorAgentRegistry.h>
+#include <inspector/InspectorEnvironment.h>
+#include <wtf/FastMalloc.h>
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
-#include <wtf/OwnPtr.h>
 #include <wtf/RefPtr.h>
+#include <wtf/Vector.h>
+
+namespace Inspector {
+class InspectorBackendDispatcher;
+}
 
 namespace WebCore {
 
-class InjectedScriptManager;
-class InspectorBackendDispatcher;
-class InspectorFrontend;
-class InspectorFrontendChannel;
 class InspectorInstrumentation;
-class InspectorRuntimeAgent;
-class InspectorState;
-class InspectorStateClient;
 class InstrumentingAgents;
-class WorkerContext;
+class WebInjectedScriptManager;
+class WorkerGlobalScope;
+class WorkerRuntimeAgent;
 
-class WorkerInspectorController {
+class WorkerInspectorController final : public Inspector::InspectorEnvironment {
     WTF_MAKE_NONCOPYABLE(WorkerInspectorController);
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    WorkerInspectorController(WorkerContext*);
+    explicit WorkerInspectorController(WorkerGlobalScope&);
     ~WorkerInspectorController();
 
-    bool hasFrontend() const { return m_frontend; }
     void connectFrontend();
-    void disconnectFrontend();
-    void restoreInspectorStateFromCookie(const String& inspectorCookie);
+    void disconnectFrontend(Inspector::InspectorDisconnectReason);
     void dispatchMessageFromFrontend(const String&);
-#if ENABLE(JAVASCRIPT_DEBUGGER)
     void resume();
-#endif
+
+    virtual bool developerExtrasEnabled() const override { return true; }
+    virtual bool canAccessInspectedScriptState(JSC::ExecState*) const override { return true; }
+    virtual Inspector::InspectorFunctionCallHandler functionCallHandler() const override;
+    virtual Inspector::InspectorEvaluateHandler evaluateHandler() const override;
+    virtual void willCallInjectedScriptFunction(JSC::ExecState*, const String& scriptName, int scriptLine) override;
+    virtual void didCallInjectedScriptFunction(JSC::ExecState*) override;
 
 private:
-    friend InstrumentingAgents* instrumentationForWorkerContext(WorkerContext*);
+    friend InstrumentingAgents* instrumentationForWorkerGlobalScope(WorkerGlobalScope*);
 
-    WorkerContext* m_workerContext;
-    OwnPtr<InspectorStateClient> m_stateClient;
-    OwnPtr<InspectorCompositeState> m_state;
+    WorkerGlobalScope& m_workerGlobalScope;
     RefPtr<InstrumentingAgents> m_instrumentingAgents;
-    OwnPtr<InjectedScriptManager> m_injectedScriptManager;
-    InspectorRuntimeAgent* m_runtimeAgent;
-    InspectorAgentRegistry m_agents;
-    OwnPtr<InspectorFrontendChannel> m_frontendChannel;
-    OwnPtr<InspectorFrontend> m_frontend;
-    RefPtr<InspectorBackendDispatcher> m_backendDispatcher;
+    std::unique_ptr<WebInjectedScriptManager> m_injectedScriptManager;
+    WorkerRuntimeAgent* m_runtimeAgent;
+    Inspector::InspectorAgentRegistry m_agents;
+    std::unique_ptr<InspectorFrontendChannel> m_frontendChannel;
+    RefPtr<Inspector::InspectorBackendDispatcher> m_backendDispatcher;
+    Vector<InspectorInstrumentationCookie, 2> m_injectedScriptInstrumentationCookies;
 };
 
 }
 
-#endif // ENABLE(WORKERS)
+#endif // ENABLE(INSPECTOR)
 
 #endif // !defined(WorkerInspectorController_h)

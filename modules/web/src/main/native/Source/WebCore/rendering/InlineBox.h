@@ -33,43 +33,15 @@ class RootInlineBox;
 // InlineBox represents a rectangle that occurs on a line.  It corresponds to
 // some RenderObject (i.e., it represents a portion of that RenderObject).
 class InlineBox {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    InlineBox(RenderObject* obj)
-        : m_next(0)
-        , m_prev(0)
-        , m_parent(0)
-        , m_renderer(obj)
-        , m_logicalWidth(0)
-#ifndef NDEBUG
-        , m_hasBadParent(false)
-#endif
-    {
-    }
-
-    InlineBox(RenderObject* obj, FloatPoint topLeft, float logicalWidth, bool firstLine, bool constructed,
-              bool dirty, bool extracted, bool isHorizontal, InlineBox* next, InlineBox* prev, InlineFlowBox* parent)
-        : m_next(next)
-        , m_prev(prev)
-        , m_parent(parent)
-        , m_renderer(obj)
-        , m_topLeft(topLeft)
-        , m_logicalWidth(logicalWidth)
-        , m_bitfields(firstLine, constructed, dirty, extracted, isHorizontal)
-#ifndef NDEBUG
-        , m_hasBadParent(false)
-#endif
-    {
-    }
-
     virtual ~InlineBox();
 
-    virtual void destroy(RenderArena*);
+    virtual void deleteLine() = 0;
+    virtual void extractLine() = 0;
+    virtual void attachLine() = 0;
 
-    virtual void deleteLine(RenderArena*);
-    virtual void extractLine();
-    virtual void attachLine();
-
-    virtual bool isLineBreak() const { return false; }
+    virtual bool isLineBreak() const { return renderer().isLineBreak(); }
 
     virtual void adjustPosition(float dx, float dy);
     void adjustLogicalPosition(float deltaLogicalLeft, float deltaLogicalTop)
@@ -94,18 +66,8 @@ public:
             adjustPosition(delta, 0);
     }
 
-    virtual void paint(PaintInfo&, const LayoutPoint&, LayoutUnit lineTop, LayoutUnit lineBottom);
-    virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit lineTop, LayoutUnit lineBottom);
-
-    // Overloaded new operator.
-    void* operator new(size_t, RenderArena*);
-
-    // Overridden to prevent the normal delete from being called.
-    void operator delete(void*, size_t);
-
-private:
-    // The normal operator new is disallowed.
-    void* operator new(size_t) throw();
+    virtual void paint(PaintInfo&, const LayoutPoint&, LayoutUnit lineTop, LayoutUnit lineBottom) = 0;
+    virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit lineTop, LayoutUnit lineBottom) = 0;
 
 public:
 #ifndef NDEBUG
@@ -117,17 +79,16 @@ public:
     virtual const char* boxName() const;
 #endif
 
-    bool isText() const { return m_bitfields.isText(); }
-    void setIsText(bool isText) { m_bitfields.setIsText(isText); }
- 
+    bool behavesLikeText() const { return m_bitfields.behavesLikeText(); }
+    void setBehavesLikeText(bool behavesLikeText) { m_bitfields.setBehavesLikeText(behavesLikeText); }
+
+    virtual bool isInlineElementBox() const { return false; }
     virtual bool isInlineFlowBox() const { return false; }
     virtual bool isInlineTextBox() const { return false; }
     virtual bool isRootInlineBox() const { return false; }
-#if ENABLE(SVG)
     virtual bool isSVGInlineTextBox() const { return false; }
     virtual bool isSVGInlineFlowBox() const { return false; }
     virtual bool isSVGRootInlineBox() const { return false; }
-#endif
 
     bool hasVirtualLogicalHeight() const { return m_bitfields.hasVirtualLogicalHeight(); }
     void setHasVirtualLogicalHeight() { m_bitfields.setHasVirtualLogicalHeight(true); }
@@ -151,10 +112,10 @@ public:
 
     void setExtracted(bool extracted = true) { m_bitfields.setExtracted(extracted); }
     
-    void setFirstLineStyleBit(bool firstLine) { m_bitfields.setFirstLine(firstLine); }
-    bool isFirstLineStyle() const { return m_bitfields.firstLine(); }
+    void setIsFirstLine(bool firstLine) { m_bitfields.setFirstLine(firstLine); }
+    bool isFirstLine() const { return m_bitfields.firstLine(); }
 
-    void remove();
+    void removeFromParent();
 
     InlineBox* nextOnLine() const { return m_next; }
     InlineBox* prevOnLine() const { return m_prev; }
@@ -169,6 +130,7 @@ public:
         m_prev = prev;
     }
     bool nextOnLineExists() const;
+    bool previousOnLineExists() const;
 
     virtual bool isLeaf() const { return true; }
     
@@ -181,17 +143,18 @@ public:
     InlineBox* nextLeafChildIgnoringLineBreak() const;
     InlineBox* prevLeafChildIgnoringLineBreak() const;
 
-    RenderObject* renderer() const { return m_renderer; }
+    // FIXME: Hide this once all callers are using tighter types.
+    RenderObject& renderer() const { return m_renderer; }
 
     InlineFlowBox* parent() const
     {
-        ASSERT(!m_hasBadParent);
+        ASSERT_WITH_SECURITY_IMPLICATION(!m_hasBadParent);
         return m_parent;
     }
     void setParent(InlineFlowBox* par) { m_parent = par; }
 
-    const RootInlineBox* root() const;
-    RootInlineBox* root();
+    const RootInlineBox& root() const;
+    RootInlineBox& root();
 
     // x() is the left side of the box in the containing block's coordinate system.
     void setX(float x) { m_topLeft.setX(x); }
@@ -272,21 +235,23 @@ public:
     // visibleLeftEdge, visibleRightEdge are in the parent's coordinate system.
     virtual float placeEllipsisBox(bool ltr, float visibleLeftEdge, float visibleRightEdge, float ellipsisWidth, float &truncatedWidth, bool&);
 
-#ifndef NDEBUG
+#if !ASSERT_WITH_SECURITY_IMPLICATION_DISABLED
     void setHasBadParent();
 #endif
 
     int expansion() const { return m_bitfields.expansion(); }
 
-    bool visibleToHitTesting() const { return renderer()->style()->visibility() == VISIBLE && renderer()->style()->pointerEvents() != PE_NONE; }
+    bool visibleToHitTesting() const { return renderer().style().visibility() == VISIBLE && renderer().style().pointerEvents() != PE_NONE; }
+
+    const RenderStyle& lineStyle() const { return m_bitfields.firstLine() ? renderer().firstLineStyle() : renderer().style(); }
     
-    EVerticalAlign verticalAlign() const { return renderer()->style(m_bitfields.firstLine())->verticalAlign(); }
+    EVerticalAlign verticalAlign() const { return lineStyle().verticalAlign(); }
 
     // Use with caution! The type is not checked!
     RenderBoxModelObject* boxModelObject() const
     { 
-        if (!m_renderer->isText())
-            return toRenderBoxModelObject(m_renderer);
+        if (!m_renderer.isText())
+            return &toRenderBoxModelObject(m_renderer);
         return 0;
     }
 
@@ -308,9 +273,9 @@ private:
 
     InlineFlowBox* m_parent; // The box that contains us.
 
-public:
-    RenderObject* m_renderer;
+    RenderObject& m_renderer;
 
+public:
     FloatPoint m_topLeft;
     float m_logicalWidth;
 
@@ -323,7 +288,7 @@ public:
 
     class InlineBoxBitfields {
     public:
-        InlineBoxBitfields(bool firstLine = false, bool constructed = false, bool dirty = false, bool extracted = false, bool isHorizontal = true)
+        explicit InlineBoxBitfields(bool firstLine = false, bool constructed = false, bool dirty = false, bool extracted = false, bool isHorizontal = true)
             : m_firstLine(firstLine)
             , m_constructed(constructed)
             , m_bidiEmbeddingLevel(0)
@@ -336,7 +301,7 @@ public:
             , m_knownToHaveNoOverflow(true)  
             , m_hasEllipsisBoxOrHyphen(false)
             , m_dirOverride(false)
-            , m_isText(false)
+            , m_behavesLikeText(false)
             , m_determinedIfNextOnLineExists(false)
             , m_nextOnLineExists(false)
             , m_expansion(0)
@@ -367,7 +332,7 @@ public:
         ADD_BOOLEAN_BITFIELD(hasEllipsisBoxOrHyphen, HasEllipsisBoxOrHyphen);
         // for InlineTextBox
         ADD_BOOLEAN_BITFIELD(dirOverride, DirOverride);
-        ADD_BOOLEAN_BITFIELD(isText, IsText); // Whether or not this object represents text with a non-zero height. Includes non-image list markers, text boxes.
+        ADD_BOOLEAN_BITFIELD(behavesLikeText, BehavesLikeText); // Whether or not this object represents text with a non-zero height. Includes non-image list markers, text boxes, br.
 
     private:
         mutable unsigned m_determinedIfNextOnLineExists : 1;
@@ -396,6 +361,33 @@ private:
     InlineBoxBitfields m_bitfields;
 
 protected:
+    explicit InlineBox(RenderObject& renderer)
+        : m_next(nullptr)
+        , m_prev(nullptr)
+        , m_parent(nullptr)
+        , m_renderer(renderer)
+        , m_logicalWidth(0)
+#if !ASSERT_WITH_SECURITY_IMPLICATION_DISABLED
+        , m_hasBadParent(false)
+#endif
+    {
+    }
+
+    InlineBox(RenderObject& renderer, FloatPoint topLeft, float logicalWidth, bool firstLine, bool constructed,
+              bool dirty, bool extracted, bool isHorizontal, InlineBox* next, InlineBox* prev, InlineFlowBox* parent)
+        : m_next(next)
+        , m_prev(prev)
+        , m_parent(parent)
+        , m_renderer(renderer)
+        , m_topLeft(topLeft)
+        , m_logicalWidth(logicalWidth)
+        , m_bitfields(firstLine, constructed, dirty, extracted, isHorizontal)
+#if !ASSERT_WITH_SECURITY_IMPLICATION_DISABLED
+        , m_hasBadParent(false)
+#endif
+    {
+    }
+
     // For RootInlineBox
     bool endsWithBreak() const { return m_bitfields.endsWithBreak(); }
     void setEndsWithBreak(bool endsWithBreak) { m_bitfields.setEndsWithBreak(endsWithBreak); }
@@ -415,19 +407,22 @@ protected:
     // For InlineFlowBox and InlineTextBox
     bool extracted() const { return m_bitfields.extracted(); }
 
-#ifndef NDEBUG
+#if !ASSERT_WITH_SECURITY_IMPLICATION_DISABLED
 private:
     bool m_hasBadParent;
 #endif
 };
 
-#ifdef NDEBUG
+#define INLINE_BOX_OBJECT_TYPE_CASTS(ToValueTypeName, predicate) \
+    TYPE_CASTS_BASE(ToValueTypeName, InlineBox, object, object->predicate, object.predicate)
+
+#if ASSERT_WITH_SECURITY_IMPLICATION_DISABLED
 inline InlineBox::~InlineBox()
 {
 }
 #endif
 
-#ifndef NDEBUG
+#if !ASSERT_WITH_SECURITY_IMPLICATION_DISABLED
 inline void InlineBox::setHasBadParent()
 {
     m_hasBadParent = true;

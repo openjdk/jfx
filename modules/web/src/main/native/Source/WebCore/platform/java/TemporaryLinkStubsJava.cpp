@@ -26,7 +26,7 @@
 #include "GraphicsContext.h"
 #include "ImageBuffer.h"
 //#include "JNIUtilityPrivate.h"
-#include "KURL.h" // WebKit BUG: must be included from Pasteboard.h
+#include "URL.h" // WebKit BUG: must be included from Pasteboard.h
 #include "Language.h"
 #include "NotImplemented.h"
 #include "RenderObject.h"
@@ -35,8 +35,7 @@
 #include "SSLKeyGenerator.h"
 #include "SearchPopupMenuJava.h"
 #include "SmartReplace.h"
-
-
+#include "JSCTestRunnerUtils.h"
 
 // WebCore/svg
 /*
@@ -88,6 +87,17 @@ bool isCharacterSmartReplaceExempt(UChar32 c, bool isPreviousCharacter)
 }
 #endif
 
+#if OS(WINDOWS) || OS(LINUX)
+// Reference these functions to make the linker include
+// JSCTestRunnerUtils.obj into jfxwebkit.dll
+// The functions are called from DumpRenderTreeJava.dll
+void referenceJSCTestRunnerUtils()
+{
+    JSC::numberOfDFGCompiles(0, 0);
+    JSC::setNeverInline(0, 0);
+}
+#endif
+
 // ---- CookieStorage.h ---- //
 void setCookieStoragePrivateBrowsingEnabled(bool)
 {
@@ -98,11 +108,6 @@ void setCookieStoragePrivateBrowsingEnabled(bool)
 // ---- WebCore/editing stubs ---- //
 
 // ---- Editor.h ---- //
-
-PassRefPtr<Clipboard> Editor::newGeneralClipboard(ClipboardAccessPolicy policy, Frame* frame)
-{
-    return ClipboardJava::create(policy, Clipboard::CopyAndPaste, DataObjectJava::create(), frame);
-}
 
 //WTF::PassRefPtr<JSC::Bindings::Instance>
 //                    ScriptController::createScriptInstanceForWidget(Widget *)
@@ -118,7 +123,7 @@ void getSupportedKeySizes(Vector<String>&)
     notImplemented();
 }
 
-String signedPublicKeyAndChallengeString(unsigned keySizeIndex, const String &challengeString, const KURL &)
+String signedPublicKeyAndChallengeString(unsigned keySizeIndex, const String &challengeString, const URL &)
 {
     notImplemented();
     return String("signedPublicKeyAndChallengeString");

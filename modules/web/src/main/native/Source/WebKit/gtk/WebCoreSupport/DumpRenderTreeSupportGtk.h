@@ -78,9 +78,6 @@ public:
     static void setDefersLoading(WebKitWebView*, bool);
     static void forceWebViewPaint(WebKitWebView*);
 
-    // Accessibility
-    static WTF::CString accessibilityHelpText(AtkObject*);
-
     // TextInputController
     static void setComposition(WebKitWebView*, const char*, int start, int length);
     static bool hasComposition(WebKitWebView*);
@@ -107,11 +104,7 @@ public:
     static void setPageCacheSupportsPlugins(WebKitWebView*, bool enabled);
     static void setCSSGridLayoutEnabled(WebKitWebView*, bool enabled);
     static void setCSSRegionsEnabled(WebKitWebView*, bool enabled);
-    static void setCSSCustomFilterEnabled(WebKitWebView*, bool enabled);
     static void setExperimentalContentSecurityPolicyFeaturesEnabled(bool);
-    static void setSeamlessIFramesEnabled(bool);
-    static void setShadowDOMEnabled(bool);
-    static void setStyleScopedEnabled(bool);
 
     static void deliverAllMutationsIfNecessary();
     static void setDomainRelaxationForbiddenForURLScheme(bool forbidden, const char* urlScheme);
@@ -136,7 +129,7 @@ public:
     static void setFrameLoadEventCallback(FrameLoadEventCallback);
     static FrameLoadEventCallback s_frameLoadEventCallback;
 
-    typedef bool (*AuthenticationCallback) (CString& username, CString& password);
+    typedef bool (*AuthenticationCallback) (CString& username, CString& password, WebKitWebResource* webResource);
     static void setAuthenticationCallback(AuthenticationCallback);
     static AuthenticationCallback s_authenticationCallback;
     static void setPageVisibility(WebKitWebView*, WebCore::PageVisibilityState, bool);

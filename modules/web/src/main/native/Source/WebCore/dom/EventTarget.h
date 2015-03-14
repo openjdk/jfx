@@ -34,15 +34,17 @@
 
 #include "EventListenerMap.h"
 #include "EventNames.h"
+#include "EventTargetInterfaces.h"
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/text/AtomicStringHash.h>
 
 namespace WebCore {
 
+    class AudioNode;
     class AudioContext;
     class AudioTrackList;
-    class DedicatedWorkerContext;
+    class DedicatedWorkerGlobalScope;
     class DOMApplicationCache;
     class DOMWindow;
     class Event;
@@ -54,9 +56,7 @@ namespace WebCore {
     class IDBRequest;
     class IDBTransaction;
     class ScriptProcessorNode;
-    class LocalMediaStream;
     class MediaController;
-    class MediaSource;
     class MediaStream;
     class MessagePort;
     class Node;
@@ -64,8 +64,7 @@ namespace WebCore {
     class SVGElementInstance;
     class ScriptExecutionContext;
     class SharedWorker;
-    class SharedWorkerContext;
-    class SourceBufferList;
+    class SharedWorkerGlobalScope;
     class TextTrack;
     class TextTrackCue;
     class VideoTrackList;
@@ -78,16 +77,16 @@ namespace WebCore {
     typedef int ExceptionCode;
 
     struct FiringEventIterator {
-        FiringEventIterator(const AtomicString& eventType, size_t& iterator, size_t& end)
+        FiringEventIterator(const AtomicString& eventType, size_t& iterator, size_t& size)
             : eventType(eventType)
             , iterator(iterator)
-            , end(end)
+            , size(size)
         {
         }
 
         const AtomicString& eventType;
         size_t& iterator;
-        size_t& end;
+        size_t& size;
     };
     typedef Vector<FiringEventIterator, 1> FiringEventIteratorVector;
 
@@ -101,16 +100,25 @@ namespace WebCore {
         OwnPtr<FiringEventIteratorVector> firingEventIterators;
     };
 
+    enum EventTargetInterface {
+
+    #define DOM_EVENT_INTERFACE_DECLARE(name) name##EventTargetInterfaceType,
+    DOM_EVENT_TARGET_INTERFACES_FOR_EACH(DOM_EVENT_INTERFACE_DECLARE)
+    #undef DOM_EVENT_INTERFACE_DECLARE
+
+    };
+
     class EventTarget {
     public:
         void ref() { refEventTarget(); }
         void deref() { derefEventTarget(); }
 
-        virtual const AtomicString& interfaceName() const = 0;
+        virtual EventTargetInterface eventTargetInterface() const = 0;
         virtual ScriptExecutionContext* scriptExecutionContext() const = 0;
 
         virtual Node* toNode();
         virtual DOMWindow* toDOMWindow();
+        virtual bool isMessagePort() const;
 
         virtual bool addEventListener(const AtomicString& eventType, PassRefPtr<EventListener>, bool useCapture);
         virtual bool removeEventListener(const AtomicString& eventType, EventListener*, bool useCapture);
@@ -124,7 +132,7 @@ namespace WebCore {
         bool clearAttributeEventListener(const AtomicString& eventType);
         EventListener* getAttributeEventListener(const AtomicString& eventType);
 
-        bool hasEventListeners();
+        bool hasEventListeners() const;
         bool hasEventListeners(const AtomicString& eventType);
         bool hasCapturingEventListeners(const AtomicString& eventType);
         const EventListenerVector& getEventListeners(const AtomicString& eventType);
@@ -139,15 +147,24 @@ namespace WebCore {
         virtual ~EventTarget();
         
         virtual EventTargetData* eventTargetData() = 0;
-        virtual EventTargetData* ensureEventTargetData() = 0;
+        virtual EventTargetData& ensureEventTargetData() = 0;
 
     private:
         virtual void refEventTarget() = 0;
         virtual void derefEventTarget() = 0;
         
         void fireEventListeners(Event*, EventTargetData*, EventListenerVector&);
+        void setupLegacyTypeObserverIfNeeded(const AtomicString& legacyTypeName, bool hasLegacyTypeListeners, bool hasNewTypeListeners);
 
         friend class EventListenerIterator;
+    };
+
+    class EventTargetWithInlineData : public EventTarget {
+    protected:
+        virtual EventTargetData* eventTargetData() override final { return &m_eventTargetData; }
+        virtual EventTargetData& ensureEventTargetData() override final { return m_eventTargetData; }
+    private:
+        EventTargetData m_eventTargetData;
     };
 
     // FIXME: These macros should be split into separate DEFINE and DECLARE
@@ -165,16 +182,20 @@ namespace WebCore {
         void type::setOn##attribute(PassRefPtr<EventListener> listener) { setAttributeEventListener(eventNames().attribute##Event, listener); } \
 
     #define DEFINE_WINDOW_ATTRIBUTE_EVENT_LISTENER(attribute) \
-        EventListener* on##attribute() { return document()->getWindowAttributeEventListener(eventNames().attribute##Event); } \
-        void setOn##attribute(PassRefPtr<EventListener> listener) { document()->setWindowAttributeEventListener(eventNames().attribute##Event, listener); } \
+        EventListener* on##attribute() { return document().getWindowAttributeEventListener(eventNames().attribute##Event); } \
+        void setOn##attribute(PassRefPtr<EventListener> listener) { document().setWindowAttributeEventListener(eventNames().attribute##Event, listener); } \
 
     #define DEFINE_MAPPED_ATTRIBUTE_EVENT_LISTENER(attribute, eventName) \
         EventListener* on##attribute() { return getAttributeEventListener(eventNames().eventName##Event); } \
         void setOn##attribute(PassRefPtr<EventListener> listener) { setAttributeEventListener(eventNames().eventName##Event, listener); } \
 
-    #define DEFINE_FORWARDING_ATTRIBUTE_EVENT_LISTENER(recipient, attribute) \
-        EventListener* on##attribute() { return recipient ? recipient->getAttributeEventListener(eventNames().attribute##Event) : 0; } \
-        void setOn##attribute(PassRefPtr<EventListener> listener) { if (recipient) recipient->setAttributeEventListener(eventNames().attribute##Event, listener); } \
+    #define DECLARE_FORWARDING_ATTRIBUTE_EVENT_LISTENER(recipient, attribute) \
+        EventListener* on##attribute(); \
+        void setOn##attribute(PassRefPtr<EventListener> listener);
+
+    #define DEFINE_FORWARDING_ATTRIBUTE_EVENT_LISTENER(type, recipient, attribute) \
+        EventListener* type::on##attribute() { return recipient ? recipient->getAttributeEventListener(eventNames().attribute##Event) : 0; } \
+        void type::setOn##attribute(PassRefPtr<EventListener> listener) { if (recipient) recipient->setAttributeEventListener(eventNames().attribute##Event, listener); }
 
     inline void EventTarget::visitJSEventListeners(JSC::SlotVisitor& visitor)
     {
@@ -191,9 +212,9 @@ namespace WebCore {
         return d->firingEventIterators && !d->firingEventIterators->isEmpty();
     }
 
-    inline bool EventTarget::hasEventListeners()
+    inline bool EventTarget::hasEventListeners() const
     {
-        EventTargetData* d = eventTargetData();
+        EventTargetData* d = const_cast<EventTarget*>(this)->eventTargetData();
         if (!d)
             return false;
         return !d->eventListenerMap.isEmpty();

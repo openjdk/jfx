@@ -63,12 +63,9 @@ String CachedXSLStyleSheet::encoding() const
     return m_decoder->encoding().name();
 }
 
-void CachedXSLStyleSheet::data(PassRefPtr<ResourceBuffer> data, bool allDataReceived)
+void CachedXSLStyleSheet::finishLoading(ResourceBuffer* data)
 {
-    if (!allDataReceived)
-        return;
-
-    m_data = data;     
+    m_data = data;
     setEncodedSize(m_data.get() ? m_data->size() : 0);
     if (m_data.get()) {
         m_sheet = m_decoder->decode(m_data->data(), encodedSize());

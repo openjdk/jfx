@@ -17,12 +17,13 @@
 #include "ResourceResponse.h"
 #include "Widget.h"
 #include "PluginWidgetJava.h"
+#include "ProgressTrackerClient.h"
 
 #include "JavaEnv.h"
 
 namespace WebCore {
 
-    class FrameLoaderClientJava : public FrameLoaderClient {
+    class FrameLoaderClientJava : public FrameLoaderClient, public ProgressTrackerClient {
     public:
         FrameLoaderClientJava(const JLObject &webPage);
         virtual void frameLoaderDestroyed();
@@ -65,7 +66,7 @@ namespace WebCore {
         virtual void dispatchDidChangeBackForwardIndex() const;
         virtual void dispatchDidReceiveServerRedirectForProvisionalLoad();
         virtual void dispatchDidCancelClientRedirect();
-        virtual void dispatchWillPerformClientRedirect(const KURL&, double, double);
+        virtual void dispatchWillPerformClientRedirect(const URL&, double, double);
         virtual void dispatchDidChangeLocationWithinPage();
         virtual void dispatchWillClose();
         virtual void dispatchDidReceiveIcon();
@@ -79,20 +80,20 @@ namespace WebCore {
         virtual void dispatchDidFinishLoad();
         virtual void dispatchDidFirstLayout();
         virtual void dispatchDidFirstVisuallyNonEmptyLayout();
-        virtual void dispatchDidClearWindowObjectInWorld(WebCore::DOMWrapperWorld *);
+        virtual void dispatchDidClearWindowObjectInWorld(WebCore::DOMWrapperWorld&);
 
         virtual Frame* dispatchCreatePage(const NavigationAction&);
         virtual void dispatchShow();
 
-        virtual void dispatchDecidePolicyForResponse(FramePolicyFunction, const ResourceResponse&, const ResourceRequest&);
-        virtual void dispatchDecidePolicyForNewWindowAction(FramePolicyFunction, const NavigationAction&, const ResourceRequest&, PassRefPtr<FormState>, const String&);
-        virtual void dispatchDecidePolicyForNavigationAction(FramePolicyFunction, const NavigationAction&, const ResourceRequest&, PassRefPtr<FormState>);
+        virtual void dispatchDecidePolicyForResponse(const ResourceResponse&, const ResourceRequest&, FramePolicyFunction);
+        virtual void dispatchDecidePolicyForNewWindowAction(const NavigationAction&, const ResourceRequest&, PassRefPtr<FormState>, const String&, FramePolicyFunction);
+        virtual void dispatchDecidePolicyForNavigationAction(const NavigationAction&, const ResourceRequest&, PassRefPtr<FormState>, FramePolicyFunction);
         virtual void cancelPolicyCheck();
 
         virtual void dispatchUnableToImplementPolicy(const ResourceError&);
 
         virtual void dispatchWillSendSubmitEvent(PassRefPtr<FormState>) {};
-        virtual void dispatchWillSubmitForm(FramePolicyFunction, PassRefPtr<FormState>);
+        virtual void dispatchWillSubmitForm(PassRefPtr<FormState>, FramePolicyFunction);
 
         virtual void dispatchDidLoadMainResource(DocumentLoader*);
 
@@ -102,19 +103,21 @@ namespace WebCore {
         virtual void setMainDocumentError(DocumentLoader*, const ResourceError&);
         virtual void clearUnarchivingState(DocumentLoader*);
 
-        virtual void postProgressStartedNotification();
-        virtual void postProgressEstimateChangedNotification();
-        virtual void postProgressFinishedNotification();
+        // ProgressTrackerClient methods
+        virtual void progressStarted(Frame& originatingProgressFrame);
+        virtual void progressEstimateChanged(Frame& originatingProgressFrame);
+        virtual void progressFinished(Frame& originatingProgressFrame);
+        virtual void progressTrackerDestroyed();
 
-        virtual PassRefPtr<Frame> createFrame(const KURL& url, const String& name, HTMLFrameOwnerElement* ownerElement,
+        virtual PassRefPtr<Frame> createFrame(const URL& url, const String& name, HTMLFrameOwnerElement* ownerElement,
                                    const String& referrer, bool allowsScrolling, int marginWidth, int marginHeight);
-        virtual PassRefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement*, const KURL&, const Vector<String>&, const Vector<String>&, const String&, bool loadManually);
+        virtual PassRefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement*, const URL&, const Vector<String>&, const Vector<String>&, const String&, bool loadManually);
         virtual void recreatePlugin(Widget*) { }
         virtual void redirectDataToPlugin(Widget* pluginWidget);
-        virtual PassRefPtr<Widget> createJavaAppletWidget(const IntSize&, HTMLAppletElement*, const KURL& baseURL, const Vector<String>& paramNames, const Vector<String>& paramValues);
+        virtual PassRefPtr<Widget> createJavaAppletWidget(const IntSize&, HTMLAppletElement*, const URL& baseURL, const Vector<String>& paramNames, const Vector<String>& paramValues);
         virtual String overrideMediaType() const;
 
-        virtual ObjectContentType objectContentType(const KURL&, const String& mimeType, bool shouldPreferPlugInsForImages);
+        virtual ObjectContentType objectContentType(const URL&, const String& mimeType, bool shouldPreferPlugInsForImages);
 
         virtual void setMainFrameDocumentReady(bool);
 
@@ -144,8 +147,8 @@ namespace WebCore {
         // The indicated security origin has run active content (such as a
         // script) from an insecure source.  Note that the insecure content can
         // spread to other frames in the same origin.
-        virtual void didRunInsecureContent(SecurityOrigin*, const KURL&);
-        virtual void didDetectXSS(const KURL&, bool);
+        virtual void didRunInsecureContent(SecurityOrigin*, const URL&);
+        virtual void didDetectXSS(const URL&, bool);
 
         virtual ResourceError cancelledError(const ResourceRequest&);
         virtual ResourceError blockedError(const ResourceRequest&);
@@ -178,9 +181,9 @@ namespace WebCore {
         virtual void prepareForDataSourceReplacement();
 
         virtual PassRefPtr<DocumentLoader> createDocumentLoader(const ResourceRequest&, const SubstituteData&);
-        virtual void setTitle(const StringWithDirection& title, const KURL&);
+        virtual void setTitle(const StringWithDirection& title, const URL&);
 
-        virtual String userAgent(const KURL&);
+        virtual String userAgent(const URL&);
 
         virtual void savePlatformDataToCachedFrame(CachedFrame*);
         virtual void transitionToCommittedFromCachedFrame(CachedFrame*);
@@ -212,6 +215,8 @@ namespace WebCore {
         int mainResourceRequestID;
         bool m_isPageRedirected;
         bool m_hasRepresentation;
+        bool m_FrameLoaderClientDestroyed;
+        bool m_ProgressTrackerClientDestroyed;
 
         JGObject m_webPage;
 
@@ -223,6 +228,8 @@ namespace WebCore {
 
         void postLoadEvent(Frame* f, int state, String url, String contentType, double progress, int errorCode = 0);
         void postResourceLoadEvent(Frame* f, int state, int id, String contentType, double progress, int errorCode = 0);
+
+        void destroyIfNeeded();
 
         // Plugin widget for handling data redirection
 //        PluginWidgetJava* m_pluginWidget;

@@ -56,11 +56,9 @@ AccessibilityOrientation AccessibilitySlider::orientation() const
     if (!m_renderer)
         return AccessibilityOrientationHorizontal;
     
-    RenderStyle* style = m_renderer->style();
-    if (!style)
-        return AccessibilityOrientationHorizontal;
-    
-    ControlPart styleAppearance = style->appearance();
+    const RenderStyle& style = m_renderer->style();
+
+    ControlPart styleAppearance = style.appearance();
     switch (styleAppearance) {
     case SliderThumbHorizontalPart:
     case SliderHorizontalPart:
@@ -84,9 +82,9 @@ void AccessibilitySlider::addChildren()
     
     m_haveChildren = true;
 
-    AXObjectCache* cache = m_renderer->document()->axObjectCache();
+    AXObjectCache* cache = m_renderer->document().axObjectCache();
 
-    AccessibilitySliderThumb* thumb = static_cast<AccessibilitySliderThumb*>(cache->getOrCreate(SliderThumbRole));
+    AccessibilitySliderThumb* thumb = toAccessibilitySliderThumb(cache->getOrCreate(SliderThumbRole));
     thumb->setParent(this);
 
     // Before actually adding the value indicator to the hierarchy,
@@ -99,7 +97,7 @@ void AccessibilitySlider::addChildren()
 
 const AtomicString& AccessibilitySlider::getAttribute(const QualifiedName& attribute) const
 {
-    return element()->getAttribute(attribute);
+    return inputElement()->getAttribute(attribute);
 }
     
 AccessibilityObject* AccessibilitySlider::elementAccessibilityHitTest(const IntPoint& point) const
@@ -115,22 +113,22 @@ AccessibilityObject* AccessibilitySlider::elementAccessibilityHitTest(const IntP
 
 float AccessibilitySlider::valueForRange() const
 {
-    return element()->value().toFloat();
+    return inputElement()->value().toFloat();
 }
 
 float AccessibilitySlider::maxValueForRange() const
 {
-    return static_cast<float>(element()->maximum());
+    return static_cast<float>(inputElement()->maximum());
 }
 
 float AccessibilitySlider::minValueForRange() const
 {
-    return static_cast<float>(element()->minimum());
+    return static_cast<float>(inputElement()->minimum());
 }
 
 void AccessibilitySlider::setValue(const String& value)
 {
-    HTMLInputElement* input = element();
+    HTMLInputElement* input = inputElement();
     
     if (input->value() == value)
         return;
@@ -141,9 +139,9 @@ void AccessibilitySlider::setValue(const String& value)
     input->dispatchFormControlChangeEvent();
 }
 
-HTMLInputElement* AccessibilitySlider::element() const
+HTMLInputElement* AccessibilitySlider::inputElement() const
 {
-    return static_cast<HTMLInputElement*>(m_renderer->node());
+    return toHTMLInputElement(m_renderer->node());
 }
 
 
@@ -164,7 +162,7 @@ LayoutRect AccessibilitySliderThumb::elementRect() const
     RenderObject* sliderRenderer = m_parent->renderer();
     if (!sliderRenderer || !sliderRenderer->isSlider())
         return LayoutRect();
-    return sliderThumbElementOf(sliderRenderer->node())->boundingBox();
+    return toHTMLInputElement(sliderRenderer->node())->sliderThumbElement()->boundingBox();
 }
 
 bool AccessibilitySliderThumb::computeAccessibilityIsIgnored() const

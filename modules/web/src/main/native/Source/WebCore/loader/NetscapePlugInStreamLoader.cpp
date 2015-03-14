@@ -32,11 +32,12 @@
 #include "DocumentLoader.h"
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
+#include <wtf/Ref.h>
 
 namespace WebCore {
 
 NetscapePlugInStreamLoader::NetscapePlugInStreamLoader(Frame* frame, NetscapePlugInStreamLoaderClient* client)
-    : ResourceLoader(frame, ResourceLoaderOptions(SendCallbacks, SniffContent, DoNotBufferData, AllowStoredCredentials, AskClientForAllCredentials, SkipSecurityCheck))
+    : ResourceLoader(frame, ResourceLoaderOptions(SendCallbacks, SniffContent, DoNotBufferData, AllowStoredCredentials, AskClientForAllCredentials, SkipSecurityCheck, UseDefaultOriginRestrictionsForType))
     , m_client(client)
 {
 }
@@ -68,7 +69,7 @@ void NetscapePlugInStreamLoader::releaseResources()
 
 void NetscapePlugInStreamLoader::didReceiveResponse(const ResourceResponse& response)
 {
-    RefPtr<NetscapePlugInStreamLoader> protect(this);
+    Ref<NetscapePlugInStreamLoader> protect(*this);
 
     m_client->didReceiveResponse(this, response);
 
@@ -90,10 +91,10 @@ void NetscapePlugInStreamLoader::didReceiveResponse(const ResourceResponse& resp
 
     // Status code can be null when serving from a Web archive.
     if (response.httpStatusCode() && (response.httpStatusCode() < 100 || response.httpStatusCode() >= 400))
-        cancel(frameLoader()->client()->fileDoesNotExistError(response));
+        cancel(frameLoader()->client().fileDoesNotExistError(response));
 }
 
-void NetscapePlugInStreamLoader::didReceiveData(const char* data, int length, long long encodedDataLength, DataPayloadType dataPayloadType)
+void NetscapePlugInStreamLoader::didReceiveData(const char* data, unsigned length, long long encodedDataLength, DataPayloadType dataPayloadType)
 {
     didReceiveDataOrBuffer(data, length, 0, encodedDataLength, dataPayloadType);
 }
@@ -105,16 +106,16 @@ void NetscapePlugInStreamLoader::didReceiveBuffer(PassRefPtr<SharedBuffer> buffe
 
 void NetscapePlugInStreamLoader::didReceiveDataOrBuffer(const char* data, int length, PassRefPtr<SharedBuffer> buffer, long long encodedDataLength, DataPayloadType dataPayloadType)
 {
-    RefPtr<NetscapePlugInStreamLoader> protect(this);
-
-    m_client->didReceiveData(this, buffer ? buffer->data() : data, buffer ? buffer->size() : length);
+    Ref<NetscapePlugInStreamLoader> protect(*this);
     
+    m_client->didReceiveData(this, buffer ? buffer->data() : data, buffer ? buffer->size() : length);
+
     ResourceLoader::didReceiveDataOrBuffer(data, length, buffer, encodedDataLength, dataPayloadType);
 }
 
 void NetscapePlugInStreamLoader::didFinishLoading(double finishTime)
 {
-    RefPtr<NetscapePlugInStreamLoader> protect(this);
+    Ref<NetscapePlugInStreamLoader> protect(*this);
 
     m_documentLoader->removePlugInStreamLoader(this);
     m_client->didFinishLoading(this);
@@ -123,7 +124,7 @@ void NetscapePlugInStreamLoader::didFinishLoading(double finishTime)
 
 void NetscapePlugInStreamLoader::didFail(const ResourceError& error)
 {
-    RefPtr<NetscapePlugInStreamLoader> protect(this);
+    Ref<NetscapePlugInStreamLoader> protect(*this);
 
     m_documentLoader->removePlugInStreamLoader(this);
     m_client->didFail(this, error);

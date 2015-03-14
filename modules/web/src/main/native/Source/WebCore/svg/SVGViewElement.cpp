@@ -19,8 +19,6 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SVG)
 #include "SVGViewElement.h"
 
 #include "Attribute.h"
@@ -40,11 +38,11 @@ BEGIN_REGISTER_ANIMATED_PROPERTIES(SVGViewElement)
     REGISTER_LOCAL_ANIMATED_PROPERTY(externalResourcesRequired)
     REGISTER_LOCAL_ANIMATED_PROPERTY(viewBox)
     REGISTER_LOCAL_ANIMATED_PROPERTY(preserveAspectRatio)
-    REGISTER_PARENT_ANIMATED_PROPERTIES(SVGStyledElement)
+    REGISTER_PARENT_ANIMATED_PROPERTIES(SVGElement)
 END_REGISTER_ANIMATED_PROPERTIES
 
-inline SVGViewElement::SVGViewElement(const QualifiedName& tagName, Document* document)
-    : SVGStyledElement(tagName, document)
+inline SVGViewElement::SVGViewElement(const QualifiedName& tagName, Document& document)
+    : SVGElement(tagName, document)
     , m_zoomAndPan(SVGZoomAndPanMagnify)
     , m_viewTarget(SVGNames::viewTargetAttr)
 {
@@ -52,7 +50,7 @@ inline SVGViewElement::SVGViewElement(const QualifiedName& tagName, Document* do
     registerAnimatedPropertiesForSVGViewElement();
 }
 
-PassRefPtr<SVGViewElement> SVGViewElement::create(const QualifiedName& tagName, Document* document)
+PassRefPtr<SVGViewElement> SVGViewElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(new SVGViewElement(tagName, document));
 }
@@ -66,13 +64,13 @@ bool SVGViewElement::isSupportedAttribute(const QualifiedName& attrName)
         SVGZoomAndPan::addSupportedAttributes(supportedAttributes);
         supportedAttributes.add(SVGNames::viewTargetAttr);
     }
-    return supportedAttributes.contains<QualifiedName, SVGAttributeHashTranslator>(attrName);
+    return supportedAttributes.contains<SVGAttributeHashTranslator>(attrName);
 }
 
 void SVGViewElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
     if (!isSupportedAttribute(name)) {
-        SVGStyledElement::parseAttribute(name, value);
+        SVGElement::parseAttribute(name, value);
         return;
     }
 
@@ -92,5 +90,3 @@ void SVGViewElement::parseAttribute(const QualifiedName& name, const AtomicStrin
 }
 
 }
-
-#endif // ENABLE(SVG)

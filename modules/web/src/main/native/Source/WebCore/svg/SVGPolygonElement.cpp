@@ -19,24 +19,21 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SVG)
 #include "SVGPolygonElement.h"
+
 #include "SVGNames.h"
 
 namespace WebCore {
 
-inline SVGPolygonElement::SVGPolygonElement(const QualifiedName& tagName, Document* document)
+inline SVGPolygonElement::SVGPolygonElement(const QualifiedName& tagName, Document& document)
     : SVGPolyElement(tagName, document)
 {
     ASSERT(hasTagName(SVGNames::polygonTag));
 }
 
-PassRefPtr<SVGPolygonElement> SVGPolygonElement::create(const QualifiedName& tagName, Document* document)
+PassRefPtr<SVGPolygonElement> SVGPolygonElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(new SVGPolygonElement(tagName, document));
 }
 
 }
-
-#endif // ENABLE(SVG)

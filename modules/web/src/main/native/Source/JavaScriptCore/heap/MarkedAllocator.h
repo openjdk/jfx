@@ -22,11 +22,18 @@ public:
 
     MarkedAllocator();
     void reset();
-    void canonicalizeCellLivenessData();
+    void stopAllocating();
+    void resumeAllocating();
     size_t cellSize() { return m_cellSize; }
     MarkedBlock::DestructorType destructorType() { return m_destructorType; }
     void* allocate(size_t);
     Heap* heap() { return m_heap; }
+    MarkedBlock* takeLastActiveBlock()
+    {
+        MarkedBlock* block = m_lastActiveBlock;
+        m_lastActiveBlock = 0;
+        return block;
+    }
     
     template<typename Functor> void forEachBlock(Functor&);
     
@@ -40,11 +47,14 @@ private:
     JS_EXPORT_PRIVATE void* allocateSlowCase(size_t);
     void* tryAllocate(size_t);
     void* tryAllocateHelper(size_t);
+    void* tryPopFreeList(size_t);
     MarkedBlock* allocateBlock(size_t);
     
     MarkedBlock::FreeList m_freeList;
     MarkedBlock* m_currentBlock;
-    MarkedBlock* m_blocksToSweep;
+    MarkedBlock* m_lastActiveBlock;
+    MarkedBlock* m_nextBlockToSweep;
+    MarkedBlock* m_lastFullBlock;
     DoublyLinkedList<MarkedBlock> m_blockList;
     size_t m_cellSize;
     MarkedBlock::DestructorType m_destructorType;
@@ -59,7 +69,9 @@ inline ptrdiff_t MarkedAllocator::offsetOfFreeListHead()
 
 inline MarkedAllocator::MarkedAllocator()
     : m_currentBlock(0)
-    , m_blocksToSweep(0)
+    , m_lastActiveBlock(0)
+    , m_nextBlockToSweep(0)
+    , m_lastFullBlock(0)
     , m_cellSize(0)
     , m_destructorType(MarkedBlock::None)
     , m_heap(0)
@@ -93,23 +105,28 @@ inline void* MarkedAllocator::allocate(size_t bytes)
     return head;
 }
 
-inline void MarkedAllocator::reset()
+inline void MarkedAllocator::stopAllocating()
 {
-    m_currentBlock = 0;
-    m_freeList = MarkedBlock::FreeList();
-    m_blocksToSweep = m_blockList.head();
-}
-
-inline void MarkedAllocator::canonicalizeCellLivenessData()
-{
+    ASSERT(!m_lastActiveBlock);
     if (!m_currentBlock) {
         ASSERT(!m_freeList.head);
         return;
     }
     
-    m_currentBlock->canonicalizeCellLivenessData(m_freeList);
+    m_currentBlock->stopAllocating(m_freeList);
+    m_lastActiveBlock = m_currentBlock;
     m_currentBlock = 0;
     m_freeList = MarkedBlock::FreeList();
+}
+
+inline void MarkedAllocator::resumeAllocating()
+{
+    if (!m_lastActiveBlock)
+        return;
+
+    m_freeList = m_lastActiveBlock->resumeAllocating();
+    m_currentBlock = m_lastActiveBlock;
+    m_lastActiveBlock = 0;
 }
 
 template <typename Functor> inline void MarkedAllocator::forEachBlock(Functor& functor)
@@ -120,7 +137,7 @@ template <typename Functor> inline void MarkedAllocator::forEachBlock(Functor& f
         functor(block);
     }
 }
-    
+
 } // namespace JSC
 
 #endif

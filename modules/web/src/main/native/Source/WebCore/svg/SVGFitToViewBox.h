@@ -21,8 +21,6 @@
 #ifndef SVGFitToViewBox_h
 #define SVGFitToViewBox_h
 
-#if ENABLE(SVG)
-#include "Attribute.h"
 #include "FloatRect.h"
 #include "QualifiedName.h"
 #include "SVGNames.h"
@@ -45,10 +43,9 @@ public:
     static bool parseAttribute(SVGElementTarget* target, const QualifiedName& name, const AtomicString& value)
     {
         ASSERT(target);
-        ASSERT(target->document());
         if (name == SVGNames::viewBoxAttr) {
             FloatRect viewBox;
-            bool valueIsValid = !value.isNull() && parseViewBox(target->document(), value, viewBox);
+            bool valueIsValid = !value.isNull() && parseViewBox(&target->document(), value, viewBox);
             target->setViewBoxBaseValue(viewBox, valueIsValid);
             return true;
         }
@@ -71,5 +68,4 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(SVG)
 #endif // SVGFitToViewBox_h

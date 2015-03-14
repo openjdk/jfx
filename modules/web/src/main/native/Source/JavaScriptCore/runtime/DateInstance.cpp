@@ -24,7 +24,7 @@
 
 #include "JSDateMath.h"
 #include "JSGlobalObject.h"
-#include "Operations.h"
+#include "JSCInlines.h"
 #include <math.h>
 #include <wtf/MathExtras.h>
 
@@ -34,22 +34,22 @@ namespace JSC {
 
 const ClassInfo DateInstance::s_info = {"Date", &JSWrapperObject::s_info, 0, 0, CREATE_METHOD_TABLE(DateInstance)};
 
-DateInstance::DateInstance(ExecState* exec, Structure* structure)
-    : JSWrapperObject(exec->vm(), structure)
+DateInstance::DateInstance(VM& vm, Structure* structure)
+    : JSWrapperObject(vm, structure)
 {
 }
 
 void DateInstance::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(&s_info));
+    ASSERT(inherits(info()));
     setInternalValue(vm, jsNaN());
 }
 
 void DateInstance::finishCreation(VM& vm, double time)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(&s_info));
+    ASSERT(inherits(info()));
     setInternalValue(vm, jsNumber(timeClip(time)));
 }
 
@@ -64,11 +64,12 @@ const GregorianDateTime* DateInstance::calculateGregorianDateTime(ExecState* exe
     if (std::isnan(milli))
         return 0;
 
+    VM& vm = exec->vm();
     if (!m_data)
-        m_data = exec->vm().dateInstanceCache.add(milli);
+        m_data = vm.dateInstanceCache.add(milli);
 
     if (m_data->m_gregorianDateTimeCachedForMS != milli) {
-        msToGregorianDateTime(exec, milli, false, m_data->m_cachedGregorianDateTime);
+        msToGregorianDateTime(vm, milli, false, m_data->m_cachedGregorianDateTime);
         m_data->m_gregorianDateTimeCachedForMS = milli;
     }
     return &m_data->m_cachedGregorianDateTime;
@@ -80,11 +81,12 @@ const GregorianDateTime* DateInstance::calculateGregorianDateTimeUTC(ExecState* 
     if (std::isnan(milli))
         return 0;
 
+    VM& vm = exec->vm();
     if (!m_data)
-        m_data = exec->vm().dateInstanceCache.add(milli);
+        m_data = vm.dateInstanceCache.add(milli);
 
     if (m_data->m_gregorianDateTimeUTCCachedForMS != milli) {
-        msToGregorianDateTime(exec, milli, true, m_data->m_cachedGregorianDateTimeUTC);
+        msToGregorianDateTime(vm, milli, true, m_data->m_cachedGregorianDateTimeUTC);
         m_data->m_gregorianDateTimeUTCCachedForMS = milli;
     }
     return &m_data->m_cachedGregorianDateTimeUTC;

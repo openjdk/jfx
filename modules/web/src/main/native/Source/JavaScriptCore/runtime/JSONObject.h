@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
 #ifndef JSONObject_h
@@ -36,33 +36,35 @@ namespace JSC {
     public:
         typedef JSNonFinalObject Base;
 
-        static JSONObject* create(ExecState* exec, JSGlobalObject* globalObject, Structure* structure)
+        static JSONObject* create(VM& vm, Structure* structure)
         {
-            JSONObject* object = new (NotNull, allocateCell<JSONObject>(*exec->heap())) JSONObject(globalObject, structure);
-            object->finishCreation(globalObject);
+            JSONObject* object = new (NotNull, allocateCell<JSONObject>(vm.heap)) JSONObject(vm, structure);
+            object->finishCreation(vm);
             return object;
         }
-
+        
         static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
         {
-            return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), &s_info);
+            return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
         }
-
-        static const ClassInfo s_info;
+        
+        DECLARE_INFO;
 
     protected:
-        void finishCreation(JSGlobalObject*);
+        void finishCreation(VM&);
         static const unsigned StructureFlags = OverridesGetOwnPropertySlot | JSObject::StructureFlags;
 
     private:
-        JSONObject(JSGlobalObject*, Structure*);
-        static bool getOwnPropertySlot(JSCell*, ExecState*, PropertyName, PropertySlot&);
-        static bool getOwnPropertyDescriptor(JSObject*, ExecState*, PropertyName, PropertyDescriptor&);
+        JSONObject(VM&, Structure*);
+        static bool getOwnPropertySlot(JSObject*, ExecState*, PropertyName, PropertySlot&);
 
     };
 
-    String JSONStringify(ExecState*, JSValue, unsigned indent);
+    JS_EXPORT_PRIVATE JSValue JSONParse(ExecState*, const String&);
+    JS_EXPORT_PRIVATE String JSONStringify(ExecState*, JSValue, unsigned indent);
 
+    void escapeStringToBuilder(StringBuilder&, const String&);
+    
 } // namespace JSC
 
 #endif // JSONObject_h

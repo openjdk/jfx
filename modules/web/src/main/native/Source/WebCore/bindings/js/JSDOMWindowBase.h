@@ -45,17 +45,17 @@ namespace WebCore {
     public:
         void updateDocument();
 
-        DOMWindow* impl() const { return m_impl.get(); }
+        DOMWindow& impl() const { return *m_impl; }
         ScriptExecutionContext* scriptExecutionContext() const;
 
         // Called just before removing this window from the JSDOMWindowShell.
         void willRemoveFromWindowShell();
 
-        static const JSC::ClassInfo s_info;
+        DECLARE_INFO;
 
         static JSC::Structure* createStructure(JSC::VM& vm, JSC::JSValue prototype)
         {
-            return JSC::Structure::create(vm, 0, prototype, JSC::TypeInfo(JSC::GlobalObjectType, StructureFlags), &s_info);
+            return JSC::Structure::create(vm, 0, prototype, JSC::TypeInfo(JSC::GlobalObjectType, StructureFlags), info());
         }
 
         static const JSC::GlobalObjectMethodTable s_globalObjectMethodTable;
@@ -63,12 +63,19 @@ namespace WebCore {
         static bool supportsProfiling(const JSC::JSGlobalObject*);
         static bool supportsRichSourceInfo(const JSC::JSGlobalObject*);
         static bool shouldInterruptScript(const JSC::JSGlobalObject*);
+        static bool shouldInterruptScriptBeforeTimeout(const JSC::JSGlobalObject*);
         static bool javaScriptExperimentsEnabled(const JSC::JSGlobalObject*);
+        static void queueTaskToEventLoop(const JSC::JSGlobalObject*, PassRefPtr<JSC::Microtask>);
+        
         void printErrorMessage(const String&) const;
 
         JSDOMWindowShell* shell() const;
 
         static JSC::VM* commonVM();
+#if PLATFORM(IOS)
+        static bool commonVMExists();
+        static JSC::VM*& commonVMInternal();
+#endif
 
     private:
         RefPtr<DOMWindow> m_impl;
@@ -82,7 +89,7 @@ namespace WebCore {
     JSC::JSValue toJS(JSC::ExecState*, DOMWindow*);
 
     // Returns JSDOMWindow or 0
-    JSDOMWindow* toJSDOMWindow(Frame*, DOMWrapperWorld*);
+    JSDOMWindow* toJSDOMWindow(Frame*, DOMWrapperWorld&);
     JSDOMWindow* toJSDOMWindow(JSC::JSValue);
 
 } // namespace WebCore

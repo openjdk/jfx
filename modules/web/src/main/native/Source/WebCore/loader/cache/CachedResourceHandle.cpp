@@ -55,7 +55,7 @@ CachedResourceHandleBase::~CachedResourceHandleBase()
         m_resource->unregisterHandle(this);
 }
 
-void CachedResourceHandleBase::setResource(CachedResource* resource) 
+void CachedResourceHandleBase::setResource(CachedResource* resource)
 {
     if (resource == m_resource)
         return;

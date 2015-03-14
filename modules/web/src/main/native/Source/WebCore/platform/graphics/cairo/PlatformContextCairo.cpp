@@ -156,6 +156,10 @@ static void drawPatternToCairoContext(cairo_t* cr, cairo_pattern_t* pattern, con
 
 void PlatformContextCairo::drawSurfaceToContext(cairo_surface_t* surface, const FloatRect& destRect, const FloatRect& originalSrcRect, GraphicsContext* context)
 {
+    // Avoid invalid cairo matrix with small values.
+    if (std::fabs(destRect.width()) < 0.5f || std::fabs(destRect.height()) < 0.5f)
+        return;
+
     FloatRect srcRect = originalSrcRect;
 
     // We need to account for negative source dimensions by flipping the rectangle.
@@ -168,14 +172,23 @@ void PlatformContextCairo::drawSurfaceToContext(cairo_surface_t* surface, const 
         srcRect.setHeight(std::fabs(originalSrcRect.height()));
     }
 
-    // Cairo subsurfaces don't support floating point boundaries well, so we expand the rectangle.
-    IntRect expandedSrcRect(enclosingIntRect(srcRect));
+    RefPtr<cairo_surface_t> patternSurface = surface;
+    float leftPadding = 0;
+    float topPadding = 0;
+    if (srcRect.x() || srcRect.y() || srcRect.size() != cairoSurfaceSize(surface)) {
+        // Cairo subsurfaces don't support floating point boundaries well, so we expand the rectangle.
+        IntRect expandedSrcRect(enclosingIntRect(srcRect));
 
-    // We use a subsurface here so that we don't end up sampling outside the originalSrcRect rectangle.
-    // See https://bugs.webkit.org/show_bug.cgi?id=58309
-    RefPtr<cairo_surface_t> subsurface = adoptRef(cairo_surface_create_for_rectangle(
-        surface, expandedSrcRect.x(), expandedSrcRect.y(), expandedSrcRect.width(), expandedSrcRect.height()));
-    RefPtr<cairo_pattern_t> pattern = adoptRef(cairo_pattern_create_for_surface(subsurface.get()));
+        // We use a subsurface here so that we don't end up sampling outside the originalSrcRect rectangle.
+        // See https://bugs.webkit.org/show_bug.cgi?id=58309
+        patternSurface = adoptRef(cairo_surface_create_for_rectangle(surface, expandedSrcRect.x(),
+            expandedSrcRect.y(), expandedSrcRect.width(), expandedSrcRect.height()));
+
+        leftPadding = static_cast<float>(expandedSrcRect.x()) - floorf(srcRect.x());
+        topPadding = static_cast<float>(expandedSrcRect.y()) - floorf(srcRect.y());
+    }
+
+    RefPtr<cairo_pattern_t> pattern = adoptRef(cairo_pattern_create_for_surface(patternSurface.get()));
 
     ASSERT(m_state);
     switch (m_state->m_imageInterpolationQuality) {
@@ -199,8 +212,6 @@ void PlatformContextCairo::drawSurfaceToContext(cairo_surface_t* surface, const 
     // of the scale since the original width and height might be negative.
     float scaleX = std::fabs(srcRect.width() / destRect.width());
     float scaleY = std::fabs(srcRect.height() / destRect.height());
-    float leftPadding = static_cast<float>(expandedSrcRect.x()) - floorf(srcRect.x());
-    float topPadding = static_cast<float>(expandedSrcRect.y()) - floorf(srcRect.y());
     cairo_matrix_t matrix = { scaleX, 0, 0, scaleY, leftPadding, topPadding };
     cairo_pattern_set_matrix(pattern.get(), &matrix);
 

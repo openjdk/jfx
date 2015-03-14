@@ -28,13 +28,13 @@
 
 namespace WebCore {
 
-class HTMLHeadElement FINAL : public HTMLElement {
+class HTMLHeadElement final : public HTMLElement {
 public:
-    static PassRefPtr<HTMLHeadElement> create(Document*);
-    static PassRefPtr<HTMLHeadElement> create(const QualifiedName&, Document*);
+    static PassRefPtr<HTMLHeadElement> create(Document&);
+    static PassRefPtr<HTMLHeadElement> create(const QualifiedName&, Document&);
 
 private:
-    HTMLHeadElement(const QualifiedName&, Document*);
+    HTMLHeadElement(const QualifiedName&, Document&);
 };
 
 } // namespace

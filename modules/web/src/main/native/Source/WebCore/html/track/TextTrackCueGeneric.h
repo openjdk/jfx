@@ -29,27 +29,26 @@
 #if ENABLE(VIDEO_TRACK)
 
 #include "Color.h"
-#include "TextTrackCue.h"
-#include <wtf/RefCounted.h>
+#include "VTTCue.h"
 
 namespace WebCore {
 
 class GenericCueData;
 
 // A "generic" cue is a non-WebVTT cue, so it is not positioned/sized with the WebVTT logic.
-class TextTrackCueGeneric : public TextTrackCue {
+class TextTrackCueGeneric final : public VTTCue {
 public:
-    static PassRefPtr<TextTrackCueGeneric> create(ScriptExecutionContext* context, double start, double end, const String& content)
+    static PassRefPtr<TextTrackCueGeneric> create(ScriptExecutionContext& context, double start, double end, const String& content)
     {
         return adoptRef(new TextTrackCueGeneric(context, start, end, content));
     }
     
     virtual ~TextTrackCueGeneric() { }
 
-    virtual PassRefPtr<TextTrackCueBox> createDisplayTree() OVERRIDE;
+    virtual PassRefPtr<VTTCueBox> createDisplayTree() override;
 
-    virtual void setLine(int, ExceptionCode&) OVERRIDE;
-    virtual void setPosition(int, ExceptionCode&) OVERRIDE;
+    virtual void setLine(int, ExceptionCode&) override;
+    virtual void setPosition(int, ExceptionCode&) override;
 
     bool useDefaultPosition() const { return m_defaultPosition; }
     
@@ -71,16 +70,16 @@ public:
     Color highlightColor() const { return m_highlightColor; }
     void setHighlightColor(RGBA32 color) { m_highlightColor.setRGB(color); }
     
-    virtual void setFontSize(int, const IntSize&, bool important) OVERRIDE;
+    virtual void setFontSize(int, const IntSize&, bool important) override;
 
-    virtual bool isEqual(const TextTrackCue&, CueMatchRules) const OVERRIDE;
+    virtual bool isEqual(const VTTCue&, CueMatchRules) const override;
 
-    virtual TextTrackCue::CueType cueType() const OVERRIDE { return TextTrackCue::Generic; }
+    virtual TextTrackCue::CueType cueType() const override { return TextTrackCue::Generic; }
 
 private:
-    virtual bool isOrderedBefore(const TextTrackCue*) const OVERRIDE;
+    virtual bool isOrderedBefore(const TextTrackCue*) const override;
 
-    TextTrackCueGeneric(ScriptExecutionContext*, double start, double end, const String&);
+    TextTrackCueGeneric(ScriptExecutionContext&, double start, double end, const String&);
     
     Color m_foregroundColor;
     Color m_backgroundColor;

@@ -26,13 +26,13 @@
 
 #include "FloatRect.h"
 #include "FontCache.h"
-#include "FontTranscoder.h"
 #include "IntPoint.h"
 #include "GlyphBuffer.h"
 #include "TextRun.h"
 #include "WidthIterator.h"
 #include <wtf/MainThread.h>
 #include <wtf/MathExtras.h>
+#include <wtf/text/AtomicStringHash.h>
 #include <wtf/text/StringBuilder.h>
 
 using namespace WTF;
@@ -50,6 +50,8 @@ template <> void deleteOwnedPtr<WebCore::TextLayout>(WebCore::TextLayout* ptr)
 
 namespace WebCore {
 
+static PassRef<FontGlyphs> retrieveOrAddCachedFontGlyphs(const FontDescription&, PassRefPtr<FontSelector>);
+
 const uint8_t Font::s_roundingHackCharacterTable[256] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 1 /*\t*/, 1 /*\n*/, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     1 /*space*/, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 /*-*/, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 /*?*/,
@@ -60,6 +62,36 @@ const uint8_t Font::s_roundingHackCharacterTable[256] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
+
+static bool useBackslashAsYenSignForFamily(const AtomicString& family)
+{
+    if (family.isEmpty())
+        return false;
+    static HashSet<AtomicString>* set;
+    if (!set) {
+        set = new HashSet<AtomicString>;
+        set->add("MS PGothic");
+        UChar unicodeNameMSPGothic[] = {0xFF2D, 0xFF33, 0x0020, 0xFF30, 0x30B4, 0x30B7, 0x30C3, 0x30AF};
+        set->add(AtomicString(unicodeNameMSPGothic, WTF_ARRAY_LENGTH(unicodeNameMSPGothic)));
+
+        set->add("MS PMincho");
+        UChar unicodeNameMSPMincho[] = {0xFF2D, 0xFF33, 0x0020, 0xFF30, 0x660E, 0x671D};
+        set->add(AtomicString(unicodeNameMSPMincho, WTF_ARRAY_LENGTH(unicodeNameMSPMincho)));
+
+        set->add("MS Gothic");
+        UChar unicodeNameMSGothic[] = {0xFF2D, 0xFF33, 0x0020, 0x30B4, 0x30B7, 0x30C3, 0x30AF};
+        set->add(AtomicString(unicodeNameMSGothic, WTF_ARRAY_LENGTH(unicodeNameMSGothic)));
+
+        set->add("MS Mincho");
+        UChar unicodeNameMSMincho[] = {0xFF2D, 0xFF33, 0x0020, 0x660E, 0x671D};
+        set->add(AtomicString(unicodeNameMSMincho, WTF_ARRAY_LENGTH(unicodeNameMSMincho)));
+
+        set->add("Meiryo");
+        UChar unicodeNameMeiryo[] = {0x30E1, 0x30A4, 0x30EA, 0x30AA};
+        set->add(AtomicString(unicodeNameMeiryo, WTF_ARRAY_LENGTH(unicodeNameMeiryo)));
+    }
+    return set->contains(family);
+}
 
 Font::CodePath Font::s_codePath = Auto;
 
@@ -72,37 +104,62 @@ TypesettingFeatures Font::s_defaultTypesettingFeatures = 0;
 Font::Font()
     : m_letterSpacing(0)
     , m_wordSpacing(0)
-    , m_needsTranscoding(false)
+    , m_useBackslashAsYenSymbol(false)
     , m_typesettingFeatures(0)
 {
 }
 
-Font::Font(const FontDescription& fd, short letterSpacing, short wordSpacing) 
+Font::Font(const FontDescription& fd, float letterSpacing, float wordSpacing)
     : m_fontDescription(fd)
     , m_letterSpacing(letterSpacing)
     , m_wordSpacing(wordSpacing)
-    , m_needsTranscoding(fontTranscoder().needsTranscoding(fd))
+    , m_useBackslashAsYenSymbol(useBackslashAsYenSignForFamily(fd.firstFamily()))
     , m_typesettingFeatures(computeTypesettingFeatures())
 {
 }
 
+// FIXME: We should make this constructor platform-independent.
 Font::Font(const FontPlatformData& fontData, bool isPrinterFont, FontSmoothingMode fontSmoothingMode)
+    : m_glyphs(FontGlyphs::createForPlatformFont(fontData))
+    , m_letterSpacing(0)
+    , m_wordSpacing(0)
+    , m_useBackslashAsYenSymbol(false)
+    , m_typesettingFeatures(computeTypesettingFeatures())
+{
+    m_fontDescription.setUsePrinterFont(isPrinterFont);
+    m_fontDescription.setFontSmoothing(fontSmoothingMode);
+#if PLATFORM(IOS)
+    m_fontDescription.setSpecifiedSize(CTFontGetSize(fontData.font()));
+    m_fontDescription.setComputedSize(CTFontGetSize(fontData.font()));
+    m_fontDescription.setItalic(CTFontGetSymbolicTraits(fontData.font()) & kCTFontTraitItalic);
+    m_fontDescription.setWeight((CTFontGetSymbolicTraits(fontData.font()) & kCTFontTraitBold) ? FontWeightBold : FontWeightNormal);
+#endif
+}
+
+// FIXME: We should make this constructor platform-independent.
+#if PLATFORM(IOS)
+Font::Font(const FontPlatformData& fontData, PassRefPtr<FontSelector> fontSelector)
     : m_glyphs(FontGlyphs::createForPlatformFont(fontData))
     , m_letterSpacing(0)
     , m_wordSpacing(0)
     , m_typesettingFeatures(computeTypesettingFeatures())
 {
-    m_fontDescription.setUsePrinterFont(isPrinterFont);
-    m_fontDescription.setFontSmoothing(fontSmoothingMode);
-    m_needsTranscoding = fontTranscoder().needsTranscoding(fontDescription());
+    CTFontRef primaryFont = fontData.font();
+    m_fontDescription.setSpecifiedSize(CTFontGetSize(primaryFont));
+    m_fontDescription.setComputedSize(CTFontGetSize(primaryFont));
+    m_fontDescription.setItalic(CTFontGetSymbolicTraits(primaryFont) & kCTFontTraitItalic);
+    m_fontDescription.setWeight((CTFontGetSymbolicTraits(primaryFont) & kCTFontTraitBold) ? FontWeightBold : FontWeightNormal);
+    m_fontDescription.setUsePrinterFont(fontData.isPrinterFont());
+    m_glyphs = retrieveOrAddCachedFontGlyphs(m_fontDescription, fontSelector.get());
 }
+#endif
 
 Font::Font(const Font& other)
     : m_fontDescription(other.m_fontDescription)
     , m_glyphs(other.m_glyphs)
     , m_letterSpacing(other.m_letterSpacing)
     , m_wordSpacing(other.m_wordSpacing)
-    , m_needsTranscoding(other.m_needsTranscoding)
+    , m_useBackslashAsYenSymbol(other.m_useBackslashAsYenSymbol)
     , m_typesettingFeatures(computeTypesettingFeatures())
 {
 }
@@ -113,7 +170,7 @@ Font& Font::operator=(const Font& other)
     m_glyphs = other.m_glyphs;
     m_letterSpacing = other.m_letterSpacing;
     m_wordSpacing = other.m_wordSpacing;
-    m_needsTranscoding = other.m_needsTranscoding;
+    m_useBackslashAsYenSymbol = other.m_useBackslashAsYenSymbol;
     m_typesettingFeatures = other.m_typesettingFeatures;
     return *this;
 }
@@ -124,7 +181,7 @@ bool Font::operator==(const Font& other) const
     // FIXME: This does not work if the font was made with the FontPlatformData constructor.
     if (loadingCustomFonts() || other.loadingCustomFonts())
         return false;
-    
+
     if (m_fontDescription != other.m_fontDescription || m_letterSpacing != other.m_letterSpacing || m_wordSpacing != other.m_wordSpacing)
         return false;
     if (m_glyphs == other.m_glyphs)
@@ -141,32 +198,145 @@ bool Font::operator==(const Font& other) const
     return true;
 }
 
+struct FontGlyphsCacheKey {
+    // This part of the key is shared with the lower level FontCache (caching FontData objects).
+    FontDescriptionFontDataCacheKey fontDescriptionCacheKey;
+    Vector<AtomicString, 3> families;
+    unsigned fontSelectorId;
+    unsigned fontSelectorVersion;
+    unsigned fontSelectorFlags;
+};
+
+struct FontGlyphsCacheEntry {
+    WTF_MAKE_FAST_ALLOCATED;
+public:
+    FontGlyphsCacheEntry(FontGlyphsCacheKey&& k, PassRef<FontGlyphs> g) : key(k), glyphs(std::move(g)) { }
+    FontGlyphsCacheKey key;
+    Ref<FontGlyphs> glyphs;
+};
+
+typedef HashMap<unsigned, OwnPtr<FontGlyphsCacheEntry>, AlreadyHashed> FontGlyphsCache;
+
+static bool operator==(const FontGlyphsCacheKey& a, const FontGlyphsCacheKey& b)
+{
+    if (a.fontDescriptionCacheKey != b.fontDescriptionCacheKey)
+        return false;
+    if (a.fontSelectorId != b.fontSelectorId || a.fontSelectorVersion != b.fontSelectorVersion || a.fontSelectorFlags != b.fontSelectorFlags)
+        return false;
+    if (a.families.size() != b.families.size())
+        return false;
+    for (unsigned i = 0; i < a.families.size(); ++i) {
+        if (!equalIgnoringCase(a.families[i].impl(), b.families[i].impl()))
+            return false;
+    }
+    return true;
+}
+
+static FontGlyphsCache& fontGlyphsCache()
+{
+    DEFINE_STATIC_LOCAL(FontGlyphsCache, cache, ());
+    return cache;
+}
+
+void invalidateFontGlyphsCache()
+{
+    fontGlyphsCache().clear();
+}
+
+void clearWidthCaches()
+{
+    for (auto it = fontGlyphsCache().begin(), end = fontGlyphsCache().end(); it != end; ++it)
+        it->value->glyphs.get().widthCache().clear();
+}
+
+static unsigned makeFontSelectorFlags(const FontDescription& description)
+{
+    return static_cast<unsigned>(description.script()) << 1 | static_cast<unsigned>(description.smallCaps());
+}
+
+static void makeFontGlyphsCacheKey(FontGlyphsCacheKey& key, const FontDescription& description, FontSelector* fontSelector)
+{
+    key.fontDescriptionCacheKey = FontDescriptionFontDataCacheKey(description);
+    for (unsigned i = 0; i < description.familyCount(); ++i)
+        key.families.append(description.familyAt(i));
+    key.fontSelectorId = fontSelector ? fontSelector->uniqueId() : 0;
+    key.fontSelectorVersion = fontSelector ? fontSelector->version() : 0;
+    key.fontSelectorFlags = fontSelector && fontSelector->resolvesFamilyFor(description) ? makeFontSelectorFlags(description) : 0;
+}
+
+static unsigned computeFontGlyphsCacheHash(const FontGlyphsCacheKey& key)
+{
+    Vector<unsigned, 7> hashCodes;
+    hashCodes.reserveInitialCapacity(4 + key.families.size());
+
+    hashCodes.uncheckedAppend(key.fontDescriptionCacheKey.computeHash());
+    hashCodes.uncheckedAppend(key.fontSelectorId);
+    hashCodes.uncheckedAppend(key.fontSelectorVersion);
+    hashCodes.uncheckedAppend(key.fontSelectorFlags);
+    for (unsigned i = 0; i < key.families.size(); ++i)
+        hashCodes.uncheckedAppend(key.families[i].impl() ? CaseFoldingHash::hash(key.families[i]) : 0);
+
+    return StringHasher::hashMemory(hashCodes.data(), hashCodes.size() * sizeof(unsigned));
+}
+
+void pruneUnreferencedEntriesFromFontGlyphsCache()
+{
+    Vector<unsigned, 50> toRemove;
+    FontGlyphsCache::iterator end = fontGlyphsCache().end();
+    for (FontGlyphsCache::iterator it = fontGlyphsCache().begin(); it != end; ++it) {
+        if (it->value->glyphs.get().hasOneRef())
+            toRemove.append(it->key);
+    }
+    for (unsigned i = 0; i < toRemove.size(); ++i)
+        fontGlyphsCache().remove(toRemove[i]);
+}
+
+static PassRef<FontGlyphs> retrieveOrAddCachedFontGlyphs(const FontDescription& fontDescription, PassRefPtr<FontSelector> fontSelector)
+{
+    FontGlyphsCacheKey key;
+    makeFontGlyphsCacheKey(key, fontDescription, fontSelector.get());
+
+    unsigned hash = computeFontGlyphsCacheHash(key);
+    FontGlyphsCache::AddResult addResult = fontGlyphsCache().add(hash, PassOwnPtr<FontGlyphsCacheEntry>());
+    if (!addResult.isNewEntry && addResult.iterator->value->key == key)
+        return addResult.iterator->value->glyphs.get();
+
+    OwnPtr<FontGlyphsCacheEntry>& newEntry = addResult.iterator->value;
+    newEntry = adoptPtr(new FontGlyphsCacheEntry(std::move(key), FontGlyphs::create(fontSelector)));
+    PassRef<FontGlyphs> glyphs = newEntry->glyphs.get();
+
+    static const unsigned unreferencedPruneInterval = 50;
+    static const int maximumEntries = 400;
+    static unsigned pruneCounter;
+    // Referenced FontGlyphs would exist anyway so pruning them saves little memory.
+    if (!(++pruneCounter % unreferencedPruneInterval))
+        pruneUnreferencedEntriesFromFontGlyphsCache();
+    // Prevent pathological growth.
+    if (fontGlyphsCache().size() > maximumEntries)
+        fontGlyphsCache().remove(fontGlyphsCache().begin());
+    return glyphs;
+}
+
 void Font::update(PassRefPtr<FontSelector> fontSelector) const
 {
-    // FIXME: It is pretty crazy that we are willing to just poke into a RefPtr, but it ends up 
-    // being reasonably safe (because inherited fonts in the render tree pick up the new
-    // style anyway. Other copies are transient, e.g., the state in the GraphicsContext, and
-    // won't stick around long enough to get you in trouble). Still, this is pretty disgusting,
-    // and could eventually be rectified by using RefPtrs for Fonts themselves.
-    if (!m_glyphs)
-        m_glyphs = FontGlyphs::create();
-    m_glyphs->invalidate(fontSelector);
+    m_glyphs = retrieveOrAddCachedFontGlyphs(m_fontDescription, fontSelector.get());
+    m_useBackslashAsYenSymbol = useBackslashAsYenSignForFamily(firstFamily());
     m_typesettingFeatures = computeTypesettingFeatures();
 }
 
-void Font::drawText(GraphicsContext* context, const TextRun& run, const FloatPoint& point, int from, int to, CustomFontNotReadyAction customFontNotReadyAction) const
+float Font::drawText(GraphicsContext* context, const TextRun& run, const FloatPoint& point, int from, int to, CustomFontNotReadyAction customFontNotReadyAction) const
 {
     // Don't draw anything while we are using custom fonts that are in the process of loading,
     // except if the 'force' argument is set to true (in which case it will use a fallback
     // font).
     if (loadingCustomFonts() && customFontNotReadyAction == DoNotPaintIfFontNotReady)
-        return;
-    
+        return 0;
+
     to = (to == -1 ? run.length() : to);
 
     CodePath codePathToUse = codePath(run);
     // FIXME: Use the fast code path once it handles partial runs with kerning and ligatures. See http://webkit.org/b/100050
-    if (codePathToUse != Complex && typesettingFeatures() && (from || to != run.length()))
+    if (codePathToUse != Complex && typesettingFeatures() && (from || to != run.length()) && !run.renderingContext())
         codePathToUse = Complex;
 
     if (codePathToUse != Complex)
@@ -185,7 +355,7 @@ void Font::drawEmphasisMarks(GraphicsContext* context, const TextRun& run, const
 
     CodePath codePathToUse = codePath(run);
     // FIXME: Use the fast code path once it handles partial runs with kerning and ligatures. See http://webkit.org/b/100050
-    if (codePathToUse != Complex && typesettingFeatures() && (from || to != run.length()))
+    if (codePathToUse != Complex && typesettingFeatures() && (from || to != run.length()) && !run.renderingContext())
         codePathToUse = Complex;
 
     if (codePathToUse != Complex)
@@ -207,10 +377,14 @@ float Font::width(const TextRun& run, HashSet<const SimpleFontData*>* fallbackFo
     }
 
     bool hasKerningOrLigatures = typesettingFeatures() & (Kerning | Ligatures);
-    bool hasWordSpacingOrLetterSpacing = wordSpacing() | letterSpacing();
+    bool hasWordSpacingOrLetterSpacing = wordSpacing() || letterSpacing();
     float* cacheEntry = m_glyphs->widthCache().add(run, std::numeric_limits<float>::quiet_NaN(), hasKerningOrLigatures, hasWordSpacingOrLetterSpacing, glyphOverflow);
     if (cacheEntry && !std::isnan(*cacheEntry))
         return *cacheEntry;
+
+    HashSet<const SimpleFontData*> localFallbackFonts;
+    if (!fallbackFonts)
+        fallbackFonts = &localFallbackFonts;
 
     float result;
     if (codePathToUse == Complex)
@@ -218,7 +392,7 @@ float Font::width(const TextRun& run, HashSet<const SimpleFontData*>* fallbackFo
     else
         result = floatWidthForSimpleText(run, fallbackFonts, glyphOverflow);
 
-    if (cacheEntry && (!fallbackFonts || fallbackFonts->isEmpty()))
+    if (cacheEntry && fallbackFonts->isEmpty())
         *cacheEntry = result;
     return result;
 }
@@ -235,7 +409,7 @@ float Font::width(const TextRun& run, int& charsConsumed, String& glyphName) con
     return width(run);
 }
 
-#if !PLATFORM(MAC)
+#if !PLATFORM(COCOA)
 PassOwnPtr<TextLayout> Font::createLayout(RenderText*, float, bool) const
 {
     return nullptr;
@@ -258,7 +432,7 @@ FloatRect Font::selectionRectForText(const TextRun& run, const FloatPoint& point
 
     CodePath codePathToUse = codePath(run);
     // FIXME: Use the fast code path once it handles partial runs with kerning and ligatures. See http://webkit.org/b/100050
-    if (codePathToUse != Complex && typesettingFeatures() && (from || to != run.length()))
+    if (codePathToUse != Complex && typesettingFeatures() && (from || to != run.length()) && !run.renderingContext())
         codePathToUse = Complex;
 
     if (codePathToUse != Complex)
@@ -645,8 +819,8 @@ bool Font::isCJKIdeographOrSymbol(UChar32 c)
 
     if (c > 0x3030 && c <= 0x303F)
         return true;
-   
-    // Hiragana 
+
+    // Hiragana
     if (c >= 0x3040 && c <= 0x309F)
         return true;
 
@@ -657,7 +831,7 @@ bool Font::isCJKIdeographOrSymbol(UChar32 c)
     // Bopomofo
     if (c >= 0x3100 && c <= 0x312F)
         return true;
-    
+
     if (c >= 0x3190 && c <= 0x319F)
         return true;
 
@@ -672,7 +846,7 @@ bool Font::isCJKIdeographOrSymbol(UChar32 c)
     // CJK Compatibility.
     if (c >= 0x3300 && c <= 0x33FF)
         return true;
-    
+
     if (c >= 0xF860 && c <= 0xF862)
         return true;
 
@@ -707,7 +881,7 @@ bool Font::isCJKIdeographOrSymbol(UChar32 c)
     if (c >= 0x1F170 && c <= 0x1F189)
         return true;
 
-    if (c >= 0x1F200 && c <= 0x1F6F)
+    if (c >= 0x1F200 && c <= 0x1F6C5)
         return true;
 
     return isCJKIdeograph(c);
@@ -788,8 +962,7 @@ unsigned Font::expansionOpportunityCount(const UChar* characters, size_t length,
 
 bool Font::canReceiveTextEmphasis(UChar32 c)
 {
-    CharCategory category = Unicode::category(c);
-    if (category & (Separator_Space | Separator_Line | Separator_Paragraph | Other_NotAssigned | Other_Control | Other_Format))
+    if (U_GET_GC_MASK(c) & (U_GC_Z_MASK | U_GC_CN_MASK | U_GC_CC_MASK | U_GC_CF_MASK))
         return false;
 
     // Additional word-separator characters listed in CSS Text Level 3 Editor's Draft 3 November 2010.

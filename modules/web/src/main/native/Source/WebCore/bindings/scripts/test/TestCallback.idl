@@ -29,14 +29,14 @@
 // This IDL file is for testing the bindings code generator with a callback
 // interface and for tracking changes in its ouput.
 [
-        Conditional=SQL_DATABASE,
+    Conditional=SQL_DATABASE,
 ] callback interface TestCallback {
-      boolean callbackWithNoParam();
+  boolean callbackWithNoParam();
   boolean callbackWithArrayParam(Float32Array arrayParam);
   boolean callbackWithSerializedScriptValueParam(SerializedScriptValue srzParam, DOMString strArg);
   long callbackWithNonBoolReturnType(DOMString strArg);
   [Custom] long customCallback(Class5 class5Param, Class6 class6Param);
   boolean callbackWithStringList(DOMStringList listParam);
   boolean callbackWithBoolean(boolean boolParam);
-  [PassThisToCallback=TestNode] boolean callbackRequiresThisToPass(long longParam, TestNode testNodeParam);
-    };
+  boolean callbackRequiresThisToPass(long longParam, TestNode testNodeParam);
+};

@@ -23,12 +23,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-[
-        Conditional=SVG
-] interface SVGViewElement : SVGElement,
-                                                 SVGExternalResourcesRequired,
-                                                 SVGFitToViewBox,
-                                                 SVGZoomAndPan {
-        readonly attribute SVGStringList viewTarget;
-    };
+interface SVGViewElement : SVGElement {
+    readonly attribute SVGStringList viewTarget;
+};
 
+SVGViewElement implements SVGExternalResourcesRequired;
+SVGViewElement implements SVGFitToViewBox;
+SVGViewElement implements SVGZoomAndPan;

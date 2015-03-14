@@ -37,7 +37,7 @@
 #define ENABLE_SUPER_REGION 0
 
 #ifndef ENABLE_SUPER_REGION
-#if USE(JSVALUE64)
+#if USE(JSVALUE64) && !CPU(ARM64)
 #define ENABLE_SUPER_REGION 1
 #else
 #define ENABLE_SUPER_REGION 0
@@ -57,7 +57,7 @@ inline DeadBlock::DeadBlock(Region* region)
 }
 
 class Region : public DoublyLinkedListNode<Region> {
-    friend CLASS_IF_GCC DoublyLinkedListNode<Region>;
+    friend class WTF::DoublyLinkedListNode<Region>;
     friend class BlockAllocator;
 public:
     ~Region();

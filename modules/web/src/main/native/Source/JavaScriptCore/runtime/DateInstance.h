@@ -27,7 +27,7 @@ namespace JSC {
 
     class DateInstance : public JSWrapperObject {
     protected:
-        JS_EXPORT_PRIVATE DateInstance(ExecState*, Structure*);
+        JS_EXPORT_PRIVATE DateInstance(VM&, Structure*);
         void finishCreation(VM&);
         JS_EXPORT_PRIVATE void finishCreation(VM&, double);
 
@@ -36,23 +36,23 @@ namespace JSC {
     public:
         typedef JSWrapperObject Base;
 
-        static DateInstance* create(ExecState* exec, Structure* structure, double date)
+        static DateInstance* create(VM& vm, Structure* structure, double date)
         {
-            DateInstance* instance = new (NotNull, allocateCell<DateInstance>(*exec->heap())) DateInstance(exec, structure);
-            instance->finishCreation(exec->vm(), date);
+            DateInstance* instance = new (NotNull, allocateCell<DateInstance>(vm.heap)) DateInstance(vm, structure);
+            instance->finishCreation(vm, date);
             return instance;
         }
 
-        static DateInstance* create(ExecState* exec, Structure* structure)
+        static DateInstance* create(VM& vm, Structure* structure)
         {
-            DateInstance* instance = new (NotNull, allocateCell<DateInstance>(*exec->heap())) DateInstance(exec, structure);
-            instance->finishCreation(exec->vm());
+            DateInstance* instance = new (NotNull, allocateCell<DateInstance>(vm.heap)) DateInstance(vm, structure);
+            instance->finishCreation(vm);
             return instance;
         }
 
         double internalNumber() const { return internalValue().asNumber(); }
 
-        static JS_EXPORTDATA const ClassInfo s_info;
+        DECLARE_EXPORT_INFO;
 
         const GregorianDateTime* gregorianDateTime(ExecState* exec) const
         {
@@ -60,7 +60,7 @@ namespace JSC {
                 return &m_data->m_cachedGregorianDateTime;
             return calculateGregorianDateTime(exec);
         }
-
+        
         const GregorianDateTime* gregorianDateTimeUTC(ExecState* exec) const
         {
             if (m_data && m_data->m_gregorianDateTimeUTCCachedForMS == internalNumber())
@@ -70,7 +70,7 @@ namespace JSC {
 
         static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
         {
-            return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), &s_info);
+            return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
         }
 
     private:
@@ -84,7 +84,7 @@ namespace JSC {
 
     inline DateInstance* asDateInstance(JSValue value)
     {
-        ASSERT(asObject(value)->inherits(&DateInstance::s_info));
+        ASSERT(asObject(value)->inherits(DateInstance::info()));
         return static_cast<DateInstance*>(asObject(value));
     }
 

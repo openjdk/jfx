@@ -34,8 +34,6 @@
 #include "DatabaseBasicTypes.h"
 #include "DatabaseError.h"
 #include "SQLTransactionBackend.h"
-#include <wtf/OwnPtr.h>
-#include <wtf/PassOwnPtr.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/Threading.h>
 #include <wtf/Vector.h>
@@ -75,6 +73,10 @@ class DatabaseTask {
 public:
     virtual ~DatabaseTask();
 
+#if PLATFORM(IOS)
+    virtual bool shouldPerformWhilePaused() const = 0;
+#endif
+
     void performTask();
 
     DatabaseBackend* database() const { return m_database; }
@@ -100,10 +102,14 @@ private:
 
 class DatabaseBackend::DatabaseOpenTask : public DatabaseTask {
 public:
-    static PassOwnPtr<DatabaseOpenTask> create(DatabaseBackend* db, bool setVersionInNewDatabase, DatabaseTaskSynchronizer* synchronizer, DatabaseError& error, String& errorMessage, bool& success)
+    static std::unique_ptr<DatabaseOpenTask> create(DatabaseBackend* db, bool setVersionInNewDatabase, DatabaseTaskSynchronizer* synchronizer, DatabaseError& error, String& errorMessage, bool& success)
     {
-        return adoptPtr(new DatabaseOpenTask(db, setVersionInNewDatabase, synchronizer, error, errorMessage, success));
+        return std::unique_ptr<DatabaseOpenTask>(new DatabaseOpenTask(db, setVersionInNewDatabase, synchronizer, error, errorMessage, success));
     }
+    
+#if PLATFORM(IOS)
+    virtual bool shouldPerformWhilePaused() const override { return true; }
+#endif
 
 private:
     DatabaseOpenTask(DatabaseBackend*, bool setVersionInNewDatabase, DatabaseTaskSynchronizer*, DatabaseError&, String& errorMessage, bool& success);
@@ -121,10 +127,14 @@ private:
 
 class DatabaseBackend::DatabaseCloseTask : public DatabaseTask {
 public:
-    static PassOwnPtr<DatabaseCloseTask> create(DatabaseBackend* db, DatabaseTaskSynchronizer* synchronizer)
+    static std::unique_ptr<DatabaseCloseTask> create(DatabaseBackend* db, DatabaseTaskSynchronizer* synchronizer)
     {
-        return adoptPtr(new DatabaseCloseTask(db, synchronizer));
+        return std::unique_ptr<DatabaseCloseTask>(new DatabaseCloseTask(db, synchronizer));
     }
+
+#if PLATFORM(IOS)
+    virtual bool shouldPerformWhilePaused() const override { return true; }
+#endif
 
 private:
     DatabaseCloseTask(DatabaseBackend*, DatabaseTaskSynchronizer*);
@@ -140,10 +150,14 @@ public:
     virtual ~DatabaseTransactionTask();
 
     // Transaction task is never synchronous, so no 'synchronizer' parameter.
-    static PassOwnPtr<DatabaseTransactionTask> create(PassRefPtr<SQLTransactionBackend> transaction)
+    static std::unique_ptr<DatabaseTransactionTask> create(PassRefPtr<SQLTransactionBackend> transaction)
     {
-        return adoptPtr(new DatabaseTransactionTask(transaction));
+        return std::unique_ptr<DatabaseTransactionTask>(new DatabaseTransactionTask(transaction));
     }
+
+#if PLATFORM(IOS)
+    virtual bool shouldPerformWhilePaused() const override;
+#endif
 
     SQLTransactionBackend* transaction() const { return m_transaction.get(); }
 
@@ -161,10 +175,14 @@ private:
 
 class DatabaseBackend::DatabaseTableNamesTask : public DatabaseTask {
 public:
-    static PassOwnPtr<DatabaseTableNamesTask> create(DatabaseBackend* db, DatabaseTaskSynchronizer* synchronizer, Vector<String>& names)
+    static std::unique_ptr<DatabaseTableNamesTask> create(DatabaseBackend* db, DatabaseTaskSynchronizer* synchronizer, Vector<String>& names)
     {
-        return adoptPtr(new DatabaseTableNamesTask(db, synchronizer, names));
+        return std::unique_ptr<DatabaseTableNamesTask>(new DatabaseTableNamesTask(db, synchronizer, names));
     }
+
+#if PLATFORM(IOS)
+    virtual bool shouldPerformWhilePaused() const override { return true; }
+#endif
 
 private:
     DatabaseTableNamesTask(DatabaseBackend*, DatabaseTaskSynchronizer*, Vector<String>& names);

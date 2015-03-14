@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
+ * Copyright (C) 2013 Samsung Electronics. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -37,14 +38,12 @@ class Document;
 
 class XMLTreeViewer {
 public:
-    explicit XMLTreeViewer(Document*);
-    virtual ~XMLTreeViewer() {};
+    explicit XMLTreeViewer(Document&);
 
-    bool hasNoStyleInformation() const;
     void transformDocumentToTreeView();
 
 private:
-    Document* m_document;
+    Document& m_document;
 };
 
 } // namespace WebCore

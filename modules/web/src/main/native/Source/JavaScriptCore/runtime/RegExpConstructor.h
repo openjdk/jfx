@@ -36,24 +36,21 @@ namespace JSC {
     public:
         typedef InternalFunction Base;
 
-        static RegExpConstructor* create(ExecState* exec, JSGlobalObject* globalObject, Structure* structure, RegExpPrototype* regExpPrototype)
+        static RegExpConstructor* create(VM& vm, Structure* structure, RegExpPrototype* regExpPrototype)
         {
-            RegExpConstructor* constructor = new (NotNull, allocateCell<RegExpConstructor>(*exec->heap())) RegExpConstructor(globalObject, structure, regExpPrototype);
-            constructor->finishCreation(exec, regExpPrototype);
+            RegExpConstructor* constructor = new (NotNull, allocateCell<RegExpConstructor>(vm.heap)) RegExpConstructor(vm, structure, regExpPrototype);
+            constructor->finishCreation(vm, regExpPrototype);
             return constructor;
         }
 
         static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
         {
-            return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), &s_info);
+            return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
         }
 
-        static void put(JSCell*, ExecState*, PropertyName, JSValue, PutPropertySlot&);
+        static bool getOwnPropertySlot(JSObject*, ExecState*, PropertyName, PropertySlot&);
 
-        static bool getOwnPropertySlot(JSCell*, ExecState*, PropertyName, PropertySlot&);
-        static bool getOwnPropertyDescriptor(JSObject*, ExecState*, PropertyName, PropertyDescriptor&);
-
-        static const ClassInfo s_info;
+        DECLARE_INFO;
 
         MatchResult performMatch(VM&, RegExp*, JSString*, const String&, int startOffset, int** ovector);
         MatchResult performMatch(VM&, RegExp*, JSString*, const String&, int startOffset);
@@ -72,11 +69,11 @@ namespace JSC {
         static void visitChildren(JSCell*, SlotVisitor&);
 
     protected:
-        void finishCreation(ExecState*, RegExpPrototype*);
+        void finishCreation(VM&, RegExpPrototype*);
         static const unsigned StructureFlags = OverridesGetOwnPropertySlot | OverridesVisitChildren | Base::StructureFlags;
 
     private:
-        RegExpConstructor(JSGlobalObject*, Structure*, RegExpPrototype*);
+        RegExpConstructor(VM&, Structure*, RegExpPrototype*);
         static void destroy(JSCell*);
         static ConstructType getConstructData(JSCell*, ConstructData&);
         static CallType getCallData(JSCell*, CallData&);
@@ -92,13 +89,13 @@ namespace JSC {
 
     inline RegExpConstructor* asRegExpConstructor(JSValue value)
     {
-        ASSERT(asObject(value)->inherits(&RegExpConstructor::s_info));
+        ASSERT(asObject(value)->inherits(RegExpConstructor::info()));
         return static_cast<RegExpConstructor*>(asObject(value));
     }
 
-    /*
+    /* 
       To facilitate result caching, exec(), test(), match(), search(), and replace() dipatch regular
-      expression matching through the performMatch function. We use cached results to calculate,
+      expression matching through the performMatch function. We use cached results to calculate, 
       e.g., RegExp.lastMatch and RegExp.leftParen.
     */
     ALWAYS_INLINE MatchResult RegExpConstructor::performMatch(VM& vm, RegExp* regExp, JSString* string, const String& input, int startOffset, int** ovector)

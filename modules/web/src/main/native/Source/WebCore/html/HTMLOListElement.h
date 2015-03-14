@@ -27,10 +27,10 @@
 
 namespace WebCore {
 
-class HTMLOListElement FINAL : public HTMLElement {
+class HTMLOListElement final : public HTMLElement {
 public:
-    static PassRefPtr<HTMLOListElement> create(Document*);
-    static PassRefPtr<HTMLOListElement> create(const QualifiedName&, Document*);
+    static PassRefPtr<HTMLOListElement> create(Document&);
+    static PassRefPtr<HTMLOListElement> create(const QualifiedName&, Document&);
 
     int start() const { return m_hasExplicitStart ? m_start : (m_isReversed ? itemCount() : 1); }
     void setStart(int);
@@ -40,7 +40,7 @@ public:
     void itemCountChanged() { m_shouldRecalculateItemCount = true; }
 
 private:
-    HTMLOListElement(const QualifiedName&, Document*);
+    HTMLOListElement(const QualifiedName&, Document&);
         
     void updateItemValues();
 
@@ -53,9 +53,9 @@ private:
 
     void recalculateItemCount();
 
-    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
-    virtual bool isPresentationAttribute(const QualifiedName&) const OVERRIDE;
-    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStylePropertySet*) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
+    virtual bool isPresentationAttribute(const QualifiedName&) const override;
+    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStyleProperties&) override;
 
     int m_start;
     unsigned m_itemCount;
@@ -65,6 +65,7 @@ private:
     bool m_shouldRecalculateItemCount : 1;
 };
 
+NODE_TYPE_CASTS(HTMLOListElement)
 
 } //namespace
 

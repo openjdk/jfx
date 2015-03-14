@@ -33,7 +33,8 @@
 #include "EditingCallbacks.h"
 #include "EventSender.h"
 #include "GCController.h"
-#include "KURL.h"
+#include "JSRetainPtr.h"
+#include "URL.h"
 #include "NotImplemented.h"
 #include "TestRunner.h"
 #include "TextInputController.h"
@@ -47,7 +48,6 @@
 #include <Eina.h>
 #include <Evas.h>
 #include <cstdio>
-#include <wtf/NotFound.h>
 #include <wtf/text/StringBuilder.h>
 
 #if HAVE(ACCESSIBILITY)
@@ -96,11 +96,20 @@ Evas_Object* DumpRenderTreeChrome::createNewWindow()
     return newView;
 }
 
+static bool shouldUseTiledBackingStore()
+{
+    const char* useTiledBackingStore = getenv("DRT_USE_TILED_BACKING_STORE");
+    return useTiledBackingStore && *useTiledBackingStore == '1';
+}
+
 Evas_Object* DumpRenderTreeChrome::createView() const
 {
     Evas_Object* view = drtViewAdd(m_evas);
     if (!view)
         return 0;
+
+    if (shouldUseTiledBackingStore())
+        ewk_view_setting_tiled_backing_store_enabled_set(view, EINA_TRUE);
 
     ewk_view_theme_set(view, TEST_THEME_DIR "/default.edj");
 
@@ -323,8 +332,7 @@ void DumpRenderTreeChrome::resetDefaultsToConsistentValues()
     DumpRenderTreeSupportEfl::setCSSRegionsEnabled(mainView(), true);
     DumpRenderTreeSupportEfl::setShouldTrackVisitedLinks(false);
     DumpRenderTreeSupportEfl::setTracksRepaints(mainFrame(), false);
-    DumpRenderTreeSupportEfl::setSeamlessIFramesEnabled(true);
-    DumpRenderTreeSupportEfl::setWebAudioEnabled(false);
+    DumpRenderTreeSupportEfl::setWebAudioEnabled(mainView(), false);
 
     // Reset capacities for the memory cache for dead objects.
     static const unsigned cacheTotalCapacity =  8192 * 1024;
@@ -336,52 +344,36 @@ void DumpRenderTreeChrome::resetDefaultsToConsistentValues()
     policyDelegatePermissive = false;
 }
 
-static CString pathSuitableForTestResult(const char* uriString)
+static String pathSuitableForTestResult(const char* uriString)
 {
-    if (!uriString)
-        return CString();
-
-    KURL uri = KURL(ParsedURLString, uriString);
+    URL uri = URL(ParsedURLString, uriString);
+    if (uri.isEmpty())
+        return "(null)";
 
     if (!uri.isLocalFile())
-        return uri.string().utf8();
+        return uri.string();
 
+    URL mainFrameURL = URL(ParsedURLString, ewk_frame_uri_get(browser->mainFrame()));
+    if (mainFrameURL.isEmpty())
+        mainFrameURL = DumpRenderTreeSupportEfl::provisionalURL(browser->mainFrame());
+
+    String mainFrameUrlPathString = mainFrameURL.path();
     String pathString = uri.path();
-    size_t indexBaseName = pathString.reverseFind('/');
-    String baseName;
-    if (indexBaseName == notFound)
-        baseName = pathString;
-    else
-        baseName = pathString.substring(indexBaseName + 1);
+    String basePath = mainFrameUrlPathString.substring(0, mainFrameUrlPathString.reverseFind('/') + 1);
 
-    String dirName;
-    if (indexBaseName != notFound) {
-        size_t indexDirName = pathString.reverseFind('/', indexBaseName - 1);
-        if (indexDirName != notFound)
-            dirName = pathString.substring(indexDirName + 1, indexBaseName - indexDirName - 1);
-    }
+    if (!basePath.isEmpty() && pathString.startsWith(basePath))
+        return pathString.substring(basePath.length());
 
-    String ret = dirName + "/" + baseName;
-    return ret.utf8();
-}
-
-static CString urlSuitableForTestResult(const char* uriString)
-{
-    KURL uri = KURL(ParsedURLString, uriString);
-    if (!uri.isLocalFile())
-        return CString(uriString);
-
-    unsigned startIndex = uri.pathAfterLastSlash();
-    return uri.string().substring(startIndex).utf8();
+    return uri.lastPathComponent();
 }
 
 static CString descriptionSuitableForTestResult(Ewk_Frame_Resource_Request* request)
 {
     StringBuilder builder;
     builder.appendLiteral("<NSURLRequest URL ");
-    builder.append(pathSuitableForTestResult(request->url).data());
+    builder.append(pathSuitableForTestResult(request->url));
     builder.appendLiteral(", main document URL ");
-    builder.append(urlSuitableForTestResult(request->first_party).data());
+    builder.append(pathSuitableForTestResult(request->first_party));
     builder.appendLiteral(", http method ");
 
     if (request->http_method)
@@ -400,7 +392,7 @@ static CString descriptionSuitableForTestResult(const Ewk_Frame_Resource_Respons
 
     StringBuilder builder;
     builder.appendLiteral("<NSURLResponse ");
-    builder.append(pathSuitableForTestResult(response->url).data());
+    builder.append(pathSuitableForTestResult(response->url));
     builder.appendLiteral(", http status code ");
     builder.append(String::number(response->status_code));
     builder.append('>');
@@ -572,7 +564,7 @@ void DumpRenderTreeChrome::onWillSendRequest(void*, Evas_Object*, void* eventInf
         return;
     }
 
-    KURL url = KURL(ParsedURLString, messages->request->url);
+    URL url = URL(ParsedURLString, messages->request->url);
 
     if (url.isValid()
         && url.protocolIsInHTTPFamily()
@@ -794,7 +786,7 @@ void DumpRenderTreeChrome::onFrameRedirectRequested(void*, Evas_Object* frame, v
 
     if (!done && gTestRunner->dumpFrameLoadCallbacks()) {
         const String frameName(DumpRenderTreeSupportEfl::suitableDRTFrameName(frame));
-        printf("%s - willPerformClientRedirectToURL: %s \n", frameName.utf8().data(), pathSuitableForTestResult(url).data());
+        printf("%s - willPerformClientRedirectToURL: %s \n", frameName.utf8().data(), pathSuitableForTestResult(url).utf8().data());
     }
 }
 
@@ -817,7 +809,7 @@ void DumpRenderTreeChrome::onResponseReceived(void*, Evas_Object*, void* eventIn
 
     if (!done && gTestRunner->dumpResourceResponseMIMETypes()) {
         printf("%s has MIME type %s\n",
-               KURL(ParsedURLString, response->url).lastPathComponent().utf8().data(),
+               URL(ParsedURLString, response->url).lastPathComponent().utf8().data(),
                response->mime_type);
     }
 }
@@ -845,8 +837,8 @@ void DumpRenderTreeChrome::onNewResourceRequest(void*, Evas_Object*, void* event
 {
     Ewk_Frame_Resource_Request* request = static_cast<Ewk_Frame_Resource_Request*>(eventInfo);
 
-    if (!done && gTestRunner->dumpResourceLoadCallbacks())
-        m_dumpAssignedUrls.add(request->identifier, pathSuitableForTestResult(request->url));
+    if (!done)
+        m_dumpAssignedUrls.add(request->identifier, pathSuitableForTestResult(request->url).utf8());
 }
 
 void DumpRenderTreeChrome::onDownloadRequest(void*, Evas_Object*, void* eventInfo)
@@ -861,13 +853,13 @@ void DumpRenderTreeChrome::onDownloadRequest(void*, Evas_Object*, void* eventInf
     Ewk_Download* download = static_cast<Ewk_Download*>(eventInfo);
     ewk_view_theme_set(newView, TEST_THEME_DIR "/default.edj");
     ewk_view_uri_set(newView, download->url);
-
+ 
     browser->m_extraViews.append(newView);
-    }
+}
 
 #if HAVE(ACCESSIBILITY)
 AccessibilityController* DumpRenderTreeChrome::accessibilityController() const
 {
     return m_axController.get();
-    }
+}
 #endif

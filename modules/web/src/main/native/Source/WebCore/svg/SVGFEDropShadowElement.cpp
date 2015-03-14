@@ -19,7 +19,7 @@
 
 #include "config.h"
 
-#if ENABLE(SVG) && ENABLE(FILTERS)
+#if ENABLE(FILTERS)
 #include "SVGFEDropShadowElement.h"
 
 #include "Attribute.h"
@@ -48,7 +48,7 @@ BEGIN_REGISTER_ANIMATED_PROPERTIES(SVGFEDropShadowElement)
     REGISTER_PARENT_ANIMATED_PROPERTIES(SVGFilterPrimitiveStandardAttributes)
 END_REGISTER_ANIMATED_PROPERTIES
 
-inline SVGFEDropShadowElement::SVGFEDropShadowElement(const QualifiedName& tagName, Document* document)
+inline SVGFEDropShadowElement::SVGFEDropShadowElement(const QualifiedName& tagName, Document& document)
     : SVGFilterPrimitiveStandardAttributes(tagName, document)
     , m_dx(2)
     , m_dy(2)
@@ -59,7 +59,7 @@ inline SVGFEDropShadowElement::SVGFEDropShadowElement(const QualifiedName& tagNa
     registerAnimatedPropertiesForSVGFEDropShadowElement();
 }
 
-PassRefPtr<SVGFEDropShadowElement> SVGFEDropShadowElement::create(const QualifiedName& tagName, Document* document)
+PassRefPtr<SVGFEDropShadowElement> SVGFEDropShadowElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(new SVGFEDropShadowElement(tagName, document));
 }
@@ -92,7 +92,7 @@ bool SVGFEDropShadowElement::isSupportedAttribute(const QualifiedName& attrName)
         supportedAttributes.add(SVGNames::dyAttr);
         supportedAttributes.add(SVGNames::stdDeviationAttr);
     }
-    return supportedAttributes.contains<QualifiedName, SVGAttributeHashTranslator>(attrName);
+    return supportedAttributes.contains<SVGAttributeHashTranslator>(attrName);
 }
 
 void SVGFEDropShadowElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
@@ -154,20 +154,19 @@ PassRefPtr<FilterEffect> SVGFEDropShadowElement::build(SVGFilterBuilder* filterB
     RenderObject* renderer = this->renderer();
     if (!renderer)
         return 0;
-    
+
     if (stdDeviationX() < 0 || stdDeviationY() < 0)
         return 0;
 
-    ASSERT(renderer->style());
-    const SVGRenderStyle* svgStyle = renderer->style()->svgStyle();
+    const SVGRenderStyle& svgStyle = renderer->style().svgStyle();
     
-    Color color = svgStyle->floodColor();
-    float opacity = svgStyle->floodOpacity();
+    Color color = svgStyle.floodColor();
+    float opacity = svgStyle.floodOpacity();
 
     FilterEffect* input1 = filterBuilder->getEffectById(in1());
     if (!input1)
         return 0;
-    
+
     RefPtr<FilterEffect> effect = FEDropShadow::create(filter, stdDeviationX(), stdDeviationY(), dx(), dy(), color, opacity);
     effect->inputEffects().append(input1);
     return effect.release();
@@ -175,4 +174,4 @@ PassRefPtr<FilterEffect> SVGFEDropShadowElement::build(SVGFilterBuilder* filterB
 
 }
 
-#endif // ENABLE(SVG)
+#endif

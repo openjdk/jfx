@@ -28,15 +28,13 @@
 
 #include "LiveNodeList.h"
 #include <wtf/PassRefPtr.h>
-#include <wtf/RefPtr.h>
-#include <wtf/Vector.h>
 #include <wtf/text/AtomicString.h>
 
 namespace WebCore {
 
 class RadioNodeList : public LiveNodeList {
 public:
-    static PassRefPtr<RadioNodeList> create(Node* rootNode, CollectionType type, const AtomicString& name)
+    static PassRefPtr<RadioNodeList> create(ContainerNode& rootNode, Type type, const AtomicString& name)
     {
         ASSERT_UNUSED(type, type == RadioNodeListType);
         return adoptRef(new RadioNodeList(rootNode, name));
@@ -48,10 +46,10 @@ public:
     void setValue(const String&);
 
 protected:
-    virtual bool nodeMatches(Element*) const;
+    virtual bool nodeMatches(Element*) const override;
 
 private:
-    RadioNodeList(Node*, const AtomicString& name);
+    RadioNodeList(ContainerNode&, const AtomicString& name);
     bool checkElementMatchesRadioNodeListFilter(Element*) const;
 
     AtomicString m_name;

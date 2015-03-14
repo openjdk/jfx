@@ -34,8 +34,8 @@ namespace WebCore {
 
 class StyleVisualData : public RefCounted<StyleVisualData> {
 public:
-    static PassRefPtr<StyleVisualData> create() { return adoptRef(new StyleVisualData); }
-    PassRefPtr<StyleVisualData> copy() const { return adoptRef(new StyleVisualData(*this)); }
+    static PassRef<StyleVisualData> create() { return adoptRef(*new StyleVisualData); }
+    PassRef<StyleVisualData> copy() const;
     ~StyleVisualData();
 
     bool operator==(const StyleVisualData& o) const
@@ -53,7 +53,7 @@ public:
     LengthBox clip;
     bool hasClip : 1;
     unsigned textDecoration : TextDecorationBits; // Text decorations defined *only* by this element.
-    
+
 #if ENABLE(TEXT_AUTOSIZING)
     float m_textAutosizingMultiplier;
 #endif

@@ -28,9 +28,8 @@
 #include "HTMLParserIdioms.h"
 #include "InputTypeNames.h"
 #include "LocalizedStrings.h"
-#include "RegularExpression.h"
-#include <wtf/PassOwnPtr.h>
 #include <wtf/text/StringBuilder.h>
+#include <yarr/RegularExpression.h>
 
 namespace WebCore {
 
@@ -45,17 +44,12 @@ static bool isValidEmailAddress(const String& address)
     if (!addressLength)
         return false;
 
-    DEFINE_STATIC_LOCAL(const RegularExpression, regExp, (emailPattern, TextCaseInsensitive));
+    DEFINE_STATIC_LOCAL(const JSC::Yarr::RegularExpression, regExp, (emailPattern, TextCaseInsensitive));
 
     int matchLength;
     int matchOffset = regExp.match(address, 0, &matchLength);
 
     return !matchOffset && matchLength == addressLength;
-}
-
-PassOwnPtr<InputType> EmailInputType::create(HTMLInputElement* element)
-{
-    return adoptPtr(new EmailInputType(element));
 }
 
 void EmailInputType::attach()
@@ -73,7 +67,7 @@ bool EmailInputType::typeMismatchFor(const String& value) const
 {
     if (value.isEmpty())
         return false;
-    if (!element()->multiple())
+    if (!element().multiple())
         return !isValidEmailAddress(value);
     Vector<String> addresses;
     value.split(',', true, addresses);
@@ -86,12 +80,12 @@ bool EmailInputType::typeMismatchFor(const String& value) const
 
 bool EmailInputType::typeMismatch() const
 {
-    return typeMismatchFor(element()->value());
+    return typeMismatchFor(element().value());
 }
 
 String EmailInputType::typeMismatchText() const
 {
-    return element()->multiple() ? validationMessageTypeMismatchForMultipleEmailText() : validationMessageTypeMismatchForEmailText();
+    return element().multiple() ? validationMessageTypeMismatchForMultipleEmailText() : validationMessageTypeMismatchForEmailText();
 }
 
 bool EmailInputType::isEmailField() const
@@ -107,7 +101,7 @@ bool EmailInputType::supportsSelectionAPI() const
 String EmailInputType::sanitizeValue(const String& proposedValue) const
 {
     String noLineBreakValue = proposedValue.removeCharacters(isHTMLLineBreak);
-    if (!element()->multiple())
+    if (!element().multiple())
         return stripLeadingAndTrailingHTMLSpaces(noLineBreakValue);
     Vector<String> addresses;
     noLineBreakValue.split(',', true, addresses);

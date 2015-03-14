@@ -20,13 +20,14 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
 #ifndef ParserArena_h
 #define ParserArena_h
 
 #include "Identifier.h"
+#include <array>
 #include <wtf/SegmentedVector.h>
 
 namespace JSC {
@@ -64,8 +65,8 @@ namespace JSC {
 
     private:
         IdentifierVector m_identifiers;
-        FixedArray<Identifier*, MaximumCachableCharacter> m_shortIdentifiers;
-        FixedArray<Identifier*, MaximumCachableCharacter> m_recentIdentifiers;
+        std::array<Identifier*, MaximumCachableCharacter> m_shortIdentifiers;
+        std::array<Identifier*, MaximumCachableCharacter> m_recentIdentifiers;
     };
 
     template <typename T>
@@ -186,7 +187,7 @@ namespace JSC {
         OwnPtr<IdentifierArena> m_identifierArena;
         Vector<void*> m_freeablePools;
         Vector<ParserArenaDeletable*> m_deletableObjects;
-        Vector<RefPtr<ParserArenaRefCounted> > m_refCountedObjects;
+        Vector<RefPtr<ParserArenaRefCounted>> m_refCountedObjects;
     };
 
 }

@@ -33,7 +33,7 @@
 #include "JSString.h"
 #include "Lexer.h"
 #include "ObjectConstructor.h"
-#include "Operations.h"
+#include "JSCInlines.h"
 #include "StrongInlines.h"
 #include <wtf/ASCIICType.h>
 #include <wtf/dtoa.h>
@@ -554,9 +554,9 @@ JSValue LiteralParser<CharType>::parse(ParserState initialState)
             case StartParseArray: {
                 JSArray* array = constructEmptyArray(m_exec, 0);
                 objectStack.append(array);
-                // fallthrough
             }
             doParseArrayStartExpression:
+            FALLTHROUGH;
             case DoParseArrayStartExpression: {
                 TokenType lastToken = m_lexer.currentToken().type;
                 if (m_lexer.next() == TokRBracket) {

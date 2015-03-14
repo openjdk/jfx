@@ -25,10 +25,12 @@
 
 package javafx.scene.web;
 
+import com.sun.javafx.PlatformUtil;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
 import javafx.event.EventHandler;
 import netscape.javascript.JSException;
+import org.junit.Assume;
 import org.junit.Test;
 
 public class IrresponsiveScriptTest extends TestBase {

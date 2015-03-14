@@ -33,15 +33,10 @@ namespace WebCore {
 class RenderTable;
 class RenderTableCell;
 
-class RenderTableCol : public RenderBox {
+class RenderTableCol final : public RenderBox {
 public:
-    explicit RenderTableCol(Element*);
-
-    RenderObject* firstChild() const { ASSERT(children() == virtualChildren()); return children()->firstChild(); }
-    RenderObject* lastChild() const { ASSERT(children() == virtualChildren()); return children()->lastChild(); }
-
-    const RenderObjectChildList* children() const { return &m_children; }
-    RenderObjectChildList* children() { return &m_children; }
+    RenderTableCol(Element&, PassRef<RenderStyle>);
+    Element& element() const { return toElement(nodeForNonAnonymous()); }
 
     void clearPreferredLogicalWidthsDirtyBits();
 
@@ -49,8 +44,8 @@ public:
     void setSpan(unsigned span) { m_span = span; }
 
     bool isTableColumnGroupWithColumnChildren() { return firstChild(); }
-    bool isTableColumn() const { return style()->display() == TABLE_COLUMN; }
-    bool isTableColumnGroup() const { return style()->display() == TABLE_COLUMN_GROUP; }
+    bool isTableColumn() const { return style().display() == TABLE_COLUMN; }
+    bool isTableColumnGroup() const { return style().display() == TABLE_COLUMN_GROUP; }
 
     RenderTableCol* enclosingColumnGroup() const;
     RenderTableCol* enclosingColumnGroupIfAdjacentBefore() const
@@ -77,46 +72,30 @@ public:
     const BorderValue& borderAdjoiningCellAfter(const RenderTableCell*) const;
 
 private:
-    virtual RenderObjectChildList* virtualChildren() { return children(); }
-    virtual const RenderObjectChildList* virtualChildren() const { return children(); }
+    virtual const char* renderName() const override { return "RenderTableCol"; }
+    virtual bool isRenderTableCol() const override { return true; }
+    virtual void updateFromElement() override;
+    virtual void computePreferredLogicalWidths() override { ASSERT_NOT_REACHED(); }
 
-    virtual const char* renderName() const { return "RenderTableCol"; }
-    virtual bool isRenderTableCol() const OVERRIDE { return true; }
-    virtual void updateFromElement();
-    virtual void computePreferredLogicalWidths() OVERRIDE { ASSERT_NOT_REACHED(); }
+    virtual void insertedIntoTree() override;
+    virtual void willBeRemovedFromTree() override;
 
-    virtual void insertedIntoTree() OVERRIDE;
-    virtual void willBeRemovedFromTree() OVERRIDE;
+    virtual bool isChildAllowed(const RenderObject&, const RenderStyle&) const override;
+    virtual bool canHaveChildren() const override;
+    virtual bool requiresLayer() const override { return false; }
 
-    virtual bool isChildAllowed(RenderObject*, RenderStyle*) const;
-    virtual bool canHaveChildren() const;
-    virtual bool requiresLayer() const { return false; }
+    virtual LayoutRect clippedOverflowRectForRepaint(const RenderLayerModelObject* repaintContainer) const override;
+    virtual void imageChanged(WrappedImagePtr, const IntRect* = 0) override;
 
-    virtual LayoutRect clippedOverflowRectForRepaint(const RenderLayerModelObject* repaintContainer) const OVERRIDE;
-    virtual void imageChanged(WrappedImagePtr, const IntRect* = 0);
-
-    virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle);
+    virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
+    virtual void paint(PaintInfo&, const LayoutPoint&) override { }
 
     RenderTable* table() const;
 
-    RenderObjectChildList m_children;
     unsigned m_span;
 };
 
-inline RenderTableCol* toRenderTableCol(RenderObject* object)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isRenderTableCol());
-    return static_cast<RenderTableCol*>(object);
-}
-
-inline const RenderTableCol* toRenderTableCol(const RenderObject* object)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isRenderTableCol());
-    return static_cast<const RenderTableCol*>(object);
-}
-
-// This will catch anyone doing an unnecessary cast.
-void toRenderTableCol(const RenderTableCol*);
+RENDER_OBJECT_TYPE_CASTS(RenderTableCol, isRenderTableCol())
 
 }
 

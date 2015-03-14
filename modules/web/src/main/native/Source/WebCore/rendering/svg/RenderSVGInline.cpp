@@ -20,8 +20,6 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SVG)
 #include "RenderSVGInline.h"
 
 #include "RenderSVGInlineText.h"
@@ -32,117 +30,110 @@
 
 namespace WebCore {
     
-RenderSVGInline::RenderSVGInline(Element* element)
-    : RenderInline(element)
+RenderSVGInline::RenderSVGInline(SVGGraphicsElement& element, PassRef<RenderStyle> style)
+    : RenderInline(element, std::move(style))
 {
     setAlwaysCreateLineBoxes();
 }
 
-InlineFlowBox* RenderSVGInline::createInlineFlowBox()
+std::unique_ptr<InlineFlowBox> RenderSVGInline::createInlineFlowBox()
 {
-    InlineFlowBox* box = new (renderArena()) SVGInlineFlowBox(this);
+    auto box = std::make_unique<SVGInlineFlowBox>(*this);
     box->setHasVirtualLogicalHeight();
-    return box;
+    return std::move(box);
 }
 
 FloatRect RenderSVGInline::objectBoundingBox() const
 {
-    if (const RenderObject* object = RenderSVGText::locateRenderSVGTextAncestor(this))
-        return object->objectBoundingBox();
+    if (auto* textAncestor = RenderSVGText::locateRenderSVGTextAncestor(*this))
+        return textAncestor->objectBoundingBox();
 
     return FloatRect();
 }
 
 FloatRect RenderSVGInline::strokeBoundingBox() const
 {
-    if (const RenderObject* object = RenderSVGText::locateRenderSVGTextAncestor(this))
-        return object->strokeBoundingBox();
+    if (auto* textAncestor = RenderSVGText::locateRenderSVGTextAncestor(*this))
+        return textAncestor->strokeBoundingBox();
 
     return FloatRect();
 }
 
 FloatRect RenderSVGInline::repaintRectInLocalCoordinates() const
 {
-    if (const RenderObject* object = RenderSVGText::locateRenderSVGTextAncestor(this))
-        return object->repaintRectInLocalCoordinates();
+    if (auto* textAncestor = RenderSVGText::locateRenderSVGTextAncestor(*this))
+        return textAncestor->repaintRectInLocalCoordinates();
 
     return FloatRect();
 }
 
 LayoutRect RenderSVGInline::clippedOverflowRectForRepaint(const RenderLayerModelObject* repaintContainer) const
 {
-    return SVGRenderSupport::clippedOverflowRectForRepaint(this, repaintContainer);
+    return SVGRenderSupport::clippedOverflowRectForRepaint(*this, repaintContainer);
 }
 
 void RenderSVGInline::computeFloatRectForRepaint(const RenderLayerModelObject* repaintContainer, FloatRect& repaintRect, bool fixed) const
 {
-    SVGRenderSupport::computeFloatRectForRepaint(this, repaintContainer, repaintRect, fixed);
+    SVGRenderSupport::computeFloatRectForRepaint(*this, repaintContainer, repaintRect, fixed);
 }
 
 void RenderSVGInline::mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState& transformState, MapCoordinatesFlags, bool* wasFixed) const
 {
-    SVGRenderSupport::mapLocalToContainer(this, repaintContainer, transformState, wasFixed);
+    SVGRenderSupport::mapLocalToContainer(*this, repaintContainer, transformState, wasFixed);
 }
 
 const RenderObject* RenderSVGInline::pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap& geometryMap) const
 {
-    return SVGRenderSupport::pushMappingToContainer(this, ancestorToStopAt, geometryMap);
+    return SVGRenderSupport::pushMappingToContainer(*this, ancestorToStopAt, geometryMap);
 }
 
 void RenderSVGInline::absoluteQuads(Vector<FloatQuad>& quads, bool* wasFixed) const
 {
-    const RenderObject* object = RenderSVGText::locateRenderSVGTextAncestor(this);
-    if (!object)
+    auto* textAncestor = RenderSVGText::locateRenderSVGTextAncestor(*this);
+    if (!textAncestor)
         return;
 
-    FloatRect textBoundingBox = object->strokeBoundingBox();
+    FloatRect textBoundingBox = textAncestor->strokeBoundingBox();
     for (InlineFlowBox* box = firstLineBox(); box; box = box->nextLineBox())
         quads.append(localToAbsoluteQuad(FloatRect(textBoundingBox.x() + box->x(), textBoundingBox.y() + box->y(), box->logicalWidth(), box->logicalHeight()), false, wasFixed));
 }
 
 void RenderSVGInline::willBeDestroyed()
 {
-    SVGResourcesCache::clientDestroyed(this);
+    SVGResourcesCache::clientDestroyed(*this);
     RenderInline::willBeDestroyed();
-}
-
-void RenderSVGInline::styleWillChange(StyleDifference diff, const RenderStyle* newStyle)
-{
-    if (diff == StyleDifferenceLayout)
-        setNeedsBoundariesUpdate();
-    RenderInline::styleWillChange(diff, newStyle);
 }
 
 void RenderSVGInline::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
+    if (diff == StyleDifferenceLayout)
+        setNeedsBoundariesUpdate();
     RenderInline::styleDidChange(diff, oldStyle);
-    SVGResourcesCache::clientStyleChanged(this, diff, style());
+    SVGResourcesCache::clientStyleChanged(*this, diff, style());
 }
 
 void RenderSVGInline::addChild(RenderObject* child, RenderObject* beforeChild)
 {
     RenderInline::addChild(child, beforeChild);
-    SVGResourcesCache::clientWasAddedToTree(child, child->style());
+    SVGResourcesCache::clientWasAddedToTree(*child);
 
-    if (RenderSVGText* textRenderer = RenderSVGText::locateRenderSVGTextAncestor(this))
-        textRenderer->subtreeChildWasAdded(child);
+    if (auto* textAncestor = RenderSVGText::locateRenderSVGTextAncestor(*this))
+        textAncestor->subtreeChildWasAdded(child);
 }
 
-void RenderSVGInline::removeChild(RenderObject* child)
+void RenderSVGInline::removeChild(RenderObject& child)
 {
     SVGResourcesCache::clientWillBeRemovedFromTree(child);
 
-    RenderSVGText* textRenderer = RenderSVGText::locateRenderSVGTextAncestor(this);
-    if (!textRenderer) {
+    auto* textAncestor = RenderSVGText::locateRenderSVGTextAncestor(*this);
+    if (!textAncestor) {
         RenderInline::removeChild(child);
         return;
     }
     Vector<SVGTextLayoutAttributes*, 2> affectedAttributes;
-    textRenderer->subtreeChildWillBeRemoved(child, affectedAttributes);
+    textAncestor->subtreeChildWillBeRemoved(&child, affectedAttributes);
     RenderInline::removeChild(child);
-    textRenderer->subtreeChildWasRemoved(affectedAttributes);
+    textAncestor->subtreeChildWasRemoved(affectedAttributes);
 }
 
 }
-
-#endif // ENABLE(SVG)

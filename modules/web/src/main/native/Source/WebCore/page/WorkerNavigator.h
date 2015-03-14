@@ -20,13 +20,11 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #ifndef WorkerNavigator_h
 #define WorkerNavigator_h
-
-#if ENABLE(WORKERS)
 
 #include "NavigatorBase.h"
 #include "Supplementable.h"
@@ -38,20 +36,18 @@
 namespace WebCore {
 
 class WorkerNavigator : public NavigatorBase, public RefCounted<WorkerNavigator>, public Supplementable<WorkerNavigator> {
-    public:
-        static PassRefPtr<WorkerNavigator> create(const String& userAgent) { return adoptRef(new WorkerNavigator(userAgent)); }
-        virtual ~WorkerNavigator();
+public:
+    static PassRefPtr<WorkerNavigator> create(const String& userAgent) { return adoptRef(new WorkerNavigator(userAgent)); }
+    virtual ~WorkerNavigator();
 
-        virtual String userAgent() const;
+    virtual String userAgent() const;
 
-    private:
+private:
     explicit WorkerNavigator(const String&);
 
-        String m_userAgent;
-    };
+    String m_userAgent;
+};
 
 } // namespace WebCore
-
-#endif // ENABLE(WORKERS)
 
 #endif // WorkerNavigator_h

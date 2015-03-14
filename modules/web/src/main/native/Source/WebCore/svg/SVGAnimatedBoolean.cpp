@@ -18,8 +18,6 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SVG)
 #include "SVGAnimatedBoolean.h"
 
 #include "SVGAnimateElement.h"
@@ -31,14 +29,14 @@ SVGAnimatedBooleanAnimator::SVGAnimatedBooleanAnimator(SVGAnimationElement* anim
 {
 }
 
-PassOwnPtr<SVGAnimatedType> SVGAnimatedBooleanAnimator::constructFromString(const String& string)
+std::unique_ptr<SVGAnimatedType> SVGAnimatedBooleanAnimator::constructFromString(const String& string)
 {
-    OwnPtr<SVGAnimatedType> animtedType = SVGAnimatedType::createBoolean(new bool);
-    animtedType->boolean() = (string == "true"); // wat?
-    return animtedType.release();
+    auto animatedType = SVGAnimatedType::createBoolean(std::make_unique<bool>());
+    animatedType->boolean() = (string == "true"); // wat?
+    return animatedType;
 }
 
-PassOwnPtr<SVGAnimatedType> SVGAnimatedBooleanAnimator::startAnimValAnimation(const SVGElementAnimatedPropertyList& animatedTypes)
+std::unique_ptr<SVGAnimatedType> SVGAnimatedBooleanAnimator::startAnimValAnimation(const SVGElementAnimatedPropertyList& animatedTypes)
 {
     return SVGAnimatedType::createBoolean(constructFromBaseValue<SVGAnimatedBoolean>(animatedTypes));
 }
@@ -87,5 +85,3 @@ float SVGAnimatedBooleanAnimator::calculateDistance(const String&, const String&
 }
 
 }
-
-#endif // ENABLE(SVG)

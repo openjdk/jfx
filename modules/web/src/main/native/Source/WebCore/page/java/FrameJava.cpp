@@ -11,7 +11,7 @@ namespace WebCore {
 
 #if FRAME_LOADS_USER_STYLESHEET
 
-void Frame::setUserStyleSheetLocation(const KURL& url)
+void Frame::setUserStyleSheetLocation(const URL& url)
 {
     delete m_userStyleSheetLoader;
     m_userStyleSheetLoader = 0;

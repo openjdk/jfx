@@ -28,8 +28,8 @@
 
 #include "IntPoint.h"
 #include "PlatformEvent.h"
-#if OS(WINDOWS) && !PLATFORM(JAVA)
-#include "WindowsExtras.h"
+#if !PLATFORM(JAVA)
+#include <wtf/WindowsExtras.h>
 #endif
 
 #if PLATFORM(JAVA)
@@ -52,10 +52,6 @@ namespace WebCore {
     // These button numbers match the ones used in the DOM API, 0 through 2, except for NoButton which isn't specified.
     enum MouseButton { NoButton = -1, LeftButton, MiddleButton, RightButton };
 
-#if PLATFORM(BLACKBERRY)
-    enum MouseInputMethod { PointingDevice, TouchScreen };
-#endif
-    
     class PlatformMouseEvent : public PlatformEvent {
     public:
         PlatformMouseEvent()
@@ -121,10 +117,6 @@ namespace WebCore {
         bool didActivateWebView() const { return m_didActivateWebView; }
 #endif
 
-#if PLATFORM(BLACKBERRY)
-        PlatformMouseEvent(const IntPoint& eventPosition, const IntPoint& globalPosition, const PlatformEvent::Type, int clickCount, MouseButton, bool shiftKey, bool ctrlKey, bool altKey, MouseInputMethod = PointingDevice);
-        MouseInputMethod inputMethod() const { return m_inputMethod; }
-#endif
     protected:
         IntPoint m_position;
         IntPoint m_globalPosition;
@@ -139,8 +131,6 @@ namespace WebCore {
         int m_eventNumber;
 #elif PLATFORM(WIN)
         bool m_didActivateWebView;
-#elif PLATFORM(BLACKBERRY)
-        MouseInputMethod m_inputMethod;
 #endif
     };
 

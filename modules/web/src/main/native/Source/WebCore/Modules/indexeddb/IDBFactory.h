@@ -50,22 +50,28 @@ class IDBFactory : public ScriptWrappable, public RefCounted<IDBFactory> {
 public:
     static PassRefPtr<IDBFactory> create(IDBFactoryBackendInterface* factory)
     {
-        return adoptRef(new IDBFactory(factory));
+        // FIXME: While the feature is under development we'll handle a null factory backend here,
+        // returning null, so javascript can't try to use the feature.
+        // Once the feature is fully functional we should remove the null factory backend.
+        return factory ? adoptRef(new IDBFactory(factory)) : nullptr;
     }
     ~IDBFactory();
 
+    // FIXME: getDatabaseNames is no longer a web-facing API, and should be removed from IDBFactory.
+    // The Web Inspector currently uses this to enumerate the list of databases, but is more complicated as a result.
+    // We should provide a simpler API to the Web Inspector then remove getDatabaseNames.
     PassRefPtr<IDBRequest> getDatabaseNames(ScriptExecutionContext*, ExceptionCode&);
 
     PassRefPtr<IDBOpenDBRequest> open(ScriptExecutionContext*, const String& name, ExceptionCode&);
     PassRefPtr<IDBOpenDBRequest> open(ScriptExecutionContext*, const String& name, unsigned long long version, ExceptionCode&);
     PassRefPtr<IDBOpenDBRequest> deleteDatabase(ScriptExecutionContext*, const String& name, ExceptionCode&);
 
-    short cmp(ScriptExecutionContext*, const ScriptValue& first, const ScriptValue& second, ExceptionCode&);
+    short cmp(ScriptExecutionContext*, const Deprecated::ScriptValue& first, const Deprecated::ScriptValue& second, ExceptionCode&);
 
 private:
     IDBFactory(IDBFactoryBackendInterface*);
 
-    PassRefPtr<IDBOpenDBRequest> openInternal(ScriptExecutionContext*, const String& name, int64_t version, ExceptionCode&);
+    PassRefPtr<IDBOpenDBRequest> openInternal(ScriptExecutionContext*, const String& name, uint64_t version, IndexedDB::VersionNullness, ExceptionCode&);
 
     RefPtr<IDBFactoryBackendInterface> m_backend;
 };

@@ -32,18 +32,15 @@
 #include "ColorSpace.h"
 #include "FloatRect.h"
 #include "GraphicsContext.h"
-#if USE(ACCELERATED_COMPOSITING)
-#include "PlatformLayer.h"
-#endif
 #include "GraphicsTypes.h"
 #include "GraphicsTypes3D.h"
 #include "IntSize.h"
 #include "ImageBufferData.h"
+#include "PlatformLayer.h"
+#include <runtime/Uint8ClampedArray.h>
 #include <wtf/Forward.h>
 #include <wtf/OwnPtr.h>
-#include <wtf/PassOwnPtr.h>
 #include <wtf/PassRefPtr.h>
-#include <wtf/Uint8ClampedArray.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -79,16 +76,16 @@ namespace WebCore {
         WTF_MAKE_NONCOPYABLE(ImageBuffer); WTF_MAKE_FAST_ALLOCATED;
     public:
         // Will return a null pointer on allocation failure.
-        static PassOwnPtr<ImageBuffer> create(const IntSize& size, float resolutionScale = 1, ColorSpace colorSpace = ColorSpaceDeviceRGB, RenderingMode renderingMode = Unaccelerated)
+        static std::unique_ptr<ImageBuffer> create(const IntSize& size, float resolutionScale = 1, ColorSpace colorSpace = ColorSpaceDeviceRGB, RenderingMode renderingMode = Unaccelerated)
         {
             bool success = false;
-            OwnPtr<ImageBuffer> buf = adoptPtr(new ImageBuffer(size, resolutionScale, colorSpace, renderingMode, success));
+            std::unique_ptr<ImageBuffer> buffer(new ImageBuffer(size, resolutionScale, colorSpace, renderingMode, success));
             if (!success)
                 return nullptr;
-            return buf.release();
+            return buffer;
         }
 
-        static PassOwnPtr<ImageBuffer> createCompatibleBuffer(const IntSize&, float resolutionScale, ColorSpace, const GraphicsContext*, bool hasAlpha);
+        static std::unique_ptr<ImageBuffer> createCompatibleBuffer(const IntSize&, float resolutionScale, ColorSpace, const GraphicsContext*, bool hasAlpha);
 
         ~ImageBuffer();
 
@@ -118,33 +115,38 @@ namespace WebCore {
         void transformColorSpace(ColorSpace srcColorSpace, ColorSpace dstColorSpace);
         void platformTransformColorSpace(const Vector<int>&);
 #else
-        AffineTransform baseTransform() const { return AffineTransform(1, 0, 0, -1, 0, internalSize().height()); }
+        AffineTransform baseTransform() const { return AffineTransform(1, 0, 0, -1, 0, m_data.m_backingStoreSize.height()); }
 #endif
-#if USE(ACCELERATED_COMPOSITING)
         PlatformLayer* platformLayer() const;
-#endif
 
         // FIXME: current implementations of this method have the restriction that they only work
         // with textures that are RGB or RGBA format, and UNSIGNED_BYTE type.
         bool copyToPlatformTexture(GraphicsContext3D&, Platform3DObject, GC3Denum, bool, bool);
 
+        FloatSize spaceSize() const { return m_space; }
+        void setSpaceSize(const FloatSize& space)
+        {
+            m_space = space;
+        }
+
     private:
 #if USE(CG)
-        PassNativeImagePtr copyNativeImage(BackingStoreCopy = CopyBackingStore) const;
+        // The returned image might be larger than the internalSize(). If you want the smaller
+        // image, crop the result.
+        RetainPtr<CGImageRef> copyNativeImage(BackingStoreCopy = CopyBackingStore) const;
         void flushContext() const;
-        void flushContextIfNecessary() const;
 #endif
         void clip(GraphicsContext*, const FloatRect&) const;
 
         void draw(GraphicsContext*, ColorSpace, const FloatRect& destRect, const FloatRect& srcRect = FloatRect(0, 0, -1, -1), CompositeOperator = CompositeSourceOver, BlendMode = BlendModeNormal, bool useLowQualityScale = false);
-        void drawPattern(GraphicsContext*, const FloatRect& srcRect, const AffineTransform& patternTransform, const FloatPoint& phase, ColorSpace styleColorSpace, CompositeOperator, const FloatRect& destRect);
+        void drawPattern(GraphicsContext*, const FloatRect& srcRect, const AffineTransform& patternTransform, const FloatPoint& phase, ColorSpace styleColorSpace, CompositeOperator, const FloatRect& destRect, BlendMode = BlendModeNormal);
 
         inline void genericConvertToLuminanceMask();
 
         friend class GraphicsContext;
         friend class GeneratedImage;
         friend class CrossfadeGeneratedImage;
-        friend class GeneratorGeneratedImage;
+        friend class GradientImage;
 
     private:
         ImageBufferData m_data;
@@ -152,6 +154,7 @@ namespace WebCore {
         IntSize m_logicalSize;
         float m_resolutionScale;
         OwnPtr<GraphicsContext> m_context;
+        FloatSize m_space;
 
         // This constructor will place its success into the given out-variable
         // so that create() knows when it should return failure.

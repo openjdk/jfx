@@ -38,7 +38,6 @@
 
 namespace WebCore {
 
-#if !PLATFORM(QT)
 static void pathLengthApplierFunction(void* info, const PathElement* element)
 {
     PathTraversalState& traversalState = *static_cast<PathTraversalState*>(info);
@@ -91,7 +90,6 @@ float Path::normalAngleAtLength(float length, bool& ok) const
     ok = traversalState.m_success;
     return traversalState.m_normalAngle;
 }
-#endif
 
 void Path::addRoundedRect(const RoundedRect& r)
 {
@@ -146,7 +144,7 @@ void Path::addRoundedRect(const FloatRect& rect, const FloatSize& topLeftRadius,
 void Path::addPathForRoundedRect(const FloatRect& rect, const FloatSize& topLeftRadius, const FloatSize& topRightRadius, const FloatSize& bottomLeftRadius, const FloatSize& bottomRightRadius, RoundedRectStrategy strategy)
 {
     if (strategy == PreferNativeRoundedRect) {
-#if USE(CG) || PLATFORM(BLACKBERRY)
+#if USE(CG)
         platformAddPathForRoundedRect(rect, topLeftRadius, topRightRadius, bottomLeftRadius, bottomRightRadius);
         return;
 #endif
@@ -165,29 +163,29 @@ void Path::addBeziersForRoundedRect(const FloatRect& rect, const FloatSize& topL
 
     addLineTo(FloatPoint(rect.maxX() - topRightRadius.width(), rect.y()));
     if (topRightRadius.width() > 0 || topRightRadius.height() > 0)
-    addBezierCurveTo(FloatPoint(rect.maxX() - topRightRadius.width() * gCircleControlPoint, rect.y()),
-                     FloatPoint(rect.maxX(), rect.y() + topRightRadius.height() * gCircleControlPoint),
-                     FloatPoint(rect.maxX(), rect.y() + topRightRadius.height()));
+        addBezierCurveTo(FloatPoint(rect.maxX() - topRightRadius.width() * gCircleControlPoint, rect.y()),
+            FloatPoint(rect.maxX(), rect.y() + topRightRadius.height() * gCircleControlPoint),
+            FloatPoint(rect.maxX(), rect.y() + topRightRadius.height()));
     addLineTo(FloatPoint(rect.maxX(), rect.maxY() - bottomRightRadius.height()));
     if (bottomRightRadius.width() > 0 || bottomRightRadius.height() > 0)
-    addBezierCurveTo(FloatPoint(rect.maxX(), rect.maxY() - bottomRightRadius.height() * gCircleControlPoint),
-                     FloatPoint(rect.maxX() - bottomRightRadius.width() * gCircleControlPoint, rect.maxY()),
-                     FloatPoint(rect.maxX() - bottomRightRadius.width(), rect.maxY()));
+        addBezierCurveTo(FloatPoint(rect.maxX(), rect.maxY() - bottomRightRadius.height() * gCircleControlPoint),
+            FloatPoint(rect.maxX() - bottomRightRadius.width() * gCircleControlPoint, rect.maxY()),
+            FloatPoint(rect.maxX() - bottomRightRadius.width(), rect.maxY()));
     addLineTo(FloatPoint(rect.x() + bottomLeftRadius.width(), rect.maxY()));
     if (bottomLeftRadius.width() > 0 || bottomLeftRadius.height() > 0)
-    addBezierCurveTo(FloatPoint(rect.x() + bottomLeftRadius.width() * gCircleControlPoint, rect.maxY()),
-                     FloatPoint(rect.x(), rect.maxY() - bottomLeftRadius.height() * gCircleControlPoint),
-                     FloatPoint(rect.x(), rect.maxY() - bottomLeftRadius.height()));
+        addBezierCurveTo(FloatPoint(rect.x() + bottomLeftRadius.width() * gCircleControlPoint, rect.maxY()),
+            FloatPoint(rect.x(), rect.maxY() - bottomLeftRadius.height() * gCircleControlPoint),
+            FloatPoint(rect.x(), rect.maxY() - bottomLeftRadius.height()));
     addLineTo(FloatPoint(rect.x(), rect.y() + topLeftRadius.height()));
     if (topLeftRadius.width() > 0 || topLeftRadius.height() > 0)
-    addBezierCurveTo(FloatPoint(rect.x(), rect.y() + topLeftRadius.height() * gCircleControlPoint),
-                     FloatPoint(rect.x() + topLeftRadius.width() * gCircleControlPoint, rect.y()),
-                     FloatPoint(rect.x() + topLeftRadius.width(), rect.y()));
+        addBezierCurveTo(FloatPoint(rect.x(), rect.y() + topLeftRadius.height() * gCircleControlPoint),
+            FloatPoint(rect.x() + topLeftRadius.width() * gCircleControlPoint, rect.y()),
+            FloatPoint(rect.x() + topLeftRadius.width(), rect.y()));
 
     closeSubpath();
 }
 
-#if !USE(CG) && !PLATFORM(QT)
+#if !USE(CG)
 FloatRect Path::fastBoundingRect() const
 {
     return boundingRect();

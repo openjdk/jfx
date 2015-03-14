@@ -19,7 +19,7 @@
 
 #include "config.h"
 
-#if ENABLE(SVG) && ENABLE(FILTERS)
+#if ENABLE(FILTERS)
 #include "SVGFEDistantLightElement.h"
 #include "SVGNames.h"
 
@@ -27,13 +27,13 @@
 
 namespace WebCore {
 
-inline SVGFEDistantLightElement::SVGFEDistantLightElement(const QualifiedName& tagName, Document* document)
+inline SVGFEDistantLightElement::SVGFEDistantLightElement(const QualifiedName& tagName, Document& document)
     : SVGFELightElement(tagName, document)
 {
     ASSERT(hasTagName(SVGNames::feDistantLightTag));
 }
 
-PassRefPtr<SVGFEDistantLightElement> SVGFEDistantLightElement::create(const QualifiedName& tagName, Document* document)
+PassRefPtr<SVGFEDistantLightElement> SVGFEDistantLightElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(new SVGFEDistantLightElement(tagName, document));
 }
@@ -45,4 +45,4 @@ PassRefPtr<LightSource> SVGFEDistantLightElement::lightSource() const
 
 }
 
-#endif // ENABLE(SVG)
+#endif

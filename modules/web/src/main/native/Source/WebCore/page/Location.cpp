@@ -34,7 +34,7 @@
 #include "ExceptionCode.h"
 #include "Frame.h"
 #include "FrameLoader.h"
-#include "KURL.h"
+#include "URL.h"
 #include "SecurityOrigin.h"
 
 namespace WebCore {
@@ -44,11 +44,11 @@ Location::Location(Frame* frame)
 {
 }
 
-inline const KURL& Location::url() const
+inline const URL& Location::url() const
 {
     ASSERT(m_frame);
 
-    const KURL& url = m_frame->document()->url();
+    const URL& url = m_frame->document()->url();
     if (!url.isValid())
         return blankURL(); // Use "about:blank" while the page is still loading (before we have a frame).
 
@@ -78,7 +78,7 @@ String Location::host() const
 
     // Note: this is the IE spec. The NS spec swaps the two, it says
     // "The hostname property is the concatenation of the host and port properties, separated by a colon."
-    const KURL& url = this->url();
+    const URL& url = this->url();
     return url.hasPort() ? url.host() + ":" + String::number(url.port()) : url.host();
 }
 
@@ -95,7 +95,7 @@ String Location::port() const
     if (!m_frame)
         return String();
 
-    const KURL& url = this->url();
+    const URL& url = this->url();
     return url.hasPort() ? String::number(url.port()) : "";
 }
 
@@ -104,7 +104,7 @@ String Location::pathname() const
     if (!m_frame)
         return String();
 
-    const KURL& url = this->url();
+    const URL& url = this->url();
     return url.path().isEmpty() ? "/" : url.path();
 }
 
@@ -113,7 +113,7 @@ String Location::search() const
     if (!m_frame)
         return String();
 
-    const KURL& url = this->url();
+    const URL& url = this->url();
     return url.query().isEmpty() ? emptyString() : "?" + url.query();
 }
 
@@ -129,7 +129,7 @@ PassRefPtr<DOMStringList> Location::ancestorOrigins() const
     RefPtr<DOMStringList> origins = DOMStringList::create();
     if (!m_frame)
         return origins.release();
-    for (Frame* frame = m_frame->tree()->parent(); frame; frame = frame->tree()->parent())
+    for (Frame* frame = m_frame->tree().parent(); frame; frame = frame->tree().parent())
         origins->append(frame->document()->securityOrigin()->toString());
     return origins.release();
 }
@@ -143,18 +143,18 @@ String Location::hash() const
     return fragmentIdentifier.isEmpty() ? emptyString() : "#" + fragmentIdentifier;
 }
 
-void Location::setHref(const String& url, DOMWindow* activeWindow, DOMWindow* firstWindow)
+void Location::setHref(const String& url, DOMWindow& activeWindow, DOMWindow& firstWindow)
 {
     if (!m_frame)
         return;
     setLocation(url, activeWindow, firstWindow);
 }
 
-void Location::setProtocol(const String& protocol, DOMWindow* activeWindow, DOMWindow* firstWindow, ExceptionCode& ec)
+void Location::setProtocol(const String& protocol, DOMWindow& activeWindow, DOMWindow& firstWindow, ExceptionCode& ec)
 {
     if (!m_frame)
         return;
-    KURL url = m_frame->document()->url();
+    URL url = m_frame->document()->url();
     if (!url.setProtocol(protocol)) {
         ec = SYNTAX_ERR;
         return;
@@ -162,29 +162,29 @@ void Location::setProtocol(const String& protocol, DOMWindow* activeWindow, DOMW
     setLocation(url.string(), activeWindow, firstWindow);
 }
 
-void Location::setHost(const String& host, DOMWindow* activeWindow, DOMWindow* firstWindow)
+void Location::setHost(const String& host, DOMWindow& activeWindow, DOMWindow& firstWindow)
 {
     if (!m_frame)
         return;
-    KURL url = m_frame->document()->url();
+    URL url = m_frame->document()->url();
     url.setHostAndPort(host);
     setLocation(url.string(), activeWindow, firstWindow);
 }
 
-void Location::setHostname(const String& hostname, DOMWindow* activeWindow, DOMWindow* firstWindow)
+void Location::setHostname(const String& hostname, DOMWindow& activeWindow, DOMWindow& firstWindow)
 {
     if (!m_frame)
         return;
-    KURL url = m_frame->document()->url();
+    URL url = m_frame->document()->url();
     url.setHost(hostname);
     setLocation(url.string(), activeWindow, firstWindow);
 }
 
-void Location::setPort(const String& portString, DOMWindow* activeWindow, DOMWindow* firstWindow)
+void Location::setPort(const String& portString, DOMWindow& activeWindow, DOMWindow& firstWindow)
 {
     if (!m_frame)
         return;
-    KURL url = m_frame->document()->url();
+    URL url = m_frame->document()->url();
     int port = portString.toInt();
     if (port < 0 || port > 0xFFFF || portString.isEmpty())
         url.removePort();
@@ -193,29 +193,29 @@ void Location::setPort(const String& portString, DOMWindow* activeWindow, DOMWin
     setLocation(url.string(), activeWindow, firstWindow);
 }
 
-void Location::setPathname(const String& pathname, DOMWindow* activeWindow, DOMWindow* firstWindow)
+void Location::setPathname(const String& pathname, DOMWindow& activeWindow, DOMWindow& firstWindow)
 {
     if (!m_frame)
         return;
-    KURL url = m_frame->document()->url();
+    URL url = m_frame->document()->url();
     url.setPath(pathname);
     setLocation(url.string(), activeWindow, firstWindow);
 }
 
-void Location::setSearch(const String& search, DOMWindow* activeWindow, DOMWindow* firstWindow)
+void Location::setSearch(const String& search, DOMWindow& activeWindow, DOMWindow& firstWindow)
 {
     if (!m_frame)
         return;
-    KURL url = m_frame->document()->url();
+    URL url = m_frame->document()->url();
     url.setQuery(search);
     setLocation(url.string(), activeWindow, firstWindow);
 }
 
-void Location::setHash(const String& hash, DOMWindow* activeWindow, DOMWindow* firstWindow)
+void Location::setHash(const String& hash, DOMWindow& activeWindow, DOMWindow& firstWindow)
 {
     if (!m_frame)
         return;
-    KURL url = m_frame->document()->url();
+    URL url = m_frame->document()->url();
     String oldFragmentIdentifier = url.fragmentIdentifier();
     String newFragmentIdentifier = hash;
     if (hash[0] == '#')
@@ -229,14 +229,14 @@ void Location::setHash(const String& hash, DOMWindow* activeWindow, DOMWindow* f
     setLocation(url.string(), activeWindow, firstWindow);
 }
 
-void Location::assign(const String& url, DOMWindow* activeWindow, DOMWindow* firstWindow)
+void Location::assign(const String& url, DOMWindow& activeWindow, DOMWindow& firstWindow)
 {
     if (!m_frame)
         return;
     setLocation(url, activeWindow, firstWindow);
 }
 
-void Location::replace(const String& url, DOMWindow* activeWindow, DOMWindow* firstWindow)
+void Location::replace(const String& url, DOMWindow& activeWindow, DOMWindow& firstWindow)
 {
     if (!m_frame)
         return;
@@ -244,7 +244,7 @@ void Location::replace(const String& url, DOMWindow* activeWindow, DOMWindow* fi
     m_frame->document()->domWindow()->setLocation(url, activeWindow, firstWindow, LockHistoryAndBackForwardList);
 }
 
-void Location::reload(DOMWindow* activeWindow)
+void Location::reload(DOMWindow& activeWindow)
 {
     if (!m_frame)
         return;
@@ -252,20 +252,19 @@ void Location::reload(DOMWindow* activeWindow)
     // We allow one page to change the location of another. Why block attempts to reload?
     // Other location operations simply block use of JavaScript URLs cross origin.
     DOMWindow* targetWindow = m_frame->document()->domWindow();
-    if (!activeWindow->document()->securityOrigin()->canAccess(m_frame->document()->securityOrigin())) {
+    if (!activeWindow.document()->securityOrigin()->canAccess(m_frame->document()->securityOrigin())) {
         targetWindow->printErrorMessage(targetWindow->crossDomainAccessErrorMessage(activeWindow));
         return;
     }
     if (protocolIsJavaScript(m_frame->document()->url()))
         return;
-    m_frame->navigationScheduler()->scheduleRefresh();
+    m_frame->navigationScheduler().scheduleRefresh();
 }
 
-void Location::setLocation(const String& url, DOMWindow* activeWindow, DOMWindow* firstWindow)
+void Location::setLocation(const String& url, DOMWindow& activeWindow, DOMWindow& firstWindow)
 {
     ASSERT(m_frame);
-    // We call findFrameForNavigation to handle the case of a seamless iframe correctly.
-    Frame* frame = m_frame->loader()->findFrameForNavigation(String(), activeWindow->document());
+    Frame* frame = m_frame->loader().findFrameForNavigation(String(), activeWindow.document());
     if (!frame)
         return;
     frame->document()->domWindow()->setLocation(url, activeWindow, firstWindow);

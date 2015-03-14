@@ -28,7 +28,7 @@
 #include <wtf/Forward.h>
 #include <wtf/RefPtr.h>
 
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
 #ifndef __OBJC__
 class NSView;
 #endif
@@ -36,158 +36,167 @@ class NSView;
 
 namespace WebCore {
 
-    class ChromeClient;
-    class ColorChooser;
-    class ColorChooserClient;
+class ChromeClient;
+class ColorChooser;
+class ColorChooserClient;
 class DateTimeChooser;
 class DateTimeChooserClient;
-    class FileChooser;
-    class FileIconLoader;
-    class FloatRect;
-    class Frame;
-    class Geolocation;
-    class HitTestResult;
-    class IntRect;
-    class NavigationAction;
-    class Node;
-    class Page;
-    class PopupMenu;
-    class PopupMenuClient;
+class FileChooser;
+class FileIconLoader;
+class FloatRect;
+class Element;
+class Frame;
+class Geolocation;
+class HitTestResult;
+class IntRect;
+class NavigationAction;
+class Page;
+class PopupMenu;
+class PopupMenuClient;
 class PopupOpeningObserver;
-    class SearchPopupMenu;
+class SearchPopupMenu;
 
 struct DateTimeChooserParameters;
-    struct FrameLoadRequest;
-    struct ViewportArguments;
-    struct WindowFeatures;
+struct FrameLoadRequest;
+struct ViewportArguments;
+struct WindowFeatures;
     
-    class Chrome : public HostWindow {
-    public:
-        ~Chrome();
+class Chrome : public HostWindow {
+public:
+    Chrome(Page&, ChromeClient&);
+    virtual ~Chrome();
 
-        static PassOwnPtr<Chrome> create(Page*, ChromeClient*);
+    ChromeClient& client() { return m_client; }
 
-        ChromeClient* client() { return m_client; }
-
-        // HostWindow methods.
-        virtual void invalidateRootView(const IntRect&, bool) OVERRIDE;
-        virtual void invalidateContentsAndRootView(const IntRect&, bool) OVERRIDE;
-    virtual void invalidateContentsForSlowScroll(const IntRect&, bool) OVERRIDE;
-    virtual void scroll(const IntSize&, const IntRect&, const IntRect&) OVERRIDE;
+    // HostWindow methods.
+    virtual void invalidateRootView(const IntRect&, bool) override;
+    virtual void invalidateContentsAndRootView(const IntRect&, bool) override;
+    virtual void invalidateContentsForSlowScroll(const IntRect&, bool) override;
+    virtual void scroll(const IntSize&, const IntRect&, const IntRect&) override;
 #if USE(TILED_BACKING_STORE)
-    virtual void delegatedScrollRequested(const IntPoint& scrollPoint) OVERRIDE;
+    virtual void delegatedScrollRequested(const IntPoint& scrollPoint) override;
 #endif
-        virtual IntPoint screenToRootView(const IntPoint&) const OVERRIDE;
-        virtual IntRect rootViewToScreen(const IntRect&) const OVERRIDE;
-    virtual PlatformPageClient platformPageClient() const OVERRIDE;
-    virtual void scrollbarsModeDidChange() const OVERRIDE;
-    virtual void setCursor(const Cursor&) OVERRIDE;
-    virtual void setCursorHiddenUntilMouseMoves(bool) OVERRIDE;
+    virtual IntPoint screenToRootView(const IntPoint&) const override;
+    virtual IntRect rootViewToScreen(const IntRect&) const override;
+    virtual PlatformPageClient platformPageClient() const override;
+    virtual void scrollbarsModeDidChange() const override;
+    virtual void setCursor(const Cursor&) override;
+    virtual void setCursorHiddenUntilMouseMoves(bool) override;
 
 #if ENABLE(REQUEST_ANIMATION_FRAME)
-    virtual void scheduleAnimation() OVERRIDE;
+    virtual void scheduleAnimation() override;
 #endif
 
-        void scrollRectIntoView(const IntRect&) const;
+    virtual PlatformDisplayID displayID() const override;
+    virtual void windowScreenDidChange(PlatformDisplayID) override;
 
-        void contentsSizeChanged(Frame*, const IntSize&) const;
-        void layoutUpdated(Frame*) const;
+    void scrollRectIntoView(const IntRect&) const;
 
-        void setWindowRect(const FloatRect&) const;
-        FloatRect windowRect() const;
+    void contentsSizeChanged(Frame*, const IntSize&) const;
 
-        FloatRect pageRect() const;
-        
-        void focus() const;
-        void unfocus() const;
+    void setWindowRect(const FloatRect&) const;
+    FloatRect windowRect() const;
 
-        bool canTakeFocus(FocusDirection) const;
-        void takeFocus(FocusDirection) const;
+    FloatRect pageRect() const;
 
-        void focusedNodeChanged(Node*) const;
-        void focusedFrameChanged(Frame*) const;
+    void focus() const;
+    void unfocus() const;
 
-        Page* createWindow(Frame*, const FrameLoadRequest&, const WindowFeatures&, const NavigationAction&) const;
-        void show() const;
+    bool canTakeFocus(FocusDirection) const;
+    void takeFocus(FocusDirection) const;
 
-        bool canRunModal() const;
-        bool canRunModalNow() const;
-        void runModal() const;
+    void focusedElementChanged(Element*) const;
+    void focusedFrameChanged(Frame*) const;
 
-        void setToolbarsVisible(bool) const;
-        bool toolbarsVisible() const;
-        
-        void setStatusbarVisible(bool) const;
-        bool statusbarVisible() const;
-        
-        void setScrollbarsVisible(bool) const;
-        bool scrollbarsVisible() const;
-        
-        void setMenubarVisible(bool) const;
-        bool menubarVisible() const;
-        
-        void setResizable(bool) const;
+    Page* createWindow(Frame*, const FrameLoadRequest&, const WindowFeatures&, const NavigationAction&) const;
+    void show() const;
 
-        bool canRunBeforeUnloadConfirmPanel();
+    bool canRunModal() const;
+    bool canRunModalNow() const;
+    void runModal() const;
+
+    void setToolbarsVisible(bool) const;
+    bool toolbarsVisible() const;
+
+    void setStatusbarVisible(bool) const;
+    bool statusbarVisible() const;
+
+    void setScrollbarsVisible(bool) const;
+    bool scrollbarsVisible() const;
+
+    void setMenubarVisible(bool) const;
+    bool menubarVisible() const;
+
+    void setResizable(bool) const;
+
+    bool canRunBeforeUnloadConfirmPanel();
     bool runBeforeUnloadConfirmPanel(const String& message, Frame*);
 
-        void closeWindowSoon();
+    void closeWindowSoon();
 
-        void runJavaScriptAlert(Frame*, const String&);
-        bool runJavaScriptConfirm(Frame*, const String&);
-        bool runJavaScriptPrompt(Frame*, const String& message, const String& defaultValue, String& result);
-        void setStatusbarText(Frame*, const String&);
-        bool shouldInterruptJavaScript();
+    void runJavaScriptAlert(Frame*, const String&);
+    bool runJavaScriptConfirm(Frame*, const String&);
+    bool runJavaScriptPrompt(Frame*, const String& message, const String& defaultValue, String& result);
+    void setStatusbarText(Frame*, const String&);
+    bool shouldInterruptJavaScript();
 
-        IntRect windowResizerRect() const;
+    IntRect windowResizerRect() const;
 
-        void mouseDidMoveOverElement(const HitTestResult&, unsigned modifierFlags);
+    void mouseDidMoveOverElement(const HitTestResult&, unsigned modifierFlags);
 
-        void setToolTip(const HitTestResult&);
+    void setToolTip(const HitTestResult&);
 
-        void print(Frame*);
+    void print(Frame*);
 
     void enableSuddenTermination();
     void disableSuddenTermination();
 
 #if ENABLE(INPUT_TYPE_COLOR)
-        PassOwnPtr<ColorChooser> createColorChooser(ColorChooserClient*, const Color& initialColor);
+    PassOwnPtr<ColorChooser> createColorChooser(ColorChooserClient*, const Color& initialColor);
 #endif
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
+
+#if ENABLE(DATE_AND_TIME_INPUT_TYPES) && !PLATFORM(IOS)
     PassRefPtr<DateTimeChooser> openDateTimeChooser(DateTimeChooserClient*, const DateTimeChooserParameters&);
 #endif
 
-        void runOpenPanel(Frame*, PassRefPtr<FileChooser>);
-        void loadIconForFiles(const Vector<String>&, FileIconLoader*);
-#if ENABLE(DIRECTORY_UPLOAD)
-        void enumerateChosenDirectory(FileChooser*);
+    void runOpenPanel(Frame*, PassRefPtr<FileChooser>);
+    void loadIconForFiles(const Vector<String>&, FileIconLoader*);
+
+    void dispatchViewportPropertiesDidChange(const ViewportArguments&) const;
+
+    bool requiresFullscreenForVideoPlayback();
+
+#if PLATFORM(COCOA)
+    void focusNSView(NSView*);
 #endif
 
-        void dispatchViewportPropertiesDidChange(const ViewportArguments&) const;
+    bool selectItemWritingDirectionIsNatural();
+    bool selectItemAlignmentFollowsMenuWritingDirection();
+    bool hasOpenedPopup() const;
+    PassRefPtr<PopupMenu> createPopupMenu(PopupMenuClient*) const;
+    PassRefPtr<SearchPopupMenu> createSearchPopupMenu(PopupMenuClient*) const;
 
-        bool requiresFullscreenForVideoPlayback();
+#if PLATFORM(IOS)
+    // FIXME: Can we come up with a better name for this setter?
+    void setDispatchViewportDataDidChangeSuppressed(bool dispatchViewportDataDidChangeSuppressed) { m_isDispatchViewportDataDidChangeSuppressed = dispatchViewportDataDidChangeSuppressed; }
 
-#if PLATFORM(MAC)
-        void focusNSView(NSView*);
+    void didReceiveDocType(Frame*);
 #endif
-
-        bool selectItemWritingDirectionIsNatural();
-        bool selectItemAlignmentFollowsMenuWritingDirection();
-        bool hasOpenedPopup() const;
-        PassRefPtr<PopupMenu> createPopupMenu(PopupMenuClient*) const;
-        PassRefPtr<SearchPopupMenu> createSearchPopupMenu(PopupMenuClient*) const;
 
     void registerPopupOpeningObserver(PopupOpeningObserver*);
     void unregisterPopupOpeningObserver(PopupOpeningObserver*);
 
-    private:
-        Chrome(Page*, ChromeClient*);
+private:
     void notifyPopupOpeningObservers() const;
 
-        Page* m_page;
-        ChromeClient* m_client;
+    Page& m_page;
+    ChromeClient& m_client;
+    PlatformDisplayID m_displayID;
     Vector<PopupOpeningObserver*> m_popupOpeningObservers;
-    };
+#if PLATFORM(IOS)
+    bool m_isDispatchViewportDataDidChangeSuppressed;
+#endif
+};
 
 }
 

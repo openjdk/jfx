@@ -4,7 +4,8 @@
 #include "config.h"
 
 #include "NotImplemented.h"
-
+#include "Clipboard.h"
+#include "Pasteboard.h"
 #include "DragController.h"
 #include "DragData.h"
 
@@ -23,18 +24,23 @@ namespace WebCore {
         copyKeyIsDown = _copyKeyIsDown;
     }
 
-    DragOperation DragController::dragOperation(DragData *dragData)
+    DragOperation DragController::dragOperation(DragData& dragData)
     {
         //Protects the page from opening URL by fake anchor drag.
-        return dragData->containsURL(0) && !m_didInitiateDrag ? DragOperationCopy : DragOperationNone;
+        return dragData.containsURL(0) && !m_didInitiateDrag ? DragOperationCopy : DragOperationNone;
     }
 
     //uta: need to be fixed with usage of DragData pointer
-    bool DragController::isCopyKeyDown(DragData *dragData)
+    bool DragController::isCopyKeyDown(DragData& dragData)
     {
         //State has not direct connection with keyboard state.
         //Now it is imported from Java (user drag action).
         return copyKeyIsDown;
+    }
+
+    void DragController::declareAndWriteDragImage(Clipboard& clipboard, Element& element, const URL& url, const String& label)
+    {
+        clipboard.pasteboard().writeImage(element, url, label);
     }
 
     const IntSize &DragController::maxDragImageSize()

@@ -30,12 +30,12 @@
 #include "Event.h"
 #include "ExceptionCode.h"
 #include "Frame.h"
-#include "JSArrayBuffer.h"
 #include "JSDOMGlobalObject.h"
 #include "JSEvent.h"
 #include "JSEventListener.h"
 #include "JSMessagePortCustom.h"
 #include "MessagePort.h"
+#include <runtime/JSArrayBuffer.h>
 #include <runtime/Error.h>
 #include <wtf/text/AtomicString.h>
 
@@ -46,7 +46,7 @@ namespace WebCore {
 void JSMessagePort::visitChildren(JSCell* cell, SlotVisitor& visitor)
 {
     JSMessagePort* thisObject = jsCast<JSMessagePort*>(cell);
-    ASSERT_GC_OBJECT_INHERITS(thisObject, &s_info);
+    ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     COMPILE_ASSERT(StructureFlags & OverridesVisitChildren, OverridesVisitChildrenWithoutSettingFlag);
     ASSERT(thisObject->structure()->typeInfo().overridesVisitChildren());
     Base::visitChildren(thisObject, visitor);
@@ -60,7 +60,7 @@ void JSMessagePort::visitChildren(JSCell* cell, SlotVisitor& visitor)
 
 JSC::JSValue JSMessagePort::postMessage(JSC::ExecState* exec)
 {
-    return handlePostMessage(exec, impl());
+    return handlePostMessage(exec, &impl());
 }
 
 void fillMessagePortArray(JSC::ExecState* exec, JSC::JSValue value, MessagePortArray& portArray, ArrayBufferArray& arrayBuffers)

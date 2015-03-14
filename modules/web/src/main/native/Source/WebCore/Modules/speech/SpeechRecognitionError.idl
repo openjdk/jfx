@@ -24,10 +24,10 @@
  */
 
 [
-        Conditional=SCRIPTED_SPEECH,
+    Conditional=SCRIPTED_SPEECH,
     ConstructorTemplate=Event,
     InterfaceName=webkitSpeechRecognitionError
 ] interface SpeechRecognitionError : Event {
     [InitializedByEventConstructor] readonly attribute DOMString error;
     [InitializedByEventConstructor] readonly attribute DOMString message;
-    };
+};

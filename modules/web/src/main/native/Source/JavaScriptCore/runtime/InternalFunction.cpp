@@ -26,24 +26,24 @@
 #include "FunctionPrototype.h"
 #include "JSGlobalObject.h"
 #include "JSString.h"
-#include "Operations.h"
+#include "JSCInlines.h"
 
 namespace JSC {
 
-ASSERT_HAS_TRIVIAL_DESTRUCTOR(InternalFunction);
+STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(InternalFunction);
 
 const ClassInfo InternalFunction::s_info = { "Function", &Base::s_info, 0, 0, CREATE_METHOD_TABLE(InternalFunction) };
 
-InternalFunction::InternalFunction(JSGlobalObject* globalObject, Structure* structure)
-    : JSDestructibleObject(globalObject->vm(), structure)
+InternalFunction::InternalFunction(VM& vm, Structure* structure)
+    : JSDestructibleObject(vm, structure)
 {
 }
 
 void InternalFunction::finishCreation(VM& vm, const String& name)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(&s_info));
-    ASSERT(methodTable()->getCallData != InternalFunction::s_info.methodTable.getCallData);
+    ASSERT(inherits(info()));
+    ASSERT(methodTable()->getCallData != InternalFunction::info()->methodTable.getCallData);
     putDirect(vm, vm.propertyNames->name, jsString(&vm, name), DontDelete | ReadOnly | DontEnum);
 }
 
@@ -55,10 +55,10 @@ const String& InternalFunction::name(ExecState* exec)
 const String InternalFunction::displayName(ExecState* exec)
 {
     JSValue displayName = getDirect(exec->vm(), exec->vm().propertyNames->displayName);
-
+    
     if (displayName && isJSString(displayName))
         return asString(displayName)->tryGetValue();
-
+    
     return String();
 }
 
@@ -71,10 +71,10 @@ CallType InternalFunction::getCallData(JSCell*, CallData&)
 const String InternalFunction::calculatedDisplayName(ExecState* exec)
 {
     const String explicitName = displayName(exec);
-
+    
     if (!explicitName.isEmpty())
         return explicitName;
-
+    
     return name(exec);
 }
 

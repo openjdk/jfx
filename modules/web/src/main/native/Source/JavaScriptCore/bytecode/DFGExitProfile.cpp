@@ -26,6 +26,8 @@
 #include "config.h"
 #include "DFGExitProfile.h"
 
+#if ENABLE(DFG_JIT)
+
 #include <wtf/PassOwnPtr.h>
 
 namespace JSC { namespace DFG {
@@ -33,8 +35,10 @@ namespace JSC { namespace DFG {
 ExitProfile::ExitProfile() { }
 ExitProfile::~ExitProfile() { }
 
-bool ExitProfile::add(const FrequentExitSite& site)
+bool ExitProfile::add(const ConcurrentJITLocker&, const FrequentExitSite& site)
 {
+    ASSERT(site.jitType() != ExitFromAnything);
+    
     // If we've never seen any frequent exits then create the list and put this site
     // into it.
     if (!m_frequentExitSites) {
@@ -70,19 +74,22 @@ Vector<FrequentExitSite> ExitProfile::exitSitesFor(unsigned bytecodeIndex)
     return result;
 }
 
-bool ExitProfile::hasExitSite(const FrequentExitSite& site) const
+bool ExitProfile::hasExitSite(const ConcurrentJITLocker&, const FrequentExitSite& site) const
 {
     if (!m_frequentExitSites)
         return false;
     
     for (unsigned i = m_frequentExitSites->size(); i--;) {
-        if (m_frequentExitSites->at(i) == site)
+        if (site.subsumes(m_frequentExitSites->at(i)))
             return true;
     }
     return false;
 }
 
-QueryableExitProfile::QueryableExitProfile(const ExitProfile& profile)
+QueryableExitProfile::QueryableExitProfile() { }
+QueryableExitProfile::~QueryableExitProfile() { }
+
+void QueryableExitProfile::initialize(const ConcurrentJITLocker&, const ExitProfile& profile)
 {
     if (!profile.m_frequentExitSites)
         return;
@@ -91,6 +98,6 @@ QueryableExitProfile::QueryableExitProfile(const ExitProfile& profile)
         m_frequentExitSites.add(profile.m_frequentExitSites->at(i));
 }
 
-QueryableExitProfile::~QueryableExitProfile() { }
-
 } } // namespace JSC::DFG
+
+#endif

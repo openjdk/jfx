@@ -28,6 +28,10 @@
 
 #include <objc/objc.h>
 
+#if PLATFORM(IOS)
+#include "WebCoreSystemInterfaceIOS.h"
+#endif
+
 typedef const struct __CFString * CFStringRef;
 typedef const struct __CFNumber * CFNumberRef;
 typedef const struct __CFDictionary * CFDictionaryRef;
@@ -53,22 +57,32 @@ typedef const struct __CTLine * CTLineRef;
 typedef const struct __CTRun * CTRunRef;
 typedef const struct __CTTypesetter * CTTypesetterRef;
 typedef const struct __AXUIElement *AXUIElementRef;
+#if !PLATFORM(IOS)
 typedef struct _NSRange NSRange;
 
 typedef UInt32 FMFont;
 typedef FMFont ATSUFontID;
 typedef UInt16 ATSGlyphRef;
-
-#if PLATFORM(MAC) && USE(CA) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
-typedef struct __IOSurface *IOSurfaceRef;
 #endif
 
+#if PLATFORM(COCOA) && USE(CA)
+#if !PLATFORM(IOS_SIMULATOR)
+typedef struct __IOSurface *IOSurfaceRef;
+#endif // !PLATFORM(IOS_SIMULATOR)
+#endif
+
+#if !PLATFORM(IOS)
 #ifdef NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES
 typedef struct CGPoint NSPoint;
 typedef struct CGRect NSRect;
 #else
 typedef struct _NSPoint NSPoint;
 typedef struct _NSRect NSRect;
+#endif
+#endif // !PLATFORM(IOS)
+
+#if PLATFORM(IOS)
+#include <CoreGraphics/CoreGraphics.h>
 #endif
 
 #if USE(CFNETWORK)
@@ -104,16 +118,13 @@ OBJC_CLASS NSView;
 OBJC_CLASS NSWindow;
 OBJC_CLASS QTMovie;
 OBJC_CLASS QTMovieView;
-OBJC_CLASS WebFilterEvaluator;
 
 extern "C" {
 
 // In alphabetical order.
 
 extern void (*wkAdvanceDefaultButtonPulseAnimation)(NSButtonCell *);
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 extern void (*wkCALayerEnumerateRectsBeingDrawnWithBlock)(CALayer *, CGContextRef, void (^block)(CGRect rect));
-#endif
 
 extern BOOL (*wkCGContextGetShouldSmoothFonts)(CGContextRef);
 typedef enum {
@@ -122,7 +133,7 @@ typedef enum {
     wkPatternTilingConstantSpacing
 } wkPatternTiling;
 extern void (*wkCGContextResetClip)(CGContextRef);
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
+#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
 extern bool (*wkCGContextDrawsWithCorrectShadowOffsets)(CGContextRef);
 #endif
 extern CGPatternRef (*wkCGPatternCreateWithImageAndTransform)(CGImageRef, CGAffineTransform, int);
@@ -138,6 +149,7 @@ extern CFReadStreamRef (*wkCreateCustomCFReadStream)(void *(*formCreate)(CFReadS
 extern CFStringRef (*wkCopyCFLocalizationPreferredName)(CFStringRef);
 extern NSString* (*wkCopyNSURLResponseStatusLine)(NSURLResponse*);
 extern CFArrayRef (*wkCopyNSURLResponseCertificateChain)(NSURLResponse*);
+#if !PLATFORM(IOS)
 extern void (*wkDrawBezeledTextFieldCell)(NSRect, BOOL enabled);
 extern void (*wkDrawTextFieldCellFocusRing)(NSTextFieldCell*, NSRect);
 extern void (*wkDrawCapsLockIndicator)(CGContextRef, CGRect);
@@ -146,21 +158,27 @@ extern void (*wkDrawFocusRing)(CGContextRef, CGColorRef, int radius);
 extern NSFont* (*wkGetFontInLanguageForRange)(NSFont*, NSString*, NSRange);
 extern NSFont* (*wkGetFontInLanguageForCharacter)(NSFont*, UniChar);
 extern BOOL (*wkGetGlyphTransformedAdvances)(CGFontRef, NSFont*, CGAffineTransform*, ATSGlyphRef*, CGSize* advance);
-extern void (*wkDrawMediaSliderTrack)(int themeStyle, CGContextRef context, CGRect rect, float timeLoaded, float currentTime, 
+#endif
+#if !PLATFORM(IOS)
+extern void (*wkDrawMediaSliderTrack)(CGContextRef context, CGRect rect, float timeLoaded, float currentTime,
     float duration, unsigned state);
-extern void (*wkDrawMediaUIPart)(int part, int themeStyle, CGContextRef context, CGRect rect, unsigned state);
+extern void (*wkDrawMediaUIPart)(int part, CGContextRef context, CGRect rect, unsigned state);
 extern CFStringRef (*wkSignedPublicKeyAndChallengeString)(unsigned keySize, CFStringRef challenge, CFStringRef keyDescription);
 extern NSString* (*wkGetPreferredExtensionForMIMEType)(NSString*);
 extern NSArray* (*wkGetExtensionsForMIMEType)(NSString*);
+#endif
 extern NSString* (*wkGetMIMETypeForExtension)(NSString*);
+#if !PLATFORM(IOS)
 extern ATSUFontID (*wkGetNSFontATSUFontId)(NSFont*);
 extern double (*wkGetNSURLResponseCalculatedExpiration)(NSURLResponse *response);
+#endif
 extern NSDate *(*wkGetNSURLResponseLastModifiedDate)(NSURLResponse *response);
+#if !PLATFORM(IOS)
 extern BOOL (*wkGetNSURLResponseMustRevalidate)(NSURLResponse *response);
 extern void (*wkGetWheelEventDeltas)(NSEvent*, float* deltaX, float* deltaY, BOOL* continuous);
 extern UInt8 (*wkGetNSEventKeyChar)(NSEvent *);
-extern BOOL (*wkHitTestMediaUIPart)(int part, int themeStyle, CGRect bounds, CGPoint point);
-extern void (*wkMeasureMediaUIPart)(int part, int themeStyle, CGRect *bounds, CGSize *naturalSize);
+extern BOOL (*wkHitTestMediaUIPart)(int part, CGRect bounds, CGPoint point);
+extern void (*wkMeasureMediaUIPart)(int part, CGRect *bounds, CGSize *naturalSize);
 extern NSView *(*wkCreateMediaUIBackgroundView)(void);
 
 typedef enum {
@@ -177,7 +195,6 @@ extern NSControl *(*wkCreateMediaUIControl)(int);
 
 extern void (*wkWindowSetAlpha)(NSWindow *, float);
 extern void (*wkWindowSetScaledFrame)(NSWindow *, NSRect, NSRect);
-extern BOOL (*wkMediaControllerThemeAvailable)(int themeStyle);
 extern void (*wkPopupMenu)(NSMenu*, NSPoint location, float width, NSView*, int selectedItem, NSFont*);
 extern unsigned (*wkQTIncludeOnlyModernMediaFileTypes)(void);
 extern int (*wkQTMovieDataRate)(QTMovie*);
@@ -194,26 +211,26 @@ extern void (*wkQTMovieViewSetDrawSynchronously)(QTMovieView*, BOOL);
 extern NSArray *(*wkQTGetSitesInMediaDownloadCache)();
 extern void (*wkQTClearMediaDownloadCacheForSite)(NSString *site);
 extern void (*wkQTClearMediaDownloadCache)();
-#if PLATFORM(MAC)
 extern void (*wkSetCGFontRenderingMode)(CGContextRef, NSFont*, BOOL);
-#else
-extern void (*wkSetCGFontRenderingMode)(CGContextRef, NSFont*);
-#endif
+extern void (*wkSetCookieStoragePrivateBrowsingEnabled)(BOOL);
 extern void (*wkSetDragImage)(NSImage*, NSPoint offset);
+#endif
 extern void (*wkSetNSURLConnectionDefersCallbacks)(NSURLConnection *, BOOL);
 extern void (*wkSetNSURLRequestShouldContentSniff)(NSMutableURLRequest *, BOOL);
 extern void (*wkSetBaseCTM)(CGContextRef, CGAffineTransform);
 extern void (*wkSetPatternPhaseInUserSpace)(CGContextRef, CGPoint);
 extern CGAffineTransform (*wkGetUserToBaseCTM)(CGContextRef);
+extern bool (*wkCGContextIsPDFContext)(CGContextRef);
 extern void (*wkSetUpFontCache)();
 extern void (*wkSignalCFReadStreamEnd)(CFReadStreamRef stream);
 extern void (*wkSignalCFReadStreamError)(CFReadStreamRef stream, CFStreamError *error);
 extern void (*wkSignalCFReadStreamHasBytes)(CFReadStreamRef stream);
 extern unsigned (*wkInitializeMaximumHTTPConnectionCountPerHost)(unsigned preferredConnectionCount);
-extern int (*wkGetHTTPPipeliningPriority)(CFURLRequestRef);
-extern void (*wkSetHTTPPipeliningMaximumPriority)(int maximumPriority);
-extern void (*wkSetHTTPPipeliningPriority)(CFURLRequestRef, int priority);
-extern void (*wkSetHTTPPipeliningMinimumFastLanePriority)(int priority);
+extern int (*wkGetHTTPRequestPriority)(CFURLRequestRef);
+extern void (*wkSetHTTPRequestMaximumPriority)(int maximumPriority);
+extern void (*wkSetHTTPRequestPriority)(CFURLRequestRef, int priority);
+extern void (*wkSetHTTPRequestMinimumFastLanePriority)(int priority);
+extern void (*wkHTTPRequestEnablePipelining)(CFURLRequestRef);
 extern void (*wkSetCONNECTProxyForStream)(CFReadStreamRef, CFStringRef proxyHost, CFNumberRef proxyPort);
 extern void (*wkSetCONNECTProxyAuthorizationForStream)(CFReadStreamRef, CFStringRef proxyAuthorizationString);
 extern CFHTTPMessageRef (*wkCopyCONNECTProxyResponse)(CFReadStreamRef, CFURLRef responseURL, CFStringRef proxyHost, CFNumberRef proxyPort);
@@ -223,24 +240,13 @@ extern bool (*wkGetVerticalGlyphsForCharacters)(CTFontRef, const UniChar[], CGGl
 
 extern BOOL (*wkUseSharedMediaUI)();
 
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
+#if !PLATFORM(IOS)
 extern void* wkGetHyphenationLocationBeforeIndex;
-#else
-extern CFIndex (*wkGetHyphenationLocationBeforeIndex)(CFStringRef string, CFIndex index);
-
-typedef enum {
-    wkEventPhaseNone = 0,
-    wkEventPhaseBegan = 1,
-    wkEventPhaseChanged = 2,
-    wkEventPhaseEnded = 3,
-} wkEventPhase;
-
-extern int (*wkGetNSEventMomentumPhase)(NSEvent *);
 #endif
 
 extern CTLineRef (*wkCreateCTLineWithUniCharProvider)(const UniChar* (*provide)(CFIndex stringIndex, CFIndex* charCount, CFDictionaryRef* attributes, void*), void (*dispose)(const UniChar* chars, void*), void*);
 
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
 enum {
     wkCTFontTransformApplyShaping = (1 << 0),
     wkCTFontTransformApplyPositioning = (1 << 1)
@@ -251,17 +257,16 @@ typedef int wkCTFontTransformOptions;
 extern bool (*wkCTFontTransformGlyphs)(CTFontRef font, CGGlyph glyphs[], CGSize advances[], CFIndex count, wkCTFontTransformOptions options);
 #endif
 
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
-
 extern CTTypesetterRef (*wkCreateCTTypesetterWithUniCharProviderAndOptions)(const UniChar* (*provide)(CFIndex stringIndex, CFIndex* charCount, CFDictionaryRef* attributes, void*), void (*dispose)(const UniChar* chars, void*), void*, CFDictionaryRef options);
 
 extern CGSize (*wkCTRunGetInitialAdvance)(CTRunRef);
 
-#if PLATFORM(MAC) && USE(CA)
+#if PLATFORM(COCOA) && USE(CA) && !PLATFORM(IOS_SIMULATOR)
 extern CGContextRef (*wkIOSurfaceContextCreate)(IOSurfaceRef surface, unsigned width, unsigned height, CGColorSpaceRef colorSpace);
 extern CGImageRef (*wkIOSurfaceContextCreateImage)(CGContextRef context);
 #endif
 
+#if !PLATFORM(IOS)
 extern int (*wkRecommendedScrollerStyle)(void);
 
 extern bool (*wkExecutableWasLinkedOnOrBeforeSnowLeopard)(void);
@@ -272,13 +277,11 @@ extern void (*wkSetCrashReportApplicationSpecificInformation)(CFStringRef);
 extern NSURL *(*wkAVAssetResolvedURL)(AVAsset*);
 
 extern NSCursor *(*wkCursor)(const char*);
-
-#endif
-
-#if PLATFORM(MAC)
+#endif // !PLATFORM(IOS)
+    
+#if !PLATFORM(IOS)
 extern NSArray *(*wkSpeechSynthesisGetVoiceIdentifiers)(void);
 extern NSString *(*wkSpeechSynthesisGetDefaultVoiceIdentifierForLocale)(NSLocale *);
-#endif
 
 extern void (*wkUnregisterUniqueIdForElement)(id element);
 extern void (*wkAccessibilityHandleFocusChanged)(void);    
@@ -290,12 +293,15 @@ extern CFTypeRef (*wkCopyAXTextMarkerRangeEnd)(CFTypeRef range);
 extern CFTypeRef (*wkCreateAXTextMarker)(const void *bytes, size_t len);
 extern BOOL (*wkGetBytesFromAXTextMarker)(CFTypeRef textMarker, void *bytes, size_t length);
 extern AXUIElementRef (*wkCreateAXUIElementRef)(id element);
+#endif // !PLATFORM(IOS)
 
-#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1060
-typedef struct __CFURLStorageSession* CFURLStorageSessionRef;
-#else
-typedef const struct __CFURLStorageSession* CFURLStorageSessionRef;
+#if PLATFORM(IOS)
+extern CGSize (*wkGetViewportScreenSize)(void);
+extern void (*wkSetLayerContentsScale)(CALayer *);
+extern float (*wkGetScreenScaleFactor)(void);
 #endif
+
+typedef const struct __CFURLStorageSession* CFURLStorageSessionRef;
 extern CFURLStorageSessionRef (*wkCreatePrivateStorageSession)(CFStringRef);
 extern NSURLRequest* (*wkCopyRequestWithStorageSession)(CFURLStorageSessionRef, NSURLRequest*);
 
@@ -304,7 +310,7 @@ extern CFHTTPCookieStorageRef (*wkCopyHTTPCookieStorage)(CFURLStorageSessionRef)
 extern unsigned (*wkGetHTTPCookieAcceptPolicy)(CFHTTPCookieStorageRef);
 extern void (*wkSetHTTPCookieAcceptPolicy)(CFHTTPCookieStorageRef, unsigned);
 extern NSArray *(*wkHTTPCookies)(CFHTTPCookieStorageRef);
-extern NSArray *(*wkHTTPCookiesForURL)(CFHTTPCookieStorageRef, NSURL *);
+extern NSArray *(*wkHTTPCookiesForURL)(CFHTTPCookieStorageRef, NSURL *, NSURL *);
 extern void (*wkSetHTTPCookiesForURL)(CFHTTPCookieStorageRef, NSArray *, NSURL *, NSURL *);
 extern void (*wkDeleteHTTPCookie)(CFHTTPCookieStorageRef, NSHTTPCookie *);
 extern void (*wkDeleteAllHTTPCookies)(CFHTTPCookieStorageRef);
@@ -325,35 +331,27 @@ extern CFArrayRef (*wkCFURLRequestCopyHTTPRequestBodyParts)(CFURLRequestRef);
 extern void (*wkCFURLRequestSetHTTPRequestBodyParts)(CFMutableURLRequestRef, CFArrayRef bodyParts);
 extern void (*wkSetRequestStorageSession)(CFURLStorageSessionRef, CFMutableURLRequestRef);
 #endif
+#if !PLATFORM(IOS)
 extern void (*wkSetMetadataURL)(NSString *urlString, NSString *referrer, NSString *path);
-    
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
+#endif
+
+#if !PLATFORM(IOS)
 #import <dispatch/dispatch.h>
 
 extern dispatch_source_t (*wkCreateVMPressureDispatchOnMainQueue)(void);
-
 #endif
 
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
+#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+extern dispatch_source_t (*wkCreateMemoryStatusPressureCriticalDispatchOnMainQueue)(void);
+#endif
+    
+#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
 extern bool (*wkExecutableWasLinkedOnOrBeforeLion)(void);
 #endif
 
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 extern void (*wkCGPathAddRoundedRect)(CGMutablePathRef path, const CGAffineTransform* matrix, CGRect rect, CGFloat cornerWidth, CGFloat cornerHeight);
-#endif
 
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 extern void (*wkCFURLRequestAllowAllPostCaching)(CFURLRequestRef);
-#endif
-
-#if USE(CONTENT_FILTERING)
-extern BOOL (*wkFilterIsManagedSession)(void);
-extern WebFilterEvaluator *(*wkFilterCreateInstance)(NSURLResponse *);
-extern BOOL (*wkFilterWasBlocked)(WebFilterEvaluator *);
-extern BOOL (*wkFilterIsBuffering)(WebFilterEvaluator *);
-extern NSData *(*wkFilterAddData)(WebFilterEvaluator *, NSData *);
-extern NSData *(*wkFilterDataComplete)(WebFilterEvaluator *);
-#endif
 
 #if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
 extern CGFloat (*wkNSElasticDeltaForTimeDelta)(CGFloat initialPosition, CGFloat initialVelocity, CGFloat elapsedTime);

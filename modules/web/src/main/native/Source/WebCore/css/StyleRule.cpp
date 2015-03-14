@@ -24,16 +24,14 @@
 
 #include "CSSCharsetRule.h"
 #include "CSSFontFaceRule.h"
-#include "CSSHostRule.h"
 #include "CSSImportRule.h"
 #include "CSSMediaRule.h"
 #include "CSSPageRule.h"
 #include "CSSStyleRule.h"
 #include "CSSSupportsRule.h"
 #include "CSSUnknownRule.h"
-#include "StylePropertySet.h"
+#include "StyleProperties.h"
 #include "StyleRuleImport.h"
-#include "WebKitCSSFilterRule.h"
 #include "WebKitCSSKeyframeRule.h"
 #include "WebKitCSSKeyframesRule.h"
 #include "WebKitCSSRegionRule.h"
@@ -88,19 +86,9 @@ void StyleRuleBase::destroy()
     case Keyframes:
         delete static_cast<StyleRuleKeyframes*>(this);
         return;
-#if ENABLE(SHADOW_DOM)
-    case HostInternal:
-        delete static_cast<StyleRuleHost*>(this);
-        return;
-#endif
 #if ENABLE(CSS_DEVICE_ADAPTATION)
     case Viewport:
         delete static_cast<StyleRuleViewport*>(this);
-        return;
-#endif
-#if ENABLE(CSS_SHADERS)
-    case Filter:
-        delete static_cast<StyleRuleFilter*>(this);
         return;
 #endif
     case Unknown:
@@ -115,7 +103,7 @@ void StyleRuleBase::destroy()
     ASSERT_NOT_REACHED();
 }
 
-PassRefPtr<StyleRuleBase> StyleRuleBase::copy() const
+PassRef<StyleRuleBase> StyleRuleBase::copy() const
 {
     switch (type()) {
     case Style:
@@ -134,35 +122,26 @@ PassRefPtr<StyleRuleBase> StyleRuleBase::copy() const
     case Region:
         return static_cast<const StyleRuleRegion*>(this)->copy();
 #endif
-    case Import:
-        // FIXME: Copy import rules.
-        ASSERT_NOT_REACHED();
-        return 0;
     case Keyframes:
         return static_cast<const StyleRuleKeyframes*>(this)->copy();
-#if ENABLE(SHADOW_DOM)
-    case HostInternal:
-        return static_cast<const StyleRuleHost*>(this)->copy();
-#endif
 #if ENABLE(CSS_DEVICE_ADAPTATION)
     case Viewport:
         return static_cast<const StyleRuleViewport*>(this)->copy();
 #endif
-#if ENABLE(CSS_SHADERS)
-    case Filter:
-        return static_cast<const StyleRuleFilter*>(this)->copy();
-#endif
+    case Import:
+        // FIXME: Copy import rules.
+        break;
     case Unknown:
     case Charset:
     case Keyframe:
 #if !ENABLE(CSS_REGIONS)
     case Region:
 #endif
-        ASSERT_NOT_REACHED();
-        return 0;
+        break;
     }
-    ASSERT_NOT_REACHED();
-    return 0;
+    CRASH();
+    // HACK: EFL won't build without this (old GCC with crappy -Werror=return-type)
+    return PassRef<StyleRuleBase>(*static_cast<StyleRuleBase*>(nullptr));
 }
 
 PassRefPtr<CSSRule> StyleRuleBase::createCSSOMWrapper(CSSStyleSheet* parentSheet, CSSRule* parentRule) const
@@ -203,16 +182,6 @@ PassRefPtr<CSSRule> StyleRuleBase::createCSSOMWrapper(CSSStyleSheet* parentSheet
         rule = WebKitCSSViewportRule::create(static_cast<StyleRuleViewport*>(self), parentSheet);
         break;
 #endif
-#if ENABLE(SHADOW_DOM)
-    case HostInternal:
-        rule = CSSHostRule::create(static_cast<StyleRuleHost*>(self), parentSheet);
-        break;
-#endif
-#if ENABLE(CSS_SHADERS)
-    case Filter:
-        rule = WebKitCSSFilterRule::create(static_cast<StyleRuleFilter*>(self), parentSheet);
-        break;
-#endif
     case Unknown:
     case Charset:
     case Keyframe:
@@ -229,11 +198,12 @@ PassRefPtr<CSSRule> StyleRuleBase::createCSSOMWrapper(CSSStyleSheet* parentSheet
 
 unsigned StyleRule::averageSizeInBytes()
 {
-    return sizeof(StyleRule) + sizeof(CSSSelector) + StylePropertySet::averageSizeInBytes();
+    return sizeof(StyleRule) + sizeof(CSSSelector) + StyleProperties::averageSizeInBytes();
 }
 
-StyleRule::StyleRule(int sourceLine)
+StyleRule::StyleRule(int sourceLine, PassRef<StyleProperties> properties)
     : StyleRuleBase(Style, sourceLine)
+    , m_properties(std::move(properties))
 {
 }
 
@@ -248,20 +218,53 @@ StyleRule::~StyleRule()
 {
 }
 
-MutableStylePropertySet* StyleRule::mutableProperties()
+MutableStyleProperties& StyleRule::mutableProperties()
 {
     if (!m_properties->isMutable())
         m_properties = m_properties->mutableCopy();
-    return static_cast<MutableStylePropertySet*>(m_properties.get());
+    return static_cast<MutableStyleProperties&>(m_properties.get());
 }
 
-void StyleRule::setProperties(PassRefPtr<StylePropertySet> properties)
-{ 
-    m_properties = properties;
+PassRef<StyleRule> StyleRule::create(int sourceLine, const Vector<const CSSSelector*>& selectors, PassRef<StyleProperties> properties)
+{
+    CSSSelector* selectorListArray = reinterpret_cast<CSSSelector*>(fastMalloc(sizeof(CSSSelector) * selectors.size()));
+    for (unsigned i = 0; i < selectors.size(); ++i)
+        new (NotNull, &selectorListArray[i]) CSSSelector(*selectors.at(i));
+    selectorListArray[selectors.size() - 1].setLastInSelectorList();
+    auto rule = StyleRule::create(sourceLine, std::move(properties));
+    rule.get().parserAdoptSelectorArray(selectorListArray);
+    return rule;
 }
 
-StyleRulePage::StyleRulePage()
+Vector<RefPtr<StyleRule>> StyleRule::splitIntoMultipleRulesWithMaximumSelectorComponentCount(unsigned maxCount) const
+{
+    ASSERT(selectorList().componentCount() > maxCount);
+
+    Vector<RefPtr<StyleRule>> rules;
+    Vector<const CSSSelector*> componentsSinceLastSplit;
+
+    for (const CSSSelector* selector = selectorList().first(); selector; selector = CSSSelectorList::next(selector)) {
+        Vector<const CSSSelector*, 8> componentsInThisSelector;
+        for (const CSSSelector* component = selector; component; component = component->tagHistory())
+            componentsInThisSelector.append(component);
+
+        if (componentsInThisSelector.size() + componentsSinceLastSplit.size() > maxCount) {
+            rules.append(create(sourceLine(), componentsSinceLastSplit, const_cast<StyleProperties&>(m_properties.get())));
+            componentsSinceLastSplit.clear();
+        }
+
+        componentsSinceLastSplit.appendVector(componentsInThisSelector);
+    }
+
+    if (!componentsSinceLastSplit.isEmpty())
+        rules.append(create(sourceLine(), componentsSinceLastSplit, const_cast<StyleProperties&>(m_properties.get())));
+
+    return rules;
+}
+
+StyleRulePage::StyleRulePage(PassRef<StyleProperties> properties)
     : StyleRuleBase(Page)
+    , m_properties(std::move(properties))
 {
 }
 
@@ -276,20 +279,16 @@ StyleRulePage::~StyleRulePage()
 {
 }
 
-MutableStylePropertySet* StyleRulePage::mutableProperties()
+MutableStyleProperties& StyleRulePage::mutableProperties()
 {
     if (!m_properties->isMutable())
         m_properties = m_properties->mutableCopy();
-    return static_cast<MutableStylePropertySet*>(m_properties.get());
+    return static_cast<MutableStyleProperties&>(m_properties.get());
 }
 
-void StyleRulePage::setProperties(PassRefPtr<StylePropertySet> properties)
-{ 
-    m_properties = properties;
-}
-
-StyleRuleFontFace::StyleRuleFontFace()
+StyleRuleFontFace::StyleRuleFontFace(PassRef<StyleProperties> properties)
     : StyleRuleBase(FontFace, 0)
+    , m_properties(std::move(properties))
 {
 }
 
@@ -303,20 +302,14 @@ StyleRuleFontFace::~StyleRuleFontFace()
 {
 }
 
-MutableStylePropertySet* StyleRuleFontFace::mutableProperties()
+MutableStyleProperties& StyleRuleFontFace::mutableProperties()
 {
     if (!m_properties->isMutable())
         m_properties = m_properties->mutableCopy();
-    return static_cast<MutableStylePropertySet*>(m_properties.get());
+    return static_cast<MutableStyleProperties&>(m_properties.get());
 }
 
-void StyleRuleFontFace::setProperties(PassRefPtr<StylePropertySet> properties)
-{ 
-    m_properties = properties;
-}
-
-
-StyleRuleGroup::StyleRuleGroup(Type type, Vector<RefPtr<StyleRuleBase> >& adoptRule)
+StyleRuleGroup::StyleRuleGroup(Type type, Vector<RefPtr<StyleRuleBase>>& adoptRule)
     : StyleRuleBase(type, 0)
 {
     m_childRules.swap(adoptRule);
@@ -324,15 +317,15 @@ StyleRuleGroup::StyleRuleGroup(Type type, Vector<RefPtr<StyleRuleBase> >& adoptR
 
 StyleRuleGroup::StyleRuleGroup(const StyleRuleGroup& o)
     : StyleRuleBase(o)
-    , m_childRules(o.m_childRules.size())
 {
-    for (unsigned i = 0; i < m_childRules.size(); ++i)
-        m_childRules[i] = o.m_childRules[i]->copy();
+    m_childRules.reserveInitialCapacity(o.m_childRules.size());
+    for (unsigned i = 0, size = o.m_childRules.size(); i < size; ++i)
+        m_childRules.uncheckedAppend(o.m_childRules[i]->copy());
 }
 
-void StyleRuleGroup::wrapperInsertRule(unsigned index, PassRefPtr<StyleRuleBase> rule)
+void StyleRuleGroup::wrapperInsertRule(unsigned index, PassRef<StyleRuleBase> rule)
 {
-    m_childRules.insert(index, rule);
+    m_childRules.insert(index, std::move(rule));
 }
     
 void StyleRuleGroup::wrapperRemoveRule(unsigned index)
@@ -341,7 +334,7 @@ void StyleRuleGroup::wrapperRemoveRule(unsigned index)
 }
 
 
-StyleRuleMedia::StyleRuleMedia(PassRefPtr<MediaQuerySet> media, Vector<RefPtr<StyleRuleBase> >& adoptRules)
+StyleRuleMedia::StyleRuleMedia(PassRefPtr<MediaQuerySet> media, Vector<RefPtr<StyleRuleBase>>& adoptRules)
     : StyleRuleGroup(Media, adoptRules)
     , m_mediaQueries(media)
 {
@@ -356,7 +349,7 @@ StyleRuleMedia::StyleRuleMedia(const StyleRuleMedia& o)
 
 
 #if ENABLE(CSS3_CONDITIONAL_RULES)
-StyleRuleSupports::StyleRuleSupports(const String& conditionText, bool conditionIsSupported, Vector<RefPtr<StyleRuleBase> >& adoptRules)
+StyleRuleSupports::StyleRuleSupports(const String& conditionText, bool conditionIsSupported, Vector<RefPtr<StyleRuleBase>>& adoptRules)
     : StyleRuleGroup(Supports, adoptRules)
     , m_conditionText(conditionText)
     , m_conditionIsSupported(conditionIsSupported)
@@ -371,7 +364,7 @@ StyleRuleSupports::StyleRuleSupports(const StyleRuleSupports& o)
 }
 #endif
 
-StyleRuleRegion::StyleRuleRegion(Vector<OwnPtr<CSSParserSelector> >* selectors, Vector<RefPtr<StyleRuleBase> >& adoptRules)
+StyleRuleRegion::StyleRuleRegion(Vector<std::unique_ptr<CSSParserSelector>>* selectors, Vector<RefPtr<StyleRuleBase>>& adoptRules)
     : StyleRuleGroup(Region, adoptRules)
 {
     m_selectorList.adoptSelectorVector(*selectors);
@@ -385,8 +378,9 @@ StyleRuleRegion::StyleRuleRegion(const StyleRuleRegion& o)
 
 
 #if ENABLE(CSS_DEVICE_ADAPTATION)
-StyleRuleViewport::StyleRuleViewport()
+StyleRuleViewport::StyleRuleViewport(PassRef<StyleProperties> properties)
     : StyleRuleBase(Viewport, 0)
+    , m_properties(std::move(properties))
 {
 }
 
@@ -400,48 +394,12 @@ StyleRuleViewport::~StyleRuleViewport()
 {
 }
 
-MutableStylePropertySet* StyleRuleViewport::mutableProperties()
+MutableStyleProperties& StyleRuleViewport::mutableProperties()
 {
     if (!m_properties->isMutable())
         m_properties = m_properties->mutableCopy();
-    return static_cast<MutableStylePropertySet*>(m_properties.get());
-}
-
-void StyleRuleViewport::setProperties(PassRefPtr<StylePropertySet> properties)
-{
-    m_properties = properties;
+    return static_cast<MutableStyleProperties&>(m_properties.get());
 }
 #endif // ENABLE(CSS_DEVICE_ADAPTATION)
-
-#if ENABLE(CSS_SHADERS)
-StyleRuleFilter::StyleRuleFilter(const String& filterName)
-    : StyleRuleBase(Filter, 0)
-    , m_filterName(filterName)
-{
-}
-
-StyleRuleFilter::StyleRuleFilter(const StyleRuleFilter& o)
-    : StyleRuleBase(o)
-    , m_filterName(o.m_filterName)
-    , m_properties(o.m_properties->mutableCopy())
-{
-}
-
-StyleRuleFilter::~StyleRuleFilter()
-{
-}
-
-MutableStylePropertySet* StyleRuleFilter::mutableProperties()
-{
-    if (!m_properties->isMutable())
-        m_properties = m_properties->mutableCopy();
-    return static_cast<MutableStylePropertySet*>(m_properties.get());
-}
-
-void StyleRuleFilter::setProperties(PassRefPtr<StylePropertySet> properties)
-{
-    m_properties = properties;
-}
-#endif // ENABLE(CSS_SHADERS)
 
 } // namespace WebCore

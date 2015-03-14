@@ -28,7 +28,7 @@
 #include "Gradient.h"
 
 #include "GraphicsContextCG.h"
-#include <ApplicationServices/ApplicationServices.h>
+#include <CoreGraphics/CoreGraphics.h>
 #include <wtf/RetainPtr.h>
 
 namespace WebCore {
@@ -87,21 +87,21 @@ void Gradient::paint(CGContextRef context)
         return;
     }
 
-        bool needScaling = aspectRatio() != 1;
-        if (needScaling) {
-            CGContextSaveGState(context);
-            // Scale from the center of the gradient. We only ever scale non-deprecated gradients,
-            // for which m_p0 == m_p1.
-            ASSERT(m_p0 == m_p1);
-            CGContextTranslateCTM(context, m_p0.x(), m_p0.y());
-            CGContextScaleCTM(context, 1, 1 / aspectRatio());
-            CGContextTranslateCTM(context, -m_p0.x(), -m_p0.y());
-        }
+    bool needScaling = aspectRatio() != 1;
+    if (needScaling) {
+        CGContextSaveGState(context);
+        // Scale from the center of the gradient. We only ever scale non-deprecated gradients,
+        // for which m_p0 == m_p1.
+        ASSERT(m_p0 == m_p1);
+        CGContextTranslateCTM(context, m_p0.x(), m_p0.y());
+        CGContextScaleCTM(context, 1, 1 / aspectRatio());
+        CGContextTranslateCTM(context, -m_p0.x(), -m_p0.y());
+    }
 
-        CGContextDrawRadialGradient(context, platformGradient(), m_p0, m_r0, m_p1, m_r1, extendOptions);
+    CGContextDrawRadialGradient(context, platformGradient(), m_p0, m_r0, m_p1, m_r1, extendOptions);
 
-        if (needScaling)
-            CGContextRestoreGState(context);
+    if (needScaling)
+        CGContextRestoreGState(context);
 }
 
 } //namespace

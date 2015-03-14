@@ -28,21 +28,21 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-    // See: https://dvcs.w3.org/hg/webperf/raw-file/tip/specs/ResourceTiming/Overview.html
+// See: https://dvcs.w3.org/hg/webperf/raw-file/tip/specs/ResourceTiming/Overview.html
 [
-        Conditional=RESOURCE_TIMING,
+    Conditional=RESOURCE_TIMING,
 ] interface PerformanceResourceTiming : PerformanceEntry {
-        readonly attribute DOMString initiatorType;
+    readonly attribute DOMString initiatorType;
 
-        readonly attribute double redirectStart;
-        readonly attribute double redirectEnd;
-        readonly attribute double fetchStart;
-        readonly attribute double domainLookupStart;
-        readonly attribute double domainLookupEnd;
-        readonly attribute double connectStart;
-        readonly attribute double connectEnd;
-        readonly attribute double secureConnectionStart;
-        readonly attribute double requestStart;
-        readonly attribute double responseStart;
-        readonly attribute double responseEnd;
-    };
+    readonly attribute double redirectStart;
+    readonly attribute double redirectEnd;
+    readonly attribute double fetchStart;
+    readonly attribute double domainLookupStart;
+    readonly attribute double domainLookupEnd;
+    readonly attribute double connectStart;
+    readonly attribute double connectEnd;
+    readonly attribute double secureConnectionStart;
+    readonly attribute double requestStart;
+    readonly attribute double responseStart;
+    readonly attribute double responseEnd;
+};

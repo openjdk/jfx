@@ -20,23 +20,21 @@
 
 #ifndef SVGMetadataElement_h
 #define SVGMetadataElement_h
-#if ENABLE(SVG)
 
 #include "SVGElement.h"
 
 namespace WebCore {
 
-class SVGMetadataElement FINAL : public SVGElement {
+class SVGMetadataElement final : public SVGElement {
 public:
-    static PassRefPtr<SVGMetadataElement> create(const QualifiedName&, Document*);
+    static PassRefPtr<SVGMetadataElement> create(const QualifiedName&, Document&);
 
 private:
-    SVGMetadataElement(const QualifiedName&, Document*);
+    SVGMetadataElement(const QualifiedName&, Document&);
+
+    virtual bool rendererIsNeeded(const RenderStyle&) override { return false; }
 };
 
 } // namespace WebCore
 
-#endif // ENABLE(SVG)
 #endif
-
-// vim:ts=4:noet

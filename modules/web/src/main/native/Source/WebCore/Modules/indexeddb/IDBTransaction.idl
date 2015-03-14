@@ -25,35 +25,21 @@
  */
 
 [
-        Conditional=INDEXED_DATABASE,
-        ActiveDOMObject,
+    Conditional=INDEXED_DATABASE,
+    ActiveDOMObject,
     EventTarget,
-    JSNoStaticTables
-] interface IDBTransaction {
+    JSNoStaticTables,
+    JSGenerateToJSObject,
+    JSGenerateToNativeObject,
+] interface IDBTransaction : EventTarget {
+    readonly attribute DOMString mode;
+    readonly attribute IDBDatabase db;
+    readonly attribute DOMError error;
 
-        // Properties
-        readonly attribute DOMString mode;
-        readonly attribute IDBDatabase db;
-        readonly attribute DOMError error;
-    [TreatReturnedNullStringAs=Undefined] readonly attribute DOMString webkitErrorMessage;
+    [RaisesException] IDBObjectStore objectStore (DOMString name);
+    [RaisesException] void abort ();
 
-        // Methods
-    IDBObjectStore objectStore (DOMString name)
-        raises (DOMException);
-    void abort ()
-        raises (DOMException);
-
-        // Events
-        attribute EventListener onabort;
-        attribute EventListener oncomplete;
-        attribute EventListener onerror;
-        // EventTarget interface
-    void addEventListener(DOMString type,
-                          EventListener listener,
-                          optional boolean useCapture);
-    void removeEventListener(DOMString type,
-                             EventListener listener,
-                             optional boolean useCapture);
-    boolean dispatchEvent(Event evt) 
-            raises(EventException);
-    };
+    attribute EventListener onabort;
+    attribute EventListener oncomplete;
+    attribute EventListener onerror;
+};

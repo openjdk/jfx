@@ -19,8 +19,6 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SVG)
 #include "SVGCircleElement.h"
 
 #include "Attribute.h"
@@ -47,12 +45,11 @@ BEGIN_REGISTER_ANIMATED_PROPERTIES(SVGCircleElement)
     REGISTER_LOCAL_ANIMATED_PROPERTY(cy)
     REGISTER_LOCAL_ANIMATED_PROPERTY(r)
     REGISTER_LOCAL_ANIMATED_PROPERTY(externalResourcesRequired)
-    REGISTER_PARENT_ANIMATED_PROPERTIES(SVGStyledTransformableElement)
-    REGISTER_PARENT_ANIMATED_PROPERTIES(SVGTests)
+    REGISTER_PARENT_ANIMATED_PROPERTIES(SVGGraphicsElement)
 END_REGISTER_ANIMATED_PROPERTIES
 
-inline SVGCircleElement::SVGCircleElement(const QualifiedName& tagName, Document* document)
-    : SVGStyledTransformableElement(tagName, document)
+inline SVGCircleElement::SVGCircleElement(const QualifiedName& tagName, Document& document)
+    : SVGGraphicsElement(tagName, document)
     , m_cx(LengthModeWidth)
     , m_cy(LengthModeHeight)
     , m_r(LengthModeOther)
@@ -61,7 +58,7 @@ inline SVGCircleElement::SVGCircleElement(const QualifiedName& tagName, Document
     registerAnimatedPropertiesForSVGCircleElement();
 }
 
-PassRefPtr<SVGCircleElement> SVGCircleElement::create(const QualifiedName& tagName, Document* document)
+PassRefPtr<SVGCircleElement> SVGCircleElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(new SVGCircleElement(tagName, document));
 }
@@ -70,14 +67,13 @@ bool SVGCircleElement::isSupportedAttribute(const QualifiedName& attrName)
 {
     DEFINE_STATIC_LOCAL(HashSet<QualifiedName>, supportedAttributes, ());
     if (supportedAttributes.isEmpty()) {
-        SVGTests::addSupportedAttributes(supportedAttributes);
         SVGLangSpace::addSupportedAttributes(supportedAttributes);
         SVGExternalResourcesRequired::addSupportedAttributes(supportedAttributes);
         supportedAttributes.add(SVGNames::cxAttr);
         supportedAttributes.add(SVGNames::cyAttr);
         supportedAttributes.add(SVGNames::rAttr);
     }
-    return supportedAttributes.contains<QualifiedName, SVGAttributeHashTranslator>(attrName);
+    return supportedAttributes.contains<SVGAttributeHashTranslator>(attrName);
 }
 
 void SVGCircleElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
@@ -85,15 +81,14 @@ void SVGCircleElement::parseAttribute(const QualifiedName& name, const AtomicStr
     SVGParsingError parseError = NoError;
 
     if (!isSupportedAttribute(name))
-        SVGStyledTransformableElement::parseAttribute(name, value);
+        SVGGraphicsElement::parseAttribute(name, value);
     else if (name == SVGNames::cxAttr)
         setCxBaseValue(SVGLength::construct(LengthModeWidth, value, parseError));
     else if (name == SVGNames::cyAttr)
         setCyBaseValue(SVGLength::construct(LengthModeHeight, value, parseError));
     else if (name == SVGNames::rAttr)
         setRBaseValue(SVGLength::construct(LengthModeOther, value, parseError, ForbidNegativeLengths));
-    else if (SVGTests::parseAttribute(name, value)
-             || SVGLangSpace::parseAttribute(name, value)
+    else if (SVGLangSpace::parseAttribute(name, value)
              || SVGExternalResourcesRequired::parseAttribute(name, value)) {
     } else
         ASSERT_NOT_REACHED();
@@ -104,7 +99,7 @@ void SVGCircleElement::parseAttribute(const QualifiedName& name, const AtomicStr
 void SVGCircleElement::svgAttributeChanged(const QualifiedName& attrName)
 {
     if (!isSupportedAttribute(attrName)) {
-        SVGStyledTransformableElement::svgAttributeChanged(attrName);
+        SVGGraphicsElement::svgAttributeChanged(attrName);
         return;
     }
 
@@ -117,21 +112,18 @@ void SVGCircleElement::svgAttributeChanged(const QualifiedName& attrName)
     if (isLengthAttribute)
         updateRelativeLengthsInformation();
 
-    if (SVGTests::handleAttributeChange(this, attrName))
-        return;
-
     RenderSVGShape* renderer = toRenderSVGShape(this->renderer());
     if (!renderer)
         return;
 
     if (isLengthAttribute) {
         renderer->setNeedsShapeUpdate();
-        RenderSVGResource::markForLayoutAndParentResourceInvalidation(renderer);
+        RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
         return;
     }
 
     if (SVGLangSpace::isKnownAttribute(attrName) || SVGExternalResourcesRequired::isKnownAttribute(attrName)) {
-        RenderSVGResource::markForLayoutAndParentResourceInvalidation(renderer);
+        RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
         return;
     }
 
@@ -145,11 +137,9 @@ bool SVGCircleElement::selfHasRelativeLengths() const
         || r().isRelative();
 }
 
-RenderObject* SVGCircleElement::createRenderer(RenderArena* arena, RenderStyle*)
+RenderPtr<RenderElement> SVGCircleElement::createElementRenderer(PassRef<RenderStyle> style)
 {
-    return new (arena) RenderSVGEllipse(this);
+    return createRenderer<RenderSVGEllipse>(*this, std::move(style));
 }
 
 }
-
-#endif // ENABLE(SVG)

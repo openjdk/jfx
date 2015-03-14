@@ -31,42 +31,43 @@ namespace WebCore {
 class BeforeTextInsertedEvent;
 class VisibleSelection;
 
-class HTMLTextAreaElement FINAL : public HTMLTextFormControlElement {
+class HTMLTextAreaElement final : public HTMLTextFormControlElement {
 public:
-    static PassRefPtr<HTMLTextAreaElement> create(const QualifiedName&, Document*, HTMLFormElement*);
+    static PassRefPtr<HTMLTextAreaElement> create(const QualifiedName&, Document&, HTMLFormElement*);
 
     int cols() const { return m_cols; }
     int rows() const { return m_rows; }
 
     bool shouldWrapText() const { return m_wrap != NoWrap; }
 
-    virtual String value() const;
+    virtual String value() const override;
     void setValue(const String&);
     String defaultValue() const;
     void setDefaultValue(const String&);
     int textLength() const { return value().length(); }
-    virtual int maxLength() const;
+    virtual int maxLength() const override;
     void setMaxLength(int, ExceptionCode&);
     // For ValidityState
-    virtual String validationMessage() const OVERRIDE;
-    virtual bool valueMissing() const OVERRIDE;
-    virtual bool tooLong() const OVERRIDE;
+    virtual String validationMessage() const override;
+    virtual bool valueMissing() const override;
+    virtual bool tooLong() const override;
     bool isValidValue(const String&) const;
     
-    virtual HTMLElement* innerTextElement() const;
+    virtual TextControlInnerTextElement* innerTextElement() const override;
 
     void rendererWillBeDestroyed();
 
     void setCols(int);
     void setRows(int);
 
+    virtual bool willRespondToMouseClickEvents() override;
+
 private:
-    HTMLTextAreaElement(const QualifiedName&, Document*, HTMLFormElement*);
+    HTMLTextAreaElement(const QualifiedName&, Document&, HTMLFormElement*);
 
     enum WrapMethod { NoWrap, SoftWrap, HardWrap };
 
-    virtual void didAddUserAgentShadowRoot(ShadowRoot*) OVERRIDE;
-    virtual bool areAuthorShadowsAllowed() const OVERRIDE { return false; }
+    virtual void didAddUserAgentShadowRoot(ShadowRoot*) override;
 
     void handleBeforeTextInsertedEvent(BeforeTextInsertedEvent*) const;
     static String sanitizeUserInputValue(const String&, unsigned maxLength);
@@ -74,46 +75,45 @@ private:
     void setNonDirtyValue(const String&);
     void setValueCommon(const String&);
 
-    virtual bool supportsPlaceholder() const { return true; }
-    virtual HTMLElement* placeholderElement() const;
-    virtual void updatePlaceholderText();
-    virtual bool isEmptyValue() const { return value().isEmpty(); }
+    virtual bool supportsPlaceholder() const override { return true; }
+    virtual HTMLElement* placeholderElement() const override;
+    virtual void updatePlaceholderText() override;
+    virtual bool isEmptyValue() const override { return value().isEmpty(); }
 
-    virtual bool isOptionalFormControl() const { return !isRequiredFormControl(); }
-    virtual bool isRequiredFormControl() const { return isRequired(); }
+    virtual bool isOptionalFormControl() const override { return !isRequiredFormControl(); }
+    virtual bool isRequiredFormControl() const override { return isRequired(); }
 
-    virtual void defaultEventHandler(Event*);
+    virtual void defaultEventHandler(Event*) override;
     
-    virtual void subtreeHasChanged();
+    virtual void subtreeHasChanged() override;
 
-    virtual bool isEnumeratable() const { return true; }
-    virtual bool supportLabels() const OVERRIDE { return true; }
+    virtual bool isEnumeratable() const override { return true; }
+    virtual bool supportLabels() const override { return true; }
 
-    virtual const AtomicString& formControlType() const;
+    virtual const AtomicString& formControlType() const override;
 
-    virtual FormControlState saveFormControlState() const OVERRIDE;
-    virtual void restoreFormControlState(const FormControlState&) OVERRIDE;
+    virtual FormControlState saveFormControlState() const override;
+    virtual void restoreFormControlState(const FormControlState&) override;
 
-    virtual bool isTextFormControl() const { return true; }
+    virtual bool isTextFormControl() const override { return true; }
 
-    virtual void childrenChanged(bool changedByParser = false, Node* beforeChange = 0, Node* afterChange = 0, int childCountDelta = 0);
-    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
-    virtual bool isPresentationAttribute(const QualifiedName&) const OVERRIDE;
-    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStylePropertySet*) OVERRIDE;
-    virtual RenderObject* createRenderer(RenderArena*, RenderStyle*);
-    virtual bool appendFormData(FormDataList&, bool);
-    virtual void reset();
-    virtual bool hasCustomFocusLogic() const OVERRIDE;
-    virtual bool isMouseFocusable() const OVERRIDE;
-    virtual bool isKeyboardFocusable(KeyboardEvent*) const OVERRIDE;
-    virtual void updateFocusAppearance(bool restorePreviousSelection);
+    virtual void childrenChanged(const ChildChange&) override;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
+    virtual bool isPresentationAttribute(const QualifiedName&) const override;
+    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStyleProperties&) override;
+    virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) override;
+    virtual bool appendFormData(FormDataList&, bool) override;
+    virtual void reset() override;
+    virtual bool hasCustomFocusLogic() const override;
+    virtual bool isMouseFocusable() const override;
+    virtual bool isKeyboardFocusable(KeyboardEvent*) const override;
+    virtual void updateFocusAppearance(bool restorePreviousSelection) override;
 
-    virtual void accessKeyAction(bool sendMouseEvents);
+    virtual void accessKeyAction(bool sendMouseEvents) override;
 
-    virtual bool shouldUseInputMethod();
-    virtual void attach() OVERRIDE;
-    virtual bool matchesReadOnlyPseudoClass() const OVERRIDE;
-    virtual bool matchesReadWritePseudoClass() const OVERRIDE;
+    virtual bool shouldUseInputMethod() override;
+    virtual bool matchesReadOnlyPseudoClass() const override;
+    virtual bool matchesReadWritePseudoClass() const override;
 
     bool valueMissing(const String& value) const { return isRequiredFormControl() && !isDisabledOrReadOnly() && value.isEmpty(); }
     bool tooLong(const String&, NeedsToCheckDirtyFlag) const;
@@ -127,10 +127,7 @@ private:
     mutable bool m_wasModifiedByUser;
 };
 
-inline bool isHTMLTextAreaElement(Node* node)
-{
-    return node->hasTagName(HTMLNames::textareaTag);
-}
+NODE_TYPE_CASTS(HTMLTextAreaElement)
 
 } //namespace
 

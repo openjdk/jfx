@@ -19,7 +19,7 @@
 
 #include "config.h"
 
-#if ENABLE(SVG) && ENABLE(FILTERS)
+#if ENABLE(FILTERS)
 #include "SVGFESpotLightElement.h"
 #include "SVGNames.h"
 
@@ -27,13 +27,13 @@
 
 namespace WebCore {
 
-inline SVGFESpotLightElement::SVGFESpotLightElement(const QualifiedName& tagName, Document* document)
+inline SVGFESpotLightElement::SVGFESpotLightElement(const QualifiedName& tagName, Document& document)
     : SVGFELightElement(tagName, document)
 {
     ASSERT(hasTagName(SVGNames::feSpotLightTag));
 }
 
-PassRefPtr<SVGFESpotLightElement> SVGFESpotLightElement::create(const QualifiedName& tagName, Document* document)
+PassRefPtr<SVGFESpotLightElement> SVGFESpotLightElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(new SVGFESpotLightElement(tagName, document));
 }
@@ -48,6 +48,4 @@ PassRefPtr<LightSource> SVGFESpotLightElement::lightSource() const
 
 }
 
-#endif // ENABLE(SVG)
-
-// vim:ts=4:noet
+#endif // ENABLE(FILTERS)

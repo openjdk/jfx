@@ -34,7 +34,7 @@
 #include <wtf/Platform.h>
 #endif
 
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
 #include "DumpRenderTreeMac.h"
 #elif PLATFORM(WIN)
 #include "DumpRenderTreeWin.h"
@@ -42,8 +42,6 @@
 #include "DumpRenderTreeGtk.h"
 #elif PLATFORM(EFL)
 #include "DumpRenderTreeEfl.h"
-#elif PLATFORM(BLACKBERRY)
-#include "DumpRenderTreeBlackBerry.h"
 #endif
 
 #include <string>

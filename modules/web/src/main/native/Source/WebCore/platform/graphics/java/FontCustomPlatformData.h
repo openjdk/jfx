@@ -11,6 +11,8 @@
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
 
+#include <JavaRef.h> // todo tav remove when building w/ pch
+
 namespace WebCore {
 
 class FontPlatformData;
@@ -36,7 +38,7 @@ private:
     JGObject m_data;
 };
 
-FontCustomPlatformData* createFontCustomPlatformData(SharedBuffer*);
+std::unique_ptr<FontCustomPlatformData> createFontCustomPlatformData(SharedBuffer&);
 
 }
 #endif

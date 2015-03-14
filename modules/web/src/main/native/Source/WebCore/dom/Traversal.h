@@ -33,7 +33,7 @@ namespace WebCore {
     class Node;
     class NodeFilter;
 
-    class Traversal {
+    class NodeIteratorBase {
     public:
         Node* root() const { return m_root.get(); }
         unsigned whatToShow() const { return m_whatToShow; }
@@ -41,8 +41,8 @@ namespace WebCore {
         bool expandEntityReferences() const { return m_expandEntityReferences; }
 
     protected:
-        Traversal(PassRefPtr<Node>, unsigned whatToShow, PassRefPtr<NodeFilter>, bool expandEntityReferences);
-        short acceptNode(ScriptState*, Node*) const;
+        NodeIteratorBase(PassRefPtr<Node>, unsigned whatToShow, PassRefPtr<NodeFilter>, bool expandEntityReferences);
+        short acceptNode(JSC::ExecState*, Node*) const;
 
     private:
         RefPtr<Node> m_root;

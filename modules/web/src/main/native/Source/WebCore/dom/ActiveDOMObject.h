@@ -35,7 +35,7 @@ namespace WebCore {
 
 class ActiveDOMObject : public ContextDestructionObserver {
 public:
-    ActiveDOMObject(ScriptExecutionContext*);
+    explicit ActiveDOMObject(ScriptExecutionContext*);
 
     // suspendIfNeeded() should be called exactly once after object construction to synchronize
     // the suspend state with that in ScriptExecutionContext.
@@ -56,7 +56,8 @@ public:
         JavaScriptDebuggerPaused,
         WillDeferLoading,
         DocumentWillBecomeInactive,
-        PageWillBeSuspended
+        PageWillBeSuspended,
+        DocumentWillBePaused
     };
     virtual bool canSuspend() const;
     virtual void suspend(ReasonForSuspension);
