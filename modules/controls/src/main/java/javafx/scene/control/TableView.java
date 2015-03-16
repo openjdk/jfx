@@ -3131,7 +3131,8 @@ public class TableView<S> extends Control {
             }
 
             this.tableView = tableView;
-            
+            this.EMPTY_CELL = new TablePosition<>(tableView, -1, null);
+
             if (tableView.getItems() != null) {
                 this.tableView.getItems().addListener(weakItemsContentListener);
             }
@@ -3147,8 +3148,6 @@ public class TableView<S> extends Control {
             });
 
             updateDefaultFocus();
-
-            EMPTY_CELL = new TablePosition<>(tableView, -1, null);
         }
         
         // Listen to changes in the tableview items list, such that when it
@@ -3234,7 +3233,7 @@ public class TableView<S> extends Control {
                         if (old == null || !old.equals(get())) {
                             setFocusedIndex(get().getRow());
                             setFocusedItem(getModelItem(getValue().getRow()));
-                            
+
                             old = get();
                         }
                     }
@@ -3408,7 +3407,7 @@ public class TableView<S> extends Control {
             }
 
             TablePosition<S,?> focusedCell = getFocusedCell();
-            TableColumn<S,?> focusColumn = focusedCell != null ?
+            TableColumn<S,?> focusColumn = focusedCell != null && !EMPTY_CELL.equals(focusedCell) ?
                focusedCell.getTableColumn() : tableView.getVisibleLeafColumn(0);
 
             focus(newValueIndex, focusColumn);

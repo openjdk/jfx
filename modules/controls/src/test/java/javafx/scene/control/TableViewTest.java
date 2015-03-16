@@ -26,6 +26,7 @@
 package javafx.scene.control;
 
 import static com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
+import static javafx.application.Platform.runLater;
 import static javafx.scene.control.TableColumn.SortType.ASCENDING;
 import static javafx.scene.control.TableColumn.SortType.DESCENDING;
 import static org.junit.Assert.*;
@@ -5098,5 +5099,13 @@ public class TableViewTest {
         });
 
         sm.clearAndSelect(selected);
+    }
+
+    @Test public void test_rt_40280() {
+        final TableView<String> view = new TableView<>();
+        StageLoader sl = new StageLoader(view);
+        view.getSelectionModel().getFocusedIndex();
+        view.getFocusModel().getFocusedIndex();
+        sl.dispose();
     }
 }

@@ -1754,4 +1754,11 @@ public class ListViewTest {
 
         sm.clearAndSelect(selected);
     }
+
+    @Test public void test_rt_40280() {
+        final ListView<String> view = new ListView<>();
+        StageLoader sl = new StageLoader(view);
+        view.getFocusModel().getFocusedIndex();
+        sl.dispose();
+    }
 }

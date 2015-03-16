@@ -3366,6 +3366,7 @@ public class TreeTableView<S> extends Control {
             }
 
             this.treeTableView = treeTableView;
+            this.EMPTY_CELL = new TreeTablePosition<>(treeTableView, -1, null);
             
             this.treeTableView.rootProperty().addListener(weakRootPropertyListener);
             updateTreeEventListener(null, treeTableView.getRoot());
@@ -3373,8 +3374,6 @@ public class TreeTableView<S> extends Control {
             int focusRow = getItemCount() > 0 ? 0 : -1;
             TreeTablePosition<S,?> pos = new TreeTablePosition<>(treeTableView, focusRow, null);
             setFocusedCell(pos);
-
-            EMPTY_CELL = new TreeTablePosition<>(treeTableView, -1, null);
 
             treeTableView.showRootProperty().addListener(o -> {
                 if (isFocused(0)) {

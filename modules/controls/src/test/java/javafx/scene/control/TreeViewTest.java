@@ -3276,4 +3276,11 @@ public class TreeViewTest {
 
         sm.clearAndSelect(selected);
     }
+
+    @Test public void test_rt_40280() {
+        final TreeView<String> view = new TreeView<>();
+        StageLoader sl = new StageLoader(view);
+        view.getFocusModel().getFocusedIndex();
+        sl.dispose();
+    }
 }
