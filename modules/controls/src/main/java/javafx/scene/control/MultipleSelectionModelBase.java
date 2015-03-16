@@ -525,12 +525,12 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             // list may therefore have the following: [1,4,5], meaning row 5
             // is in position 2 of the selectedIndices list
             Collections.sort(actualSelectedRows);
-            Change<Integer> change = createRangeChange(selectedIndicesSeq, actualSelectedRows);
+            Change<Integer> change = createRangeChange(selectedIndicesSeq, actualSelectedRows, false);
             selectedIndicesSeq.callObservers(change);
         }
     }
     
-    static Change<Integer> createRangeChange(final ObservableList<Integer> list, final List<Integer> addedItems) {
+    static Change<Integer> createRangeChange(final ObservableList<Integer> list, final List<Integer> addedItems, boolean splitChanges) {
         Change<Integer> change = new Change<Integer>(list) {
             private final int[] EMPTY_PERM = new int[0];
             private final int addedSize = addedItems.size(); 
@@ -578,7 +578,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
                     int previousEndValue = endValue;
                     endValue = addedItems.get(pos++);
                     ++to;
-                    if (previousEndValue != (endValue - 1)) {
+                    if (splitChanges && previousEndValue != (endValue - 1)) {
                         break;
                     }
                 }
@@ -589,12 +589,14 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
                 }
                 
                 // we keep going until we've represented all changes!
-                return pos < addedSize;
+                return splitChanges && pos < addedSize;
             }
 
             @Override public void reset() {
                 invalid = true;
                 pos = 0;
+                to = 0;
+                from = 0;
             }
             
             private void checkState() {

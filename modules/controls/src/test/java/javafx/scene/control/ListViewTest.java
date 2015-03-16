@@ -26,6 +26,7 @@
 package javafx.scene.control;
 
 import static com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -1760,5 +1761,38 @@ public class ListViewTest {
         StageLoader sl = new StageLoader(view);
         view.getFocusModel().getFocusedIndex();
         sl.dispose();
+    }
+
+    /**
+     * Test list change of selectedIndices on setIndices. Fails for core ..
+     */
+    @Test public void test_rt_40263() {
+        final ListView<Integer> lv = new ListView<>();
+        for (int i = 0; i < 10; i++) {
+            lv.getItems().add(i);
+        }
+
+        MultipleSelectionModel<Integer> sm = lv.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        int[] indices = new int[]{2, 5, 7};
+        ListChangeListener<Integer> l = c -> {
+            // firstly, we expect only one change
+            int subChanges = 0;
+            while(c.next()) {
+                subChanges++;
+            }
+            assertEquals(1, subChanges);
+
+            // secondly, we expect the added size to be three, as that is the
+            // number of items selected
+            c.reset();
+            c.next();
+            System.out.println("Added items: " + c.getAddedSubList());
+            assertEquals(indices.length, c.getAddedSize());
+            assertArrayEquals(indices, c.getAddedSubList().stream().mapToInt(i -> i).toArray());
+        };
+        sm.getSelectedIndices().addListener(l);
+        sm.selectIndices(indices[0], indices);
     }
 }

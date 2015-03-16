@@ -3337,4 +3337,40 @@ public class TreeViewTest {
         assertEquals(0, sm.getSelectedIndex());
         assertEquals(view.getTreeItem(sm.getSelectedIndex()), sm.getSelectedItem());
     }
+
+    /**
+     * Test list change of selectedIndices on setIndices. Fails for core ..
+     */
+    @Test public void test_rt_40263() {
+        TreeItem<Integer> root = new TreeItem<>(-1);
+        root.setExpanded(true);
+
+        for (int i = 0; i < 10; i++) {
+            root.getChildren().add(new TreeItem<Integer>(i));
+        }
+
+        final TreeView<Integer> view = new TreeView<>(root);
+        MultipleSelectionModel<TreeItem<Integer>> sm = view.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        int[] indices = new int[]{2, 5, 7};
+        ListChangeListener<Integer> l = c -> {
+            // firstly, we expect only one change
+            int subChanges = 0;
+            while(c.next()) {
+                subChanges++;
+            }
+            assertEquals(1, subChanges);
+
+            // secondly, we expect the added size to be three, as that is the
+            // number of items selected
+            c.reset();
+            c.next();
+            System.out.println("Added items: " + c.getAddedSubList());
+            assertEquals(indices.length, c.getAddedSize());
+            assertArrayEquals(indices, c.getAddedSubList().stream().mapToInt(i -> i).toArray());
+        };
+        sm.getSelectedIndices().addListener(l);
+        sm.selectIndices(indices[0], indices);
+    }
 }

@@ -3090,7 +3090,7 @@ public class TableView<S> extends Control {
                 // we may have requested to select row 5, and the selectedIndices
                 // list may therefore have the following: [1,4,5], meaning row 5
                 // is in position 2 of the selectedIndices list
-                ListChangeListener.Change<Integer> change = createRangeChange(selectedIndicesSeq, newlySelectedRows);
+                ListChangeListener.Change<Integer> change = createRangeChange(selectedIndicesSeq, newlySelectedRows, false);
                 selectedIndicesSeq.callObservers(change);
             } else {
                 selectedIndicesSeq.callObservers(new MappingChange<>(c, cellToIndicesMap, selectedIndicesSeq));
