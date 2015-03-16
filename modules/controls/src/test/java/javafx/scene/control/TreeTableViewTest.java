@@ -5594,4 +5594,58 @@ public class TreeTableViewTest {
         view.getFocusModel().getFocusedIndex();
         sl.dispose();
     }
+
+    @Test public void test_rt_40278_showRoot() {
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        root.getChildren().addAll(new TreeItem<>("0"),new TreeItem<>("1"));
+
+        TreeTableView<String> view = new TreeTableView<>(root);
+        view.setShowRoot(false);
+        MultipleSelectionModel<TreeItem<String>> sm = view.getSelectionModel();
+
+        assertFalse("sanity: test setup such that root is not showing", view.isShowRoot());
+        sm.select(0);
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals(view.getTreeItem(sm.getSelectedIndex()), sm.getSelectedItem());
+        view.setShowRoot(true);
+        assertEquals(1, sm.getSelectedIndex());
+        assertEquals(view.getTreeItem(sm.getSelectedIndex()), sm.getSelectedItem());
+    }
+
+    @Test public void test_rt_40278_hideRoot_selectionOnChild() {
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        root.getChildren().addAll(new TreeItem<>("0"),new TreeItem<>("1"));
+
+        TreeTableView<String> view = new TreeTableView<>(root);
+        view.setShowRoot(true);
+        MultipleSelectionModel<TreeItem<String>> sm = view.getSelectionModel();
+
+        assertTrue("sanity: test setup such that root is showing", view.isShowRoot());
+        sm.select(1);
+        assertEquals(1, sm.getSelectedIndex());
+        assertEquals(view.getTreeItem(sm.getSelectedIndex()), sm.getSelectedItem());
+        view.setShowRoot(false);
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals(view.getTreeItem(sm.getSelectedIndex()), sm.getSelectedItem());
+    }
+
+    @Test public void test_rt_40278_hideRoot_selectionOnRoot() {
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        root.getChildren().addAll(new TreeItem<>("0"),new TreeItem<>("1"));
+
+        TreeTableView<String> view = new TreeTableView<>(root);
+        view.setShowRoot(true);
+        MultipleSelectionModel<TreeItem<String>> sm = view.getSelectionModel();
+
+        assertTrue("sanity: test setup such that root is showing", view.isShowRoot());
+        sm.select(0);
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals(view.getTreeItem(sm.getSelectedIndex()), sm.getSelectedItem());
+        view.setShowRoot(false);
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals(view.getTreeItem(sm.getSelectedIndex()), sm.getSelectedItem());
+    }
 }

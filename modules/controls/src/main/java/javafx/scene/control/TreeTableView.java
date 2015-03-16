@@ -2305,6 +2305,9 @@ public class TreeTableView<S> extends Control {
             this.treeTableView = treeTableView;
             
             this.treeTableView.rootProperty().addListener(weakRootPropertyListener);
+            this.treeTableView.showRootProperty().addListener(o -> {
+                shiftSelection(0, treeTableView.isShowRoot() ? 1 : -1, null);
+            });
             updateTreeEventListener(null, treeTableView.getRoot());
 
             selectedCellsMap = new SelectedCellsMap<TreeTablePosition<S,?>>(c -> handleSelectedCellsListChangeEvent(c)) {
