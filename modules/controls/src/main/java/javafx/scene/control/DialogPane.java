@@ -34,6 +34,7 @@ import java.util.WeakHashMap;
 import com.sun.javafx.scene.control.skin.Utils;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
 import javafx.beans.DefaultProperty;
+import javafx.beans.InvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -796,17 +797,18 @@ public class DialogPane extends Pane {
      */
     protected Node createDetailsButton() {
         final Hyperlink detailsButton = new Hyperlink();
-        detailsButton.getStyleClass().setAll("details-button", "more"); //$NON-NLS-1$ //$NON-NLS-2$
         final String moreText = ControlResources.getString("Dialog.detail.button.more"); //$NON-NLS-1$
         final String lessText = ControlResources.getString("Dialog.detail.button.less"); //$NON-NLS-1$
 
-        detailsButton.setText(moreText);
-        
-        expandedProperty().addListener(o -> {
+        InvalidationListener expandedListener = o -> {
             final boolean isExpanded = isExpanded();
             detailsButton.setText(isExpanded ? lessText : moreText);
             detailsButton.getStyleClass().setAll("details-button", (isExpanded ? "less" : "more")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-        });
+        };
+
+        // we call the listener immediately to ensure the state is correct at start up
+        expandedListener.invalidated(null);
+        expandedProperty().addListener(expandedListener);
 
         detailsButton.setOnAction(ae -> setExpanded(!isExpanded()));
         return detailsButton;
