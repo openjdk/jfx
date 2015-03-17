@@ -219,6 +219,13 @@ public class PackagerLib {
             attr.put(new Attributes.Name("Class-Path"), cp);
         }
 
+        attr.put(new Attributes.Name("Permissions"),
+                 createJarParams.allPermissions ? "all-permissions" : "sandbox");
+        
+        if (createJarParams.codebase != null) {
+            attr.put(new Attributes.Name("Codebase"), createJarParams.codebase);
+        }
+        
         attr.put(new Attributes.Name("JavaFX-Version"), createJarParams.fxVersion);
 
         if (createJarParams.preloader != null) {
