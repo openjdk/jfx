@@ -1499,7 +1499,7 @@ public class ListView<T> extends Control {
 
             this.listView = listView;
 
-            InvalidationListener itemsObserver = new InvalidationListener() {
+            itemsObserver = new InvalidationListener() {
                 private WeakReference<ObservableList<T>> weakItemsRef = new WeakReference<>(listView.getItems());
 
                 @Override public void invalidated(Observable observable) {
@@ -1529,7 +1529,9 @@ public class ListView<T> extends Control {
 
             updateItemCount();
         }
-        
+
+        private final InvalidationListener itemsObserver;
+
         // Listen to changes in the listview items list, such that when it
         // changes we can update the focused index to refer to the new indices.
         private final ListChangeListener<T> itemsContentListener = c -> {
