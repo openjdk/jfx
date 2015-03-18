@@ -32,6 +32,7 @@
 
 // as destination (to draw into)
 - (void)bindForWidth:(GLuint)width andHeight:(GLuint)height;
+- (void)unbind;
 
 // as source (to show)
 - (GLuint)texture;
@@ -47,9 +48,9 @@
 {
     CGLContextObj               _ctx;
     CGLContextObj               _ctxToRestore;
-    
+
     id<GlassOffscreenProtocol>  _offscreen;
-    
+
     GLboolean                   _dirty;
     
     GLfloat                     _backgroundR;
@@ -60,7 +61,8 @@
     CAOpenGLLayer*              _layer;
 }
 
-- (id)initWithContext:(CGLContextObj)ctx;
+- (id)initWithContext:(CGLContextObj)ctx
+            andIsSwPipe:(BOOL)isSwPipe;
 - (CGLContextObj)getContext;
 
 - (void)setBackgroundColor:(NSColor*)color;

@@ -116,7 +116,7 @@
 - (void)_initialize3dWithJproperties:(jobject)jproperties
 {
     GET_MAIN_JENV;
-    
+
     int depthBits = 0;
     if (jproperties != NULL)
     {
@@ -150,6 +150,8 @@
     }
     
     CGLContextObj clientCGL = NULL;
+    BOOL isSwPipe = NO;
+
     if (jproperties != NULL)
     {
         jobject contextPtrKey = (*env)->NewStringUTF(env, "contextPtr");
@@ -175,6 +177,7 @@
     {
         // this can happen in Rain or clients other than Prism (ie. device details do not have the shared context set)
         sharedCGL = clientCGL;
+        isSwPipe = YES;
     }
 
     self->isHiDPIAware = NO;
@@ -191,7 +194,7 @@
         }
     }
 
-    GlassLayer3D *layer = [[GlassLayer3D alloc] initWithSharedContext:sharedCGL andClientContext:clientCGL withHiDPIAware:self->isHiDPIAware];
+    GlassLayer3D *layer = [[GlassLayer3D alloc] initWithSharedContext:sharedCGL andClientContext:clientCGL withHiDPIAware:self->isHiDPIAware withIsSwPipe:isSwPipe];
 
     // https://developer.apple.com/library/mac/documentation/Cocoa/Reference/ApplicationKit/Classes/nsview_Class/Reference/NSView.html#//apple_ref/occ/instm/NSView/setWantsLayer:
     // the order of the following 2 calls is important: here we indicate we want a layer-hosting view
@@ -233,6 +236,7 @@
         {
             glDeleteTextures(1, &self->_texture);
         }
+        [[layer getPainterOffscreen] unbind];
     }
     
     [[self layer] release];
@@ -605,6 +609,7 @@
     if (self->_drawCounter == 0)
     {
         GlassLayer3D *layer = (GlassLayer3D*)[self layer];
+        [[layer getPainterOffscreen] unbind];
         [layer flush];
     }
     LOG("end");

@@ -190,6 +190,7 @@
         self->_height = 0;
         self->_texture = 0;
         self->_fbo = 0;
+        self->_isSwPipe = NO;
         
         [self _assertContext];
         if ([self _supportsFbo] == NO)
@@ -228,12 +229,52 @@
     [self _assertContext];
     {
         if ((width > 0) && (height > 0))
-        {            
+        {
+            if(self->_isSwPipe)
+            {
+                self->_fboToRestore = 0; // default to screen
+                glGetIntegerv(GL_FRAMEBUFFER_BINDING_EXT, (GLint*)&self->_fboToRestore);
+                LOG("               will need to restore to FBO: %d", self->_fboToRestore);
+            }
+
             [self _createFboIfNeededForWidth:width andHeight:height];
+
+            if (self->_isSwPipe && (self->_fbo != 0))
+            {
+                GLuint framebufferToBind = self->_fbo; // our own FBO
+                glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, framebufferToBind);
+                LOG("               bounded to FBO: %d", self->_fbo);
+            }
         }
     }
     LOG("               BOUND");
     LOG("               glGetError(): %d", glGetError());
+}
+
+- (void)unbind
+{
+    if (self->_isSwPipe)
+    {
+        LOG("           GlassFrameBufferObject unbind"); 
+        [self _assertContext];
+        {
+            GLint framebufferCurrent = 0;
+            glGetIntegerv(GL_FRAMEBUFFER_BINDING_EXT, &framebufferCurrent);
+
+            if ((GLuint)framebufferCurrent != self->_fbo)
+            {
+                fprintf(stderr, "ERROR: unexpected fbo is bound! Expected %d, but found %d\n", self->_fbo, framebufferCurrent);
+            }
+
+            if (![GlassApplication syncRenderingDisabled]) {         
+                glFinish();
+            }
+            GLuint framebufferToRevertTo = self->_fboToRestore;
+            glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, framebufferToRevertTo);
+            LOG("               restored to FBO: %d", framebufferToRevertTo);
+            LOG("               glGetError(): %d", glGetError());
+        }
+    }
 }
 
 - (void)blitForWidth:(GLuint)width andHeight:(GLuint)height
@@ -292,6 +333,11 @@
 - (GLuint)fbo
 {
     return self->_fbo;
+}
+
+- (void)setIsSwPipe:(BOOL)isSwPipe
+{
+    self->_isSwPipe = isSwPipe;
 }
 
 @end
