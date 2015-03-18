@@ -2319,13 +2319,13 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nRenderMeshView
     ctxInfo->glEnableVertexAttribArray(NC_3D_INDEX);
 
     ctxInfo->glVertexAttribPointer(VC_3D_INDEX, VC_3D_SIZE, GL_FLOAT, GL_FALSE,
-            VERT_3D_STRIDE, (const void*) offset);
+            VERT_3D_STRIDE, (const GLvoid *) jlong_to_ptr((jlong) offset));
     offset += VC_3D_SIZE * sizeof(GLfloat);
     ctxInfo->glVertexAttribPointer(TC_3D_INDEX, TC_3D_SIZE, GL_FLOAT, GL_FALSE,
-            VERT_3D_STRIDE, (const void*) offset);
+            VERT_3D_STRIDE, (const GLvoid *) jlong_to_ptr((jlong) offset));
     offset += TC_3D_SIZE * sizeof(GLfloat);
     ctxInfo->glVertexAttribPointer(NC_3D_INDEX, NC_3D_SIZE, GL_FLOAT, GL_FALSE,
-            VERT_3D_STRIDE, (const void*) offset);
+            VERT_3D_STRIDE, (const GLvoid *) jlong_to_ptr((jlong) offset));
 
     glDrawElements(GL_TRIANGLES, mvInfo->meshInfo->indexBufferSize,
             mvInfo->meshInfo->indexBufferType, 0);
