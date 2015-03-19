@@ -38,10 +38,12 @@
     GLuint _texture;
     GLuint _fbo;
     GLuint _fboToRestore;
+    BOOL   _isSwPipe;
 }
 
 - (void)blitFromFBO:(GlassFrameBufferObject*)other_fbo;
 - (GLuint)texture;
 - (GLuint)fbo;
+- (void)setIsSwPipe:(BOOL)isSwPipe;
 
 @end

@@ -26,6 +26,7 @@
 package javafx.scene.control;
 
 import static com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
+import static javafx.application.Platform.runLater;
 import static javafx.scene.control.TableColumn.SortType.ASCENDING;
 import static javafx.scene.control.TableColumn.SortType.DESCENDING;
 import static org.junit.Assert.*;
@@ -5098,5 +5099,46 @@ public class TableViewTest {
         });
 
         sm.clearAndSelect(selected);
+    }
+
+    @Test public void test_rt_40280() {
+        final TableView<String> view = new TableView<>();
+        StageLoader sl = new StageLoader(view);
+        view.getSelectionModel().getFocusedIndex();
+        view.getFocusModel().getFocusedIndex();
+        sl.dispose();
+    }
+
+    /**
+     * Test list change of selectedIndices on setIndices. Fails for core ..
+     */
+    @Test public void test_rt_40263() {
+        final TableView<Integer> view = new TableView<>();
+        for (int i = 0; i < 10; i++) {
+            view.getItems().add(i);
+        }
+
+        MultipleSelectionModel<Integer> sm = view.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        int[] indices = new int[]{2, 5, 7};
+        ListChangeListener<Integer> l = c -> {
+            // firstly, we expect only one change
+            int subChanges = 0;
+            while(c.next()) {
+                subChanges++;
+            }
+            assertEquals(1, subChanges);
+
+            // secondly, we expect the added size to be three, as that is the
+            // number of items selected
+            c.reset();
+            c.next();
+            System.out.println("Added items: " + c.getAddedSubList());
+            assertEquals(indices.length, c.getAddedSize());
+            assertArrayEquals(indices, c.getAddedSubList().stream().mapToInt(i -> i).toArray());
+        };
+        sm.getSelectedIndices().addListener(l);
+        sm.selectIndices(indices[0], indices);
     }
 }

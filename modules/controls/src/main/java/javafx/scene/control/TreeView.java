@@ -1251,6 +1251,9 @@ public class TreeView<T> extends Control {
 
             this.treeView = treeView;
             this.treeView.rootProperty().addListener(weakRootPropertyListener);
+            this.treeView.showRootProperty().addListener(o -> {
+                shiftSelection(0, treeView.isShowRoot() ? 1 : -1, null);
+            });
                     
             updateTreeEventListener(null, treeView.getRoot());
 

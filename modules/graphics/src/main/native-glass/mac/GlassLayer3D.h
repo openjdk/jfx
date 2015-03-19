@@ -42,7 +42,8 @@
 
 - (id)initWithSharedContext:(CGLContextObj)ctx
            andClientContext:(CGLContextObj)clCtx
-             withHiDPIAware:(BOOL)HiDPIAware;
+             withHiDPIAware:(BOOL)HiDPIAware
+             withIsSwPipe:(BOOL)isSwPipe;
 
 - (uint32_t)getRemoteLayerIdForServer:(NSString*)serverName;
 - (void)hostRemoteLayerId:(uint32_t)layerId;

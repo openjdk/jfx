@@ -163,7 +163,7 @@ public class DeployFXTask extends Task implements DynamicAttribute {
 
         deployParams.setEmbedJNLP(embedJNLP);
         if (perms != null) {
-           deployParams.setAllPermissions(perms.elevated);
+           deployParams.setAllPermissions(perms.getElevated());
         }
 
         if (app != null) {
@@ -539,44 +539,6 @@ public class DeployFXTask extends Task implements DynamicAttribute {
         //Use qName and value - can't really validate anything until we know which bundlers we have, so this has
         //to done (way) downstream
         bundleArgumentList.add(new BundleArgument(name, value));
-    }
-
-
-    /**
-     * Definition of security permissions needed by application.
-     * By default it is assumed that application may run in sandbox.
-     * Requesting elevated permissions assumes that application jar
-     * files are signed.
-     *
-     * @ant.type name="Permissions" category="javafx"
-     */
-    public static class Permissions extends DataType {
-        @Deprecated final boolean embed = false;
-        boolean elevated = true;
-
-        /**
-         * If set to false then application can run in sandbox.
-         *
-         * @ant.not-required Default is true.
-         */
-        public void setElevated(boolean v) {
-            elevated = v;
-        }
-
-        /**
-         * If true then certificate used to sign jar files will be cached
-         * in the JNLP file. This allows to ask user to accept elevating
-         * permissions earlier and improves startup time.
-         * <p>
-         * This has no effect if application is run in the sandbox.
-         *
-         * @ant.not-required By default is false.
-         */
-        public void setCacheCertificates(boolean v) {
-            if (v) {
-                Log.info("JavaFX Ant Tasks no longer support caching certificates in JNLP.  Setting ignored.");
-            }
-        }
     }
 
     /**

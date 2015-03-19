@@ -2305,6 +2305,9 @@ public class TreeTableView<S> extends Control {
             this.treeTableView = treeTableView;
             
             this.treeTableView.rootProperty().addListener(weakRootPropertyListener);
+            this.treeTableView.showRootProperty().addListener(o -> {
+                shiftSelection(0, treeTableView.isShowRoot() ? 1 : -1, null);
+            });
             updateTreeEventListener(null, treeTableView.getRoot());
 
             selectedCellsMap = new SelectedCellsMap<TreeTablePosition<S,?>>(c -> handleSelectedCellsListChangeEvent(c)) {
@@ -3325,7 +3328,7 @@ public class TreeTableView<S> extends Control {
                 // we may have requested to select row 5, and the selectedIndices
                 // list may therefore have the following: [1,4,5], meaning row 5
                 // is in position 2 of the selectedIndices list
-                ListChangeListener.Change<Integer> change = createRangeChange(selectedIndicesSeq, newlySelectedRows);
+                ListChangeListener.Change<Integer> change = createRangeChange(selectedIndicesSeq, newlySelectedRows, false);
                 selectedIndicesSeq.callObservers(change);
             } else {
                 selectedIndicesSeq.callObservers(new MappingChange<>(c, cellToIndicesMap, selectedIndicesSeq));
@@ -3366,6 +3369,7 @@ public class TreeTableView<S> extends Control {
             }
 
             this.treeTableView = treeTableView;
+            this.EMPTY_CELL = new TreeTablePosition<>(treeTableView, -1, null);
             
             this.treeTableView.rootProperty().addListener(weakRootPropertyListener);
             updateTreeEventListener(null, treeTableView.getRoot());
@@ -3373,8 +3377,6 @@ public class TreeTableView<S> extends Control {
             int focusRow = getItemCount() > 0 ? 0 : -1;
             TreeTablePosition<S,?> pos = new TreeTablePosition<>(treeTableView, focusRow, null);
             setFocusedCell(pos);
-
-            EMPTY_CELL = new TreeTablePosition<>(treeTableView, -1, null);
 
             treeTableView.showRootProperty().addListener(o -> {
                 if (isFocused(0)) {

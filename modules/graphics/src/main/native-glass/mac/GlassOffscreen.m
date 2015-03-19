@@ -43,6 +43,7 @@
 @implementation GlassOffscreen
 
 - (id)initWithContext:(CGLContextObj)ctx
+            andIsSwPipe:(BOOL)isSwPipe;
 {
     self = [super init];
     if (self != nil)
@@ -62,6 +63,7 @@
                 // TODO: implement PBuffer if needed
                 //self->_offscreen = [[GlassPBuffer alloc] init];
             }
+            [(GlassFrameBufferObject*)self->_offscreen setIsSwPipe:(BOOL)isSwPipe];
         }
         [self unsetContext];
     }
@@ -139,6 +141,12 @@
 {
     [self setContext];
     [self->_offscreen bindForWidth:width andHeight:height];
+}
+
+- (void)unbind
+{
+    assert(CGLGetCurrentContext() == self->_ctx);
+    [self->_offscreen unbind];
     [self unsetContext];
 }
 

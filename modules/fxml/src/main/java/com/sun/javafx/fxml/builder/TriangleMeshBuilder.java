@@ -103,7 +103,9 @@ public class TriangleMeshBuilder extends TreeMap<String, Object> implements Buil
                 normals[i] = Float.parseFloat(split[i]);
             }
         } else if ("vertexformat".equalsIgnoreCase(key)) {
-            if ("point_texcoord".equalsIgnoreCase((String)value)) {
+            if (value instanceof VertexFormat) {
+                vertexFormat = (VertexFormat) value;
+            } else if ("point_texcoord".equalsIgnoreCase((String)value)) {
                 vertexFormat = VertexFormat.POINT_TEXCOORD;
             } else if ("point_normal_texcoord".equalsIgnoreCase((String)value)) {
                 vertexFormat = VertexFormat.POINT_NORMAL_TEXCOORD;

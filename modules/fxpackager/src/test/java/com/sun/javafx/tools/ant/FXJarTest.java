@@ -126,5 +126,49 @@ public class FXJarTest {
         FXJar j = new FXJar();
         j.execute();
     }
+    
+    private static final String CODEBASE_ATTRIBUTE_NAME = "Codebase";
+    private static final String CODEBASE_ATTRIBUTE_VALUE = "www.example.com";
+    
+    @Test
+    public void codebaseAttributeTest() throws IOException, ManifestException {
+        fxjar.setCodebase(CODEBASE_ATTRIBUTE_VALUE);
+        fxjar.execute();
 
+        JarFile jout = new JarFile(testOut);
+        Manifest m = jout.getManifest();
+
+        assertEquals(CODEBASE_ATTRIBUTE_VALUE,
+                m.getMainAttributes().getValue(CODEBASE_ATTRIBUTE_NAME));
+    }
+
+    private static final String PERMISSIONS_ATTRIBUTE_NAME = "Permissions";
+    private static final String PERMISSIONS_ATTRIBUTE_ALLPERMS_VALUE = "all-permissions";
+    private static final String PERMISSIONS_ATTRIBUTE_SANDBOX_VALUE = "sandbox";
+    
+    @Test
+    public void allpermsAttributeTest() throws IOException, ManifestException {
+        Permissions perms = fxjar.createPermissions();
+        perms.setElevated(true);
+        fxjar.execute();
+
+        JarFile jout = new JarFile(testOut);
+        Manifest m = jout.getManifest();
+
+        assertEquals(PERMISSIONS_ATTRIBUTE_ALLPERMS_VALUE,
+                m.getMainAttributes().getValue(PERMISSIONS_ATTRIBUTE_NAME));
+    }
+
+    @Test
+    public void sandboxAttributeTest() throws IOException, ManifestException {
+        fxjar.execute();
+
+        JarFile jout = new JarFile(testOut);
+        Manifest m = jout.getManifest();
+
+        // should be sandbox if permissions aren't specified
+        assertEquals(PERMISSIONS_ATTRIBUTE_SANDBOX_VALUE,
+                m.getMainAttributes().getValue(PERMISSIONS_ATTRIBUTE_NAME));
+    }
+    
 }
