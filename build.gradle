@@ -386,6 +386,10 @@ ext.IS_DOC_LINT = DOC_LINT != "none"
 defineProperty("USE_DEPEND", "true")
 ext.IS_USE_DEPEND = Boolean.parseBoolean(USE_DEPEND)
 
+// Specifies whether to use the "incremental" option when compiling Java sources
+defineProperty("INCREMENTAL", "false")
+ext.IS_INCREMENTAL = Boolean.parseBoolean(INCREMENTAL)
+
 // Specifies whether to generate code coverage statistics when running tests
 defineProperty("JCOV", "false")
 ext.DO_JCOV = Boolean.parseBoolean(JCOV)
@@ -764,9 +768,7 @@ if (gradle.gradleVersion != "1.8") {
     def gradleMajor = Integer.parseInt(ver[0]);
     def gradleMinor = Integer.parseInt(ver[1]);
     def err = "";
-    if (gradleMajor != 1) {
-        err = "Gradle major version is incompatible: ${gradle.gradleVersion}; supported version is 1.8";
-    } else {
+    if (gradleMajor == 1) {
         if (gradleMinor < 8) {
             err = "Gradle version too old: ${gradle.gradleVersion}; must be at least 1.8"
         }
@@ -2650,17 +2652,18 @@ allprojects {
     // compiler with the right settings.
     //
     // Also, we need to remove jfxrt.jar from the ext classpath (if it is there)
-    tasks.withType(Compile) { compile ->
-        // It looks like we have to use ant to compile instead of the built-in gradle
-        // compiler stuff because otherwise it won't compile on CYGWIN
-        // TODO need to file issue with Gradle
-        compile.options.useAnt = true
+    tasks.withType(JavaCompile) { compile ->
+        if (compile.options.hasProperty("useAnt")) {
+            compile.options.useAnt = true
+            compile.options.useDepend = IS_USE_DEPEND
+        } else if (compile.options.hasProperty("incremental")) {
+            compile.options.incremental = IS_INCREMENTAL
+        }
         compile.options.debug = true // we always generate debugging info in the class files
         compile.options.debugOptions.debugLevel = IS_DEBUG_JAVA ? "source,lines,vars" : "source,lines"
         compile.options.fork = true
         compile.options.forkOptions.executable = JAVAC
         compile.options.warnings = IS_LINT
-        compile.options.useDepend = IS_USE_DEPEND
         compile.options.compilerArgs = ["-Djava.ext.dirs=", "-XDignore.symbol.file", "-encoding", "UTF-8"]
         if (!DO_BUILD_SDK_FOR_TEST) {
             compile.classpath = files(jfxrtJarFromSdk) + compile.classpath
