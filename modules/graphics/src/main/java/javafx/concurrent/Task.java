@@ -191,7 +191,7 @@ import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_SUCCEEDED;
  *     progress of the Task in each iteration. Note that we have a choice
  *     to make in the case of cancellation. Do we want to set the progress back
  *     to -1 (indeterminate) when the Task is cancelled, or do we want to leave
- *     the progress where it was at? In this case, lets leave the progress alone
+ *     the progress where it was at? In this case, let's leave the progress alone
  *     and only update the message on cancellation, though updating the
  *     progress after cancellation is a perfectly valid choice.
  * </p>
@@ -384,7 +384,7 @@ import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_SUCCEEDED;
  *             // Now update the customer
  *             Platform.runLater(new Runnable() {
  *                 &#64;Override public void run() {
- *                     customer.setF setFirstName(rs.getString("FirstName"));
+ *                     customer.setFirstName(rs.getString("FirstName"));
  *                     // etc
  *                 }
  *             });
