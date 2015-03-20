@@ -2427,7 +2427,6 @@ public class Scene implements EventTarget {
                     if (PULSE_LOGGING_ENABLED) {
                         PulseLogger.newPhase("Synchronize with null peer");
                     }
-                    synchronizeSceneProperties();
                     synchronizeSceneNodes();
                     Scene.this.mouseHandler.pulse();
                 }
