@@ -22,8 +22,6 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SVG)
 #include "SVGMaskElement.h"
 
 #include "Attribute.h"
@@ -53,12 +51,12 @@ BEGIN_REGISTER_ANIMATED_PROPERTIES(SVGMaskElement)
     REGISTER_LOCAL_ANIMATED_PROPERTY(width)
     REGISTER_LOCAL_ANIMATED_PROPERTY(height)
     REGISTER_LOCAL_ANIMATED_PROPERTY(externalResourcesRequired)
-    REGISTER_PARENT_ANIMATED_PROPERTIES(SVGStyledElement)
+    REGISTER_PARENT_ANIMATED_PROPERTIES(SVGElement)
     REGISTER_PARENT_ANIMATED_PROPERTIES(SVGTests)
 END_REGISTER_ANIMATED_PROPERTIES
 
-inline SVGMaskElement::SVGMaskElement(const QualifiedName& tagName, Document* document)
-    : SVGStyledElement(tagName, document)
+inline SVGMaskElement::SVGMaskElement(const QualifiedName& tagName, Document& document)
+    : SVGElement(tagName, document)
     , m_maskUnits(SVGUnitTypes::SVG_UNIT_TYPE_OBJECTBOUNDINGBOX)
     , m_maskContentUnits(SVGUnitTypes::SVG_UNIT_TYPE_USERSPACEONUSE)
     , m_x(LengthModeWidth, "-10%")
@@ -72,7 +70,7 @@ inline SVGMaskElement::SVGMaskElement(const QualifiedName& tagName, Document* do
     registerAnimatedPropertiesForSVGMaskElement();
 }
 
-PassRefPtr<SVGMaskElement> SVGMaskElement::create(const QualifiedName& tagName, Document* document)
+PassRefPtr<SVGMaskElement> SVGMaskElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(new SVGMaskElement(tagName, document));
 }
@@ -91,7 +89,7 @@ bool SVGMaskElement::isSupportedAttribute(const QualifiedName& attrName)
         supportedAttributes.add(SVGNames::widthAttr);
         supportedAttributes.add(SVGNames::heightAttr);
     }
-    return supportedAttributes.contains<QualifiedName, SVGAttributeHashTranslator>(attrName);
+    return supportedAttributes.contains<SVGAttributeHashTranslator>(attrName);
 }
 
 void SVGMaskElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
@@ -99,7 +97,7 @@ void SVGMaskElement::parseAttribute(const QualifiedName& name, const AtomicStrin
     SVGParsingError parseError = NoError;
 
     if (!isSupportedAttribute(name))
-        SVGStyledElement::parseAttribute(name, value);
+        SVGElement::parseAttribute(name, value);
     else if (name == SVGNames::maskUnitsAttr) {
         SVGUnitTypes::SVGUnitType propertyValue = SVGPropertyTraits<SVGUnitTypes::SVGUnitType>::fromString(value);
         if (propertyValue > 0)
@@ -130,7 +128,7 @@ void SVGMaskElement::parseAttribute(const QualifiedName& name, const AtomicStrin
 void SVGMaskElement::svgAttributeChanged(const QualifiedName& attrName)
 {
     if (!isSupportedAttribute(attrName)) {
-        SVGStyledElement::svgAttributeChanged(attrName);
+        SVGElement::svgAttributeChanged(attrName);
         return;
     }
 
@@ -143,23 +141,23 @@ void SVGMaskElement::svgAttributeChanged(const QualifiedName& attrName)
         updateRelativeLengthsInformation();
 
     if (RenderObject* object = renderer())
-        object->setNeedsLayout(true);
+        object->setNeedsLayout();
 }
 
-void SVGMaskElement::childrenChanged(bool changedByParser, Node* beforeChange, Node* afterChange, int childCountDelta)
+void SVGMaskElement::childrenChanged(const ChildChange& change)
 {
-    SVGStyledElement::childrenChanged(changedByParser, beforeChange, afterChange, childCountDelta);
+    SVGElement::childrenChanged(change);
 
-    if (changedByParser)
+    if (change.source == ChildChangeSourceParser)
         return;
 
     if (RenderObject* object = renderer())
-        object->setNeedsLayout(true);
+        object->setNeedsLayout();
 }
 
-RenderObject* SVGMaskElement::createRenderer(RenderArena* arena, RenderStyle*)
+RenderPtr<RenderElement> SVGMaskElement::createElementRenderer(PassRef<RenderStyle> style)
 {
-    return new (arena) RenderSVGResourceMasker(this);
+    return createRenderer<RenderSVGResourceMasker>(*this, std::move(style));
 }
 
 bool SVGMaskElement::selfHasRelativeLengths() const
@@ -171,5 +169,3 @@ bool SVGMaskElement::selfHasRelativeLengths() const
 }
 
 }
-
-#endif // ENABLE(SVG)

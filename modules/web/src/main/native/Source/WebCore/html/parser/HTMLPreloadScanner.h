@@ -28,7 +28,6 @@
 #define HTMLPreloadScanner_h
 
 #include "CSSPreloadScanner.h"
-#include "CompactHTMLToken.h"
 #include "HTMLToken.h"
 #include "SegmentedString.h"
 #include <wtf/Vector.h>
@@ -44,15 +43,12 @@ class SegmentedString;
 class TokenPreloadScanner {
     WTF_MAKE_NONCOPYABLE(TokenPreloadScanner); WTF_MAKE_FAST_ALLOCATED;
 public:
-    explicit TokenPreloadScanner(const KURL& documentURL);
+    explicit TokenPreloadScanner(const URL& documentURL, float deviceScaleFactor = 1.0);
     ~TokenPreloadScanner();
 
     void scan(const HTMLToken&, PreloadRequestStream& requests);
-#if ENABLE(THREADED_HTML_PARSER)
-    void scan(const CompactHTMLToken&, PreloadRequestStream& requests);
-#endif
 
-    void setPredictedBaseElementURL(const KURL& url) { m_predictedBaseElementURL = url; }
+    void setPredictedBaseElementURL(const URL& url) { m_predictedBaseElementURL = url; }
 
     // A TokenPreloadScannerCheckpoint is valid until the next call to rewindTo,
     // at which point all outstanding checkpoints are invalidated.
@@ -66,27 +62,23 @@ public:
     }
 
 private:
-    enum TagId {
+    enum class TagId {
         // These tags are scanned by the StartTagScanner.
-        ImgTagId,
-        InputTagId,
-        LinkTagId,
-        ScriptTagId,
+        Img,
+        Input,
+        Link,
+        Script,
 
         // These tags are not scanned by the StartTagScanner.
-        UnknownTagId,
-        StyleTagId,
-        BaseTagId,
-        TemplateTagId,
+        Unknown,
+        Style,
+        Base,
+        Template,
     };
 
     class StartTagScanner;
 
-    template<typename Token>
-    inline void scanCommon(const Token&, PreloadRequestStream& requests);
-
     static TagId tagIdFor(const HTMLToken::DataVector&);
-    static TagId tagIdFor(const HTMLIdentifier&);
 
     static String initiatorFor(TagId);
 
@@ -94,7 +86,7 @@ private:
     void updatePredictedBaseURL(const Token&);
 
     struct Checkpoint {
-        Checkpoint(const KURL& predictedBaseElementURL, bool inStyle
+        Checkpoint(const URL& predictedBaseElementURL, bool inStyle
 #if ENABLE(TEMPLATE_ELEMENT)
             , size_t templateCount
 #endif
@@ -107,7 +99,7 @@ private:
         {
         }
 
-        KURL predictedBaseElementURL;
+        URL predictedBaseElementURL;
         bool inStyle;
 #if ENABLE(TEMPLATE_ELEMENT)
         size_t templateCount;
@@ -115,9 +107,10 @@ private:
     };
 
     CSSPreloadScanner m_cssScanner;
-    const KURL m_documentURL;
-    KURL m_predictedBaseElementURL;
+    const URL m_documentURL;
+    URL m_predictedBaseElementURL;
     bool m_inStyle;
+    float m_deviceScaleFactor;
 
 #if ENABLE(TEMPLATE_ELEMENT)
     size_t m_templateCount;
@@ -129,17 +122,17 @@ private:
 class HTMLPreloadScanner {
     WTF_MAKE_NONCOPYABLE(HTMLPreloadScanner); WTF_MAKE_FAST_ALLOCATED;
 public:
-    HTMLPreloadScanner(const HTMLParserOptions&, const KURL& documentURL);
+    HTMLPreloadScanner(const HTMLParserOptions&, const URL& documentURL, float deviceScaleFactor = 1.0);
     ~HTMLPreloadScanner();
 
     void appendToEnd(const SegmentedString&);
-    void scan(HTMLResourcePreloader*, const KURL& documentBaseElementURL);
+    void scan(HTMLResourcePreloader*, const URL& documentBaseElementURL);
 
 private:
     TokenPreloadScanner m_scanner;
     SegmentedString m_source;
     HTMLToken m_token;
-    OwnPtr<HTMLTokenizer> m_tokenizer;
+    std::unique_ptr<HTMLTokenizer> m_tokenizer;
 };
 
 }

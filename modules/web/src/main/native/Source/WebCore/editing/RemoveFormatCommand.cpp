@@ -28,19 +28,17 @@
 #include "RemoveFormatCommand.h"
 
 #include "ApplyStyleCommand.h"
-#include "CSSValueKeywords.h"
-#include "EditingStyle.h"
 #include "Element.h"
 #include "Frame.h"
 #include "FrameSelection.h"
 #include "HTMLNames.h"
-#include "StylePropertySet.h"
+#include "StyleProperties.h"
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-RemoveFormatCommand::RemoveFormatCommand(Document* document)
+RemoveFormatCommand::RemoveFormatCommand(Document& document)
     : CompositeEditCommand(document)
 {
 }
@@ -79,14 +77,12 @@ static bool isElementForRemoveFormatCommand(const Element* element)
 
 void RemoveFormatCommand::doApply()
 {
-    Frame* frame = document()->frame();
-
-    if (!frame->selection()->selection().isNonOrphanedCaretOrRange())
+    if (!endingSelection().isNonOrphanedCaretOrRange())
         return;
 
     // Get the default style for this editable root, it's the style that we'll give the
     // content that we're operating on.
-    Node* root = frame->selection()->rootEditableElement();
+    Node* root = endingSelection().rootEditableElement();
     RefPtr<EditingStyle> defaultStyle = EditingStyle::create(root);
 
     // We want to remove everything but transparent background.

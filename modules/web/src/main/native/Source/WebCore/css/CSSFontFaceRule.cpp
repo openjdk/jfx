@@ -23,7 +23,7 @@
 #include "CSSFontFaceRule.h"
 
 #include "PropertySetCSSStyleDeclaration.h"
-#include "StylePropertySet.h"
+#include "StyleProperties.h"
 #include "StyleRule.h"
 #include <wtf/text/StringBuilder.h>
 
@@ -44,7 +44,7 @@ CSSFontFaceRule::~CSSFontFaceRule()
 CSSStyleDeclaration* CSSFontFaceRule::style()
 {
     if (!m_propertiesCSSOMWrapper)
-        m_propertiesCSSOMWrapper = StyleRuleCSSStyleDeclaration::create(m_fontFaceRule->mutableProperties(), this);
+        m_propertiesCSSOMWrapper = StyleRuleCSSStyleDeclaration::create(m_fontFaceRule->mutableProperties(), *this);
     return m_propertiesCSSOMWrapper.get();
 }
 
@@ -52,7 +52,7 @@ String CSSFontFaceRule::cssText() const
 {
     StringBuilder result;
     result.appendLiteral("@font-face { ");
-    String descs = m_fontFaceRule->properties()->asText();
+    String descs = m_fontFaceRule->properties().asText();
     result.append(descs);
     if (!descs.isEmpty())
         result.append(' ');

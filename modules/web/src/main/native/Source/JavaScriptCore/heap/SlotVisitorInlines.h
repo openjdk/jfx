@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,7 +39,7 @@ ALWAYS_INLINE void SlotVisitor::append(JSValue* slot, size_t count)
 {
     for (size_t i = 0; i < count; ++i) {
         JSValue& value = slot[i];
-        internalAppend(value);
+        internalAppend(&value, value);
     }
 }
 
@@ -48,25 +48,36 @@ inline void SlotVisitor::appendUnbarrieredPointer(T** slot)
 {
     ASSERT(slot);
     JSCell* cell = *slot;
-    internalAppend(cell);
+    internalAppend(slot, cell);
+}
+
+template<typename T>
+inline void SlotVisitor::appendUnbarrieredReadOnlyPointer(T* cell)
+{
+    internalAppend(0, cell);
 }
 
 ALWAYS_INLINE void SlotVisitor::append(JSValue* slot)
 {
     ASSERT(slot);
-    internalAppend(*slot);
+    internalAppend(slot, *slot);
 }
 
 ALWAYS_INLINE void SlotVisitor::appendUnbarrieredValue(JSValue* slot)
 {
     ASSERT(slot);
-    internalAppend(*slot);
+    internalAppend(slot, *slot);
+}
+
+ALWAYS_INLINE void SlotVisitor::appendUnbarrieredReadOnlyValue(JSValue value)
+{
+    internalAppend(0, value);
 }
 
 ALWAYS_INLINE void SlotVisitor::append(JSCell** slot)
 {
     ASSERT(slot);
-    internalAppend(*slot);
+    internalAppend(slot, *slot);
 }
 
 template<typename T>
@@ -74,14 +85,64 @@ ALWAYS_INLINE void SlotVisitor::appendUnbarrieredWeak(Weak<T>* weak)
 {
     ASSERT(weak);
     if (weak->get())
-        internalAppend(weak->get());
+        internalAppend(0, weak->get());
 }
 
-ALWAYS_INLINE void SlotVisitor::internalAppend(JSValue value)
+ALWAYS_INLINE void SlotVisitor::internalAppend(void* from, JSValue value)
 {
     if (!value || !value.isCell())
         return;
-    internalAppend(value.asCell());
+    internalAppend(from, value.asCell());
+}
+
+ALWAYS_INLINE void SlotVisitor::internalAppend(void* from, JSCell* cell)
+{
+    ASSERT(!m_isCheckingForDefaultMarkViolation);
+    if (!cell)
+        return;
+#if ENABLE(ALLOCATION_LOGGING)
+    dataLogF("JSC GC noticing reference from %p to %p.\n", from, cell);
+#else
+    UNUSED_PARAM(from);
+#endif
+#if ENABLE(GC_VALIDATION)
+    validate(cell);
+#endif
+    if (Heap::testAndSetMarked(cell) || !cell->structure())
+        return;
+
+    m_bytesVisited += MarkedBlock::blockFor(cell)->cellSize();
+        
+    MARK_LOG_CHILD(*this, cell);
+
+    unconditionallyAppend(cell);
+}
+
+ALWAYS_INLINE void SlotVisitor::unconditionallyAppend(JSCell* cell)
+{
+    ASSERT(Heap::isMarked(cell));
+    m_visitCount++;
+        
+    // Should never attempt to mark something that is zapped.
+    ASSERT(!cell->isZapped());
+        
+    m_stack.append(cell);
+}
+
+template<typename T> inline void SlotVisitor::append(WriteBarrierBase<T>* slot)
+{
+    internalAppend(slot, *slot->slot());
+}
+
+template<typename Iterator> inline void SlotVisitor::append(Iterator begin, Iterator end)
+{
+    for (auto it = begin; it != end; ++it)
+        append(&*it);
+}
+
+ALWAYS_INLINE void SlotVisitor::appendValues(WriteBarrierBase<Unknown>* barriers, size_t count)
+{
+    append(barriers->slot(), count);
 }
 
 inline void SlotVisitor::addWeakReferenceHarvester(WeakReferenceHarvester* weakReferenceHarvester)
@@ -126,7 +187,7 @@ inline TriState SlotVisitor::containsOpaqueRootTriState(void* root)
 {
     if (m_opaqueRoots.contains(root))
         return TrueTriState;
-    MutexLocker locker(m_shared.m_opaqueRootsLock);
+    std::lock_guard<std::mutex> lock(m_shared.m_opaqueRootsMutex);
     if (m_shared.m_opaqueRoots.contains(root))
         return TrueTriState;
     return MixedTriState;
@@ -172,20 +233,50 @@ inline void SlotVisitor::donateAndDrain()
     drain();
 }
 
-inline void SlotVisitor::copyLater(JSCell* owner, void* ptr, size_t bytes)
+inline void SlotVisitor::copyLater(JSCell* owner, CopyToken token, void* ptr, size_t bytes)
 {
+    ASSERT(bytes);
     CopiedBlock* block = CopiedSpace::blockFor(ptr);
     if (block->isOversize()) {
         m_shared.m_copiedSpace->pin(block);
         return;
     }
 
-    if (block->isPinned())
-        return;
-
-    block->reportLiveBytes(owner, bytes);
+    SpinLockHolder locker(&block->workListLock());
+    if (heap()->operationInProgress() == FullCollection || block->shouldReportLiveBytes(locker, owner)) {
+        m_bytesCopied += bytes;
+        block->reportLiveBytes(locker, owner, token, bytes);
+    }
 }
     
+inline void SlotVisitor::reportExtraMemoryUsage(JSCell* owner, size_t size)
+{
+#if ENABLE(GGC)
+    // We don't want to double-count the extra memory that was reported in previous collections.
+    if (heap()->operationInProgress() == EdenCollection && MarkedBlock::blockFor(owner)->isRemembered(owner))
+        return;
+#else
+    UNUSED_PARAM(owner);
+#endif
+
+    size_t* counter = &m_shared.m_vm->heap.m_extraMemoryUsage;
+    
+#if ENABLE(COMPARE_AND_SWAP)
+    for (;;) {
+        size_t oldSize = *counter;
+        if (WTF::weakCompareAndSwapSize(counter, oldSize, oldSize + size))
+            return;
+    }
+#else
+    (*counter) += size;
+#endif
+}
+
+inline Heap* SlotVisitor::heap() const
+{
+    return &sharedData().m_vm->heap;
+}
+
 } // namespace JSC
 
 #endif // SlotVisitorInlines_h

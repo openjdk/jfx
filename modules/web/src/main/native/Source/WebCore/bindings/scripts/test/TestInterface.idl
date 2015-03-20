@@ -29,13 +29,20 @@
 // This IDL file is for testing the bindings code generator and for tracking
 // changes in its ouput.
 [
-        ActiveDOMObject,
-        CustomNamedSetter,
-        Conditional=Condition1|Condition2,
-        CallWith=ScriptExecutionContext,
+    ActiveDOMObject,
+    CustomNamedSetter,
+    Conditional=Condition1|Condition2,
+    ConstructorCallWith=ScriptExecutionContext,
     Constructor(DOMString str1, [Default=Undefined] optional DOMString str2),
     ConstructorRaisesException,
     ConstructorConditional=TEST_INTERFACE,
     ImplementationLacksVTable
 ] interface TestInterface {
-    };
+};
+
+TestInterface implements TestImplements;
+
+[
+    ImplementationLacksVTable
+] interface _readonly {
+};

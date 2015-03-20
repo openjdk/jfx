@@ -25,14 +25,14 @@ namespace WebCore {
         DragClientJava(const JLObject &webPage);
         virtual ~DragClientJava();
 
-        virtual void willPerformDragDestinationAction(DragDestinationAction, DragData* data);
-        virtual void willPerformDragSourceAction(DragSourceAction, const IntPoint&, Clipboard* clipboard);
-        virtual DragDestinationAction actionMaskForDrag(DragData* data);
+        virtual void willPerformDragDestinationAction(DragDestinationAction, DragData& data);
+        virtual void willPerformDragSourceAction(DragSourceAction, const IntPoint&, Clipboard& clipboard);
+        virtual DragDestinationAction actionMaskForDrag(DragData& data);
         //We work in window rather than view coordinates here
         virtual DragSourceAction dragSourceActionMaskForPoint(const IntPoint& windowPoint);
         
-        virtual void startDrag(DragImageRef dragImage, const IntPoint& dragImageOrigin, const IntPoint& eventPos, Clipboard* clipboard, Frame* frame, bool linkDrag = false);
-        virtual DragImageRef createDragImageForLink(KURL& url, const String& label, Frame* frame);
+        virtual void startDrag(DragImageRef dragImage, const IntPoint& dragImageOrigin, const IntPoint& eventPos, Clipboard& clipboard, Frame& frame, bool linkDrag = false);
+        virtual DragImageRef createDragImageForLink(URL& url, const String& label, Frame* frame);
         
         virtual void dragControllerDestroyed();
     private:

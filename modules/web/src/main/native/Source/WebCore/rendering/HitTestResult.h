@@ -41,20 +41,20 @@ class Frame;
 class HTMLMediaElement;
 #endif
 class Image;
-class KURL;
+class URL;
 class Node;
 class RenderRegion;
 class Scrollbar;
 
 class HitTestResult {
 public:
-    typedef ListHashSet<RefPtr<Node> > NodeSet;
+    typedef ListHashSet<RefPtr<Node>> NodeSet;
 
     HitTestResult();
-    HitTestResult(const LayoutPoint&);
+    explicit HitTestResult(const LayoutPoint&);
     // Pass non-negative padding values to perform a rect-based hit test.
     HitTestResult(const LayoutPoint& centerPoint, unsigned topPadding, unsigned rightPadding, unsigned bottomPadding, unsigned leftPadding);
-    HitTestResult(const HitTestLocation&);
+    explicit HitTestResult(const HitTestLocation&);
     HitTestResult(const HitTestResult&);
     ~HitTestResult();
     HitTestResult& operator=(const HitTestResult&);
@@ -62,6 +62,7 @@ public:
     Node* innerNode() const { return m_innerNode.get(); }
     Element* innerElement() const;
     Node* innerNonSharedNode() const { return m_innerNonSharedNode.get(); }
+    Element* innerNonSharedElement() const;
     Element* URLElement() const { return m_innerURLElement.get(); }
     Scrollbar* scrollbar() const { return m_scrollbar.get(); }
     bool isOverWidget() const { return m_isOverWidget; }
@@ -102,16 +103,18 @@ public:
     String titleDisplayString() const;
     Image* image() const;
     IntRect imageRect() const;
-    KURL absoluteImageURL() const;
-    KURL absolutePDFURL() const;
-    KURL absoluteMediaURL() const;
-    KURL absoluteLinkURL() const;
+    URL absoluteImageURL() const;
+    URL absolutePDFURL() const;
+    URL absoluteMediaURL() const;
+    URL absoluteLinkURL() const;
     String textContent() const;
     bool isLiveLink() const;
     bool isOverLink() const;
     bool isContentEditable() const;
     void toggleMediaControlsDisplay() const;
     void toggleMediaLoopPlayback() const;
+    bool mediaIsInFullscreen() const;
+    void toggleMediaFullscreenState() const;
     void enterFullscreenForVideo() const;
     bool mediaControlsEnabled() const;
     bool mediaLoopEnabled() const;

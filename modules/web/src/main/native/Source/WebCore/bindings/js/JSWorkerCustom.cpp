@@ -26,10 +26,9 @@
 
 #include "config.h"
 
-#if ENABLE(WORKERS)
-
 #include "JSWorker.h"
 
+#include "Document.h"
 #include "JSDOMGlobalObject.h"
 #include "JSMessagePortCustom.h"
 #include "Worker.h"
@@ -42,7 +41,7 @@ namespace WebCore {
 
 JSC::JSValue JSWorker::postMessage(JSC::ExecState* exec)
 {
-    return handlePostMessage(exec, impl());
+    return handlePostMessage(exec, &impl());
 }
 
 EncodedJSValue JSC_HOST_CALL JSWorkerConstructor::constructJSWorker(ExecState* exec)
@@ -57,10 +56,11 @@ EncodedJSValue JSC_HOST_CALL JSWorkerConstructor::constructJSWorker(ExecState* e
         return JSValue::encode(JSValue());
 
     // See section 4.8.2 step 14 of WebWorkers for why this is the lexicalGlobalObject. 
-    DOMWindow* window = asJSDOMWindow(exec->lexicalGlobalObject())->impl();
+    DOMWindow& window = asJSDOMWindow(exec->lexicalGlobalObject())->impl();
 
     ExceptionCode ec = 0;
-    RefPtr<Worker> worker = Worker::create(window->document(), scriptURL, ec);
+    ASSERT(window.document());
+    RefPtr<Worker> worker = Worker::create(*window.document(), scriptURL, ec);
     if (ec) {
         setDOMException(exec, ec);
         return JSValue::encode(JSValue());
@@ -70,5 +70,3 @@ EncodedJSValue JSC_HOST_CALL JSWorkerConstructor::constructJSWorker(ExecState* e
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(WORKERS)

@@ -29,6 +29,10 @@
 #ifndef InitializeThreading_h
 #define InitializeThreading_h
 
+#if PLATFORM(JAVA) // tav todo temp
+#include <JSExportMacros.h>
+#endif
+
 namespace JSC {
 
     // This function must be called from the main thread. It is safe to call it repeatedly.

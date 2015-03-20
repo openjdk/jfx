@@ -29,12 +29,12 @@ namespace WebCore {
 class ProgressValueElement;
 class RenderProgress;
 
-class HTMLProgressElement FINAL : public LabelableElement {
+class HTMLProgressElement final : public LabelableElement {
 public:
     static const double IndeterminatePosition;
     static const double InvalidPosition;
 
-    static PassRefPtr<HTMLProgressElement> create(const QualifiedName&, Document*);
+    static PassRefPtr<HTMLProgressElement> create(const QualifiedName&, Document&);
 
     double value() const;
     void setValue(double, ExceptionCode&);
@@ -44,42 +44,31 @@ public:
 
     double position() const;
 
-    virtual bool canContainRangeEndPoint() const { return false; }
+    virtual bool canContainRangeEndPoint() const override { return false; }
 
 private:
-    HTMLProgressElement(const QualifiedName&, Document*);
+    HTMLProgressElement(const QualifiedName&, Document&);
     virtual ~HTMLProgressElement();
 
-    virtual bool areAuthorShadowsAllowed() const OVERRIDE { return false; }
-    virtual bool shouldAppearIndeterminate() const OVERRIDE;
-    virtual bool supportLabels() const OVERRIDE { return true; }
+    virtual bool shouldAppearIndeterminate() const override;
+    virtual bool supportLabels() const override { return true; }
 
-    virtual RenderObject* createRenderer(RenderArena*, RenderStyle*);
-    virtual bool childShouldCreateRenderer(const NodeRenderingContext&) const OVERRIDE;
+    virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) override;
+    virtual bool childShouldCreateRenderer(const Node&) const override;
     RenderProgress* renderProgress() const;
 
-    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
 
-    virtual void attach();
+    virtual void didAttachRenderers() override;
 
     void didElementStateChange();
-    virtual void didAddUserAgentShadowRoot(ShadowRoot*) OVERRIDE;
+    virtual void didAddUserAgentShadowRoot(ShadowRoot*) override;
     bool isDeterminate() const;
 
     ProgressValueElement* m_value;
 };
 
-inline bool isHTMLProgressElement(Node* node)
-{
-    ASSERT(node);
-    return node->hasTagName(HTMLNames::progressTag);
-}
-
-inline HTMLProgressElement* toHTMLProgressElement(Node* node)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!node || isHTMLProgressElement(node));
-    return static_cast<HTMLProgressElement*>(node);
-}
+NODE_TYPE_CASTS(HTMLProgressElement)
 
 } // namespace
 

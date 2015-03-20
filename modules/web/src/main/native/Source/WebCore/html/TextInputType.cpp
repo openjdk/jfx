@@ -33,21 +33,16 @@
 
 #include "HTMLInputElement.h"
 #include "InputTypeNames.h"
-#include <wtf/PassOwnPtr.h>
+#include "TextBreakIterator.h"
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-PassOwnPtr<InputType> TextInputType::create(HTMLInputElement* element)
-{
-    return adoptPtr(new TextInputType(element));
-}
-
 void TextInputType::attach()
 {
     TextFieldInputType::attach();
-    const AtomicString& type = element()->fastGetAttribute(typeAttr);
+    const AtomicString& type = element().fastGetAttribute(typeAttr);
     if (equalIgnoringCase(type, InputTypeNames::datetime()))
         observeFeatureIfVisible(FeatureObserver::InputTypeDateTimeFallback);
     else if (equalIgnoringCase(type, InputTypeNames::week()))

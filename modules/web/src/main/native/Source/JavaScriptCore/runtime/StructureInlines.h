@@ -26,6 +26,7 @@
 #ifndef StructureInlines_h
 #define StructureInlines_h
 
+#include "JSArrayBufferView.h"
 #include "PropertyMapHashTable.h"
 #include "Structure.h"
 
@@ -56,10 +57,28 @@ inline Structure* Structure::create(VM& vm, const Structure* structure)
     return newStructure;
 }
 
+inline JSObject* Structure::storedPrototypeObject() const
+{
+    JSValue value = m_prototype.get();
+    if (value.isNull())
+        return 0;
+    return asObject(value);
+}
+
+inline Structure* Structure::storedPrototypeStructure() const
+{
+    JSObject* object = storedPrototypeObject();
+    if (!object)
+        return 0;
+    return object->structure();
+}
+
 inline PropertyOffset Structure::get(VM& vm, PropertyName propertyName)
 {
-    ASSERT(structure()->classInfo() == &s_info);
-    materializePropertyMapIfNecessary(vm);
+    ASSERT(!isCompilationThread());
+    ASSERT(structure()->classInfo() == info());
+    DeferGC deferGC(vm.heap);
+    materializePropertyMapIfNecessary(vm, deferGC);
     if (!propertyTable())
         return invalidOffset;
 
@@ -69,8 +88,10 @@ inline PropertyOffset Structure::get(VM& vm, PropertyName propertyName)
 
 inline PropertyOffset Structure::get(VM& vm, const WTF::String& name)
 {
-    ASSERT(structure()->classInfo() == &s_info);
-    materializePropertyMapIfNecessary(vm);
+    ASSERT(!isCompilationThread());
+    ASSERT(structure()->classInfo() == info());
+    DeferGC deferGC(vm.heap);
+    materializePropertyMapIfNecessary(vm, deferGC);
     if (!propertyTable())
         return invalidOffset;
 
@@ -78,30 +99,28 @@ inline PropertyOffset Structure::get(VM& vm, const WTF::String& name)
     return entry ? entry->offset : invalidOffset;
 }
     
+inline PropertyOffset Structure::getConcurrently(VM& vm, StringImpl* uid)
+{
+    unsigned attributesIgnored;
+    JSCell* specificValueIgnored;
+    return getConcurrently(
+        vm, uid, attributesIgnored, specificValueIgnored);
+}
+
+inline bool Structure::hasIndexingHeader(const JSCell* cell) const
+{
+    if (hasIndexedProperties(indexingType()))
+        return true;
+    
+    if (!isTypedView(m_classInfo->typedArrayStorageType))
+        return false;
+    
+    return jsCast<const JSArrayBufferView*>(cell)->mode() == WastefulTypedArray;
+}
+
 inline bool Structure::masqueradesAsUndefined(JSGlobalObject* lexicalGlobalObject)
 {
     return typeInfo().masqueradesAsUndefined() && globalObject() == lexicalGlobalObject;
-}
-
-ALWAYS_INLINE void SlotVisitor::internalAppend(JSCell* cell)
-{
-    ASSERT(!m_isCheckingForDefaultMarkViolation);
-    if (!cell)
-        return;
-#if ENABLE(GC_VALIDATION)
-    validate(cell);
-#endif
-    if (Heap::testAndSetMarked(cell) || !cell->structure())
-        return;
-
-    m_visitCount++;
-        
-    MARK_LOG_CHILD(*this, cell);
-
-    // Should never attempt to mark something that is zapped.
-    ASSERT(!cell->isZapped());
-        
-    m_stack.append(cell);
 }
 
 inline bool Structure::transitivelyTransitionedFrom(Structure* structureToFind)
@@ -200,7 +219,7 @@ inline bool Structure::putWillGrowOutOfLineStorage()
 
 ALWAYS_INLINE WriteBarrier<PropertyTable>& Structure::propertyTable()
 {
-    ASSERT(!globalObject() || !globalObject()->vm().heap.isBusy());
+    ASSERT(!globalObject() || !globalObject()->vm().heap.isCollecting());
     return m_propertyTableUnsafe;
 }
 
@@ -213,6 +232,13 @@ ALWAYS_INLINE bool Structure::checkOffsetConsistency() const
         return true;
     }
 
+    // We cannot reliably assert things about the property table in the concurrent
+    // compilation thread. It is possible for the table to be stolen and then have
+    // things added to it, which leads to the offsets being all messed up. We could
+    // get around this by grabbing a lock here, but I think that would be overkill.
+    if (isCompilationThread())
+        return true;
+    
     RELEASE_ASSERT(numberOfSlotsForLastOffset(m_offset, m_inlineCapacity) == propertyTable->propertyStorageSize());
     unsigned totalSize = propertyTable->propertyStorageSize();
     RELEASE_ASSERT((totalSize < inlineCapacity() ? 0 : totalSize - inlineCapacity()) == numberOfOutOfLineSlotsForLastOffset(m_offset));

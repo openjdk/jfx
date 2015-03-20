@@ -28,8 +28,9 @@
 #ifndef BackForwardList_h
 #define BackForwardList_h
 
-#include <wtf/Forward.h>
-#include <wtf/RefCounted.h>
+#include "BackForwardClient.h"
+#include <wtf/HashSet.h>
+#include <wtf/Vector.h>
 
 #if PLATFORM(JAVA)
 #include <wtf/java/JavaRef.h>
@@ -37,43 +38,80 @@
 
 namespace WebCore {
 
-class HistoryItem;
+class Page;
+#if PLATFORM(JAVA)
+class BackForwardListImpl;
+#endif
 
-// FIXME: Rename this class to BackForwardClient, and rename the
-// getter in Page accordingly.
-class BackForwardList : public RefCounted<BackForwardList> {
+typedef Vector<RefPtr<HistoryItem>> HistoryItemVector;
+typedef HashSet<RefPtr<HistoryItem>> HistoryItemHashSet;
+
+class BackForwardList : public BackForwardClient {
+#if PLATFORM(JAVA)
+    friend BackForwardListImpl;
+#endif
 public: 
-    virtual ~BackForwardList()
-    {
-    }
+    static PassRefPtr<BackForwardList> create(Page* page) { return adoptRef(new BackForwardList(page)); }
+    virtual ~BackForwardList();
 
-    virtual void addItem(PassRefPtr<HistoryItem>) = 0;
+    Page* page() { return m_page; }
 
-    virtual void goToItem(HistoryItem*) = 0;
-        
-    virtual HistoryItem* itemAtIndex(int) = 0;
-    virtual int backListCount() = 0;
-    virtual int forwardListCount() = 0;
-
-    virtual bool isActive() = 0;
-
-    virtual void close() = 0;
+    virtual void addItem(PassRefPtr<HistoryItem>) override;
+    void goBack();
+    void goForward();
+    virtual void goToItem(HistoryItem*) override;
 
 #if PLATFORM(JAVA)
     BackForwardList(JLObject host): m_hostObject(host) {}
     JLObject hostObject();
     void setHostObject(const JLObject&);
 #endif
-    // FIXME: Delete these once all callers are using BackForwardController
-    // instead of calling this directly.
-    HistoryItem* backItem() { return itemAtIndex(-1); }
-    HistoryItem* currentItem() { return itemAtIndex(0); }
-    HistoryItem* forwardItem() { return itemAtIndex(1); }
+        
+    HistoryItem* backItem();
+    HistoryItem* currentItem();
+    HistoryItem* forwardItem();
+    virtual HistoryItem* itemAtIndex(int) override;
+
 #if PLATFORM(JAVA)
     JGObject m_hostObject;
 #endif
-};
 
+    void backListWithLimit(int, HistoryItemVector&);
+    void forwardListWithLimit(int, HistoryItemVector&);
+
+    int capacity();
+    void setCapacity(int);
+    bool enabled();
+    void setEnabled(bool);
+    virtual int backListCount() override;
+    virtual int forwardListCount() override;
+    bool containsItem(HistoryItem*);
+
+    virtual void close() override;
+    bool closed();
+
+    void removeItem(HistoryItem*);
+    HistoryItemVector& entries();
+
+#if PLATFORM(IOS)
+    virtual unsigned current() override;
+    virtual void setCurrent(unsigned newCurrent) override;
+
+    virtual bool clearAllPageCaches() override;
+#endif
+
+private:
+    explicit BackForwardList(Page*);
+
+    Page* m_page;
+    HistoryItemVector m_entries;
+    HistoryItemHashSet m_entryHash;
+    unsigned m_current;
+    unsigned m_capacity;
+    bool m_closed;
+    bool m_enabled;
+};
+    
 } // namespace WebCore
 
 #endif // BackForwardList_h

@@ -31,9 +31,7 @@
 #include "config.h"
 #include "RenderedPosition.h"
 
-#include "InlineBox.h"
 #include "InlineTextBox.h"
-#include "Position.h"
 #include "VisiblePosition.h"
 
 namespace WebCore {
@@ -76,7 +74,7 @@ RenderedPosition::RenderedPosition(const VisiblePosition& position)
         return;
     position.getInlineBoxAndOffset(m_inlineBox, m_offset);
     if (m_inlineBox)
-        m_renderer = m_inlineBox->renderer();
+        m_renderer = &m_inlineBox->renderer();
     else
         m_renderer = rendererFromPosition(position.deepEquivalent());
 }
@@ -92,7 +90,7 @@ RenderedPosition::RenderedPosition(const Position& position, EAffinity affinity)
         return;
     position.getInlineBoxAndOffset(affinity, m_inlineBox, m_offset);
     if (m_inlineBox)
-        m_renderer = m_inlineBox->renderer();
+        m_renderer = &m_inlineBox->renderer();
     else
         m_renderer = rendererFromPosition(position);
 }
@@ -139,7 +137,7 @@ RenderedPosition RenderedPosition::leftBoundaryOfBidiRun(unsigned char bidiLevel
     do {
         InlineBox* prev = box->prevLeafChildIgnoringLineBreak();
         if (!prev || prev->bidiLevel() < bidiLevelOfRun)
-            return RenderedPosition(box->renderer(), box, box->caretLeftmostOffset());
+            return RenderedPosition(&box->renderer(), box, box->caretLeftmostOffset());
         box = prev;
     } while (box);
 
@@ -156,7 +154,7 @@ RenderedPosition RenderedPosition::rightBoundaryOfBidiRun(unsigned char bidiLeve
     do {
         InlineBox* next = box->nextLeafChildIgnoringLineBreak();
         if (!next || next->bidiLevel() < bidiLevelOfRun)
-            return RenderedPosition(box->renderer(), box, box->caretRightmostOffset());
+            return RenderedPosition(&box->renderer(), box, box->caretRightmostOffset());
         box = next;
     } while (box);
 
@@ -211,7 +209,7 @@ Position RenderedPosition::positionAtLeftBoundaryOfBiDiRun() const
     if (atLeftmostOffsetInBox())
         return createLegacyEditingPosition(m_renderer->node(), m_offset);
 
-    return createLegacyEditingPosition(nextLeafChild()->renderer()->node(), nextLeafChild()->caretLeftmostOffset());
+    return createLegacyEditingPosition(nextLeafChild()->renderer().node(), nextLeafChild()->caretLeftmostOffset());
 }
 
 Position RenderedPosition::positionAtRightBoundaryOfBiDiRun() const
@@ -221,7 +219,7 @@ Position RenderedPosition::positionAtRightBoundaryOfBiDiRun() const
     if (atRightmostOffsetInBox())
         return createLegacyEditingPosition(m_renderer->node(), m_offset);
 
-    return createLegacyEditingPosition(prevLeafChild()->renderer()->node(), prevLeafChild()->caretRightmostOffset());
+    return createLegacyEditingPosition(prevLeafChild()->renderer().node(), prevLeafChild()->caretRightmostOffset());
 }
 
 IntRect RenderedPosition::absoluteRect(LayoutUnit* extraWidthToEndOfLine) const

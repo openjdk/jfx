@@ -36,27 +36,27 @@ public:
 
     static NamePrototype* create(ExecState* exec, Structure* structure)
     {
-        NamePrototype* prototype = new (NotNull, allocateCell<NamePrototype>(*exec->heap())) NamePrototype(exec, structure);
-        prototype->finishCreation(exec);
+        VM& vm = exec->vm();
+        NamePrototype* prototype = new (NotNull, allocateCell<NamePrototype>(vm.heap)) NamePrototype(exec, structure);
+        prototype->finishCreation(vm);
         return prototype;
     }
     
-    static const ClassInfo s_info;
+    DECLARE_INFO;
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(NameInstanceType, StructureFlags), &s_info);
+        return Structure::create(vm, globalObject, prototype, TypeInfo(NameInstanceType, StructureFlags), info());
     }
 
 protected:
     NamePrototype(ExecState*, Structure*);
-    void finishCreation(ExecState*);
+    void finishCreation(VM&);
 
     static const unsigned StructureFlags = OverridesGetOwnPropertySlot | NameInstance::StructureFlags;
 
 private:
-    static bool getOwnPropertySlot(JSCell*, ExecState*, PropertyName, PropertySlot&);
-    static bool getOwnPropertyDescriptor(JSObject*, ExecState*, PropertyName, PropertyDescriptor&);
+    static bool getOwnPropertySlot(JSObject*, ExecState*, PropertyName, PropertySlot&);
 };
 
 } // namespace JSC

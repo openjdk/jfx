@@ -20,7 +20,7 @@
 #ifndef SVGFEMorphologyElement_h
 #define SVGFEMorphologyElement_h
 
-#if ENABLE(SVG) && ENABLE(FILTERS)
+#if ENABLE(FILTERS)
 #include "FEMorphology.h"
 #include "SVGAnimatedEnumeration.h"
 #include "SVGAnimatedNumber.h"
@@ -57,27 +57,27 @@ struct SVGPropertyTraits<MorphologyOperatorType> {
     }
 };
 
-class SVGFEMorphologyElement FINAL : public SVGFilterPrimitiveStandardAttributes {
+class SVGFEMorphologyElement final : public SVGFilterPrimitiveStandardAttributes {
 public:
-    static PassRefPtr<SVGFEMorphologyElement> create(const QualifiedName&, Document*);
+    static PassRefPtr<SVGFEMorphologyElement> create(const QualifiedName&, Document&);
 
     void setRadius(float radiusX, float radiusY);
 
 private:
-    SVGFEMorphologyElement(const QualifiedName&, Document*);
+    SVGFEMorphologyElement(const QualifiedName&, Document&);
 
     bool isSupportedAttribute(const QualifiedName&);
-    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
-    virtual bool setFilterEffectAttribute(FilterEffect*, const QualifiedName&);
-    virtual void svgAttributeChanged(const QualifiedName&);
-    virtual PassRefPtr<FilterEffect> build(SVGFilterBuilder*, Filter*);
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
+    virtual bool setFilterEffectAttribute(FilterEffect*, const QualifiedName&) override;
+    virtual void svgAttributeChanged(const QualifiedName&) override;
+    virtual PassRefPtr<FilterEffect> build(SVGFilterBuilder*, Filter*) override;
 
     static const AtomicString& radiusXIdentifier();
     static const AtomicString& radiusYIdentifier();
 
     BEGIN_DECLARE_ANIMATED_PROPERTIES(SVGFEMorphologyElement)
         DECLARE_ANIMATED_STRING(In1, in1)
-        DECLARE_ANIMATED_ENUMERATION(_operator, _operator, MorphologyOperatorType)
+        DECLARE_ANIMATED_ENUMERATION(SVGOperator, svgOperator, MorphologyOperatorType)
         DECLARE_ANIMATED_NUMBER(RadiusX, radiusX)
         DECLARE_ANIMATED_NUMBER(RadiusY, radiusY)
     END_DECLARE_ANIMATED_PROPERTIES
@@ -85,5 +85,5 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(SVG)
+#endif // ENABLE(FILTERS)
 #endif

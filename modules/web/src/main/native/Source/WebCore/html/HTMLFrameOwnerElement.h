@@ -21,18 +21,15 @@
 #ifndef HTMLFrameOwnerElement_h
 #define HTMLFrameOwnerElement_h
 
-#include "FrameLoaderTypes.h"
 #include "HTMLElement.h"
+#include <wtf/HashCountedSet.h>
 
 namespace WebCore {
 
 class DOMWindow;
 class Frame;
-class RenderPart;
-
-#if ENABLE(SVG)
+class RenderWidget;
 class SVGDocument;
-#endif
 
 class HTMLFrameOwnerElement : public HTMLElement {
 public:
@@ -47,67 +44,58 @@ public:
 
     void disconnectContentFrame();
 
-    // Most subclasses use RenderPart (either RenderEmbeddedObject or RenderIFrame)
+    // Most subclasses use RenderWidget (either RenderEmbeddedObject or RenderIFrame)
     // except for HTMLObjectElement and HTMLEmbedElement which may return any
-    // RenderObject when using fallback content.
-    RenderPart* renderPart() const;
+    // RenderElement when using fallback content.
+    RenderWidget* renderWidget() const;
 
-#if ENABLE(SVG)
     SVGDocument* getSVGDocument(ExceptionCode&) const;
-#endif
 
     virtual ScrollbarMode scrollingMode() const { return ScrollbarAuto; }
 
     SandboxFlags sandboxFlags() const { return m_sandboxFlags; }
 
+    void scheduleSetNeedsStyleRecalc(StyleChangeType = FullStyleChange);
+
 protected:
-    HTMLFrameOwnerElement(const QualifiedName& tagName, Document*);
+    HTMLFrameOwnerElement(const QualifiedName& tagName, Document&);
     void setSandboxFlags(SandboxFlags);
 
 private:
-    virtual bool isKeyboardFocusable(KeyboardEvent*) const OVERRIDE;
-    virtual bool isFrameOwnerElement() const OVERRIDE { return true; }
+    virtual bool isKeyboardFocusable(KeyboardEvent*) const override;
+    virtual bool isFrameOwnerElement() const override { return true; }
 
     Frame* m_contentFrame;
     SandboxFlags m_sandboxFlags;
 };
 
-inline HTMLFrameOwnerElement* toFrameOwnerElement(Node* node)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!node || node->isFrameOwnerElement());
-    return static_cast<HTMLFrameOwnerElement*>(node);
-}
+void isHTMLFrameOwnerElement(const HTMLFrameOwnerElement&); // Catch unnecessary runtime check of type known at compile time.
+inline bool isHTMLFrameOwnerElement(const Node& node) { return node.isFrameOwnerElement(); }
+NODE_TYPE_CASTS(HTMLFrameOwnerElement)
 
 class SubframeLoadingDisabler {
 public:
-    explicit SubframeLoadingDisabler(Node* root)
+    explicit SubframeLoadingDisabler(ContainerNode& root)
         : m_root(root)
     {
-        disabledSubtreeRoots().add(m_root);
+        disabledSubtreeRoots().add(&m_root);
     }
 
     ~SubframeLoadingDisabler()
     {
-        disabledSubtreeRoots().remove(m_root);
+        disabledSubtreeRoots().remove(&m_root);
     }
 
-    static bool canLoadFrame(HTMLFrameOwnerElement* owner)
-    {
-        for (Node* node = owner; node; node = node->parentOrShadowHostNode()) {
-            if (disabledSubtreeRoots().contains(node))
-                return false;
-        }
-        return true;
-    }
+    static bool canLoadFrame(HTMLFrameOwnerElement&);
 
 private:
-    static HashSet<Node*>& disabledSubtreeRoots()
+    static HashCountedSet<ContainerNode*>& disabledSubtreeRoots()
     {
-        DEFINE_STATIC_LOCAL(HashSet<Node*>, nodes, ());
+        DEFINE_STATIC_LOCAL(HashCountedSet<ContainerNode*>, nodes, ());
         return nodes;
     }
 
-    Node* m_root;
+    ContainerNode& m_root;
 };
 
 } // namespace WebCore

@@ -63,13 +63,13 @@ class WinPortTest(port_testcase.PortTestCase):
         self.assertEqual(port.baseline_search_path(), absolute_search_paths)
 
     def test_baseline_search_path(self):
-        self._assert_search_path(['win-xp', 'win-vista', 'win-7sp0', 'win', 'mac-lion', 'mac'], 'xp')
-        self._assert_search_path(['win-vista', 'win-7sp0', 'win', 'mac-lion', 'mac'], 'vista')
-        self._assert_search_path(['win-7sp0', 'win', 'mac-lion', 'mac'], '7sp0')
+        self._assert_search_path(['win-xp', 'win-vista', 'win-7sp0', 'win', 'mac-mountainlion', 'mac'], 'xp')
+        self._assert_search_path(['win-vista', 'win-7sp0', 'win', 'mac-mountainlion', 'mac'], 'vista')
+        self._assert_search_path(['win-7sp0', 'win', 'mac-mountainlion', 'mac'], '7sp0')
 
-        self._assert_search_path(['win-wk2', 'win-xp', 'win-vista', 'win-7sp0', 'win', 'mac-wk2', 'mac-lion', 'mac'], 'xp', use_webkit2=True)
-        self._assert_search_path(['win-wk2', 'win-vista', 'win-7sp0', 'win', 'mac-wk2', 'mac-lion', 'mac'], 'vista', use_webkit2=True)
-        self._assert_search_path(['win-wk2', 'win-7sp0', 'win', 'mac-wk2', 'mac-lion', 'mac'], '7sp0', use_webkit2=True)
+        self._assert_search_path(['win-wk2', 'win-xp', 'win-vista', 'win-7sp0', 'win', 'mac-wk2', 'mac-mountainlion', 'mac'], 'xp', use_webkit2=True)
+        self._assert_search_path(['win-wk2', 'win-vista', 'win-7sp0', 'win', 'mac-wk2', 'mac-mountainlion', 'mac'], 'vista', use_webkit2=True)
+        self._assert_search_path(['win-wk2', 'win-7sp0', 'win', 'mac-wk2', 'mac-mountainlion', 'mac'], '7sp0', use_webkit2=True)
 
     def _assert_version(self, port_name, expected_version):
         host = MockSystemHost(os_name='win', os_version=expected_version)
@@ -107,3 +107,12 @@ class WinPortTest(port_testcase.PortTestCase):
     def test_expectations_files(self):
         self.assertEqual(len(self.make_port().expectations_files()), 3)
         self.assertEqual(len(self.make_port(options=MockOptions(webkit_test_runner=True, configuration='Release')).expectations_files()), 5)
+
+    def test_get_crash_log(self):
+        # Win crash logs are tested elsewhere, so here we just make sure we don't crash.
+        def fake_time_cb():
+            times = [0, 20, 40]
+            return lambda: times.pop(0)
+        port = self.make_port(port_name='win')
+        port._get_crash_log('DumpRenderTree', 1234, '', '', 0,
+            time_fn=fake_time_cb(), sleep_fn=lambda delay: None)

@@ -42,34 +42,6 @@
 
 namespace WTF {
 
-#ifdef NDEBUG
-static inline void testSHA1() { }
-#else
-static bool isTestSHA1Done;
-
-static void expectSHA1(CString input, int repeat, CString expected)
-{
-    SHA1 sha1;
-    for (int i = 0; i < repeat; ++i)
-        sha1.addBytes(input);
-    CString actual = sha1.computeHexDigest();
-    ASSERT_WITH_MESSAGE(actual == expected, "input: %s, repeat: %d, actual: %s, expected: %s", input.data(), repeat, actual.data(), expected.data());
-}
-
-static void testSHA1()
-{
-    if (isTestSHA1Done)
-        return;
-    isTestSHA1Done = true;
-
-    // Examples taken from sample code in RFC 3174.
-    expectSHA1("abc", 1, "A9993E364706816ABA3E25717850C26C9CD0D89D");
-    expectSHA1("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq", 1, "84983E441C3BD26EBAAE4AA1F95129E5E54670F1");
-    expectSHA1("a", 1000000, "34AA973CD4C4DAA4F61EEB2BDBAD27316534016F");
-    expectSHA1("0123456701234567012345670123456701234567012345670123456701234567", 10, "DEA356A2CDDD90C7A7ECEDC5EBB563934F460452");
-}
-#endif
-
 static inline uint32_t f(int t, uint32_t b, uint32_t c, uint32_t d)
 {
     ASSERT(t >= 0 && t < 80);
@@ -102,8 +74,6 @@ static inline uint32_t rotateLeft(int n, uint32_t x)
 
 SHA1::SHA1()
 {
-    // FIXME: Move unit tests somewhere outside the constructor. See bug 55853.
-    testSHA1();
     reset();
 }
 
@@ -118,12 +88,10 @@ void SHA1::addBytes(const uint8_t* input, size_t length)
     }
 }
 
-void SHA1::computeHash(Vector<uint8_t, 20>& digest)
+void SHA1::computeHash(Digest& digest)
 {
     finalize();
 
-    digest.clear();
-    digest.resize(20);
     for (size_t i = 0; i < 5; ++i) {
         // Treat hashValue as a big-endian value.
         uint32_t hashValue = m_hash[i];
@@ -136,12 +104,12 @@ void SHA1::computeHash(Vector<uint8_t, 20>& digest)
     reset();
 }
 
-CString SHA1::hexDigest(const Vector<uint8_t, 20>& digest)
+CString SHA1::hexDigest(const Digest& digest)
 {
     char* start = 0;
     CString result = CString::newUninitialized(40, start);
     char* buffer = start;
-    for (size_t i = 0; i < 20; ++i) {
+    for (size_t i = 0; i < hashSize; ++i) {
         snprintf(buffer, 3, "%02X", digest.at(i));
         buffer += 2;
     }
@@ -150,7 +118,7 @@ CString SHA1::hexDigest(const Vector<uint8_t, 20>& digest)
 
 CString SHA1::computeHexDigest()
 {
-    Vector<uint8_t, 20> digest;
+    Digest digest;
     computeHash(digest);
     return hexDigest(digest);
 }

@@ -29,6 +29,10 @@
 #import <wtf/Assertions.h>
 #import <dlfcn.h>
 
+#if PLATFORM(IOS)
+#import <objc/runtime.h>
+#endif
+
 #define SOFT_LINK_LIBRARY(lib) \
     static void* lib##Library() \
     { \
@@ -45,6 +49,16 @@
         return frameworkLibrary; \
     }
 
+#define SOFT_LINK_PRIVATE_FRAMEWORK(framework) \
+    static void* framework##Library() \
+    { \
+        static void* frameworkLibrary = 0; \
+        if (!frameworkLibrary) \
+            frameworkLibrary = dlopen("/System/Library/PrivateFrameworks/" #framework ".framework/" #framework, RTLD_NOW); \
+        ASSERT_WITH_MESSAGE(frameworkLibrary, "%s", dlerror()); \
+        return frameworkLibrary; \
+    }
+
 #define SOFT_LINK_FRAMEWORK_OPTIONAL(framework) \
     static void* framework##Library() \
     { \
@@ -52,7 +66,16 @@
         return frameworkLibrary; \
     }
 
-#define SOFT_LINK_STAGED_FRAMEWORK_OPTIONAL(framework, unstagedLocation, version) \
+#if PLATFORM(IOS)
+#define SOFT_LINK_PRIVATE_FRAMEWORK_OPTIONAL(framework) \
+    static void* framework##Library() \
+    { \
+        static void* frameworkLibrary = dlopen("/System/Library/PrivateFrameworks/" #framework ".framework/" #framework, RTLD_NOW); \
+        return frameworkLibrary; \
+    }
+#endif // PLATFORM(IOS)
+
+#define SOFT_LINK_STAGED_FRAMEWORK(framework, unstagedLocation, version) \
     static void* framework##Library() \
     { \
         static void* frameworkLibrary = ^{ \
@@ -61,13 +84,14 @@
                 result = dlopen("/System/Library/StagedFrameworks/Safari/" #framework ".framework/Versions/" #version "/" #framework, RTLD_LAZY); \
             return result; \
         }(); \
+        ASSERT_WITH_MESSAGE(frameworkLibrary, "%s", dlerror()); \
         return frameworkLibrary; \
     }
 
-#define SOFT_LINK_FRAMEWORK_IN_CORESERVICES_UMBRELLA(framework) \
+#define SOFT_LINK_FRAMEWORK_IN_UMBRELLA(umbrella, framework) \
     static void* framework##Library() \
     { \
-        static void* frameworkLibrary = dlopen("/System/Library/Frameworks/CoreServices.framework/Frameworks/" #framework ".framework/" #framework, RTLD_NOW); \
+        static void* frameworkLibrary = dlopen("/System/Library/Frameworks/" #umbrella ".framework/Frameworks/" #framework ".framework/" #framework, RTLD_NOW); \
         ASSERT_WITH_MESSAGE(frameworkLibrary, "%s", dlerror()); \
         return frameworkLibrary; \
     }
@@ -87,6 +111,30 @@
     {\
         return softLink##functionName parameterNames; \
     }
+
+#if PLATFORM(IOS)
+#define SOFT_LINK_MAY_FAIL(framework, functionName, resultType, parameterDeclarations, parameterNames) \
+    static resultType (*softLink##functionName) parameterDeclarations = 0; \
+    \
+    static bool init##functionName() \
+    { \
+        ASSERT(!softLink##functionName); \
+        softLink##functionName = (resultType (*) parameterDeclarations) dlsym(framework##Library(), #functionName); \
+        return !!softLink##functionName; \
+    } \
+    \
+    static bool canLoad##functionName() \
+    { \
+        static bool loaded = init##functionName(); \
+        return loaded; \
+    } \
+    \
+    resultType functionName parameterDeclarations \
+    { \
+        ASSERT(softLink##functionName); \
+        return softLink##functionName parameterNames; \
+    }
+#endif
 
 /* callingConvention is unused on Mac but is here to keep the macro prototype the same between Mac and Windows. */
 #define SOFT_LINK_OPTIONAL(framework, functionName, resultType, callingConvention, parameterDeclarations) \
@@ -113,6 +161,24 @@
         framework##Library(); \
         class##className = objc_getClass(#className); \
         ASSERT(class##className); \
+        get##className##Class = className##Function; \
+        return class##className; \
+    }
+
+#define SOFT_LINK_CLASS_OPTIONAL(framework, className) \
+    static Class init##className(); \
+    static Class (*get##className##Class)() = init##className; \
+    static Class class##className; \
+    \
+    static Class className##Function() \
+    { \
+        return class##className; \
+    }\
+    \
+    static Class init##className() \
+    { \
+        framework##Library(); \
+        class##className = objc_getClass(#className); \
         get##className##Class = className##Function; \
         return class##className; \
     }
@@ -173,3 +239,32 @@
         get##name = name##Function; \
         return constant##name; \
     }
+
+#if PLATFORM(IOS)
+#define SOFT_LINK_CONSTANT_MAY_FAIL(framework, name, type) \
+    static bool init##name(); \
+    static type (*get##name)() = 0; \
+    static type constant##name; \
+    \
+    static type name##Function() \
+    { \
+        return constant##name; \
+    }\
+    \
+    static bool canLoad##name() \
+    { \
+        static bool loaded = init##name(); \
+        return loaded; \
+    } \
+    \
+    static bool init##name() \
+    { \
+        ASSERT(!get##name); \
+        void* constant = dlsym(framework##Library(), #name); \
+        if (!constant) \
+            return false; \
+        constant##name = *static_cast<type*>(constant); \
+        get##name = name##Function; \
+        return true; \
+    }
+#endif

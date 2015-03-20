@@ -29,36 +29,51 @@
 #define MathMLElement_h
 
 #if ENABLE(MATHML)
+
+#include "MathMLNames.h"
 #include "StyledElement.h"
 
 namespace WebCore {
 
 class MathMLElement : public StyledElement {
 public:
-    static PassRefPtr<MathMLElement> create(const QualifiedName& tagName, Document*);
+    static PassRefPtr<MathMLElement> create(const QualifiedName& tagName, Document&);
 
     int colSpan() const;
     int rowSpan() const;
 
+    bool isMathMLToken() const
+    {
+        return hasTagName(MathMLNames::miTag) || hasTagName(MathMLNames::mnTag) || hasTagName(MathMLNames::moTag) || hasTagName(MathMLNames::msTag) || hasTagName(MathMLNames::mtextTag);
+    }
+
+    bool isSemanticAnnotation() const
+    {
+        return hasTagName(MathMLNames::annotationTag) || hasTagName(MathMLNames::annotation_xmlTag);
+    }
+
+    virtual bool isPresentationMathML() const;
+
 protected:
-    MathMLElement(const QualifiedName& tagName, Document*);
+    MathMLElement(const QualifiedName& tagName, Document&);
 
-    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
+    virtual bool childShouldCreateRenderer(const Node&) const override;
+    virtual void attributeChanged(const QualifiedName&, const AtomicString& newValue, AttributeModificationReason) override;
 
+    virtual bool isPresentationAttribute(const QualifiedName&) const override;
+    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStyleProperties&) override;
 private:    
-    virtual bool isMathMLElement() const { return true; }
 
-    virtual bool isPresentationAttribute(const QualifiedName&) const OVERRIDE;
-    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStylePropertySet*) OVERRIDE;
+    virtual void updateSelectedChild() { };
 };
 
-inline MathMLElement* toMathMLElement(Node* node)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!node || (node->isElementNode() && toElement(node)->isMathMLElement()));
-    return static_cast<MathMLElement*>(node);
-}
+void isMathMLElement(const MathMLElement&); // Catch unnecessary runtime check of type known at compile time.
+inline bool isMathMLElement(const Node& node) { return node.isMathMLElement(); }
+NODE_TYPE_CASTS(MathMLElement)
 
 }
 
 #endif // ENABLE(MATHML)
+
 #endif // MathMLElement_h

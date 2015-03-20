@@ -23,10 +23,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-    // Introduced in DOM Level 3:
-    interface TextEvent : UIEvent {
+// Introduced in DOM Level 3:
+interface TextEvent : UIEvent {
 
-        readonly attribute DOMString data;
+    readonly attribute DOMString data;
 
     void initTextEvent([Default=Undefined] optional DOMString typeArg, 
                        [Default=Undefined] optional boolean canBubbleArg, 
@@ -34,5 +34,5 @@
                        [Default=Undefined] optional DOMWindow viewArg, 
                        [Default=Undefined] optional DOMString dataArg);
 
-    };
+};
 

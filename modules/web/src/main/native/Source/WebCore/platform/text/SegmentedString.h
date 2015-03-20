@@ -73,7 +73,7 @@ public:
 
         if (!offset) {
             if (m_length)
-            builder.append(m_string);
+                builder.append(m_string);
         } else
             builder.append(m_string.substring(offset, m_length));
     }
@@ -261,7 +261,7 @@ public:
 
     void advanceAndASSERTIgnoringCase(UChar expectedCharacter)
     {
-        ASSERT_UNUSED(expectedCharacter, WTF::Unicode::foldCase(currentChar()) == WTF::Unicode::foldCase(expectedCharacter));
+        ASSERT_UNUSED(expectedCharacter, u_foldCase(currentChar(), U_FOLD_CASE_DEFAULT) == u_foldCase(expectedCharacter, U_FOLD_CASE_DEFAULT));
         advance();
     }
 
@@ -332,7 +332,7 @@ private:
     void advanceAndUpdateLineNumberSlowCase();
     void advanceEmpty();
     void advanceSubstring();
-
+    
     void updateSlowCaseFunctionPointers();
 
     void decrementAndCheckLength()
@@ -384,7 +384,7 @@ private:
         }
         return lookAheadSlowCase(string, caseSensitive);
     }
-
+    
     LookAheadResult lookAheadSlowCase(const String& string, bool caseSensitive)
     {
         unsigned count = string.length();

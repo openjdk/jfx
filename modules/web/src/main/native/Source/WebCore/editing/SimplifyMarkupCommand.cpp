@@ -34,16 +34,20 @@
 
 namespace WebCore {
 
-SimplifyMarkupCommand::SimplifyMarkupCommand(Document* document, Node* firstNode, Node* nodeAfterLast) 
-    : CompositeEditCommand(document), m_firstNode(firstNode), m_nodeAfterLast(nodeAfterLast)
+SimplifyMarkupCommand::SimplifyMarkupCommand(Document& document, Node* firstNode, Node* nodeAfterLast)
+    : CompositeEditCommand(document)
+    , m_firstNode(firstNode)
+    , m_nodeAfterLast(nodeAfterLast)
 {
 }
     
 void SimplifyMarkupCommand::doApply()
 {
     Node* rootNode = m_firstNode->parentNode();
-    Vector<RefPtr<Node> > nodesToRemove;
+    Vector<RefPtr<Node>> nodesToRemove;
     
+    document().updateLayoutIgnorePendingStylesheets();
+
     // Walk through the inserted nodes, to see if there are elements that could be removed
     // without affecting the style. The goal is to produce leaner markup even when starting
     // from a verbose fragment.
@@ -96,13 +100,14 @@ void SimplifyMarkupCommand::doApply()
     }
 }
 
-int SimplifyMarkupCommand::pruneSubsequentAncestorsToRemove(Vector<RefPtr<Node> >& nodesToRemove, size_t startNodeIndex)
+int SimplifyMarkupCommand::pruneSubsequentAncestorsToRemove(Vector<RefPtr<Node>>& nodesToRemove, size_t startNodeIndex)
 {
     size_t pastLastNodeToRemove = startNodeIndex + 1;
     for (; pastLastNodeToRemove < nodesToRemove.size(); ++pastLastNodeToRemove) {
         if (nodesToRemove[pastLastNodeToRemove - 1]->parentNode() != nodesToRemove[pastLastNodeToRemove])
             break;
-        ASSERT(nodesToRemove[pastLastNodeToRemove]->firstChild() == nodesToRemove[pastLastNodeToRemove]->lastChild());
+        if (nodesToRemove[pastLastNodeToRemove]->firstChild() != nodesToRemove[pastLastNodeToRemove]->lastChild())
+            break;
     }
 
     Node* highestAncestorToRemove = nodesToRemove[pastLastNodeToRemove - 1].get();

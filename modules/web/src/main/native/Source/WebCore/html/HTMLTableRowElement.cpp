@@ -38,18 +38,18 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-HTMLTableRowElement::HTMLTableRowElement(const QualifiedName& tagName, Document* document)
+HTMLTableRowElement::HTMLTableRowElement(const QualifiedName& tagName, Document& document)
     : HTMLTablePartElement(tagName, document)
 {
     ASSERT(hasTagName(trTag));
 }
 
-PassRefPtr<HTMLTableRowElement> HTMLTableRowElement::create(Document* document)
+PassRefPtr<HTMLTableRowElement> HTMLTableRowElement::create(Document& document)
 {
     return adoptRef(new HTMLTableRowElement(trTag, document));
 }
 
-PassRefPtr<HTMLTableRowElement> HTMLTableRowElement::create(const QualifiedName& tagName, Document* document)
+PassRefPtr<HTMLTableRowElement> HTMLTableRowElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(new HTMLTableRowElement(tagName, document));
 }
@@ -60,7 +60,7 @@ int HTMLTableRowElement::rowIndex() const
     if (!table)
         return -1;
     table = table->parentNode();
-    if (!table || !table->hasTagName(tableTag))
+    if (!table || !isHTMLTableElement(table))
         return -1;
 
     // To match Firefox, the row indices work like this:
@@ -70,7 +70,7 @@ int HTMLTableRowElement::rowIndex() const
 
     int rIndex = 0;
 
-    if (HTMLTableSectionElement* head = static_cast<HTMLTableElement*>(table)->tHead()) {
+    if (HTMLTableSectionElement* head = toHTMLTableElement(table)->tHead()) {
         for (Node *row = head->firstChild(); row; row = row->nextSibling()) {
             if (row == this)
                 return rIndex;
@@ -81,7 +81,7 @@ int HTMLTableRowElement::rowIndex() const
     
     for (Node *node = table->firstChild(); node; node = node->nextSibling()) {
         if (node->hasTagName(tbodyTag)) {
-            HTMLTableSectionElement* section = static_cast<HTMLTableSectionElement*>(node);
+            HTMLTableSectionElement* section = toHTMLTableSectionElement(node);
             for (Node* row = section->firstChild(); row; row = row->nextSibling()) {
                 if (row == this)
                     return rIndex;
@@ -91,7 +91,7 @@ int HTMLTableRowElement::rowIndex() const
         }
     }
 
-    if (HTMLTableSectionElement* foot = static_cast<HTMLTableElement*>(table)->tFoot()) {
+    if (HTMLTableSectionElement* foot = toHTMLTableElement(table)->tFoot()) {
         for (Node *row = foot->firstChild(); row; row = row->nextSibling()) {
             if (row == this)
                 return rIndex;

@@ -29,13 +29,19 @@
 #include "WebGLSharedObject.h"
 
 #include <wtf/PassRefPtr.h>
-#include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
 class WebGLTexture : public WebGLSharedObject {
 public:
+
+    enum TextureExtensionFlag {
+        TextureExtensionsDisabled = 0,
+        TextureExtensionFloatLinearEnabled = 1 << 0,
+        TextureExtensionHalfFloatLinearEnabled = 2 << 0
+    };
+
     virtual ~WebGLTexture();
 
     static PassRefPtr<WebGLTexture> create(WebGLRenderingContext*);
@@ -65,7 +71,10 @@ public:
 
     bool isNPOT() const;
     // Determine if texture sampling should always return [0, 0, 0, 1] (OpenGL ES 2.0 Sec 3.8.2).
-    bool needToUseBlackTexture() const;
+    bool needToUseBlackTexture(TextureExtensionFlag) const;
+
+    bool isCompressed() const;
+    void setCompressed();
 
     bool hasEverBeenBound() const { return object() && m_target; }
 
@@ -74,7 +83,7 @@ public:
 protected:
     WebGLTexture(WebGLRenderingContext*);
 
-    virtual void deleteObjectImpl(GraphicsContext3D*, Platform3DObject);
+    virtual void deleteObjectImpl(GraphicsContext3D*, Platform3DObject) override;
 
 private:
     class LevelInfo {
@@ -104,7 +113,7 @@ private:
         GC3Denum type;
     };
 
-    virtual bool isTexture() const { return true; }
+    virtual bool isTexture() const override { return true; }
 
     void update();
 
@@ -119,11 +128,14 @@ private:
     GC3Denum m_wrapS;
     GC3Denum m_wrapT;
 
-    Vector<Vector<LevelInfo> > m_info;
+    Vector<Vector<LevelInfo>> m_info;
 
     bool m_isNPOT;
     bool m_isComplete;
     bool m_needToUseBlackTexture;
+    bool m_isCompressed;
+    bool m_isFloatType;
+    bool m_isHalfFloatType;
 };
 
 } // namespace WebCore

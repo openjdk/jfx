@@ -24,10 +24,9 @@
  */
 
 [
-    Conditional=SVG,
     SkipVTableValidation
 ] interface SVGAnimatedTransformList {
-        readonly attribute SVGTransformList baseVal;
-        readonly attribute SVGTransformList animVal;
-    };
+    readonly attribute SVGTransformList baseVal;
+    readonly attribute SVGTransformList animVal;
+};
 

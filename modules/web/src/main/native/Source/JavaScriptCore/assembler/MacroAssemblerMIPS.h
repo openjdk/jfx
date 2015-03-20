@@ -101,6 +101,7 @@ public:
     };
 
     static const RegisterID stackPointerRegister = MIPSRegisters::sp;
+    static const RegisterID framePointerRegister = MIPSRegisters::fp;
     static const RegisterID returnAddressRegister = MIPSRegisters::ra;
 
     // Integer arithmetic operations:
@@ -641,7 +642,7 @@ public:
     // Memory access operations:
     //
     // Loads are of the form load(address, destination) and stores of the form
-    // store(source, address).  The source for a store may be an TrustedImm32.  Address
+    // store(source, address). The source for a store may be an TrustedImm32. Address
     // operand objects to loads and store will be implicitly constructed if a
     // register is passed.
 
@@ -689,6 +690,21 @@ public:
             m_assembler.addu(addrTempRegister, addrTempRegister, immTempRegister);
             m_assembler.lbu(dest, addrTempRegister, address.offset);
         }
+    }
+
+    ALWAYS_INLINE void load8(AbsoluteAddress address, RegisterID dest)
+    {
+        load8(address.m_ptr, dest);
+    }
+
+    void load8(const void* address, RegisterID dest)
+    {
+        /*
+            li  addrTemp, address
+            lbu dest, 0(addrTemp)
+        */
+        move(TrustedImmPtr(address), addrTempRegister);
+        m_assembler.lbu(dest, addrTempRegister, 0);
     }
 
     void load8Signed(BaseIndex address, RegisterID dest)
@@ -848,7 +864,7 @@ public:
         m_fixedWidth = false;
         return dataLabel;
     }
-
+    
     DataLabelCompact load32WithCompactAddressOffsetPatch(Address address, RegisterID dest)
     {
         DataLabelCompact dataLabel(this);
@@ -974,6 +990,12 @@ public:
             m_assembler.addu(addrTempRegister, addrTempRegister, immTempRegister);
             m_assembler.sb(src, addrTempRegister, address.offset);
         }
+    }
+
+    void store8(RegisterID src, void* address)
+    {
+        move(TrustedImmPtr(address), addrTempRegister);
+        m_assembler.sb(src, addrTempRegister, 0);
     }
 
     void store8(TrustedImm32 imm, void* address)
@@ -1191,9 +1213,9 @@ public:
     // Stack manipulation operations:
     //
     // The ABI is assumed to provide a stack abstraction to memory,
-    // containing machine word sized units of data.  Push and pop
+    // containing machine word sized units of data. Push and pop
     // operations add and remove a single register sized unit of data
-    // to or from the stack.  Peek and poke operations read or write
+    // to or from the stack. Peek and poke operations read or write
     // values on the stack, without moving the current stack position.
 
     void pop(RegisterID dest)
@@ -1284,6 +1306,15 @@ public:
     // an optional second operand of a mask under which to perform the test.
 
     Jump branch8(RelationalCondition cond, Address left, TrustedImm32 right)
+    {
+        // Make sure the immediate value is unsigned 8 bits.
+        ASSERT(!(right.m_value & 0xFFFFFF00));
+        load8(left, dataTempRegister);
+        move(right, immTempRegister);
+        return branch32(cond, dataTempRegister, immTempRegister);
+    }
+
+    Jump branch8(RelationalCondition cond, AbsoluteAddress left, TrustedImm32 right)
     {
         // Make sure the immediate value is unsigned 8 bits.
         ASSERT(!(right.m_value & 0xFFFFFF00));
@@ -1444,6 +1475,12 @@ public:
         return branchTest32(cond, dataTempRegister, mask);
     }
 
+    Jump branchTest8(ResultCondition cond, BaseIndex address, TrustedImm32 mask = TrustedImm32(-1))
+    {
+        load8(address, dataTempRegister);
+        return branchTest32(cond, dataTempRegister, mask);
+    }
+
     Jump branchTest8(ResultCondition cond, Address address, TrustedImm32 mask = TrustedImm32(-1))
     {
         load8(address, dataTempRegister);
@@ -1501,7 +1538,7 @@ public:
     // Arithmetic control flow operations:
     //
     // This set of conditional branch operations branch based
-    // on the result of an arithmetic operation.  The operation
+    // on the result of an arithmetic operation. The operation
     // is performed as normal, storing the result.
     //
     // * jz operations branch if the result is zero.
@@ -1545,9 +1582,9 @@ public:
         }
         if (cond == PositiveOrZero) {
             add32(src, dest);
-            // Check if dest is negative.
-            m_assembler.slt(cmpTempRegister, MIPSRegisters::zero, dest);
-            return branchNotEqual(cmpTempRegister, MIPSRegisters::zero);
+            // Check if dest is not negative.
+            m_assembler.slt(cmpTempRegister, dest, MIPSRegisters::zero);
+            return branchEqual(cmpTempRegister, MIPSRegisters::zero);
         }
         if (cond == Zero) {
             add32(src, dest);
@@ -1563,7 +1600,7 @@ public:
 
     Jump branchAdd32(ResultCondition cond, RegisterID op1, RegisterID op2, RegisterID dest)
     {
-        ASSERT((cond == Overflow) || (cond == Signed) || (cond == Zero) || (cond == NonZero));
+        ASSERT((cond == Overflow) || (cond == Signed) || (cond == PositiveOrZero) || (cond == Zero) || (cond == NonZero));
         if (cond == Overflow) {
             /*
                 move    dataTemp, op1
@@ -1596,6 +1633,12 @@ public:
             m_assembler.slt(cmpTempRegister, dest, MIPSRegisters::zero);
             return branchNotEqual(cmpTempRegister, MIPSRegisters::zero);
         }
+        if (cond == PositiveOrZero) {
+            add32(op1, op2, dest);
+            // Check if dest is not negative.
+            m_assembler.slt(cmpTempRegister, dest, MIPSRegisters::zero);
+            return branchEqual(cmpTempRegister, MIPSRegisters::zero);
+        }
         if (cond == Zero) {
             add32(op1, op2, dest);
             return branchEqual(dest, MIPSRegisters::zero);
@@ -1623,7 +1666,7 @@ public:
 
     Jump branchAdd32(ResultCondition cond, TrustedImm32 imm, AbsoluteAddress dest)
     {
-        ASSERT((cond == Overflow) || (cond == Signed) || (cond == Zero) || (cond == NonZero));
+        ASSERT((cond == Overflow) || (cond == Signed) || (cond == PositiveOrZero) || (cond == Zero) || (cond == NonZero));
         if (cond == Overflow) {
             /*
                 move    dataTemp, dest
@@ -1672,6 +1715,11 @@ public:
             // Check if dest is negative.
             m_assembler.slt(cmpTempRegister, dataTempRegister, MIPSRegisters::zero);
             return branchNotEqual(cmpTempRegister, MIPSRegisters::zero);
+        }
+        if (cond == PositiveOrZero) {
+            // Check if dest is not negative.
+            m_assembler.slt(cmpTempRegister, dataTempRegister, MIPSRegisters::zero);
+            return branchEqual(cmpTempRegister, MIPSRegisters::zero);
         }
         if (cond == Zero)
             return branchEqual(dataTempRegister, MIPSRegisters::zero);
@@ -1919,7 +1967,7 @@ public:
 
     Call nearCall()
     {
-        /* We need two words for relaxation.  */
+        /* We need two words for relaxation. */
         m_assembler.nop();
         m_assembler.nop();
         m_assembler.jal();
@@ -2636,7 +2684,7 @@ public:
 
         // If the result is zero, it might have been -0.0, and the double comparison won't catch this!
         if (negZeroCheck)
-        failureCases.append(branch32(Equal, dest, MIPSRegisters::zero));
+            failureCases.append(branch32(Equal, dest, MIPSRegisters::zero));
 
         // Convert the integer result back to float & compare to the original value - if not equal or unordered (NaN) then jump.
         convertInt32ToDouble(dest, fpTemp);
@@ -2687,6 +2735,11 @@ public:
         m_assembler.nop();
     }
 
+    void memoryFence()
+    {
+        m_assembler.sync();
+    }
+
     static FunctionPtr readCallTarget(CodeLocationCall call)
     {
         return FunctionPtr(reinterpret_cast<void(*)()>(MIPSAssembler::readCallTarget(call.dataLocation())));
@@ -2721,7 +2774,7 @@ public:
         return CodeLocationLabel();
     }
 
-    static void revertJumpReplacementToPatchableBranchPtrWithPatch(CodeLocationLabel instructionStart, Address, void* initialValue)
+    static void revertJumpReplacementToPatchableBranchPtrWithPatch(CodeLocationLabel, Address, void*)
     {
         UNREACHABLE_FOR_PLATFORM();
     }

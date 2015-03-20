@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2006, 2007, 2008, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,16 +26,13 @@
 #include "config.h"
 #include "FrameWin.h"
 
-#include "BridgeJSC.h"
 #include "Document.h"
 #include "FloatRect.h"
 #include "Frame.h"
 #include "FrameSelection.h"
+#include "FrameView.h"
 #include "PrintContext.h"
-#include "Range.h"
-#include "RenderView.h"
-#include "Settings.h"
-#include "TransformationMatrix.h"
+#include "RenderObject.h"
 
 namespace WebCore {
 
@@ -48,12 +45,16 @@ void computePageRectsForFrame(Frame* frame, const IntRect& printRect, float head
     outPages = printContext.pageRects();
 }
 
-DragImageRef Frame::dragImageForSelection()
-{    
-    if (selection()->isRange())
-        return imageFromSelection(this, false);
+GDIObject<HBITMAP> imageFromSelection(Frame* frame, bool forceBlackText)
+{
+    frame->document()->updateLayout();
 
-    return 0;
+    frame->view()->setPaintBehavior(PaintBehaviorSelectionOnly | (forceBlackText ? PaintBehaviorForceBlackText : 0));
+    FloatRect fr = frame->selection().selectionBounds();
+    IntRect ir(static_cast<int>(fr.x()), static_cast<int>(fr.y()), static_cast<int>(fr.width()), static_cast<int>(fr.height()));
+    GDIObject<HBITMAP> image = imageFromRect(frame, ir);
+    frame->view()->setPaintBehavior(PaintBehaviorNormal);
+    return image;
 }
 
 } // namespace WebCore

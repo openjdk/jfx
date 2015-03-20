@@ -20,6 +20,8 @@
  *
  */
 
+#include "Platform.h" // todo tav remove when building w/ pch
+
 #if ENABLE(TOUCH_EVENTS)
 
 #include "com_sun_webkit_event_WCTouchEvent.h"

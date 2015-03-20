@@ -34,7 +34,7 @@ public:
 
     virtual void draw(GraphicsContext* gc, const FloatRect& dstRect,
                       const FloatRect& srcRect, ColorSpace styleColorSpace,
-                      CompositeOperator op, BlendMode bm);
+                      CompositeOperator op, BlendMode bm, ImageOrientationDescription);
 
     virtual void drawPattern(GraphicsContext* gc, const FloatRect& srcRect, const AffineTransform& patternTransform,
                              const FloatPoint& phase, ColorSpace styleColorSpace, CompositeOperator, const FloatRect& destRect);

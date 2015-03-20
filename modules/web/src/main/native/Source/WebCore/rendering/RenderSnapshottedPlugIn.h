@@ -34,41 +34,36 @@ namespace WebCore {
 
 class HTMLPlugInImageElement;
 
-class RenderSnapshottedPlugIn : public RenderEmbeddedObject {
+class RenderSnapshottedPlugIn final : public RenderEmbeddedObject {
 public:
-    explicit RenderSnapshottedPlugIn(HTMLPlugInImageElement*);
+    RenderSnapshottedPlugIn(HTMLPlugInImageElement&, PassRef<RenderStyle>);
     virtual ~RenderSnapshottedPlugIn();
+
+    HTMLPlugInImageElement& plugInImageElement() const;
 
     void updateSnapshot(PassRefPtr<Image>);
 
     void handleEvent(Event*);
 
 private:
-    HTMLPlugInImageElement* plugInImageElement() const;
+    void frameOwnerElement() const = delete;
     virtual const char* renderName() const { return "RenderSnapshottedPlugIn"; }
 
-    virtual CursorDirective getCursor(const LayoutPoint&, Cursor&) const OVERRIDE;
-    virtual bool isSnapshottedPlugIn() const OVERRIDE { return true; }
-    virtual void paint(PaintInfo&, const LayoutPoint&) OVERRIDE;
+    virtual CursorDirective getCursor(const LayoutPoint&, Cursor&) const override final;
+    virtual bool isSnapshottedPlugIn() const override final { return true; }
+    virtual void paint(PaintInfo&, const LayoutPoint&) override;
     
-    virtual bool canHaveWidget() const OVERRIDE { return false; }
+    virtual bool canHaveWidget() const override final { return false; }
 
     void paintSnapshot(PaintInfo&, const LayoutPoint&);
 
-    virtual void layout() OVERRIDE;
+    virtual void layout() override;
 
-    OwnPtr<RenderImageResource> m_snapshotResource;
+    std::unique_ptr<RenderImageResource> m_snapshotResource;
     bool m_isPotentialMouseActivation;
 };
 
-inline RenderSnapshottedPlugIn* toRenderSnapshottedPlugIn(RenderObject* object)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isSnapshottedPlugIn());
-    return static_cast<RenderSnapshottedPlugIn*>(object);
-}
-
-// This will catch anyone doing an unnecessary cast.
-void toRenderSnapshottedPlugIn(const RenderSnapshottedPlugIn*);
+RENDER_OBJECT_TYPE_CASTS(RenderSnapshottedPlugIn, isSnapshottedPlugIn())
 
 } // namespace WebCore
 

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All Rights Reserved.
+ * Copyright (C) 2013 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,32 +31,37 @@
 #include "DOMWindow.h"
 #include "Document.h"
 #include "Event.h"
-#include "EventNames.h"
-#include "RuntimeApplicationChecks.h"
-#include "ScriptExecutionContext.h"
 #include "SuspendableTimer.h"
+#include <wtf/Ref.h>
 
 namespace WebCore {
     
-class DocumentEventQueueTimer : public SuspendableTimer {
-    WTF_MAKE_NONCOPYABLE(DocumentEventQueueTimer);
+class DocumentEventQueue::Timer final : public SuspendableTimer {
 public:
-    DocumentEventQueueTimer(DocumentEventQueue* eventQueue, ScriptExecutionContext* context)
-        : SuspendableTimer(context)
-        , m_eventQueue(eventQueue) { }
+    static PassOwnPtr<Timer> create(DocumentEventQueue& eventQueue)
+    {
+        return adoptPtr(new Timer(eventQueue));
+    }
 
 private:
-    virtual void fired() { m_eventQueue->pendingEventTimerFired(); }
-    DocumentEventQueue* m_eventQueue;
+    Timer(DocumentEventQueue& eventQueue)
+        : SuspendableTimer(&eventQueue.m_document)
+        , m_eventQueue(eventQueue)
+    {
+    }
+
+    virtual void fired() override
+    {
+        ASSERT(!isSuspended());
+        m_eventQueue.pendingEventTimerFired();
+    }
+
+    DocumentEventQueue& m_eventQueue;
 };
 
-PassRefPtr<DocumentEventQueue> DocumentEventQueue::create(ScriptExecutionContext* context)
-{
-    return adoptRef(new DocumentEventQueue(context));
-}
-
-DocumentEventQueue::DocumentEventQueue(ScriptExecutionContext* context)
-    : m_pendingEventTimer(adoptPtr(new DocumentEventQueueTimer(this, context)))
+DocumentEventQueue::DocumentEventQueue(Document& document)
+    : m_document(document)
+    , m_pendingEventTimer(Timer::create(*this))
     , m_isClosed(false)
 {
     m_pendingEventTimer->suspendIfNeeded();
@@ -67,48 +73,52 @@ DocumentEventQueue::~DocumentEventQueue()
 
 bool DocumentEventQueue::enqueueEvent(PassRefPtr<Event> event)
 {
+    ASSERT(event->target());
+    ASSERT(!m_queuedEvents.contains(event.get()));
+
     if (m_isClosed)
         return false;
 
-    ASSERT(event->target());
-    bool wasAdded = m_queuedEvents.add(event).isNewEntry;
-    ASSERT_UNUSED(wasAdded, wasAdded); // It should not have already been in the list.
-    
+    m_queuedEvents.add(event);
     if (!m_pendingEventTimer->isActive())
         m_pendingEventTimer->startOneShot(0);
-
     return true;
 }
 
-void DocumentEventQueue::enqueueOrDispatchScrollEvent(PassRefPtr<Node> target, ScrollEventTargetType targetType)
+void DocumentEventQueue::enqueueOrDispatchScrollEvent(Node& target)
 {
-    if (!target->document()->hasListenerType(Document::SCROLL_LISTENER))
+    ASSERT(&target.document() == &m_document);
+
+    if (m_isClosed)
+        return;
+
+    if (!m_document.hasListenerType(Document::SCROLL_LISTENER))
+        return;
+
+    if (!m_nodesWithQueuedScrollEvents.add(&target).isNewEntry)
         return;
 
     // Per the W3C CSSOM View Module, scroll events fired at the document should bubble, others should not.
-    bool canBubble = targetType == ScrollEventDocumentTarget;
-    RefPtr<Event> scrollEvent = Event::create(eventNames().scrollEvent, canBubble, false /* non cancelleable */);
-     
-    if (!m_nodesWithQueuedScrollEvents.add(target.get()).isNewEntry)
-        return;
+    bool bubbles = target.isDocumentNode();
+    bool cancelable = false;
 
-    scrollEvent->setTarget(target);
+    RefPtr<Event> scrollEvent = Event::create(eventNames().scrollEvent, bubbles, cancelable);
+    scrollEvent->setTarget(&target);
     enqueueEvent(scrollEvent.release());
 }
 
-bool DocumentEventQueue::cancelEvent(Event* event)
+bool DocumentEventQueue::cancelEvent(Event& event)
 {
-    bool found = m_queuedEvents.contains(event);
-    m_queuedEvents.remove(event);
+    bool found = m_queuedEvents.remove(&event);
     if (m_queuedEvents.isEmpty())
-        m_pendingEventTimer->stop();
+        m_pendingEventTimer->cancel();
     return found;
 }
 
 void DocumentEventQueue::close()
 {
     m_isClosed = true;
-    m_pendingEventTimer->stop();
+    m_pendingEventTimer->cancel();
     m_queuedEvents.clear();
 }
 
@@ -120,29 +130,28 @@ void DocumentEventQueue::pendingEventTimerFired()
     m_nodesWithQueuedScrollEvents.clear();
 
     // Insert a marker for where we should stop.
-    ASSERT(!m_queuedEvents.contains(0));
-    bool wasAdded = m_queuedEvents.add(0).isNewEntry;
-    ASSERT_UNUSED(wasAdded, wasAdded); // It should not have already been in the list.
+    ASSERT(!m_queuedEvents.contains(nullptr));
+    m_queuedEvents.add(nullptr);
 
-    RefPtr<DocumentEventQueue> protector(this);
+    Ref<Document> protect(m_document);
 
     while (!m_queuedEvents.isEmpty()) {
-        ListHashSet<RefPtr<Event>, 16>::iterator iter = m_queuedEvents.begin();
-        RefPtr<Event> event = *iter;
-        m_queuedEvents.remove(iter);
+        RefPtr<Event> event = m_queuedEvents.takeFirst();
         if (!event)
             break;
-        dispatchEvent(event.get());
+        dispatchEvent(*event);
     }
 }
 
-void DocumentEventQueue::dispatchEvent(PassRefPtr<Event> event)
+void DocumentEventQueue::dispatchEvent(Event& event)
 {
-    EventTarget* eventTarget = event->target();
-    if (eventTarget->toDOMWindow())
-        eventTarget->toDOMWindow()->dispatchEvent(event, 0);
+    // FIXME: Where did this special case for the DOM window come from?
+    // Why do we have this special case here instead of a virtual function on EventTarget?
+    EventTarget& eventTarget = *event.target();
+    if (DOMWindow* window = eventTarget.toDOMWindow())
+        window->dispatchEvent(&event, 0);
     else
-        eventTarget->dispatchEvent(event);
+        eventTarget.dispatchEvent(&event);
 }
 
 }

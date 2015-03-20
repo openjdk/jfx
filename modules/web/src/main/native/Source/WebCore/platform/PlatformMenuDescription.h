@@ -26,12 +26,10 @@
 #ifndef PlatformMenuDescription_h
 #define PlatformMenuDescription_h
 
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
 OBJC_CLASS NSMutableArray;
 #elif PLATFORM(WIN)
 #include <windows.h>
-#elif PLATFORM(QT)
-#include <qlist.h>
 #elif PLATFORM(GTK)
 typedef struct _GtkMenu GtkMenu;
 #elif PLATFORM(JAVA)
@@ -41,11 +39,8 @@ typedef struct _GtkMenu GtkMenu;
 namespace WebCore {
 
 #if !USE(CROSS_PLATFORM_CONTEXT_MENUS)
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
     typedef NSMutableArray* PlatformMenuDescription;
-#elif PLATFORM(QT)
-    class ContextMenuItem;
-    typedef const QList<ContextMenuItem>* PlatformMenuDescription;
 #elif PLATFORM(GTK)
     typedef GtkMenu* PlatformMenuDescription;
 #elif PLATFORM(JAVA)

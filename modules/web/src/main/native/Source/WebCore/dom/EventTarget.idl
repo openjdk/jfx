@@ -18,15 +18,14 @@
  * Boston, MA 02110-1301, USA.
  */
 
-    // Introduced in DOM Level 2:
+// Introduced in DOM Level 2:
 [
     NoInterfaceObject,
-        ObjCProtocol,
-        CPPPureInterface,
-        OmitConstructor,
+    ObjCProtocol,
+    CPPPureInterface,
     CustomToJSObject,
     JSCustomToNativeObject,
-    EventTarget
+    EventTarget,
 ] interface EventTarget {
     [ObjCLegacyUnnamedParameters] void addEventListener(DOMString type, 
                                          EventListener listener, 
@@ -34,7 +33,6 @@
     [ObjCLegacyUnnamedParameters] void removeEventListener(DOMString type, 
                                             EventListener listener, 
                                             optional boolean useCapture);
-    boolean dispatchEvent(Event event)
-            raises(EventException);
-    };
+    [RaisesException] boolean dispatchEvent(Event event);
+};
 

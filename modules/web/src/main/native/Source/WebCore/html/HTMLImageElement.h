@@ -24,6 +24,7 @@
 #ifndef HTMLImageElement_h
 #define HTMLImageElement_h
 
+#include "FormNamedItem.h"
 #include "GraphicsTypes.h"
 #include "HTMLElement.h"
 #include "HTMLImageLoader.h"
@@ -32,12 +33,12 @@ namespace WebCore {
 
 class HTMLFormElement;
 
-class HTMLImageElement : public HTMLElement {
+class HTMLImageElement : public HTMLElement, public FormNamedItem {
     friend class HTMLFormElement;
 public:
-    static PassRefPtr<HTMLImageElement> create(Document*);
-    static PassRefPtr<HTMLImageElement> create(const QualifiedName&, Document*, HTMLFormElement*);
-    static PassRefPtr<HTMLImageElement> createForJSConstructor(Document*, const int* optionalWidth, const int* optionalHeight);
+    static PassRefPtr<HTMLImageElement> create(Document&);
+    static PassRefPtr<HTMLImageElement> create(const QualifiedName&, Document&, HTMLFormElement*);
+    static PassRefPtr<HTMLImageElement> createForJSConstructor(Document&, const int* optionalWidth, const int* optionalHeight);
 
     virtual ~HTMLImageElement();
 
@@ -58,11 +59,13 @@ public:
 
     void setLoadManually(bool loadManually) { m_imageLoader.setLoadManually(loadManually); }
 
+    bool matchesLowercasedUsemap(const AtomicStringImpl&) const;
+
     const AtomicString& alt() const;
 
     void setHeight(int);
 
-    KURL src() const;
+    URL src() const;
     void setSrc(const String&);
 
     void setWidth(int);
@@ -72,45 +75,54 @@ public:
 
     bool complete() const;
 
+#if PLATFORM(IOS)
+    virtual bool willRespondToMouseClickEvents() override;
+#endif
+
     bool hasPendingActivity() const { return m_imageLoader.hasPendingActivity(); }
 
-    virtual bool canContainRangeEndPoint() const { return false; }
+    virtual bool canContainRangeEndPoint() const override { return false; }
+
+    virtual const AtomicString& imageSourceURL() const override;
 
 protected:
-    HTMLImageElement(const QualifiedName&, Document*, HTMLFormElement* = 0);
+    HTMLImageElement(const QualifiedName&, Document&, HTMLFormElement* = 0);
 
-    virtual void didMoveToNewDocument(Document* oldDocument) OVERRIDE;
+    virtual void didMoveToNewDocument(Document* oldDocument) override;
 
 private:
-    virtual bool areAuthorShadowsAllowed() const OVERRIDE { return false; }
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
+    virtual bool isPresentationAttribute(const QualifiedName&) const override;
+    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStyleProperties&) override;
 
-    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
-    virtual bool isPresentationAttribute(const QualifiedName&) const OVERRIDE;
-    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStylePropertySet*) OVERRIDE;
+    virtual void didAttachRenderers() override;
+    virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) override;
 
-    virtual void attach();
-    virtual RenderObject* createRenderer(RenderArena*, RenderStyle*);
+    virtual bool canStartSelection() const override;
 
-    virtual bool canStartSelection() const;
+    virtual bool isURLAttribute(const Attribute&) const override;
 
-    virtual bool isURLAttribute(const Attribute&) const OVERRIDE;
+    virtual bool draggable() const override;
 
-    virtual bool draggable() const;
+    virtual void addSubresourceAttributeURLs(ListHashSet<URL>&) const override;
 
-    virtual void addSubresourceAttributeURLs(ListHashSet<KURL>&) const;
+    virtual InsertionNotificationRequest insertedInto(ContainerNode&) override;
+    virtual void removedFrom(ContainerNode&) override;
 
-    virtual InsertionNotificationRequest insertedInto(ContainerNode*) OVERRIDE;
-    virtual void removedFrom(ContainerNode*) OVERRIDE;
-
-#if ENABLE(MICRODATA)
-    virtual String itemValueText() const OVERRIDE;
-    virtual void setItemValueText(const String&, ExceptionCode&) OVERRIDE;
-#endif
+    virtual bool isFormAssociatedElement() const override final { return false; }
+    virtual FormNamedItem* asFormNamedItem() override final { return this; }
+    virtual HTMLImageElement& asHTMLElement() override final { return *this; }
+    virtual const HTMLImageElement& asHTMLElement() const override final { return *this; }
 
     HTMLImageLoader m_imageLoader;
     HTMLFormElement* m_form;
     CompositeOperator m_compositeOperator;
+    AtomicString m_bestFitImageURL;
+    AtomicString m_lowercasedUsemap;
+    float m_imageDevicePixelRatio;
 };
+
+NODE_TYPE_CASTS(HTMLImageElement)
 
 } //namespace
 

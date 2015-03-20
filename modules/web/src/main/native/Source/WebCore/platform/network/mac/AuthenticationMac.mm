@@ -43,7 +43,11 @@
 @end
 
 @interface NSURLAuthenticationChallenge (Details)
+#if PLATFORM(IOS)
++(NSURLAuthenticationChallenge *)_createAuthenticationChallengeForCFAuthChallenge:(CFURLAuthChallengeRef)cfChallenge sender:(id <NSURLAuthenticationChallengeSender>)sender;
+#else
 +(NSURLAuthenticationChallenge *)_authenticationChallengeForCFAuthChallenge:(CFURLAuthChallengeRef)cfChallenge sender:(id <NSURLAuthenticationChallengeSender>)sender;
+#endif
 @end
 
 @interface NSURLCredential (Details)
@@ -154,7 +158,11 @@ NSURLAuthenticationChallenge *mac(const AuthenticationChallenge& coreChallenge)
     if (!authChallenge)
         authChallenge = adoptCF(createCF(coreChallenge));
     [challengeSender.get() setCFChallenge:authChallenge.get()];
+#if PLATFORM(IOS)
+    return [[NSURLAuthenticationChallenge _createAuthenticationChallengeForCFAuthChallenge:authChallenge.get() sender:challengeSender.get()] autorelease];
+#else
     return [[NSURLAuthenticationChallenge _authenticationChallengeForCFAuthChallenge:authChallenge.get() sender:challengeSender.get()] autorelease];
+#endif
 }
 
 NSURLCredential *mac(const Credential& coreCredential)
@@ -283,6 +291,9 @@ NSURLProtectionSpace *mac(const ProtectionSpace& coreSpace)
         case ProtectionSpaceAuthenticationSchemeNTLM:
             method = NSURLAuthenticationMethodNTLM;
             break;
+        case ProtectionSpaceAuthenticationSchemeNegotiate:
+            method = NSURLAuthenticationMethodNegotiate;
+            break;
 #if USE(PROTECTION_SPACE_AUTH_CALLBACK)
         case ProtectionSpaceAuthenticationSchemeServerTrustEvaluationRequested:
             method = NSURLAuthenticationMethodServerTrust;
@@ -389,6 +400,8 @@ ProtectionSpace core(NSURLProtectionSpace *macSpace)
         scheme = ProtectionSpaceAuthenticationSchemeHTMLForm;
     else if ([method isEqualToString:NSURLAuthenticationMethodNTLM])
         scheme = ProtectionSpaceAuthenticationSchemeNTLM;
+    else if ([method isEqualToString:NSURLAuthenticationMethodNegotiate])
+        scheme = ProtectionSpaceAuthenticationSchemeNegotiate;
 #if USE(PROTECTION_SPACE_AUTH_CALLBACK)
     else if ([method isEqualToString:NSURLAuthenticationMethodClientCertificate])
         scheme = ProtectionSpaceAuthenticationSchemeClientCertificateRequested;

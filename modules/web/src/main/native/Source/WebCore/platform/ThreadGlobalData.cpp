@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008, 2014 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,47 +28,42 @@
 #include "ThreadGlobalData.h"
 
 #include "CachedResourceRequestInitiators.h"
-#include "DOMImplementation.h"
 #include "EventNames.h"
 #include "InspectorCounters.h"
+#include "TextCodecICU.h"
 #include "ThreadTimers.h"
 #include <wtf/MainThread.h>
+#include <wtf/ThreadSpecific.h>
+#include <wtf/Threading.h>
 #include <wtf/WTFThreadData.h>
 #include <wtf/text/StringImpl.h>
 
-#if USE(ICU_UNICODE)
-#include "TextCodecICU.h"
-#endif
-
 #if PLATFORM(MAC)
-#include "TextCodecMac.h"
+#include "TextCodeCMac.h"
 #endif
 
-#if ENABLE(WORKERS)
-#include <wtf/Threading.h>
-#include <wtf/ThreadSpecific.h>
-using namespace WTF;
+#if ENABLE(WEB_REPLAY)
+#include "ReplayInputTypes.h"
 #endif
 
 namespace WebCore {
 
-#if ENABLE(WORKERS)
 ThreadSpecific<ThreadGlobalData>* ThreadGlobalData::staticData;
-#else
-ThreadGlobalData* ThreadGlobalData::staticData;
+#if USE(WEB_THREAD)
+ThreadGlobalData* ThreadGlobalData::sharedMainThreadStaticData;
 #endif
 
 ThreadGlobalData::ThreadGlobalData()
     : m_cachedResourceRequestInitiators(adoptPtr(new CachedResourceRequestInitiators))
     , m_eventNames(adoptPtr(new EventNames))
     , m_threadTimers(adoptPtr(new ThreadTimers))
-    , m_xmlTypeRegExp(adoptPtr(new XMLMIMETypeRegExp))
+#if ENABLE(WEB_REPLAY)
+    , m_inputTypes(std::make_unique<ReplayInputTypes>())
+#endif
 #ifndef NDEBUG
     , m_isMainThread(isMainThread())
 #endif
-#if USE(ICU_UNICODE)
     , m_cachedConverterICU(adoptPtr(new ICUConverterWrapper))
-#endif
 #if PLATFORM(MAC)
     , m_cachedConverterTEC(adoptPtr(new TECConverterWrapper))
 #endif
@@ -94,17 +89,49 @@ void ThreadGlobalData::destroy()
     m_cachedConverterTEC.clear();
 #endif
 
-#if USE(ICU_UNICODE)
     m_cachedConverterICU.clear();
-#endif
 
 #if ENABLE(INSPECTOR)
     m_inspectorCounters.clear();
 #endif
 
+#if ENABLE(WEB_REPLAY)
+    m_inputTypes = nullptr;
+#endif
+
     m_eventNames.clear();
     m_threadTimers.clear();
-    m_xmlTypeRegExp.clear();
+}
+
+#if ENABLE(WORKERS) && USE(WEB_THREAD)
+void ThreadGlobalData::setWebCoreThreadData()
+{
+    ASSERT(isWebThread());
+    ASSERT(&threadGlobalData() != ThreadGlobalData::sharedMainThreadStaticData);
+
+    // Set WebThread's ThreadGlobalData object to be the same as the main UI thread.
+    ThreadGlobalData::staticData->replace(ThreadGlobalData::sharedMainThreadStaticData);
+
+    ASSERT(&threadGlobalData() == ThreadGlobalData::sharedMainThreadStaticData);
+}
+#endif
+
+ThreadGlobalData& threadGlobalData() 
+{
+#if USE(WEB_THREAD)
+    if (UNLIKELY(!ThreadGlobalData::staticData)) {
+        ThreadGlobalData::staticData = new ThreadSpecific<ThreadGlobalData>;
+        // WebThread and main UI thread need to share the same object. Save it in a static
+        // here, the WebThread will pick it up in setWebCoreThreadData().
+        if (pthread_main_np())
+            ThreadGlobalData::sharedMainThreadStaticData = *ThreadGlobalData::staticData;
+    }
+    return **ThreadGlobalData::staticData;
+#else
+    if (!ThreadGlobalData::staticData)
+        ThreadGlobalData::staticData = new ThreadSpecific<ThreadGlobalData>;
+    return **ThreadGlobalData::staticData;
+#endif
 }
 
 } // namespace WebCore

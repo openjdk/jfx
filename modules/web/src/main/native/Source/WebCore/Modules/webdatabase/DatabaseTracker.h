@@ -37,7 +37,6 @@
 #include "SecurityOriginHash.h"
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
-#include <wtf/OwnPtr.h>
 #include <wtf/text/StringHash.h>
 #include <wtf/text/WTFString.h>
 
@@ -70,7 +69,7 @@ public:
 
     void addOpenDatabase(DatabaseBackendBase*);
     void removeOpenDatabase(DatabaseBackendBase*);
-    void getOpenDatabases(SecurityOrigin*, const String& name, HashSet<RefPtr<DatabaseBackendBase> >* databases);
+    void getOpenDatabases(SecurityOrigin*, const String& name, HashSet<RefPtr<DatabaseBackendBase>>* databases);
 
     unsigned long long getMaxSizeForDatabase(const DatabaseBackendBase*);
 
@@ -85,12 +84,11 @@ public:
     void setDatabaseDirectoryPath(const String&);
     String databaseDirectoryPath() const;
 
-    void origins(Vector<RefPtr<SecurityOrigin> >& result);
+    void origins(Vector<RefPtr<SecurityOrigin>>& result);
     bool databaseNamesForOrigin(SecurityOrigin*, Vector<String>& result);
 
     DatabaseDetails detailsForNameAndOrigin(const String&, SecurityOrigin*);
 
-    unsigned long long usageForDatabase(const String&, SecurityOrigin*);
     unsigned long long usageForOrigin(SecurityOrigin*);
     unsigned long long quotaForOrigin(SecurityOrigin*);
     void setQuota(SecurityOrigin*, unsigned long long);
@@ -100,6 +98,21 @@ public:
     bool deleteOrigin(SecurityOrigin*);
     bool deleteDatabase(SecurityOrigin*, const String& name);
 
+#if PLATFORM(IOS)
+    void removeDeletedOpenedDatabases();
+    static bool deleteDatabaseFileIfEmpty(const String&);
+
+    // MobileSafari will grab this mutex on the main thread before dispatching the task to 
+    // clean up zero byte database files.  Any operations to open new database will have to
+    // wait for that task to finish by waiting on this mutex.
+    static Mutex& openDatabaseMutex();
+    
+    static void emptyDatabaseFilesRemovalTaskWillBeScheduled();
+    static void emptyDatabaseFilesRemovalTaskDidFinish();
+    
+    void setDatabasesPaused(bool);
+#endif
+    
     void setClient(DatabaseManagerClient*);
 
     // From a secondary thread, must be thread safe with its data
@@ -138,13 +151,13 @@ private:
     typedef HashMap<RefPtr<SecurityOrigin>, DatabaseNameMap*> DatabaseOriginMap;
 
     Mutex m_openDatabaseMapGuard;
-    mutable OwnPtr<DatabaseOriginMap> m_openDatabaseMap;
+    mutable std::unique_ptr<DatabaseOriginMap> m_openDatabaseMap;
 
     // This lock protects m_database, m_originLockMap, m_databaseDirectoryPath, m_originsBeingDeleted, m_beingCreated, and m_beingDeleted.
     Mutex m_databaseGuard;
     SQLiteDatabase m_database;
 
-    typedef HashMap<String, RefPtr<OriginLock> > OriginLockMap;
+    typedef HashMap<String, RefPtr<OriginLock>> OriginLockMap;
     OriginLockMap m_originLockMap;
 
     String m_databaseDirectoryPath;
@@ -156,7 +169,7 @@ private:
     CreateSet m_beingCreated;
     typedef HashSet<String> NameSet;
     HashMap<RefPtr<SecurityOrigin>, NameSet*> m_beingDeleted;
-    HashSet<RefPtr<SecurityOrigin> > m_originsBeingDeleted;
+    HashSet<RefPtr<SecurityOrigin>> m_originsBeingDeleted;
     bool isDeletingDatabaseOrOriginFor(SecurityOrigin*, const String& name);
     void recordCreatingDatabase(SecurityOrigin*, const String& name);
     void doneCreatingDatabase(SecurityOrigin*, const String& name);

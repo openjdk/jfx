@@ -19,8 +19,6 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SVG)
 #include "SVGSymbolElement.h"
 
 #include "RenderSVGHiddenContainer.h"
@@ -39,17 +37,17 @@ BEGIN_REGISTER_ANIMATED_PROPERTIES(SVGSymbolElement)
     REGISTER_LOCAL_ANIMATED_PROPERTY(externalResourcesRequired)
     REGISTER_LOCAL_ANIMATED_PROPERTY(viewBox)
     REGISTER_LOCAL_ANIMATED_PROPERTY(preserveAspectRatio) 
-    REGISTER_PARENT_ANIMATED_PROPERTIES(SVGStyledElement)
+    REGISTER_PARENT_ANIMATED_PROPERTIES(SVGElement)
 END_REGISTER_ANIMATED_PROPERTIES
 
-inline SVGSymbolElement::SVGSymbolElement(const QualifiedName& tagName, Document* document)
-    : SVGStyledElement(tagName, document)
+inline SVGSymbolElement::SVGSymbolElement(const QualifiedName& tagName, Document& document)
+    : SVGElement(tagName, document)
 {
     ASSERT(hasTagName(SVGNames::symbolTag));
     registerAnimatedPropertiesForSVGSymbolElement();
 }
 
-PassRefPtr<SVGSymbolElement> SVGSymbolElement::create(const QualifiedName& tagName, Document* document)
+PassRefPtr<SVGSymbolElement> SVGSymbolElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(new SVGSymbolElement(tagName, document));
 }
@@ -62,13 +60,13 @@ bool SVGSymbolElement::isSupportedAttribute(const QualifiedName& attrName)
         SVGExternalResourcesRequired::addSupportedAttributes(supportedAttributes);
         SVGFitToViewBox::addSupportedAttributes(supportedAttributes);
     }
-    return supportedAttributes.contains<QualifiedName, SVGAttributeHashTranslator>(attrName);
+    return supportedAttributes.contains<SVGAttributeHashTranslator>(attrName);
 }
 
 void SVGSymbolElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
     if (!isSupportedAttribute(name)) {
-        SVGStyledElement::parseAttribute(name, value);
+        SVGElement::parseAttribute(name, value);
         return;
     }
 
@@ -85,7 +83,7 @@ void SVGSymbolElement::parseAttribute(const QualifiedName& name, const AtomicStr
 void SVGSymbolElement::svgAttributeChanged(const QualifiedName& attrName)
 {
     if (!isSupportedAttribute(attrName)) {
-        SVGStyledElement::svgAttributeChanged(attrName);
+        SVGElement::svgAttributeChanged(attrName);
         return;
     }
 
@@ -101,11 +99,9 @@ bool SVGSymbolElement::selfHasRelativeLengths() const
     return hasAttribute(SVGNames::viewBoxAttr);
 }
 
-RenderObject* SVGSymbolElement::createRenderer(RenderArena* arena, RenderStyle*)
+RenderPtr<RenderElement> SVGSymbolElement::createElementRenderer(PassRef<RenderStyle> style)
 {
-    return new (arena) RenderSVGHiddenContainer(this);
+    return createRenderer<RenderSVGHiddenContainer>(*this, std::move(style));
 }
 
 }
-
-#endif // ENABLE(SVG)

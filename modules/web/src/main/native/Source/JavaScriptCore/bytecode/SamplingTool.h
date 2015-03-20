@@ -81,7 +81,7 @@ namespace JSC {
         private:
             int m_flag;
         };
-
+    
         static const void* addressOfFlags()
         {
             return &s_flags;
@@ -194,13 +194,13 @@ namespace JSC {
             , m_size(0)
         {
         }
-
+        
         ~ScriptSampleRecord()
         {
             if (m_samples)
                 free(m_samples);
         }
-
+        
         void sample(CodeBlock*, Instruction*);
 
         Strong<ScriptExecutable> m_executable;
@@ -211,7 +211,7 @@ namespace JSC {
         unsigned m_size;
     };
 
-    typedef HashMap<ScriptExecutable*, OwnPtr<ScriptSampleRecord> > ScriptSampleRecordMap;
+    typedef HashMap<ScriptExecutable*, std::unique_ptr<ScriptSampleRecord>> ScriptSampleRecordMap;
 
     class SamplingThread {
     public:
@@ -229,7 +229,7 @@ namespace JSC {
     class SamplingTool {
     public:
         friend struct CallRecord;
-
+        
 #if ENABLE(OPCODE_SAMPLING)
         class CallRecord {
             WTF_MAKE_NONCOPYABLE(CallRecord);
@@ -309,7 +309,7 @@ namespace JSC {
                 , m_codeBlock(codeBlock)
             {
             }
-
+            
             bool isNull() { return !m_sample; }
             CodeBlock* codeBlock() { return m_codeBlock; }
             Instruction* vPC() { return reinterpret_cast<Instruction*>(m_sample & ~0x3); }
@@ -323,9 +323,9 @@ namespace JSC {
 
         void doRun();
         static SamplingTool* s_samplingTool;
-
+        
         Interpreter* m_interpreter;
-
+        
         // State tracked by the main thread, used by the sampling thread.
         CodeBlock* m_codeBlock;
         intptr_t m_sample;
@@ -335,7 +335,7 @@ namespace JSC {
         long long m_opcodeSampleCount;
         unsigned m_opcodeSamples[numOpcodeIDs];
         unsigned m_opcodeSamplesInCTIFunctions[numOpcodeIDs];
-
+        
 #if ENABLE(CODEBLOCK_SAMPLING)
         Mutex m_scriptSampleMapMutex;
         OwnPtr<ScriptSampleRecordMap> m_scopeSampleMap;

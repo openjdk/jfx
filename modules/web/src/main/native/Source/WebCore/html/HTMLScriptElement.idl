@@ -17,15 +17,15 @@
  * Boston, MA 02110-1301, USA.
  */
 
-    interface HTMLScriptElement : HTMLElement {
+interface HTMLScriptElement : HTMLElement {
     [TreatNullAs=NullString] attribute DOMString text;
     [Reflect=for] attribute DOMString htmlFor;
     [Reflect] attribute DOMString event;
     [Reflect] attribute DOMString charset;
-        attribute boolean async;
+    attribute boolean async;
     [Reflect] attribute boolean defer;
     [Reflect, URL] attribute DOMString src;
     [Reflect] attribute DOMString type;
     [Reflect] attribute DOMString crossOrigin;
     [Reflect, Conditional=CSP_NEXT] attribute DOMString nonce;
-    };
+};

@@ -32,10 +32,10 @@
 #include "FloatRect.h"
 #include "GraphicsContextCG.h"
 #include "ImageObserver.h"
-#include <ApplicationServices/ApplicationServices.h>
+#include <CoreGraphics/CoreGraphics.h>
 #include <wtf/RetainPtr.h>
 
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
 #include "WebCoreSystemInterface.h"
 #endif
 
@@ -70,7 +70,22 @@ RetainPtr<CGImageRef> Image::imageWithColorSpace(CGImageRef originalImage, Color
 static void drawPatternCallback(void* info, CGContextRef context)
 {
     CGImageRef image = (CGImageRef)info;
-    CGContextDrawImage(context, GraphicsContext(context).roundToDevicePixels(FloatRect(0, 0, CGImageGetWidth(image), CGImageGetHeight(image))), image);
+    CGFloat height = CGImageGetHeight(image);
+#if PLATFORM(IOS)
+    CGContextScaleCTM(context, 1, -1);
+    CGContextTranslateCTM(context, 0, -height);
+#endif
+    CGContextDrawImage(context, GraphicsContext(context).roundToDevicePixels(FloatRect(0, 0, CGImageGetWidth(image), height)), image);
+}
+
+static void patternReleaseOnMainThreadCallback(void* info)
+{
+    CGImageRelease((CGImageRef)info);
+}
+
+static void patternReleaseCallback(void* info)
+{
+    callOnMainThread(patternReleaseOnMainThreadCallback, info);
 }
 
 void Image::drawPattern(GraphicsContext* ctxt, const FloatRect& tileRect, const AffineTransform& patternTransform,
@@ -112,42 +127,47 @@ void Image::drawPattern(GraphicsContext* ctxt, const FloatRect& tileRect, const 
 
     // Adjust the color space.
     subImage = Image::imageWithColorSpace(subImage.get(), styleColorSpace);
-    
+
     // Leopard has an optimized call for the tiling of image patterns, but we can only use it if the image has been decoded enough that
     // its buffer is the same size as the overall image.  Because a partially decoded CGImageRef with a smaller width or height than the
     // overall image buffer needs to tile with "gaps", we can't use the optimized tiling call in that case.
     // FIXME: We cannot use CGContextDrawTiledImage with scaled tiles on Leopard, because it suffers from rounding errors.  Snow Leopard is ok.
     float scaledTileWidth = tileRect.width() * narrowPrecisionToFloat(patternTransform.a());
     float w = CGImageGetWidth(tileImage);
-    if (w == size().width() && h == size().height())
+    if (w == size().width() && h == size().height() && !spaceSize().width() && !spaceSize().height())
         CGContextDrawTiledImage(context, FloatRect(adjustedX, adjustedY, scaledTileWidth, scaledTileHeight), subImage.get());
     else {
+        // On Leopard and newer, this code now only runs for partially decoded images whose buffers do not yet match the overall size of the image.
+        static const CGPatternCallbacks patternCallbacks = { 0, drawPatternCallback, patternReleaseCallback };
+        CGAffineTransform matrix = CGAffineTransformMake(narrowPrecisionToCGFloat(patternTransform.a()), 0, 0, narrowPrecisionToCGFloat(patternTransform.d()), adjustedX, adjustedY);
+        matrix = CGAffineTransformConcat(matrix, CGContextGetCTM(context));
+        // The top of a partially-decoded image is drawn at the bottom of the tile. Map it to the top.
+        matrix = CGAffineTransformTranslate(matrix, 0, size().height() - h);
+#if PLATFORM(IOS)
+        matrix = CGAffineTransformScale(matrix, 1, -1);
+        matrix = CGAffineTransformTranslate(matrix, 0, -h);
+#endif
+        CGImageRef platformImage = CGImageRetain(subImage.get());
+        RetainPtr<CGPatternRef> pattern = adoptCF(CGPatternCreate(platformImage, CGRectMake(0, 0, tileRect.width(), tileRect.height()), matrix,
+            tileRect.width() + spaceSize().width() * (1 / narrowPrecisionToFloat(patternTransform.a())),
+            tileRect.height() + spaceSize().height() * (1 / narrowPrecisionToFloat(patternTransform.d())),
+            kCGPatternTilingConstantSpacing, true, &patternCallbacks));
+        
+        if (!pattern)
+            return;
 
-    // On Leopard and newer, this code now only runs for partially decoded images whose buffers do not yet match the overall size of the image.
-    static const CGPatternCallbacks patternCallbacks = { 0, drawPatternCallback, NULL };
-    CGAffineTransform matrix = CGAffineTransformMake(narrowPrecisionToCGFloat(patternTransform.a()), 0, 0, narrowPrecisionToCGFloat(patternTransform.d()), adjustedX, adjustedY);
-    matrix = CGAffineTransformConcat(matrix, CGContextGetCTM(context));
-    // The top of a partially-decoded image is drawn at the bottom of the tile. Map it to the top.
-    matrix = CGAffineTransformTranslate(matrix, 0, size().height() - h);
-    RetainPtr<CGPatternRef> pattern = adoptCF(CGPatternCreate(subImage.get(), CGRectMake(0, 0, tileRect.width(), tileRect.height()),
-                                             matrix, tileRect.width(), tileRect.height(), 
-                                             kCGPatternTilingConstantSpacing, true, &patternCallbacks));
-    if (!pattern)
-        return;
+        RetainPtr<CGColorSpaceRef> patternSpace = adoptCF(CGColorSpaceCreatePattern(0));
 
-    RetainPtr<CGColorSpaceRef> patternSpace = adoptCF(CGColorSpaceCreatePattern(0));
-    
-    CGFloat alpha = 1;
-    RetainPtr<CGColorRef> color = adoptCF(CGColorCreateWithPattern(patternSpace.get(), pattern.get(), &alpha));
-    CGContextSetFillColorSpace(context, patternSpace.get());
+        CGFloat alpha = 1;
+        RetainPtr<CGColorRef> color = adoptCF(CGColorCreateWithPattern(patternSpace.get(), pattern.get(), &alpha));
+        CGContextSetFillColorSpace(context, patternSpace.get());
 
-    // FIXME: Really want a public API for this.  It is just CGContextSetBaseCTM(context, CGAffineTransformIdentiy).
-    wkSetBaseCTM(context, CGAffineTransformIdentity);
-    CGContextSetPatternPhase(context, CGSizeZero);
+        // FIXME: Really want a public API for this. It is just CGContextSetBaseCTM(context, CGAffineTransformIdentiy).
+        wkSetBaseCTM(context, CGAffineTransformIdentity);
+        CGContextSetPatternPhase(context, CGSizeZero);
 
-    CGContextSetFillColorWithColor(context, color.get());
-    CGContextFillRect(context, CGContextGetClipBoundingBox(context));
-
+        CGContextSetFillColorWithColor(context, color.get());
+        CGContextFillRect(context, CGContextGetClipBoundingBox(context));
     }
 
     stateSaver.restore();

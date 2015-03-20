@@ -24,6 +24,9 @@
  */
 
 #include "config.h"
+
+#if ENABLE(CHANNEL_MESSAGING)
+
 #include "JSMessageChannel.h"
 
 #include "MessageChannel.h"
@@ -36,7 +39,7 @@ namespace WebCore {
 void JSMessageChannel::visitChildren(JSCell* cell, SlotVisitor& visitor)
 {
     JSMessageChannel* thisObject = jsCast<JSMessageChannel*>(cell);
-    ASSERT_GC_OBJECT_INHERITS(thisObject, &s_info);
+    ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     COMPILE_ASSERT(StructureFlags & OverridesVisitChildren, OverridesVisitChildrenWithoutSettingFlag);
     ASSERT(thisObject->structure()->typeInfo().overridesVisitChildren());
     Base::visitChildren(thisObject, visitor);
@@ -49,3 +52,5 @@ void JSMessageChannel::visitChildren(JSCell* cell, SlotVisitor& visitor)
 }
 
 } // namespace WebCore
+
+#endif // ENABLE(CHANNEL_MESSAGING)

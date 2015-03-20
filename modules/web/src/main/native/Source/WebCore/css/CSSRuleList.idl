@@ -23,13 +23,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-    // Introduced in DOM Level 2:
+// Introduced in DOM Level 2:
 [
     CustomIsReachable,
-        IndexedGetter,
-    SkipVTableValidation
+    SkipVTableValidation,
 ] interface CSSRuleList {
-        readonly attribute unsigned long    length;
-    CSSRule           item([Default=Undefined] optional unsigned long index);
-    };
+    readonly attribute unsigned long    length;
+    getter CSSRule item([Default=Undefined] optional unsigned long index);
+};
 

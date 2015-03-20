@@ -26,9 +26,10 @@
 #include "Arguments.h"
 
 #include "JSActivation.h"
+#include "JSArgumentsIterator.h"
 #include "JSFunction.h"
 #include "JSGlobalObject.h"
-#include "Operations.h"
+#include "JSCInlines.h"
 
 using namespace std;
 
@@ -39,7 +40,7 @@ const ClassInfo Arguments::s_info = { "Arguments", &Base::s_info, 0, 0, CREATE_M
 void Arguments::visitChildren(JSCell* cell, SlotVisitor& visitor)
 {
     Arguments* thisObject = jsCast<Arguments*>(cell);
-    ASSERT_GC_OBJECT_INHERITS(thisObject, &s_info);
+    ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     COMPILE_ASSERT(StructureFlags & OverridesVisitChildren, OverridesVisitChildrenWithoutSettingFlag);
     ASSERT(thisObject->structure()->typeInfo().overridesVisitChildren());
     JSObject::visitChildren(thisObject, visitor);
@@ -49,6 +50,8 @@ void Arguments::visitChildren(JSCell* cell, SlotVisitor& visitor)
     visitor.append(&thisObject->m_callee);
     visitor.append(&thisObject->m_activation);
 }
+    
+static EncodedJSValue JSC_HOST_CALL argumentsFuncIterator(ExecState*);
 
 void Arguments::destroy(JSCell* cell)
 {
@@ -89,15 +92,15 @@ void Arguments::fillArgList(ExecState* exec, MarkedArgumentBuffer& args)
     }
 }
 
-bool Arguments::getOwnPropertySlotByIndex(JSCell* cell, ExecState* exec, unsigned i, PropertySlot& slot)
+bool Arguments::getOwnPropertySlotByIndex(JSObject* object, ExecState* exec, unsigned i, PropertySlot& slot)
 {
-    Arguments* thisObject = jsCast<Arguments*>(cell);
+    Arguments* thisObject = jsCast<Arguments*>(object);
     if (JSValue value = thisObject->tryGetArgument(i)) {
-        slot.setValue(value);
+        slot.setValue(thisObject, None, value);
         return true;
     }
 
-    return JSObject::getOwnPropertySlot(thisObject, exec, Identifier(exec, String::number(i)), slot);
+    return JSObject::getOwnPropertySlot(thisObject, exec, Identifier::from(exec, i), slot);
 }
     
 void Arguments::createStrictModeCallerIfNecessary(ExecState* exec)
@@ -105,70 +108,43 @@ void Arguments::createStrictModeCallerIfNecessary(ExecState* exec)
     if (m_overrodeCaller)
         return;
 
+    VM& vm = exec->vm();
     m_overrodeCaller = true;
     PropertyDescriptor descriptor;
-    descriptor.setAccessorDescriptor(globalObject()->throwTypeErrorGetterSetter(exec), DontEnum | DontDelete | Accessor);
-    methodTable()->defineOwnProperty(this, exec, exec->propertyNames().caller, descriptor, false);
+    descriptor.setAccessorDescriptor(globalObject()->throwTypeErrorGetterSetter(vm), DontEnum | DontDelete | Accessor);
+    methodTable()->defineOwnProperty(this, exec, vm.propertyNames->caller, descriptor, false);
 }
 
 void Arguments::createStrictModeCalleeIfNecessary(ExecState* exec)
 {
     if (m_overrodeCallee)
         return;
-    
+
+    VM& vm = exec->vm();
     m_overrodeCallee = true;
     PropertyDescriptor descriptor;
-    descriptor.setAccessorDescriptor(globalObject()->throwTypeErrorGetterSetter(exec), DontEnum | DontDelete | Accessor);
-    methodTable()->defineOwnProperty(this, exec, exec->propertyNames().callee, descriptor, false);
+    descriptor.setAccessorDescriptor(globalObject()->throwTypeErrorGetterSetter(vm), DontEnum | DontDelete | Accessor);
+    methodTable()->defineOwnProperty(this, exec, vm.propertyNames->callee, descriptor, false);
 }
 
-bool Arguments::getOwnPropertySlot(JSCell* cell, ExecState* exec, PropertyName propertyName, PropertySlot& slot)
-{
-    Arguments* thisObject = jsCast<Arguments*>(cell);
-    unsigned i = propertyName.asIndex();
-    if (JSValue value = thisObject->tryGetArgument(i)) {
-        RELEASE_ASSERT(i < PropertyName::NotAnIndex);
-        slot.setValue(value);
-        return true;
-    }
-
-    if (propertyName == exec->propertyNames().length && LIKELY(!thisObject->m_overrodeLength)) {
-        slot.setValue(jsNumber(thisObject->m_numArguments));
-        return true;
-    }
-
-    if (propertyName == exec->propertyNames().callee && LIKELY(!thisObject->m_overrodeCallee)) {
-        if (!thisObject->m_isStrictMode) {
-            slot.setValue(thisObject->m_callee.get());
-            return true;
-        }
-        thisObject->createStrictModeCalleeIfNecessary(exec);
-    }
-
-    if (propertyName == exec->propertyNames().caller && thisObject->m_isStrictMode)
-        thisObject->createStrictModeCallerIfNecessary(exec);
-
-    return JSObject::getOwnPropertySlot(thisObject, exec, propertyName, slot);
-}
-
-bool Arguments::getOwnPropertyDescriptor(JSObject* object, ExecState* exec, PropertyName propertyName, PropertyDescriptor& descriptor)
+bool Arguments::getOwnPropertySlot(JSObject* object, ExecState* exec, PropertyName propertyName, PropertySlot& slot)
 {
     Arguments* thisObject = jsCast<Arguments*>(object);
     unsigned i = propertyName.asIndex();
     if (JSValue value = thisObject->tryGetArgument(i)) {
         RELEASE_ASSERT(i < PropertyName::NotAnIndex);
-        descriptor.setDescriptor(value, None);
+        slot.setValue(thisObject, None, value);
         return true;
     }
-    
+
     if (propertyName == exec->propertyNames().length && LIKELY(!thisObject->m_overrodeLength)) {
-        descriptor.setDescriptor(jsNumber(thisObject->m_numArguments), DontEnum);
+        slot.setValue(thisObject, DontEnum, jsNumber(thisObject->m_numArguments));
         return true;
     }
-    
+
     if (propertyName == exec->propertyNames().callee && LIKELY(!thisObject->m_overrodeCallee)) {
         if (!thisObject->m_isStrictMode) {
-            descriptor.setDescriptor(thisObject->m_callee.get(), DontEnum);
+            slot.setValue(thisObject, DontEnum, thisObject->m_callee.get());
             return true;
         }
         thisObject->createStrictModeCalleeIfNecessary(exec);
@@ -176,8 +152,17 @@ bool Arguments::getOwnPropertyDescriptor(JSObject* object, ExecState* exec, Prop
 
     if (propertyName == exec->propertyNames().caller && thisObject->m_isStrictMode)
         thisObject->createStrictModeCallerIfNecessary(exec);
-    
-    return JSObject::getOwnPropertyDescriptor(thisObject, exec, propertyName, descriptor);
+
+    if (JSObject::getOwnPropertySlot(thisObject, exec, propertyName, slot))
+        return true;
+    if (propertyName == exec->propertyNames().iteratorPrivateName) {
+        VM& vm = exec->vm();
+        JSGlobalObject* globalObject = exec->lexicalGlobalObject();
+        thisObject->JSC_NATIVE_FUNCTION(exec->propertyNames().iteratorPrivateName, argumentsFuncIterator, DontEnum, 0);
+        if (JSObject::getOwnPropertySlot(thisObject, exec, propertyName, slot))
+            return true;
+    }
+    return false;
 }
 
 void Arguments::getOwnPropertyNames(JSObject* object, ExecState* exec, PropertyNameArray& propertyNames, EnumerationMode mode)
@@ -186,7 +171,7 @@ void Arguments::getOwnPropertyNames(JSObject* object, ExecState* exec, PropertyN
     for (unsigned i = 0; i < thisObject->m_numArguments; ++i) {
         if (!thisObject->isArgument(i))
             continue;
-        propertyNames.add(Identifier(exec, String::number(i)));
+        propertyNames.add(Identifier::from(exec, i));
     }
     if (mode == IncludeDontEnumProperties) {
         propertyNames.add(exec->propertyNames().callee);
@@ -201,8 +186,8 @@ void Arguments::putByIndex(JSCell* cell, ExecState* exec, unsigned i, JSValue va
     if (thisObject->trySetArgument(exec->vm(), i, value))
         return;
 
-    PutPropertySlot slot(shouldThrow);
-    JSObject::put(thisObject, exec, Identifier(exec, String::number(i)), value, slot);
+    PutPropertySlot slot(thisObject, shouldThrow);
+    JSObject::put(thisObject, exec, Identifier::from(exec, i), value, slot);
 }
 
 void Arguments::put(JSCell* cell, ExecState* exec, PropertyName propertyName, JSValue value, PutPropertySlot& slot)
@@ -241,7 +226,7 @@ bool Arguments::deletePropertyByIndex(JSCell* cell, ExecState* exec, unsigned i)
             return false;
         if (thisObject->tryDeleteArgument(i))
             return true;
-        }
+    }
     return JSObject::deletePropertyByIndex(thisObject, exec, i);
 }
 
@@ -257,7 +242,7 @@ bool Arguments::deleteProperty(JSCell* cell, ExecState* exec, PropertyName prope
         if (!Base::deleteProperty(cell, exec, propertyName))
             return false;
         if (thisObject->tryDeleteArgument(i))
-        return true;
+            return true;
     }
 
     if (propertyName == exec->propertyNames().length && !thisObject->m_overrodeLength) {
@@ -279,14 +264,14 @@ bool Arguments::deleteProperty(JSCell* cell, ExecState* exec, PropertyName prope
     return JSObject::deleteProperty(thisObject, exec, propertyName);
 }
 
-bool Arguments::defineOwnProperty(JSObject* object, ExecState* exec, PropertyName propertyName, PropertyDescriptor& descriptor, bool shouldThrow)
+bool Arguments::defineOwnProperty(JSObject* object, ExecState* exec, PropertyName propertyName, const PropertyDescriptor& descriptor, bool shouldThrow)
 {
     Arguments* thisObject = jsCast<Arguments*>(object);
     unsigned i = propertyName.asIndex();
     if (i < thisObject->m_numArguments) {
         RELEASE_ASSERT(i < PropertyName::NotAnIndex);
         // If the property is not yet present on the object, and is not yet marked as deleted, then add it now.
-        PropertySlot slot;
+        PropertySlot slot(thisObject);
         if (!thisObject->isDeletedArgument(i) && !JSObject::getOwnPropertySlot(thisObject, exec, propertyName, slot)) {
             JSValue value = thisObject->tryGetArgument(i);
             ASSERT(value);
@@ -339,29 +324,23 @@ void Arguments::tearOff(CallFrame* callFrame)
     // Must be called for the same call frame from which it was created.
     ASSERT(bitwise_cast<WriteBarrier<Unknown>*>(callFrame) == m_registers);
     
-    m_registerArray = adoptArrayPtr(new WriteBarrier<Unknown>[m_numArguments]);
-    m_registers = m_registerArray.get() + CallFrame::offsetFor(m_numArguments + 1);
+    m_registerArray = std::make_unique<WriteBarrier<Unknown>[]>(m_numArguments);
+    m_registers = m_registerArray.get() - CallFrame::offsetFor(1) - 1;
 
     // If we have a captured argument that logically aliases activation storage,
     // but we optimize away the activation, the argument needs to tear off into
     // our storage. The simplest way to do this is to revert it to Normal status.
-    if (m_slowArguments && !m_activation) {
+    if (m_slowArgumentData && !m_activation) {
         for (size_t i = 0; i < m_numArguments; ++i) {
-            if (m_slowArguments[i].status != SlowArgument::Captured)
+            if (m_slowArgumentData->slowArguments[i].status != SlowArgument::Captured)
                 continue;
-            m_slowArguments[i].status = SlowArgument::Normal;
-            m_slowArguments[i].index = CallFrame::argumentOffset(i);
+            m_slowArgumentData->slowArguments[i].status = SlowArgument::Normal;
+            m_slowArgumentData->slowArguments[i].index = CallFrame::argumentOffset(i);
         }
     }
 
-    if (!callFrame->isInlineCallFrame()) {
-        for (size_t i = 0; i < m_numArguments; ++i)
-            trySetArgument(callFrame->vm(), i, callFrame->argumentAfterCapture(i));
-        return;
-    }
-
-    tearOffForInlineCallFrame(
-        callFrame->vm(), callFrame->registers(), callFrame->inlineCallFrame());
+    for (size_t i = 0; i < m_numArguments; ++i)
+        trySetArgument(callFrame->vm(), i, callFrame->argumentAfterCapture(i));
 }
 
 void Arguments::didTearOffActivation(ExecState* exec, JSActivation* activation)
@@ -385,54 +364,23 @@ void Arguments::tearOff(CallFrame* callFrame, InlineCallFrame* inlineCallFrame)
     if (!m_numArguments)
         return;
     
-    m_registerArray = adoptArrayPtr(new WriteBarrier<Unknown>[m_numArguments]);
-    m_registers = m_registerArray.get() + CallFrame::offsetFor(m_numArguments + 1);
+    m_registerArray = std::make_unique<WriteBarrier<Unknown>[]>(m_numArguments);
+    m_registers = m_registerArray.get() - CallFrame::offsetFor(1) - 1;
 
-    tearOffForInlineCallFrame(
-        callFrame->vm(), callFrame->registers() + inlineCallFrame->stackOffset,
-        inlineCallFrame);
-}
-
-void Arguments::tearOffForInlineCallFrame(VM& vm, Register* registers, InlineCallFrame* inlineCallFrame)
-{
     for (size_t i = 0; i < m_numArguments; ++i) {
         ValueRecovery& recovery = inlineCallFrame->arguments[i + 1];
-        // In the future we'll support displaced recoveries (indicating that the
-        // argument was flushed to a different location), but for now we don't do
-        // that so this code will fail if that were to happen. On the other hand,
-        // it's much less likely that we'll support in-register recoveries since
-        // this code does not (easily) have access to registers.
-        JSValue value;
-        Register* location = &registers[CallFrame::argumentOffset(i)];
-        switch (recovery.technique()) {
-        case AlreadyInJSStack:
-            value = location->jsValue();
-            break;
-        case AlreadyInJSStackAsUnboxedInt32:
-            value = jsNumber(location->unboxedInt32());
-            break;
-        case AlreadyInJSStackAsUnboxedCell:
-            value = location->unboxedCell();
-            break;
-        case AlreadyInJSStackAsUnboxedBoolean:
-            value = jsBoolean(location->unboxedBoolean());
-            break;
-        case AlreadyInJSStackAsUnboxedDouble:
-#if USE(JSVALUE64)
-            value = jsNumber(*bitwise_cast<double*>(location));
-#else
-            value = location->jsValue();
-#endif
-            break;
-        case Constant:
-            value = recovery.constant();
-            break;
-        default:
-            RELEASE_ASSERT_NOT_REACHED();
-            break;
-        }
-        trySetArgument(vm, i, value);
+        trySetArgument(callFrame->vm(), i, recovery.recover(callFrame));
     }
 }
+    
+EncodedJSValue JSC_HOST_CALL argumentsFuncIterator(ExecState* exec)
+{
+    JSObject* thisObj = exec->hostThisValue().toThis(exec, StrictMode).toObject(exec);
+    Arguments* arguments = jsDynamicCast<Arguments*>(thisObj);
+    if (!arguments)
+        return JSValue::encode(throwTypeError(exec, "Attempted to use Arguments iterator on non-Arguments object"));
+    return JSValue::encode(JSArgumentsIterator::create(exec->vm(), exec->callee()->globalObject()->argumentsIteratorStructure(), arguments));
+}
+
 
 } // namespace JSC

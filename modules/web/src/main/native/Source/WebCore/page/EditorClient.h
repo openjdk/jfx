@@ -35,10 +35,15 @@
 #include <wtf/Forward.h>
 #include <wtf/Vector.h>
 
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
 OBJC_CLASS NSAttributedString;
 OBJC_CLASS NSString;
 OBJC_CLASS NSURL;
+#endif
+
+#if PLATFORM(IOS)
+OBJC_CLASS NSArray;
+OBJC_CLASS NSDictionary;
 #endif
 
 namespace WebCore {
@@ -53,8 +58,7 @@ class KeyboardEvent;
 class Node;
 class Range;
 class SharedBuffer;
-class SpellChecker;
-class StylePropertySet;
+class StyleProperties;
 class TextCheckerClient;
 class VisibleSelection;
 class VisiblePosition;
@@ -65,7 +69,6 @@ class EditorClient {
 public:
     virtual ~EditorClient() {  }
     virtual void pageDestroyed() = 0;
-    virtual void frameWillDetachPage(Frame*) = 0;
 
     virtual bool shouldDeleteRange(Range*) = 0;
     virtual bool smartInsertDeleteEnabled() = 0; 
@@ -82,7 +85,7 @@ public:
     virtual bool shouldInsertText(const String&, Range*, EditorInsertAction) = 0;
     virtual bool shouldChangeSelectedRange(Range* fromRange, Range* toRange, EAffinity, bool stillSelecting) = 0;
     
-    virtual bool shouldApplyStyle(StylePropertySet*, Range*) = 0;
+    virtual bool shouldApplyStyle(StyleProperties*, Range*) = 0;
     virtual bool shouldMoveRangeAfterDelete(Range*, Range*) = 0;
 
     virtual void didBeginEditing() = 0;
@@ -91,8 +94,7 @@ public:
     virtual void didEndEditing() = 0;
     virtual void willWriteSelectionToPasteboard(Range*) = 0;
     virtual void didWriteSelectionToPasteboard() = 0;
-    virtual void getClientPasteboardDataForRange(Range*, Vector<String>& pasteboardTypes, Vector<RefPtr<SharedBuffer> >& pasteboardData) = 0;
-    virtual void didSetSelectionTypesForPasteboard() = 0;
+    virtual void getClientPasteboardDataForRange(Range*, Vector<String>& pasteboardTypes, Vector<RefPtr<SharedBuffer>>& pasteboardData) = 0;
     
     virtual void registerUndoStep(PassRefPtr<UndoStep>) = 0;
     virtual void registerRedoStep(PassRefPtr<UndoStep>) = 0;
@@ -116,9 +118,22 @@ public:
     virtual void textWillBeDeletedInTextField(Element*) = 0;
     virtual void textDidChangeInTextArea(Element*) = 0;
 
-#if PLATFORM(MAC)
+#if PLATFORM(IOS)
+    virtual void startDelayingAndCoalescingContentChangeNotifications() = 0;
+    virtual void stopDelayingAndCoalescingContentChangeNotifications() = 0;
+    virtual void writeDataToPasteboard(NSDictionary*) = 0;
+    virtual NSArray* supportedPasteboardTypesForCurrentSelection() = 0;
+    virtual NSArray* readDataFromPasteboard(NSString* type, int index) = 0;
+    virtual bool hasRichlyEditableSelection() = 0;
+    virtual int getPasteboardItemsCount() = 0;
+    virtual DocumentFragment* documentFragmentFromDelegate(int index) = 0;
+    virtual bool performsTwoStepPaste(DocumentFragment*) = 0;
+    virtual int pasteboardChangeCount() = 0;
+#endif
+
+#if PLATFORM(COCOA)
     virtual NSString* userVisibleString(NSURL*) = 0;
-    virtual DocumentFragment* documentFragmentFromAttributedString(NSAttributedString*, Vector< RefPtr<ArchiveResource> >&) = 0;
+    virtual DocumentFragment* documentFragmentFromAttributedString(NSAttributedString*, Vector< RefPtr<ArchiveResource>>&) = 0;
     virtual void setInsertionPasteboard(const String& pasteboardName) = 0;
     virtual NSURL* canonicalizeURL(NSURL*) = 0;
     virtual NSURL* canonicalizeURLString(NSString*) = 0;
@@ -145,7 +160,7 @@ public:
     virtual bool isAutomaticSpellingCorrectionEnabled() = 0;
     virtual void toggleAutomaticSpellingCorrection() = 0;
 #endif
-
+    
 #if ENABLE(DELETION_UI)
     virtual bool shouldShowDeleteInterface(HTMLElement*) = 0;
 #endif

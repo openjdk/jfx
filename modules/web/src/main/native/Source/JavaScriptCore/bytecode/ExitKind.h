@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2012, 2013, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,30 +28,46 @@
 
 namespace JSC {
 
-enum ExitKind {
+enum ExitKind : uint8_t {
     ExitKindUnset,
     BadType, // We exited because a type prediction was wrong.
     BadFunction, // We exited because we made an incorrect assumption about what function we would see.
     BadExecutable, // We exited because we made an incorrect assumption about what executable we would see.
     BadCache, // We exited because an inline cache was wrong.
     BadWeakConstantCache, // We exited because a cache on a weak constant (usually a prototype) was wrong.
+    BadCacheWatchpoint, // Same as BadCache but from a watchpoint.
+    BadWeakConstantCacheWatchpoint, // Same as BadWeakConstantCache but from a watchpoint.
     BadIndexingType, // We exited because an indexing type was wrong.
     Overflow, // We exited because of overflow.
     NegativeZero, // We exited because we encountered negative zero.
+    Int52Overflow, // We exited because of an Int52 overflow.
     StoreToHole, // We had a store to a hole.
     LoadFromHole, // We had a load from a hole.
     OutOfBounds, // We had an out-of-bounds access to an array.
-    StoreToHoleOrOutOfBounds, // We're simultaneously speculating that we're in bounds and not accessing a hole, and one of those things didn't pan out.
     InadequateCoverage, // We exited because we ended up in code that didn't have profiling coverage.
     ArgumentsEscaped, // We exited because arguments escaped but we didn't expect them to.
     NotStringObject, // We exited because we shouldn't have attempted to optimize string object access.
     Uncountable, // We exited for none of the above reasons, and we should not count it. Most uses of this should be viewed as a FIXME.
+    UncountableInvalidation, // We exited because the code block was invalidated; this means that we've already counted the reasons why the code block was invalidated.
     UncountableWatchpoint, // We exited because of a watchpoint, which isn't counted because watchpoints do tracking themselves.
-    WatchdogTimerFired // We exited because we need to service the watchdog timer.
+    WatchdogTimerFired, // We exited because we need to service the watchdog timer.
+    DebuggerEvent // We exited because we need to service the debugger.
 };
 
 const char* exitKindToString(ExitKind);
 bool exitKindIsCountable(ExitKind);
+
+inline bool isWatchpoint(ExitKind kind)
+{
+    switch (kind) {
+    case BadCacheWatchpoint:
+    case BadWeakConstantCacheWatchpoint:
+    case UncountableWatchpoint:
+        return true;
+    default:
+        return false;
+    }
+}
 
 } // namespace JSC
 

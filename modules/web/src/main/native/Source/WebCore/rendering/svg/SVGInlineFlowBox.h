@@ -21,38 +21,39 @@
 #ifndef SVGInlineFlowBox_h
 #define SVGInlineFlowBox_h
 
-#if ENABLE(SVG)
 #include "InlineFlowBox.h"
+#include "RenderSVGInline.h"
 
 namespace WebCore {
 
 class RenderSVGInlineText;
 
-class SVGInlineFlowBox FINAL : public InlineFlowBox {
+class SVGInlineFlowBox final : public InlineFlowBox {
 public:
-    SVGInlineFlowBox(RenderObject* obj)
-        : InlineFlowBox(obj)
+    SVGInlineFlowBox(RenderSVGInline& renderer)
+        : InlineFlowBox(renderer)
         , m_logicalHeight(0)
     {
     }
 
-    virtual bool isSVGInlineFlowBox() const { return true; }
-    virtual float virtualLogicalHeight() const { return m_logicalHeight; }
+    RenderSVGInline& renderer() { return static_cast<RenderSVGInline&>(InlineFlowBox::renderer()); }
+
+    virtual FloatRect calculateBoundaries() const override;
+
     void setLogicalHeight(float h) { m_logicalHeight = h; }
-
     void paintSelectionBackground(PaintInfo&);
-    virtual void paint(PaintInfo&, const LayoutPoint&, LayoutUnit lineTop, LayoutUnit lineBottom);
-
-    virtual FloatRect calculateBoundaries() const;
-
     static void computeTextMatchMarkerRectForRenderer(RenderSVGInlineText*);
 
 private:
+    virtual bool isSVGInlineFlowBox() const override { return true; }
+    virtual float virtualLogicalHeight() const override { return m_logicalHeight; }
+    virtual void paint(PaintInfo&, const LayoutPoint&, LayoutUnit lineTop, LayoutUnit lineBottom) override;
+
     float m_logicalHeight;
 };
 
-} // namespace WebCore
+INLINE_BOX_OBJECT_TYPE_CASTS(SVGInlineFlowBox, isSVGInlineFlowBox())
 
-#endif // ENABLE(SVG)
+} // namespace WebCore
 
 #endif // SVGInlineFlowBox_h

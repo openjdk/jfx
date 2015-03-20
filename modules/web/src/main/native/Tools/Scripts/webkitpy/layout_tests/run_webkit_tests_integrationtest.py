@@ -1,6 +1,6 @@
 # Copyright (C) 2010 Google Inc. All rights reserved.
 # Copyright (C) 2010 Gabor Rapcsanyi (rgabor@inf.u-szeged.hu), University of Szeged
-# Copyright (C) 2011 Apple Inc. All rights reserved.
+# Copyright (C) 2011, 2013 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -496,7 +496,7 @@ class RunTest(unittest.TestCase, StreamTestingMixin):
             tests_included=True, host=host)
         file_list = host.filesystem.written_files.keys()
         self.assertEqual(details.exit_code, 1)
-        expected_token = '"unexpected":{"text-image-checksum.html":{"expected":"PASS","actual":"IMAGE+TEXT","image_diff_percent":1},"missing_text.html":{"expected":"PASS","is_missing_text":true,"actual":"MISSING"}'
+        expected_token = '"unexpected":{"text-image-checksum.html":{"report":"REGRESSION","expected":"PASS","actual":"IMAGE+TEXT","image_diff_percent":1},"missing_text.html":{"report":"MISSING","expected":"PASS","is_missing_text":true,"actual":"MISSING"}'
         json_string = host.filesystem.read_text_file('/tmp/layout-test-results/full_results.json')
         self.assertTrue(json_string.find(expected_token) != -1)
         self.assertTrue(json_string.find('"num_regressions":1') != -1)
@@ -513,7 +513,7 @@ class RunTest(unittest.TestCase, StreamTestingMixin):
         details, err, _ = logging_run(extra_args=args, host=host, tests_included=True)
 
         self.assertEqual(details.exit_code, 1)
-        expected_token = '"unexpected":{"pixeldir":{"image_in_pixeldir.html":{"expected":"PASS","actual":"IMAGE"'
+        expected_token = '"unexpected":{"pixeldir":{"image_in_pixeldir.html":{"report":"REGRESSION","expected":"PASS","actual":"IMAGE"'
         json_string = host.filesystem.read_text_file('/tmp/layout-test-results/full_results.json')
         self.assertTrue(json_string.find(expected_token) != -1)
 
@@ -537,7 +537,7 @@ class RunTest(unittest.TestCase, StreamTestingMixin):
     def test_crash_with_stderr(self):
         host = MockHost()
         _, regular_output, _ = logging_run(['failures/unexpected/crash-with-stderr.html'], tests_included=True, host=host)
-        self.assertTrue(host.filesystem.read_text_file('/tmp/layout-test-results/full_results.json').find('{"crash-with-stderr.html":{"expected":"PASS","actual":"CRASH","has_stderr":true}}') != -1)
+        self.assertTrue(host.filesystem.read_text_file('/tmp/layout-test-results/full_results.json').find('{"crash-with-stderr.html":{"report":"REGRESSION","expected":"PASS","actual":"CRASH","has_stderr":true}}') != -1)
 
     def test_no_image_failure_with_image_diff(self):
         host = MockHost()
@@ -667,7 +667,7 @@ class RunTest(unittest.TestCase, StreamTestingMixin):
         json_string = host.filesystem.read_text_file('/tmp/layout-test-results/full_results.json')
         json = parse_full_results(json_string)
         self.assertEqual(json["tests"]["failures"]["unexpected"]["text-image-checksum.html"],
-            {"expected": "PASS", "actual": "TEXT IMAGE+TEXT", "image_diff_percent": 1})
+            {"expected": "PASS", "actual": "TEXT IMAGE+TEXT", "image_diff_percent": 1, "report": "REGRESSION"})
         self.assertFalse(json["pixel_tests_enabled"])
         self.assertEqual(details.enabled_pixel_tests_in_retry, True)
 
@@ -749,7 +749,7 @@ class RunTest(unittest.TestCase, StreamTestingMixin):
         host = MockHost()
         _, err, _ = logging_run(['--no-show-results', 'reftests/foo/'], tests_included=True, host=host)
         json_string = host.filesystem.read_text_file('/tmp/layout-test-results/full_results.json')
-        self.assertTrue(json_string.find('"unlistedtest.html":{"expected":"PASS","is_missing_text":true,"actual":"MISSING","is_missing_image":true}') != -1)
+        self.assertTrue(json_string.find('"unlistedtest.html":{"report":"MISSING","expected":"PASS","is_missing_text":true,"actual":"MISSING","is_missing_image":true}') != -1)
         self.assertTrue(json_string.find('"num_regressions":4') != -1)
         self.assertTrue(json_string.find('"num_flaky":0') != -1)
         self.assertTrue(json_string.find('"num_missing":1') != -1)
@@ -794,18 +794,15 @@ class RunTest(unittest.TestCase, StreamTestingMixin):
         self.assertFalse('platform/test-win-win7/http/test.html' in tests_run)
 
     def test_output_diffs(self):
-        # Test to ensure that we don't generate -wdiff.html or -pretty.html if wdiff and PrettyPatch
-        # aren't available.
+        # Test to ensure that we don't generate -pretty.html if PrettyPatch isn't available.
         host = MockHost()
         _, err, _ = logging_run(['--pixel-tests', 'failures/unexpected/text-image-checksum.html'], tests_included=True, host=host)
         written_files = host.filesystem.written_files
         self.assertTrue(any(path.endswith('-diff.txt') for path in written_files.keys()))
-        self.assertFalse(any(path.endswith('-wdiff.html') for path in written_files.keys()))
         self.assertFalse(any(path.endswith('-pretty-diff.html') for path in written_files.keys()))
 
         full_results_text = host.filesystem.read_text_file('/tmp/layout-test-results/full_results.json')
         full_results = json.loads(full_results_text.replace("ADD_RESULTS(", "").replace(");", ""))
-        self.assertEqual(full_results['has_wdiff'], False)
         self.assertEqual(full_results['has_pretty_patch'], False)
 
     def test_unsupported_platform(self):
@@ -816,16 +813,6 @@ class RunTest(unittest.TestCase, StreamTestingMixin):
         self.assertEqual(res, run_webkit_tests.EXCEPTIONAL_EXIT_STATUS)
         self.assertEqual(stdout.getvalue(), '')
         self.assertTrue('unsupported platform' in stderr.getvalue())
-
-    def test_build_check(self):
-        # By using a port_name for a different platform than the one we're running on, the build check should always fail.
-        if sys.platform == 'darwin':
-            port_name = 'gtk'
-        else:
-            port_name = 'mac-lion'
-        out = StringIO.StringIO()
-        err = StringIO.StringIO()
-        self.assertEqual(run_webkit_tests.main(['--platform', port_name, 'fast/harness/results.html'], out, err), -1)
 
     def test_verbose_in_child_processes(self):
         # When we actually run multiple processes, we may have to reconfigure logging in the
@@ -860,11 +847,11 @@ class EndToEndTest(unittest.TestCase):
         self.assertTrue("multiple-mismatch-success.html" not in json["tests"]["reftests"]["foo"])
         self.assertTrue("multiple-both-success.html" not in json["tests"]["reftests"]["foo"])
         self.assertEqual(json["tests"]["reftests"]["foo"]["multiple-match-failure.html"],
-            {"expected": "PASS", "actual": "IMAGE", "reftest_type": ["=="], "image_diff_percent": 1})
+            {"expected": "PASS", "actual": "IMAGE", "reftest_type": ["=="], "image_diff_percent": 1, "report": "REGRESSION"})
         self.assertEqual(json["tests"]["reftests"]["foo"]["multiple-mismatch-failure.html"],
-            {"expected": "PASS", "actual": "IMAGE", "reftest_type": ["!="]})
+            {"expected": "PASS", "actual": "IMAGE", "reftest_type": ["!="], "report": "REGRESSION"})
         self.assertEqual(json["tests"]["reftests"]["foo"]["multiple-both-failure.html"],
-            {"expected": "PASS", "actual": "IMAGE", "reftest_type": ["==", "!="]})
+            {"expected": "PASS", "actual": "IMAGE", "reftest_type": ["==", "!="], "report": "REGRESSION"})
 
 
 class RebaselineTest(unittest.TestCase, StreamTestingMixin):
@@ -928,15 +915,6 @@ class RebaselineTest(unittest.TestCase, StreamTestingMixin):
 class PortTest(unittest.TestCase):
     def assert_mock_port_works(self, port_name, args=[]):
         self.assertTrue(passing_run(args + ['--platform', 'mock-' + port_name, 'fast/harness/results.html'], tests_included=True, host=Host()))
-
-    def disabled_test_chromium_mac_lion(self):
-        self.assert_mock_port_works('chromium-mac-lion')
-
-    def disabled_test_chromium_mac_lion_in_test_shell_mode(self):
-        self.assert_mock_port_works('chromium-mac-lion', args=['--additional-drt-flag=--test-shell'])
-
-    def disabled_test_qt_linux(self):
-        self.assert_mock_port_works('qt-linux')
 
     def disabled_test_mac_lion(self):
         self.assert_mock_port_works('mac-lion')

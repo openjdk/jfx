@@ -7,6 +7,8 @@
 #include <jni.h>
 #include <JavaEnv.h>
 #include <wtf/RefCounted.h>
+#include <wtf/PassRef.h>
+#include <wtf/RefPtr.h>
 
 namespace WebCore {
 

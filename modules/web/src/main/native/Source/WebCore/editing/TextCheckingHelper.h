@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2006, 2007, 2008, 2014 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Nokia Corporation and/or its subsidiary(-ies)
  *
  * This library is free software; you can redistribute it and/or
@@ -43,13 +43,16 @@ public:
     int offsetTo(const Position&, ExceptionCode&) const;
     void expandRangeToNextEnd();
 
+    // FIXME: Consider changing this to return a StringView.
+    const String& text() const;
+
+    // FIXME: Consider removing these and just having the caller use text() directly.
     int textLength() const { return text().length(); }
     String textSubstring(unsigned pos, unsigned len = UINT_MAX) const { return text().substring(pos, len); }
-    const UChar* textCharacters() const { return text().characters(); }
     UChar textCharAt(int index) const { return text()[static_cast<unsigned>(index)]; }
+    bool isTextEmpty() const { return text().isEmpty(); }
 
     bool isEmpty() const;
-    bool isTextEmpty() const { return text().isEmpty(); }
     bool isRangeEmpty() const { return checkingStart() >= checkingEnd(); }
 
     int checkingStart() const;
@@ -66,7 +69,6 @@ private:
     void invalidateParagraphRangeValues();
     PassRefPtr<Range> checkingRange() const { return m_checkingRange; }
     PassRefPtr<Range> offsetAsRange() const;
-    const String& text() const;
 
     RefPtr<Range> m_checkingRange;
     mutable RefPtr<Range> m_paragraphRange;
@@ -85,22 +87,25 @@ public:
 
     String findFirstMisspelling(int& firstMisspellingOffset, bool markAll, RefPtr<Range>& firstMisspellingRange);
     String findFirstMisspellingOrBadGrammar(bool checkGrammar, bool& outIsSpelling, int& outFirstFoundOffset, GrammarDetail& outGrammarDetail);
-    String findFirstBadGrammar(GrammarDetail& outGrammarDetail, int& outGrammarPhraseOffset, bool markAll);
-    int findFirstGrammarDetail(const Vector<GrammarDetail>& grammarDetails, int badGrammarPhraseLocation, int badGrammarPhraseLength, int startOffset, int endOffset, bool markAll);
     void markAllMisspellings(RefPtr<Range>& firstMisspellingRange);
+#if USE(GRAMMAR_CHECKING)
+    String findFirstBadGrammar(GrammarDetail& outGrammarDetail, int& outGrammarPhraseOffset, bool markAll) const;
     void markAllBadGrammar();
-
-    bool isUngrammatical(Vector<String>& guessesVector) const;
+    bool isUngrammatical() const;
+#endif
     Vector<String> guessesForMisspelledOrUngrammaticalRange(bool checkGrammar, bool& misspelled, bool& ungrammatical) const;
+
 private:
     EditorClient* m_client;
     RefPtr<Range> m_range;
 
     bool unifiedTextCheckerEnabled() const;
+#if USE(GRAMMAR_CHECKING)
+    int findFirstGrammarDetail(const Vector<GrammarDetail>&, int badGrammarPhraseLocation, int startOffset, int endOffset, bool markAll) const;
+#endif
 };
 
-void checkTextOfParagraph(TextCheckerClient*, const UChar* text, int length,
-    TextCheckingTypeMask checkingTypes, Vector<TextCheckingResult>& results);
+void checkTextOfParagraph(TextCheckerClient&, StringView, TextCheckingTypeMask, Vector<TextCheckingResult>&);
 
 bool unifiedTextCheckerEnabled(const Frame*);
 

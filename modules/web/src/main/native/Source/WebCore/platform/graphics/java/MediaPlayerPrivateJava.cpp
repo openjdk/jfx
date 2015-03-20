@@ -11,6 +11,8 @@
 #include "Document.h"
 #include "Settings.h"
 
+#include <wtf/text/CString.h> // todo tav remove when building w/ pch
+
 #include "com_sun_webkit_graphics_WCMediaPlayer.h"
 #include "com_sun_webkit_graphics_GraphicsDecoder.h"
 
@@ -171,21 +173,17 @@ void MediaPlayerPrivate::MediaEngineSupportedTypes(HashSet<String>& types)
     LOG_TRACE0("<<MediaEngineSupportedTypes\n");
 }
 
-#if ENABLE(ENCRYPTED_MEDIA)
-MediaPlayer::SupportsType MediaPlayerPrivate::MediaEngineSupportsType(const String& type, const String& codecs, const String& keySystem, const KURL& url)
-#else
-MediaPlayer::SupportsType MediaPlayerPrivate::MediaEngineSupportsType(const String& type, const String& codecs, const KURL& url)
-#endif
+MediaPlayer::SupportsType MediaPlayerPrivate::MediaEngineSupportsType(const MediaEngineSupportParameters& parameters)
 {
-    LOG_TRACE2(">>MediaEngineSupportsType, type=%s, codecs=%s\n", type.utf8().data(), codecs.utf8().data());
-    if (type.isEmpty()) {
+    LOG_TRACE2(">>MediaEngineSupportsType, type=%s, codecs=%s\n", parameters.type.utf8().data(), parameters.codecs.utf8().data());
+    if (parameters.type.isEmpty()) {
         LOG_TRACE0("<<MediaEngineSupportsType: NOT supported (type is empty)\n");
         return MediaPlayer::IsNotSupported;
     }
 
-    if (GetSupportedTypes().contains(type)) {
+    if (GetSupportedTypes().contains(parameters.type)) {
         LOG_TRACE0("<<MediaEngineSupportsType: MayBeSupported/IsSupported\n");
-        return codecs.isEmpty() ? MediaPlayer::MayBeSupported : MediaPlayer::IsSupported;
+        return parameters.codecs.isEmpty() ? MediaPlayer::MayBeSupported : MediaPlayer::IsSupported;
     }
     LOG_TRACE0("<<MediaEngineSupportsType: NOT supported\n");
     return MediaPlayer::IsNotSupported;

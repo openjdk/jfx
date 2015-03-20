@@ -52,7 +52,7 @@
 #define IS_ICON_SYNC_THREAD() (m_syncThread == currentThread())
 #define ASSERT_ICON_SYNC_THREAD() ASSERT(IS_ICON_SYNC_THREAD())
 
-#if PLATFORM(QT) || PLATFORM(GTK)
+#if PLATFORM(GTK)
 #define CAN_THEME_URL_ICON
 #endif
 
@@ -261,9 +261,10 @@ Image* IconDatabase::synchronousIconForPageURL(const String& pageURLOriginal, co
     // we can just bail now
     if (!m_iconURLImportComplete && !iconRecord)
         return 0;
-    
-    // The only way we should *not* have an icon record is if this pageURL is retained but has no icon yet - make sure of that
-    ASSERT(iconRecord || m_retainedPageURLs.contains(pageURLOriginal));
+
+    // Assuming we're done initializing and cleanup is allowed,
+    // the only way we should *not* have an icon record is if this pageURL is retained but has no icon yet.
+    ASSERT(iconRecord || databaseCleanupCounter || m_retainedPageURLs.contains(pageURLOriginal));
     
     if (!iconRecord)
         return 0;
@@ -389,7 +390,7 @@ static inline void loadDefaultIconRecord(IconRecord* defaultIconRecord)
         0x00, 0x00, 0x01, 0x52, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x08, 0x00, 0x08, 0x00, 0x08, 0x00, 0x0A, 
         0xFC, 0x80, 0x00, 0x00, 0x27, 0x10, 0x00, 0x0A, 0xFC, 0x80, 0x00, 0x00, 0x27, 0x10 };
         
-    DEFINE_STATIC_LOCAL(RefPtr<SharedBuffer>, defaultIconBuffer, (SharedBuffer::create(defaultIconData, sizeof(defaultIconData))));
+    static SharedBuffer* defaultIconBuffer = SharedBuffer::create(defaultIconData, sizeof(defaultIconData)).leakRef();
     defaultIconRecord->setImageData(defaultIconBuffer);
 }
 #endif
@@ -401,7 +402,6 @@ Image* IconDatabase::defaultIcon(const IntSize& size)
     
     if (!m_defaultIconRecord) {
         m_defaultIconRecord = IconRecord::create("urlIcon");
-        m_defaultIconRecord->setMutexForVerifier(m_urlAndIconLock);
         loadDefaultIconRecord(m_defaultIconRecord.get());
     }
     
@@ -543,8 +543,6 @@ void IconDatabase::setIconDataForIconURL(PassRefPtr<SharedBuffer> dataOriginal, 
         return;
     
     RefPtr<SharedBuffer> data = dataOriginal ? dataOriginal->copy() : PassRefPtr<SharedBuffer>(0);
-    if (data)
-        data->setMutexForVerifier(m_urlAndIconLock);
     String iconURL = iconURLOriginal.isolatedCopy();
     
     Vector<String> pageURLs;
@@ -796,7 +794,6 @@ IconDatabase::IconDatabase()
     , m_removeIconsRequested(false)
     , m_iconURLImportComplete(false)
     , m_syncThreadHasWorkToDo(false)
-    , m_disabledSuddenTerminationForSyncThread(false)
     , m_retainOrReleaseIconRequested(false)
     , m_initialPruningComplete(false)
     , m_client(defaultClient())
@@ -823,8 +820,8 @@ void IconDatabase::notifyPendingLoadDecisions()
     ASSERT(m_iconURLImportComplete);
     LOG(IconDatabase, "Notifying all DocumentLoaders that were waiting on a load decision for their icons");
     
-    HashSet<RefPtr<DocumentLoader> >::iterator i = m_loadersPendingDecision.begin();
-    HashSet<RefPtr<DocumentLoader> >::iterator end = m_loadersPendingDecision.end();
+    HashSet<RefPtr<DocumentLoader>>::iterator i = m_loadersPendingDecision.begin();
+    HashSet<RefPtr<DocumentLoader>>::iterator end = m_loadersPendingDecision.end();
     
     for (; i != end; ++i)
         if ((*i)->refCount() > 1)
@@ -837,14 +834,8 @@ void IconDatabase::wakeSyncThread()
 {
     MutexLocker locker(m_syncLock);
 
-    if (!m_disabledSuddenTerminationForSyncThread) {
-        m_disabledSuddenTerminationForSyncThread = true;
-        // The following is balanced by the call to enableSuddenTermination in the
-        // syncThreadMainLoop function.
-        // FIXME: It would be better to only disable sudden termination if we have
-        // something to write, not just if we have something to read.
-        disableSuddenTermination();
-    }
+    if (!m_disableSuddenTerminationWhileSyncThreadHasWorkToDo)
+        m_disableSuddenTerminationWhileSyncThreadHasWorkToDo = std::make_unique<SuddenTerminationDisabler>();
 
     m_syncThreadHasWorkToDo = true;
     m_syncCondition.signal();
@@ -868,22 +859,19 @@ void IconDatabase::scheduleOrDeferSyncTimer()
     if (m_scheduleOrDeferSyncTimerRequested)
         return;
 
-    // The following is balanced by the call to enableSuddenTermination in the
-    // syncTimerFired function.
-    disableSuddenTermination();
+    if (!m_disableSuddenTerminationWhileSyncTimerScheduled)
+        m_disableSuddenTerminationWhileSyncTimerScheduled = std::make_unique<SuddenTerminationDisabler>();
 
     m_scheduleOrDeferSyncTimerRequested = true;
     callOnMainThread(performScheduleOrDeferSyncTimerOnMainThread, this);
 }
 
-void IconDatabase::syncTimerFired(Timer<IconDatabase>*)
+void IconDatabase::syncTimerFired(Timer<IconDatabase>&)
 {
     ASSERT_NOT_SYNC_THREAD();
     wakeSyncThread();
 
-    // The following is balanced by the call to disableSuddenTermination in the
-    // scheduleOrDeferSyncTimer function.
-    enableSuddenTermination();
+    m_disableSuddenTerminationWhileSyncTimerScheduled.reset();
 }
 
 // ******************
@@ -918,7 +906,6 @@ PassRefPtr<IconRecord> IconDatabase::getOrCreateIconRecord(const String& iconURL
         return icon;
 
     RefPtr<IconRecord> newIcon = IconRecord::create(iconURL);
-    newIcon->setMutexForVerifier(m_urlAndIconLock);
     m_iconURLToRecordMap.set(iconURL, newIcon.get());
 
     return newIcon.release();
@@ -989,7 +976,7 @@ void IconDatabase::iconDatabaseSyncThread()
     LOG(IconDatabase, "(THREAD) IconDatabase sync thread started");
 
 #if !LOG_DISABLED
-    double startTime = currentTime();
+    double startTime = monotonicallyIncreasingTime();
 #endif
 
     // Need to create the database path if it doesn't already exist
@@ -1017,7 +1004,7 @@ void IconDatabase::iconDatabaseSyncThread()
     }
         
 #if !LOG_DISABLED
-    double timeStamp = currentTime();
+    double timeStamp = monotonicallyIncreasingTime();
     LOG(IconDatabase, "(THREAD) Open took %.4f seconds", timeStamp - startTime);
 #endif    
 
@@ -1028,13 +1015,13 @@ void IconDatabase::iconDatabaseSyncThread()
     }
         
 #if !LOG_DISABLED
-    double newStamp = currentTime();
+    double newStamp = monotonicallyIncreasingTime();
     LOG(IconDatabase, "(THREAD) performOpenInitialization() took %.4f seconds, now %.4f seconds from thread start", newStamp - timeStamp, newStamp - startTime);
     timeStamp = newStamp;
 #endif 
-
+        
     // Uncomment the following line to simulate a long lasting URL import (*HUGE* icon databases, or network home directories)
-    // while (currentTime() - timeStamp < 10);
+    // while (monotonicallyIncreasingTime() - timeStamp < 10);
 
     // Read in URL mappings from the database          
     LOG(IconDatabase, "(THREAD) Starting iconURL import");
@@ -1046,7 +1033,7 @@ void IconDatabase::iconDatabaseSyncThread()
     }
 
 #if !LOG_DISABLED
-    newStamp = currentTime();
+    newStamp = monotonicallyIncreasingTime();
     LOG(IconDatabase, "(THREAD) performURLImport() took %.4f seconds.  Entering main loop %.4f seconds from thread start", newStamp - timeStamp, newStamp - startTime);
 #endif 
 
@@ -1235,7 +1222,7 @@ void IconDatabase::performURLImport()
 
         {
             MutexLocker locker(m_urlAndIconLock);
-            
+
             PageURLRecord* pageRecord = m_pageURLToRecordMap.get(pageURL);
             
             // If the pageRecord doesn't exist in this map, then no one has retained this pageURL
@@ -1362,8 +1349,7 @@ void IconDatabase::syncThreadMainLoop()
 
     m_syncLock.lock();
 
-    bool shouldReenableSuddenTermination = m_disabledSuddenTerminationForSyncThread;
-    m_disabledSuddenTerminationForSyncThread = false;
+    std::unique_ptr<SuddenTerminationDisabler> disableSuddenTermination = std::move(m_disableSuddenTerminationWhileSyncThreadHasWorkToDo);
 
     // We'll either do any pending work on our first pass through the loop, or we'll terminate
     // without doing any work. Either way we're dealing with any currently-pending work.
@@ -1374,7 +1360,7 @@ void IconDatabase::syncThreadMainLoop()
         m_syncLock.unlock();
 
 #if !LOG_DISABLED
-        double timeStamp = currentTime();
+        double timeStamp = monotonicallyIncreasingTime();
 #endif
         LOG(IconDatabase, "(THREAD) Main work loop starting");
 
@@ -1412,13 +1398,13 @@ void IconDatabase::syncThreadMainLoop()
             static bool prunedUnretainedIcons = false;
             if (didWrite && !m_privateBrowsingEnabled && !prunedUnretainedIcons && !databaseCleanupCounter) {
 #if !LOG_DISABLED
-                double time = currentTime();
+                double time = monotonicallyIncreasingTime();
 #endif
                 LOG(IconDatabase, "(THREAD) Starting pruneUnretainedIcons()");
                 
                 pruneUnretainedIcons();
                 
-                LOG(IconDatabase, "(THREAD) pruneUnretainedIcons() took %.4f seconds", currentTime() - time);
+                LOG(IconDatabase, "(THREAD) pruneUnretainedIcons() took %.4f seconds", monotonicallyIncreasingTime() - time);
                 
                 // If pruneUnretainedIcons() returned early due to requested thread termination, its still okay
                 // to mark prunedUnretainedIcons true because we're about to terminate anyway
@@ -1431,7 +1417,7 @@ void IconDatabase::syncThreadMainLoop()
         }
         
 #if !LOG_DISABLED
-        double newstamp = currentTime();
+        double newstamp = monotonicallyIncreasingTime();
         LOG(IconDatabase, "(THREAD) Main work loop ran for %.4f seconds, %s requested to terminate", newstamp - timeStamp, shouldStopThreadActivity() ? "was" : "was not");
 #endif
                     
@@ -1443,37 +1429,21 @@ void IconDatabase::syncThreadMainLoop()
         if (shouldStopThreadActivity())
             continue;
 
-        if (shouldReenableSuddenTermination) {
-            // The following is balanced by the call to disableSuddenTermination in the
-            // wakeSyncThread function. Any time we wait on the condition, we also have
-            // to enableSuddenTermation, after doing the next batch of work.
-            enableSuddenTermination();
-        }
+        disableSuddenTermination.reset();
 
         while (!m_syncThreadHasWorkToDo)
             m_syncCondition.wait(m_syncLock);
 
         m_syncThreadHasWorkToDo = false;
 
-        ASSERT(m_disabledSuddenTerminationForSyncThread);
-        shouldReenableSuddenTermination = true;
-        m_disabledSuddenTerminationForSyncThread = false;
+        ASSERT(m_disableSuddenTerminationWhileSyncThreadHasWorkToDo);
+        disableSuddenTermination = std::move(m_disableSuddenTerminationWhileSyncThreadHasWorkToDo);
     }
 
     m_syncLock.unlock();
     
     // Thread is terminating at this point
     cleanupSyncThread();
-
-    if (shouldReenableSuddenTermination) {
-        // The following is balanced by the call to disableSuddenTermination in the
-        // wakeSyncThread function. Any time we wait on the condition, we also have
-        // to enableSuddenTermation, after doing the next batch of work.
-        enableSuddenTermination();
-
-        MutexLocker locker(m_syncLock);
-        m_disabledSuddenTerminationForSyncThread = false;
-    }
 }
 
 void IconDatabase::performPendingRetainAndReleaseOperations()
@@ -1513,7 +1483,7 @@ bool IconDatabase::readFromDatabase()
     ASSERT_ICON_SYNC_THREAD();
     
 #if !LOG_DISABLED
-    double timeStamp = currentTime();
+    double timeStamp = monotonicallyIncreasingTime();
 #endif
 
     bool didAnyWork = false;
@@ -1532,7 +1502,6 @@ bool IconDatabase::readFromDatabase()
     for (unsigned i = 0; i < icons.size(); ++i) {
         didAnyWork = true;
         RefPtr<SharedBuffer> imageData = getImageDataForIconURLFromSQLDatabase(icons[i]->iconURL());
-        imageData->setMutexForVerifier(m_urlAndIconLock);
 
         // Verify this icon still wants to be read from disk
         {
@@ -1607,7 +1576,7 @@ bool IconDatabase::readFromDatabase()
             return didAnyWork;
     }
 
-    LOG(IconDatabase, "Reading from database took %.4f seconds", currentTime() - timeStamp);
+    LOG(IconDatabase, "Reading from database took %.4f seconds", monotonicallyIncreasingTime() - timeStamp);
 
     return didAnyWork;
 }
@@ -1617,7 +1586,7 @@ bool IconDatabase::writeToDatabase()
     ASSERT_ICON_SYNC_THREAD();
 
 #if !LOG_DISABLED
-    double timeStamp = currentTime();
+    double timeStamp = monotonicallyIncreasingTime();
 #endif
 
     bool didAnyWork = false;
@@ -1667,7 +1636,7 @@ bool IconDatabase::writeToDatabase()
     if (didAnyWork)
         checkForDanglingPageURLs(false);
 
-    LOG(IconDatabase, "Updating the database took %.4f seconds", currentTime() - timeStamp);
+    LOG(IconDatabase, "Updating the database took %.4f seconds", monotonicallyIncreasingTime() - timeStamp);
 
     return didAnyWork;
 }
@@ -1711,19 +1680,11 @@ void IconDatabase::pruneUnretainedIcons()
         SQLiteStatement pageDeleteSQL(m_syncDB, "DELETE FROM PageURL WHERE rowid = (?);");
         pageDeleteSQL.prepare();
         for (size_t i = 0; i < numToDelete; ++i) {
-#if OS(WINDOWS)
-            LOG(IconDatabase, "Pruning page with rowid %I64i from disk", static_cast<long long>(pageIDsToDelete[i]));
-#else
             LOG(IconDatabase, "Pruning page with rowid %lli from disk", static_cast<long long>(pageIDsToDelete[i]));
-#endif
             pageDeleteSQL.bindInt64(1, pageIDsToDelete[i]);
             int result = pageDeleteSQL.step();
             if (result != SQLResultDone)
-#if OS(WINDOWS)
-                LOG_ERROR("Unabled to delete page with id %I64i from disk", static_cast<long long>(pageIDsToDelete[i]));
-#else
                 LOG_ERROR("Unabled to delete page with id %lli from disk", static_cast<long long>(pageIDsToDelete[i]));
-#endif
             pageDeleteSQL.reset();
             
             // If the thread was asked to terminate, we should commit what pruning we've done so far, figuring we can
@@ -1822,7 +1783,7 @@ void* IconDatabase::cleanupSyncThread()
     ASSERT_ICON_SYNC_THREAD();
     
 #if !LOG_DISABLED
-    double timeStamp = currentTime();
+    double timeStamp = monotonicallyIncreasingTime();
 #endif 
 
     // If the removeIcons flag is set, remove all icons from the db.
@@ -1842,7 +1803,7 @@ void* IconDatabase::cleanupSyncThread()
     m_syncDB.close();
     
 #if !LOG_DISABLED
-    LOG(IconDatabase, "(THREAD) Final closure took %.4f seconds", currentTime() - timeStamp);
+    LOG(IconDatabase, "(THREAD) Final closure took %.4f seconds", monotonicallyIncreasingTime() - timeStamp);
 #endif
     
     m_syncThreadRunning = false;

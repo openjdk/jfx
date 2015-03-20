@@ -26,7 +26,7 @@
 #ifndef SQLiteTransaction_h
 #define SQLiteTransaction_h
 
-#include <wtf/FastAllocBase.h>
+#include <wtf/FastMalloc.h>
 #include <wtf/Noncopyable.h>
 
 namespace WebCore {
@@ -46,6 +46,9 @@ public:
     
     bool inProgress() const { return m_inProgress; }
     bool wasRolledBackBySqlite() const;
+
+    SQLiteDatabase& database() const { return m_db; }
+
 private:
     SQLiteDatabase& m_db;
     bool m_inProgress;

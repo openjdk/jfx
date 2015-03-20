@@ -40,17 +40,24 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
 
     private static native void initIDs();
     static {
-        // This loading of msvcr100.dll (VS2010) is required when run with Java 6
-        // since it was build with VS2003 and doesn't include msvcr100.dll in it's JRE.
-        // Note: See README-builds.html on MSVC requirement: VS2010 is required.
+        // This loading of msvcr120.dll and msvcp120.dll (VS2013) is required when run with Java 8
+        // since it was build with VS2010 and doesn't include msvcr120.dll in its JRE.
+        // Note: See README-builds.html on MSVC requirement: VS2013 is required.
         AccessController.doPrivileged(new PrivilegedAction<Void>() {
             public Void run() {
                 verbose = Boolean.getBoolean("javafx.verbose");
                 try {
-                    NativeLibLoader.loadLibrary("msvcr100");
+                    NativeLibLoader.loadLibrary("msvcr120");
                 } catch (Throwable t) {
                     if (verbose) {
-                        System.err.println("Error: failed to load msvcr100.dll : " + t);
+                        System.err.println("Error: failed to load msvcr120.dll : " + t);
+                    }
+                }
+                try {
+                    NativeLibLoader.loadLibrary("msvcp120");
+                } catch (Throwable t) {
+                    if (verbose) {
+                        System.err.println("Error: failed to load msvcp120.dll : " + t);
                     }
                 }
                 Application.loadNativeLibrary();

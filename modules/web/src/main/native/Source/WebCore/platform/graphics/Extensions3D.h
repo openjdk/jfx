@@ -53,7 +53,9 @@ public:
     //   GL_EXT_packed_depth_stencil / GL_OES_packed_depth_stencil
     //   GL_ANGLE_framebuffer_blit / GL_ANGLE_framebuffer_multisample
     //   GL_OES_texture_float
+    //   GL_OES_texture_float_linear
     //   GL_OES_texture_half_float
+    //   GL_OES_texture_half_float_linear
     //   GL_OES_standard_derivatives
     //   GL_OES_rgb8_rgba8
     //   GL_OES_vertex_array_object
@@ -72,6 +74,7 @@ public:
     //   GL_CHROMIUM_copy_texture
     //   GL_CHROMIUM_flipy
     //   GL_ARB_draw_buffers / GL_EXT_draw_buffers
+    //   GL_ANGLE_instanced_arrays
 
     // Takes full name of extension; for example,
     // "GL_EXT_texture_format_BGRA8888".
@@ -235,6 +238,11 @@ public:
 
     // GL_ARB_draw_buffers / GL_EXT_draw_buffers
     virtual void drawBuffersEXT(GC3Dsizei n, const GC3Denum* bufs) = 0;
+
+    // GL_ANGLE_instanced_arrays
+    virtual void drawArraysInstanced(GC3Denum mode, GC3Dint first, GC3Dsizei count, GC3Dsizei primcount) = 0;
+    virtual void drawElementsInstanced(GC3Denum mode, GC3Dsizei count, GC3Denum type, long long offset, GC3Dsizei primcount) = 0;
+    virtual void vertexAttribDivisor(GC3Duint index, GC3Duint divisor) = 0;
 
     virtual bool isNVIDIA() = 0;
     virtual bool isAMD() = 0;

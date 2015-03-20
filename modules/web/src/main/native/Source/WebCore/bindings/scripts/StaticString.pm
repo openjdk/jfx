@@ -48,15 +48,10 @@ static StringImpl::StaticASCIILiteral ${name}Data = {
     $length,
     ${name}String8,
     0,
+    nullptr,
     StringImpl::StaticASCIILiteral::s_initialFlags | (${hash} << StringImpl::StaticASCIILiteral::s_hashShift)
 };
 END
-    }
-
-    push(@result, "\n");
-
-    while ( my ($name, $value) = each %strings ) {
-        push(@result, "static StringImpl* ${name}Impl = reinterpret_cast<StringImpl*>(&${name}Data);\n");
     }
 
     push(@result, "\n");
@@ -74,7 +69,7 @@ sub GenerateStringAsserts($)
     push(@result, "#ifndef NDEBUG\n");
 
     while ( my ($name, $value) = each %strings ) {
-        push(@result, "    ${name}Impl->assertHashIsCorrect();\n");
+        push(@result, "    reinterpret_cast<StringImpl*>(&${name}Data)->assertHashIsCorrect();\n");
     }
 
     push(@result, "#endif // NDEBUG\n");

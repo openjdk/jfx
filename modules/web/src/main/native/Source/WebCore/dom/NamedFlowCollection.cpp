@@ -33,10 +33,8 @@
 #include "DOMNamedFlowCollection.h"
 #include "Document.h"
 #include "InspectorInstrumentation.h"
-#include "WebKitNamedFlow.h"
 
 #include <wtf/text/StringHash.h>
-#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -45,9 +43,9 @@ NamedFlowCollection::NamedFlowCollection(Document* document)
 {
 }
 
-Vector<RefPtr<WebKitNamedFlow> > NamedFlowCollection::namedFlows()
+Vector<RefPtr<WebKitNamedFlow>> NamedFlowCollection::namedFlows()
 {
-    Vector<RefPtr<WebKitNamedFlow> > namedFlows;
+    Vector<RefPtr<WebKitNamedFlow>> namedFlows;
 
     for (NamedFlowSet::iterator it = m_namedFlows.begin(); it != m_namedFlows.end(); ++it) {
         if ((*it)->flowState() == WebKitNamedFlow::FlowStateNull)
@@ -68,14 +66,14 @@ WebKitNamedFlow* NamedFlowCollection::flowByName(const String& flowName)
     return *it;
 }
 
-PassRefPtr<WebKitNamedFlow> NamedFlowCollection::ensureFlowWithName(const String& flowName)
+PassRef<WebKitNamedFlow> NamedFlowCollection::ensureFlowWithName(const String& flowName)
 {
     NamedFlowSet::iterator it = m_namedFlows.find<String, NamedFlowHashTranslator>(flowName);
     if (it != m_namedFlows.end()) {
         WebKitNamedFlow* namedFlow = *it;
         ASSERT(namedFlow->flowState() == WebKitNamedFlow::FlowStateNull);
 
-        return namedFlow;
+        return *namedFlow;
     }
 
     RefPtr<WebKitNamedFlow> newFlow = WebKitNamedFlow::create(this, flowName);
@@ -83,7 +81,7 @@ PassRefPtr<WebKitNamedFlow> NamedFlowCollection::ensureFlowWithName(const String
 
     InspectorInstrumentation::didCreateNamedFlow(document(), newFlow.get());
 
-    return newFlow.release();
+    return newFlow.releaseNonNull();
 }
 
 void NamedFlowCollection::discardNamedFlow(WebKitNamedFlow* namedFlow)

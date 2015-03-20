@@ -22,13 +22,13 @@
 
 #include "Error.h"
 #include "ExceptionHelpers.h"
-#include "Operations.h"
+#include "JSCInlines.h"
 
 namespace JSC {
 
 JSValue StringRecursionChecker::throwStackOverflowError()
 {
-    return throwError(m_exec, createStackOverflowError(m_exec));
+    return JSC::throwStackOverflowError(m_exec);
 }
 
 JSValue StringRecursionChecker::emptyString()

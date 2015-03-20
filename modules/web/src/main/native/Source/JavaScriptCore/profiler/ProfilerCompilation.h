@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2012, 2013, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +31,7 @@
 #include "ProfilerCompilationKind.h"
 #include "ProfilerCompiledBytecode.h"
 #include "ProfilerExecutionCounter.h"
+#include "ProfilerJettisonReason.h"
 #include "ProfilerOSRExit.h"
 #include "ProfilerOSRExitSite.h"
 #include "ProfilerOriginStack.h"
@@ -63,18 +64,25 @@ public:
     CompilationKind kind() const { return m_kind; }
     
     void addDescription(const CompiledBytecode&);
+    void addDescription(const OriginStack&, const CString& description);
     ExecutionCounter* executionCounterFor(const OriginStack&);
     void addOSRExitSite(const Vector<const void*>& codeAddresses);
     OSRExit* addOSRExit(unsigned id, const OriginStack&, ExitKind, bool isWatchpoint);
+    
+    void setJettisonReason(JettisonReason jettisonReason)
+    {
+        m_jettisonReason = jettisonReason;
+    }
     
     JSValue toJS(ExecState*) const;
     
 private:
     Bytecodes* m_bytecodes;
     CompilationKind m_kind;
+    JettisonReason m_jettisonReason;
     Vector<ProfiledBytecodes> m_profiledBytecodes;
     Vector<CompiledBytecode> m_descriptions;
-    HashMap<OriginStack, OwnPtr<ExecutionCounter> > m_counters;
+    HashMap<OriginStack, std::unique_ptr<ExecutionCounter>> m_counters;
     Vector<OSRExitSite> m_osrExitSites;
     SegmentedVector<OSRExit> m_osrExits;
     unsigned m_numInlinedGetByIds;

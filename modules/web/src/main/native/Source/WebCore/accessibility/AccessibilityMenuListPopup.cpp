@@ -30,6 +30,7 @@
 #include "AccessibilityMenuList.h"
 #include "AccessibilityMenuListOption.h"
 #include "HTMLNames.h"
+#include "HTMLOptionElement.h"
 #include "HTMLSelectElement.h"
 #include "RenderMenuList.h"
 
@@ -69,13 +70,13 @@ bool AccessibilityMenuListPopup::computeAccessibilityIsIgnored() const
 
 AccessibilityMenuListOption* AccessibilityMenuListPopup::menuListOptionAccessibilityObject(HTMLElement* element) const
 {
-    if (!element || !element->hasTagName(optionTag))
+    if (!element || !isHTMLOptionElement(element) || !element->inRenderedDocument())
         return 0;
 
     AccessibilityObject* object = document()->axObjectCache()->getOrCreate(MenuListOptionRole);
     ASSERT_WITH_SECURITY_IMPLICATION(object->isMenuListOption());
 
-    AccessibilityMenuListOption* option = static_cast<AccessibilityMenuListOption*>(object);
+    AccessibilityMenuListOption* option = toAccessibilityMenuListOption(object);
     option->setElement(element);
 
     return option;
@@ -101,10 +102,8 @@ void AccessibilityMenuListPopup::addChildren()
 
     m_haveChildren = true;
 
-    const Vector<HTMLElement*>& listItems = toHTMLSelectElement(selectNode)->listItems();
-    unsigned length = listItems.size();
-    for (unsigned i = 0; i < length; i++) {
-        AccessibilityMenuListOption* option = menuListOptionAccessibilityObject(listItems[i]);
+    for (const auto& listItem : toHTMLSelectElement(selectNode)->listItems()) {
+        AccessibilityMenuListOption* option = menuListOptionAccessibilityObject(listItem);
         if (option) {
             option->setParent(this);
             m_children.append(option);
@@ -117,7 +116,7 @@ void AccessibilityMenuListPopup::childrenChanged()
     AXObjectCache* cache = axObjectCache();
     for (size_t i = m_children.size(); i > 0 ; --i) {
         AccessibilityObject* child = m_children[i - 1].get();
-        if (child->actionElement() && !child->actionElement()->attached()) {
+        if (child->actionElement() && !child->actionElement()->inRenderedDocument()) {
             child->detachFromParent();
             cache->remove(child->axObjectID());
         }
@@ -136,8 +135,8 @@ void AccessibilityMenuListPopup::didUpdateActiveOption(int optionIndex)
     AXObjectCache* cache = axObjectCache();
     RefPtr<AccessibilityObject> child = m_children[optionIndex].get();
 
-    cache->postNotification(child.get(), document(), AXObjectCache::AXFocusedUIElementChanged, true, PostSynchronously);
-    cache->postNotification(child.get(), document(), AXObjectCache::AXMenuListItemSelected, true, PostSynchronously);
+    cache->postNotification(child.get(), document(), AXObjectCache::AXFocusedUIElementChanged, TargetElement, PostSynchronously);
+    cache->postNotification(child.get(), document(), AXObjectCache::AXMenuListItemSelected, TargetElement, PostSynchronously);
 }
 
 } // namespace WebCore

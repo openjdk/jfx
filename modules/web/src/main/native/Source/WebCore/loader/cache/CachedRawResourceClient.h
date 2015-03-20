@@ -35,12 +35,15 @@ class CachedRawResourceClient : public CachedResourceClient {
 public:
     virtual ~CachedRawResourceClient() { }
     static CachedResourceClientType expectedType() { return RawResourceType; }
-    virtual CachedResourceClientType resourceClientType() const OVERRIDE { return expectedType(); }
+    virtual CachedResourceClientType resourceClientType() const override { return expectedType(); }
 
     virtual void dataSent(CachedResource*, unsigned long long /* bytesSent */, unsigned long long /* totalBytesToBeSent */) { }
     virtual void responseReceived(CachedResource*, const ResourceResponse&) { }
     virtual void dataReceived(CachedResource*, const char* /* data */, int /* length */) { }
     virtual void redirectReceived(CachedResource*, ResourceRequest&, const ResourceResponse&) { }
+#if USE(SOUP)
+    virtual char* getOrCreateReadBuffer(CachedResource*, size_t /* requestedSize */, size_t& /* actualSize */) { return 0; }
+#endif
 };
 
 }

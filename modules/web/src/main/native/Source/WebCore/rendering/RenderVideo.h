@@ -31,29 +31,31 @@
 #include "RenderMedia.h"
 
 namespace WebCore {
-    
-class HTMLMediaElement;
+
 class HTMLVideoElement;
 
-class RenderVideo : public RenderMedia {
+class RenderVideo final : public RenderMedia {
 public:
-    RenderVideo(HTMLVideoElement*);
+    RenderVideo(HTMLVideoElement&, PassRef<RenderStyle>);
     virtual ~RenderVideo();
+
+    HTMLVideoElement& videoElement() const;
 
     IntRect videoBox() const;
 
     static IntSize defaultSize();
 
-#if USE(ACCELERATED_COMPOSITING)
     bool supportsAcceleratedRendering() const;
     void acceleratedRenderingStateChanged();
-#endif
+
+    bool requiresImmediateCompositing() const;
 
     virtual bool shouldDisplayVideo() const;
 
 private:
+    void mediaElement() const = delete;
+
     virtual void updateFromElement();
-    inline HTMLVideoElement* videoElement() const;
 
     virtual void intrinsicSizeChanged();
     LayoutSize calculateIntrinsicSize();
@@ -70,9 +72,9 @@ private:
 
     virtual void layout();
 
-    virtual LayoutUnit computeReplacedLogicalWidth(ShouldComputePreferred  = ComputeActual) const OVERRIDE;
+    virtual LayoutUnit computeReplacedLogicalWidth(ShouldComputePreferred  = ComputeActual) const override;
     virtual LayoutUnit computeReplacedLogicalHeight() const;
-    virtual LayoutUnit minimumReplacedHeight() const OVERRIDE;
+    virtual LayoutUnit minimumReplacedHeight() const override;
 
 #if ENABLE(FULLSCREEN_API)
     virtual LayoutUnit offsetLeft() const;
@@ -83,19 +85,12 @@ private:
 
     void updatePlayer();
 
-    virtual bool foregroundIsKnownToBeOpaqueInRect(const LayoutRect& localRect, unsigned maxDepthToTest) const OVERRIDE;
+    virtual bool foregroundIsKnownToBeOpaqueInRect(const LayoutRect& localRect, unsigned maxDepthToTest) const override;
 
     LayoutSize m_cachedImageSize;
 };
 
-inline RenderVideo* toRenderVideo(RenderObject* object)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isVideo());
-    return static_cast<RenderVideo*>(object);
-}
-
-// This will catch anyone doing an unnecessary cast.
-void toRenderVideo(const RenderVideo*);
+RENDER_OBJECT_TYPE_CASTS(RenderVideo, isVideo())
 
 } // namespace WebCore
 

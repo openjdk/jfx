@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 Samuel Weinig (sam.weinig@gmail.com)
- * Copyright (C) 2004, 2005, 2006 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2004, 2005, 2006, 2013 Apple Computer, Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 
 #include "Color.h"
 #include "ColorSpace.h"
+#include "FloatSize.h"
 #include "GraphicsTypes.h"
 #include "ImageOrientation.h"
 #include "IntRect.h"
@@ -39,7 +40,7 @@
 #include <wtf/RetainPtr.h>
 #include <wtf/text/WTFString.h>
 
-#if PLATFORM(MAC)
+#if USE(APPKIT)
 OBJC_CLASS NSImage;
 #endif
 
@@ -53,18 +54,14 @@ typedef SIZE* LPSIZE;
 typedef struct HBITMAP__ *HBITMAP;
 #endif
 
-#if PLATFORM(QT)
-#include <QPixmap>
-#endif
-
 #if PLATFORM(GTK)
 typedef struct _GdkPixbuf GdkPixbuf;
 #endif
 
 #if PLATFORM(EFL)
 #if USE(EO)
-typedef struct _Eo Evas;
-typedef struct _Eo Evas_Object;
+typedef struct _Eo_Opaque Evas;
+typedef struct _Eo_Opaque Evas_Object;
 #else
 typedef struct _Evas Evas;
 typedef struct _Evas_Object Evas_Object;
@@ -87,7 +84,7 @@ class ImageObserver;
 class Image : public RefCounted<Image> {
     friend class GeneratedImage;
     friend class CrossfadeGeneratedImage;
-    friend class GeneratorGeneratedImage;
+    friend class GradientImage;
     friend class GraphicsContext;
 
 public:
@@ -99,6 +96,7 @@ public:
 
     virtual bool isSVGImage() const { return false; }
     virtual bool isBitmapImage() const { return false; }
+    virtual bool isPDFDocumentImage() const { return false; }
     virtual bool currentFrameKnownToBeOpaque() = 0;
 
     // Derived classes should override this if they can assure that 
@@ -126,7 +124,6 @@ public:
     virtual String filenameExtension() const { return String(); } // null string if unknown
 
     virtual void destroyDecodedData(bool destroyAll = true) = 0;
-    virtual unsigned decodedSize() const = 0;
 
     SharedBuffer* data() { return m_encodedImageData.get(); }
 
@@ -143,10 +140,15 @@ public:
     enum TileRule { StretchTile, RoundTile, SpaceTile, RepeatTile };
 
     virtual PassNativeImagePtr nativeImageForCurrentFrame() { return 0; }
-    
-#if PLATFORM(MAC)
+    virtual ImageOrientation orientationForCurrentFrame() { return ImageOrientation(); }
+
     // Accessors for native image formats.
+
+#if USE(APPKIT)
     virtual NSImage* getNSImage() { return 0; }
+#endif
+
+#if PLATFORM(COCOA)
     virtual CFDataRef getTIFFRepresentation() { return 0; }
 #endif
 
@@ -159,7 +161,7 @@ public:
 
 #if PLATFORM(WIN)
     virtual bool getHBITMAP(HBITMAP) { return false; }
-    virtual bool getHBITMAPOfSize(HBITMAP, LPSIZE) { return false; }
+    virtual bool getHBITMAPOfSize(HBITMAP, const IntSize*) { return false; }
 #endif
 
 #if PLATFORM(GTK)
@@ -170,10 +172,6 @@ public:
 #if PLATFORM(JAVA)
     virtual NativeImagePtr javaImage() { return nativeImageForCurrentFrame(); }
     virtual void drawImage(GraphicsContext*, const FloatRect& dstRect, const FloatRect& srcRect, ColorSpace styleColorSpace, CompositeOperator, BlendMode);
-#endif
-
-#if PLATFORM(QT)
-    static void setPlatformResource(const char* name, const QPixmap&);
 #endif
 
 #if PLATFORM(EFL)
@@ -191,6 +189,11 @@ public:
     virtual bool notSolidColor() { return true; }
 #endif
 
+    FloatSize spaceSize() const { return m_space; }
+    void setSpaceSize(const FloatSize& space)
+    {
+        m_space = space;
+    }
 protected:
     Image(ImageObserver* = 0);
 
@@ -200,8 +203,7 @@ protected:
 #if PLATFORM(WIN)
     virtual void drawFrameMatchingSourceSize(GraphicsContext*, const FloatRect& dstRect, const IntSize& srcSize, ColorSpace styleColorSpace, CompositeOperator) { }
 #endif
-    virtual void draw(GraphicsContext*, const FloatRect& dstRect, const FloatRect& srcRect, ColorSpace styleColorSpace, CompositeOperator, BlendMode) = 0;
-    virtual void draw(GraphicsContext*, const FloatRect& dstRect, const FloatRect& srcRect, ColorSpace styleColorSpace, CompositeOperator, BlendMode, RespectImageOrientationEnum);
+    virtual void draw(GraphicsContext*, const FloatRect& dstRect, const FloatRect& srcRect, ColorSpace styleColorSpace, CompositeOperator, BlendMode, ImageOrientationDescription);
     void drawTiled(GraphicsContext*, const FloatRect& dstRect, const FloatPoint& srcPoint, const FloatSize& tileSize, ColorSpace styleColorSpace,
         CompositeOperator , BlendMode);
     void drawTiled(GraphicsContext*, const FloatRect& dstRect, const FloatRect& srcRect, const FloatSize& tileScaleFactor, TileRule hRule, TileRule vRule, ColorSpace styleColorSpace, CompositeOperator);
@@ -213,7 +215,11 @@ protected:
 private:
     RefPtr<SharedBuffer> m_encodedImageData;
     ImageObserver* m_imageObserver;
+    FloatSize m_space;
 };
+
+#define IMAGE_TYPE_CASTS(ToClassName) \
+    TYPE_CASTS_BASE(ToClassName, Image, image, image->is##ToClassName(), image.is##ToClassName())
 
 }
 

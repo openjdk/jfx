@@ -31,6 +31,7 @@
 #if ENABLE(DFG_JIT)
 
 #include "DFGCommon.h"
+#include "DFGFlushFormat.h"
 #include "DFGMinifiedID.h"
 #include "DataFormat.h"
 #include "SpeculatedType.h"
@@ -42,6 +43,7 @@ enum ValueSourceKind {
     SourceNotSet,
     ValueInJSStack,
     Int32InJSStack,
+    Int52InJSStack,
     CellInJSStack,
     BooleanInJSStack,
     DoubleInJSStack,
@@ -53,8 +55,10 @@ enum ValueSourceKind {
 static inline ValueSourceKind dataFormatToValueSourceKind(DataFormat dataFormat)
 {
     switch (dataFormat) {
-    case DataFormatInteger:
+    case DataFormatInt32:
         return Int32InJSStack;
+    case DataFormatInt52:
+        return Int52InJSStack;
     case DataFormatDouble:
         return DoubleInJSStack;
     case DataFormatBoolean:
@@ -77,7 +81,9 @@ static inline DataFormat valueSourceKindToDataFormat(ValueSourceKind kind)
     case ValueInJSStack:
         return DataFormatJS;
     case Int32InJSStack:
-        return DataFormatInteger;
+        return DataFormatInt32;
+    case Int52InJSStack:
+        return DataFormatInt52;
     case CellInJSStack:
         return DataFormatCell;
     case BooleanInJSStack:
@@ -109,48 +115,70 @@ static inline bool isTriviallyRecoverable(ValueSourceKind kind)
 class ValueSource {
 public:
     ValueSource()
-        : m_value(idFromKind(SourceNotSet))
+        : m_kind(SourceNotSet)
     {
     }
     
     explicit ValueSource(ValueSourceKind valueSourceKind)
-        : m_value(idFromKind(valueSourceKind))
+        : m_kind(valueSourceKind)
     {
-        ASSERT(kind() != SourceNotSet);
-        ASSERT(kind() != HaveNode);
+        ASSERT(kind() == ArgumentsSource || kind() == SourceIsDead || kind() == ArgumentsSource);
     }
     
     explicit ValueSource(MinifiedID id)
-        : m_value(id)
+        : m_kind(HaveNode)
+        , m_value(id.bits())
     {
         ASSERT(!!id);
         ASSERT(kind() == HaveNode);
     }
     
-    static ValueSource forSpeculation(SpeculatedType prediction)
+    ValueSource(ValueSourceKind valueSourceKind, VirtualRegister where)
+        : m_kind(valueSourceKind)
+        , m_value(static_cast<intptr_t>(where.offset()))
     {
-        if (isInt32Speculation(prediction))
-            return ValueSource(Int32InJSStack);
-        if (isArraySpeculation(prediction) || isCellSpeculation(prediction))
-            return ValueSource(CellInJSStack);
-        if (isBooleanSpeculation(prediction))
-            return ValueSource(BooleanInJSStack);
-        return ValueSource(ValueInJSStack);
+        ASSERT(kind() != SourceNotSet);
+        ASSERT(kind() != HaveNode);
     }
     
-    static ValueSource forDataFormat(DataFormat dataFormat)
+    static ValueSource forFlushFormat(VirtualRegister where, FlushFormat format)
     {
-        return ValueSource(dataFormatToValueSourceKind(dataFormat));
+        switch (format) {
+        case DeadFlush:
+        case ConflictingFlush:
+            return ValueSource(SourceIsDead);
+        case FlushedJSValue:
+            return ValueSource(ValueInJSStack, where);
+        case FlushedDouble:
+            return ValueSource(DoubleInJSStack, where);
+        case FlushedInt32:
+            return ValueSource(Int32InJSStack, where);
+        case FlushedInt52:
+            return ValueSource(Int52InJSStack, where);
+        case FlushedCell:
+            return ValueSource(CellInJSStack, where);
+        case FlushedBoolean:
+            return ValueSource(BooleanInJSStack, where);
+        case FlushedArguments:
+            return ValueSource(ArgumentsSource);
+        }
+        RELEASE_ASSERT_NOT_REACHED();
+        return ValueSource();
+    }
+    
+    static ValueSource forDataFormat(VirtualRegister where, DataFormat dataFormat)
+    {
+        return ValueSource(dataFormatToValueSourceKind(dataFormat), where);
     }
     
     bool isSet() const
     {
-        return kindFromID(m_value) != SourceNotSet;
+        return kind() != SourceNotSet;
     }
     
     ValueSourceKind kind() const
     {
-        return kindFromID(m_value);
+        return m_kind;
     }
     
     bool isInJSStack() const { return JSC::DFG::isInJSStack(kind()); }
@@ -165,21 +193,6 @@ public:
     {
         ASSERT(isTriviallyRecoverable());
         switch (kind()) {
-        case ValueInJSStack:
-            return ValueRecovery::alreadyInJSStack();
-            
-        case Int32InJSStack:
-            return ValueRecovery::alreadyInJSStackAsUnboxedInt32();
-            
-        case CellInJSStack:
-            return ValueRecovery::alreadyInJSStackAsUnboxedCell();
-            
-        case BooleanInJSStack:
-            return ValueRecovery::alreadyInJSStackAsUnboxedBoolean();
-            
-        case DoubleInJSStack:
-            return ValueRecovery::alreadyInJSStackAsUnboxedDouble();
-            
         case SourceIsDead:
             return ValueRecovery::constant(jsUndefined());
             
@@ -187,35 +200,27 @@ public:
             return ValueRecovery::argumentsThatWereNotCreated();
             
         default:
-            RELEASE_ASSERT_NOT_REACHED();
-            return ValueRecovery();
+            return ValueRecovery::displacedInJSStack(virtualRegister(), dataFormat());
         }
     }
     
     MinifiedID id() const
     {
         ASSERT(kind() == HaveNode);
-        return m_value;
+        return MinifiedID::fromBits(m_value);
+    }
+    
+    VirtualRegister virtualRegister() const
+    {
+        ASSERT(isInJSStack());
+        return VirtualRegister(m_value);
     }
     
     void dump(PrintStream&) const;
     
 private:
-    static MinifiedID idFromKind(ValueSourceKind kind)
-    {
-        ASSERT(kind >= SourceNotSet && kind < HaveNode);
-        return MinifiedID::fromBits(MinifiedID::invalidID() - kind);
-    }
-    
-    static ValueSourceKind kindFromID(MinifiedID id)
-    {
-        uintptr_t kind = static_cast<uintptr_t>(MinifiedID::invalidID() - id.m_id);
-        if (kind >= static_cast<uintptr_t>(HaveNode))
-            return HaveNode;
-        return static_cast<ValueSourceKind>(kind);
-    }
-    
-    MinifiedID m_value;
+    ValueSourceKind m_kind;
+    uintptr_t m_value;
 };
 
 } } // namespace JSC::DFG

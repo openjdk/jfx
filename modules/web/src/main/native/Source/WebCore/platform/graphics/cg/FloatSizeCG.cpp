@@ -27,9 +27,9 @@
 #include "config.h"
 #include "FloatSize.h"
 
-#if USE(CG) || (PLATFORM(QT) && USE(QTKIT))
+#if USE(CG)
 
-#include <ApplicationServices/ApplicationServices.h>
+#include <CoreGraphics/CoreGraphics.h>
 
 namespace WebCore {
 

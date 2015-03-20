@@ -30,7 +30,7 @@ public:
     virtual bool supportsHover(const RenderStyle* style) const { return true; }
 
     // System fonts.
-    virtual void systemFont(int propId, FontDescription&) const;
+    virtual void systemFont(CSSValueID, FontDescription&) const;
 
     static RefPtr<RenderTheme> sm_defaultInstance;
 
