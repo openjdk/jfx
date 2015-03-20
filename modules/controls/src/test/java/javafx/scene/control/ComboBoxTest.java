@@ -1197,7 +1197,7 @@ public class ComboBoxTest {
 
     private int test_rt35586_count = 0;
     @Test public void test_rt35586() {
-        assertEquals(0, test_rt34603_count);
+        assertEquals(0, test_rt35586_count);
 
         final ComboBox<String> cb = new ComboBox<String>();
         cb.setEditable(true);
@@ -1616,7 +1616,6 @@ public class ComboBoxTest {
         sl.dispose();
     }
 
-    @Ignore("fix not yet developed")
     @Test public void test_rt36902() {
         final ComboBox<String> cb1 = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
         final ComboBox<String> cb2 = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
