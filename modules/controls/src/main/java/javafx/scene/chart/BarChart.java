@@ -226,6 +226,11 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
 
     @Override protected void dataItemRemoved(final Data<X,Y> item, final Series<X,Y> series) {
         final Node bar = item.getNode();
+
+        if (bar != null) {
+            bar.focusTraversableProperty().unbind();
+        }
+
         if (shouldAnimate()) {
             XYValueMap.clear();
             dataRemoveTimeline = createDataRemoveTimeline(item, bar, series);

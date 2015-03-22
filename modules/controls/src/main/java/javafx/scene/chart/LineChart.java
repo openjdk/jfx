@@ -294,6 +294,11 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
 
     @Override protected  void dataItemRemoved(final Data<X,Y> item, final Series<X,Y> series) {
         final Node symbol = item.getNode();
+
+        if (symbol != null) {
+            symbol.focusTraversableProperty().unbind();
+        }
+
         // remove item from sorted list
         int itemIndex = series.getItemIndex(item);
         if (shouldAnimate()) {
