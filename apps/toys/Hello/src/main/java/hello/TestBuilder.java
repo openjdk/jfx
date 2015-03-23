@@ -79,7 +79,6 @@ import javafx.animation.AnimationTimer;
 import javafx.stage.Modality;
 import javafx.stage.Popup;
 import javafx.stage.Stage;
-import javafx.stage.WindowEvent;
 import javafx.util.Callback;
 import javafx.util.Duration;
 import com.sun.glass.events.KeyEvent;
@@ -1765,11 +1764,7 @@ public class TestBuilder {
         int pixel = robot.getPixelColor(x, y);
         robot.destroy();
         int expectedPixel = colorToRGB(expected);
-        if (pixel == expectedPixel) {
-            System.out.println("Expected color been found, at (" + x + "," + y + ")");
-            return 1;
-        } else if (pixel == (expectedPixel & 0xfff8fcf8)) {
-            System.out.println("Expected color been found, in 565, at (" + x + "," + y + ")");
+        if (checkColor(pixel, expected)) {
             return 1;
         } else {
             System.out.println("Expected color 0x" + Integer.toHexString(expectedPixel) +
@@ -1778,26 +1773,37 @@ public class TestBuilder {
         return 0;
     }
 
-    private boolean checkColor(int value, int expected) {
-        if (value == expected) {
+    private boolean checkColor(int value, Color expected) {
+
+        double tolerance = 0.07;
+        double ered = expected.getRed();
+        double egrn = expected.getGreen();
+        double eblu = expected.getBlue();
+
+        double vred = ((value & 0xff0000) >> 16) / 255.0;
+        double vgrn = ((value & 0x00ff00) >> 8) / 255.0;
+        double vblu = ((value & 0x0000ff)) / 255.0;
+
+        double dred = Math.abs(ered - vred);
+        double dgrn = Math.abs(egrn - vgrn);
+        double dblu = Math.abs(eblu - vblu);
+
+        if (dred <= tolerance && dgrn <= tolerance && dblu <= tolerance) {
             return true;
         }
-        if (value == (expected & 0xfff8fcf8)) {
-            // fuzzy match with 565
-            return true;
-        }
+
         return false;
     }
        
     public Popup robotScreenTest(final TextField result, Stage stage){
 	
-		Bounds bounds = rec1.localToScreen(new BoundingBox(0, 0, 
-            rec1.getBoundsInParent().getWidth(),
-            rec1.getBoundsInParent().getHeight()));
+        Bounds bounds = rec1.localToScreen(new BoundingBox(0, 0,
+                rec1.getBoundsInParent().getWidth(),
+                rec1.getBoundsInParent().getHeight()));
 
-		int x = 50 + (int) bounds.getMinX();
-		int y = 50 + (int) bounds.getMinY();
-		int []intArr = null;
+        int x = 50 + (int) bounds.getMinX();
+        int y = 50 + (int) bounds.getMinY();
+        int[] intArr = null;
         boolean correct = true;
         Robot robot = com.sun.glass.ui.Application.GetApplication().createRobot();
         int width = 160;
@@ -1819,22 +1825,34 @@ public class TestBuilder {
 
         for (int i = width; i <= height*(height-1); i += width) {
             for (int j = 1; j <= 38; j ++){
-                if (!checkColor(intArr[j+i],colorToRGB(Color.RED))) {
+                if (!checkColor(intArr[j+i],Color.RED)) {
+                    System.out.println(" pixel("+j+","+(i/width)+") "+
+                            Integer.toHexString(intArr[j+i])+" != "+
+                            Integer.toHexString(colorToRGB(Color.RED)));
                     correct = false;
                 }
              }
             for (int j = 41; j <= 78; j ++){
-                if (!checkColor(intArr[j+i],colorToRGB(Color.BLUE))) {
+                if (!checkColor(intArr[j+i],Color.BLUE)) {
+                    System.out.println(" pixel("+j+","+(i/width)+") "+
+                            Integer.toHexString(intArr[j+i])+" != "+
+                            Integer.toHexString(colorToRGB(Color.BLUE)));
                     correct = false;
                 }
              }
             for (int j = 81; j <= 118; j ++){
-                if (!checkColor(intArr[j+i],colorToRGB(Color.YELLOW))) {
+                if (!checkColor(intArr[j+i],Color.YELLOW)) {
+                    System.out.println(" pixel("+j+","+(i/width)+") "+
+                            Integer.toHexString(intArr[j+i])+" != "+
+                            Integer.toHexString(colorToRGB(Color.YELLOW)));
                     correct = false;
                 }
              }
             for (int j = 121; j <= 158; j ++){
-                if (!checkColor(intArr[j+i],colorToRGB(Color.GREEN))) {
+                if (!checkColor(intArr[j+i],Color.GREEN)) {
+                    System.out.println(" pixel("+j+","+(i/width)+") "+
+                            Integer.toHexString(intArr[j+i])+" != "+
+                            Integer.toHexString(colorToRGB(Color.GREEN)));
                     correct = false;
                 }
             }
