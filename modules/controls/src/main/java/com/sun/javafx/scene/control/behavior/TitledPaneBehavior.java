@@ -51,7 +51,9 @@ public class TitledPaneBehavior extends BehaviorBase<TitledPane> {
 
     protected static final List<KeyBinding> TITLEDPANE_BINDINGS = new ArrayList<KeyBinding>();
     static {
-        TITLEDPANE_BINDINGS.add(new KeyBinding(ENTER, PRESS_ACTION));
+        // ENTER should not be a key binding for TitledPane, as this is the
+        // key reserved for the default button. See RT-40166 for more detail.
+        // TITLEDPANE_BINDINGS.add(new KeyBinding(ENTER, PRESS_ACTION));
         TITLEDPANE_BINDINGS.add(new KeyBinding(SPACE, PRESS_ACTION));
     }
 
