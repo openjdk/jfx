@@ -34,17 +34,17 @@
 
 namespace WebCore {
 
-class HTMLUnknownElement FINAL : public HTMLElement {
+class HTMLUnknownElement final : public HTMLElement {
 public:
-    static PassRefPtr<HTMLUnknownElement> create(const QualifiedName& tagName, Document* document)
+    static PassRefPtr<HTMLUnknownElement> create(const QualifiedName& tagName, Document& document)
     {
         return adoptRef(new HTMLUnknownElement(tagName, document));
     }
 
-    virtual bool isHTMLUnknownElement() const OVERRIDE { return true; }
+    virtual bool isHTMLUnknownElement() const override { return true; }
 
 private:
-    HTMLUnknownElement(const QualifiedName& tagName, Document* document)
+    HTMLUnknownElement(const QualifiedName& tagName, Document& document)
         : HTMLElement(tagName, document)
     {
     }

@@ -29,61 +29,57 @@
 
 #include "TextBreakIterator.h"
 #include <wtf/text/StringImpl.h>
-#include <wtf/unicode/Unicode.h>
-
-using namespace WTF;
-using namespace Unicode;
 
 namespace WebCore {
 
-int endOfFirstWordBoundaryContext(const UChar* characters, int length)
+unsigned endOfFirstWordBoundaryContext(StringView text)
 {
-    for (int i = 0; i < length; ) {
-        int first = i;
+    unsigned length = text.length();
+    for (unsigned i = 0; i < length; ) {
+        unsigned first = i;
         UChar32 ch;
-        U16_NEXT(characters, i, length, ch);
+        U16_NEXT(text, i, length, ch);
         if (!requiresContextForWordBoundary(ch))
             return first;
     }
     return length;
 }
 
-int startOfLastWordBoundaryContext(const UChar* characters, int length)
+unsigned startOfLastWordBoundaryContext(StringView text)
 {
-    for (int i = length; i > 0; ) {
-        int last = i;
+    unsigned length = text.length();
+    for (unsigned i = length; i > 0; ) {
+        unsigned last = i;
         UChar32 ch;
-        U16_PREV(characters, 0, i, ch);
+        U16_PREV(text, 0, i, ch);
         if (!requiresContextForWordBoundary(ch))
             return last;
     }
     return 0;
 }
 
-#if !PLATFORM(MAC) && !PLATFORM(QT)
+#if !PLATFORM(COCOA)
 
-int findNextWordFromIndex(const UChar* chars, int len, int position, bool forward)
+int findNextWordFromIndex(StringView text, int position, bool forward)
 {
-    TextBreakIterator* it = wordBreakIterator(chars, len);
+    TextBreakIterator* it = wordBreakIterator(text);
 
     if (forward) {
         position = textBreakFollowing(it, position);
         while (position != TextBreakDone) {
-            // We stop searching when the character preceeding the break
-            // is alphanumeric.
-            if (position < len && isAlphanumeric(chars[position - 1]))
+            // We stop searching when the character preceeding the break is alphanumeric.
+            if (static_cast<unsigned>(position) < text.length() && u_isalnum(text[position - 1]))
                 return position;
 
             position = textBreakFollowing(it, position);
         }
 
-        return len;
+        return text.length();
     } else {
         position = textBreakPreceding(it, position);
         while (position != TextBreakDone) {
-            // We stop searching when the character following the break
-            // is alphanumeric.
-            if (position > 0 && isAlphanumeric(chars[position]))
+            // We stop searching when the character following the break is alphanumeric.
+            if (position && u_isalnum(text[position]))
                 return position;
 
             position = textBreakPreceding(it, position);
@@ -93,15 +89,23 @@ int findNextWordFromIndex(const UChar* chars, int len, int position, bool forwar
     }
 }
 
-void findWordBoundary(const UChar* chars, int len, int position, int* start, int* end)
+void findWordBoundary(StringView text, int position, int* start, int* end)
 {
-    TextBreakIterator* it = wordBreakIterator(chars, len);
+    TextBreakIterator* it = wordBreakIterator(text);
     *end = textBreakFollowing(it, position);
     if (*end < 0)
         *end = textBreakLast(it);
     *start = textBreakPrevious(it);
 }
 
-#endif // !PLATFORM(MAC) && !PLATFORM(QT)
+void findEndWordBoundary(StringView text, int position, int* end)
+{
+    TextBreakIterator* it = wordBreakIterator(text);
+    *end = textBreakFollowing(it, position);
+    if (*end < 0)
+        *end = textBreakLast(it);
+}
+
+#endif // !PLATFORM(COCOA)
 
 } // namespace WebCore

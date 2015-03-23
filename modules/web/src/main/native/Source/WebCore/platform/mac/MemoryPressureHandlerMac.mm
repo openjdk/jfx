@@ -30,6 +30,7 @@
 #import <WebCore/GCController.h>
 #import <WebCore/FontCache.h>
 #import <WebCore/MemoryCache.h>
+#import <WebCore/Page.h>
 #import <WebCore/PageCache.h>
 #import <WebCore/LayerPool.h>
 #import <WebCore/ScrollingThread.h>
@@ -39,16 +40,12 @@
 #import <wtf/FastMalloc.h>
 #import <wtf/Functional.h>
 
-#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
+#if !PLATFORM(IOS)
 #import "WebCoreSystemInterface.h"
 #import <notify.h>
 #endif
 
-using std::max;
-
 namespace WebCore {
-
-#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 
 #if !PLATFORM(IOS)
 static dispatch_source_t _cache_event_source = 0;
@@ -70,7 +67,11 @@ void MemoryPressureHandler::install()
         return;
 
     dispatch_async(dispatch_get_main_queue(), ^{
+#if !PLATFORM(IOS) && MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+        _cache_event_source = wkCreateMemoryStatusPressureCriticalDispatchOnMainQueue();
+#else
         _cache_event_source = wkCreateVMPressureDispatchOnMainQueue();
+#endif
         if (_cache_event_source) {
             dispatch_set_context(_cache_event_source, this);
             dispatch_source_set_event_handler(_cache_event_source, ^{ memoryPressureHandler().respondToMemoryPressure();});
@@ -78,8 +79,13 @@ void MemoryPressureHandler::install()
         }
     });
 
-    notify_register_dispatch("org.WebKit.lowMemory", &_notifyToken,
-         dispatch_get_main_queue(), ^(int) { memoryPressureHandler().respondToMemoryPressure();});
+    // Allow simulation of memory pressure with "notifyutil -p org.WebKit.lowMemory"
+    // Note that we also ask JSC to garbage collect some time soon, unlike the real memory pressure path.
+    // This is to get more stable numbers in memory benchmarks using this mechanism.
+    notify_register_dispatch("org.WebKit.lowMemory", &_notifyToken, dispatch_get_main_queue(), ^(int) {
+        memoryPressureHandler().respondToMemoryPressure();
+        gcController().garbageCollectSoon();
+    });
 
     m_installed = true;
 }
@@ -91,16 +97,16 @@ void MemoryPressureHandler::uninstall()
 
     dispatch_async(dispatch_get_main_queue(), ^{
         if (_cache_event_source) {
-    dispatch_source_cancel(_cache_event_source);
-    dispatch_release(_cache_event_source);
-    _cache_event_source = 0;
+            dispatch_source_cancel(_cache_event_source);
+            dispatch_release(_cache_event_source);
+            _cache_event_source = 0;
         }
 
-    if (_timer_event_source) {
-        dispatch_source_cancel(_timer_event_source);
-        dispatch_release(_timer_event_source);
-        _timer_event_source = 0;
-    }
+        if (_timer_event_source) {
+            dispatch_source_cancel(_timer_event_source);
+            dispatch_release(_timer_event_source);
+            _timer_event_source = 0;
+        }
     });
 
     m_installed = false;
@@ -138,7 +144,7 @@ void MemoryPressureHandler::respondToMemoryPressure()
 
     unsigned holdOffTime = (monotonicallyIncreasingTime() - startTime) * s_holdOffMultiplier;
 
-    holdOff(max(holdOffTime, s_minimumHoldOffTime));
+    holdOff(std::max(holdOffTime, s_minimumHoldOffTime));
 }
 #endif // !PLATFORM(IOS)
 
@@ -157,22 +163,25 @@ void MemoryPressureHandler::releaseMemory(bool)
 
     memoryCache()->pruneToPercentage(0);
 
+#if !PLATFORM(IOS)
     LayerPool::sharedPool()->drain();
+#endif
 
     cssValuePool().drain();
+
+    clearWidthCaches();
+
+    Page::jettisonStyleResolversInAllDocuments();
 
     gcController().discardAllCompiledCode();
 
     // FastMalloc has lock-free thread specific caches that can only be cleared from the thread itself.
     StorageThread::releaseFastMallocFreeMemoryInAllThreads();
-#if ENABLE(WORKERS)
     WorkerThread::releaseFastMallocFreeMemoryInAllThreads();
-#endif
-#if ENABLE(THREADED_SCROLLING)
+#if ENABLE(ASYNC_SCROLLING)
     ScrollingThread::dispatch(bind(WTF::releaseFastMallocFreeMemory));
 #endif
     WTF::releaseFastMallocFreeMemory();
 }
-#endif
 
 } // namespace WebCore

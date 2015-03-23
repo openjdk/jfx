@@ -27,6 +27,7 @@
 #include "ResourceHandleInternal.h"
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
+#include "SharedBuffer.h"
 #include "webkitdownloadprivate.h"
 #include "webkitenumtypes.h"
 #include "webkitglobals.h"
@@ -38,8 +39,8 @@
 #include <glib/gi18n-lib.h>
 #include <glib/gstdio.h>
 #include <wtf/Noncopyable.h>
-#include <wtf/gobject/GOwnPtr.h>
 #include <wtf/gobject/GRefPtr.h>
+#include <wtf/gobject/GUniquePtr.h>
 #include <wtf/text/CString.h>
 
 #ifdef ERROR
@@ -61,18 +62,20 @@ using namespace WebCore;
 
 class DownloadClient : public ResourceHandleClient {
     WTF_MAKE_NONCOPYABLE(DownloadClient);
-    public:
-        DownloadClient(WebKitDownload*);
 
-        virtual void didReceiveResponse(ResourceHandle*, const ResourceResponse&);
-        virtual void didReceiveData(ResourceHandle*, const char*, int, int);
-        virtual void didFinishLoading(ResourceHandle*, double);
-        virtual void didFail(ResourceHandle*, const ResourceError&);
-        virtual void wasBlocked(ResourceHandle*);
-        virtual void cannotShowURL(ResourceHandle*);
+public:
+    DownloadClient(WebKitDownload*);
 
-    private:
-        WebKitDownload* m_download;
+    virtual void didReceiveResponse(ResourceHandle*, const ResourceResponse&);
+    virtual void didReceiveData(ResourceHandle*, const char*, unsigned, int);
+    virtual void didReceiveBuffer(ResourceHandle*, PassRefPtr<SharedBuffer> buffer, int encodedLength);
+    virtual void didFinishLoading(ResourceHandle*, double);
+    virtual void didFail(ResourceHandle*, const ResourceError&);
+    virtual void wasBlocked(ResourceHandle*);
+    virtual void cannotShowURL(ResourceHandle*);
+
+private:
+    WebKitDownload* m_download;
 };
 
 struct _WebKitDownloadPrivate {
@@ -250,16 +253,16 @@ static void webkit_download_class_init(WebKitDownloadClass* downloadClass)
      * Since: 1.1.2
      */
     webkit_download_signals[ERROR] = g_signal_new("error",
-            G_TYPE_FROM_CLASS(downloadClass),
-            (GSignalFlags)G_SIGNAL_RUN_LAST,
-            0,
-            g_signal_accumulator_true_handled,
-            NULL,
-            webkit_marshal_BOOLEAN__INT_INT_STRING,
-            G_TYPE_BOOLEAN, 3,
-            G_TYPE_INT,
-            G_TYPE_INT,
-            G_TYPE_STRING);
+        G_TYPE_FROM_CLASS(downloadClass),
+        (GSignalFlags)G_SIGNAL_RUN_LAST,
+        0,
+        g_signal_accumulator_true_handled,
+        NULL,
+        webkit_marshal_BOOLEAN__INT_INT_STRING,
+        G_TYPE_BOOLEAN, 3,
+        G_TYPE_INT,
+        G_TYPE_INT,
+        G_TYPE_STRING);
 
     // Properties.
 
@@ -461,7 +464,7 @@ static gboolean webkit_download_open_stream_for_uri(WebKitDownload* download, co
 
     WebKitDownloadPrivate* priv = download->priv;
     GRefPtr<GFile> file = adoptGRef(g_file_new_for_uri(uri));
-    GOwnPtr<GError> error;
+    GUniqueOutPtr<GError> error;
 
     if (append)
         priv->outputStream = g_file_append_to(file.get(), G_FILE_CREATE_NONE, NULL, &error.outPtr());
@@ -474,7 +477,9 @@ static gboolean webkit_download_open_stream_for_uri(WebKitDownload* download, co
     }
 
     GRefPtr<GFileInfo> info = adoptGRef(g_file_info_new());
-    g_file_info_set_attribute_string(info.get(), "metadata::download-uri", webkit_download_get_uri(download));
+    const char* uri_string = webkit_download_get_uri(download);
+    g_file_info_set_attribute_string(info.get(), "metadata::download-uri", uri_string);
+    g_file_info_set_attribute_string(info.get(), "xattr::xdg.origin.url", uri_string);
     g_file_set_attributes_async(file.get(), info.get(), G_FILE_QUERY_INFO_NONE, G_PRIORITY_DEFAULT, 0, 0, 0);
 
     return TRUE;
@@ -635,7 +640,7 @@ const gchar* webkit_download_get_suggested_filename(WebKitDownload* download)
     if (priv->suggestedFilename)
         return priv->suggestedFilename;
 
-    KURL url = KURL(KURL(), webkit_network_request_get_uri(priv->networkRequest));
+    URL url = URL(URL(), webkit_network_request_get_uri(priv->networkRequest));
     url.setQuery(String());
     url.removeFragmentIdentifier();
     priv->suggestedFilename = g_strdup(decodeURLEscapeSequences(url.lastPathComponent()).utf8().data());
@@ -700,7 +705,7 @@ void webkit_download_set_destination_uri(WebKitDownload* download, const gchar* 
 
         GRefPtr<GFile> src = adoptGRef(g_file_new_for_uri(priv->destinationURI));
         GRefPtr<GFile> dest = adoptGRef(g_file_new_for_uri(destination_uri));
-        GOwnPtr<GError> error;
+        GUniqueOutPtr<GError> error;
 
         g_file_move(src.get(), dest.get(), G_FILE_COPY_BACKUP, 0, 0, 0, &error.outPtr());
 
@@ -860,7 +865,7 @@ static void webkit_download_received_data(WebKitDownload* download, const gchar*
     ASSERT(priv->outputStream);
 
     gsize bytes_written;
-    GOwnPtr<GError> error;
+    GUniqueOutPtr<GError> error;
 
     g_output_stream_write_all(G_OUTPUT_STREAM(priv->outputStream),
                               data, length, &bytes_written, NULL, &error.outPtr());
@@ -938,9 +943,20 @@ void DownloadClient::didReceiveResponse(ResourceHandle*, const ResourceResponse&
     }
 }
 
-void DownloadClient::didReceiveData(ResourceHandle*, const char* data, int length, int encodedDataLength)
+void DownloadClient::didReceiveData(ResourceHandle*, const char* data, unsigned length, int encodedDataLength)
 {
-    webkit_download_received_data(m_download, data, length);
+    ASSERT_NOT_REACHED();
+}
+
+void DownloadClient::didReceiveBuffer(ResourceHandle*, PassRefPtr<SharedBuffer> buffer, int encodedLength)
+{
+    // This pattern is suggested by SharedBuffer.h.
+    const char* segment;
+    unsigned position = 0;
+    while (unsigned length = buffer->getSomeData(segment, position)) {
+        webkit_download_received_data(m_download, segment, length);
+        position += length;
+    }
 }
 
 void DownloadClient::didFinishLoading(ResourceHandle*, double)

@@ -19,25 +19,26 @@
  * Boston, MA 02110-1301, USA.
  */
 
-    // http://dvcs.w3.org/hg/dap/raw-file/tip/network-api/index.html
+// http://dvcs.w3.org/hg/dap/raw-file/tip/network-api/index.html
+#if !defined(LANGUAGE_GOBJECT) || !LANGUAGE_GOBJECT
 [
     NoInterfaceObject,
-        Conditional=NETWORK_INFO,
-        ActiveDOMObject,
-        EventTarget
+    Conditional=NETWORK_INFO,
+    ActiveDOMObject,
+    EventTarget,
 ] interface NetworkInfoConnection {
-        readonly attribute double bandwidth;
-        readonly attribute boolean metered;
+    readonly attribute double bandwidth;
+    readonly attribute boolean metered;
 
-        attribute EventListener onwebkitnetworkinfochange;
+    attribute EventListener onwebkitnetworkinfochange;
 
-        // EventTarget interface
+    // EventTarget interface
     void addEventListener(DOMString type, 
                           EventListener listener, 
                           optional boolean useCapture);
     void removeEventListener(DOMString type, 
                              EventListener listener, 
                              optional boolean useCapture);
-    boolean dispatchEvent(Event evt)
-            raises(EventException);
-    };
+    [RaisesException] boolean dispatchEvent(Event evt);
+};
+#endif

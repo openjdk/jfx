@@ -30,10 +30,9 @@
 
 [
     NoInterfaceObject,
-        Conditional=SQL_DATABASE,
-        OmitConstructor,
+    Conditional=SQL_DATABASE,
     JSNoStaticTables,
-    ImplementationLacksVTable
+    ImplementationLacksVTable,
 ] interface SQLTransactionSync {
     [Custom] SQLResultSet executeSql(DOMString sqlStatement, ObjectArray arguments);
-    };
+};

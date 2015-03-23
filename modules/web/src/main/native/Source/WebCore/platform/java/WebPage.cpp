@@ -28,6 +28,10 @@
 #include "Font.h"
 #include "FontPlatformData.h"
 #include "Frame.h"
+#include "MainFrame.h"
+#include "HistoryItem.h"
+#include "BackForwardController.h"
+#include "BackForwardList.h"
 #include "FrameTree.h"
 #include "FrameLoadRequest.h"
 #include "FrameLoaderClientJava.h"
@@ -37,8 +41,9 @@
 #include "IconController.h"
 #include "InspectorClientJava.h"
 #include "InspectorController.h"
-#include "InitializeLogging.h"
+#include "inspector/InspectorAgentBase.h"
 #include "JSContextRefPrivate.h"
+#include "JSContextRef.h"
 #include "JavaEnv.h"
 #include "JavaRef.h"
 #include "Logging.h"
@@ -50,7 +55,6 @@
 #include "PlatformTouchEvent.h"
 #include "PlatformStrategiesJava.h"
 #include "PlatformWheelEvent.h"
-#include "RenderPart.h"
 #include "RenderThemeJava.h"
 #include "RenderTreeAsText.h"
 #include "RenderView.h"
@@ -135,7 +139,7 @@ JLObject WebPage::jobjectFromPage(Page* page)
     if (!page)
         return NULL;
 
-    ChromeClientJava* client = dynamic_cast<ChromeClientJava*>(page->chrome().client());
+    ChromeClientJava* client = dynamic_cast<ChromeClientJava*>(&page->chrome().client());
     return client
         ? client->platformPage()
         : NULL;
@@ -143,7 +147,7 @@ JLObject WebPage::jobjectFromPage(Page* page)
 
 void WebPage::setSize(const IntSize& size)
 {
-    Frame* mainFrame = m_page->mainFrame();
+    Frame* mainFrame = (Frame*)&m_page->mainFrame();
 
     FrameView* frameView = mainFrame->view();
     if (!frameView) {
@@ -201,7 +205,7 @@ void WebPage::prePaint() {
         return;
     }
 #endif
-    Frame* mainFrame = m_page->mainFrame();
+    Frame* mainFrame = (Frame*)&m_page->mainFrame();
     FrameView* frameView = mainFrame->view();
     if (frameView) {
         // Updating layout & styles precedes normal painting.
@@ -219,7 +223,7 @@ void WebPage::paint(jobject rq, jint x, jint y, jint w, jint h)
 
     DBG_CHECKPOINTEX("twkUpdateContent", 15, 100);
 
-    RefPtr<Frame> mainFrame(m_page->mainFrame());
+    RefPtr<Frame> mainFrame((Frame*)&m_page->mainFrame());
     RefPtr<FrameView> frameView(mainFrame->view());
     if (!frameView) {
         return;
@@ -230,11 +234,11 @@ void WebPage::paint(jobject rq, jint x, jint y, jint w, jint h)
     GraphicsContext gc(ppgc);
 
     // TODO: Following JS synchronization is not necessary for single thread model
-    JSGlobalContextRef globalContext = toGlobalRef(mainFrame->script()->globalObject(mainThreadNormalWorld())->globalExec());
+    JSGlobalContextRef globalContext = toGlobalRef(mainFrame->script().globalObject(mainThreadNormalWorld())->globalExec());
     JSC::APIEntryShim sw( toJS(globalContext) );
 
     frameView->paint(&gc, IntRect(x, y, w, h));
-    if (m_page->settings()->showDebugBorders()) {
+    if (m_page->settings().showDebugBorders()) {
         drawDebugLed(gc, IntRect(x, y, w, h), Color(0, 0, 255, 128));
     }
 
@@ -243,7 +247,7 @@ void WebPage::paint(jobject rq, jint x, jint y, jint w, jint h)
 
 void WebPage::postPaint(jobject rq, jint x, jint y, jint w, jint h)
 {
-    if (!m_page->inspectorController()->highlightedNode()
+    if (!m_page->inspectorController().highlightedNode()
 #if USE(ACCELERATED_COMPOSITING)
             && !m_rootLayer
 #endif
@@ -258,7 +262,7 @@ void WebPage::postPaint(jobject rq, jint x, jint y, jint w, jint h)
 #if USE(ACCELERATED_COMPOSITING)
     if (m_rootLayer) {
         renderCompositedLayers(gc, IntRect(x, y, w, h));
-        if (m_page->settings()->showDebugBorders()) {
+        if (m_page->settings().showDebugBorders()) {
             drawDebugLed(gc, IntRect(x, y, w, h), Color(0, 192, 0, 128));
         }
         if (toTextureMapperLayer(m_rootLayer.get())->descendantsOrSelfHaveRunningAnimations()) {
@@ -267,8 +271,8 @@ void WebPage::postPaint(jobject rq, jint x, jint y, jint w, jint h)
     }
 #endif
 
-    if (m_page->inspectorController()->highlightedNode()) {
-        m_page->inspectorController()->drawHighlight(gc);
+    if (m_page->inspectorController().highlightedNode()) {
+        m_page->inspectorController().drawHighlight(gc);
     }
 
     gc.platformContext()->rq().flushBuffer();
@@ -319,7 +323,7 @@ void WebPage::repaint(const IntRect& rect)
 void WebPage::setRootChildLayer(GraphicsLayer* layer)
 {
     if (layer) {
-        m_rootLayer = GraphicsLayer::create(this);
+        m_rootLayer = adoptPtr(GraphicsLayer::create(0, this).release());
         m_rootLayer->setDrawsContent(true);
         m_rootLayer->setContentsOpaque(true);
         m_rootLayer->setSize(pageRect().size());
@@ -359,7 +363,7 @@ void WebPage::syncLayers()
         return;
     }
 
-    m_page->mainFrame()->view()->updateLayoutAndStyleIfNeededRecursive();
+    ((Frame*)&m_page->mainFrame())->view()->updateLayoutAndStyleIfNeededRecursive();
 
     // Updating layout might have taken us out of compositing mode
     if (m_rootLayer) {
@@ -367,7 +371,7 @@ void WebPage::syncLayers()
                     //syncCompositingStateForThisLayerOnly();
     }
 
-    m_page->mainFrame()->view()->flushCompositingStateIncludingSubframes();
+    ((Frame*)&m_page->mainFrame())->view()->flushCompositingStateIncludingSubframes();
                                 //syncCompositingStateIncludingSubframes();
 }
 
@@ -393,12 +397,8 @@ void WebPage::requestJavaRepaint(const IntRect& rect)
 
 IntRect WebPage::pageRect()
 {
-    ChromeClient *client = m_page->chrome().client();
-    if (client) {
-        return IntRect(client->pageRect());
-    } else {
-        return IntRect();
-    }
+    ChromeClient& client = m_page->chrome().client();
+    return IntRect(client.pageRect());
 }
 
 void WebPage::renderCompositedLayers(GraphicsContext& context, const IntRect& clip)
@@ -435,25 +435,25 @@ void WebPage::notifyFlushRequired(const GraphicsLayer*)
 void WebPage::paintContents(const GraphicsLayer*,
                             GraphicsContext& context,
                             GraphicsLayerPaintingPhase,
-                            const IntRect& inClip)
+                            const FloatRect& inClip)
 {
     context.save();
     context.clip(inClip);
-    m_page->mainFrame()->view()->paint(&context, inClip);
-    if (m_page->settings()->showDebugBorders()) {
-        drawDebugBorder(context, inClip, Color(0, 192, 0), 20);
+    ((Frame*)&m_page->mainFrame())->view()->paint(&context, roundedIntRect(inClip));
+    if (m_page->settings().showDebugBorders()) {
+        drawDebugBorder(context, roundedIntRect(inClip), Color(0, 192, 0), 20);
     }
     context.restore();
 }
 
 bool WebPage::showDebugBorders(const GraphicsLayer*) const
 {
-    return m_page->settings()->showDebugBorders();
+    return m_page->settings().showDebugBorders();
 }
 
 bool WebPage::showRepaintCounter(const GraphicsLayer*) const
 {
-    return m_page->settings()->showRepaintCounter();
+    return m_page->settings().showRepaintCounter();
 }
 
 #endif // USE(ACCELERATED_COMPOSITING)
@@ -497,11 +497,9 @@ bool WebPage::keyEvent(const PlatformKeyboardEvent& event)
     if (!frame)
         return false;
 
-    EventHandler* handler = frame->eventHandler();
-    if (!handler)
-        return keyEventDefault(event);
+    EventHandler& handler = frame->eventHandler();
 
-    if (handler->keyEvent(event)) {
+    if (handler.keyEvent(event)) {
         if (event.type() == PlatformKeyboardEvent::RawKeyDown) {
             // Suppress the next keypress event unless the focused node
             // is a plug-in node. (Flash needs these keypress events to
@@ -533,11 +531,9 @@ bool WebPage::charEvent(const PlatformKeyboardEvent& event)
     if (!frame)
         return suppress;
 
-    EventHandler* handler = frame->eventHandler();
-    if (!handler)
-        return suppress || keyEventDefault(event);
+    EventHandler& handler = frame->eventHandler();
 
-    if (!suppress && !handler->keyEvent(event))
+    if (!suppress && !handler.keyEvent(event))
         return keyEventDefault(event);
 
     return true;
@@ -648,26 +644,26 @@ bool WebPage::propagateScroll(ScrollDirection scrollDirection,
     if (!frame)
         return false;
 
-    bool scrollHandled = frame->eventHandler()->scrollOverflow(
+    bool scrollHandled = frame->eventHandler().scrollOverflow(
             scrollDirection,
             scrollGranularity);
     Frame* currentFrame = frame;
     while (!scrollHandled && currentFrame) {
         scrollHandled = currentFrame->view()->scroll(scrollDirection,
                                                      scrollGranularity);
-        currentFrame = currentFrame->tree()->parent();
+        currentFrame = currentFrame->tree().parent();
     }
     return scrollHandled;
 }
 
 Frame* WebPage::focusedWebCoreFrame()
 {
-    return m_page->focusController()->focusedOrMainFrame();
+    return &m_page->focusController().focusedOrMainFrame();
 }
 
 Node* WebPage::focusedWebCoreNode()
 {
-    Frame* frame = m_page->focusController()->focusedFrame();
+    Frame* frame = m_page->focusController().focusedFrame();
     if (!frame)
         return 0;
 
@@ -675,7 +671,7 @@ Node* WebPage::focusedWebCoreNode()
     if (!document)
         return 0;
 
-    return document->focusedNode();
+    return (Node*)document->focusedElement();
 }
 
 //implemented in customized WebCore/page/java/DragControllerJava.cpp
@@ -715,8 +711,8 @@ static String defaultUserAgent()
 
 int WebPage::beginPrinting(float width, float height)
 {
-    Frame* frame = m_page->mainFrame();
-    if (!frame->document() || !frame->view() || !frame->document()->renderer())
+    Frame* frame = (Frame*)&m_page->mainFrame();
+    if (!frame->document() || !frame->view())
         return 0;
     frame->document()->updateLayout();
 
@@ -772,14 +768,14 @@ void WebPage::debugEnded() {
 }
 void WebPage::enableWatchdog() {
     if (globalDebugSessionCounter == 0) {
-        JSContextGroupRef contextGroup = toRef(mainThreadNormalWorld()->vm());
+        JSContextGroupRef contextGroup = toRef(mainThreadNormalWorld().vm());
         JSContextGroupSetExecutionTimeLimit(contextGroup, 10, 0, 0);
     }
 }
 
 void WebPage::disableWatchdog() {
     if (globalDebugSessionCounter > 0) {
-        JSContextGroupRef contextGroup = toRef(mainThreadNormalWorld()->vm());
+        JSContextGroupRef contextGroup = toRef(mainThreadNormalWorld().vm());
 	    JSContextGroupClearExecutionTimeLimit(contextGroup);
 	}
 }
@@ -824,6 +820,12 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkCreatePage
     pc.dragClient = new DragClientJava(jlself);
     pc.inspectorClient = new InspectorClientJava(jlself);
 
+    FrameLoaderClientJava* flc = new FrameLoaderClientJava(jlself);
+    pc.loaderClientForMainFrame = flc;
+    pc.progressTrackerClient = flc;
+
+ //   pc.backForwardClient = BackForwardListImpl::create(NULL);
+
     return ptr_to_jlong(new WebPage(adoptPtr(new Page(pc))));
 }
 
@@ -833,33 +835,39 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkInit
     Page* page = WebPage::pageFromJLong(pPage);
 
     /* Initialization of the default settings */
-    Settings* settings = page->settings();
-    settings->setTextAreasAreResizable(true);
-    settings->setLoadsImagesAutomatically(true);
-    settings->setMinimumFontSize(0);
-    settings->setMinimumLogicalFontSize(5);
-    settings->setScriptEnabled(true);
-    settings->setJavaScriptCanOpenWindowsAutomatically(true);
-    settings->setPluginsEnabled(usePlugins);
-    settings->setDefaultFixedFontSize(13);
-    settings->setDefaultFontSize(16);
-    settings->setContextMenuEnabled(true);
-    settings->setUserAgent(defaultUserAgent());
-    settings->setMaximumHTMLParserDOMTreeDepth(180);
-    settings->setXSSAuditorEnabled(true);
+    Settings& settings = page->settings();
+    settings.setTextAreasAreResizable(true);
+    settings.setLoadsImagesAutomatically(true);
+    settings.setMinimumFontSize(0);
+    settings.setMinimumLogicalFontSize(5);
+    settings.setScriptEnabled(true);
+    settings.setJavaScriptCanOpenWindowsAutomatically(true);
+    settings.setPluginsEnabled(usePlugins);
+    settings.setDefaultFixedFontSize(13);
+    settings.setDefaultFontSize(16);
+    settings.setContextMenuEnabled(true);
+    settings.setUserAgent(defaultUserAgent());
+    settings.setMaximumHTMLParserDOMTreeDepth(180);
+    settings.setXSSAuditorEnabled(true);
 
     /* Using java logical fonts as defaults */
-    settings->setSerifFontFamily("Serif");
-    settings->setSansSerifFontFamily("SansSerif");
-    settings->setFixedFontFamily("Monospaced");
+    settings.setSerifFontFamily("Serif");
+    settings.setSansSerifFontFamily("SansSerif");
+    settings.setFixedFontFamily("Monospaced");
 //    settings->setShowsURLsInToolTips(true);
 
-    JLObject jlself(self, true);
-    FrameLoaderClientJava* frameLoaderClient = new FrameLoaderClientJava(jlself);
-    RefPtr<Frame> frame = Frame::create(page, 0 /* ownerFrameElement */, frameLoaderClient);
-    frameLoaderClient->setFrame(frame.get());
+//    JLObject jlself(self, true);
+//    FrameLoaderClientJava* frameLoaderClient = new FrameLoaderClientJava(jlself);
+//    RefPtr<Frame> frame = Frame::create(page, 0 /* ownerFrameElement */, frameLoaderClient);
+//    frameLoaderClient->setFrame(frame.get());
 
-    frame->init();
+    dynamic_cast<FrameLoaderClientJava*>(&page->mainFrame().loader().client())->setFrame(&page->mainFrame());
+
+    //    frame->init();
+    page->mainFrame().init();
+
+    JSContextGroupRef contextGroup = toRef(mainThreadNormalWorld().vm());
+    JSContextGroupSetExecutionTimeLimit(contextGroup, 10, 0, 0);
 
     WebPage::webPageFromJLong(pPage)->enableWatchdog();
 }
@@ -872,10 +880,10 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkDestroyPage
         return;
     }
 
-    Frame* mainFrame = webPage->page()->mainFrame();
+    Frame* mainFrame = (Frame*)&webPage->page()->mainFrame();
     if (mainFrame) {
-        mainFrame->loader()->stopAllLoaders();
-        mainFrame->loader()->detachFromParent();
+        mainFrame->loader().stopAllLoaders();
+        mainFrame->loader().detachFromParent();
     }
 
     delete webPage;
@@ -888,7 +896,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkGetMainFrame
     if (!page) {
         return 0;
     }
-    Frame* mainFrame = page->mainFrame();
+    Frame* mainFrame = (Frame*)&page->mainFrame();
     if (!mainFrame) {
         return 0;
     }
@@ -902,7 +910,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkGetParentFrame
     if (!frame) {
         return 0;
     }
-    Frame* parentFrame = frame->tree()->parent();
+    Frame* parentFrame = frame->tree().parent();
     if (!parentFrame) {
         return 0;
     }
@@ -917,12 +925,12 @@ JNIEXPORT jlongArray JNICALL Java_com_sun_webkit_WebPage_twkGetChildFrames
         return 0;
     }
 
-    FrameTree* tree = frame->tree();
+    FrameTree& tree = frame->tree();
 
-    jlongArray jArray = env->NewLongArray(tree->childCount());
+    jlongArray jArray = env->NewLongArray(tree.childCount());
     jlong *arr = env->GetLongArrayElements(jArray, 0);
     int i = 0;
-    for (Frame* child = tree->firstChild(); child; child = child->tree()->nextSibling()) {
+    for (Frame* child = tree.firstChild(); child; child = child->tree().nextSibling()) {
         arr[i++] = ptr_to_jlong(child);
     }
     env->ReleaseLongArrayElements(jArray, arr, 0);
@@ -934,10 +942,10 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_WebPage_twkGetName
     (JNIEnv* env, jobject self, jlong pFrame)
 {
     Frame* frame = static_cast<Frame*>(jlong_to_ptr(pFrame));
-    if (!frame || !frame->tree()) {
+    if (!frame) {
         return 0;
     }
-    return frame->tree()->uniqueName().string().toJavaString(env).releaseLocal();
+    return frame->tree().uniqueName().string().toJavaString(env).releaseLocal();
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_WebPage_twkGetURL
@@ -1000,10 +1008,10 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_WebPage_twkGetContentType
     (JNIEnv* env, jobject self, jlong pFrame)
 {
     Frame* frame = static_cast<Frame*>(jlong_to_ptr(pFrame));
-    if (!frame || !frame->loader() || !frame->loader()->documentLoader()) {
+    if (!frame || !frame->loader().documentLoader()) {
         return 0;
     }
-    return frame->loader()->documentLoader()->responseMIMEType().toJavaString(env).releaseLocal();
+    return frame->loader().documentLoader()->responseMIMEType().toJavaString(env).releaseLocal();
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_WebPage_twkGetTitle
@@ -1020,7 +1028,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_WebPage_twkGetIconURL
     (JNIEnv* env, jobject self, jlong pFrame)
 {
     Frame* frame = static_cast<Frame*>(jlong_to_ptr(pFrame));
-    if (!frame || !frame->loader()) {
+    if (!frame) {
         return 0;
     }
 #if ENABLE(ICONDATABASE)
@@ -1034,14 +1042,15 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkOpen
     (JNIEnv* env, jobject self, jlong pFrame, jstring url)
 {
     Frame* frame = static_cast<Frame*>(jlong_to_ptr(pFrame));
-    if (!frame || !frame->loader()) {
+    if (!frame) {
         return;
     }
 
-    static const KURL emptyParent;
-    frame->loader()->load(FrameLoadRequest(
+    static const URL emptyParent;
+    
+    frame->loader().load(FrameLoadRequest(
         frame,
-        ResourceRequest(KURL(emptyParent, String(env, url)))
+        ResourceRequest(URL(emptyParent, String(env, url)))
     ));
 }
 
@@ -1049,7 +1058,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkLoad
     (JNIEnv* env, jobject self, jlong pFrame, jstring text, jstring contentType)
 {
     Frame* frame = static_cast<Frame*>(jlong_to_ptr(pFrame));
-    if (!frame || !frame->loader()) {
+    if (!frame) {
         return;
     }
 
@@ -1057,8 +1066,8 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkLoad
     size_t stringLen = (size_t)env->GetStringUTFLength(text);
     RefPtr<SharedBuffer> buffer = SharedBuffer::create(stringChars, (int)stringLen);
 
-    static const KURL emptyUrl(ParsedURLString, "");
-    frame->loader()->load(FrameLoadRequest(
+    static const URL emptyUrl(ParsedURLString, "");
+    frame->loader().load(FrameLoadRequest(
         frame,
         ResourceRequest(emptyUrl),
         SubstituteData(
@@ -1075,33 +1084,33 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkStop
     (JNIEnv* env, jobject self, jlong pFrame)
 {
     Frame* frame = static_cast<Frame*>(jlong_to_ptr(pFrame));
-    if (!frame || !frame->loader()) {
+    if (!frame) {
         return;
     }
 
-    frame->loader()->stopAllLoaders();
+    frame->loader().stopAllLoaders();
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkStopAll
     (JNIEnv* env, jobject self, jlong pPage)
 {
     Page* page = WebPage::pageFromJLong(pPage);
-    if (!page || !page->mainFrame()) {
+    if (!page) {
         return;
     }
 
-    page->mainFrame()->loader()->stopAllLoaders();
+    page->mainFrame().loader().stopAllLoaders();
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkRefresh
     (JNIEnv* env, jobject self, jlong pFrame)
 {
     Frame* frame = static_cast<Frame*>(jlong_to_ptr(pFrame));
-    if (!frame || !frame->loader()) {
+    if (!frame) {
         return;
     }
 
-    frame->loader()->reload(true);
+    frame->loader().reload(true);
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkGoBackForward
@@ -1112,8 +1121,8 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkGoBackForward
         return JNI_FALSE;
     }
 
-    if (page->canGoBackOrForward(distance)) {
-        page->goBackOrForward(distance);
+    if (page->backForward().canGoBackOrForward(distance)) {
+        page->backForward().goBackOrForward(distance);
         return JNI_TRUE;
     }
 
@@ -1143,10 +1152,10 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkFindInPage
 {
     Page* page = WebPage::pageFromJLong(pPage);
     if (page) {
-        return bool_to_jbool(page->findString(String(env, toFind),
-                                              matchCase ? TextCaseSensitive : TextCaseInsensitive,
-                                              forward ? FindDirectionForward : FindDirectionBackward,
-                                              bool_to_jbool(wrap)));
+        unsigned opts = matchCase ? 0 : CaseInsensitive;
+	opts = forward ? opts : opts | Backwards;
+	opts = wrap ? opts | WrapAround : opts;
+        return bool_to_jbool(page->findString(String(env, toFind), opts));
     }
     return JNI_FALSE;
 }
@@ -1200,11 +1209,11 @@ JNIEXPORT jobject JNICALL Java_com_sun_webkit_WebPage_twkExecuteScript
     (JNIEnv* env, jobject self, jlong pFrame, jstring script)
 {
     Frame* frame = static_cast<Frame*>(jlong_to_ptr(pFrame));
-    if (!frame || !frame->script()) {
+    if (!frame) {
         return NULL;
     }
-    JSGlobalContextRef globalContext = getGlobalContext(frame->script());
-    RefPtr<JSC::Bindings::RootObject> rootObject(frame->script()->createRootObject(frame));
+    JSGlobalContextRef globalContext = getGlobalContext(&frame->script());
+    RefPtr<JSC::Bindings::RootObject> rootObject(frame->script().createRootObject(frame));
     return WebCore::executeScript(
         env,
         NULL,
@@ -1217,12 +1226,12 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkAddJavaScriptBinding
     (JNIEnv* env, jobject self, jlong pFrame, jstring name, jobject value, jobject accessControlContext)
 {
     Frame* frame = static_cast<Frame*>(jlong_to_ptr(pFrame));
-    if (!frame || !frame->script()) {
+    if (!frame) {
         return;
     }
-    JSGlobalContextRef globalContext = getGlobalContext(frame->script());
+    JSGlobalContextRef globalContext = getGlobalContext(&frame->script());
     JSObjectRef window = JSContextGetGlobalObject(globalContext);
-    RefPtr<JSC::Bindings::RootObject> rootObject(frame->script()->createRootObject(frame));
+    RefPtr<JSC::Bindings::RootObject> rootObject(frame->script().createRootObject(frame));
 
     JSValueRef jsval = WebCore::Java_Object_to_JSValue(
         env,
@@ -1244,11 +1253,11 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkReset
     (JNIEnv* env, jobject self, jlong pFrame)
 {
     Frame* frame = static_cast<Frame*>(jlong_to_ptr(pFrame));
-    if (!frame || !frame->tree()) {
+    if (!frame) {
         return;
     }
 
-    frame->tree()->clearName();
+    frame->tree().clearName();
 }
 
 JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkBeginPrinting
@@ -1406,13 +1415,10 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_WebPage_twkGetEncoding
 {
     Page* p = WebPage::pageFromJLong(pPage);
     ASSERT(p);
-    Frame* mainFrame = p->mainFrame();
+    Frame* mainFrame = (Frame*)&p->mainFrame();
     ASSERT(mainFrame);
 
-    if (mainFrame->loader()) {
-        return mainFrame->document()->charset().toJavaString(env).releaseLocal();
-    }
-    return NULL;
+    return mainFrame->document()->charset().toJavaString(env).releaseLocal();
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkSetEncoding
@@ -1420,12 +1426,10 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkSetEncoding
 {
     Page* p = WebPage::pageFromJLong(pPage);
     ASSERT(p);
-    Frame* mainFrame = p->mainFrame();
+    Frame* mainFrame = (Frame*)&p->mainFrame();
     ASSERT(mainFrame);
 
-    if (mainFrame->loader()) {
-        mainFrame->loader()->reloadWithOverrideEncoding(String(env, encoding));
-    }
+    mainFrame->loader().reloadWithOverrideEncoding(String(env, encoding));
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkProcessFocusEvent
@@ -1433,38 +1437,34 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkProcessFocusEvent
      jint id, jint direction)
 {
     Page* page = WebPage::pageFromJLong(pPage);
-    Frame* mainFrame = page->mainFrame();
+    Frame* mainFrame = (Frame*)&page->mainFrame();
 
-    FocusController* focusController = page->focusController();
-    ASSERT(focusController);
-    if (!focusController) {
-        return;
-    }
+    FocusController& focusController = page->focusController();
 
-    Frame* focusedFrame = focusController->focusedFrame();
+    Frame* focusedFrame = focusController.focusedFrame();
     switch (id) {
         case com_sun_webkit_event_WCFocusEvent_FOCUS_GAINED:
-            focusController->setActive(true); // window activation
-            focusController->setFocused(true); // focus gained
+            focusController.setActive(true); // window activation
+            focusController.setFocused(true); // focus gained
             if (!focusedFrame) {
-                focusController->setFocusedFrame(mainFrame);
+                focusController.setFocusedFrame(mainFrame);
                 focusedFrame = mainFrame;
             }
             if (direction == com_sun_webkit_event_WCFocusEvent_FORWARD) {
                 // comment out the following line to get focus to the last
                 // focused node instead of the first focusable one
-                focusedFrame->document()->setFocusedNode(0);
-                focusController->advanceFocus(FocusDirectionForward, 0);
+                focusedFrame->document()->setFocusedElement(0);
+                focusController.advanceFocus(FocusDirectionForward, 0);
             } else if (direction == com_sun_webkit_event_WCFocusEvent_BACKWARD) {
                 // comment out the following line to get focus to the last
                 // focused node instead of the last focusable one
-                focusedFrame->document()->setFocusedNode(0);
-                focusController->advanceFocus(FocusDirectionBackward, 0);
+                focusedFrame->document()->setFocusedElement(0);
+                focusController.advanceFocus(FocusDirectionBackward, 0);
             }
             break;
         case com_sun_webkit_event_WCFocusEvent_FOCUS_LOST:
-            focusController->setFocused(false); // focus lost
-            focusController->setActive(false); // window deactivation
+            focusController.setFocused(false); // focus lost
+            focusController.setActive(false); // window deactivation
             break;
     }
 }
@@ -1491,7 +1491,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessMouseEvent
      jboolean popupTrigger, jfloat timestamp)
 {
     Page* page = WebPage::pageFromJLong(pPage);
-    Frame* frame = page->mainFrame();
+    Frame* frame = (Frame*)&page->mainFrame();
 
     // Uncomment to debug mouse events
     // fprintf(stderr, "twkProcessKeyEvent: "
@@ -1499,11 +1499,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessMouseEvent
     //         "screenX=%d screenY=%d \n",
     //         id, button, clickCount, x, y, screenX, screenY);
 
-    EventHandler* eventHandler = frame->eventHandler();
-    ASSERT(eventHandler);
-    if (!eventHandler) {
-        return false;
-    }
+    EventHandler& eventHandler = frame->eventHandler();
 
     FrameView* frameView = frame->view();
     if (!frameView) {
@@ -1523,41 +1519,41 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessMouseEvent
     case com_sun_webkit_event_WCMouseEvent_MOUSE_PRESSED:
         //frame->focusWindow();
         page->chrome().focus();
-        consumeEvent = eventHandler->handleMousePressEvent(mouseEvent);
+        consumeEvent = eventHandler.handleMousePressEvent(mouseEvent);
         break;
     case com_sun_webkit_event_WCMouseEvent_MOUSE_RELEASED:
-        consumeEvent = eventHandler->handleMouseReleaseEvent(mouseEvent);
+        consumeEvent = eventHandler.handleMouseReleaseEvent(mouseEvent);
         break;
     case com_sun_webkit_event_WCMouseEvent_MOUSE_MOVED:
     case com_sun_webkit_event_WCMouseEvent_MOUSE_DRAGGED:
-        consumeEvent = eventHandler->mouseMoved(mouseEvent);
+        consumeEvent = eventHandler.mouseMoved(mouseEvent);
         break;
     }
 
-    if (popupTrigger && page->settings()->isContextMenuEnabled()) {
-        ContextMenuController* cmc = page->contextMenuController();
-        cmc->clearContextMenu();
-        bool handleEvent = eventHandler->sendContextMenuEvent(mouseEvent);
+    if (popupTrigger && page->settings().isContextMenuEnabled()) {
+        ContextMenuController& cmc = page->contextMenuController();
+        cmc.clearContextMenu();
+        bool handleEvent = eventHandler.sendContextMenuEvent(mouseEvent);
         if (!handleEvent) {
             return consumeEvent;
         }
 
-        ContextMenu* contextMenu = cmc->contextMenu();
+        ContextMenu* contextMenu = cmc.contextMenu();
         // right-click in disabled text area (and probably many other
         // scenarios) result in NULL contextMenu here
         if (!contextMenu) {
             return consumeEvent;
         }
 
-        Node* node = cmc->hitTestResult().innerNonSharedNode();
+        Node* node = cmc.hitTestResult().innerNonSharedNode();
         if (!node) {
             return consumeEvent;
         }
 
-        Frame* frame = node->document()->frame();
+        Frame* frame = node->document().frame();
         // we do not want to show context menu for frameset (see 6648628)
         if (frame && !frame->document()->isFrameSet()) {
-            contextMenu->show(cmc, loc);
+            contextMenu->show(&cmc, loc);
         }
         return JNI_TRUE;
     }
@@ -1573,18 +1569,13 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessMouseWheelEvent
      jfloat timestamp)
 {
     Page* page = WebPage::pageFromJLong(pPage);
-    Frame* frame = page->mainFrame();
-
-    ASSERT(frame->eventHandler());
-    if (!frame->eventHandler()) {
-        return JNI_FALSE;
-    }
+    Frame* frame = (Frame*)&page->mainFrame();
 
     PlatformWheelEvent wheelEvent = PlatformWheelEvent(IntPoint(x, y),
                                                        IntPoint(screenX, screenY),
                                                        deltaX, deltaY,
                                                        shift, ctrl, alt, meta);
-    bool consumeEvent = frame->eventHandler()->handleWheelEvent(wheelEvent);
+    bool consumeEvent = frame->eventHandler().handleWheelEvent(wheelEvent);
 
     return bool_to_jbool(consumeEvent);
 }
@@ -1603,7 +1594,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessTouchEvent
     }
 
     PlatformTouchEvent ev(env, id, touchData, shift, ctrl, alt, meta, timestamp);
-    bool consumeEvent = frame->eventHandler()->handleTouchEvent(ev);
+    bool consumeEvent = frame->eventHandler().handleTouchEvent(ev);
     return bool_to_jbool(consumeEvent);
 }
 #endif
@@ -1614,11 +1605,10 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessInputTextChange
 {
     Page* page = WebPage::pageFromJLong(pPage);
 
-    ASSERT(page->focusController());
-    Frame* frame = page->focusController()->focusedOrMainFrame();
-    ASSERT(frame && frame->eventHandler());
+    Frame* frame = (Frame*)&page->focusController().focusedOrMainFrame();
+    ASSERT(frame);
 
-    if (!frame || !frame->eventHandler() || !frame->editor().canEdit()) {
+    if (!frame || !frame->editor().canEdit()) {
         // There's no client to deliver the event. Consume the event
         // so that it won't be delivered to a wrong webkit client.
         return JNI_TRUE;
@@ -1660,13 +1650,9 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessCaretPositionCh
 {
     Page* page = WebPage::pageFromJLong(pPage);
 
-    ASSERT(page->focusController());
-    Frame* frame = page->focusController()->focusedOrMainFrame();
+    Frame* frame = (Frame*)&page->focusController().focusedOrMainFrame();
 
-    ASSERT(frame && frame->eventHandler());
-    if (!frame->eventHandler()) {
-        return JNI_FALSE;
-    }
+    ASSERT(frame);
 
     RefPtr<Text> text = frame->editor().compositionNode();
     if (!text) {
@@ -1676,7 +1662,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessCaretPositionCh
     // FIXME: the following code may not work with having committed text
     Position position(text, caretPosition);
     VisibleSelection selection(position, DOWNSTREAM);
-    frame->selection()->setSelection(selection, CharacterGranularity);//true, false, false
+    frame->selection().setSelection(selection, CharacterGranularity);//true, false, false
     return JNI_TRUE;
 }
 
@@ -1684,14 +1670,14 @@ JNIEXPORT jintArray JNICALL Java_com_sun_webkit_WebPage_twkGetTextLocation
     (JNIEnv* env, jobject self, jlong pPage, jint charindex)
 {
     Page* page = WebPage::pageFromJLong(pPage);
-    Frame* frame = page->mainFrame();
+    Frame& frame = page->mainFrame();
 
     jintArray result = env->NewIntArray(4);
     CheckAndClearException(env); // OOME
 
-    FrameView* frameView = frame->view();
+    FrameView* frameView = frame.view();
     if (frameView) {
-        IntRect caret = frame->selection()->absoluteCaretBounds();
+        IntRect caret = frame.selection().absoluteCaretBounds();
         caret = frameView->contentsToWindow(caret);
         jint* ints = (jint*) env->GetPrimitiveArrayCritical(result, NULL);
         ints[0] = caret.x();
@@ -1711,7 +1697,7 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkGetLocationOffset
     // coordinate is out of the composition text range.
 
     Page* page = WebPage::pageFromJLong(pPage);
-    Frame* frame = page->mainFrame();
+    Frame* frame = (Frame*)&page->mainFrame();
 
     FrameView* frameView = frame->view();
     if (!frameView) {
@@ -1745,12 +1731,12 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkGetInsertPositionOffset
     (JNIEnv *env, jobject self, jlong pPage)
 {
     Page* page = WebPage::pageFromJLong(pPage);
-    Frame* frame = page->mainFrame();
+    Frame* frame = (Frame*)&page->mainFrame();
 
     jint position = 0;
     Editor &editor = frame->editor();
     if (editor.canEdit()) {
-        VisibleSelection selection = frame->selection()->selection();
+        VisibleSelection selection = frame->selection().selection();
         if (selection.isCaret()) {
             VisiblePosition caret = selection.visibleStart();
             position = caret.deepEquivalent().offsetInContainerNode();
@@ -1772,12 +1758,12 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkGetCommittedTextLength
     (JNIEnv *env, jobject self, jlong pPage)
 {
     Page* page = WebPage::pageFromJLong(pPage);
-    Frame* frame = page->mainFrame();
+    Frame* frame = (Frame*)&page->mainFrame();
 
     jint length = 0;
     Editor &editor = frame->editor();
     if (editor.canEdit()) {
-        RefPtr<Range> range = rangeOfContents(frame->selection()->start().element());
+        RefPtr<Range> range = rangeOfContents(*(Node*)frame->selection().selection().start().element());
         // Code derived from Range::toString
         Node* pastLast = range.get()->pastLastNode();
         for (Node* n = range.get()->firstNode(); n != pastLast; n = NodeTraversal::next(n)) {
@@ -1799,13 +1785,13 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_WebPage_twkGetCommittedText
     (JNIEnv *env, jobject self, jlong pPage)
 {
     Page* page = WebPage::pageFromJLong(pPage);
-    Frame* frame = page->mainFrame();
+    Frame* frame = (Frame*)&page->mainFrame();
 
     jstring text = 0;
 
     Editor &editor = frame->editor();
     if (editor.canEdit()) {
-        RefPtr<Range> range = rangeOfContents(frame->selection()->start().element());
+        RefPtr<Range> range = rangeOfContents(*(Node*)frame->selection().selection().start().element());
         if (range) {
             String t = plainText(range.get());
             // Exclude the composition text if any
@@ -1823,7 +1809,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_WebPage_twkGetCommittedText
                     t = s + t.substring(end, length - start);
                 }
             }
-            text = env->NewString(reinterpret_cast<const jchar *>(t.characters()), t.length());
+            text = env->NewString(reinterpret_cast<const jchar *>(t.deprecatedCharacters()), t.length());
             CheckAndClearException(env); // OOME
         }
     }
@@ -1834,12 +1820,12 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_WebPage_twkGetSelectedText
     (JNIEnv *env, jobject self, jlong pPage)
 {
     Page* page = WebPage::pageFromJLong(pPage);
-    Frame* frame = page->mainFrame();
+    Frame* frame = (Frame*)&page->mainFrame();
 
     jstring text = 0;
 
     String t = frame->editor().selectedText();
-    text = env->NewString(reinterpret_cast<const jchar *>(t.characters()), t.length());
+    text = env->NewString(reinterpret_cast<const jchar *>(t.deprecatedCharacters()), t.length());
     CheckAndClearException(env); // OOME
 
     return text;
@@ -1904,29 +1890,29 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkProcessDrag
             IntPoint(x, y),
             IntPoint(screenX, screenY),
             keyStateToDragOperation(javaAction));
-        DragController *dc = WebPage::pageFromJLong(pPage)->dragController();
+        DragController& dc = WebPage::pageFromJLong(pPage)->dragController();
 
         setCopyKeyState(ACTION_COPY == javaAction);
         switch(actionId){
         case com_sun_webkit_WebPage_DND_DST_EXIT:
-            dc->dragExited(&dragData);
+	    dc.dragExited(dragData);
             return 0;
         case com_sun_webkit_WebPage_DND_DST_ENTER:
-            return dragOperationToDragCursor( dc->dragEntered(&dragData).operation);
+            return dragOperationToDragCursor( dc.dragEntered(dragData).operation);
         case com_sun_webkit_WebPage_DND_DST_OVER:
         case com_sun_webkit_WebPage_DND_DST_CHANGE:
-            return dragOperationToDragCursor(dc->dragUpdated(&dragData).operation);
+            return dragOperationToDragCursor(dc.dragUpdated(dragData).operation);
         case com_sun_webkit_WebPage_DND_DST_DROP:
             {
-                int ret = dc->performDrag(&dragData) ? 1 : 0;
-                WebPage::pageFromJLong(pPage)->dragController()->dragEnded();
+                int ret = dc.performDrag(dragData) ? 1 : 0;
+                WebPage::pageFromJLong(pPage)->dragController().dragEnded();
                 return ret;
             }
         }
     } else {
         //SOURCE
-        EventHandler* eventHandler =
-                WebPage::pageFromJLong(pPage)->mainFrame()->eventHandler();
+        EventHandler& eventHandler =
+                WebPage::pageFromJLong(pPage)->mainFrame().eventHandler();
         PlatformMouseEvent mouseEvent = PlatformMouseEvent(
             IntPoint(x, y),
             IntPoint(screenX, screenY),
@@ -1945,7 +1931,7 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkProcessDrag
 //            eventHandler->dragSourceMovedTo(mouseEvent);
             break;
         case com_sun_webkit_WebPage_DND_SRC_DROP:
-            eventHandler->dragSourceEndedAt(mouseEvent, keyStateToDragOperation(javaAction));
+            eventHandler.dragSourceEndedAt(mouseEvent, keyStateToDragOperation(javaAction));
             break;
         }
     }
@@ -1954,13 +1940,8 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkProcessDrag
 
 static Editor* getEditor(Page* page) {
     ASSERT(page);
-    ASSERT(page->focusController());
-    Frame* frame = page->focusController()->focusedOrMainFrame();
-    if (frame) {
-        return &frame->editor();
-    } else {
-        return NULL;
-    }
+    Frame& frame = page->focusController().focusedOrMainFrame();
+    return &frame.editor();
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkExecuteCommand
@@ -2065,7 +2046,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkGetUsePageCache
     ASSERT(pPage);
     Page* page = WebPage::pageFromJLong(pPage);
     ASSERT(page);
-    return bool_to_jbool(page->settings()->usesPageCache());
+    return bool_to_jbool(page->settings().usesPageCache());
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkSetUsePageCache
@@ -2074,7 +2055,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkSetUsePageCache
     ASSERT(pPage);
     Page* page = WebPage::pageFromJLong(pPage);
     ASSERT(page);
-    page->settings()->setUsesPageCache(jbool_to_bool(usePageCache));
+    page->settings().setUsesPageCache(jbool_to_bool(usePageCache));
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkIsJavaScriptEnabled
@@ -2083,7 +2064,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkIsJavaScriptEnabled
     ASSERT(pPage);
     Page* page = WebPage::pageFromJLong(pPage);
     ASSERT(page);
-    return bool_to_jbool(page->mainFrame()->script()->canExecuteScripts(NotAboutToExecuteScript));
+    return bool_to_jbool(page->mainFrame().script().canExecuteScripts(NotAboutToExecuteScript));
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkSetJavaScriptEnabled
@@ -2092,7 +2073,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkSetJavaScriptEnabled
     ASSERT(pPage);
     Page* page = WebPage::pageFromJLong(pPage);
     ASSERT(page);
-    page->settings()->setScriptEnabled(jbool_to_bool(enable));
+    page->settings().setScriptEnabled(jbool_to_bool(enable));
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkIsContextMenuEnabled
@@ -2101,7 +2082,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkIsContextMenuEnabled
     ASSERT(pPage);
     Page* page = WebPage::pageFromJLong(pPage);
     ASSERT(page);
-    return bool_to_jbool(page->settings()->isContextMenuEnabled());
+    return bool_to_jbool(page->settings().isContextMenuEnabled());
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkSetContextMenuEnabled
@@ -2110,7 +2091,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkSetContextMenuEnabled
     ASSERT(pPage);
     Page* page = WebPage::pageFromJLong(pPage);
     ASSERT(page);
-    page->settings()->setContextMenuEnabled(jbool_to_bool(enable));
+    page->settings().setContextMenuEnabled(jbool_to_bool(enable));
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkSetUserStyleSheetLocation
@@ -2119,7 +2100,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkSetUserStyleSheetLocation
     ASSERT(pPage);
     Page* page = WebPage::pageFromJLong(pPage);
     ASSERT(page);
-    page->settings()->setUserStyleSheetLocation(KURL(KURL(), String(env, url)));
+    page->settings().setUserStyleSheetLocation(URL(URL(), String(env, url)));
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_WebPage_twkGetUserAgent
@@ -2128,7 +2109,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_WebPage_twkGetUserAgent
     ASSERT(pPage);
     Page* page = WebPage::pageFromJLong(pPage);
     ASSERT(page);
-    return page->settings()->userAgent().toJavaString(env).releaseLocal();
+    return page->settings().userAgent().toJavaString(env).releaseLocal();
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkSetUserAgent
@@ -2137,7 +2118,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkSetUserAgent
     ASSERT(pPage);
     Page* page = WebPage::pageFromJLong(pPage);
     ASSERT(page);
-    page->settings()->setUserAgent(String(env, userAgent));
+    page->settings().setUserAgent(String(env, userAgent));
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkSetLocalStorageDatabasePath
@@ -2146,8 +2127,8 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkSetLocalStorageDatabasePat
     ASSERT(pPage);
     Page* page = WebPage::pageFromJLong(pPage);
     ASSERT(page);
-    Settings* settings = page->settings();
-    settings->setLocalStorageDatabasePath(String(env, path));
+    Settings& settings = page->settings();
+    settings.setLocalStorageDatabasePath(String(env, path));
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkSetLocalStorageEnabled
@@ -2156,8 +2137,8 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkSetLocalStorageEnabled
     ASSERT(pPage);
     Page* page = WebPage::pageFromJLong(pPage);
     ASSERT(page);
-    Settings* settings = page->settings();
-    settings->setLocalStorageEnabled(jbool_to_bool(enabled));
+    Settings& settings = page->settings();
+    settings.setLocalStorageEnabled(jbool_to_bool(enabled));
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkGetDeveloperExtrasEnabled
@@ -2166,7 +2147,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkGetDeveloperExtrasEnab
     ASSERT(pPage);
     Page* page = WebPage::pageFromJLong(pPage);
     ASSERT(page);
-    return bool_to_jbool(page->settings()->developerExtrasEnabled());
+    return bool_to_jbool(page->settings().developerExtrasEnabled());
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkSetDeveloperExtrasEnabled
@@ -2175,7 +2156,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkSetDeveloperExtrasEnabled
     ASSERT(pPage);
     Page* page = WebPage::pageFromJLong(pPage);
     ASSERT(page);
-    page->settings()->setDeveloperExtrasEnabled(jbool_to_bool(enabled));
+    page->settings().setDeveloperExtrasEnabled(jbool_to_bool(enabled));
 }
 
 JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkGetUnloadEventListenersCount
@@ -2192,13 +2173,12 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkConnectInspectorFrontend
 {
     Page *page = WebPage::pageFromJLong(pPage);
     if (page) {
-        InspectorController *ic = page->inspectorController();
-        if (ic) {
-            InspectorClientJava *icj = static_cast<InspectorClientJava *>(ic->inspectorClient());
-            if (icj) {
-                ic->connectFrontend(icj);
-            }
-        }
+        InspectorController& ic = page->inspectorController();
+	InspectorClientJava *icj = static_cast<InspectorClientJava *>(ic.inspectorClient());
+	if (icj) {
+	  ic.connectFrontend(icj);
+	}
+
     }
     WebPage::webPageFromJLong(pPage)->debugStarted();
 }
@@ -2210,7 +2190,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkDisconnectInspectorFronten
     if (!page) {
         return;
     }
-    page->inspectorController()->disconnectFrontend();
+    page->inspectorController().disconnectFrontend(Inspector::InspectorDisconnectReason::InspectedTargetDestroyed);
     WebPage::webPageFromJLong(pPage)->debugEnded();
 }
 
@@ -2223,7 +2203,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkDispatchInspectorMessageFr
     }
     //utatodo: seems that RT-21428 will back again
     //JSDOMWindowBase::commonVM()->timeoutChecker.reset(); // RT-21428
-    page->inspectorController()->dispatchMessageFromFrontend(
+    page->inspectorController().dispatchMessageFromFrontend(
             String(env, message));
 }
 

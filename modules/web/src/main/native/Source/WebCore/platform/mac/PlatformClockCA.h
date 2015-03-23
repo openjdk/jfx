@@ -34,21 +34,21 @@ typedef struct OpaqueCAClock *CAClockRef;
 
 namespace WebCore {
 
-class PlatformClockCA : public Clock {
+class PlatformClockCA final : public Clock {
 public:
     PlatformClockCA();
     virtual ~PlatformClockCA();
 
 private:
-    virtual void setCurrentTime(double);
-    virtual double currentTime() const;
+    virtual void setCurrentTime(double) override;
+    virtual double currentTime() const override;
 
-    virtual void setPlayRate(double);
-    virtual double playRate() const;
+    virtual void setPlayRate(double) override;
+    virtual double playRate() const override;
 
-    virtual void start();
-    virtual void stop();
-    virtual bool isRunning() const { return m_running; }
+    virtual void start() override;
+    virtual void stop() override;
+    virtual bool isRunning() const override { return m_running; }
 
     CAClockRef m_clock;
     bool m_running;

@@ -28,18 +28,21 @@
 #ifndef RenderSVGRect_h
 #define RenderSVGRect_h
 
-#if ENABLE(SVG)
 #include "RenderSVGPath.h"
 #include "SVGRectElement.h"
 
 namespace WebCore {
 
-class RenderSVGRect : public RenderSVGShape {
+class RenderSVGRect final : public RenderSVGShape {
 public:
-    explicit RenderSVGRect(SVGRectElement*);
+    RenderSVGRect(SVGRectElement&, PassRef<RenderStyle>);
     virtual ~RenderSVGRect();
 
+    SVGRectElement& rectElement() const;
+
 private:
+    void graphicsElement() const = delete;
+
     virtual const char* renderName() const { return "RenderSVGRect"; }
 
     virtual void updateShapeFromElement();
@@ -57,5 +60,4 @@ private:
 
 }
 
-#endif // ENABLE(SVG)
 #endif

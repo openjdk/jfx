@@ -29,7 +29,7 @@
 #include "webkitsecurityoriginprivate.h"
 #include "webkitwebframe.h"
 #include <glib/gi18n-lib.h>
-#include <wtf/gobject/GOwnPtr.h>
+#include <wtf/gobject/GUniquePtr.h>
 #include <wtf/text/CString.h>
 
 /**
@@ -41,7 +41,7 @@
  * the same icon database.
  *
  * The icon database is enabled by default and stored in
- * ~/.local/share/webkit/icondatabase, depending on XDG_DATA_HOME.
+ * ~/.cache/webkit/icondatabase, depending on XDG_CACHE_HOME.
  *
  * WebKit will automatically look for available icons in link elements
  * on opened pages as well as an existing favicon.ico and load the
@@ -80,7 +80,7 @@ static guint webkit_icon_database_signals[LAST_SIGNAL] = { 0, };
 G_DEFINE_TYPE(WebKitIconDatabase, webkit_icon_database, G_TYPE_OBJECT);
 
 struct _WebKitIconDatabasePrivate {
-    GOwnPtr<gchar> path;
+    GUniquePtr<gchar> path;
 };
 
 static void webkit_icon_database_finalize(GObject* object)
@@ -166,15 +166,15 @@ static void webkit_icon_database_class_init(WebKitIconDatabaseClass* klass)
      * Deprecated: 1.8: Use WebKitFaviconDatabase::icon-loaded instead.
      */
     webkit_icon_database_signals[ICON_LOADED] = g_signal_new("icon-loaded",
-            G_TYPE_FROM_CLASS(klass),
-            (GSignalFlags)G_SIGNAL_RUN_LAST,
-            0,
-            NULL,
-            NULL,
-            webkit_marshal_VOID__OBJECT_STRING,
-            G_TYPE_NONE, 2,
-            WEBKIT_TYPE_WEB_FRAME,
-            G_TYPE_STRING);
+        G_TYPE_FROM_CLASS(klass),
+        (GSignalFlags)G_SIGNAL_RUN_LAST,
+        0,
+        NULL,
+        NULL,
+        webkit_marshal_VOID__OBJECT_STRING,
+        G_TYPE_NONE, 2,
+        WEBKIT_TYPE_WEB_FRAME,
+        G_TYPE_STRING);
 
     g_type_class_add_private(klass, sizeof(WebKitIconDatabasePrivate));
 }
@@ -234,12 +234,12 @@ void webkit_icon_database_set_path(WebKitIconDatabase* database, const gchar* pa
         WebCore::iconDatabase().close();
 
     if (!(path && path[0])) {
-        database->priv->path.set(0);
+        database->priv->path.reset();
         WebCore::iconDatabase().setEnabled(false);
         return;
     }
 
-    database->priv->path.set(g_strdup(path));
+    database->priv->path.reset(g_strdup(path));
 
     WebCore::iconDatabase().setEnabled(true);
     WebCore::iconDatabase().open(WebCore::filenameToString(database->priv->path.get()), WebCore::IconDatabase::defaultDatabaseFilename());

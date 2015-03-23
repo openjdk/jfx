@@ -25,10 +25,9 @@
 
 [
     NoInterfaceObject,
-        Conditional=WEBGL,
-    GenerateIsReachable=ImplContext,
-        OmitConstructor,
-        DoNotCheckConstants
+    Conditional=WEBGL,
+    GenerateIsReachable=ImplWebGLRenderingContext,
+    DoNotCheckConstants
 ] interface OESStandardDerivatives {
-        const unsigned int FRAGMENT_SHADER_DERIVATIVE_HINT_OES = 0x8B8B;
-    };
+    const unsigned int FRAGMENT_SHADER_DERIVATIVE_HINT_OES = 0x8B8B;
+};

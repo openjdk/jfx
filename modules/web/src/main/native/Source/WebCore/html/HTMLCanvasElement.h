@@ -33,9 +33,7 @@
 #include "IntSize.h"
 #include <wtf/Forward.h>
 
-#if PLATFORM(QT)
-#define DefaultInterpolationQuality InterpolationMedium
-#elif USE(CG)
+#if USE(CG)
 #define DefaultInterpolationQuality InterpolationLow
 #else
 #define DefaultInterpolationQuality InterpolationDefault
@@ -57,19 +55,19 @@ class CanvasObserver {
 public:
     virtual ~CanvasObserver() { }
 
-    virtual void canvasChanged(HTMLCanvasElement*, const FloatRect& changedRect) = 0;
-    virtual void canvasResized(HTMLCanvasElement*) = 0;
-    virtual void canvasDestroyed(HTMLCanvasElement*) = 0;
+    virtual void canvasChanged(HTMLCanvasElement&, const FloatRect& changedRect) = 0;
+    virtual void canvasResized(HTMLCanvasElement&) = 0;
+    virtual void canvasDestroyed(HTMLCanvasElement&) = 0;
 };
 
-class HTMLCanvasElement FINAL : public HTMLElement {
+class HTMLCanvasElement final : public HTMLElement {
 public:
-    static PassRefPtr<HTMLCanvasElement> create(Document*);
-    static PassRefPtr<HTMLCanvasElement> create(const QualifiedName&, Document*);
+    static PassRefPtr<HTMLCanvasElement> create(Document&);
+    static PassRefPtr<HTMLCanvasElement> create(const QualifiedName&, Document&);
     virtual ~HTMLCanvasElement();
 
-    void addObserver(CanvasObserver*);
-    void removeObserver(CanvasObserver*);
+    void addObserver(CanvasObserver&);
+    void removeObserver(CanvasObserver&);
 
     // Attributes and functions exposed to script
     int width() const { return size().width(); }
@@ -92,6 +90,11 @@ public:
     }
 
     CanvasRenderingContext* getContext(const String&, CanvasContextAttributes* attributes = 0);
+    bool probablySupportsContext(const String&, CanvasContextAttributes* = 0);
+    static bool is2dType(const String&);
+#if ENABLE(WEBGL)
+    static bool is3dType(const String&);
+#endif
 
     static String toEncodingMimeType(const String& mimeType);
     String toDataURL(const String& mimeType, const double* quality, ExceptionCode&);
@@ -124,6 +127,12 @@ public:
     void setOriginTainted() { m_originClean = false; }
     bool originClean() const { return m_originClean; }
 
+#if PLATFORM(IOS)
+    // FIXME: Can we use unsigned data types, unsigned or size_t?
+    void setMaximumDecodedImageSize(float maximumDecodedImageSize) { m_maximumDecodedImageSize = maximumDecodedImageSize; }
+    float maximumDecodedImageSize() { return m_maximumDecodedImageSize; }
+#endif
+
     AffineTransform baseTransform() const;
 
 #if ENABLE(WEBGL)    
@@ -137,15 +146,15 @@ public:
 
     float deviceScaleFactor() const { return m_deviceScaleFactor; }
 
-    virtual bool canContainRangeEndPoint() const { return false; }
-
 private:
-    HTMLCanvasElement(const QualifiedName&, Document*);
+    HTMLCanvasElement(const QualifiedName&, Document&);
 
-    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
-    virtual RenderObject* createRenderer(RenderArena*, RenderStyle*);
-    virtual void attach();
-    virtual bool areAuthorShadowsAllowed() const OVERRIDE { return false; }
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
+    virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) override;
+    virtual void willAttachRenderers() override;
+
+    virtual bool canContainRangeEndPoint() const override;
+    virtual bool canStartSelection() const override;
 
     void reset();
 
@@ -172,15 +181,22 @@ private:
     float m_deviceScaleFactor;
     bool m_originClean;
 
+#if PLATFORM(IOS)
+    // FIXME: Can we use a unsigned data type, unsigned or size_t?
+    float m_maximumDecodedImageSize;
+#endif
+
     // m_createdImageBuffer means we tried to malloc the buffer.  We didn't necessarily get it.
     mutable bool m_hasCreatedImageBuffer;
     mutable bool m_didClearImageBuffer;
-    mutable OwnPtr<ImageBuffer> m_imageBuffer;
+    mutable std::unique_ptr<ImageBuffer> m_imageBuffer;
     mutable OwnPtr<GraphicsContextStateSaver> m_contextStateSaver;
     
     mutable RefPtr<Image> m_presentedImage;
     mutable RefPtr<Image> m_copiedImage; // FIXME: This is temporary for platforms that have to copy the image buffer to render (and for CSSCanvasValue).
 };
+
+NODE_TYPE_CASTS(HTMLCanvasElement)
 
 } //namespace
 

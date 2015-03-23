@@ -48,9 +48,10 @@ namespace WebCore {
         void setCapacity(int); // number of pages to cache
         int capacity() { return m_capacity; }
         
-        void add(PassRefPtr<HistoryItem>, Page*); // Prunes if capacity() is exceeded.
+        void add(PassRefPtr<HistoryItem>, Page&); // Prunes if capacity() is exceeded.
         void remove(HistoryItem*);
         CachedPage* get(HistoryItem* item);
+        std::unique_ptr<CachedPage> take(HistoryItem*);
 
         int pageCount() const { return m_size; }
         int frameCount() const;
@@ -60,14 +61,16 @@ namespace WebCore {
         // Will mark all cached pages associated with the given page as needing style recalc.
         void markPagesForFullStyleRecalc(Page*);
 
+        // Used when memory is low to prune some cached pages.
+        void pruneToCapacityNow(int capacity);
+
 #if ENABLE(VIDEO_TRACK)
         void markPagesForCaptionPreferencesChanged();
 #endif
 
-#if USE(ACCELERATED_COMPOSITING)
         bool shouldClearBackingStores() const { return m_shouldClearBackingStores; }
         void setShouldClearBackingStores(bool flag) { m_shouldClearBackingStores = flag; }
-#endif
+        void markPagesForDeviceScaleChanged(Page*);
 
     private:
         PageCache(); // Use pageCache() instead.
@@ -87,9 +90,7 @@ namespace WebCore {
         HistoryItem* m_head;
         HistoryItem* m_tail;
         
-#if USE(ACCELERATED_COMPOSITING)
         bool m_shouldClearBackingStores;
-#endif
      };
 
     // Function to obtain the global page cache.

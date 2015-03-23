@@ -33,28 +33,28 @@
 
 namespace WebCore {
 
-    class Image;
+class Image;
 class Pattern;
 
-    typedef int ExceptionCode;
+typedef int ExceptionCode;
 
-    class CanvasPattern : public RefCounted<CanvasPattern> {
-    public:
+class CanvasPattern : public RefCounted<CanvasPattern> {
+public:
     static PassRefPtr<CanvasPattern> create(PassRefPtr<Image>, bool repeatX, bool repeatY, bool originClean);
     ~CanvasPattern();
 
-        static void parseRepetitionType(const String&, bool& repeatX, bool& repeatY, ExceptionCode&);
+    static void parseRepetitionType(const String&, bool& repeatX, bool& repeatY, ExceptionCode&);
 
-        Pattern* pattern() const { return m_pattern.get(); }
+    Pattern* pattern() const { return m_pattern.get(); }
 
-        bool originClean() const { return m_originClean; }
+    bool originClean() const { return m_originClean; }
 
-    private:
-        CanvasPattern(PassRefPtr<Image>, bool repeatX, bool repeatY, bool originClean);
+private:
+    CanvasPattern(PassRefPtr<Image>, bool repeatX, bool repeatY, bool originClean);
 
-        RefPtr<Pattern> m_pattern;
-        bool m_originClean;
-    };
+    RefPtr<Pattern> m_pattern;
+    bool m_originClean;
+};
 
 } // namespace WebCore
 

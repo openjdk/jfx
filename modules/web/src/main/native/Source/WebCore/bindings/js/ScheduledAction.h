@@ -37,7 +37,7 @@ namespace WebCore {
     class Document;
     class ContentSecurityPolicy;
     class ScriptExecutionContext;
-    class WorkerContext;
+    class WorkerGlobalScope;
 
    /* An action (either function or string) to be executed after a specified
     * time interval, either once or repeatedly. Used for window.setTimeout()
@@ -46,27 +46,25 @@ namespace WebCore {
     class ScheduledAction {
         WTF_MAKE_NONCOPYABLE(ScheduledAction); WTF_MAKE_FAST_ALLOCATED;
     public:
-        static PassOwnPtr<ScheduledAction> create(JSC::ExecState*, DOMWrapperWorld* isolatedWorld, ContentSecurityPolicy*);
+        static PassOwnPtr<ScheduledAction> create(JSC::ExecState*, DOMWrapperWorld& isolatedWorld, ContentSecurityPolicy*);
 
         void execute(ScriptExecutionContext*);
 
     private:
-        ScheduledAction(JSC::ExecState*, JSC::JSValue function, DOMWrapperWorld* isolatedWorld);
-        ScheduledAction(const String& code, DOMWrapperWorld* isolatedWorld)
-            : m_function(*isolatedWorld->vm())
+        ScheduledAction(JSC::ExecState*, JSC::JSValue function, DOMWrapperWorld& isolatedWorld);
+        ScheduledAction(const String& code, DOMWrapperWorld& isolatedWorld)
+            : m_function(*isolatedWorld.vm())
             , m_code(code)
-            , m_isolatedWorld(isolatedWorld)
+            , m_isolatedWorld(&isolatedWorld)
         {
         }
 
         void executeFunctionInContext(JSC::JSGlobalObject*, JSC::JSValue thisValue, ScriptExecutionContext*);
         void execute(Document*);
-#if ENABLE(WORKERS)
-        void execute(WorkerContext*);
-#endif
+        void execute(WorkerGlobalScope*);
 
         JSC::Strong<JSC::Unknown> m_function;
-        Vector<JSC::Strong<JSC::Unknown> > m_args;
+        Vector<JSC::Strong<JSC::Unknown>> m_args;
         String m_code;
         RefPtr<DOMWrapperWorld> m_isolatedWorld;
     };

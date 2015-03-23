@@ -19,11 +19,11 @@
  */
 
 [
-        CustomNamedSetter,
-        JSCustomGetOwnPropertySlotAndDescriptor,
-        CustomCall
+    CustomNamedSetter,
+    JSCustomGetOwnPropertySlotAndDescriptor,
+    CustomCall,
 ] interface HTMLObjectElement : HTMLElement {
-        readonly attribute HTMLFormElement form;
+    readonly attribute HTMLFormElement form;
     [Reflect] attribute DOMString code;
     [Reflect] attribute DOMString align;
     [Reflect] attribute DOMString archive;
@@ -40,24 +40,22 @@
     [Reflect] attribute DOMString useMap;
     [Reflect] attribute long vspace;
     [Reflect] attribute DOMString width;
-        readonly attribute boolean willValidate;
-        readonly attribute ValidityState validity;
-        readonly attribute DOMString validationMessage;
-        boolean checkValidity();
+    readonly attribute boolean willValidate;
+    readonly attribute ValidityState validity;
+    readonly attribute DOMString validationMessage;
+    boolean checkValidity();
     void setCustomValidity([TreatNullAs=NullString, TreatUndefinedAs=NullString] DOMString error);
 
-        // Introduced in DOM Level 2:
+    // Introduced in DOM Level 2:
     [CheckSecurityForNode] readonly attribute Document contentDocument;
 
-#if defined(ENABLE_SVG) && ENABLE_SVG
 #if !defined(LANGUAGE_OBJECTIVE_C) || !LANGUAGE_OBJECTIVE_C
-        [CheckSecurityForNode] SVGDocument getSVGDocument() raises(DOMException);
-#endif
+    [CheckSecurityForNode, RaisesException] SVGDocument getSVGDocument();
 #endif
 
 #if defined(LANGUAGE_OBJECTIVE_C) && LANGUAGE_OBJECTIVE_C
-        // Objective-C extension:
-        readonly attribute URL absoluteImageURL;
+    // Objective-C extension:
+    readonly attribute URL absoluteImageURL;
 #endif
-    };
+};
 

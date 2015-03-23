@@ -29,6 +29,7 @@
 
 #include "JSDOMGlobalObject.h"
 #include "JSMainThreadExecState.h"
+#include "JSMainThreadExecStateInstrumentation.h"
 #include "JSMutationObserver.h"
 #include "JSMutationRecord.h"
 #include "ScriptExecutionContext.h"
@@ -41,8 +42,8 @@ namespace WebCore {
 
 JSMutationCallback::JSMutationCallback(JSObject* callback, JSDOMGlobalObject* globalObject)
     : ActiveDOMCallback(globalObject->scriptExecutionContext())
-    , m_callback(PassWeak<JSObject>(callback))
-    , m_isolatedWorld(globalObject->world())
+    , m_callback(callback)
+    , m_isolatedWorld(&globalObject->world())
 {
 }
 
@@ -50,12 +51,12 @@ JSMutationCallback::~JSMutationCallback()
 {
 }
 
-void JSMutationCallback::call(const Vector<RefPtr<MutationRecord> >& mutations, MutationObserver* observer)
+void JSMutationCallback::call(const Vector<RefPtr<MutationRecord>>& mutations, MutationObserver* observer)
 {
     if (!canInvokeCallback())
         return;
 
-    RefPtr<JSMutationCallback> protect(this);
+    Ref<JSMutationCallback> protect(*this);
 
     JSLockHolder lock(m_isolatedWorld->vm());
 
@@ -75,7 +76,7 @@ void JSMutationCallback::call(const Vector<RefPtr<MutationRecord> >& mutations, 
         return;
     ASSERT(context->isDocument());
 
-    JSDOMGlobalObject* globalObject = toJSDOMGlobalObject(context, m_isolatedWorld.get());
+    JSDOMGlobalObject* globalObject = toJSDOMGlobalObject(context, *m_isolatedWorld);
     ExecState* exec = globalObject->globalExec();
 
     JSValue jsObserver = toJS(exec, globalObject, observer);
@@ -88,7 +89,7 @@ void JSMutationCallback::call(const Vector<RefPtr<MutationRecord> >& mutations, 
 
     JSMainThreadExecState::call(exec, callback, callType, callData, jsObserver, args);
 
-    InspectorInstrumentation::didCallFunction(cookie);
+    InspectorInstrumentation::didCallFunction(cookie, context);
 
     if (exec->hadException())
         reportCurrentException(exec);

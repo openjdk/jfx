@@ -26,6 +26,7 @@
 #ifndef RenderScrollbar_h
 #define RenderScrollbar_h
 
+#include "RenderPtr.h"
 #include "RenderStyleConstants.h"
 #include "Scrollbar.h"
 #include <wtf/HashMap.h>
@@ -33,18 +34,15 @@
 namespace WebCore {
 
 class Frame;
-class Node;
+class Element;
 class RenderBox;
 class RenderScrollbarPart;
 class RenderStyle;
 
-class RenderScrollbar : public Scrollbar {
-protected:
-    RenderScrollbar(ScrollableArea*, ScrollbarOrientation, Node*, Frame*);
-
+class RenderScrollbar final : public Scrollbar {
 public:
     friend class Scrollbar;
-    static PassRefPtr<Scrollbar> createCustomScrollbar(ScrollableArea*, ScrollbarOrientation, Node*, Frame* owningFrame = 0);
+    static RefPtr<Scrollbar> createCustomScrollbar(ScrollableArea*, ScrollbarOrientation, Element*, Frame* owningFrame = nullptr);
     virtual ~RenderScrollbar();
 
     RenderBox* owningRenderer() const;
@@ -59,32 +57,37 @@ public:
 
     virtual bool isOverlayScrollbar() const { return false; }
 
-private:
-    virtual void setParent(ScrollView*);
-    virtual void setEnabled(bool);
-
-    virtual void paint(GraphicsContext*, const IntRect& damageRect);
-
-    virtual void setHoveredPart(ScrollbarPart);
-    virtual void setPressedPart(ScrollbarPart);
-
-    virtual void styleChanged();
-
-    virtual bool isCustomScrollbar() const { return true; }
-
-    void updateScrollbarParts(bool destroy = false);
+    float opacity();
 
     PassRefPtr<RenderStyle> getScrollbarPseudoStyle(ScrollbarPart, PseudoId);
-    void updateScrollbarPart(ScrollbarPart, bool destroy = false);
+
+private:
+    RenderScrollbar(ScrollableArea*, ScrollbarOrientation, Element*, Frame*);
+
+    virtual void setParent(ScrollView*) override;
+    virtual void setEnabled(bool) override;
+
+    virtual void paint(GraphicsContext*, const IntRect& damageRect) override;
+
+    virtual void setHoveredPart(ScrollbarPart) override;
+    virtual void setPressedPart(ScrollbarPart) override;
+
+    virtual void styleChanged() override;
+
+    virtual bool isCustomScrollbar() const override { return true; }
+
+    void updateScrollbarParts();
+
+    void updateScrollbarPart(ScrollbarPart);
 
     // This Scrollbar(Widget) may outlive the DOM which created it (during tear down),
-    // so we keep a reference to the Node which caused this custom scrollbar creation.
+    // so we keep a reference to the Element which caused this custom scrollbar creation.
     // This will not create a reference cycle as the Widget tree is owned by our containing
-    // FrameView which this Node pointer can in no way keep alive. See webkit bug 80610.
-    RefPtr<Node> m_owner;
+    // FrameView which this Element pointer can in no way keep alive. See webkit bug 80610.
+    RefPtr<Element> m_ownerElement;
 
     Frame* m_owningFrame;
-    HashMap<unsigned, RenderScrollbarPart*> m_parts;
+    HashMap<unsigned, RenderPtr<RenderScrollbarPart>> m_parts;
 };
 
 inline RenderScrollbar* toRenderScrollbar(ScrollbarThemeClient* scrollbar)

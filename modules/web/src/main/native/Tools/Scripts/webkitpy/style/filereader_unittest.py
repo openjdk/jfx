@@ -20,6 +20,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import tempfile
 import unittest2 as unittest
 
 from webkitpy.common.system.filesystem import FileSystem
@@ -80,8 +81,8 @@ class TextFileReaderTest(LoggingTestCase):
     def test_process_file__does_not_exist(self):
         try:
             self._file_reader.process_file('does_not_exist.txt')
-        except SystemExit, err:
-            self.assertEqual(str(err), '1')
+        except IOError, err:
+            self.assertEqual(str(err), "File does not exist")
         else:
             self.fail('No Exception raised.')
         self._assert_file_reader([], 1)
@@ -153,3 +154,8 @@ class TextFileReaderTest(LoggingTestCase):
         self._file_reader.count_delete_only_file()
         delete_only_file_count = self._file_reader.delete_only_file_count
         self.assertEqual(delete_only_file_count, 1)
+
+    def test_process_malformed_file(self):
+        file_path = tempfile.mktemp(prefix='filereader_unittest_')
+        self.filesystem.write_binary_file(file_path, '\x4D\x69\x63\x72\x6F\x73\x6F\x66\x74\xAE')
+        self._file_reader.process_file(file_path)

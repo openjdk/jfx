@@ -34,21 +34,21 @@ class HTMLFormControlElementWithState : public HTMLFormControlElement {
 public:
     virtual ~HTMLFormControlElementWithState();
 
-    virtual bool canContainRangeEndPoint() const { return false; }
+    virtual bool canContainRangeEndPoint() const override { return false; }
 
     virtual bool shouldSaveAndRestoreFormControlState() const;
     virtual FormControlState saveFormControlState() const;
     // The specified FormControlState must have at least one string value.
     virtual void restoreFormControlState(const FormControlState&) { }
-    void notifyFormStateChanged();
 
 protected:
-    HTMLFormControlElementWithState(const QualifiedName& tagName, Document*, HTMLFormElement*);
+    HTMLFormControlElementWithState(const QualifiedName& tagName, Document&, HTMLFormElement*);
 
     virtual bool shouldAutocomplete() const;
-    virtual void finishParsingChildren();
-    virtual void didMoveToNewDocument(Document* oldDocument) OVERRIDE;
-    virtual bool isFormControlElementWithState() const OVERRIDE;
+    virtual void finishParsingChildren() override;
+    virtual InsertionNotificationRequest insertedInto(ContainerNode&) override;
+    virtual void removedFrom(ContainerNode&) override;
+    virtual bool isFormControlElementWithState() const override;
 };
 
 } // namespace

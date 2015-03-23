@@ -55,19 +55,15 @@ libwebkitgtk_@WEBKITGTK_API_MAJOR_VERSION@_@WEBKITGTK_API_MINOR_VERSION@_la_CPPF
 	$(javascriptcore_cppflags) \
 	$(webkitgtk_cppflags) \
 	-fno-strict-aliasing \
-	$(CLUTTER_CFLAGS) \
-	$(CLUTTER_GTK_CFLAGS) \
 	$(COVERAGE_CFLAGS) \
 	$(ENCHANT_CFLAGS) \
 	$(FREETYPE_CFLAGS) \
-	$(GAIL_CFLAGS) \
 	$(GEOCLUE_CFLAGS) \
 	$(GLIB_CFLAGS) \
 	$(GSTREAMER_CFLAGS) \
 	$(GTK_CFLAGS) \
 	$(LIBSOUP_CFLAGS) \
 	$(LIBXML_CFLAGS) \
-	$(LIBXSLT_CFLAGS) \
 	$(SQLITE3_CFLAGS) \
 	$(UNICODE_CFLAGS) \
 	$(XCOMPOSITE_CFLAGS) \
@@ -75,10 +71,14 @@ libwebkitgtk_@WEBKITGTK_API_MAJOR_VERSION@_@WEBKITGTK_API_MINOR_VERSION@_la_CPPF
 	$(XT_CFLAGS) \
 	$(ZLIB_CFLAGS)
 
-libwebkitgtk_@WEBKITGTK_API_MAJOR_VERSION@_@WEBKITGTK_API_MINOR_VERSION@_la_LDFLAGS = \
+libwebkitgtk_@WEBKITGTK_API_MAJOR_VERSION@_@WEBKITGTK_API_MINOR_VERSION@_la_LDFLAGS := \
 	-version-info @LIBWEBKITGTK_VERSION@ \
-	$(version_script) \
 	$(no_undefined)
+
+if !ENABLE_DEVELOPER_MODE
+libwebkitgtk_@WEBKITGTK_API_MAJOR_VERSION@_@WEBKITGTK_API_MINOR_VERSION@_la_LDFLAGS += \
+	$(version_script)
+endif
 
 libwebkitgtk_@WEBKITGTK_API_MAJOR_VERSION@_@WEBKITGTK_API_MINOR_VERSION@_la_LIBADD := \
 	-lpthread \
@@ -87,7 +87,7 @@ libwebkitgtk_@WEBKITGTK_API_MAJOR_VERSION@_@WEBKITGTK_API_MINOR_VERSION@_la_LIBA
 	libWebCore.la \
 	libWebCorePlatform.la \
 	libWebCoreModules.la \
-	libWebCoreDOM.la \
+	libGObjectDOMBindings.la \
 	libWebCoreGtk.la
 
 if ENABLE_INDEXED_DATABASE
@@ -100,20 +100,15 @@ libwebkitgtk_@WEBKITGTK_API_MAJOR_VERSION@_@WEBKITGTK_API_MINOR_VERSION@_la_LIBA
 	libANGLE.la
 endif
 
-if ENABLE_SVG
 libwebkitgtk_@WEBKITGTK_API_MAJOR_VERSION@_@WEBKITGTK_API_MINOR_VERSION@_la_LIBADD += \
 	libWebCoreSVG.la
-endif
 
 libwebkitgtk_@WEBKITGTK_API_MAJOR_VERSION@_@WEBKITGTK_API_MINOR_VERSION@_la_LIBADD += \
 	libjavascriptcoregtk-@WEBKITGTK_API_MAJOR_VERSION@.@WEBKITGTK_API_MINOR_VERSION@.la \
 	$(CAIRO_LIBS) \
-	$(CLUTTER_LIBS) \
-	$(CLUTTER_GTK_LIBS) \
 	$(COVERAGE_LDFLAGS) \
 	$(ENCHANT_LIBS) \
 	$(FREETYPE_LIBS) \
-	$(GAIL_LIBS) \
 	$(GAMEPAD_LIBS) \
 	$(GEOCLUE_LIBS) \
 	$(GLIB_LIBS) \
@@ -129,6 +124,7 @@ libwebkitgtk_@WEBKITGTK_API_MAJOR_VERSION@_@WEBKITGTK_API_MINOR_VERSION@_la_LIBA
 	$(PNG_LIBS) \
 	$(SQLITE3_LIBS) \
 	$(UNICODE_LIBS) \
+	$(UPOWER_GLIB_LIBS) \
 	$(WEBP_LIBS) \
 	$(XCOMPOSITE_LIBS) \
 	$(XDAMAGE_LIBS) \
@@ -193,10 +189,10 @@ BUILT_SOURCES += $(webkitgtk_built_sources)
 
 webkitgtk_sources += \
 	Source/WebKit/gtk/WebCoreSupport/AcceleratedCompositingContext.h \
-	Source/WebKit/gtk/WebCoreSupport/AcceleratedCompositingContextClutter.cpp \
 	Source/WebKit/gtk/WebCoreSupport/AcceleratedCompositingContextGL.cpp \
-	Source/WebKit/gtk/WebCoreSupport/AcceleratedCompositingContextCairo.cpp \
 	Source/WebKit/gtk/WebCoreSupport/AssertMatchingEnums.cpp \
+	Source/WebKit/gtk/WebCoreSupport/BatteryClientGtk.cpp \
+	Source/WebKit/gtk/WebCoreSupport/BatteryClientGtk.h \
 	Source/WebKit/gtk/WebCoreSupport/ChromeClientGtk.cpp \
 	Source/WebKit/gtk/WebCoreSupport/ChromeClientGtk.h \
 	Source/WebKit/gtk/WebCoreSupport/ContextMenuClientGtk.cpp \
@@ -228,6 +224,8 @@ webkitgtk_sources += \
 	Source/WebKit/gtk/WebCoreSupport/PasteboardHelperGtk.h \
 	Source/WebKit/gtk/WebCoreSupport/PlatformStrategiesGtk.h \
 	Source/WebKit/gtk/WebCoreSupport/PlatformStrategiesGtk.cpp \
+	Source/WebKit/gtk/WebCoreSupport/ProgressTrackerClientGtk.cpp \
+	Source/WebKit/gtk/WebCoreSupport/ProgressTrackerClientGtk.h \
 	Source/WebKit/gtk/WebCoreSupport/UserMediaClientGtk.cpp \
 	Source/WebKit/gtk/WebCoreSupport/UserMediaClientGtk.h \
 	Source/WebKit/gtk/WebCoreSupport/WebViewInputMethodFilter.cpp \
@@ -298,6 +296,7 @@ pkgconfig_DATA += Source/WebKit/gtk/@WEBKITGTK_PC_NAME@-@WEBKITGTK_API_VERSION@.
 if ENABLE_INTROSPECTION
 WebKit-@WEBKITGTK_API_VERSION@.gir: $(G_IR_SCANNER) JavaScriptCore-@WEBKITGTK_API_VERSION@.gir libwebkitgtk-@WEBKITGTK_API_MAJOR_VERSION@.@WEBKITGTK_API_MINOR_VERSION@.la
 	$(AM_V_GEN) \
+	     CC="$(CC)" \
 	     CFLAGS="$(CFLAGS) -Wno-deprecated-declarations" \
 	     $(G_IR_SCANNER) \
 	     --quiet \
@@ -363,18 +362,7 @@ stamp-webkitmarshal.h: $(WEBKIT_MARSHAL_LIST)
 $(GENSOURCES_WEBKIT)/webkitenumtypes.h: stamp-webkitenumtypes.h
 	@true
 stamp-webkitenumtypes.h: $(webkitgtk_h_api) $(WebKit)/GNUmakefile.am
-	$(AM_V_GEN)glib-mkenums \
-			--fhead "#ifndef WEBKIT_ENUM_TYPES_H\n" \
-			--fhead "#define WEBKIT_ENUM_TYPES_H\n\n" \
-			--fhead "#include <glib-object.h>\n\n" \
-			--fhead "#include <webkit/webkitdefines.h>\n\n" \
-			--fhead "G_BEGIN_DECLS\n\n" \
-			--ftail "G_END_DECLS\n\n" \
-			--ftail "#endif\n" \
-			--fprod "#include <webkit/@basename@>\n\n" \
-			--eprod "#define WEBKIT_TYPE_@ENUMSHORT@ @enum_name@_get_type()\n\n" \
-			--eprod "WEBKIT_API GType\n@enum_name@_get_type(void);\n\n" \
-		$(webkitgtk_h_api) | \
+	$(AM_V_GEN)glib-mkenums --template $(srcdir)/Source/WebKit/gtk/webkit/webkitenumtypes.h.template $(webkitgtk_h_api) | \
 		sed 's,web_kit,webkit,' | \
 		sed 's,WEBKIT_TYPE_KIT,WEBKIT_TYPE,' \
 		> xgen-gth \
@@ -383,22 +371,7 @@ stamp-webkitenumtypes.h: $(webkitgtk_h_api) $(WebKit)/GNUmakefile.am
 	&& echo timestamp > $(@F)
 
 $(GENSOURCES_WEBKIT)/webkitenumtypes.cpp: $(webkitgtk_h_api) $(WebKit)/GNUmakefile.am
-	$(AM_V_GEN)glib-mkenums \
-			--fhead "#include <config.h>\n" \
-			--fhead "#include <glib-object.h>\n" \
-			--fhead "#include \"$(GENSOURCES_WEBKIT)/webkitenumtypes.h\"\n\n" \
-			--fhead "extern \"C\" {\n\n" \
-			--fprod "\n/* enumerations from \"@filename@\" */" \
-			--vhead "static const G@Type@Value _@enum_name@_values[] = {" \
-			--vprod "    { @VALUENAME@, \"@VALUENAME@\", \"@valuenick@\" }," \
-			--vtail "    { 0, NULL, NULL }\n};\n\n" \
-			--vtail "GType @enum_name@_get_type(void)\n{\n" \
-			--vtail "    static GType type = 0;\n\n" \
-			--vtail "    if (!type)\n" \
-			--vtail "        type = g_@type@_register_static(\"@EnumName@\", _@enum_name@_values);\n\n" \
-			--vtail "    return type;\n}\n\n" \
-			--ftail "}\n" \
-		$(webkitgtk_h_api) | \
+	$(AM_V_GEN)glib-mkenums --template $(srcdir)/Source/WebKit/gtk/webkit/webkitenumtypes.cpp.template $(webkitgtk_h_api) | \
 		sed 's,web_kit,webkit,' \
 		> xgen-gtc \
 	&& cp xgen-gtc $@ \
@@ -413,219 +386,14 @@ EXTRA_DIST += \
 	$(WebKit)/docs/webkitenvironment.xml \
 	$(WebKit)/docs/webkitgtk-overrides.txt \
 	$(WebKit)/webkitmarshal.list \
-	$(WebKit)/resources/* \
-	$(WebKit)/tests/resources/* \
-	$(WebKit)/tests/test_utils.h
+	$(WebKit)/webkit/webkitenumtypes.cpp.template \
+	$(WebKit)/webkit/webkitenumtypes.h.template \
+	$(WebKit)/resources/*
 
 # extra resource files
 resourcesdir = ${datadir}/webkitgtk-@WEBKITGTK_API_VERSION@/resources
 dist_resources_DATA = \
 	$(shell ls $(srcdir)/Source/WebKit/gtk/resources/*.html)
-
-# Build unit tests
-webkit_tests_cflags = \
-	-fno-strict-aliasing \
-	-I$(srcdir)/Source/JavaScriptCore/ForwardingHeaders \
-	-I$(WebKit) \
-	-I$(GENSOURCES) \
-	-I$(top_builddir)/Source/WebKit/gtk \
-	-I$(top_srcdir)/Source/WebCore/bindings \
-	-I$(top_srcdir)/Source/WebCore/bindings/gobject \
-	$(global_cppflags) \
-	$(global_cflags) \
-	$(javascriptcore_cppflags) \
-	$(FREETYPE_CFLAGS) \
-	$(GLIB_CFLAGS) \
-	$(GTK_CFLAGS) \
-	$(LIBSOUP_CFLAGS) \
-	$(XRENDER_CFLAGS) \
-	$(XT_CFLAGS)
-
-webkit_tests_ldadd = \
-	libjavascriptcoregtk-@WEBKITGTK_API_MAJOR_VERSION@.@WEBKITGTK_API_MINOR_VERSION@.la \
-	libwebkitgtk-@WEBKITGTK_API_MAJOR_VERSION@.@WEBKITGTK_API_MINOR_VERSION@.la \
-	$(FREETYPE_LIBS) \
-	$(GTK_LIBS) \
-	$(GLIB_LIBS) \
-	$(LIBSOUP_LIBS) \
-	$(XRENDER_LIBS)
-
-webkit_tests_ldflags = \
-	-no-install \
-	-no-fast-install
-
-if ENABLE_WEBKIT1
-noinst_PROGRAMS += \
-	Programs/unittests/testapplicationcache \
-	Programs/unittests/testcontextmenu \
-	Programs/unittests/testdomdocument \
-	Programs/unittests/testdomdomwindow \
-	Programs/unittests/testdomnode \
-	Programs/unittests/testhttpbackend \
-	Programs/unittests/testfavicondatabase \
-	Programs/unittests/testloading \
-	Programs/unittests/testglobals \
-	Programs/unittests/testmimehandling \
-	Programs/unittests/testnetworkrequest \
-	Programs/unittests/testnetworkresponse \
-	Programs/unittests/testwebframe \
-	Programs/unittests/testwebbackforwardlist \
-	Programs/unittests/testwebhistoryitem \
-	Programs/unittests/testwindow \
-	Programs/unittests/testdownload \
-	Programs/unittests/testatk \
-	Programs/unittests/testatkroles \
-	Programs/unittests/testhittestresult \
-	Programs/unittests/testwebinspector \
-	Programs/unittests/testwebsettings \
-	Programs/unittests/testwebresource \
-	Programs/unittests/testwebdatasource \
-	Programs/unittests/testwebplugindatabase \
-	Programs/unittests/testwebview \
-	Programs/unittests/testkeyevents \
-	Programs/unittests/testcopyandpaste
-endif
-
-# Add additional tests here
-Programs_unittests_testapplicationcache_SOURCES = Source/WebKit/gtk/tests/testapplicationcache.c
-Programs_unittests_testapplicationcache_CFLAGS = $(webkit_tests_cflags)
-Programs_unittests_testapplicationcache_LDADD = $(webkit_tests_ldadd)
-Programs_unittests_testapplicationcache_LDFLAGS = $(webkit_tests_ldflags)
-
-Programs_unittests_testcontextmenu_SOURCES = Source/WebKit/gtk/tests/testcontextmenu.c
-Programs_unittests_testcontextmenu_CFLAGS = $(webkit_tests_cflags)
-Programs_unittests_testcontextmenu_LDADD = $(webkit_tests_ldadd)
-Programs_unittests_testcontextmenu_LDFLAGS = $(webkit_tests_ldflags)
-
-Programs_unittests_testdomdocument_SOURCES = Source/WebKit/gtk/tests/testdomdocument.c
-Programs_unittests_testdomdocument_CFLAGS = $(webkit_tests_cflags)
-Programs_unittests_testdomdocument_LDADD = $(webkit_tests_ldadd)
-Programs_unittests_testdomdocument_LDFLAGS = $(webkit_tests_ldflags)
-
-Programs_unittests_testdomdomwindow_SOURCES = Source/WebKit/gtk/tests/testdomdomwindow.c
-Programs_unittests_testdomdomwindow_CFLAGS = $(webkit_tests_cflags)
-Programs_unittests_testdomdomwindow_LDADD = $(webkit_tests_ldadd)
-Programs_unittests_testdomdomwindow_LDFLAGS = $(webkit_tests_ldflags)
-
-Programs_unittests_testdomnode_SOURCES = Source/WebKit/gtk/tests/testdomnode.c
-Programs_unittests_testdomnode_CFLAGS = $(webkit_tests_cflags)
-Programs_unittests_testdomnode_LDADD = $(webkit_tests_ldadd)
-Programs_unittests_testdomnode_LDFLAGS = $(webkit_tests_ldflags)
-
-Programs_unittests_testhttpbackend_SOURCES = Source/WebKit/gtk/tests/testhttpbackend.c
-Programs_unittests_testhttpbackend_CFLAGS = $(webkit_tests_cflags)
-Programs_unittests_testhttpbackend_LDADD = $(webkit_tests_ldadd)
-Programs_unittests_testhttpbackend_LDFLAGS = $(webkit_tests_ldflags)
-
-Programs_unittests_testfavicondatabase_SOURCES = Source/WebKit/gtk/tests/testfavicondatabase.c Source/WebKit/gtk/tests/test_utils.c
-Programs_unittests_testfavicondatabase_CFLAGS = $(webkit_tests_cflags)
-Programs_unittests_testfavicondatabase_LDADD = $(webkit_tests_ldadd)
-Programs_unittests_testfavicondatabase_LDFLAGS = $(webkit_tests_ldflags)
-
-Programs_unittests_testglobals_SOURCES = Source/WebKit/gtk/tests/testglobals.c
-Programs_unittests_testglobals_CFLAGS = $(webkit_tests_cflags)
-Programs_unittests_testglobals_LDADD = $(webkit_tests_ldadd)
-Programs_unittests_testglobals_LDFLAGS = $(webkit_tests_ldflags)
-
-Programs_unittests_testloading_SOURCES = Source/WebKit/gtk/tests/testloading.c
-Programs_unittests_testloading_CFLAGS = $(webkit_tests_cflags)
-Programs_unittests_testloading_LDADD = $(webkit_tests_ldadd)
-Programs_unittests_testloading_LDFLAGS = $(webkit_tests_ldflags)
-
-Programs_unittests_testmimehandling_SOURCES = Source/WebKit/gtk/tests/testmimehandling.c Source/WebKit/gtk/tests/test_utils.c
-Programs_unittests_testmimehandling_CFLAGS = $(webkit_tests_cflags)
-Programs_unittests_testmimehandling_LDADD = $(webkit_tests_ldadd)
-Programs_unittests_testmimehandling_LDFLAGS = $(webkit_tests_ldflags)
-
-Programs_unittests_testnetworkrequest_SOURCES = Source/WebKit/gtk/tests/testnetworkrequest.c
-Programs_unittests_testnetworkrequest_CFLAGS = $(webkit_tests_cflags)
-Programs_unittests_testnetworkrequest_LDADD = $(webkit_tests_ldadd)
-Programs_unittests_testnetworkrequest_LDFLAGS = $(webkit_tests_ldflags)
-
-Programs_unittests_testnetworkresponse_SOURCES = Source/WebKit/gtk/tests/testnetworkresponse.c
-Programs_unittests_testnetworkresponse_CFLAGS = $(webkit_tests_cflags)
-Programs_unittests_testnetworkresponse_LDADD = $(webkit_tests_ldadd)
-Programs_unittests_testnetworkresponse_LDFLAGS = $(webkit_tests_ldflags)
-
-Programs_unittests_testwebframe_SOURCES = Source/WebKit/gtk/tests/testwebframe.c
-Programs_unittests_testwebframe_CFLAGS = $(webkit_tests_cflags)
-Programs_unittests_testwebframe_LDADD = $(webkit_tests_ldadd)
-Programs_unittests_testwebframe_LDFLAGS = $(webkit_tests_ldflags)
-
-Programs_unittests_testwebplugindatabase_SOURCES = Source/WebKit/gtk/tests/testwebplugindatabase.c
-Programs_unittests_testwebplugindatabase_CFLAGS = -DTEST_PLUGIN_DIR=\"${shell pwd}/${top_builddir}/TestNetscapePlugin/.libs\" $(webkit_tests_cflags)
-Programs_unittests_testwebplugindatabase_LDADD = $(webkit_tests_ldadd)
-Programs_unittests_testwebplugindatabase_LDFLAGS = $(webkit_tests_ldflags)
-
-Programs_unittests_testwebbackforwardlist_SOURCES = Source/WebKit/gtk/tests/testwebbackforwardlist.c
-Programs_unittests_testwebbackforwardlist_CFLAGS = $(webkit_tests_cflags)
-Programs_unittests_testwebbackforwardlist_LDADD = $(webkit_tests_ldadd)
-Programs_unittests_testwebbackforwardlist_LDFLAGS = $(webkit_tests_ldflags)
-
-Programs_unittests_testwebhistoryitem_SOURCES = Source/WebKit/gtk/tests/testwebhistoryitem.c
-Programs_unittests_testwebhistoryitem_CFLAGS = $(webkit_tests_cflags)
-Programs_unittests_testwebhistoryitem_LDADD = $(webkit_tests_ldadd)
-Programs_unittests_testwebhistoryitem_LDFLAGS = $(webkit_tests_ldflags)
-
-Programs_unittests_testwindow_SOURCES = Source/WebKit/gtk/tests/testwindow.c
-Programs_unittests_testwindow_CFLAGS = $(webkit_tests_cflags)
-Programs_unittests_testwindow_LDADD = $(webkit_tests_ldadd)
-Programs_unittests_testwindow_LDFLAGS = $(webkit_tests_ldflags)
-
-Programs_unittests_testdownload_SOURCES = Source/WebKit/gtk/tests/testdownload.c
-Programs_unittests_testdownload_CFLAGS = $(webkit_tests_cflags)
-Programs_unittests_testdownload_LDADD = $(webkit_tests_ldadd)
-Programs_unittests_testdownload_LDFLAGS = $(webkit_tests_ldflags)
-
-Programs_unittests_testatk_SOURCES = Source/WebKit/gtk/tests/testatk.c
-Programs_unittests_testatk_CFLAGS = $(webkit_tests_cflags)
-Programs_unittests_testatk_LDADD = $(webkit_tests_ldadd)
-Programs_unittests_testatk_LDFLAGS = $(webkit_tests_ldflags)
-
-Programs_unittests_testatkroles_SOURCES = Source/WebKit/gtk/tests/testatkroles.c
-Programs_unittests_testatkroles_CFLAGS = $(webkit_tests_cflags)
-Programs_unittests_testatkroles_LDADD = $(webkit_tests_ldadd)
-Programs_unittests_testatkroles_LDFLAGS = $(webkit_tests_ldflags)
-
-Programs_unittests_testwebinspector_SOURCES = Source/WebKit/gtk/tests/testwebinspector.c Source/WebKit/gtk/tests/test_utils.c
-Programs_unittests_testwebinspector_CFLAGS = $(webkit_tests_cflags)
-Programs_unittests_testwebinspector_LDADD = $(webkit_tests_ldadd)
-Programs_unittests_testwebinspector_LDFLAGS = $(webkit_tests_ldflags)
-
-Programs_unittests_testwebsettings_SOURCES = Source/WebKit/gtk/tests/testwebsettings.c
-Programs_unittests_testwebsettings_CFLAGS = $(webkit_tests_cflags)
-Programs_unittests_testwebsettings_LDADD = $(webkit_tests_ldadd)
-Programs_unittests_testwebsettings_LDFLAGS = $(webkit_tests_ldflags)
-
-Programs_unittests_testwebresource_SOURCES = Source/WebKit/gtk/tests/testwebresource.c
-Programs_unittests_testwebresource_CFLAGS = $(webkit_tests_cflags)
-Programs_unittests_testwebresource_LDADD = $(webkit_tests_ldadd)
-
-Programs_unittests_testwebdatasource_SOURCES = Source/WebKit/gtk/tests/testwebdatasource.c
-Programs_unittests_testwebdatasource_CFLAGS = $(webkit_tests_cflags)
-Programs_unittests_testwebdatasource_LDADD = $(webkit_tests_ldadd)
-
-Programs_unittests_testwebview_SOURCES = Source/WebKit/gtk/tests/testwebview.c Source/WebKit/gtk/tests/test_utils.c
-Programs_unittests_testwebview_CFLAGS = $(webkit_tests_cflags)
-Programs_unittests_testwebview_LDADD = $(webkit_tests_ldadd)
-Programs_unittests_testwebview_LDFLAGS = $(webkit_tests_ldflags)
-
-Programs_unittests_testhittestresult_SOURCES = Source/WebKit/gtk/tests/testhittestresult.c
-Programs_unittests_testhittestresult_CFLAGS = $(webkit_tests_cflags)
-Programs_unittests_testhittestresult_LDADD = $(webkit_tests_ldadd)
-
-Programs_unittests_testkeyevents_SOURCES = Source/WebKit/gtk/tests/testkeyevents.c
-Programs_unittests_testkeyevents_CFLAGS = $(webkit_tests_cflags)
-Programs_unittests_testkeyevents_LDADD = $(webkit_tests_ldadd)
-Programs_unittests_testkeyevents_LDFLAGS = $(webkit_tests_ldflags)
-
-Programs_unittests_testcopyandpaste_SOURCES = Source/WebKit/gtk/tests/testcopyandpaste.c \
-	Source/WebCore/platform/gtk/GtkVersioning.c
-Programs_unittests_testcopyandpaste_CFLAGS = $(webkit_tests_cflags) \
-	-I$(srcdir)/Source/WebCore/platform/gtk \
-	-I$(srcdir)/Source/WebCore
-Programs_unittests_testcopyandpaste_LDADD = $(webkit_tests_ldadd)
-Programs_unittests_testcopyandpaste_LDFLAGS = $(webkit_tests_ldflags)
 
 # Project-wide clean rules
 # Files that will be cleaned

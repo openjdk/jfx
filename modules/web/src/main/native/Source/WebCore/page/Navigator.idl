@@ -20,23 +20,28 @@
 [
     GenerateIsReachable=ImplFrame,
 ] interface Navigator {
-        readonly attribute DOMString appCodeName;
-        readonly attribute DOMString appName;
-        readonly attribute DOMString appVersion;
-        readonly attribute DOMString language;
-        readonly attribute DOMString userAgent;
-        readonly attribute DOMString platform;
-        readonly attribute DOMPluginArray plugins;
-        readonly attribute DOMMimeTypeArray mimeTypes;
-        readonly attribute DOMString product;
-        readonly attribute DOMString productSub;
-        readonly attribute DOMString vendor;
-        readonly attribute DOMString vendorSub;
-        readonly attribute boolean cookieEnabled;
-        boolean javaEnabled();
+    readonly attribute DOMString appCodeName;
+    readonly attribute DOMString appName;
+    readonly attribute DOMString appVersion;
+    readonly attribute DOMString language;
+    readonly attribute DOMString userAgent;
+    readonly attribute DOMString platform;
+    readonly attribute DOMPluginArray plugins;
+    readonly attribute DOMMimeTypeArray mimeTypes;
+    readonly attribute DOMString product;
+    readonly attribute DOMString productSub;
+    readonly attribute DOMString vendor;
+    readonly attribute DOMString vendorSub;
+    readonly attribute boolean cookieEnabled;
+    boolean javaEnabled();
 
-        readonly attribute boolean onLine;
+    readonly attribute boolean onLine;
 
-        void getStorageUpdates(); // FIXME: Remove this method or rename to yieldForStorageUpdates.
-    };
+    // FIXME: Convert this #if'def to an IDL conditional attribute.
+#if defined(WTF_PLATFORM_IOS) && WTF_PLATFORM_IOS
+    readonly attribute boolean standalone;
+#endif
+
+    void getStorageUpdates(); // FIXME: Remove this method or rename to yieldForStorageUpdates.
+};
 

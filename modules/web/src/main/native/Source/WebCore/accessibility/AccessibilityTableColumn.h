@@ -47,25 +47,27 @@ public:
     
     AccessibilityObject* headerObject();
         
-    virtual AccessibilityRole roleValue() const { return ColumnRole; }
-    virtual bool isTableColumn() const { return true; }
+    virtual AccessibilityRole roleValue() const override { return ColumnRole; }
+    virtual bool isTableColumn() const override { return true; }
     
     void setColumnIndex(int columnIndex) { m_columnIndex = columnIndex; }
     int columnIndex() const { return m_columnIndex; }    
     
-    virtual void addChildren();
-    virtual void setParent(AccessibilityObject*);
+    virtual void addChildren() override;
+    virtual void setParent(AccessibilityObject*) override;
     
-    virtual LayoutRect elementRect() const;
+    virtual LayoutRect elementRect() const override;
     
 private:    
     unsigned m_columnIndex;
     LayoutRect m_columnRect;
     
     AccessibilityObject* headerObjectForSection(RenderTableSection*, bool thTagRequired);
-    virtual bool computeAccessibilityIsIgnored() const;
+    virtual bool computeAccessibilityIsIgnored() const override;
 };
-   
+
+ACCESSIBILITY_OBJECT_TYPE_CASTS(AccessibilityTableColumn, isTableColumn())
+
 } // namespace WebCore 
 
 #endif // AccessibilityTableColumn_h

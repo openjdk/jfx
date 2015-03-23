@@ -32,6 +32,7 @@
 #include "SQLiteFileSystem.h"
 #include "SQLiteStatement.h"
 #include <sqlite3.h>
+#include <thread>
 #include <wtf/Threading.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
@@ -98,6 +99,19 @@ bool SQLiteDatabase::open(const String& filename, bool forWebSQLDatabase)
     if (!SQLiteStatement(*this, ASCIILiteral("PRAGMA temp_store = MEMORY;")).executeCommand())
         LOG_ERROR("SQLite database could not set temp_store to memory");
 
+    SQLiteStatement walStatement(*this, ASCIILiteral("PRAGMA journal_mode=WAL;"));
+    int result = walStatement.step();
+    if (result != SQLITE_OK && result != SQLITE_ROW)
+        LOG_ERROR("SQLite database failed to set journal_mode to WAL, error: %s",  lastErrorMsg());
+
+#ifndef NDEBUG
+    if (result == SQLITE_ROW) {
+        String mode = walStatement.getColumnText(0);
+        if (!equalIgnoringCase(mode, "wal"))
+            LOG_ERROR("journal_mode of database should be 'wal', but is '%s'", mode.utf8().data());
+    }
+#endif
+
     return isOpen();
 }
 
@@ -127,7 +141,7 @@ void SQLiteDatabase::interrupt()
         if (!m_db)
             return;
         sqlite3_interrupt(m_db);
-        yield();
+        std::this_thread::yield();
     }
 
     m_lockingMutex.unlock();
@@ -178,11 +192,7 @@ void SQLiteDatabase::setMaximumSize(int64_t size)
     SQLiteStatement statement(*this, "PRAGMA max_page_count = " + String::number(newMaxPageCount));
     statement.prepare();
     if (statement.step() != SQLResultRow)
-#if OS(WINDOWS)
-        LOG_ERROR("Failed to set maximum size of database to %I64i bytes", static_cast<long long>(size));
-#else
         LOG_ERROR("Failed to set maximum size of database to %lli bytes", static_cast<long long>(size));
-#endif
 
     enableAuthorizer(true);
 
@@ -271,9 +281,9 @@ bool SQLiteDatabase::tableExists(const String& tablename)
 {
     if (!isOpen())
         return false;
-        
+
     String statement = "SELECT name FROM sqlite_master WHERE type = 'table' AND name = '" + tablename + "';";
-    
+
     SQLiteStatement sql(*this, statement);
     sql.prepare();
     return sql.step() == SQLITE_ROW;
@@ -344,7 +354,7 @@ int SQLiteDatabase::lastError()
 }
 
 const char* SQLiteDatabase::lastErrorMsg()
-{ 
+{
     if (m_db)
         return sqlite3_errmsg(m_db);
     return m_openErrorMessage.isNull() ? notOpenErrorMessage : m_openErrorMessage.data();
@@ -494,6 +504,29 @@ bool SQLiteDatabase::turnOnIncrementalAutoVacuum()
         error = lastError();
         return (error == SQLITE_OK);
     }
+}
+
+static void destroyCollationFunction(void* arg)
+{
+    auto f = static_cast<std::function<int(int, const void*, int, const void*)>*>(arg);
+    delete f;
+}
+
+static int callCollationFunction(void* arg, int aLength, const void* a, int bLength, const void* b)
+{
+    auto f = static_cast<std::function<int(int, const void*, int, const void*)>*>(arg);
+    return (*f)(aLength, a, bLength, b);
+}
+
+void SQLiteDatabase::setCollationFunction(const String& collationName, std::function<int(int, const void*, int, const void*)> collationFunction)
+{
+    auto functionObject = new std::function<int(int, const void*, int, const void*)>(collationFunction);
+    sqlite3_create_collation_v2(m_db, collationName.utf8().data(), SQLITE_UTF8, functionObject, callCollationFunction, destroyCollationFunction);
+}
+
+void SQLiteDatabase::removeCollationFunction(const String& collationName)
+{
+    sqlite3_create_collation_v2(m_db, collationName.utf8().data(), SQLITE_UTF8, nullptr, nullptr, nullptr);
 }
 
 } // namespace WebCore

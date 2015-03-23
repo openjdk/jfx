@@ -68,17 +68,12 @@ public:
     virtual void openInNewTab(const String& url) = 0;
 
     virtual bool canSave() = 0;
-    virtual void save(const WTF::String& url, const WTF::String& content, bool forceSaveAs) = 0;
+    virtual void save(const WTF::String& url, const WTF::String& content, bool base64Encoded, bool forceSaveAs) = 0;
     virtual void append(const WTF::String& url, const WTF::String& content) = 0;
 
     virtual void inspectedURLChanged(const String&) = 0;
 
     virtual void sendMessageToBackend(const String&) = 0;
-
-    virtual bool supportsFileSystems() = 0;
-    virtual void requestFileSystems() = 0;
-    virtual void addFileSystem() = 0;
-    virtual void removeFileSystem(const String& fileSystemPath) = 0;
 
     virtual bool isUnderTest() = 0;
 };

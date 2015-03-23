@@ -29,13 +29,17 @@
 #include "DNS.h"
 #include "DNSResolveQueue.h"
 
-#include "KURL.h"
+#include "URL.h"
 #include "Timer.h"
 #include <wtf/HashSet.h>
 #include <wtf/MainThread.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/StringHash.h>
+
+#if PLATFORM(IOS)
+#include <CFNetwork/CFNetwork.h>
+#endif
 
 #if PLATFORM(WIN)
 #include "LoaderRunLoopCF.h"
@@ -55,8 +59,8 @@ bool DNSResolveQueue::platformProxyIsEnabledInSystemPreferences()
     if (!proxySettings)
         return false;
 
-    RetainPtr<CFURLRef> httpCFURL = KURL(ParsedURLString, "http://example.com/").createCFURL();
-    RetainPtr<CFURLRef> httpsCFURL = KURL(ParsedURLString, "https://example.com/").createCFURL();
+    RetainPtr<CFURLRef> httpCFURL = URL(ParsedURLString, "http://example.com/").createCFURL();
+    RetainPtr<CFURLRef> httpsCFURL = URL(ParsedURLString, "https://example.com/").createCFURL();
 
     RetainPtr<CFArrayRef> httpProxyArray = adoptCF(CFNetworkCopyProxiesForURL(httpCFURL.get(), proxySettings.get()));
     RetainPtr<CFArrayRef> httpsProxyArray = adoptCF(CFNetworkCopyProxiesForURL(httpsCFURL.get(), proxySettings.get()));

@@ -39,20 +39,18 @@ public:
         return ptr;
     }
 
-    static JSC::JSObject* createPrototype(JSC::ExecState*, JSC::JSGlobalObject*);
-    static bool getOwnPropertySlot(JSC::JSCell*, JSC::ExecState*, JSC::PropertyName, JSC::PropertySlot&);
-    static bool getOwnPropertyDescriptor(JSC::JSObject*, JSC::ExecState*, JSC::PropertyName, JSC::PropertyDescriptor&);
-    static void put(JSC::JSCell*, JSC::ExecState*, JSC::PropertyName, JSC::JSValue, JSC::PutPropertySlot&);
+    static JSC::JSObject* createPrototype(JSC::VM&, JSC::JSGlobalObject*);
+    static bool getOwnPropertySlot(JSC::JSObject*, JSC::ExecState*, JSC::PropertyName, JSC::PropertySlot&);
     static void destroy(JSC::JSCell*);
     ~JSTestObj();
-    static const JSC::ClassInfo s_info;
+    DECLARE_INFO;
 
     static JSC::Structure* createStructure(JSC::VM& vm, JSC::JSGlobalObject* globalObject, JSC::JSValue prototype)
     {
-        return JSC::Structure::create(vm, globalObject, prototype, JSC::TypeInfo(JSC::ObjectType, StructureFlags), &s_info);
+        return JSC::Structure::create(vm, globalObject, prototype, JSC::TypeInfo(JSC::ObjectType, StructureFlags), info());
     }
 
-    static JSC::JSValue getConstructor(JSC::ExecState*, JSC::JSGlobalObject*);
+    static JSC::JSValue getConstructor(JSC::VM&, JSC::JSGlobalObject*);
     JSC::WriteBarrier<JSC::Unknown> m_cachedAttribute1;
     JSC::WriteBarrier<JSC::Unknown> m_cachedAttribute2;
     static void visitChildren(JSCell*, JSC::SlotVisitor&);
@@ -66,7 +64,7 @@ public:
     JSC::JSValue customMethod(JSC::ExecState*);
     JSC::JSValue customMethodWithArgs(JSC::ExecState*);
     static JSC::JSValue classMethod2(JSC::ExecState*);
-    TestObj* impl() const { return m_impl; }
+    TestObj& impl() const { return *m_impl; }
     void releaseImpl() { m_impl->deref(); m_impl = 0; }
 
     void releaseImplIfNotNull()
@@ -82,7 +80,7 @@ private:
 protected:
     JSTestObj(JSC::Structure*, JSDOMGlobalObject*, PassRefPtr<TestObj>);
     void finishCreation(JSC::VM&);
-    static const unsigned StructureFlags = JSC::OverridesGetOwnPropertySlot | JSC::InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero | JSC::OverridesVisitChildren | Base::StructureFlags;
+    static const unsigned StructureFlags = JSC::InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero | JSC::OverridesGetOwnPropertySlot | JSC::OverridesVisitChildren | Base::StructureFlags;
 };
 
 class JSTestObjOwner : public JSC::WeakHandleOwner {
@@ -91,15 +89,15 @@ public:
     virtual void finalize(JSC::Handle<JSC::Unknown>, void* context);
 };
 
-inline JSC::WeakHandleOwner* wrapperOwner(DOMWrapperWorld*, TestObj*)
+inline JSC::WeakHandleOwner* wrapperOwner(DOMWrapperWorld&, TestObj*)
 {
     DEFINE_STATIC_LOCAL(JSTestObjOwner, jsTestObjOwner, ());
     return &jsTestObjOwner;
 }
 
-inline void* wrapperContext(DOMWrapperWorld* world, TestObj*)
+inline void* wrapperContext(DOMWrapperWorld& world, TestObj*)
 {
-    return world;
+    return &world;
 }
 
 JSC::JSValue toJS(JSC::ExecState*, JSDOMGlobalObject*, TestObj*);
@@ -108,7 +106,7 @@ TestObj* toTestObj(JSC::JSValue);
 class JSTestObjPrototype : public JSC::JSNonFinalObject {
 public:
     typedef JSC::JSNonFinalObject Base;
-    static JSC::JSObject* self(JSC::ExecState*, JSC::JSGlobalObject*);
+    static JSC::JSObject* self(JSC::VM&, JSC::JSGlobalObject*);
     static JSTestObjPrototype* create(JSC::VM& vm, JSC::JSGlobalObject* globalObject, JSC::Structure* structure)
     {
         JSTestObjPrototype* ptr = new (NotNull, JSC::allocateCell<JSTestObjPrototype>(vm.heap)) JSTestObjPrototype(vm, globalObject, structure);
@@ -116,12 +114,11 @@ public:
         return ptr;
     }
 
-    static const JSC::ClassInfo s_info;
-    static bool getOwnPropertySlot(JSC::JSCell*, JSC::ExecState*, JSC::PropertyName, JSC::PropertySlot&);
-    static bool getOwnPropertyDescriptor(JSC::JSObject*, JSC::ExecState*, JSC::PropertyName, JSC::PropertyDescriptor&);
+    DECLARE_INFO;
+    static bool getOwnPropertySlot(JSC::JSObject*, JSC::ExecState*, JSC::PropertyName, JSC::PropertySlot&);
     static JSC::Structure* createStructure(JSC::VM& vm, JSC::JSGlobalObject* globalObject, JSC::JSValue prototype)
     {
-        return JSC::Structure::create(vm, globalObject, prototype, JSC::TypeInfo(JSC::ObjectType, StructureFlags), &s_info);
+        return JSC::Structure::create(vm, globalObject, prototype, JSC::TypeInfo(JSC::ObjectType, StructureFlags), info());
     }
 
 private:
@@ -133,23 +130,22 @@ protected:
 class JSTestObjConstructor : public DOMConstructorObject {
 private:
     JSTestObjConstructor(JSC::Structure*, JSDOMGlobalObject*);
-    void finishCreation(JSC::ExecState*, JSDOMGlobalObject*);
+    void finishCreation(JSC::VM&, JSDOMGlobalObject*);
 
 public:
     typedef DOMConstructorObject Base;
-    static JSTestObjConstructor* create(JSC::ExecState* exec, JSC::Structure* structure, JSDOMGlobalObject* globalObject)
+    static JSTestObjConstructor* create(JSC::VM& vm, JSC::Structure* structure, JSDOMGlobalObject* globalObject)
     {
-        JSTestObjConstructor* ptr = new (NotNull, JSC::allocateCell<JSTestObjConstructor>(*exec->heap())) JSTestObjConstructor(structure, globalObject);
-        ptr->finishCreation(exec, globalObject);
+        JSTestObjConstructor* ptr = new (NotNull, JSC::allocateCell<JSTestObjConstructor>(vm.heap)) JSTestObjConstructor(structure, globalObject);
+        ptr->finishCreation(vm, globalObject);
         return ptr;
     }
 
-    static bool getOwnPropertySlot(JSC::JSCell*, JSC::ExecState*, JSC::PropertyName, JSC::PropertySlot&);
-    static bool getOwnPropertyDescriptor(JSC::JSObject*, JSC::ExecState*, JSC::PropertyName, JSC::PropertyDescriptor&);
-    static const JSC::ClassInfo s_info;
+    static bool getOwnPropertySlot(JSC::JSObject*, JSC::ExecState*, JSC::PropertyName, JSC::PropertySlot&);
+    DECLARE_INFO;
     static JSC::Structure* createStructure(JSC::VM& vm, JSC::JSGlobalObject* globalObject, JSC::JSValue prototype)
     {
-        return JSC::Structure::create(vm, globalObject, prototype, JSC::TypeInfo(JSC::ObjectType, StructureFlags), &s_info);
+        return JSC::Structure::create(vm, globalObject, prototype, JSC::TypeInfo(JSC::ObjectType, StructureFlags), info());
     }
 protected:
     static const unsigned StructureFlags = JSC::OverridesGetOwnPropertySlot | JSC::ImplementsHasInstance | DOMConstructorObject::StructureFlags;
@@ -161,6 +157,10 @@ protected:
 
 JSC::EncodedJSValue JSC_HOST_CALL jsTestObjPrototypeFunctionVoidMethod(JSC::ExecState*);
 JSC::EncodedJSValue JSC_HOST_CALL jsTestObjPrototypeFunctionVoidMethodWithArgs(JSC::ExecState*);
+JSC::EncodedJSValue JSC_HOST_CALL jsTestObjPrototypeFunctionByteMethod(JSC::ExecState*);
+JSC::EncodedJSValue JSC_HOST_CALL jsTestObjPrototypeFunctionByteMethodWithArgs(JSC::ExecState*);
+JSC::EncodedJSValue JSC_HOST_CALL jsTestObjPrototypeFunctionOctetMethod(JSC::ExecState*);
+JSC::EncodedJSValue JSC_HOST_CALL jsTestObjPrototypeFunctionOctetMethodWithArgs(JSC::ExecState*);
 JSC::EncodedJSValue JSC_HOST_CALL jsTestObjPrototypeFunctionLongMethod(JSC::ExecState*);
 JSC::EncodedJSValue JSC_HOST_CALL jsTestObjPrototypeFunctionLongMethodWithArgs(JSC::ExecState*);
 JSC::EncodedJSValue JSC_HOST_CALL jsTestObjPrototypeFunctionObjMethod(JSC::ExecState*);
@@ -225,153 +225,166 @@ JSC::EncodedJSValue JSC_HOST_CALL jsTestObjPrototypeFunctionMutablePointFunction
 JSC::EncodedJSValue JSC_HOST_CALL jsTestObjPrototypeFunctionImmutablePointFunction(JSC::ExecState*);
 JSC::EncodedJSValue JSC_HOST_CALL jsTestObjPrototypeFunctionOrange(JSC::ExecState*);
 JSC::EncodedJSValue JSC_HOST_CALL jsTestObjPrototypeFunctionStrictFunction(JSC::ExecState*);
+JSC::EncodedJSValue JSC_HOST_CALL jsTestObjPrototypeFunctionStrictFunctionWithSequence(JSC::ExecState*);
+JSC::EncodedJSValue JSC_HOST_CALL jsTestObjPrototypeFunctionStrictFunctionWithArray(JSC::ExecState*);
 JSC::EncodedJSValue JSC_HOST_CALL jsTestObjPrototypeFunctionVariadicStringMethod(JSC::ExecState*);
 JSC::EncodedJSValue JSC_HOST_CALL jsTestObjPrototypeFunctionVariadicDoubleMethod(JSC::ExecState*);
 JSC::EncodedJSValue JSC_HOST_CALL jsTestObjPrototypeFunctionVariadicNodeMethod(JSC::ExecState*);
+JSC::EncodedJSValue JSC_HOST_CALL jsTestObjPrototypeFunctionAny(JSC::ExecState*);
 // Attributes
 
-JSC::JSValue jsTestObjReadOnlyLongAttr(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-JSC::JSValue jsTestObjReadOnlyStringAttr(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-JSC::JSValue jsTestObjReadOnlyTestObjAttr(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-JSC::JSValue jsTestObjConstructorStaticReadOnlyLongAttr(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-JSC::JSValue jsTestObjConstructorStaticStringAttr(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjConstructorStaticStringAttr(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
-JSC::JSValue jsTestObjConstructorTestSubObj(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-JSC::JSValue jsTestObjEnumAttr(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjEnumAttr(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
-JSC::JSValue jsTestObjShortAttr(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjShortAttr(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
-JSC::JSValue jsTestObjUnsignedShortAttr(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjUnsignedShortAttr(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
-JSC::JSValue jsTestObjLongAttr(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjLongAttr(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
-JSC::JSValue jsTestObjLongLongAttr(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjLongLongAttr(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
-JSC::JSValue jsTestObjUnsignedLongLongAttr(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjUnsignedLongLongAttr(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
-JSC::JSValue jsTestObjStringAttr(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjStringAttr(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
-JSC::JSValue jsTestObjTestObjAttr(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjTestObjAttr(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
-JSC::JSValue jsTestObjXMLObjAttr(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjXMLObjAttr(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
-JSC::JSValue jsTestObjCreate(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjCreate(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
-JSC::JSValue jsTestObjReflectedStringAttr(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjReflectedStringAttr(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
-JSC::JSValue jsTestObjReflectedIntegralAttr(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjReflectedIntegralAttr(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
-JSC::JSValue jsTestObjReflectedUnsignedIntegralAttr(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjReflectedUnsignedIntegralAttr(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
-JSC::JSValue jsTestObjReflectedBooleanAttr(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjReflectedBooleanAttr(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
-JSC::JSValue jsTestObjReflectedURLAttr(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjReflectedURLAttr(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
-JSC::JSValue jsTestObjReflectedStringAttr(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjReflectedStringAttr(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
-JSC::JSValue jsTestObjReflectedCustomIntegralAttr(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjReflectedCustomIntegralAttr(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
-JSC::JSValue jsTestObjReflectedCustomBooleanAttr(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjReflectedCustomBooleanAttr(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
-JSC::JSValue jsTestObjReflectedCustomURLAttr(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjReflectedCustomURLAttr(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
-JSC::JSValue jsTestObjTypedArrayAttr(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjTypedArrayAttr(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
-JSC::JSValue jsTestObjAttrWithGetterException(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjAttrWithGetterException(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
-JSC::JSValue jsTestObjAttrWithSetterException(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjAttrWithSetterException(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
-JSC::JSValue jsTestObjStringAttrWithGetterException(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjStringAttrWithGetterException(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
-JSC::JSValue jsTestObjStringAttrWithSetterException(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjStringAttrWithSetterException(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
-JSC::JSValue jsTestObjCustomAttr(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjCustomAttr(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
-JSC::JSValue jsTestObjWithScriptStateAttribute(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjWithScriptStateAttribute(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
-JSC::JSValue jsTestObjWithScriptExecutionContextAttribute(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjWithScriptExecutionContextAttribute(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
-JSC::JSValue jsTestObjWithScriptStateAttributeRaises(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjWithScriptStateAttributeRaises(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
-JSC::JSValue jsTestObjWithScriptExecutionContextAttributeRaises(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjWithScriptExecutionContextAttributeRaises(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
-JSC::JSValue jsTestObjWithScriptExecutionContextAndScriptStateAttribute(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjWithScriptExecutionContextAndScriptStateAttribute(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
-JSC::JSValue jsTestObjWithScriptExecutionContextAndScriptStateAttributeRaises(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjWithScriptExecutionContextAndScriptStateAttributeRaises(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
-JSC::JSValue jsTestObjWithScriptExecutionContextAndScriptStateWithSpacesAttribute(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjWithScriptExecutionContextAndScriptStateWithSpacesAttribute(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
-JSC::JSValue jsTestObjWithScriptArgumentsAndCallStackAttribute(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjWithScriptArgumentsAndCallStackAttribute(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
+JSC::EncodedJSValue jsTestObjReadOnlyLongAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+JSC::EncodedJSValue jsTestObjReadOnlyStringAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+JSC::EncodedJSValue jsTestObjReadOnlyTestObjAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+JSC::EncodedJSValue jsTestObjConstructorStaticReadOnlyLongAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+JSC::EncodedJSValue jsTestObjConstructorStaticStringAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjConstructorStaticStringAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjConstructorTestSubObj(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+JSC::EncodedJSValue jsTestObjTestSubObjEnabledBySettingConstructor(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjTestSubObjEnabledBySettingConstructor(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjEnumAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjEnumAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjByteAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjByteAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjOctetAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjOctetAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjShortAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjShortAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjUnsignedShortAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjUnsignedShortAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjLongAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjLongAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjLongLongAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjLongLongAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjUnsignedLongLongAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjUnsignedLongLongAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjStringAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjStringAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjTestObjAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjTestObjAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjXMLObjAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjXMLObjAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjCreate(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjCreate(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjReflectedStringAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjReflectedStringAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjReflectedIntegralAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjReflectedIntegralAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjReflectedUnsignedIntegralAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjReflectedUnsignedIntegralAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjReflectedBooleanAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjReflectedBooleanAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjReflectedURLAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjReflectedURLAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjReflectedStringAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjReflectedStringAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjReflectedCustomIntegralAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjReflectedCustomIntegralAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjReflectedCustomBooleanAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjReflectedCustomBooleanAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjReflectedCustomURLAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjReflectedCustomURLAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjTypedArrayAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjTypedArrayAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjAttrWithGetterException(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjAttrWithGetterException(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjAttrWithSetterException(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjAttrWithSetterException(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjStringAttrWithGetterException(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjStringAttrWithGetterException(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjStringAttrWithSetterException(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjStringAttrWithSetterException(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjCustomAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjCustomAttr(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjWithScriptStateAttribute(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjWithScriptStateAttribute(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjWithScriptExecutionContextAttribute(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjWithScriptExecutionContextAttribute(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjWithScriptStateAttributeRaises(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjWithScriptStateAttributeRaises(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjWithScriptExecutionContextAttributeRaises(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjWithScriptExecutionContextAttributeRaises(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjWithScriptExecutionContextAndScriptStateAttribute(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjWithScriptExecutionContextAndScriptStateAttribute(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjWithScriptExecutionContextAndScriptStateAttributeRaises(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjWithScriptExecutionContextAndScriptStateAttributeRaises(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjWithScriptExecutionContextAndScriptStateWithSpacesAttribute(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjWithScriptExecutionContextAndScriptStateWithSpacesAttribute(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjWithScriptArgumentsAndCallStackAttribute(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjWithScriptArgumentsAndCallStackAttribute(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
 #if ENABLE(Condition1)
-JSC::JSValue jsTestObjConditionalAttr1(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjConditionalAttr1(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
+JSC::EncodedJSValue jsTestObjConditionalAttr1(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjConditionalAttr1(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
 #endif
 #if ENABLE(Condition1) && ENABLE(Condition2)
-JSC::JSValue jsTestObjConditionalAttr2(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjConditionalAttr2(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
+JSC::EncodedJSValue jsTestObjConditionalAttr2(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjConditionalAttr2(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
 #endif
 #if ENABLE(Condition1) || ENABLE(Condition2)
-JSC::JSValue jsTestObjConditionalAttr3(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjConditionalAttr3(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
+JSC::EncodedJSValue jsTestObjConditionalAttr3(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjConditionalAttr3(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
 #endif
 #if ENABLE(Condition1)
-JSC::JSValue jsTestObjConditionalAttr4Constructor(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjConditionalAttr4Constructor(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
+JSC::EncodedJSValue jsTestObjConditionalAttr4Constructor(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjConditionalAttr4Constructor(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
 #endif
 #if ENABLE(Condition1) && ENABLE(Condition2)
-JSC::JSValue jsTestObjConditionalAttr5Constructor(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjConditionalAttr5Constructor(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
+JSC::EncodedJSValue jsTestObjConditionalAttr5Constructor(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjConditionalAttr5Constructor(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
 #endif
 #if ENABLE(Condition1) || ENABLE(Condition2)
-JSC::JSValue jsTestObjConditionalAttr6Constructor(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjConditionalAttr6Constructor(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
+JSC::EncodedJSValue jsTestObjConditionalAttr6Constructor(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjConditionalAttr6Constructor(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
 #endif
-JSC::JSValue jsTestObjCachedAttribute1(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-JSC::JSValue jsTestObjCachedAttribute2(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-JSC::JSValue jsTestObjAnyAttribute(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjAnyAttribute(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
-JSC::JSValue jsTestObjContentDocument(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-JSC::JSValue jsTestObjMutablePoint(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjMutablePoint(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
-JSC::JSValue jsTestObjImmutablePoint(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjImmutablePoint(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
-JSC::JSValue jsTestObjStrawberry(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjStrawberry(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
-JSC::JSValue jsTestObjStrictFloat(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjStrictFloat(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
-JSC::JSValue jsTestObjDescription(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-JSC::JSValue jsTestObjId(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjId(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
-JSC::JSValue jsTestObjHash(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-JSC::JSValue jsTestObjReplaceableAttribute(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjReplaceableAttribute(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
-JSC::JSValue jsTestObjNullableDoubleAttribute(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-JSC::JSValue jsTestObjNullableLongAttribute(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-JSC::JSValue jsTestObjNullableBooleanAttribute(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-JSC::JSValue jsTestObjNullableStringAttribute(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-JSC::JSValue jsTestObjNullableLongSettableAttribute(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjNullableLongSettableAttribute(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
-JSC::JSValue jsTestObjNullableStringValue(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-void setJSTestObjNullableStringValue(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
-JSC::JSValue jsTestObjConstructor(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
+JSC::EncodedJSValue jsTestObjCachedAttribute1(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+JSC::EncodedJSValue jsTestObjCachedAttribute2(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+JSC::EncodedJSValue jsTestObjAnyAttribute(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjAnyAttribute(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjContentDocument(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+JSC::EncodedJSValue jsTestObjMutablePoint(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjMutablePoint(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjImmutablePoint(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjImmutablePoint(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjStrawberry(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjStrawberry(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjStrictFloat(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjStrictFloat(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjDescription(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+JSC::EncodedJSValue jsTestObjId(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjId(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjHash(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+JSC::EncodedJSValue jsTestObjReplaceableAttribute(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjReplaceableAttribute(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjNullableDoubleAttribute(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+JSC::EncodedJSValue jsTestObjNullableLongAttribute(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+JSC::EncodedJSValue jsTestObjNullableBooleanAttribute(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+JSC::EncodedJSValue jsTestObjNullableStringAttribute(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+JSC::EncodedJSValue jsTestObjNullableLongSettableAttribute(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjNullableLongSettableAttribute(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjNullableStringValue(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjNullableStringValue(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjAttribute(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+JSC::EncodedJSValue jsTestObjAttributeWithReservedEnumType(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestObjAttributeWithReservedEnumType(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
+JSC::EncodedJSValue jsTestObjConstructor(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
 // Constants
 
 #if ENABLE(Condition1)
-JSC::JSValue jsTestObjCONDITIONAL_CONST(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
+JSC::EncodedJSValue jsTestObjCONDITIONAL_CONST(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
 #endif
-JSC::JSValue jsTestObjCONST_VALUE_0(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-JSC::JSValue jsTestObjCONST_VALUE_1(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-JSC::JSValue jsTestObjCONST_VALUE_2(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-JSC::JSValue jsTestObjCONST_VALUE_4(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-JSC::JSValue jsTestObjCONST_VALUE_8(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-JSC::JSValue jsTestObjCONST_VALUE_9(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-JSC::JSValue jsTestObjCONST_VALUE_10(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-JSC::JSValue jsTestObjCONST_VALUE_11(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-JSC::JSValue jsTestObjCONST_VALUE_12(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-JSC::JSValue jsTestObjCONST_VALUE_13(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-JSC::JSValue jsTestObjCONST_VALUE_14(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
-JSC::JSValue jsTestObjCONST_JAVASCRIPT(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
+JSC::EncodedJSValue jsTestObjCONST_VALUE_0(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+JSC::EncodedJSValue jsTestObjCONST_VALUE_1(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+JSC::EncodedJSValue jsTestObjCONST_VALUE_2(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+JSC::EncodedJSValue jsTestObjCONST_VALUE_4(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+JSC::EncodedJSValue jsTestObjCONST_VALUE_8(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+JSC::EncodedJSValue jsTestObjCONST_VALUE_9(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+JSC::EncodedJSValue jsTestObjCONST_VALUE_10(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+JSC::EncodedJSValue jsTestObjCONST_VALUE_11(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+JSC::EncodedJSValue jsTestObjCONST_VALUE_12(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+JSC::EncodedJSValue jsTestObjCONST_VALUE_13(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+JSC::EncodedJSValue jsTestObjCONST_VALUE_14(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+JSC::EncodedJSValue jsTestObjCONST_JAVASCRIPT(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+JSC::EncodedJSValue jsTestObjReadonly(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
 
 } // namespace WebCore
 

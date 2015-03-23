@@ -58,19 +58,20 @@ namespace JSC {
     public:
         typedef JSDestructibleObject Base;
 
-        JS_EXPORT_PRIVATE static JSFunction* create(ExecState*, JSGlobalObject*, int length, const String& name, NativeFunction, Intrinsic = NoIntrinsic, NativeFunction nativeConstructor = callHostFunctionAsConstructor);
+        JS_EXPORT_PRIVATE static JSFunction* create(VM&, JSGlobalObject*, int length, const String& name, NativeFunction, Intrinsic = NoIntrinsic, NativeFunction nativeConstructor = callHostFunctionAsConstructor);
 
-        static JSFunction* create(ExecState* exec, FunctionExecutable* executable, JSScope* scope)
+        static JSFunction* create(VM& vm, FunctionExecutable* executable, JSScope* scope)
         {
-            VM& vm = exec->vm();
             JSFunction* function = new (NotNull, allocateCell<JSFunction>(vm.heap)) JSFunction(vm, executable, scope);
             ASSERT(function->structure()->globalObject());
             function->finishCreation(vm);
             return function;
         }
-
+        
+        static JSFunction* createBuiltinFunction(VM&, FunctionExecutable*, JSGlobalObject*);
+        
         static void destroy(JSCell*);
-
+        
         JS_EXPORT_PRIVATE String name(ExecState*);
         JS_EXPORT_PRIVATE String displayName(ExecState*);
         const String calculatedDisplayName(ExecState*);
@@ -94,21 +95,22 @@ namespace JSC {
             ASSERT(!isHostFunctionNonInline());
             m_scope.set(vm, this, scope);
         }
+        void addNameScopeIfNeeded(VM&);
 
         ExecutableBase* executable() const { return m_executable.get(); }
 
         // To call either of these methods include Executable.h
-        inline bool isHostFunction() const;
+        bool isHostFunction() const;
         FunctionExecutable* jsExecutable() const;
 
         JS_EXPORT_PRIVATE const SourceCode* sourceCode() const;
 
-        static JS_EXPORTDATA const ClassInfo s_info;
+        DECLARE_EXPORT_INFO;
 
         static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype) 
         {
             ASSERT(globalObject);
-            return Structure::create(vm, globalObject, prototype, TypeInfo(JSFunctionType, StructureFlags), &s_info); 
+            return Structure::create(vm, globalObject, prototype, TypeInfo(JSFunctionType, StructureFlags), info()); 
         }
 
         NativeFunction nativeFunction();
@@ -138,37 +140,32 @@ namespace JSC {
                 return createAllocationProfile(exec, inlineCapacity);
             return &m_allocationProfile;
         }
-
-        ObjectAllocationProfile* tryGetAllocationProfile()
-        {
-            if (m_allocationProfile.isNull())
-                return 0;
-            if (m_allocationProfileWatchpoint.hasBeenInvalidated())
-                return 0;
-            return &m_allocationProfile;
-        }
         
-        void addAllocationProfileWatchpoint(Watchpoint* watchpoint)
+        Structure* allocationStructure() { return m_allocationProfile.structure(); }
+
+        InlineWatchpointSet& allocationProfileWatchpointSet()
         {
-            ASSERT(tryGetAllocationProfile());
-            m_allocationProfileWatchpoint.add(watchpoint);
+            return m_allocationProfileWatchpoint;
         }
+
+        JS_EXPORT_PRIVATE bool isHostOrBuiltinFunction() const;
+        JS_EXPORT_PRIVATE bool isBuiltinFunction() const;
+        JS_EXPORT_PRIVATE bool isHostFunctionNonInline() const;
 
     protected:
         const static unsigned StructureFlags = OverridesGetOwnPropertySlot | ImplementsHasInstance | OverridesVisitChildren | OverridesGetPropertyNames | JSObject::StructureFlags;
 
-        JS_EXPORT_PRIVATE JSFunction(ExecState*, JSGlobalObject*, Structure*);
+        JS_EXPORT_PRIVATE JSFunction(VM&, JSGlobalObject*, Structure*);
         JSFunction(VM&, FunctionExecutable*, JSScope*);
-
-        void finishCreation(ExecState*, NativeExecutable*, int length, const String& name);
+        
+        void finishCreation(VM&, NativeExecutable*, int length, const String& name);
         using Base::finishCreation;
 
         ObjectAllocationProfile* createAllocationProfile(ExecState*, size_t inlineCapacity);
 
-        static bool getOwnPropertySlot(JSCell*, ExecState*, PropertyName, PropertySlot&);
-        static bool getOwnPropertyDescriptor(JSObject*, ExecState*, PropertyName, PropertyDescriptor&);
+        static bool getOwnPropertySlot(JSObject*, ExecState*, PropertyName, PropertySlot&);
         static void getOwnNonIndexPropertyNames(JSObject*, ExecState*, PropertyNameArray&, EnumerationMode = ExcludeDontEnumProperties);
-        static bool defineOwnProperty(JSObject*, ExecState*, PropertyName, PropertyDescriptor&, bool shouldThrow);
+        static bool defineOwnProperty(JSObject*, ExecState*, PropertyName, const PropertyDescriptor&, bool shouldThrow);
 
         static void put(JSCell*, ExecState*, PropertyName, JSValue, PutPropertySlot&);
 
@@ -179,12 +176,10 @@ namespace JSC {
     private:
         friend class LLIntOffsetsExtractor;
         
-        JS_EXPORT_PRIVATE bool isHostFunctionNonInline() const;
-
-        static JSValue argumentsGetter(ExecState*, JSValue, PropertyName);
-        static JSValue callerGetter(ExecState*, JSValue, PropertyName);
-        static JSValue lengthGetter(ExecState*, JSValue, PropertyName);
-        static JSValue nameGetter(ExecState*, JSValue, PropertyName);
+        static EncodedJSValue argumentsGetter(ExecState*, JSObject*, EncodedJSValue, PropertyName);
+        static EncodedJSValue callerGetter(ExecState*, JSObject*, EncodedJSValue, PropertyName);
+        static EncodedJSValue lengthGetter(ExecState*, JSObject*, EncodedJSValue, PropertyName);
+        static EncodedJSValue nameGetter(ExecState*, JSObject*, EncodedJSValue, PropertyName);
 
         WriteBarrier<ExecutableBase> m_executable;
         WriteBarrier<JSScope> m_scope;

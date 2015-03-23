@@ -22,9 +22,6 @@
 #ifndef RenderSVGResourceGradient_h
 #define RenderSVGResourceGradient_h
 
-#if ENABLE(SVG)
-#include "AffineTransform.h"
-#include "FloatRect.h"
 #include "Gradient.h"
 #include "ImageBuffer.h"
 #include "RenderSVGResourceContainer.h"
@@ -45,36 +42,39 @@ class GraphicsContext;
 
 class RenderSVGResourceGradient : public RenderSVGResourceContainer {
 public:
-    RenderSVGResourceGradient(SVGGradientElement*);
+    SVGGradientElement& gradientElement() const { return static_cast<SVGGradientElement&>(RenderSVGResourceContainer::element()); }
 
-    virtual void removeAllClientsFromCache(bool markForInvalidation = true);
-    virtual void removeClientFromCache(RenderObject*, bool markForInvalidation = true);
+    virtual void removeAllClientsFromCache(bool markForInvalidation = true) override final;
+    virtual void removeClientFromCache(RenderElement&, bool markForInvalidation = true) override final;
 
-    virtual bool applyResource(RenderObject*, RenderStyle*, GraphicsContext*&, unsigned short resourceMode);
-    virtual void postApplyResource(RenderObject*, GraphicsContext*&, unsigned short resourceMode, const Path*, const RenderSVGShape*);
-    virtual FloatRect resourceBoundingBox(RenderObject*) { return FloatRect(); }
+    virtual bool applyResource(RenderElement&, const RenderStyle&, GraphicsContext*&, unsigned short resourceMode) override final;
+    virtual void postApplyResource(RenderElement&, GraphicsContext*&, unsigned short resourceMode, const Path*, const RenderSVGShape*) override final;
+    virtual FloatRect resourceBoundingBox(const RenderObject&) override final { return FloatRect(); }
 
 protected:
+    RenderSVGResourceGradient(SVGGradientElement&, PassRef<RenderStyle>);
+
+    void element() const = delete;
+
     void addStops(GradientData*, const Vector<Gradient::ColorStop>&) const;
 
     virtual SVGUnitTypes::SVGUnitType gradientUnits() const = 0;
     virtual void calculateGradientTransform(AffineTransform&) = 0;
-    virtual bool collectGradientAttributes(SVGGradientElement*) = 0;
+    virtual bool collectGradientAttributes() = 0;
     virtual void buildGradient(GradientData*) const = 0;
 
     GradientSpreadMethod platformSpreadMethodFromSVGType(SVGSpreadMethodType) const;
 
 private:
     bool m_shouldCollectGradientAttributes : 1;
-    HashMap<RenderObject*, OwnPtr<GradientData> > m_gradientMap;
+    HashMap<RenderObject*, OwnPtr<GradientData>> m_gradientMap;
 
 #if USE(CG)
     GraphicsContext* m_savedContext;
-    OwnPtr<ImageBuffer> m_imageBuffer;
+    std::unique_ptr<ImageBuffer> m_imageBuffer;
 #endif
 };
 
 }
 
-#endif
 #endif

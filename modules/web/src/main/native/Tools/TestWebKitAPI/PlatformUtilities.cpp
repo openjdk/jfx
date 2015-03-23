@@ -26,8 +26,7 @@
 #include "config.h"
 #include "PlatformUtilities.h"
 
-#include <wtf/OwnArrayPtr.h>
-#include <wtf/PassOwnArrayPtr.h>
+#include <wtf/StdLibExtras.h>
 
 namespace TestWebKitAPI {
 namespace Util {
@@ -46,10 +45,10 @@ WKDictionaryRef createInitializationDictionaryForInjectedBundleTest(const std::s
 
     WKRetainPtr<WKStringRef> testNameKey(AdoptWK, WKStringCreateWithUTF8CString("TestName"));
     WKRetainPtr<WKStringRef> testNameString(AdoptWK, WKStringCreateWithUTF8CString(testName.c_str()));
-    WKDictionaryAddItem(initializationDictionary, testNameKey.get(), testNameString.get());
+    WKDictionarySetItem(initializationDictionary, testNameKey.get(), testNameString.get());
 
     WKRetainPtr<WKStringRef> userDataKey(AdoptWK, WKStringCreateWithUTF8CString("UserData"));
-    WKDictionaryAddItem(initializationDictionary, userDataKey.get(), userData);
+    WKDictionarySetItem(initializationDictionary, userDataKey.get(), userData);
 
     return initializationDictionary;
 }
@@ -67,7 +66,7 @@ WKContextRef createContextForInjectedBundleTest(const std::string& testName, WKT
 std::string toSTD(WKStringRef string)
 {
     size_t bufferSize = WKStringGetMaximumUTF8CStringSize(string);
-    OwnArrayPtr<char> buffer = adoptArrayPtr(new char[bufferSize]);
+    auto buffer = std::make_unique<char[]>(bufferSize);
     size_t stringLength = WKStringGetUTF8CString(string, buffer.get(), bufferSize);
     return std::string(buffer.get(), stringLength - 1);
 }

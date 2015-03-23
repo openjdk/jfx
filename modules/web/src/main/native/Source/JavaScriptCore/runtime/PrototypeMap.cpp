@@ -27,7 +27,7 @@
 #include "PrototypeMap.h"
 
 #include "JSGlobalObject.h"
-#include "Operations.h"
+#include "JSCInlines.h"
 
 namespace JSC {
 
@@ -63,7 +63,7 @@ Structure* PrototypeMap::emptyObjectStructureForPrototype(JSObject* prototype, u
     addPrototype(prototype);
     Structure* structure = JSFinalObject::createStructure(
         prototype->globalObject()->vm(), prototype->globalObject(), prototype, inlineCapacity);
-    addResult.iterator->value = structure;
+    addResult.iterator->value = Weak<Structure>(structure);
     return structure;
 }
 

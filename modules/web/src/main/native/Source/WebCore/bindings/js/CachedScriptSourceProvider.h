@@ -35,32 +35,32 @@
 namespace WebCore {
 
 class CachedScriptSourceProvider : public JSC::SourceProvider, public CachedResourceClient {
-        WTF_MAKE_FAST_ALLOCATED;
-    public:
-        static PassRefPtr<CachedScriptSourceProvider> create(CachedScript* cachedScript) { return adoptRef(new CachedScriptSourceProvider(cachedScript)); }
+    WTF_MAKE_FAST_ALLOCATED;
+public:
+    static PassRefPtr<CachedScriptSourceProvider> create(CachedScript* cachedScript) { return adoptRef(new CachedScriptSourceProvider(cachedScript)); }
 
-        virtual ~CachedScriptSourceProvider()
-        {
-            m_cachedScript->removeClient(this);
-        }
-
-        const String& source() const { return m_cachedScript->script(); }
-
-    private:
-        CachedScriptSourceProvider(CachedScript* cachedScript)
-        : SourceProvider(cachedScript->response().url(), TextPosition::minimumPosition())
-            , m_cachedScript(cachedScript)
-        {
-            m_cachedScript->addClient(this);
-        }
-
-        CachedResourceHandle<CachedScript> m_cachedScript;
-    };
-
-    inline JSC::SourceCode makeSource(CachedScript* cachedScript)
+    virtual ~CachedScriptSourceProvider()
     {
-        return JSC::SourceCode(CachedScriptSourceProvider::create(cachedScript));
+        m_cachedScript->removeClient(this);
     }
+
+    const String& source() const { return m_cachedScript->script(); }
+
+private:
+    CachedScriptSourceProvider(CachedScript* cachedScript)
+        : SourceProvider(cachedScript->response().url(), TextPosition::minimumPosition())
+        , m_cachedScript(cachedScript)
+    {
+        m_cachedScript->addClient(this);
+    }
+
+    CachedResourceHandle<CachedScript> m_cachedScript;
+};
+
+inline JSC::SourceCode makeSource(CachedScript* cachedScript)
+{
+    return JSC::SourceCode(CachedScriptSourceProvider::create(cachedScript));
+}
 
 } // namespace WebCore
 

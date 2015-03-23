@@ -20,31 +20,27 @@
 #ifndef SVGAnimatedColor_h
 #define SVGAnimatedColor_h
 
-#if ENABLE(SVG)
 #include "SVGAnimatedTypeAnimator.h"
 
 namespace WebCore {
-    
+
 class SVGAnimationElement;
 
-class SVGAnimatedColorAnimator : public SVGAnimatedTypeAnimator {
+class SVGAnimatedColorAnimator final : public SVGAnimatedTypeAnimator {
 public:
     SVGAnimatedColorAnimator(SVGAnimationElement*, SVGElement*);
-    virtual ~SVGAnimatedColorAnimator() { }
-    
-    virtual PassOwnPtr<SVGAnimatedType> constructFromString(const String&);
-    virtual PassOwnPtr<SVGAnimatedType> startAnimValAnimation(const SVGElementAnimatedPropertyList&) { return PassOwnPtr<SVGAnimatedType>(); }
-    virtual void stopAnimValAnimation(const SVGElementAnimatedPropertyList&) { }
-    virtual void resetAnimValToBaseVal(const SVGElementAnimatedPropertyList&, SVGAnimatedType*) { }
-    virtual void animValWillChange(const SVGElementAnimatedPropertyList&) { }
-    virtual void animValDidChange(const SVGElementAnimatedPropertyList&) { }
 
-    virtual void addAnimatedTypes(SVGAnimatedType*, SVGAnimatedType*);
-    virtual void calculateAnimatedValue(float percentage, unsigned repeatCount, SVGAnimatedType*, SVGAnimatedType*, SVGAnimatedType*, SVGAnimatedType*);
-    virtual float calculateDistance(const String& fromString, const String& toString);
+    virtual std::unique_ptr<SVGAnimatedType> constructFromString(const String&) override;
+    virtual std::unique_ptr<SVGAnimatedType> startAnimValAnimation(const SVGElementAnimatedPropertyList&) override { return nullptr; }
+    virtual void stopAnimValAnimation(const SVGElementAnimatedPropertyList&) override { }
+    virtual void resetAnimValToBaseVal(const SVGElementAnimatedPropertyList&, SVGAnimatedType*) override { }
+    virtual void animValWillChange(const SVGElementAnimatedPropertyList&) override { }
+    virtual void animValDidChange(const SVGElementAnimatedPropertyList&) override { }
+
+    virtual void addAnimatedTypes(SVGAnimatedType*, SVGAnimatedType*) override;
+    virtual void calculateAnimatedValue(float percentage, unsigned repeatCount, SVGAnimatedType*, SVGAnimatedType*, SVGAnimatedType*, SVGAnimatedType*) override;
+    virtual float calculateDistance(const String& fromString, const String& toString) override;
 };
 } // namespace WebCore
-
-#endif // ENABLE(SVG)
 
 #endif

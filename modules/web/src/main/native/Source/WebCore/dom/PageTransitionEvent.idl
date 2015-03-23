@@ -24,8 +24,8 @@
  */
 
 [
-        ConstructorTemplate=Event
+    ConstructorTemplate=Event
 ] interface PageTransitionEvent : Event {
     [InitializedByEventConstructor] readonly attribute boolean persisted;
-    };
+};
 

@@ -30,8 +30,6 @@
 
 #include "config.h"
 
-#if ENABLE(WORKERS)
-
 #include "AbstractWorker.h"
 
 #include "ContentSecurityPolicy.h"
@@ -46,8 +44,8 @@
 
 namespace WebCore {
 
-AbstractWorker::AbstractWorker(ScriptExecutionContext* context)
-    : ActiveDOMObject(context)
+AbstractWorker::AbstractWorker(ScriptExecutionContext& context)
+    : ActiveDOMObject(&context)
 {
 }
 
@@ -55,48 +53,31 @@ AbstractWorker::~AbstractWorker()
 {
 }
 
-void AbstractWorker::contextDestroyed()
-{
-    ActiveDOMObject::contextDestroyed(); 
-}
-
-KURL AbstractWorker::resolveURL(const String& url, ExceptionCode& ec)
+URL AbstractWorker::resolveURL(const String& url, ExceptionCode& ec)
 {
     if (url.isEmpty()) {
         ec = SYNTAX_ERR;
-        return KURL();
+        return URL();
     }
 
     // FIXME: This should use the dynamic global scope (bug #27887)
-    KURL scriptURL = scriptExecutionContext()->completeURL(url);
+    URL scriptURL = scriptExecutionContext()->completeURL(url);
     if (!scriptURL.isValid()) {
         ec = SYNTAX_ERR;
-        return KURL();
+        return URL();
     }
 
     if (!scriptExecutionContext()->securityOrigin()->canRequest(scriptURL)) {
         ec = SECURITY_ERR;
-        return KURL();
+        return URL();
     }
 
     if (scriptExecutionContext()->contentSecurityPolicy() && !scriptExecutionContext()->contentSecurityPolicy()->allowScriptFromSource(scriptURL)) {
         ec = SECURITY_ERR;
-        return KURL();
+        return URL();
     }
 
     return scriptURL;
 }
 
-EventTargetData* AbstractWorker::eventTargetData()
-{
-    return &m_eventTargetData;
-}
-
-EventTargetData* AbstractWorker::ensureEventTargetData()
-{
-    return &m_eventTargetData;
-}
-
 } // namespace WebCore
-
-#endif // ENABLE(WORKERS)

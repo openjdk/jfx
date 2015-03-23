@@ -35,11 +35,12 @@
 #include <wtf/RetainPtr.h>
 #include <wtf/StringExtras.h>
 
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && !PLATFORM(IOS)
 #include <LaunchServices/UTCoreTypes.h>
 #endif
 
-#if PLATFORM(WIN)
+#if PLATFORM(IOS)
+// FIXME: get kUTTypePNG from MobileCoreServices on iOS
 static const CFStringRef kUTTypePNG = CFSTR("public.png");
 #endif
 
@@ -85,7 +86,7 @@ void computeMD5HashStringForContext(CGContextRef bitmapContext, char hashString[
     // We need to swap the bytes to ensure consistent hashes independently of endianness
     MD5 md5;
     unsigned char* bitmapData = static_cast<unsigned char*>(CGBitmapContextGetData(bitmapContext));
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
     if ((CGBitmapContextGetBitmapInfo(bitmapContext) & kCGBitmapByteOrderMask) == kCGBitmapByteOrder32Big) {
         for (unsigned row = 0; row < pixelsHigh; row++) {
             Vector<uint8_t> buffer(4 * pixelsWide);
@@ -103,11 +104,11 @@ void computeMD5HashStringForContext(CGContextRef bitmapContext, char hashString[
         }
     }
 
-    Vector<uint8_t, 16> hash;
+    MD5::Digest hash;
     md5.checksum(hash);
-    
+
     hashString[0] = '\0';
-    for (int i = 0; i < 16; i++)
+    for (size_t i = 0; i < MD5::hashSize; i++)
         snprintf(hashString, 33, "%s%02x", hashString, hash[i]);
 }
 

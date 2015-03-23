@@ -51,7 +51,6 @@ enum FormType { // KEEP IN SYNC WITH edjeGroupFromFormType()
     ProgressBar,
 #endif
     SearchField,
-    SearchFieldDecoration,
     SearchFieldResultsButton,
     SearchFieldResultsDecoration,
     SearchFieldCancelButton,
@@ -83,6 +82,9 @@ public:
 
     // A method asking if the theme's controls actually care about redrawing when hovered.
     virtual bool supportsHover(const RenderStyle*) const { return true; }
+
+    // A method Returning whether the control is styled by css or not e.g specifying background-color.
+    virtual bool isControlStyled(const RenderStyle*, const BorderData&, const FillLayer&, const Color& backgroundColor) const;
 
     // A method asking if the theme is able to draw the focus ring.
     virtual bool supportsFocusRing(const RenderStyle*) const;
@@ -118,7 +120,7 @@ public:
     void adjustSizeConstraints(RenderStyle*, FormType) const;
 
     // System fonts.
-    virtual void systemFont(int propId, FontDescription&) const;
+    virtual void systemFont(CSSValueID, FontDescription&) const;
 
     virtual void adjustCheckboxStyle(StyleResolver*, RenderStyle*, Element*) const;
     virtual bool paintCheckbox(RenderObject*, const PaintInfo&, const IntRect&);
@@ -139,13 +141,10 @@ public:
     virtual bool paintMenuList(RenderObject*, const PaintInfo&, const IntRect&);
 
     virtual void adjustMenuListButtonStyle(StyleResolver*, RenderStyle*, Element*) const;
-    virtual bool paintMenuListButton(RenderObject*, const PaintInfo&, const IntRect&);
+    virtual bool paintMenuListButtonDecorations(RenderObject*, const PaintInfo&, const IntRect&);
 
-    virtual void adjustSearchFieldResultsDecorationStyle(StyleResolver*, RenderStyle*, Element*) const;
-    virtual bool paintSearchFieldResultsDecoration(RenderObject*, const PaintInfo&, const IntRect&);
-
-    virtual void adjustSearchFieldDecorationStyle(StyleResolver*, RenderStyle*, Element*) const;
-    virtual bool paintSearchFieldDecoration(RenderObject*, const PaintInfo&, const IntRect&);
+    virtual void adjustSearchFieldResultsDecorationPartStyle(StyleResolver*, RenderStyle*, Element*) const;
+    virtual bool paintSearchFieldResultsDecorationPart(RenderObject*, const PaintInfo&, const IntRect&);
 
     virtual void adjustSearchFieldStyle(StyleResolver*, RenderStyle*, Element*) const;
     virtual bool paintSearchField(RenderObject*, const PaintInfo&, const IntRect&);
@@ -164,12 +163,12 @@ public:
     virtual void adjustSliderThumbSize(RenderStyle*, Element*) const;
 
 #if ENABLE(DATALIST_ELEMENT)
-    virtual IntSize sliderTickSize() const OVERRIDE;
-    virtual int sliderTickOffsetFromTrackCenter() const OVERRIDE;
-    virtual LayoutUnit sliderTickSnappingThreshold() const OVERRIDE;
+    virtual IntSize sliderTickSize() const override;
+    virtual int sliderTickOffsetFromTrackCenter() const override;
+    virtual LayoutUnit sliderTickSnappingThreshold() const override;
 #endif
 
-    virtual bool supportsDataListUI(const AtomicString&) const OVERRIDE;
+    virtual bool supportsDataListUI(const AtomicString&) const override;
 
     virtual bool paintSliderThumb(RenderObject*, const PaintInfo&, const IntRect&);
 
@@ -206,10 +205,10 @@ public:
     virtual bool paintMediaCurrentTime(RenderObject*, const PaintInfo&, const IntRect&);
 #endif
 #if ENABLE(VIDEO_TRACK)
-    virtual bool supportsClosedCaptioning() const OVERRIDE;
-    virtual bool paintMediaToggleClosedCaptionsButton(RenderObject*, const PaintInfo&, const IntRect&) OVERRIDE;
+    virtual bool supportsClosedCaptioning() const override;
+    virtual bool paintMediaToggleClosedCaptionsButton(RenderObject*, const PaintInfo&, const IntRect&) override;
 #endif
-    virtual bool shouldShowPlaceholderWhenFocused() const OVERRIDE { return true; }
+    virtual bool shouldShowPlaceholderWhenFocused() const override { return true; }
 
     void setThemePath(const String&);
     String themePath() const;
@@ -229,7 +228,7 @@ private:
 
     void applyPartDescriptionsFrom(const String& themePath);
 
-    void applyEdjeStateFromForm(Evas_Object*, ControlStates);
+    void applyEdjeStateFromForm(Evas_Object*, ControlStates, bool);
     void applyEdjeRTLState(Evas_Object*, RenderObject*, FormType, const IntRect&);
     bool paintThemePart(RenderObject*, FormType, const PaintInfo&, const IntRect&);
 

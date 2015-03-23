@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,9 +33,10 @@
 
 #if ENABLE(LLINT_C_LOOP)
 #include "CodeBlock.h"
+#include "CommonSlowPaths.h"
 #include "LLIntCLoop.h"
 #include "LLIntSlowPaths.h"
-#include "Operations.h"
+#include "JSCInlines.h"
 #include "VMInspector.h"
 #include <wtf/Assertions.h>
 #include <wtf/MathExtras.h>
@@ -89,15 +90,28 @@ using namespace JSC::LLInt;
 #define OFFLINE_ASM_BEGIN
 #define OFFLINE_ASM_END
 
-
-#define OFFLINE_ASM_OPCODE_LABEL(opcode) DEFINE_OPCODE(opcode)
-#if ENABLE(COMPUTED_GOTO_OPCODES)
-    #define OFFLINE_ASM_GLUE_LABEL(label)  label:
+#if ENABLE(OPCODE_TRACING)
+#define TRACE_OPCODE(opcode) dataLogF("   op %s\n", #opcode)
 #else
-    #define OFFLINE_ASM_GLUE_LABEL(label)  case label: label:
+#define TRACE_OPCODE(opcode)
 #endif
 
-#define OFFLINE_ASM_LOCAL_LABEL(label)   label:
+// To keep compilers happy in case of unused labels, force usage of the label:
+#define USE_LABEL(label) \
+    do { \
+        if (false) \
+            goto label; \
+    } while (false)
+
+#define OFFLINE_ASM_OPCODE_LABEL(opcode) DEFINE_OPCODE(opcode) USE_LABEL(opcode); TRACE_OPCODE(opcode);
+
+#if ENABLE(COMPUTED_GOTO_OPCODES)
+#define OFFLINE_ASM_GLUE_LABEL(label)  label: USE_LABEL(label);
+#else
+#define OFFLINE_ASM_GLUE_LABEL(label)  case label: label: USE_LABEL(label);
+#endif
+
+#define OFFLINE_ASM_LOCAL_LABEL(label) label: USE_LABEL(label);
 
 
 //============================================================================
@@ -139,6 +153,7 @@ static void Double2Ints(double val, uint32_t& lo, uint32_t& hi)
 // pseudo register, as well as hides endianness differences.
 
 struct CLoopRegister {
+    CLoopRegister() { i = static_cast<intptr_t>(0xbadbeef0baddbeef); }
     union {
         intptr_t i;
         uintptr_t u;
@@ -204,10 +219,15 @@ struct CLoopRegister {
 #endif // !CPU(BIG_ENDIAN)
 #endif // !USE(JSVALUE64)
 
+        intptr_t* ip;
         int8_t* i8p;
         void* vp;
+        CallFrame* callFrame;
         ExecState* execState;
         void* instruction;
+        VM* vm;
+        JSCell* cell;
+        ProtoCallFrame* protoCallFrame;
         NativeFunction nativeFunc;
 #if USE(JSVALUE64)
         int64_t i64;
@@ -217,6 +237,13 @@ struct CLoopRegister {
 #endif
         Opcode opcode;
     };
+
+    operator ExecState*() { return execState; }
+    operator Instruction*() { return reinterpret_cast<Instruction*>(instruction); }
+    operator VM*() { return vm; }
+    operator ProtoCallFrame*() { return protoCallFrame; }
+    operator Register*() { return reinterpret_cast<Register*>(vp); }
+    operator JSCell*() { return cell; }
 
 #if USE(JSVALUE64)
     inline void clearHighWord() { i32padding = 0; }
@@ -229,8 +256,7 @@ struct CLoopRegister {
 // The llint C++ interpreter loop:
 //
 
-JSValue CLoop::execute(CallFrame* callFrame, OpcodeID bootstrapOpcodeId,
-                       bool isInitializationPass)
+JSValue CLoop::execute(OpcodeID entryOpcodeID, void* executableAddress, VM* vm, ProtoCallFrame* protoCallFrame, bool isInitializationPass)
 {
     #define CAST reinterpret_cast
     #define SIGN_BIT32(x) ((x) & 0x80000000)
@@ -264,8 +290,6 @@ JSValue CLoop::execute(CallFrame* callFrame, OpcodeID bootstrapOpcodeId,
 
         return JSValue();
     }
-
-    ASSERT(callFrame->vm().topCallFrame == callFrame);
 
     // Define the pseudo registers used by the LLINT C Loop backend:
     ASSERT(sizeof(CLoopRegister) == sizeof(intptr_t));
@@ -301,78 +325,66 @@ JSValue CLoop::execute(CallFrame* callFrame, OpcodeID bootstrapOpcodeId,
     // 2. 32 bit result values will be in the low 32-bit of t0.
     // 3. 64 bit result values will be in t0.
 
-    CLoopRegister t0, t1, t2, t3;
+    CLoopRegister t0, t1, t2, t3, t5, sp, cfr, lr, pc;
 #if USE(JSVALUE64)
-    CLoopRegister rBasePC, tagTypeNumber, tagMask;
+    CLoopRegister pcBase, tagTypeNumber, tagMask;
 #endif
-    CLoopRegister rRetVPC;
     CLoopDoubleRegister d0, d1;
 
-    // Keep the compiler happy. We don't really need this, but the compiler
-    // will complain. This makes the warning go away.
-    t0.i = 0;
-    t1.i = 0;
+    lr.opcode = getOpcode(llint_return_to_host);
+    sp.vp = vm->interpreter->stack().topOfStack() + 1;
+    cfr.callFrame = vm->topCallFrame;
+#ifndef NDEBUG
+    void* startSP = sp.vp;
+    CallFrame* startCFR = cfr.callFrame;
+#endif
 
-    // Instantiate the pseudo JIT stack frame used by the LLINT C Loop backend:
-    JITStackFrame jitStackFrame;
+    // Initialize the incoming args for doCallToJavaScript:
+    t0.vp = executableAddress;
+    t1.vm = vm;
+    t2.protoCallFrame = protoCallFrame;
 
-    // The llint expects the native stack pointer, sp, to be pointing to the
-    // jitStackFrame (which is the simulation of the native stack frame):
-    JITStackFrame* const sp = &jitStackFrame;
-    sp->vm = &callFrame->vm();
-
-    // Set up an alias for the vm ptr in the JITStackFrame:
-    VM* &vm = sp->vm;
-
-    CodeBlock* codeBlock = callFrame->codeBlock();
-    Instruction* vPC;
-
-    // rPC is an alias for vPC. Set up the alias:
-    CLoopRegister& rPC = *CAST<CLoopRegister*>(&vPC);
-
-#if USE(JSVALUE32_64)
-    vPC = codeBlock->instructions().begin();
-#else // USE(JSVALUE64)
-    vPC = 0;
-    rBasePC.vp = codeBlock->instructions().begin();
-
+#if USE(JSVALUE64)
     // For the ASM llint, JITStubs takes care of this initialization. We do
     // it explicitly here for the C loop:
     tagTypeNumber.i = 0xFFFF000000000000;
     tagMask.i = 0xFFFF000000000002;
 #endif // USE(JSVALUE64)
 
-    // cfr is an alias for callFrame. Set up this alias:
-    CLoopRegister& cfr = *CAST<CLoopRegister*>(&callFrame);
-
-    // Simulate a native return PC which should never be used:
-    rRetVPC.i = 0xbbadbeef;
-
     // Interpreter variables for value passing between opcodes and/or helpers:
     NativeFunction nativeFunc = 0;
     JSValue functionReturnValue;
-    Opcode opcode;
+    Opcode opcode = getOpcode(entryOpcodeID);
 
-    opcode = LLInt::getOpcode(bootstrapOpcodeId);
+#define PUSH(cloopReg) \
+    do { \
+        sp.ip--; \
+        *sp.ip = cloopReg.i; \
+    } while (false)
 
-    #if ENABLE(OPCODE_STATS)
-        #define RECORD_OPCODE_STATS(__opcode) \
-            OpcodeStats::recordInstruction(__opcode)
-    #else
-        #define RECORD_OPCODE_STATS(__opcode)
-    #endif
+#define POP(cloopReg) \
+    do { \
+        cloopReg.i = *sp.ip; \
+        sp.ip++; \
+    } while (false)
 
-    #if USE(JSVALUE32_64)
-        #define FETCH_OPCODE() vPC->u.opcode
-    #else // USE(JSVALUE64)
-        #define FETCH_OPCODE() *bitwise_cast<Opcode*>(rBasePC.i8p + rPC.i * 8)
-    #endif // USE(JSVALUE64)
+#if ENABLE(OPCODE_STATS)
+#define RECORD_OPCODE_STATS(__opcode) OpcodeStats::recordInstruction(__opcode)
+#else
+#define RECORD_OPCODE_STATS(__opcode)
+#endif
 
-    #define NEXT_INSTRUCTION() \
-        do {                         \
-            opcode = FETCH_OPCODE(); \
-            DISPATCH_OPCODE();       \
-        } while (false)
+#if USE(JSVALUE32_64)
+#define FETCH_OPCODE() pc.opcode
+#else // USE(JSVALUE64)
+#define FETCH_OPCODE() *bitwise_cast<Opcode*>(pcBase.i8p + pc.i * 8)
+#endif // USE(JSVALUE64)
+
+#define NEXT_INSTRUCTION() \
+    do {                         \
+        opcode = FETCH_OPCODE(); \
+        DISPATCH_OPCODE();       \
+    } while (false)
 
 #if ENABLE(COMPUTED_GOTO_OPCODES)
 
@@ -414,14 +426,22 @@ JSValue CLoop::execute(CallFrame* callFrame, OpcodeID bootstrapOpcodeId,
 
         #include "LLIntAssembly.h"
 
+        OFFLINE_ASM_GLUE_LABEL(llint_return_to_host)
+        {
+            ASSERT(startSP == sp.vp);
+            ASSERT(startCFR == cfr.callFrame);
+#if USE(JSVALUE32_64)
+            return JSValue(t1.i, t0.i); // returning JSValue(tag, payload);
+#else
+            return JSValue::decode(t0.encodedJSValue);
+#endif
+        }
+
         // In the ASM llint, getHostCallReturnValue() is a piece of glue
-        // function provided by the JIT (see dfg/DFGOperations.cpp).
+        // function provided by the JIT (see jit/JITOperations.cpp).
         // We simulate it here with a pseduo-opcode handler.
         OFFLINE_ASM_GLUE_LABEL(getHostCallReturnValue)
         {
-            // The ASM part pops the frame:
-            callFrame = callFrame->callerFrame();
-
             // The part in getHostCallReturnValueWithExecState():
             JSValue result = vm->hostCallReturnValue;
 #if USE(JSVALUE32_64)
@@ -430,12 +450,8 @@ JSValue CLoop::execute(CallFrame* callFrame, OpcodeID bootstrapOpcodeId,
 #else
             t0.encodedJSValue = JSValue::encode(result);
 #endif
-            goto doReturnHelper;
-        }
-
-        OFFLINE_ASM_GLUE_LABEL(ctiOpThrowNotCaught)
-        {
-            return vm->exception;
+            opcode = lr.opcode;
+            DISPATCH_OPCODE();
         }
 
 #if !ENABLE(COMPUTED_GOTO_OPCODES)
@@ -445,56 +461,7 @@ JSValue CLoop::execute(CallFrame* callFrame, OpcodeID bootstrapOpcodeId,
 
     } // END bytecode handler cases.
 
-    //========================================================================
-    // Bytecode helpers:
-
-    doReturnHelper: {
-        ASSERT(!!callFrame);
-        if (callFrame->hasHostCallFrameFlag()) {
-#if USE(JSVALUE32_64)
-            return JSValue(t1.i, t0.i); // returning JSValue(tag, payload);
-#else
-            return JSValue::decode(t0.encodedJSValue);
-#endif
-        }
-
-        // The normal ASM llint call implementation returns to the caller as
-        // recorded in rRetVPC, and the caller would fetch the return address
-        // from ArgumentCount.tag() (see the dispatchAfterCall() macro used in
-        // the callTargetFunction() macro in the llint asm files).
-        //
-        // For the C loop, we don't have the JIT stub to this work for us.
-        // So, we need to implement the equivalent of dispatchAfterCall() here
-        // before dispatching to the PC.
-
-        vPC = callFrame->currentVPC();
-
-#if USE(JSVALUE64)
-        // Based on LowLevelInterpreter64.asm's dispatchAfterCall():
-
-        // When returning from a native trampoline call, unlike the assembly
-        // LLInt, we can't simply return to the caller. In our case, we grab
-        // the caller's VPC and resume execution there. However, the caller's
-        // VPC returned by callFrame->currentVPC() is in the form of the real
-        // address of the target bytecode, but the 64-bit llint expects the
-        // VPC to be a bytecode offset. Hence, we need to map it back to a
-        // bytecode offset before we dispatch via the usual dispatch mechanism
-        // i.e. NEXT_INSTRUCTION():
-
-        codeBlock = callFrame->codeBlock();
-        ASSERT(codeBlock);
-        rPC.vp = callFrame->currentVPC();
-        rPC.i = rPC.i8p - reinterpret_cast<int8_t*>(codeBlock->instructions().begin());
-        rPC.i >>= 3;
-
-        rBasePC.vp = codeBlock->instructions().begin();
-#endif // USE(JSVALUE64)
-
-        NEXT_INSTRUCTION();
-
-    } // END doReturnHelper.
-
-
+#if ENABLE(COMPUTED_GOTO_OPCODES)
     // Keep the compiler happy so that it doesn't complain about unused
     // labels for the LLInt trampoline glue. The labels are automatically
     // emitted by label macros above, and some of them are referenced by
@@ -505,7 +472,7 @@ JSValue CLoop::execute(CallFrame* callFrame, OpcodeID bootstrapOpcodeId,
         UNUSED_LABEL(__opcode);
         FOR_EACH_OPCODE_ID(LLINT_OPCODE_ENTRY);
     #undef LLINT_OPCODE_ENTRY
-
+#endif
 
     #undef NEXT_INSTRUCTION
     #undef DEFINE_OPCODE
@@ -513,39 +480,60 @@ JSValue CLoop::execute(CallFrame* callFrame, OpcodeID bootstrapOpcodeId,
     #undef CAST
     #undef SIGN_BIT32
 
+    return JSValue(); // to suppress a compiler warning.
 } // Interpreter::llintCLoopExecute()
 
 } // namespace JSC
 
-#else // !ENABLE(LLINT_C_LOOP)
+#elif !OS(WINDOWS)
 
 //============================================================================
 // Define the opcode dispatch mechanism when using an ASM loop:
 //
 
 // These are for building an interpreter from generated assembly code:
+#if CPU(X86_64) && COMPILER(CLANG)
+#define OFFLINE_ASM_BEGIN   asm (                \
+    ".cfi_startproc\n"
+
+#define OFFLINE_ASM_END                          \
+    ".cfi_endproc\n"                             \
+                            );
+#else
 #define OFFLINE_ASM_BEGIN   asm (
 #define OFFLINE_ASM_END     );
+#endif
 
 #define OFFLINE_ASM_OPCODE_LABEL(__opcode) OFFLINE_ASM_GLOBAL_LABEL(llint_##__opcode)
 #define OFFLINE_ASM_GLUE_LABEL(__opcode)   OFFLINE_ASM_GLOBAL_LABEL(__opcode)
 
 #if CPU(ARM_THUMB2)
 #define OFFLINE_ASM_GLOBAL_LABEL(label)          \
+    ".text\n"                                    \
     ".globl " SYMBOL_STRING(label) "\n"          \
     HIDE_SYMBOL(label) "\n"                      \
     ".thumb\n"                                   \
     ".thumb_func " THUMB_FUNC_PARAM(label) "\n"  \
     SYMBOL_STRING(label) ":\n"
+#elif CPU(XXX86_64) && COMPILER(CLANG)
+#define OFFLINE_ASM_GLOBAL_LABEL(label)         \
+    ".text\n"                                   \
+    ".globl " SYMBOL_STRING(label) "\n"         \
+    HIDE_SYMBOL(label) "\n"                     \
+    SYMBOL_STRING(label) ":\n"                  \
+    ".cfi_def_cfa_offset 16\n"                  \
+    ".cfi_offset %rbp, -16\n"                   \
+    ".cfi_def_cfa_register rbp\n"
 #else
 #define OFFLINE_ASM_GLOBAL_LABEL(label)         \
+    ".text\n"                                   \
     ".globl " SYMBOL_STRING(label) "\n"         \
     HIDE_SYMBOL(label) "\n"                     \
     SYMBOL_STRING(label) ":\n"
 #endif
 
 #define OFFLINE_ASM_LOCAL_LABEL(label)   LOCAL_LABEL_STRING(label) ":\n"
-
+  
 // This is a file generated by offlineasm, which contains all of the assembly code
 // for the interpreter, as compiled from LowLevelInterpreter.asm.
 #include "LLIntAssembly.h"

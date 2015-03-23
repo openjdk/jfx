@@ -843,7 +843,7 @@ if (UPDATE_STUB_CACHE) {
 
 // Save a reference to the buildSrc.jar file because we need it for actually
 // compiling things, not just for the sake of this build script
-// (such as generating the builders, JSL files, etc)
+// (such as generating the JSL files, etc)
 ext.BUILD_SRC = rootProject.files("buildSrc/build/libs/buildSrc.jar")
 
 /**
@@ -1653,7 +1653,7 @@ project(":extensions") {
 }
 
 project(":swing") {
-    /* should not be built, but needed in builders and JMX
+    /* should not be built, but needed in JMX
     tasks.all {
         if (!COMPILE_SWING) it.enabled = false
     }
@@ -1685,25 +1685,6 @@ project(":fxml") {
         // we have to use the stub toolkit for now.
         jvmArgs "-Djavafx.toolkit=com.sun.javafx.pgstub.StubToolkit"
         classpath += files("$JDK_HOME/jre/lib/ext/nashorn.jar")
-    }
-}
-
-project(":builders") {
-    sourceCompatibility = 1.7
-
-    if (!COMPILE_SWING) sourceSets.main.java.exclude ("**/swing/**")
-    if (!COMPILE_SWT)   sourceSets.main.java.exclude ("**/swt/**")
-
-    dependencies {
-        compile BUILD_SRC, project(":base"), project(":graphics"),
-                project(":controls"), project(":swt"), project(":swing"), project(":media"), project(":web")
-        testCompile project(":graphics").sourceSets.test.output
-    }
-    test {
-        // StubToolkit is not *really* needed here, but because some code inadvertently invokes performance
-        // tracker and this attempts to fire up the toolkit and this looks for native libraries and fails,
-        // we have to use the stub toolkit for now.
-        jvmArgs "-Djavafx.toolkit=com.sun.javafx.pgstub.StubToolkit"
     }
 }
 
@@ -1960,7 +1941,7 @@ project(":fxpackager") {
             doLast {
                 mkdir "$buildDir/native"
                 exec({
-                    commandLine("$RC", "/nologo", "/l", "0x409", "/r", "/dJFX_DVERSION=8", "/dJFX_VERSION=8",
+                    commandLine("$RC", "/nologo", "/l", "0x409", "/r", "/dJFX_DVERSION=9", "/dJFX_VERSION=9",
                             "/fo$buildDir/native/javapackager/javapackager.res",
                             "src/main/native/javapackager/win/javapackager.rc");
                     environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT);
@@ -2481,7 +2462,7 @@ project(":web") {
                           IS_64 ? "${t.name}-amd64" : "${t.name}-i586"
         dependencies {
             webkit group: "com.sun.webkit", name: "webview-deps",
-                   version: "1.2", classifier: "$classifier", ext: "zip"
+                   version: "1.3", classifier: "$classifier", ext: "zip"
         }
 
         def webkitOutputDir = "$buildDir/${t.name}"
@@ -2499,7 +2480,7 @@ project(":web") {
             exec {
                 workingDir("$projectDir/src/main/native")
                 commandLine("perl", "Tools/Scripts/set-webkit-configuration", "--$webkitConfig")
-                environment(["WEBKITOUTPUTDIR" : webkitOutputDir])
+                environment(["WEBKIT_OUTPUTDIR" : webkitOutputDir])
             }
 
             exec {
@@ -2509,7 +2490,7 @@ project(":web") {
                     String parfaitPath = IS_COMPILE_PARFAIT ? System.getenv().get("PARFAIT_PATH") + ";" : "";
                     Map environmentSettings = new HashMap(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
                     environmentSettings["PATH"] = parfaitPath + "$WINDOWS_VS_PATH;$qtDir/bin;$qtDir/qt/bin"
-                    environmentSettings["QMAKESPEC"] = "win32-msvc2008"
+                    environmentSettings["QMAKESPEC"] = "win32-msvc2013"
                     environment(environmentSettings)
                     /* To build with ICU:
                     1. Download http://javaweb.us.oracle.com/jcg/fx-webrevs/RT-17164/WebKitLibrariesICU.zip
@@ -2522,7 +2503,7 @@ project(":web") {
                     // args("--icu-unicode")
                 } else if (t.name == "mac") {
                     environment([
-                        "QMAKESPEC"      : "macx-g++",
+                        "QMAKESPEC"      : "macx-clang",
                         "QMAKE_CFLAGS"   : "-m64",
                         "QMAKE_LFLAGS"   : "-m64",
                     ])
@@ -2567,22 +2548,18 @@ load(qt_config)""")
                 }
                 environment([
                     "JAVA_HOME"       : JDK_HOME,
-                    "WEBKITOUTPUTDIR" : webkitOutputDir,
+                    "WEBKIT_OUTPUTDIR" : webkitOutputDir,
                 ])
 
                 if (IS_COMPILE_PARFAIT) {
                     environment([
-                        "CC"        : "parfait-gcc",
-                        "QMAKE_CC"  : "parfait-gcc",
-                        "CXX"       : "parfait-g++",
-                        "QMAKE_CXX" : "parfait-g++",
-                        "CPP"       : "parfait-g++",
-                        "cc"        : "parfait-gcc",
-                        "LINK"      : "parfait-g++",
-                        "QMAKE_LINK": "parfait-g++",
+                        "COMPILE_PARFAIT" : "true",
+                        "QMAKE_CC"        : "parfait-gcc",
+                        "QMAKE_CXX"       : "parfait-g++",
+                        "QMAKE_LINK"      : "parfait-g++",
                     ])
                 }
-                commandLine("perl", "Tools/Scripts/build-webkit", "--java", "--imageio")
+                commandLine("perl", "Tools/Scripts/build-webkit", "--java", "--imageio", "--icu-unicode")
             }
 
             def library = rootProject.ext[t.upper].library
@@ -2723,7 +2700,7 @@ task javadoc(type: Javadoc) {
             project(":base"), project(":graphics"), project(":controls"), project(":media"),
             project(":swing"), project(":swt"), project(":fxml"), project(":web")]
     source(projectsToDocument.collect({
-        [it.sourceSets.main.java, "$it.buildDir/generated-src/builders"]
+        [it.sourceSets.main.java]
     }));
     setDestinationDir(new File(buildDir, 'javadoc'));
     // Might need a classpath
@@ -2842,7 +2819,7 @@ task copySources(type: Copy) {
     def projectsToCopy = [
             project(":base"), project(":graphics"), project(":controls"),
             project(":swing"), project(":swt"), project(":fxml"),
-            project(":builders"), project(":media"), project(":web")]
+            project(":media"), project(":web")]
     from(projectsToCopy.collect({ proj ->
         files(proj.sourceSets.main.java.srcDirs)
     }))
@@ -2890,7 +2867,6 @@ compileTargets { t ->
         includeEmptyDirs = false
         from("modules/base/build/classes/main",
              "modules/base/build/resources/main",
-             "modules/builders/build/classes/main",
              "modules/graphics/build/classes/main",
              "modules/graphics/build/resources/main",
              "modules/controls/build/classes/main",
@@ -3009,7 +2985,6 @@ compileTargets { t ->
         archiveName = "build/${sdkDirName}/rt/lib/jfxswt.jar";
         includeEmptyDirs = false
         from("modules/swt/build/classes/main");
-        from("modules/builders/build/classes/main");
         include("**/javafx/embed/swt/**")
         exclude("**/*.java");  // Builder java files are in build/classes and should be excluded
 
@@ -3060,6 +3035,14 @@ compileTargets { t ->
                 }
                 if (IS_WINDOWS) {
                     from ("modules/graphics/build/libs/prismD3D/${t.name}/${library(targetProperties.prismD3D.lib)}");
+
+                    // Copy VS2013 runtime libs to sdk
+                    if ("${targetProperties.MSVCRTDIR}" != "") {
+                        from("${targetProperties.MSVCRTDIR}") {
+                            include "msvcr${WINDOWS_VS_VER}.dll",
+                                    "msvcp${WINDOWS_VS_VER}.dll"
+                        }
+                    }
                 }
                 if (IS_COMPILE_WEBKIT) {
                     from ("modules/web/build/libs/${t.name}/${library('jfxwebkit')}")
@@ -3204,7 +3187,6 @@ ext.JFXRT_CP =
         project(":controls").sourceSets.main.output.classesDir,
         project(":fxml").sourceSets.main.output.classesDir,
         project(":swing").sourceSets.main.output.classesDir, //NOTE - used by 3Dviewer
-        project(":builders").sourceSets.main.output.classesDir,
             "modules/media/build/classes/main",
             "modules/web/build/classes/main",
     )

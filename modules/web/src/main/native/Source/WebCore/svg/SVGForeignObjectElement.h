@@ -20,37 +20,33 @@
 #ifndef SVGForeignObjectElement_h
 #define SVGForeignObjectElement_h
 
-#if ENABLE(SVG)
 #include "SVGAnimatedBoolean.h"
 #include "SVGAnimatedLength.h"
 #include "SVGExternalResourcesRequired.h"
-#include "SVGLangSpace.h"
-#include "SVGStyledTransformableElement.h"
-#include "SVGTests.h"
+#include "SVGGraphicsElement.h"
+#include "SVGNames.h"
 #include "SVGURIReference.h"
 
 namespace WebCore {
 
-class SVGForeignObjectElement FINAL : public SVGStyledTransformableElement,
-                                public SVGTests,
-                                public SVGLangSpace,
-                                public SVGExternalResourcesRequired {
+class SVGForeignObjectElement final : public SVGGraphicsElement,
+                                      public SVGExternalResourcesRequired {
 public:
-    static PassRefPtr<SVGForeignObjectElement> create(const QualifiedName&, Document*);
+    static PassRefPtr<SVGForeignObjectElement> create(const QualifiedName&, Document&);
 
 private:
-    SVGForeignObjectElement(const QualifiedName&, Document*);
+    SVGForeignObjectElement(const QualifiedName&, Document&);
 
-    virtual bool isValid() const { return SVGTests::isValid(); }
+    virtual bool isValid() const override { return SVGTests::isValid(); }
     bool isSupportedAttribute(const QualifiedName&);
-    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
-    virtual void svgAttributeChanged(const QualifiedName&);
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
+    virtual void svgAttributeChanged(const QualifiedName&) override;
 
-    virtual bool rendererIsNeeded(const NodeRenderingContext&) OVERRIDE;
-    virtual bool childShouldCreateRenderer(const NodeRenderingContext&) const;
-    virtual RenderObject* createRenderer(RenderArena* arena, RenderStyle* style);
+    virtual bool rendererIsNeeded(const RenderStyle&) override;
+    virtual bool childShouldCreateRenderer(const Node&) const override;
+    virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) override;
 
-    virtual bool selfHasRelativeLengths() const;
+    virtual bool selfHasRelativeLengths() const override;
 
     BEGIN_DECLARE_ANIMATED_PROPERTIES(SVGForeignObjectElement)
         DECLARE_ANIMATED_LENGTH(X, x)
@@ -60,14 +56,10 @@ private:
         DECLARE_ANIMATED_STRING(Href, href)
         DECLARE_ANIMATED_BOOLEAN(ExternalResourcesRequired, externalResourcesRequired)
     END_DECLARE_ANIMATED_PROPERTIES
-
-    // SVGTests
-    virtual void synchronizeRequiredFeatures() { SVGTests::synchronizeRequiredFeatures(this); }
-    virtual void synchronizeRequiredExtensions() { SVGTests::synchronizeRequiredExtensions(this); }
-    virtual void synchronizeSystemLanguage() { SVGTests::synchronizeSystemLanguage(this); }
 };
+
+NODE_TYPE_CASTS(SVGForeignObjectElement)
 
 } // namespace WebCore
 
-#endif // ENABLE(SVG)
 #endif

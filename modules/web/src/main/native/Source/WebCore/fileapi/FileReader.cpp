@@ -40,38 +40,32 @@
 #include "Logging.h"
 #include "ProgressEvent.h"
 #include "ScriptExecutionContext.h"
-#include <wtf/ArrayBuffer.h>
+#include <runtime/ArrayBuffer.h>
 #include <wtf/CurrentTime.h>
 #include <wtf/text/CString.h>
 
 namespace WebCore {
 
-static const double progressNotificationIntervalMS = 50;
+static const auto progressNotificationInterval = std::chrono::milliseconds(50);
 
-PassRefPtr<FileReader> FileReader::create(ScriptExecutionContext* context)
+PassRefPtr<FileReader> FileReader::create(ScriptExecutionContext& context)
 {
     RefPtr<FileReader> fileReader(adoptRef(new FileReader(context)));
     fileReader->suspendIfNeeded();
     return fileReader.release();
 }
 
-FileReader::FileReader(ScriptExecutionContext* context)
-    : ActiveDOMObject(context)
+FileReader::FileReader(ScriptExecutionContext& context)
+    : ActiveDOMObject(&context)
     , m_state(EMPTY)
     , m_aborting(false)
     , m_readType(FileReaderLoader::ReadAsBinaryString)
-    , m_lastProgressNotificationTimeMS(0)
 {
 }
 
 FileReader::~FileReader()
 {
     terminate();
-}
-
-const AtomicString& FileReader::interfaceName() const
-{
-    return eventNames().interfaceForFileReader;
 }
 
 bool FileReader::canSuspend() const
@@ -146,7 +140,7 @@ void FileReader::readInternal(Blob* blob, FileReaderLoader::ReadType type, Excep
     m_state = LOADING;
     m_error = 0;
 
-    m_loader = adoptPtr(new FileReaderLoader(m_readType, this));
+    m_loader = std::make_unique<FileReaderLoader>(m_readType, this);
     m_loader->setEncoding(m_encoding);
     m_loader->setDataType(m_blob->type());
     m_loader->start(scriptExecutionContext(), m_blob.get());
@@ -204,12 +198,15 @@ void FileReader::didStartLoading()
 void FileReader::didReceiveData()
 {
     // Fire the progress event at least every 50ms.
-    double now = currentTimeMS();
-    if (!m_lastProgressNotificationTimeMS)
-        m_lastProgressNotificationTimeMS = now;
-    else if (now - m_lastProgressNotificationTimeMS > progressNotificationIntervalMS) {
+    auto now = std::chrono::steady_clock::now();
+    if (!m_lastProgressNotificationTime.time_since_epoch().count()) {
+        m_lastProgressNotificationTime = now;
+        return;
+    }
+
+    if (now - m_lastProgressNotificationTime > progressNotificationInterval) {
         fireEvent(eventNames().progressEvent);
-        m_lastProgressNotificationTimeMS = now;
+        m_lastProgressNotificationTime = now;
     }
 }
 

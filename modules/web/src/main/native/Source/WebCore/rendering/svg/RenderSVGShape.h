@@ -26,12 +26,11 @@
 #ifndef RenderSVGShape_h
 #define RenderSVGShape_h
 
-#if ENABLE(SVG)
 #include "AffineTransform.h"
 #include "FloatRect.h"
 #include "RenderSVGModelObject.h"
+#include "SVGGraphicsElement.h"
 #include "SVGMarkerData.h"
-#include "StrokeStyleApplier.h"
 #include <wtf/OwnPtr.h>
 #include <wtf/Vector.h>
 
@@ -42,41 +41,24 @@ class GraphicsContextStateSaver;
 class RenderSVGContainer;
 class RenderSVGPath;
 class RenderSVGResource;
-class SVGStyledTransformableElement;
-
-class BoundingRectStrokeStyleApplier : public StrokeStyleApplier {
-public:
-    BoundingRectStrokeStyleApplier(const RenderObject* object, RenderStyle* style)
-        : m_object(object)
-        , m_style(style)
-    {
-        ASSERT(style);
-        ASSERT(object);
-    }
-
-    void strokeStyle(GraphicsContext* context)
-    {
-        SVGRenderSupport::applyStrokeStyleToContext(context, m_style, m_object);
-    }
-
-private:
-    const RenderObject* m_object;
-    RenderStyle* m_style;
-};
+class SVGGraphicsElement;
 
 class RenderSVGShape : public RenderSVGModelObject {
 public:
-    explicit RenderSVGShape(SVGStyledTransformableElement*);
-    RenderSVGShape(SVGStyledTransformableElement*, Path*, bool);
+    RenderSVGShape(SVGGraphicsElement&, PassRef<RenderStyle>);
+    RenderSVGShape(SVGGraphicsElement&, PassRef<RenderStyle>, Path*, bool);
     virtual ~RenderSVGShape();
 
+    SVGGraphicsElement& graphicsElement() const { return toSVGGraphicsElement(RenderSVGModelObject::element()); }
+
     void setNeedsShapeUpdate() { m_needsShapeUpdate = true; }
-    virtual void setNeedsBoundariesUpdate() { m_needsBoundariesUpdate = true; }
-    virtual bool needsBoundariesUpdate() OVERRIDE { return m_needsBoundariesUpdate; }
-    virtual void setNeedsTransformUpdate() { m_needsTransformUpdate = true; }
+    virtual void setNeedsBoundariesUpdate() override final { m_needsBoundariesUpdate = true; }
+    virtual bool needsBoundariesUpdate() override final { return m_needsBoundariesUpdate; }
+    virtual void setNeedsTransformUpdate() override final { m_needsTransformUpdate = true; }
     virtual void fillShape(GraphicsContext*) const;
     virtual void strokeShape(GraphicsContext*) const;
 
+    bool hasPath() const { return m_path.get(); }
     Path& path() const
     {
         ASSERT(m_path);
@@ -84,15 +66,16 @@ public:
     }
 
 protected:
+    void element() const = delete;
+
     virtual void updateShapeFromElement();
-    virtual bool isEmpty() const;
+    virtual bool isEmpty() const override;
     virtual bool shapeDependentStrokeContains(const FloatPoint&);
     virtual bool shapeDependentFillContains(const FloatPoint&, const WindRule) const;
     float strokeWidth() const;
-    bool hasPath() const { return m_path.get(); }
     bool hasSmoothStroke() const;
 
-    bool hasNonScalingStroke() const { return style()->svgStyle()->vectorEffect() == VE_NON_SCALING_STROKE; }
+    bool hasNonScalingStroke() const { return style().svgStyle().vectorEffect() == VE_NON_SCALING_STROKE; }
     AffineTransform nonScalingStrokeTransform() const;
     Path* nonScalingStrokePath(const Path*, const AffineTransform&) const;
 
@@ -104,22 +87,23 @@ private:
     bool fillContains(const FloatPoint&, bool requiresFill = true, const WindRule fillRule = RULE_NONZERO);
     bool strokeContains(const FloatPoint&, bool requiresStroke = true);
 
-    virtual FloatRect repaintRectInLocalCoordinates() const { return m_repaintBoundingBox; }
-    virtual FloatRect repaintRectInLocalCoordinatesExcludingSVGShadow() const OVERRIDE { return m_repaintBoundingBoxExcludingShadow; }
-    virtual const AffineTransform& localToParentTransform() const { return m_localTransform; }
-    virtual AffineTransform localTransform() const { return m_localTransform; }
+    virtual FloatRect repaintRectInLocalCoordinates() const override final { return m_repaintBoundingBox; }
+    virtual FloatRect repaintRectInLocalCoordinatesExcludingSVGShadow() const override final { return m_repaintBoundingBoxExcludingShadow; }
+    virtual const AffineTransform& localToParentTransform() const override final { return m_localTransform; }
+    virtual AffineTransform localTransform() const override final { return m_localTransform; }
 
-    virtual bool isSVGShape() const { return true; }
-    virtual const char* renderName() const { return "RenderSVGShape"; }
+    virtual bool isSVGShape() const override final { return true; }
+    virtual bool canHaveChildren() const override final { return false; }
+    virtual const char* renderName() const override { return "RenderSVGShape"; }
 
-    virtual void layout();
-    virtual void paint(PaintInfo&, const LayoutPoint&);
-    virtual void addFocusRingRects(Vector<IntRect>&, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer = 0) OVERRIDE;
+    virtual void layout() override final;
+    virtual void paint(PaintInfo&, const LayoutPoint&) override final;
+    virtual void addFocusRingRects(Vector<IntRect>&, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer = 0) override final;
 
-    virtual bool nodeAtFloatPoint(const HitTestRequest&, HitTestResult&, const FloatPoint& pointInParent, HitTestAction);
+    virtual bool nodeAtFloatPoint(const HitTestRequest&, HitTestResult&, const FloatPoint& pointInParent, HitTestAction) override final;
 
-    virtual FloatRect objectBoundingBox() const { return m_fillBoundingBox; }
-    virtual FloatRect strokeBoundingBox() const { return m_strokeBoundingBox; }
+    virtual FloatRect objectBoundingBox() const override final { return m_fillBoundingBox; }
+    virtual FloatRect strokeBoundingBox() const override final { return m_strokeBoundingBox; }
     FloatRect calculateObjectBoundingBox() const;
     FloatRect calculateStrokeBoundingBox() const;
     void updateRepaintBoundingBox();
@@ -130,8 +114,8 @@ private:
     FloatRect markerRect(float strokeWidth) const;
     void processMarkerPositions();
 
-    void fillShape(RenderStyle*, GraphicsContext*);
-    void strokeShape(RenderStyle*, GraphicsContext*);
+    void fillShape(const RenderStyle&, GraphicsContext*);
+    void strokeShape(const RenderStyle&, GraphicsContext*);
     void fillAndStrokeShape(GraphicsContext*);
     void drawMarkers(PaintInfo&);
 
@@ -147,22 +131,8 @@ private:
     bool m_needsTransformUpdate : 1;
 };
 
-inline RenderSVGShape* toRenderSVGShape(RenderObject* object)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isSVGShape());
-    return static_cast<RenderSVGShape*>(object);
-}
-
-inline const RenderSVGShape* toRenderSVGShape(const RenderObject* object)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isSVGShape());
-    return static_cast<const RenderSVGShape*>(object);
-}
-
-// This will catch anyone doing an unnecessary cast.
-void toRenderSVGShape(const RenderSVGShape*);
+RENDER_OBJECT_TYPE_CASTS(RenderSVGShape, isSVGShape())
 
 }
 
-#endif // ENABLE(SVG)
 #endif

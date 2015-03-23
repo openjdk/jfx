@@ -20,7 +20,7 @@
 #ifndef TextureMapperBackingStore_h
 #define TextureMapperBackingStore_h
 
-#if USE(ACCELERATED_COMPOSITING) && USE(TEXTURE_MAPPER)
+#if USE(TEXTURE_MAPPER)
 
 #include "FloatRect.h"
 #include "Image.h"
@@ -47,7 +47,7 @@ protected:
     static unsigned calculateExposedTileEdges(const FloatRect& totalRect, const FloatRect& tileRect);
 };
 
-    }
+}
 #endif
 
 #endif // TextureMapperBackingStore_h

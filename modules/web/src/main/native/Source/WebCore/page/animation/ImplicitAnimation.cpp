@@ -38,9 +38,9 @@
 
 namespace WebCore {
 
-ImplicitAnimation::ImplicitAnimation(const Animation* transition, CSSPropertyID animatingProperty, RenderObject* renderer, CompositeAnimation* compAnim, RenderStyle* fromStyle)
+ImplicitAnimation::ImplicitAnimation(const Animation& transition, CSSPropertyID animatingProperty, RenderElement* renderer, CompositeAnimation* compAnim, RenderStyle* fromStyle)
     : AnimationBase(transition, renderer, compAnim)
-    , m_transitionProperty(transition->property())
+    , m_transitionProperty(transition.property())
     , m_animatingProperty(animatingProperty)
     , m_overridden(false)
     , m_active(true)
@@ -58,10 +58,10 @@ ImplicitAnimation::~ImplicitAnimation()
 
 bool ImplicitAnimation::shouldSendEventForListener(Document::ListenerType inListenerType) const
 {
-    return m_object->document()->hasListenerType(inListenerType);
+    return m_object->document().hasListenerType(inListenerType);
 }
 
-void ImplicitAnimation::animate(CompositeAnimation*, RenderObject*, const RenderStyle*, RenderStyle* targetStyle, RefPtr<RenderStyle>& animatedStyle)
+void ImplicitAnimation::animate(CompositeAnimation*, RenderElement*, const RenderStyle*, RenderStyle* targetStyle, RefPtr<RenderStyle>& animatedStyle)
 {
     // If we get this far and the animation is done, it means we are cleaning up a just finished animation.
     // So just return. Everything is already all cleaned up.
@@ -77,7 +77,6 @@ void ImplicitAnimation::animate(CompositeAnimation*, RenderObject*, const Render
     if (!animatedStyle)
         animatedStyle = RenderStyle::clone(targetStyle);
 
-#if USE(ACCELERATED_COMPOSITING)
     bool needsAnim = CSSPropertyAnimation::blendProperties(this, m_animatingProperty, animatedStyle.get(), m_fromStyle.get(), m_toStyle.get(), progress(1, 0, 0));
     // FIXME: we also need to detect cases where we have to software animate for other reasons,
     // such as a child using inheriting the transform. https://bugs.webkit.org/show_bug.cgi?id=23902
@@ -87,7 +86,6 @@ void ImplicitAnimation::animate(CompositeAnimation*, RenderObject*, const Render
         // that is animating are correctly detected during the animation (e.g. when a transition
         // gets interrupted).
         animatedStyle->setIsRunningAcceleratedAnimation();
-#endif
 
     // Fire the start timeout if needed
     fireAnimationEventsIfNeeded();
@@ -103,12 +101,8 @@ void ImplicitAnimation::getAnimatedStyle(RefPtr<RenderStyle>& animatedStyle)
 
 bool ImplicitAnimation::startAnimation(double timeOffset)
 {
-#if USE(ACCELERATED_COMPOSITING)
     if (m_object && m_object->isComposited())
         return toRenderBoxModelObject(m_object)->startTransition(timeOffset, m_animatingProperty, m_fromStyle.get(), m_toStyle.get());
-#else
-    UNUSED_PARAM(timeOffset);
-#endif
     return false;
 }
 
@@ -117,23 +111,17 @@ void ImplicitAnimation::pauseAnimation(double timeOffset)
     if (!m_object)
         return;
 
-#if USE(ACCELERATED_COMPOSITING)
     if (m_object->isComposited())
         toRenderBoxModelObject(m_object)->transitionPaused(timeOffset, m_animatingProperty);
-#else
-    UNUSED_PARAM(timeOffset);
-#endif
     // Restore the original (unanimated) style
     if (!paused())
-        setNeedsStyleRecalc(m_object->node());
+        setNeedsStyleRecalc(m_object->element());
 }
 
 void ImplicitAnimation::endAnimation()
 {
-#if USE(ACCELERATED_COMPOSITING)
     if (m_object && m_object->isComposited())
         toRenderBoxModelObject(m_object)->transitionFinished(m_animatingProperty);
-#endif
 }
 
 void ImplicitAnimation::onAnimationEnd(double elapsedTime)
@@ -160,11 +148,9 @@ bool ImplicitAnimation::sendTransitionEvent(const AtomicString& eventType, doubl
             String propertyName = getPropertyNameString(m_animatingProperty);
                 
             // Dispatch the event
-            RefPtr<Element> element = 0;
-            if (m_object->node() && m_object->node()->isElementNode())
-                element = toElement(m_object->node());
+            RefPtr<Element> element = m_object->element();
 
-            ASSERT(!element || (element->document() && !element->document()->inPageCache()));
+            ASSERT(!element || !element->document().inPageCache());
             if (!element)
                 return false;
 
@@ -287,7 +273,6 @@ void ImplicitAnimation::checkForMatchingFilterFunctionLists()
 double ImplicitAnimation::timeToNextService()
 {
     double t = AnimationBase::timeToNextService();
-#if USE(ACCELERATED_COMPOSITING)
     if (t != 0 || preActive())
         return t;
         
@@ -297,7 +282,6 @@ double ImplicitAnimation::timeToNextService()
         bool isLooping;
         getTimeToNextEvent(t, isLooping);
     }
-#endif
     return t;
 }
 

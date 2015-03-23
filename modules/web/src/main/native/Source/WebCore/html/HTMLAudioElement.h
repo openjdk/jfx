@@ -34,16 +34,16 @@ namespace WebCore {
 
 class Document;
 
-class HTMLAudioElement FINAL : public HTMLMediaElement {
+class HTMLAudioElement final : public HTMLMediaElement {
 public:
-    static PassRefPtr<HTMLAudioElement> create(const QualifiedName&, Document*, bool);
-    static PassRefPtr<HTMLAudioElement> createForJSConstructor(Document*, const String& src);
+    static PassRefPtr<HTMLAudioElement> create(const QualifiedName&, Document&, bool);
+    static PassRefPtr<HTMLAudioElement> createForJSConstructor(Document&, const String& src);
 
 private:
-    HTMLAudioElement(const QualifiedName&, Document*, bool);
-
-    virtual bool isVideo() const { return false; }
+    HTMLAudioElement(const QualifiedName&, Document&, bool);
 };
+
+NODE_TYPE_CASTS(HTMLAudioElement)
 
 } //namespace
 

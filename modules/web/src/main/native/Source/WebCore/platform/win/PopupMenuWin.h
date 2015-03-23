@@ -29,10 +29,7 @@
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
-
-typedef struct HWND__* HWND;
-typedef struct HDC__* HDC;
-typedef struct HBITMAP__* HBITMAP;
+#include <wtf/win/GDIObject.h>
 
 namespace WebCore {
 
@@ -91,21 +88,20 @@ private:
     void setScrollbarCapturingMouse(bool b) { m_scrollbarCapturingMouse = b; }
 
     // ScrollableArea
-    virtual int scrollSize(ScrollbarOrientation) const OVERRIDE;
-    virtual int scrollPosition(Scrollbar*) const OVERRIDE;
-    virtual void setScrollOffset(const IntPoint&) OVERRIDE;
-    virtual void invalidateScrollbarRect(Scrollbar*, const IntRect&) OVERRIDE;
-    virtual void invalidateScrollCornerRect(const IntRect&) OVERRIDE { }
-    virtual bool isActive() const OVERRIDE { return true; }
-    ScrollableArea* enclosingScrollableArea() const OVERRIDE { return 0; }
-    virtual bool isScrollCornerVisible() const OVERRIDE { return false; }
-    virtual IntRect scrollCornerRect() const OVERRIDE { return IntRect(); }
-    virtual Scrollbar* verticalScrollbar() const OVERRIDE { return m_scrollbar.get(); }
-    virtual int visibleHeight() const OVERRIDE;
-    virtual int visibleWidth() const OVERRIDE;
-    virtual IntSize contentsSize() const OVERRIDE;
-    virtual bool scrollbarsCanBeActive() const OVERRIDE;
-    virtual IntRect scrollableAreaBoundingBox() const OVERRIDE;
+    virtual int scrollSize(ScrollbarOrientation) const override;
+    virtual int scrollPosition(Scrollbar*) const override;
+    virtual void setScrollOffset(const IntPoint&) override;
+    virtual void invalidateScrollbarRect(Scrollbar*, const IntRect&) override;
+    virtual void invalidateScrollCornerRect(const IntRect&) override { }
+    virtual bool isActive() const override { return true; }
+    ScrollableArea* enclosingScrollableArea() const override { return 0; }
+    virtual bool isScrollCornerVisible() const override { return false; }
+    virtual IntRect scrollCornerRect() const override { return IntRect(); }
+    virtual Scrollbar* verticalScrollbar() const override { return m_scrollbar.get(); }
+    virtual IntSize visibleSize() const override;
+    virtual IntSize contentsSize() const override;
+    virtual IntRect scrollableAreaBoundingBox() const override;
+    virtual bool updatesScrollLayerPositionOnMainThread() const override { return true; }
 
     // NOTE: This should only be called by the overriden setScrollOffset from ScrollableArea.
     void scrollTo(int offset);
@@ -120,14 +116,15 @@ private:
     PopupMenuClient* m_popupClient;
     RefPtr<Scrollbar> m_scrollbar;
     HWND m_popup;
-    HDC m_DC;
-    HBITMAP m_bmp;
+    GDIObject<HDC> m_DC;
+    GDIObject<HBITMAP> m_bmp;
     bool m_wasClicked;
     IntRect m_windowRect;
     int m_itemHeight;
     int m_scrollOffset;
     int m_wheelDelta;
     int m_focusedIndex;
+    int m_hoveredIndex;
     bool m_scrollbarCapturingMouse;
     bool m_showPopup;
 };

@@ -95,9 +95,9 @@ bool TextTrackCueList::add(PassRefPtr<TextTrackCue> prpCue, size_t start, size_t
         if (!m_list.isEmpty() && (start > 0) && (m_list[start - 1].get() == cue.get()))
             return false;
 
-       m_list.insert(start, cue);
-       invalidateCueIndexes(start);
-       return true;
+        m_list.insert(start, cue);
+        invalidateCueIndexes(start);
+        return true;
     }
 
     size_t index = (start + end) / 2;

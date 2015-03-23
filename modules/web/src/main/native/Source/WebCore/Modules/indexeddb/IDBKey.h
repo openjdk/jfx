@@ -37,7 +37,7 @@ namespace WebCore {
 
 class IDBKey : public RefCounted<IDBKey> {
 public:
-    typedef Vector<RefPtr<IDBKey> > KeyArray;
+    typedef Vector<RefPtr<IDBKey>> KeyArray;
 
     static PassRefPtr<IDBKey> createInvalid()
     {
@@ -98,6 +98,7 @@ public:
 
     // In order of the least to the highest precedent in terms of sort order.
     enum Type {
+        MaxType = -1,
         InvalidType = 0,
         ArrayType,
         StringType,
@@ -146,6 +147,10 @@ public:
 
     using RefCounted<IDBKey>::ref;
     using RefCounted<IDBKey>::deref;
+
+#ifndef NDEBUG
+    String loggingString() const;
+#endif
 
 private:
     IDBKey() : m_type(InvalidType), m_number(0), m_sizeEstimate(OverheadSize) { }

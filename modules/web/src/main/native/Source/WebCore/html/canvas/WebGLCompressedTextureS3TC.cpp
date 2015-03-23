@@ -32,9 +32,6 @@
 #include "Extensions3D.h"
 #include "WebGLRenderingContext.h"
 
-#include <wtf/Int32Array.h>
-#include <wtf/OwnArrayPtr.h>
-
 namespace WebCore {
 
 WebGLCompressedTextureS3TC::WebGLCompressedTextureS3TC(WebGLRenderingContext* context)
@@ -55,7 +52,7 @@ WebGLExtension::ExtensionName WebGLCompressedTextureS3TC::getName() const
     return WebGLCompressedTextureS3TCName;
 }
 
-PassOwnPtr<WebGLCompressedTextureS3TC> WebGLCompressedTextureS3TC::create(WebGLRenderingContext* context)
+OwnPtr<WebGLCompressedTextureS3TC> WebGLCompressedTextureS3TC::create(WebGLRenderingContext* context)
 {
     return adoptPtr(new WebGLCompressedTextureS3TC(context));
 }

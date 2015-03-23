@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
 #ifndef MacroAssemblerCodeRef_h
@@ -31,19 +31,18 @@
 #include "LLIntData.h"
 #include <wtf/DataLog.h>
 #include <wtf/PassRefPtr.h>
+#include <wtf/PrintStream.h>
 #include <wtf/RefPtr.h>
 
 // ASSERT_VALID_CODE_POINTER checks that ptr is a non-null pointer, and that it is a valid
 // instruction address on the platform (for example, check any alignment requirements).
-#if CPU(ARM_THUMB2)
-// ARM/thumb instructions must be 16-bit aligned, but all code pointers to be loaded
-// into the processor are decorated with the bottom bit set, indicating that this is
-// thumb code (as oposed to 32-bit traditional ARM).  The first test checks for both
-// decorated and undectorated null, and the second test ensures that the pointer is
-// decorated.
+#if CPU(ARM_THUMB2) && !ENABLE(LLINT_C_LOOP)
+// ARM instructions must be 16-bit aligned. Thumb2 code pointers to be loaded into
+// into the processor are decorated with the bottom bit set, while traditional ARM has
+// the lower bit clear. Since we don't know what kind of pointer, we check for both
+// decorated and undecorated null.
 #define ASSERT_VALID_CODE_POINTER(ptr) \
-    ASSERT(reinterpret_cast<intptr_t>(ptr) & ~1); \
-    ASSERT(reinterpret_cast<intptr_t>(ptr) & 1)
+    ASSERT(reinterpret_cast<intptr_t>(ptr) & ~1)
 #define ASSERT_VALID_CODE_OFFSET(offset) \
     ASSERT(!(offset & 1)) // Must be multiple of 2.
 #else
@@ -255,6 +254,11 @@ public:
     }
 
     void* value() const { return m_value; }
+    
+    void dump(PrintStream& out) const
+    {
+        out.print(RawPointer(m_value));
+    }
 
 private:
     void* m_value;
@@ -310,13 +314,63 @@ public:
     void* dataLocation() const { ASSERT_VALID_CODE_POINTER(m_value); return m_value; }
 #endif
 
-    bool operator!() const
+    typedef void* (MacroAssemblerCodePtr::*UnspecifiedBoolType);
+    operator UnspecifiedBoolType*() const
     {
-        return !m_value;
+        return !!m_value ? reinterpret_cast<UnspecifiedBoolType*>(1) : 0;
+    }
+    
+    bool operator==(const MacroAssemblerCodePtr& other) const
+    {
+        return m_value == other.m_value;
     }
 
+    void dumpWithName(const char* name, PrintStream& out) const
+    {
+        if (executableAddress() == dataLocation()) {
+            out.print(name, "(", RawPointer(executableAddress()), ")");
+            return;
+        }
+        out.print(name, "(executable = ", RawPointer(executableAddress()), ", dataLocation = ", RawPointer(dataLocation()), ")");
+    }
+    
+    void dump(PrintStream& out) const
+    {
+        dumpWithName("CodePtr", out);
+    }
+    
+    enum EmptyValueTag { EmptyValue };
+    enum DeletedValueTag { DeletedValue };
+    
+    MacroAssemblerCodePtr(EmptyValueTag)
+        : m_value(emptyValue())
+    {
+    }
+    
+    MacroAssemblerCodePtr(DeletedValueTag)
+        : m_value(deletedValue())
+    {
+    }
+    
+    bool isEmptyValue() const { return m_value == emptyValue(); }
+    bool isDeletedValue() const { return m_value == deletedValue(); }
+    
+    unsigned hash() const { return PtrHash<void*>::hash(m_value); }
+
 private:
+    static void* emptyValue() { return bitwise_cast<void*>(static_cast<intptr_t>(1)); }
+    static void* deletedValue() { return bitwise_cast<void*>(static_cast<intptr_t>(2)); }
+    
     void* m_value;
+};
+
+struct MacroAssemblerCodePtrHash {
+    static unsigned hash(const MacroAssemblerCodePtr& ptr) { return ptr.hash(); }
+    static bool equal(const MacroAssemblerCodePtr& a, const MacroAssemblerCodePtr& b)
+    {
+        return a == b;
+    }
+    static const bool safeToCompareToEmptyOrDeleted = true;
 };
 
 // MacroAssemblerCodeRef:
@@ -347,7 +401,7 @@ public:
         ASSERT(m_executableMemory->start());
         ASSERT(m_codePtr);
     }
-
+    
     // Use this only when you know that the codePtr refers to code that is
     // already being kept alive through some other means. Typically this means
     // that codePtr is immortal.
@@ -355,7 +409,7 @@ public:
     {
         return MacroAssemblerCodeRef(codePtr);
     }
-
+    
 #if ENABLE(LLINT)
     // Helper for creating self-managed code refs from LLInt.
     static MacroAssemblerCodeRef createLLIntCodeRef(LLIntCode codeId)
@@ -363,30 +417,39 @@ public:
         return createSelfManagedCodeRef(MacroAssemblerCodePtr::createFromExecutableAddress(LLInt::getCodePtr(codeId)));
     }
 #endif
-    
+
     ExecutableMemoryHandle* executableMemory() const
     {
         return m_executableMemory.get();
     }
-
+    
     MacroAssemblerCodePtr code() const
     {
         return m_codePtr;
     }
-
+    
     size_t size() const
     {
         if (!m_executableMemory)
             return 0;
         return m_executableMemory->sizeInBytes();
     }
-
+    
     bool tryToDisassemble(const char* prefix) const
     {
         return JSC::tryToDisassemble(m_codePtr, size(), prefix, WTF::dataFile());
     }
     
-    bool operator!() const { return !m_codePtr; }
+    typedef void* (MacroAssemblerCodeRef::*UnspecifiedBoolType);
+    operator UnspecifiedBoolType*() const
+    {
+        return !!m_codePtr ? reinterpret_cast<UnspecifiedBoolType*>(1) : 0;
+    }
+    
+    void dump(PrintStream& out) const
+    {
+        m_codePtr.dumpWithName("CodeRef", out);
+    }
 
 private:
     MacroAssemblerCodePtr m_codePtr;
@@ -394,5 +457,17 @@ private:
 };
 
 } // namespace JSC
+
+namespace WTF {
+
+template<typename T> struct DefaultHash;
+template<> struct DefaultHash<JSC::MacroAssemblerCodePtr> {
+    typedef JSC::MacroAssemblerCodePtrHash Hash;
+};
+
+template<typename T> struct HashTraits;
+template<> struct HashTraits<JSC::MacroAssemblerCodePtr> : public CustomHashTraits<JSC::MacroAssemblerCodePtr> { };
+
+} // namespace WTF
 
 #endif // MacroAssemblerCodeRef_h

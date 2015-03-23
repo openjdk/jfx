@@ -72,7 +72,7 @@ MediaList* CSSMediaRule::media() const
 }
 
 void CSSMediaRule::reattach(StyleRuleBase* rule)
-{ 
+{
     CSSGroupingRule::reattach(rule);
     if (m_mediaCSSOMWrapper && mediaQueries())
         m_mediaCSSOMWrapper->reattach(mediaQueries());

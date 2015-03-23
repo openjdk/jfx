@@ -18,11 +18,11 @@
  * Boston, MA 02110-1301, USA.
  */
 
-    interface HTMLLegendElement : HTMLElement {
-        readonly attribute HTMLFormElement form;
+interface HTMLLegendElement : HTMLElement {
+    readonly attribute HTMLFormElement form;
     [Reflect] attribute DOMString align;
 #if defined(LANGUAGE_OBJECTIVE_C) && LANGUAGE_OBJECTIVE_C
     [Reflect] attribute DOMString accessKey;
 #endif
-    };
+};
 

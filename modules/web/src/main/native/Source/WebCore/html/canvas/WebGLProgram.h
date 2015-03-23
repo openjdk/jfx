@@ -31,7 +31,6 @@
 #include "WebGLShader.h"
 
 #include <wtf/PassRefPtr.h>
-#include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -65,10 +64,10 @@ public:
 protected:
     WebGLProgram(WebGLRenderingContext*);
 
-    virtual void deleteObjectImpl(GraphicsContext3D*, Platform3DObject);
+    virtual void deleteObjectImpl(GraphicsContext3D*, Platform3DObject) override;
 
 private:
-    virtual bool isProgram() const { return true; }
+    virtual bool isProgram() const override { return true; }
 
     void cacheActiveAttribLocations(GraphicsContext3D*);
     void cacheInfoIfNeeded();

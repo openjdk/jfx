@@ -29,6 +29,10 @@
 #import <WebKit/WebDOMOperations.h>
 #import <JavaScriptCore/JSBase.h>
 
+#if TARGET_OS_IPHONE
+#import <Foundation/NSGeometry.h>
+#endif
+
 @interface DOMElement (WebDOMElementOperationsPrivate)
 + (DOMElement *)_DOMElementFromJSContext:(JSContextRef)context value:(JSValueRef)value;
 @end
@@ -46,4 +50,9 @@ typedef BOOL (^WebArchiveSubframeFilter)(WebFrame* subframe);
 
 @interface DOMNode (WebDOMNodeOperationsPrivate)
 - (WebArchive *)webArchiveByFilteringSubframes:(WebArchiveSubframeFilter)webArchiveSubframeFilter;
+#if TARGET_OS_IPHONE
+- (BOOL)isHorizontalWritingMode;
+- (void)hidePlaceholder;
+- (void)showPlaceholderIfNecessary;
+#endif
 @end

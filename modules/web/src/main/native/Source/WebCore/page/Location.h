@@ -40,7 +40,7 @@ namespace WebCore {
 
 class DOMWindow;
 class Frame;
-class KURL;
+class URL;
 
 typedef int ExceptionCode;
 
@@ -48,26 +48,26 @@ class Location : public ScriptWrappable, public RefCounted<Location>, public DOM
 public:
     static PassRefPtr<Location> create(Frame* frame) { return adoptRef(new Location(frame)); }
 
-    void setHref(const String&, DOMWindow* activeWindow, DOMWindow* firstWindow);
+    void setHref(const String&, DOMWindow& activeWindow, DOMWindow& firstWindow);
     String href() const;
 
-    void assign(const String&, DOMWindow* activeWindow, DOMWindow* firstWindow);
-    void replace(const String&, DOMWindow* activeWindow, DOMWindow* firstWindow);
-    void reload(DOMWindow* activeWindow);
+    void assign(const String&, DOMWindow& activeWindow, DOMWindow& firstWindow);
+    void replace(const String&, DOMWindow& activeWindow, DOMWindow& firstWindow);
+    void reload(DOMWindow& activeWindow);
 
-    void setProtocol(const String&, DOMWindow* activeWindow, DOMWindow* firstWindow, ExceptionCode&);
+    void setProtocol(const String&, DOMWindow& activeWindow, DOMWindow& firstWindow, ExceptionCode&);
     String protocol() const;
-    void setHost(const String&, DOMWindow* activeWindow, DOMWindow* firstWindow); 
+    void setHost(const String&, DOMWindow& activeWindow, DOMWindow& firstWindow);
     String host() const;
-    void setHostname(const String&, DOMWindow* activeWindow, DOMWindow* firstWindow); 
+    void setHostname(const String&, DOMWindow& activeWindow, DOMWindow& firstWindow);
     String hostname() const;
-    void setPort(const String&, DOMWindow* activeWindow, DOMWindow* firstWindow); 
+    void setPort(const String&, DOMWindow& activeWindow, DOMWindow& firstWindow);
     String port() const;
-    void setPathname(const String&, DOMWindow* activeWindow, DOMWindow* firstWindow); 
+    void setPathname(const String&, DOMWindow& activeWindow, DOMWindow& firstWindow);
     String pathname() const;
-    void setSearch(const String&, DOMWindow* activeWindow, DOMWindow* firstWindow); 
+    void setSearch(const String&, DOMWindow& activeWindow, DOMWindow& firstWindow);
     String search() const;
-    void setHash(const String&, DOMWindow* activeWindow, DOMWindow* firstWindow); 
+    void setHash(const String&, DOMWindow& activeWindow, DOMWindow& firstWindow);
     String hash() const;
     String origin() const;
 
@@ -78,9 +78,9 @@ public:
 private:
     explicit Location(Frame*);
 
-    void setLocation(const String&, DOMWindow* activeWindow, DOMWindow* firstWindow);
+    void setLocation(const String&, DOMWindow& activeWindow, DOMWindow& firstWindow);
 
-    const KURL& url() const;
+    const URL& url() const;
 };
 
 } // namespace WebCore

@@ -31,32 +31,30 @@ namespace JSC {
     public:
         typedef InternalFunction Base;
 
-        static DateConstructor* create(ExecState* exec, JSGlobalObject* globalObject, Structure* structure, DatePrototype* datePrototype)
+        static DateConstructor* create(VM& vm, Structure* structure, DatePrototype* datePrototype)
         {
-            DateConstructor* constructor = new (NotNull, allocateCell<DateConstructor>(*exec->heap())) DateConstructor(globalObject, structure);
-            constructor->finishCreation(exec, datePrototype);
+            DateConstructor* constructor = new (NotNull, allocateCell<DateConstructor>(vm.heap)) DateConstructor(vm, structure);
+            constructor->finishCreation(vm, datePrototype);
             return constructor;
         }
 
-        static const ClassInfo s_info;
+        DECLARE_INFO;
 
         static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
         {
-            return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), &s_info);
+            return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
         }
 
     protected:
-        void finishCreation(ExecState*, DatePrototype*);
+        void finishCreation(VM&, DatePrototype*);
         static const unsigned StructureFlags = OverridesGetOwnPropertySlot | InternalFunction::StructureFlags;
 
     private:
-        DateConstructor(JSGlobalObject*, Structure*);
+        DateConstructor(VM&, Structure*);
         static ConstructType getConstructData(JSCell*, ConstructData&);
         static CallType getCallData(JSCell*, CallData&);
 
-        static bool getOwnPropertySlot(JSCell*, ExecState*, PropertyName, PropertySlot&);
-
-        static bool getOwnPropertyDescriptor(JSObject*, ExecState*, PropertyName, PropertyDescriptor&);
+        static bool getOwnPropertySlot(JSObject*, ExecState*, PropertyName, PropertySlot&);
     };
 
     JSObject* constructDate(ExecState*, JSGlobalObject*, const ArgList&);

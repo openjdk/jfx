@@ -43,13 +43,13 @@ public:
     static CClass* classForIsA(NPClass*);
     virtual ~CClass();
 
-    virtual Method* methodNamed(PropertyName, Instance*) const;
-    virtual Field* fieldNamed(PropertyName, Instance*) const;
+    virtual Method* methodNamed(PropertyName, Instance*) const override;
+    virtual Field* fieldNamed(PropertyName, Instance*) const override;
 
 private:
-    NPClass* _isa;
-    mutable MethodMap _methods;
-    mutable FieldMap _fields;
+    NPClass* m_isa;
+    mutable HashMap<RefPtr<StringImpl>, OwnPtr<Method>> m_methods;
+    mutable HashMap<RefPtr<StringImpl>, OwnPtr<Field>> m_fields;
 };
 
 } // namespace Bindings

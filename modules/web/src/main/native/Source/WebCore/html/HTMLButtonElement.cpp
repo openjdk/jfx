@@ -33,14 +33,13 @@
 #include "HTMLNames.h"
 #include "KeyboardEvent.h"
 #include "RenderButton.h"
-#include "ScriptEventListener.h"
 #include <wtf/StdLibExtras.h>
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-inline HTMLButtonElement::HTMLButtonElement(const QualifiedName& tagName, Document* document, HTMLFormElement* form)
+inline HTMLButtonElement::HTMLButtonElement(const QualifiedName& tagName, Document& document, HTMLFormElement* form)
     : HTMLFormControlElement(tagName, document, form)
     , m_type(SUBMIT)
     , m_isActivatedSubmit(false)
@@ -48,7 +47,7 @@ inline HTMLButtonElement::HTMLButtonElement(const QualifiedName& tagName, Docume
     ASSERT(hasTagName(buttonTag));
 }
 
-PassRefPtr<HTMLButtonElement> HTMLButtonElement::create(const QualifiedName& tagName, Document* document, HTMLFormElement* form)
+PassRefPtr<HTMLButtonElement> HTMLButtonElement::create(const QualifiedName& tagName, Document& document, HTMLFormElement* form)
 {
     return adoptRef(new HTMLButtonElement(tagName, document, form));
 }
@@ -58,9 +57,9 @@ void HTMLButtonElement::setType(const AtomicString& type)
     setAttribute(typeAttr, type);
 }
 
-RenderObject* HTMLButtonElement::createRenderer(RenderArena* arena, RenderStyle*)
+RenderPtr<RenderElement> HTMLButtonElement::createElementRenderer(PassRef<RenderStyle> style)
 {
-    return new (arena) RenderButton(this);
+    return createRenderer<RenderButton>(*this, std::move(style));
 }
 
 const AtomicString& HTMLButtonElement::formControlType() const
@@ -125,13 +124,13 @@ void HTMLButtonElement::defaultEventHandler(Event* event)
     }
 
     if (event->isKeyboardEvent()) {
-        if (event->type() == eventNames().keydownEvent && static_cast<KeyboardEvent*>(event)->keyIdentifier() == "U+0020") {
+        if (event->type() == eventNames().keydownEvent && toKeyboardEvent(event)->keyIdentifier() == "U+0020") {
             setActive(true, true);
             // No setDefaultHandled() - IE dispatches a keypress in this case.
             return;
         }
         if (event->type() == eventNames().keypressEvent) {
-            switch (static_cast<KeyboardEvent*>(event)->charCode()) {
+            switch (toKeyboardEvent(event)->charCode()) {
                 case '\r':
                     dispatchSimulatedClick(event);
                     event->setDefaultHandled();
@@ -142,7 +141,7 @@ void HTMLButtonElement::defaultEventHandler(Event* event)
                     return;
             }
         }
-        if (event->type() == eventNames().keyupEvent && static_cast<KeyboardEvent*>(event)->keyIdentifier() == "U+0020") {
+        if (event->type() == eventNames().keyupEvent && toKeyboardEvent(event)->keyIdentifier() == "U+0020") {
             if (active())
                 dispatchSimulatedClick(event);
             event->setDefaultHandled();

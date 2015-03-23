@@ -33,25 +33,32 @@
 
 #if USE(CFNETWORK)
 #include <CFNetwork/CFURLDownloadPriv.h>
+#elif USE(CURL)
+#include <WebCore/CurlDownload.h>
 #endif
 
 namespace WebCore {
-    class KURL;
+    class URL;
     class ResourceHandle;
     class ResourceRequest;
     class ResourceResponse;
 }
 
-class WebDownload : public IWebDownload, public IWebURLAuthenticationChallengeSender
+class WebDownload
+: public IWebDownload
+, public IWebURLAuthenticationChallengeSender
+#if USE(CURL)
+, public WebCore::CurlDownloadListener
+#endif
 {
 public:
-    static WebDownload* createInstance(const WebCore::KURL&, IWebDownloadDelegate*);
+    static WebDownload* createInstance(const WebCore::URL&, IWebDownloadDelegate*);
     static WebDownload* createInstance(WebCore::ResourceHandle*, const WebCore::ResourceRequest&, const WebCore::ResourceResponse&, IWebDownloadDelegate*);
     static WebDownload* createInstance();
 private:
     WebDownload();
     void init(WebCore::ResourceHandle*, const WebCore::ResourceRequest&, const WebCore::ResourceResponse&, IWebDownloadDelegate*);
-    void init(const WebCore::KURL&, IWebDownloadDelegate*);
+    void init(const WebCore::URL&, IWebDownloadDelegate*);
     ~WebDownload();
 public:
     // IUnknown
@@ -119,6 +126,11 @@ public:
     void didCreateDestination(CFURLRef);
     void didFinish();
     void didFail(CFErrorRef);
+#elif USE(CURL)
+    virtual void didReceiveResponse();
+    virtual void didReceiveDataOfLength(int size);
+    virtual void didFinish();
+    virtual void didFail();
 #endif
 
 protected:
@@ -128,6 +140,8 @@ protected:
     WTF::String m_bundlePath;
 #if USE(CFNETWORK)
     RetainPtr<CFURLDownloadRef> m_download;
+#elif USE(CURL)
+    WebCore::CurlDownload m_download;
 #endif
     COMPtr<IWebMutableURLRequest> m_request;
     COMPtr<IWebDownloadDelegate> m_delegate;

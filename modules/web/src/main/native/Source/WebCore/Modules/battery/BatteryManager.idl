@@ -17,31 +17,29 @@
  *  Boston, MA 02110-1301, USA.
  */
 
-    // http://dev.w3.org/2009/dap/system-info/battery-status.html
+// http://dev.w3.org/2009/dap/system-info/battery-status.html
 [
     NoInterfaceObject,
-        Conditional=BATTERY_STATUS,
-        ActiveDOMObject,
-        EventTarget
- ] interface BatteryManager {
-        readonly attribute boolean charging;
-        readonly attribute double chargingTime;
-        readonly attribute double dischargingTime;
-        readonly attribute double level;
+    Conditional=BATTERY_STATUS,
+    ActiveDOMObject,
+    EventTarget,
+] interface BatteryManager {
+    readonly attribute boolean charging;
+    readonly attribute double chargingTime;
+    readonly attribute double dischargingTime;
+    readonly attribute double level;
 
-        attribute EventListener onchargingchange;
-        attribute EventListener onchargingtimechange;
-        attribute EventListener ondischargingtimechange;
-        attribute EventListener onlevelchange;
+    attribute EventListener onchargingchange;
+    attribute EventListener onchargingtimechange;
+    attribute EventListener ondischargingtimechange;
+    attribute EventListener onlevelchange;
 
-        // EventTarget interface
+    // EventTarget interface
     void addEventListener(DOMString type,
                           EventListener listener,
                           optional boolean useCapture);
     void removeEventListener(DOMString type,
                              EventListener listener,
                              optional boolean useCapture);
-    boolean dispatchEvent(Event event)
-            raises(EventException);
-    };
-
+    [RaisesException] boolean dispatchEvent(Event event);
+};

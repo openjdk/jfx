@@ -37,38 +37,38 @@ struct CompositionEventInit : UIEventInit {
     String data;
 };
 
-    class CompositionEvent : public UIEvent {
-    public:
-        static PassRefPtr<CompositionEvent> create()
-        {
-            return adoptRef(new CompositionEvent);
-        }
+class CompositionEvent : public UIEvent {
+public:
+    static PassRefPtr<CompositionEvent> create()
+    {
+        return adoptRef(new CompositionEvent);
+    }
 
-        static PassRefPtr<CompositionEvent> create(const AtomicString& type, PassRefPtr<AbstractView> view, const String& data)
-        {
-          return adoptRef(new CompositionEvent(type, view, data));
-        }
+    static PassRefPtr<CompositionEvent> create(const AtomicString& type, PassRefPtr<AbstractView> view, const String& data)
+    {
+        return adoptRef(new CompositionEvent(type, view, data));
+    }
 
     static PassRefPtr<CompositionEvent> create(const AtomicString& type, const CompositionEventInit& initializer)
     {
         return adoptRef(new CompositionEvent(type, initializer));
     }
 
-        virtual ~CompositionEvent();
+    virtual ~CompositionEvent();
 
-        void initCompositionEvent(const AtomicString& type, bool canBubble, bool cancelable, PassRefPtr<AbstractView>, const String& data);
+    void initCompositionEvent(const AtomicString& type, bool canBubble, bool cancelable, PassRefPtr<AbstractView>, const String& data);
 
-        String data() const { return m_data; }
+    String data() const { return m_data; }
 
-        virtual const AtomicString& interfaceName() const;
+    virtual EventInterface eventInterface() const override;
 
-    private:
-        CompositionEvent();
+private:
+    CompositionEvent();
     CompositionEvent(const AtomicString& type, PassRefPtr<AbstractView>, const String&);
     CompositionEvent(const AtomicString& type, const CompositionEventInit&);
 
-        String m_data;
-    };
+    String m_data;
+};
 
 } // namespace WebCore
 

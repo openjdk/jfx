@@ -29,25 +29,33 @@
 
 namespace WebCore {
 
+class ScriptExecutionContext;
+
 class DocumentFragment : public ContainerNode {
 public:
-    static PassRefPtr<DocumentFragment> create(Document*);
+    static PassRefPtr<DocumentFragment> create(Document&);
+    static PassRefPtr<DocumentFragment> create(ScriptExecutionContext&);
 
     void parseHTML(const String&, Element* contextElement, ParserContentPolicy = AllowScriptingContent);
     bool parseXML(const String&, Element* contextElement, ParserContentPolicy = AllowScriptingContent);
     
-    virtual bool canContainRangeEndPoint() const { return true; }
+    virtual bool canContainRangeEndPoint() const override { return true; }
     virtual bool isTemplateContent() const { return false; }
 
 protected:
-    DocumentFragment(Document*, ConstructionType = CreateContainer);
-    virtual String nodeName() const;
+    DocumentFragment(Document&, ConstructionType = CreateContainer);
+    virtual String nodeName() const override;
 
 private:
-    virtual NodeType nodeType() const;
-    virtual PassRefPtr<Node> cloneNode(bool deep);
-    virtual bool childTypeAllowed(NodeType) const;
+    virtual NodeType nodeType() const override;
+    virtual PassRefPtr<Node> cloneNode(bool deep) override;
+    virtual bool childTypeAllowed(NodeType) const override;
 };
+
+inline bool isDocumentFragment(const Node& node) { return node.isDocumentFragment(); }
+void isDocumentFragment(const DocumentFragment&); // Catch unnecessary runtime check of type known at compile time.
+
+NODE_TYPE_CASTS(DocumentFragment)
 
 } //namespace
 

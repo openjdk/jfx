@@ -25,10 +25,10 @@
 
 [
     NoInterfaceObject,
-        JSCustomMarkFunction,
+    JSCustomMarkFunction,
     GenerateIsReachable,
     CustomToJSObject
 ] interface CanvasRenderingContext {
-        readonly attribute HTMLCanvasElement canvas;
-    };
+    readonly attribute HTMLCanvasElement canvas;
+};
 

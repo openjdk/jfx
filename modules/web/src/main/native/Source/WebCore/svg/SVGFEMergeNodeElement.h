@@ -21,29 +21,33 @@
 #ifndef SVGFEMergeNodeElement_h
 #define SVGFEMergeNodeElement_h
 
-#if ENABLE(SVG) && ENABLE(FILTERS)
+#if ENABLE(FILTERS)
 #include "SVGAnimatedString.h"
 #include "SVGElement.h"
 
 namespace WebCore {
 
-class SVGFEMergeNodeElement FINAL : public SVGElement {
+class SVGFEMergeNodeElement final : public SVGElement {
 public:
-    static PassRefPtr<SVGFEMergeNodeElement> create(const QualifiedName&, Document*);
+    static PassRefPtr<SVGFEMergeNodeElement> create(const QualifiedName&, Document&);
 
 private:
-    SVGFEMergeNodeElement(const QualifiedName&, Document*);
+    SVGFEMergeNodeElement(const QualifiedName&, Document&);
 
     bool isSupportedAttribute(const QualifiedName&);
-    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
-    virtual void svgAttributeChanged(const QualifiedName&);
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
+    virtual void svgAttributeChanged(const QualifiedName&) override;
+
+    virtual bool rendererIsNeeded(const RenderStyle&) override { return false; }
 
     BEGIN_DECLARE_ANIMATED_PROPERTIES(SVGFEMergeNodeElement)
         DECLARE_ANIMATED_STRING(In1, in1)
     END_DECLARE_ANIMATED_PROPERTIES
 };
 
+NODE_TYPE_CASTS(SVGFEMergeNodeElement)
+
 } // namespace WebCore
 
-#endif // ENABLE(SVG)
+#endif // ENABLE(FILTERS)
 #endif

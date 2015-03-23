@@ -18,12 +18,9 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SVG)
 #include "SVGTextChunk.h"
 
 #include "SVGInlineTextBox.h"
-#include "SVGTextFragment.h"
 
 namespace WebCore {
 
@@ -81,5 +78,3 @@ float SVGTextChunk::calculateTextAnchorShift(float length) const
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(SVG)

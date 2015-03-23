@@ -27,14 +27,15 @@
 #include <wtf/text/StringHash.h>
 #include <wtf/text/WTFString.h>
 
-using namespace std;
-
 namespace WebCore {
 
 FontPlatformData::FontPlatformData(WTF::HashTableDeletedValueType)
     : m_syntheticBold(false)
     , m_syntheticOblique(false)
     , m_orientation(Horizontal)
+#if PLATFORM(IOS)
+    , m_isEmoji(false)
+#endif
     , m_size(0)
     , m_widthVariant(RegularWidth)
 #if PLATFORM(WIN)
@@ -62,6 +63,9 @@ FontPlatformData::FontPlatformData()
     : m_syntheticBold(false)
     , m_syntheticOblique(false)
     , m_orientation(Horizontal)
+#if PLATFORM(IOS)
+    , m_isEmoji(false)
+#endif
     , m_size(0)
     , m_widthVariant(RegularWidth)
 #if OS(DARWIN)
@@ -87,6 +91,9 @@ FontPlatformData::FontPlatformData(float size, bool syntheticBold, bool syntheti
     : m_syntheticBold(syntheticBold)
     , m_syntheticOblique(syntheticOblique)
     , m_orientation(orientation)
+#if PLATFORM(IOS)
+    , m_isEmoji(false)
+#endif
     , m_size(size)
     , m_widthVariant(widthVariant)
 #if OS(DARWIN)
@@ -113,6 +120,9 @@ FontPlatformData::FontPlatformData(CGFontRef cgFont, float size, bool syntheticB
     : m_syntheticBold(syntheticBold)
     , m_syntheticOblique(syntheticOblique)
     , m_orientation(orientation)
+#if PLATFORM(IOS)
+    , m_isEmoji(false)
+#endif
     , m_size(size)
     , m_widthVariant(widthVariant)
     , m_font(0)

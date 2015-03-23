@@ -26,8 +26,6 @@
 #ifndef CACFLayerTreeHost_h
 #define CACFLayerTreeHost_h
 
-#if USE(ACCELERATED_COMPOSITING)
-
 #include "AbstractCACFLayerTreeHost.h"
 #include "COMPtr.h"
 #include "Timer.h"
@@ -74,6 +72,8 @@ public:
     virtual GraphicsDeviceAdapter* graphicsDeviceAdapter() const { return 0; }
 #endif
 
+    virtual bool createRenderer() = 0;
+
     // AbstractCACFLayerTreeHost
     virtual void flushPendingLayerChangesNow();
 
@@ -87,7 +87,6 @@ protected:
     // AbstractCACFLayerTreeHost
     virtual PlatformCALayer* rootLayer() const;
 
-    virtual bool createRenderer() = 0;
     virtual void destroyRenderer();
     virtual void contextDidChange();
 
@@ -118,7 +117,5 @@ private:
 };
 
 }
-
-#endif // USE(ACCELERATED_COMPOSITING)
 
 #endif // CACFLayerTreeHost_h

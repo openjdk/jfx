@@ -33,76 +33,76 @@
 
 #if ENABLE(INSPECTOR)
 
-#include "InspectorBaseAgent.h"
-#include "InspectorFrontend.h"
-#include "InspectorTypeBuilder.h"
+#include "InspectorWebAgentBase.h"
+#include "InspectorWebBackendDispatchers.h"
+#include "InspectorWebFrontendDispatchers.h"
+#include "InspectorWebTypeBuilders.h"
 #include "ScriptState.h"
 #include <wtf/HashMap.h>
-#include <wtf/PassOwnPtr.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/text/WTFString.h>
+
+namespace Deprecated {
+class ScriptObject;
+}
+
+namespace Inspector {
+class InjectedScriptManager;
+}
 
 namespace WebCore {
 
 class Frame;
 class InjectedScriptCanvasModule;
-class InjectedScriptManager;
 class InspectorPageAgent;
-class InspectorState;
 class InstrumentingAgents;
-class ScriptObject;
 
 typedef String ErrorString;
 
-class InspectorCanvasAgent : public InspectorBaseAgent<InspectorCanvasAgent>, public InspectorBackendDispatcher::CanvasCommandHandler {
+class InspectorCanvasAgent : public InspectorAgentBase, public Inspector::InspectorCanvasBackendDispatcherHandler {
 public:
-    static PassOwnPtr<InspectorCanvasAgent> create(InstrumentingAgents* instrumentingAgents, InspectorCompositeState* state, InspectorPageAgent* pageAgent, InjectedScriptManager* injectedScriptManager)
-    {
-        return adoptPtr(new InspectorCanvasAgent(instrumentingAgents, state, pageAgent, injectedScriptManager));
-    }
+    InspectorCanvasAgent(InstrumentingAgents*, InspectorPageAgent*, Inspector::InjectedScriptManager*);
     ~InspectorCanvasAgent();
 
-    virtual void setFrontend(InspectorFrontend*);
-    virtual void clearFrontend();
-    virtual void restore();
+    virtual void didCreateFrontendAndBackend(Inspector::InspectorFrontendChannel*, Inspector::InspectorBackendDispatcher*) override;
+    virtual void willDestroyFrontendAndBackend(Inspector::InspectorDisconnectReason) override;
 
     void frameNavigated(Frame*);
     void frameDetached(Frame*);
     void didBeginFrame();
 
     // Called from InspectorCanvasInstrumentation.
-    ScriptObject wrapCanvas2DRenderingContextForInstrumentation(const ScriptObject&);
+    Deprecated::ScriptObject wrapCanvas2DRenderingContextForInstrumentation(const Deprecated::ScriptObject&);
 #if ENABLE(WEBGL)
-    ScriptObject wrapWebGLRenderingContextForInstrumentation(const ScriptObject&);
+    Deprecated::ScriptObject wrapWebGLRenderingContextForInstrumentation(const Deprecated::ScriptObject&);
 #endif
 
     // Called from the front-end.
-    virtual void enable(ErrorString*);
-    virtual void disable(ErrorString*);
-    virtual void dropTraceLog(ErrorString*, const TypeBuilder::Canvas::TraceLogId&);
-    virtual void hasUninstrumentedCanvases(ErrorString*, bool*);
-    virtual void captureFrame(ErrorString*, const TypeBuilder::Network::FrameId*, TypeBuilder::Canvas::TraceLogId*);
-    virtual void startCapturing(ErrorString*, const TypeBuilder::Network::FrameId*, TypeBuilder::Canvas::TraceLogId*);
-    virtual void stopCapturing(ErrorString*, const TypeBuilder::Canvas::TraceLogId&);
-    virtual void getTraceLog(ErrorString*, const TypeBuilder::Canvas::TraceLogId&, const int*, const int*, RefPtr<TypeBuilder::Canvas::TraceLog>&);
-    virtual void replayTraceLog(ErrorString*, const TypeBuilder::Canvas::TraceLogId&, int, RefPtr<TypeBuilder::Canvas::ResourceState>&);
-    virtual void getResourceInfo(ErrorString*, const TypeBuilder::Canvas::ResourceId&, RefPtr<TypeBuilder::Canvas::ResourceInfo>&);
-    virtual void getResourceState(ErrorString*, const TypeBuilder::Canvas::TraceLogId&, const TypeBuilder::Canvas::ResourceId&, RefPtr<TypeBuilder::Canvas::ResourceState>&);
+    virtual void enable(ErrorString*) override;
+    virtual void disable(ErrorString*) override;
+    virtual void dropTraceLog(ErrorString*, const Inspector::TypeBuilder::Canvas::TraceLogId&) override;
+    virtual void hasUninstrumentedCanvases(ErrorString*, bool*) override;
+    virtual void captureFrame(ErrorString*, const Inspector::TypeBuilder::Network::FrameId*, Inspector::TypeBuilder::Canvas::TraceLogId*) override;
+    virtual void startCapturing(ErrorString*, const Inspector::TypeBuilder::Network::FrameId*, Inspector::TypeBuilder::Canvas::TraceLogId*) override;
+    virtual void stopCapturing(ErrorString*, const Inspector::TypeBuilder::Canvas::TraceLogId&) override;
+    virtual void getTraceLog(ErrorString*, const Inspector::TypeBuilder::Canvas::TraceLogId&, const int*, const int*, RefPtr<Inspector::TypeBuilder::Canvas::TraceLog>&) override;
+    virtual void replayTraceLog(ErrorString*, const Inspector::TypeBuilder::Canvas::TraceLogId&, int, RefPtr<Inspector::TypeBuilder::Canvas::ResourceState>&) override;
+    virtual void getResourceInfo(ErrorString*, const Inspector::TypeBuilder::Canvas::ResourceId&, RefPtr<Inspector::TypeBuilder::Canvas::ResourceInfo>&) override;
+    virtual void getResourceState(ErrorString*, const Inspector::TypeBuilder::Canvas::TraceLogId&, const Inspector::TypeBuilder::Canvas::ResourceId&, RefPtr<Inspector::TypeBuilder::Canvas::ResourceState>&) override;
 
 private:
-    InspectorCanvasAgent(InstrumentingAgents*, InspectorCompositeState*, InspectorPageAgent*, InjectedScriptManager*);
-
-    InjectedScriptCanvasModule injectedScriptCanvasModule(ErrorString*, ScriptState*);
-    InjectedScriptCanvasModule injectedScriptCanvasModule(ErrorString*, const ScriptObject&);
+    InjectedScriptCanvasModule injectedScriptCanvasModule(ErrorString*, JSC::ExecState*);
+    InjectedScriptCanvasModule injectedScriptCanvasModule(ErrorString*, const Deprecated::ScriptObject&);
     InjectedScriptCanvasModule injectedScriptCanvasModule(ErrorString*, const String&);
 
     void findFramesWithUninstrumentedCanvases();
     bool checkIsEnabled(ErrorString*) const;
-    ScriptObject notifyRenderingContextWasWrapped(const ScriptObject&);
+    Deprecated::ScriptObject notifyRenderingContextWasWrapped(const Deprecated::ScriptObject&);
 
     InspectorPageAgent* m_pageAgent;
-    InjectedScriptManager* m_injectedScriptManager;
-    InspectorFrontend::Canvas* m_frontend;
+    Inspector::InjectedScriptManager* m_injectedScriptManager;
+    std::unique_ptr<Inspector::InspectorCanvasFrontendDispatcher> m_frontendDispatcher;
+    RefPtr<Inspector::InspectorCanvasBackendDispatcher> m_backendDispatcher;
     bool m_enabled;
     // Contains all frames with canvases, value is true only for frames that have an uninstrumented canvas.
     typedef HashMap<Frame*, bool> FramesWithUninstrumentedCanvases;

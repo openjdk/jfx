@@ -48,17 +48,17 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-RenderVideo::RenderVideo(HTMLVideoElement* video)
-    : RenderMedia(video)
+RenderVideo::RenderVideo(HTMLVideoElement& element, PassRef<RenderStyle> style)
+    : RenderMedia(element, std::move(style))
 {
     setIntrinsicSize(calculateIntrinsicSize());
 }
 
 RenderVideo::~RenderVideo()
 {
-    if (MediaPlayer* p = mediaElement()->player()) {
-        p->setVisible(false);
-        p->setFrameView(0);
+    if (MediaPlayer* player = videoElement().player()) {
+        player->setVisible(false);
+        player->setFrameView(0);
     }
 }
 
@@ -73,7 +73,7 @@ IntSize RenderVideo::defaultSize()
 
 void RenderVideo::intrinsicSizeChanged()
 {
-    if (videoElement()->shouldDisplayPosterImage())
+    if (videoElement().shouldDisplayPosterImage())
         RenderMedia::intrinsicSizeChanged();
     updateIntrinsicSize(); 
 }
@@ -81,10 +81,10 @@ void RenderVideo::intrinsicSizeChanged()
 void RenderVideo::updateIntrinsicSize()
 {
     LayoutSize size = calculateIntrinsicSize();
-    size.scale(style()->effectiveZoom());
+    size.scale(style().effectiveZoom());
 
     // Never set the element size to zero when in a media document.
-    if (size.isEmpty() && node()->ownerDocument() && node()->ownerDocument()->isMediaDocument())
+    if (size.isEmpty() && document().isMediaDocument())
         return;
 
     if (size == intrinsicSize())
@@ -92,13 +92,11 @@ void RenderVideo::updateIntrinsicSize()
 
     setIntrinsicSize(size);
     setPreferredLogicalWidthsDirty(true);
-    setNeedsLayout(true);
+    setNeedsLayout();
 }
     
 LayoutSize RenderVideo::calculateIntrinsicSize()
 {
-    HTMLVideoElement* video = videoElement();
-    
     // Spec text from 4.8.6
     //
     // The intrinsic width of a video element's playback area is the intrinsic width 
@@ -108,27 +106,21 @@ LayoutSize RenderVideo::calculateIntrinsicSize()
     // The intrinsic height of a video element's playback area is the intrinsic height 
     // of the video resource, if that is available; otherwise it is the intrinsic 
     // height of the poster frame, if that is available; otherwise it is 150 CSS pixels.
-    MediaPlayer* player = mediaElement()->player();
-    if (player && video->readyState() >= HTMLVideoElement::HAVE_METADATA) {
+    MediaPlayer* player = videoElement().player();
+    if (player && videoElement().readyState() >= HTMLVideoElement::HAVE_METADATA) {
         LayoutSize size = player->naturalSize();
         if (!size.isEmpty())
             return size;
     }
 
-    if (video->shouldDisplayPosterImage() && !m_cachedImageSize.isEmpty() && !imageResource()->errorOccurred())
+    if (videoElement().shouldDisplayPosterImage() && !m_cachedImageSize.isEmpty() && !imageResource().errorOccurred())
         return m_cachedImageSize;
-
-    // When the natural size of the video is unavailable, we use the provided
-    // width and height attributes of the video element as the intrinsic size until
-    // better values become available. 
-    if (video->hasAttribute(widthAttr) && video->hasAttribute(heightAttr))
-        return LayoutSize(video->width(), video->height());
 
     // <video> in standalone media documents should not use the default 300x150
     // size since they also have audio-only files. By setting the intrinsic
     // size to 300x1 the video will resize itself in these cases, and audio will
     // have the correct height (it needs to be > 0 for controls to render properly).
-    if (video->ownerDocument() && video->ownerDocument()->isMediaDocument())
+    if (videoElement().document().isMediaDocument())
         return LayoutSize(defaultSize().width(), 1);
 
     return defaultSize();
@@ -141,7 +133,7 @@ void RenderVideo::imageChanged(WrappedImagePtr newImage, const IntRect* rect)
     // Cache the image intrinsic size so we can continue to use it to draw the image correctly
     // even if we know the video intrinsic size but aren't able to draw video frames yet
     // (we don't want to scale the poster to the video size without keeping aspect ratio).
-    if (videoElement()->shouldDisplayPosterImage())
+    if (videoElement().shouldDisplayPosterImage())
         m_cachedImageSize = intrinsicSize();
 
     // The intrinsic size is now that of the image, but in case we already had the
@@ -151,56 +143,31 @@ void RenderVideo::imageChanged(WrappedImagePtr newImage, const IntRect* rect)
 
 IntRect RenderVideo::videoBox() const
 {
-    if (m_cachedImageSize.isEmpty() && videoElement()->shouldDisplayPosterImage())
-        return IntRect();
+    LayoutSize intrinsicSize = this->intrinsicSize();
 
-    LayoutSize elementSize;
-    if (videoElement()->shouldDisplayPosterImage())
-        elementSize = m_cachedImageSize;
-    else
-        elementSize = intrinsicSize();
+    if (videoElement().shouldDisplayPosterImage())
+        intrinsicSize = m_cachedImageSize;
 
-    IntRect contentRect = pixelSnappedIntRect(contentBoxRect());
-    if (elementSize.isEmpty() || contentRect.isEmpty())
-        return IntRect();
-
-    LayoutRect renderBox = contentRect;
-    LayoutUnit ratio = renderBox.width() * elementSize.height() - renderBox.height() * elementSize.width();
-    if (ratio > 0) {
-        LayoutUnit newWidth = renderBox.height() * elementSize.width() / elementSize.height();
-        // Just fill the whole area if the difference is one pixel or less (in both sides)
-        if (renderBox.width() - newWidth > 2)
-            renderBox.setWidth(newWidth);
-        renderBox.move((contentRect.width() - renderBox.width()) / 2, 0);
-    } else if (ratio < 0) {
-        LayoutUnit newHeight = renderBox.width() * elementSize.height() / elementSize.width();
-        if (renderBox.height() - newHeight > 2)
-            renderBox.setHeight(newHeight);
-        renderBox.move(0, (contentRect.height() - renderBox.height()) / 2);
-    }
-
-    return pixelSnappedIntRect(renderBox);
+    return pixelSnappedIntRect(replacedContentRect(intrinsicSize));
 }
 
 bool RenderVideo::shouldDisplayVideo() const
 {
-    return !videoElement()->shouldDisplayPosterImage();
+    return !videoElement().shouldDisplayPosterImage();
 }
 
 void RenderVideo::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
-    MediaPlayer* mediaPlayer = mediaElement()->player();
-    bool displayingPoster = videoElement()->shouldDisplayPosterImage();
+    MediaPlayer* mediaPlayer = videoElement().player();
+    bool displayingPoster = videoElement().shouldDisplayPosterImage();
 
-    Page* page = 0;
-    if (Frame* frame = this->frame())
-        page = frame->page();
+    Page* page = frame().page();
 
     if (!displayingPoster && !mediaPlayer) {
-            if (page && paintInfo.phase == PaintPhaseForeground)
-                page->addRelevantUnpaintedObject(this, visualOverflowRect());
-            return;
-        }
+        if (page && paintInfo.phase == PaintPhaseForeground)
+            page->addRelevantUnpaintedObject(this, visualOverflowRect());
+        return;
+    }
 
     LayoutRect rect = videoBox();
     if (rect.isEmpty()) {
@@ -213,12 +180,20 @@ void RenderVideo::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOf
     if (page && paintInfo.phase == PaintPhaseForeground)
         page->addRelevantRepaintedObject(this, rect);
 
+    LayoutRect contentRect = contentBoxRect();
+    contentRect.moveBy(paintOffset);
+    GraphicsContext* context = paintInfo.context;
+    bool clip = !contentRect.contains(rect);
+    GraphicsContextStateSaver stateSaver(*context, clip);
+    if (clip)
+        context->clip(contentRect);
+
     if (displayingPoster)
-        paintIntoRect(paintInfo.context, rect);
-    else if (document()->view() && document()->view()->paintBehavior() & PaintBehaviorFlattenCompositingLayers)
-        mediaPlayer->paintCurrentFrameInContext(paintInfo.context, pixelSnappedIntRect(rect));
+        paintIntoRect(context, rect);
+    else if (view().frameView().paintBehavior() & PaintBehaviorFlattenCompositingLayers)
+        mediaPlayer->paintCurrentFrameInContext(context, pixelSnappedIntRect(rect));
     else
-        mediaPlayer->paint(paintInfo.context, pixelSnappedIntRect(rect));
+        mediaPlayer->paint(context, pixelSnappedIntRect(rect));
 }
 
 void RenderVideo::layout()
@@ -228,10 +203,9 @@ void RenderVideo::layout()
     updatePlayer();
 }
     
-HTMLVideoElement* RenderVideo::videoElement() const
+HTMLVideoElement& RenderVideo::videoElement() const
 {
-    ASSERT(node()->hasTagName(videoTag));
-    return static_cast<HTMLVideoElement*>(node()); 
+    return toHTMLVideoElement(RenderMedia::mediaElement());
 }
 
 void RenderVideo::updateFromElement()
@@ -242,25 +216,27 @@ void RenderVideo::updateFromElement()
 
 void RenderVideo::updatePlayer()
 {
+    if (documentBeingDestroyed())
+        return;
+
     updateIntrinsicSize();
 
-    MediaPlayer* mediaPlayer = mediaElement()->player();
+    MediaPlayer* mediaPlayer = videoElement().player();
     if (!mediaPlayer)
         return;
 
-    if (!videoElement()->inActiveDocument()) {
+    if (!videoElement().inActiveDocument()) {
         mediaPlayer->setVisible(false);
         return;
     }
 
-#if USE(ACCELERATED_COMPOSITING)
     contentChanged(VideoChanged);
-#endif
     
     IntRect videoBounds = videoBox(); 
-    mediaPlayer->setFrameView(document()->view());
+    mediaPlayer->setFrameView(&view().frameView());
     mediaPlayer->setSize(IntSize(videoBounds.width(), videoBounds.height()));
     mediaPlayer->setVisible(true);
+    mediaPlayer->setShouldMaintainAspectRatio(style().objectFit() != ObjectFitFill);
 }
 
 LayoutUnit RenderVideo::computeReplacedLogicalWidth(ShouldComputePreferred shouldComputePreferred) const
@@ -278,23 +254,24 @@ LayoutUnit RenderVideo::minimumReplacedHeight() const
     return RenderReplaced::minimumReplacedHeight(); 
 }
 
-#if USE(ACCELERATED_COMPOSITING)
 bool RenderVideo::supportsAcceleratedRendering() const
 {
-    MediaPlayer* p = mediaElement()->player();
-    if (p)
-        return p->supportsAcceleratedRendering();
-
+    if (MediaPlayer* player = videoElement().player())
+        return player->supportsAcceleratedRendering();
     return false;
 }
 
 void RenderVideo::acceleratedRenderingStateChanged()
 {
-    MediaPlayer* p = mediaElement()->player();
-    if (p)
-        p->acceleratedRenderingStateChanged();
+    if (MediaPlayer* player = videoElement().player())
+        player->acceleratedRenderingStateChanged();
 }
-#endif  // USE(ACCELERATED_COMPOSITING)
+
+bool RenderVideo::requiresImmediateCompositing() const
+{
+    MediaPlayer* player = videoElement().player();
+    return player && player->requiresImmediateCompositing();
+}
 
 #if ENABLE(FULLSCREEN_API)
 static const RenderBlock* rendererPlaceholder(const RenderObject* renderer)
@@ -341,10 +318,16 @@ LayoutUnit RenderVideo::offsetHeight() const
 
 bool RenderVideo::foregroundIsKnownToBeOpaqueInRect(const LayoutRect& localRect, unsigned maxDepthToTest) const
 {
-    if (videoElement()->shouldDisplayPosterImage())
+    if (videoElement().shouldDisplayPosterImage())
         return RenderImage::foregroundIsKnownToBeOpaqueInRect(localRect, maxDepthToTest);
 
-    return videoBox().contains(enclosingIntRect(localRect));
+    if (!videoBox().contains(enclosingIntRect(localRect)))
+        return false;
+
+    if (MediaPlayer* player = videoElement().player())
+        return player->hasAvailableVideoFrame();
+
+    return false;
 }
 
 } // namespace WebCore

@@ -38,19 +38,19 @@ namespace WebCore {
 // Base of input types that dispatches a simulated click on space/return key.
 class BaseClickableWithKeyInputType : public InputType {
 public:
-    static void handleKeydownEvent(HTMLInputElement*, KeyboardEvent*);
-    static void handleKeypressEvent(HTMLInputElement*, KeyboardEvent*);
+    static void handleKeydownEvent(HTMLInputElement&, KeyboardEvent*);
+    static void handleKeypressEvent(HTMLInputElement&, KeyboardEvent*);
     static void handleKeyupEvent(InputType&, KeyboardEvent*);
-    static void accessKeyAction(HTMLInputElement*, bool sendMouseEvents);
+    static void accessKeyAction(HTMLInputElement&, bool sendMouseEvents);
     
 protected:
-    BaseClickableWithKeyInputType(HTMLInputElement* element) : InputType(element) { }
+    explicit BaseClickableWithKeyInputType(HTMLInputElement& element) : InputType(element) { }
 
 private:
-    virtual void handleKeydownEvent(KeyboardEvent*) OVERRIDE;
-    virtual void handleKeypressEvent(KeyboardEvent*) OVERRIDE;
-    virtual void handleKeyupEvent(KeyboardEvent*) OVERRIDE;
-    virtual void accessKeyAction(bool sendMouseEvents) OVERRIDE;
+    virtual void handleKeydownEvent(KeyboardEvent*) override;
+    virtual void handleKeypressEvent(KeyboardEvent*) override;
+    virtual void handleKeyupEvent(KeyboardEvent*) override;
+    virtual void accessKeyAction(bool sendMouseEvents) override;
 };
 
 } // namespace WebCore

@@ -24,6 +24,7 @@
 #include "CSSParserMode.h"
 #include "CSSRule.h"
 #include "StyleSheet.h"
+#include <memory>
 #include <wtf/HashMap.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/text/AtomicStringHash.h>
@@ -40,25 +41,26 @@ class CachedCSSStyleSheet;
 class Document;
 class MediaQuerySet;
 class SecurityOrigin;
+class StyleRuleKeyframes;
 class StyleSheetContents;
 
 typedef int ExceptionCode;
 
-class CSSStyleSheet : public StyleSheet {
+class CSSStyleSheet final : public StyleSheet {
 public:
-    static PassRefPtr<CSSStyleSheet> create(PassRefPtr<StyleSheetContents>, CSSImportRule* ownerRule = 0);
-    static PassRefPtr<CSSStyleSheet> create(PassRefPtr<StyleSheetContents>, Node* ownerNode);
-    static PassRefPtr<CSSStyleSheet> createInline(Node*, const KURL&, const String& encoding = String());
+    static PassRef<CSSStyleSheet> create(PassRef<StyleSheetContents>, CSSImportRule* ownerRule = 0);
+    static PassRef<CSSStyleSheet> create(PassRef<StyleSheetContents>, Node* ownerNode);
+    static PassRef<CSSStyleSheet> createInline(Node&, const URL&, const String& encoding = String());
 
     virtual ~CSSStyleSheet();
 
-    virtual CSSStyleSheet* parentStyleSheet() const OVERRIDE;
-    virtual Node* ownerNode() const OVERRIDE { return m_ownerNode; }
-    virtual MediaList* media() const OVERRIDE;
-    virtual String href() const OVERRIDE;
-    virtual String title() const OVERRIDE { return m_title; }
-    virtual bool disabled() const OVERRIDE { return m_isDisabled; }
-    virtual void setDisabled(bool) OVERRIDE;
+    virtual CSSStyleSheet* parentStyleSheet() const override;
+    virtual Node* ownerNode() const override { return m_ownerNode; }
+    virtual MediaList* media() const override;
+    virtual String href() const override;
+    virtual String title() const override { return m_title; }
+    virtual bool disabled() const override { return m_isDisabled; }
+    virtual void setDisabled(bool) override;
     
     PassRefPtr<CSSRuleList> cssRules();
     unsigned insertRule(const String& rule, unsigned index, ExceptionCode&);
@@ -74,10 +76,10 @@ public:
     unsigned length() const;
     CSSRule* item(unsigned index);
 
-    virtual void clearOwnerNode() OVERRIDE { didMutate(); m_ownerNode = 0; }
-    virtual CSSImportRule* ownerRule() const OVERRIDE { return m_ownerRule; }
-    virtual KURL baseURL() const OVERRIDE;
-    virtual bool isLoading() const OVERRIDE;
+    virtual void clearOwnerNode() override;
+    virtual CSSImportRule* ownerRule() const override { return m_ownerRule; }
+    virtual URL baseURL() const override;
+    virtual bool isLoading() const override;
     
     void clearOwnerRule() { m_ownerRule = 0; }
     Document* ownerDocument() const;
@@ -85,36 +87,45 @@ public:
     void setMediaQueries(PassRefPtr<MediaQuerySet>);
     void setTitle(const String& title) { m_title = title; }
 
+    enum RuleMutationType { OtherMutation, RuleInsertion };
+    enum WhetherContentsWereClonedForMutation { ContentsWereNotClonedForMutation = 0, ContentsWereClonedForMutation };
+
     class RuleMutationScope {
         WTF_MAKE_NONCOPYABLE(RuleMutationScope);
     public:
-        RuleMutationScope(CSSStyleSheet*);
+        RuleMutationScope(CSSStyleSheet*, RuleMutationType = OtherMutation, StyleRuleKeyframes* insertedKeyframesRule = nullptr);
         RuleMutationScope(CSSRule*);
         ~RuleMutationScope();
 
     private:
         CSSStyleSheet* m_styleSheet;
+        RuleMutationType m_mutationType;
+        WhetherContentsWereClonedForMutation m_contentsWereClonedForMutation;
+        StyleRuleKeyframes* m_insertedKeyframesRule;
     };
 
-    void willMutateRules();
-    void didMutateRules();
+    WhetherContentsWereClonedForMutation willMutateRules();
+    void didMutateRules(RuleMutationType, WhetherContentsWereClonedForMutation, StyleRuleKeyframes* insertedKeyframesRule);
+    void didMutateRuleFromCSSStyleDeclaration();
     void didMutate();
     
     void clearChildRuleCSSOMWrappers();
     void reattachChildRuleCSSOMWrappers();
 
-    StyleSheetContents* contents() const { return m_contents.get(); }
+    StyleSheetContents& contents() { return m_contents.get(); }
+
+    void detachFromDocument() { m_ownerNode = nullptr; }
 
 private:
-    CSSStyleSheet(PassRefPtr<StyleSheetContents>, CSSImportRule* ownerRule);
-    CSSStyleSheet(PassRefPtr<StyleSheetContents>, Node* ownerNode, bool isInlineStylesheet);
+    CSSStyleSheet(PassRef<StyleSheetContents>, CSSImportRule* ownerRule);
+    CSSStyleSheet(PassRef<StyleSheetContents>, Node* ownerNode, bool isInlineStylesheet);
 
-    virtual bool isCSSStyleSheet() const { return true; }
-    virtual String type() const { return ASCIILiteral("text/css"); }
+    virtual bool isCSSStyleSheet() const override { return true; }
+    virtual String type() const override { return ASCIILiteral("text/css"); }
 
     bool canAccessRules() const;
     
-    RefPtr<StyleSheetContents> m_contents;
+    Ref<StyleSheetContents> m_contents;
     bool m_isInlineStylesheet;
     bool m_isDisabled;
     String m_title;
@@ -124,29 +135,9 @@ private:
     CSSImportRule* m_ownerRule;
 
     mutable RefPtr<MediaList> m_mediaCSSOMWrapper;
-    mutable Vector<RefPtr<CSSRule> > m_childRuleCSSOMWrappers;
-    mutable OwnPtr<CSSRuleList> m_ruleListCSSOMWrapper;
+    mutable Vector<RefPtr<CSSRule>> m_childRuleCSSOMWrappers;
+    mutable std::unique_ptr<CSSRuleList> m_ruleListCSSOMWrapper;
 };
-
-inline CSSStyleSheet::RuleMutationScope::RuleMutationScope(CSSStyleSheet* sheet)
-    : m_styleSheet(sheet)
-{
-    if (m_styleSheet)
-        m_styleSheet->willMutateRules();
-}
-
-inline CSSStyleSheet::RuleMutationScope::RuleMutationScope(CSSRule* rule)
-    : m_styleSheet(rule ? rule->parentStyleSheet() : 0)
-{
-    if (m_styleSheet)
-        m_styleSheet->willMutateRules();
-}
-
-inline CSSStyleSheet::RuleMutationScope::~RuleMutationScope()
-{
-    if (m_styleSheet)
-        m_styleSheet->didMutateRules();
-}
 
 } // namespace
 

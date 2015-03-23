@@ -25,7 +25,7 @@
 
 /**
  * Build file for buildSrc project. The buildSrc project contains the annotation
- * processor that is used to generate the builders, the decora compiler used for effects,
+ * processor that is used to generate the decora compiler used for effects,
  * and various annotations we use for FXML, etc. It also contains build script logic such
  * as for compiling native code. Nothing in buildSrc should *ever* be shipped with the runtime.
  */

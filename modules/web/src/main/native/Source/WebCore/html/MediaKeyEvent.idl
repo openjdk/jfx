@@ -24,8 +24,8 @@
  */
 
 [
-        Conditional=ENCRYPTED_MEDIA,
-        ConstructorTemplate=Event 
+    Conditional=ENCRYPTED_MEDIA,
+    ConstructorTemplate=Event 
 ] interface MediaKeyEvent : Event {
     [InitializedByEventConstructor] readonly attribute DOMString keySystem;
     [InitializedByEventConstructor] readonly attribute DOMString sessionId;
@@ -34,5 +34,5 @@
     [InitializedByEventConstructor] readonly attribute DOMString defaultURL;
     [InitializedByEventConstructor] readonly attribute MediaKeyError errorCode;
     [InitializedByEventConstructor] readonly attribute unsigned short systemCode;
-    };
+};
 

@@ -29,7 +29,7 @@
  */
 
 #include "config.h"
-#if ENABLE(WEB_SOCKETS) && ENABLE(WORKERS)
+#if ENABLE(WEB_SOCKETS)
 #include "ThreadableWebSocketChannelClientWrapper.h"
 
 #include "CrossThreadCopier.h"
@@ -111,7 +111,7 @@ void ThreadableWebSocketChannelClientWrapper::setSubprotocol(const String& subpr
     unsigned length = subprotocol.length();
     m_subprotocol.resize(length);
     if (length)
-        memcpy(m_subprotocol.data(), subprotocol.characters(), sizeof(UChar) * length);
+        memcpy(m_subprotocol.data(), subprotocol.deprecatedCharacters(), sizeof(UChar) * length);
 }
 
 String ThreadableWebSocketChannelClientWrapper::extensions() const
@@ -126,7 +126,7 @@ void ThreadableWebSocketChannelClientWrapper::setExtensions(const String& extens
     unsigned length = extensions.length();
     m_extensions.resize(length);
     if (length)
-        memcpy(m_extensions.data(), extensions.characters(), sizeof(UChar) * length);
+        memcpy(m_extensions.data(), extensions.deprecatedCharacters(), sizeof(UChar) * length);
 }
 
 ThreadableWebSocketChannel::SendResult ThreadableWebSocketChannelClientWrapper::sendRequestResult() const
@@ -170,7 +170,7 @@ void ThreadableWebSocketChannelClientWrapper::didReceiveMessage(const String& me
         processPendingTasks();
 }
 
-void ThreadableWebSocketChannelClientWrapper::didReceiveBinaryData(PassOwnPtr<Vector<char> > binaryData)
+void ThreadableWebSocketChannelClientWrapper::didReceiveBinaryData(PassOwnPtr<Vector<char>> binaryData)
 {
     m_pendingTasks.append(createCallbackTask(&didReceiveBinaryDataCallback, this, binaryData));
     if (!m_suspended)
@@ -218,7 +218,7 @@ void ThreadableWebSocketChannelClientWrapper::resume()
 
 void ThreadableWebSocketChannelClientWrapper::processPendingTasksCallback(ScriptExecutionContext* context, PassRefPtr<ThreadableWebSocketChannelClientWrapper> wrapper)
 {
-    ASSERT_UNUSED(context, context->isWorkerContext());
+    ASSERT_UNUSED(context, context->isWorkerGlobalScope());
     wrapper->processPendingTasks();
 }
 
@@ -232,9 +232,9 @@ void ThreadableWebSocketChannelClientWrapper::processPendingTasks()
         m_context->postTask(createCallbackTask(&ThreadableWebSocketChannelClientWrapper::processPendingTasksCallback, this));
         return;
     }
-    Vector<OwnPtr<ScriptExecutionContext::Task> > tasks;
+    Vector<OwnPtr<ScriptExecutionContext::Task>> tasks;
     tasks.swap(m_pendingTasks);
-    for (Vector<OwnPtr<ScriptExecutionContext::Task> >::const_iterator iter = tasks.begin(); iter != tasks.end(); ++iter)
+    for (Vector<OwnPtr<ScriptExecutionContext::Task>>::const_iterator iter = tasks.begin(); iter != tasks.end(); ++iter)
         (*iter)->performTask(0);
 }
 
@@ -252,7 +252,7 @@ void ThreadableWebSocketChannelClientWrapper::didReceiveMessageCallback(ScriptEx
         wrapper->m_client->didReceiveMessage(message);
 }
 
-void ThreadableWebSocketChannelClientWrapper::didReceiveBinaryDataCallback(ScriptExecutionContext* context, PassRefPtr<ThreadableWebSocketChannelClientWrapper> wrapper, PassOwnPtr<Vector<char> > binaryData)
+void ThreadableWebSocketChannelClientWrapper::didReceiveBinaryDataCallback(ScriptExecutionContext* context, PassRefPtr<ThreadableWebSocketChannelClientWrapper> wrapper, PassOwnPtr<Vector<char>> binaryData)
 {
     ASSERT_UNUSED(context, !context);
     if (wrapper->m_client)

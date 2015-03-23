@@ -24,13 +24,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-    // Introduced in DOM Level 2:
+// Introduced in DOM Level 2:
 [
     NoInterfaceObject,
-        ObjCCustomImplementation,
-        OmitConstructor
+    ObjCCustomImplementation,
 ] interface AbstractView {
-        readonly attribute Document document;
-        readonly attribute StyleMedia styleMedia;
-    };
+    readonly attribute Document document;
+    readonly attribute StyleMedia styleMedia;
+};
 

@@ -43,18 +43,6 @@
 #include <machine/ieee.h>
 #endif
 
-#if OS(QNX)
-// FIXME: Look into a way to have cmath import its functions into both the standard and global
-// namespace. For now, we include math.h since the QNX cmath header only imports its functions
-// into the standard namespace.
-#include <math.h>
-// These macros from math.h conflict with the real functions in the std namespace.
-#undef signbit
-#undef isnan
-#undef isinf
-#undef isfinite
-#endif
-
 #ifndef M_PI
 const double piDouble = 3.14159265358979323846;
 const float piFloat = 3.14159265358979323846f;
@@ -122,69 +110,6 @@ inline bool signbit(double x) { struct ieee_double *p = (struct ieee_double *)&x
 #endif
 
 #if COMPILER(MSVC)
-
-// We must not do 'num + 0.5' or 'num - 0.5' because they can cause precision loss.
-static double round(double num)
-{
-    double integer = ceil(num);
-    if (num > 0)
-        return integer - num > 0.5 ? integer - 1.0 : integer;
-    return integer - num >= 0.5 ? integer - 1.0 : integer;
-}
-static float roundf(float num)
-{
-    float integer = ceilf(num);
-    if (num > 0)
-        return integer - num > 0.5f ? integer - 1.0f : integer;
-    return integer - num >= 0.5f ? integer - 1.0f : integer;
-}
-inline long long llround(double num) { return static_cast<long long>(round(num)); }
-inline long long llroundf(float num) { return static_cast<long long>(roundf(num)); }
-inline long lround(double num) { return static_cast<long>(round(num)); }
-inline long lroundf(float num) { return static_cast<long>(roundf(num)); }
-inline double trunc(double num) { return num > 0 ? floor(num) : ceil(num); }
-
-#endif
-
-#if COMPILER(GCC) && OS(QNX)
-// The stdlib on QNX doesn't contain long abs(long). See PR #104666.
-inline long long abs(long num) { return labs(num); }
-#endif
-
-#if COMPILER(MSVC)
-// MSVC's math.h does not currently supply log2 or log2f.
-inline double log2(double num)
-{
-    // This constant is roughly M_LN2, which is not provided by default on Windows.
-    return log(num) / 0.693147180559945309417232121458176568;
-}
-
-inline float log2f(float num)
-{
-    // This constant is roughly M_LN2, which is not provided by default on Windows.
-    return logf(num) / 0.693147180559945309417232121458176568f;
-}
-#endif
-
-#if COMPILER(MSVC)
-// The 64bit version of abs() is already defined in stdlib.h which comes with VC10
-#if COMPILER(MSVC9_OR_LOWER)
-inline long long abs(long long num) { return _abs64(num); }
-#endif
-
-namespace std {
-
-inline bool isinf(double num) { return !_finite(num) && !_isnan(num); }
-inline bool isnan(double num) { return !!_isnan(num); }
-inline bool isfinite(double x) { return _finite(x); }
-inline bool signbit(double num) { return _copysign(1.0, num) < 0; }
-
-} // namespace std
-
-inline double nextafter(double x, double y) { return _nextafter(x, y); }
-inline float nextafterf(float x, float y) { return x > y ? x - FLT_EPSILON : x + FLT_EPSILON; }
-
-inline double copysign(double x, double y) { return _copysign(x, y); }
 
 // Work around a bug in Win, where atan2(+-infinity, +-infinity) yields NaN instead of specific values.
 extern "C" inline double wtf_atan2(double x, double y)
@@ -282,6 +207,11 @@ inline int clampToInteger(double value)
     return clampTo<int>(value);
 }
 
+inline unsigned clampToUnsigned(double value)
+{
+    return clampTo<unsigned>(value);
+}
+
 inline float clampToFloat(double value)
 {
     return clampTo<float>(value);
@@ -336,6 +266,11 @@ template <typename T> inline unsigned getLSBSet(T value)
     return result;
 }
 
+template<typename T> inline T divideRoundedUp(T a, T b)
+{
+    return (a + b - 1) / b;
+}
+
 template<typename T> inline T timesThreePlusOneDividedByTwo(T value)
 {
     // Mathematically equivalent to:
@@ -354,6 +289,13 @@ template<typename T> inline bool isNotZeroAndOrdered(T value)
 template<typename T> inline bool isZeroOrUnordered(T value)
 {
     return !isNotZeroAndOrdered(value);
+}
+
+template<typename T> inline bool isGreaterThanNonZeroPowerOfTwo(T value, unsigned power)
+{
+    // The crazy way of testing of index >= 2 ** power
+    // (where I use ** to denote pow()).
+    return !!((value >> 1) >> (power - 1));
 }
 
 #ifndef UINT64_C

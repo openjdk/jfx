@@ -23,14 +23,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-[
-        Conditional=SVG
-] interface SVGPolygonElement : SVGStyledElement,
-                                                    SVGTests,
-                                                    SVGLangSpace,
-                                                    SVGExternalResourcesRequired,
-                                                    SVGTransformable {
-        readonly attribute SVGPointList points;
-        readonly attribute SVGPointList animatedPoints;
-    };
+interface SVGPolygonElement : SVGGraphicsElement {
+    readonly attribute SVGPointList points;
+    readonly attribute SVGPointList animatedPoints;
+};
 
+SVGPolygonElement implements SVGExternalResourcesRequired;
