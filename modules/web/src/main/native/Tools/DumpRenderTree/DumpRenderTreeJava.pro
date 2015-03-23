@@ -20,6 +20,10 @@ mac*|linux* {
     QMAKE_CXXFLAGS += -std=c++11
 }
 
+linux* {
+    QMAKE_LFLAGS += -static-libstdc++
+}
+
 *clang* {
     QMAKE_CXXFLAGS += -stdlib=libc++ -Wno-c++11-narrowing
 }
