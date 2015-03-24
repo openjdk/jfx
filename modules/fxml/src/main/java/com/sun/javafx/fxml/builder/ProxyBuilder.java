@@ -548,6 +548,8 @@ public class ProxyBuilder<T> extends AbstractMap<String, Object> implements Buil
             if (argStr instanceof Collection) {
                 Collection from = (Collection) argStr;
                 to.addAll(from);
+            } else {
+                to.add(argStr);
             }
         }
     }
