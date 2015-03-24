@@ -18,8 +18,6 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SVG)
 #include "SVGAnimatedString.h"
 
 #include "SVGAnimateElement.h"
@@ -31,14 +29,14 @@ SVGAnimatedStringAnimator::SVGAnimatedStringAnimator(SVGAnimationElement* animat
 {
 }
 
-PassOwnPtr<SVGAnimatedType> SVGAnimatedStringAnimator::constructFromString(const String& string)
+std::unique_ptr<SVGAnimatedType> SVGAnimatedStringAnimator::constructFromString(const String& string)
 {
-    OwnPtr<SVGAnimatedType> animatedType = SVGAnimatedType::createString(new String);
+    auto animatedType = SVGAnimatedType::createString(std::make_unique<String>());
     animatedType->string() = string;
-    return animatedType.release();
+    return animatedType;
 }
 
-PassOwnPtr<SVGAnimatedType> SVGAnimatedStringAnimator::startAnimValAnimation(const SVGElementAnimatedPropertyList& animatedTypes)
+std::unique_ptr<SVGAnimatedType> SVGAnimatedStringAnimator::startAnimValAnimation(const SVGElementAnimatedPropertyList& animatedTypes)
 {
     return SVGAnimatedType::createString(constructFromBaseValue<SVGAnimatedString>(animatedTypes));
 }
@@ -96,5 +94,3 @@ float SVGAnimatedStringAnimator::calculateDistance(const String&, const String&)
 }
 
 }
-
-#endif // ENABLE(SVG)

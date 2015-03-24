@@ -69,11 +69,30 @@ void FileChooser::chooseFiles(const Vector<String>& filenames)
     if (!m_client)
         return;
 
-        Vector<FileChooserFileInfo> files;
-        for (unsigned i = 0; i < filenames.size(); ++i)
-            files.append(FileChooserFileInfo(filenames[i]));
-        m_client->filesChosen(files);
-    }
+    Vector<FileChooserFileInfo> files;
+    for (unsigned i = 0; i < filenames.size(); ++i)
+        files.append(FileChooserFileInfo(filenames[i]));
+    m_client->filesChosen(files);
+}
+
+#if PLATFORM(IOS)
+// FIXME: This function is almost identical to FileChooser::chooseFiles(). We should merge this function
+// with FileChooser::chooseFiles() and hence remove the PLATFORM(IOS)-guard.
+void FileChooser::chooseMediaFiles(const Vector<String>& filenames, const String& displayString, Icon* icon)
+{
+    // FIXME: This is inelegant. We should not be looking at settings here.
+    if (m_settings.selectedFiles == filenames)
+        return;
+
+    if (!m_client)
+        return;
+
+    Vector<FileChooserFileInfo> files;
+    for (auto filename : filenames)
+        files.append(FileChooserFileInfo(filename));
+    m_client->filesChosen(files, displayString, icon);
+}
+#endif
 
 void FileChooser::chooseFiles(const Vector<FileChooserFileInfo>& files)
 {

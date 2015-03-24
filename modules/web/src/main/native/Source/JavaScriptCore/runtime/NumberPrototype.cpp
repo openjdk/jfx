@@ -27,7 +27,7 @@
 #include "JSFunction.h"
 #include "JSGlobalObject.h"
 #include "JSString.h"
-#include "Operations.h"
+#include "JSCInlines.h"
 #include "Uint16WithFraction.h"
 #include <wtf/dtoa.h>
 #include <wtf/Assertions.h>
@@ -68,29 +68,24 @@ const ClassInfo NumberPrototype::s_info = { "Number", &NumberObject::s_info, 0, 
 @end
 */
 
-ASSERT_HAS_TRIVIAL_DESTRUCTOR(NumberPrototype);
+STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(NumberPrototype);
 
-NumberPrototype::NumberPrototype(ExecState* exec, Structure* structure)
-    : NumberObject(exec->vm(), structure)
+NumberPrototype::NumberPrototype(VM& vm, Structure* structure)
+    : NumberObject(vm, structure)
 {
 }
 
-void NumberPrototype::finishCreation(ExecState* exec, JSGlobalObject*)
+void NumberPrototype::finishCreation(VM& vm, JSGlobalObject*)
 {
-    Base::finishCreation(exec->vm());
-    setInternalValue(exec->vm(), jsNumber(0));
+    Base::finishCreation(vm);
+    setInternalValue(vm, jsNumber(0));
 
-    ASSERT(inherits(&s_info));
+    ASSERT(inherits(info()));
 }
 
-bool NumberPrototype::getOwnPropertySlot(JSCell* cell, ExecState* exec, PropertyName propertyName, PropertySlot &slot)
+bool NumberPrototype::getOwnPropertySlot(JSObject* object, ExecState* exec, PropertyName propertyName, PropertySlot &slot)
 {
-    return getStaticFunctionSlot<NumberObject>(exec, ExecState::numberPrototypeTable(exec), jsCast<NumberPrototype*>(cell), propertyName, slot);
-}
-
-bool NumberPrototype::getOwnPropertyDescriptor(JSObject* object, ExecState* exec, PropertyName propertyName, PropertyDescriptor& descriptor)
-{
-    return getStaticFunctionDescriptor<NumberObject>(exec, ExecState::numberPrototypeTable(exec), jsCast<NumberPrototype*>(object), propertyName, descriptor);
+    return getStaticFunctionSlot<NumberObject>(exec, ExecState::numberPrototypeTable(exec->vm()), jsCast<NumberPrototype*>(object), propertyName, slot);
 }
 
 // ------------------------------ Functions ---------------------------
@@ -106,7 +101,7 @@ static ALWAYS_INLINE bool toThisNumber(JSValue thisValue, double& x)
         x = thisValue.asDouble();
         return true;
     }
-
+    
     if (thisValue.isCell() && thisValue.asCell()->structure()->typeInfo().isNumberObject()) {
         x = static_cast<const NumberObject*>(thisValue.asCell())->internalValue().asNumber();
         return true;
@@ -373,7 +368,7 @@ EncodedJSValue JSC_HOST_CALL numberProtoFuncToExponential(ExecState* exec)
     if (!toThisNumber(exec->hostThisValue(), x))
         return throwVMTypeError(exec);
 
-    // Get the argument.
+    // Get the argument. 
     int decimalPlacesInExponent;
     bool isUndefined;
     if (!getIntegerArgumentInRange(exec, 0, 20, decimalPlacesInExponent, isUndefined))
@@ -397,14 +392,14 @@ EncodedJSValue JSC_HOST_CALL numberProtoFuncToExponential(ExecState* exec)
 // toFixed converts a number to a string, always formatting as an a decimal fraction.
 // This method takes an argument specifying a number of decimal places to round the
 // significand to. However when converting large values (1e+21 and above) this
-// method will instead fallback to calling ToString.
+// method will instead fallback to calling ToString. 
 EncodedJSValue JSC_HOST_CALL numberProtoFuncToFixed(ExecState* exec)
 {
     double x;
     if (!toThisNumber(exec->hostThisValue(), x))
         return throwVMTypeError(exec);
 
-    // Get the argument.
+    // Get the argument. 
     int decimalPlaces;
     bool isUndefined; // This is ignored; undefined treated as 0.
     if (!getIntegerArgumentInRange(exec, 0, 20, decimalPlaces, isUndefined))
@@ -437,7 +432,7 @@ EncodedJSValue JSC_HOST_CALL numberProtoFuncToPrecision(ExecState* exec)
     if (!toThisNumber(exec->hostThisValue(), x))
         return throwVMTypeError(exec);
 
-    // Get the argument.
+    // Get the argument. 
     int significantFigures;
     bool isUndefined;
     if (!getIntegerArgumentInRange(exec, 1, 21, significantFigures, isUndefined))
@@ -476,7 +471,7 @@ static inline EncodedJSValue integerValueToString(ExecState* exec, int32_t radix
         ASSERT(value <= 36);
         ASSERT(value >= 0);
         VM* vm = &exec->vm();
-        return JSValue::encode(vm->smallStrings.singleCharacterString(vm, radixDigits[value]));
+        return JSValue::encode(vm->smallStrings.singleCharacterString(radixDigits[value]));
     }
 
     if (radix == 10) {

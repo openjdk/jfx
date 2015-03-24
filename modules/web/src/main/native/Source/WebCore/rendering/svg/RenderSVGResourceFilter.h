@@ -24,8 +24,7 @@
 #ifndef RenderSVGResourceFilter_h
 #define RenderSVGResourceFilter_h
 
-#if ENABLE(SVG) && ENABLE(FILTERS)
-#include "FloatRect.h"
+#if ENABLE(FILTERS)
 #include "ImageBuffer.h"
 #include "RenderSVGResourceContainer.h"
 #include "SVGFilter.h"
@@ -33,14 +32,13 @@
 #include "SVGFilterElement.h"
 #include "SVGUnitTypes.h"
 
-#include <wtf/OwnPtr.h>
-#include <wtf/PassOwnPtr.h>
 #include <wtf/RefPtr.h>
 
 namespace WebCore {
 
 struct FilterData {
     WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(FilterData);
 public:
     enum FilterDataState { PaintingSource, Applying, Built, CycleDetected, MarkedForRemoval };
 
@@ -51,8 +49,8 @@ public:
     }
 
     RefPtr<SVGFilter> filter;
-    RefPtr<SVGFilterBuilder> builder;
-    OwnPtr<ImageBuffer> sourceGraphicBuffer;
+    std::unique_ptr<SVGFilterBuilder> builder;
+    std::unique_ptr<ImageBuffer> sourceGraphicBuffer;
     GraphicsContext* savedContext;
     AffineTransform shearFreeAbsoluteTransform;
     FloatRect boundaries;
@@ -63,26 +61,25 @@ public:
 
 class GraphicsContext;
 
-class RenderSVGResourceFilter : public RenderSVGResourceContainer {
+class RenderSVGResourceFilter final : public RenderSVGResourceContainer {
 public:
-    RenderSVGResourceFilter(SVGFilterElement*);
+    RenderSVGResourceFilter(SVGFilterElement&, PassRef<RenderStyle>);
     virtual ~RenderSVGResourceFilter();
 
-    virtual const char* renderName() const { return "RenderSVGResourceFilter"; }
-    virtual bool isSVGResourceFilter() const OVERRIDE { return true; }
+    SVGFilterElement& filterElement() const { return toSVGFilterElement(RenderSVGResourceContainer::element()); }
 
-    virtual void removeAllClientsFromCache(bool markForInvalidation = true);
-    virtual void removeClientFromCache(RenderObject*, bool markForInvalidation = true);
+    virtual void removeAllClientsFromCache(bool markForInvalidation = true) override;
+    virtual void removeClientFromCache(RenderElement&, bool markForInvalidation = true) override;
 
-    virtual bool applyResource(RenderObject*, RenderStyle*, GraphicsContext*&, unsigned short resourceMode);
-    virtual void postApplyResource(RenderObject*, GraphicsContext*&, unsigned short resourceMode, const Path*, const RenderSVGShape*);
+    virtual bool applyResource(RenderElement&, const RenderStyle&, GraphicsContext*&, unsigned short resourceMode) override;
+    virtual void postApplyResource(RenderElement&, GraphicsContext*&, unsigned short resourceMode, const Path*, const RenderSVGShape*) override;
 
-    virtual FloatRect resourceBoundingBox(RenderObject*);
+    virtual FloatRect resourceBoundingBox(const RenderObject&) override;
 
-    PassRefPtr<SVGFilterBuilder> buildPrimitives(SVGFilter*);
+    std::unique_ptr<SVGFilterBuilder> buildPrimitives(SVGFilter*) const;
 
-    SVGUnitTypes::SVGUnitType filterUnits() const { return static_cast<SVGFilterElement*>(node())->filterUnits(); }
-    SVGUnitTypes::SVGUnitType primitiveUnits() const { return static_cast<SVGFilterElement*>(node())->primitiveUnits(); }
+    SVGUnitTypes::SVGUnitType filterUnits() const { return filterElement().filterUnits(); }
+    SVGUnitTypes::SVGUnitType primitiveUnits() const { return filterElement().primitiveUnits(); }
 
     void primitiveAttributeChanged(RenderObject*, const QualifiedName&);
 
@@ -91,16 +88,17 @@ public:
 
     FloatRect drawingRegion(RenderObject*) const;
 private:
+    void element() const = delete;
+
+    virtual const char* renderName() const override { return "RenderSVGResourceFilter"; }
+    virtual bool isSVGResourceFilter() const override { return true; }
+
     bool fitsInMaximumImageSize(const FloatSize&, FloatSize&);
 
-    HashMap<RenderObject*, FilterData*> m_filter;
+    HashMap<RenderObject*, std::unique_ptr<FilterData>> m_filter;
 };
 
-inline RenderSVGResourceFilter* toRenderSVGFilter(RenderObject* object)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isSVGResourceFilter());
-    return static_cast<RenderSVGResourceFilter*>(object);
-}
+RENDER_OBJECT_TYPE_CASTS(RenderSVGResourceFilter, isSVGResourceFilter())
 
 }
 

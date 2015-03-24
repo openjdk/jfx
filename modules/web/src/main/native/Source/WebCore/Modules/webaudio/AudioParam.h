@@ -32,8 +32,8 @@
 #include "AudioContext.h"
 #include "AudioParamTimeline.h"
 #include "AudioSummingJunction.h"
+#include <runtime/Float32Array.h>
 #include <sys/types.h>
-#include <wtf/Float32Array.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
@@ -53,8 +53,8 @@ public:
     }
 
     // AudioSummingJunction
-    virtual bool canUpdateState() OVERRIDE { return true; }
-    virtual void didUpdate() OVERRIDE { }
+    virtual bool canUpdateState() override { return true; }
+    virtual void didUpdate() override { }
 
     // Intrinsic value.
     float value();

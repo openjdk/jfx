@@ -36,14 +36,14 @@
 #include "LocalScope.h"
 #include "Lookup.h"
 #include "ObjectConstructor.h"
-#include "Operations.h"
+#include "JSCInlines.h"
 #include "PropertyNameArray.h"
 #include <wtf/MathExtras.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace JSC {
 
-ASSERT_HAS_TRIVIAL_DESTRUCTOR(JSONObject);
+STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(JSONObject);
 
 static EncodedJSValue JSC_HOST_CALL JSONProtoFuncParse(ExecState*);
 static EncodedJSValue JSC_HOST_CALL JSONProtoFuncStringify(ExecState*);
@@ -54,15 +54,15 @@ static EncodedJSValue JSC_HOST_CALL JSONProtoFuncStringify(ExecState*);
 
 namespace JSC {
 
-JSONObject::JSONObject(JSGlobalObject* globalObject, Structure* structure)
-    : JSNonFinalObject(globalObject->vm(), structure)
+JSONObject::JSONObject(VM& vm, Structure* structure)
+    : JSNonFinalObject(vm, structure)
 {
 }
 
-void JSONObject::finishCreation(JSGlobalObject* globalObject)
+void JSONObject::finishCreation(VM& vm)
 {
-    Base::finishCreation(globalObject->vm());
-    ASSERT(inherits(&s_info));
+    Base::finishCreation(vm);
+    ASSERT(inherits(info()));
 }
 
 // PropertyNameForFunctionCall objects must be on the stack, since the JSValue that they create is not marked.
@@ -139,11 +139,11 @@ static inline JSValue unwrapBoxedPrimitive(ExecState* exec, JSValue value)
     if (!value.isObject())
         return value;
     JSObject* object = asObject(value);
-    if (object->inherits(&NumberObject::s_info))
+    if (object->inherits(NumberObject::info()))
         return jsNumber(object->toNumber(exec));
-    if (object->inherits(&StringObject::s_info))
+    if (object->inherits(StringObject::info()))
         return object->toString(exec);
-    if (object->inherits(&BooleanObject::s_info))
+    if (object->inherits(BooleanObject::info()))
         return object->toPrimitive(exec);
     return value;
 }
@@ -214,7 +214,7 @@ Stringifier::Stringifier(ExecState* exec, const Local<Unknown>& replacer, const 
     if (!m_replacer.isObject())
         return;
 
-    if (m_replacer.asObject()->inherits(&JSArray::s_info)) {
+    if (m_replacer.asObject()->inherits(JSArray::info())) {
         m_usingArrayReplacer = true;
         Handle<JSObject> array = m_replacer.asObject();
         unsigned length = array->get(exec, exec->vm().propertyNames->length).toUInt32(exec);
@@ -224,7 +224,7 @@ Stringifier::Stringifier(ExecState* exec, const Local<Unknown>& replacer, const 
                 break;
 
             if (name.isObject()) {
-                if (!asObject(name)->inherits(&NumberObject::s_info) && !asObject(name)->inherits(&StringObject::s_info))
+                if (!asObject(name)->inherits(NumberObject::info()) && !asObject(name)->inherits(StringObject::info()))
                     continue;
             }
 
@@ -302,7 +302,15 @@ static void appendStringToStringBuilder(StringBuilder& builder, const CharType* 
         }
     }
 }
-    
+
+void escapeStringToBuilder(StringBuilder& builder, const String& message)
+{
+    if (message.is8Bit())
+        appendStringToStringBuilder(builder, message.characters8(), message.length());
+    else
+        appendStringToStringBuilder(builder, message.characters16(), message.length());
+}
+
 void Stringifier::appendQuotedString(StringBuilder& builder, const String& value)
 {
     int length = value.length();
@@ -358,7 +366,7 @@ Stringifier::StringifyResult Stringifier::appendStringifiedValue(StringBuilder& 
             return StringifyFailed;
     }
 
-    if (value.isUndefined() && !holder->inherits(&JSArray::s_info))
+    if (value.isUndefined() && !holder->inherits(JSArray::info()))
         return StringifyFailedDueToUndefinedValue;
 
     if (value.isNull()) {
@@ -401,7 +409,7 @@ Stringifier::StringifyResult Stringifier::appendStringifiedValue(StringBuilder& 
 
     CallData callData;
     if (object->methodTable()->getCallData(object, callData) != CallTypeNone) {
-        if (holder->inherits(&JSArray::s_info)) {
+        if (holder->inherits(JSArray::info())) {
             builder.appendLiteral("null");
             return StringifySucceeded;
         }
@@ -411,7 +419,7 @@ Stringifier::StringifyResult Stringifier::appendStringifiedValue(StringBuilder& 
     // Handle cycle detection, and put the holder on the stack.
     for (unsigned i = 0; i < m_holderStack.size(); i++) {
         if (m_holderStack[i].object() == object) {
-            throwError(m_exec, createTypeError(m_exec, ASCIILiteral("JSON.stringify cannot serialize cyclic structures.")));
+            m_exec->vm().throwException(m_exec, createTypeError(m_exec, ASCIILiteral("JSON.stringify cannot serialize cyclic structures.")));
             return StringifyFailed;
         }
     }
@@ -461,7 +469,7 @@ inline void Stringifier::startNewLine(StringBuilder& builder) const
 
 inline Stringifier::Holder::Holder(VM& vm, JSObject* object)
     : m_object(vm, object)
-    , m_isArray(object->inherits(&JSArray::s_info))
+    , m_isArray(object->inherits(JSArray::info()))
     , m_index(0)
 #ifndef NDEBUG
     , m_size(0)
@@ -515,11 +523,12 @@ bool Stringifier::Holder::appendNextProperty(Stringifier& stringifier, StringBui
             value = asArray(m_object.get())->getIndexQuickly(index);
         else {
             PropertySlot slot(m_object.get());
-            if (!m_object->methodTable()->getOwnPropertySlotByIndex(m_object.get(), exec, index, slot))
-                slot.setUndefined();
-            if (exec->hadException())
-                return false;
-            value = slot.getValue(exec, index);
+            if (m_object->methodTable()->getOwnPropertySlotByIndex(m_object.get(), exec, index, slot)) {
+                value = slot.getValue(exec, index);
+                if (exec->hadException())
+                    return false;
+            } else
+                value = jsUndefined();
         }
 
         // Append the separator string.
@@ -590,14 +599,9 @@ const ClassInfo JSONObject::s_info = { "JSON", &JSNonFinalObject::s_info, 0, Exe
 
 // ECMA 15.8
 
-bool JSONObject::getOwnPropertySlot(JSCell* cell, ExecState* exec, PropertyName propertyName, PropertySlot& slot)
+bool JSONObject::getOwnPropertySlot(JSObject* object, ExecState* exec, PropertyName propertyName, PropertySlot& slot)
 {
-    return getStaticFunctionSlot<JSObject>(exec, ExecState::jsonTable(exec), jsCast<JSONObject*>(cell), propertyName, slot);
-}
-
-bool JSONObject::getOwnPropertyDescriptor(JSObject* object, ExecState* exec, PropertyName propertyName, PropertyDescriptor& descriptor)
-{
-    return getStaticFunctionDescriptor<JSObject>(exec, ExecState::jsonTable(exec), jsCast<JSONObject*>(object), propertyName, descriptor);
+    return getStaticFunctionSlot<JSObject>(exec, ExecState::jsonTable(exec->vm()), jsCast<JSONObject*>(object), propertyName, slot);
 }
 
 class Walker {
@@ -648,16 +652,16 @@ NEVER_INLINE JSValue Walker::walk(JSValue unfiltered)
             arrayStartState:
             case ArrayStartState: {
                 ASSERT(inValue.isObject());
-                ASSERT(isJSArray(asObject(inValue)) || asObject(inValue)->inherits(&JSArray::s_info));
+                ASSERT(isJSArray(asObject(inValue)) || asObject(inValue)->inherits(JSArray::info()));
                 if (objectStack.size() + arrayStack.size() > maximumFilterRecursion)
-                    return throwError(m_exec, createStackOverflowError(m_exec));
+                    return throwStackOverflowError(m_exec);
 
                 JSArray* array = asArray(inValue);
                 arrayStack.push(array);
                 indexStack.append(0);
-                // fallthrough
             }
             arrayStartVisitMember:
+            FALLTHROUGH;
             case ArrayStartVisitMember: {
                 JSArray* array = arrayStack.peek();
                 uint32_t index = indexStack.last();
@@ -670,7 +674,7 @@ NEVER_INLINE JSValue Walker::walk(JSValue unfiltered)
                 if (isJSArray(array) && array->canGetIndexQuickly(index))
                     inValue = array->getIndexQuickly(index);
                 else {
-                    PropertySlot slot;
+                    PropertySlot slot(array);
                     if (array->methodTable()->getOwnPropertySlotByIndex(array, m_exec, index, slot))
                         inValue = slot.getValue(m_exec, index);
                     else
@@ -682,7 +686,7 @@ NEVER_INLINE JSValue Walker::walk(JSValue unfiltered)
                     goto stateUnknown;
                 } else
                     outValue = inValue;
-                // fallthrough
+                FALLTHROUGH;
             }
             case ArrayEndVisitMember: {
                 JSArray* array = arrayStack.peek();
@@ -699,18 +703,18 @@ NEVER_INLINE JSValue Walker::walk(JSValue unfiltered)
             objectStartState:
             case ObjectStartState: {
                 ASSERT(inValue.isObject());
-                ASSERT(!isJSArray(asObject(inValue)) && !asObject(inValue)->inherits(&JSArray::s_info));
+                ASSERT(!isJSArray(asObject(inValue)) && !asObject(inValue)->inherits(JSArray::info()));
                 if (objectStack.size() + arrayStack.size() > maximumFilterRecursion)
-                    return throwError(m_exec, createStackOverflowError(m_exec));
+                    return throwStackOverflowError(m_exec);
 
                 JSObject* object = asObject(inValue);
                 objectStack.push(object);
                 indexStack.append(0);
                 propertyStack.append(PropertyNameArray(m_exec));
                 object->methodTable()->getOwnPropertyNames(object, m_exec, propertyStack.last(), ExcludeDontEnumProperties);
-                // fallthrough
             }
             objectStartVisitMember:
+            FALLTHROUGH;
             case ObjectStartVisitMember: {
                 JSObject* object = objectStack.peek();
                 uint32_t index = indexStack.last();
@@ -722,7 +726,7 @@ NEVER_INLINE JSValue Walker::walk(JSValue unfiltered)
                     propertyStack.removeLast();
                     break;
                 }
-                PropertySlot slot;
+                PropertySlot slot(object);
                 if (object->methodTable()->getOwnPropertySlot(object, m_exec, properties[index], slot))
                     inValue = slot.getValue(m_exec, properties[index]);
                 else
@@ -737,12 +741,12 @@ NEVER_INLINE JSValue Walker::walk(JSValue unfiltered)
                     goto stateUnknown;
                 } else
                     outValue = inValue;
-                // fallthrough
+                FALLTHROUGH;
             }
             case ObjectEndVisitMember: {
                 JSObject* object = objectStack.peek();
                 Identifier prop = propertyStack.last()[indexStack.last()];
-                PutPropertySlot slot;
+                PutPropertySlot slot(object);
                 JSValue filteredValue = callReviver(object, jsString(m_exec, prop.string()), outValue);
                 if (filteredValue.isUndefined())
                     object->methodTable()->deleteProperty(object, m_exec, prop);
@@ -760,7 +764,7 @@ NEVER_INLINE JSValue Walker::walk(JSValue unfiltered)
                     break;
                 }
                 JSObject* object = asObject(inValue);
-                if (isJSArray(object) || object->inherits(&JSArray::s_info))
+                if (isJSArray(object) || object->inherits(JSArray::info()))
                     goto arrayStartState;
                 goto objectStartState;
         }
@@ -771,7 +775,7 @@ NEVER_INLINE JSValue Walker::walk(JSValue unfiltered)
         stateStack.removeLast();
     }
     JSObject* finalHolder = constructEmptyObject(m_exec);
-    PutPropertySlot slot;
+    PutPropertySlot slot(finalHolder);
     finalHolder->methodTable()->put(finalHolder, m_exec, m_exec->vm().propertyNames->emptyIdentifier, outValue, slot);
     return callReviver(finalHolder, jsEmptyString(m_exec), outValue);
 }
@@ -781,7 +785,7 @@ EncodedJSValue JSC_HOST_CALL JSONProtoFuncParse(ExecState* exec)
 {
     if (!exec->argumentCount())
         return throwVMError(exec, createError(exec, ASCIILiteral("JSON.parse requires at least one parameter")));
-    String source = exec->argument(0).toString(exec)->value(exec);
+    String source = exec->uncheckedArgument(0).toString(exec)->value(exec);
     if (exec->hadException())
         return JSValue::encode(jsNull());
 
@@ -802,7 +806,7 @@ EncodedJSValue JSC_HOST_CALL JSONProtoFuncParse(ExecState* exec)
     if (exec->argumentCount() < 2)
         return JSValue::encode(unfiltered);
     
-    JSValue function = exec->argument(1);
+    JSValue function = exec->uncheckedArgument(1);
     CallData callData;
     CallType callType = getCallData(function, callData);
     if (callType == CallTypeNone)
@@ -816,10 +820,24 @@ EncodedJSValue JSC_HOST_CALL JSONProtoFuncStringify(ExecState* exec)
     if (!exec->argumentCount())
         return throwVMError(exec, createError(exec, ASCIILiteral("No input to stringify")));
     LocalScope scope(exec->vm());
-    Local<Unknown> value(exec->vm(), exec->argument(0));
+    Local<Unknown> value(exec->vm(), exec->uncheckedArgument(0));
     Local<Unknown> replacer(exec->vm(), exec->argument(1));
     Local<Unknown> space(exec->vm(), exec->argument(2));
-    return JSValue::encode(Stringifier(exec, replacer, space).stringify(value).get());
+    JSValue result = Stringifier(exec, replacer, space).stringify(value).get();
+    return JSValue::encode(result);
+}
+
+JSValue JSONParse(ExecState* exec, const String& json)
+{
+    LocalScope scope(exec->vm());
+
+    if (json.is8Bit()) {
+        LiteralParser<LChar> jsonParser(exec, json.characters8(), json.length(), StrictJSON);
+        return jsonParser.tryLiteralParse();
+    }
+
+    LiteralParser<UChar> jsonParser(exec, json.characters16(), json.length(), StrictJSON);
+    return jsonParser.tryLiteralParse();
 }
 
 String JSONStringify(ExecState* exec, JSValue value, unsigned indent)

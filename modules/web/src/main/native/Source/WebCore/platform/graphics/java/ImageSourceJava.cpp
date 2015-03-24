@@ -146,7 +146,7 @@ size_t ImageSource::frameCount() const
         : count;
 }
 
-PassNativeImagePtr ImageSource::createFrameAtIndex(size_t idx)
+PassNativeImagePtr ImageSource::createFrameAtIndex(size_t idx, float*/* scale = 0*/)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
     ASSERT(m_decoder);
@@ -188,10 +188,10 @@ float ImageSource::frameDurationAtIndex(size_t idx)
     return m_frameInfos[idx].duration;
 }
 
-IntSize ImageSource::size(RespectImageOrientationEnum shouldRespectOrientation) const
+IntSize ImageSource::size(ImageOrientationDescription d) const
 {
     // The JPEG and TIFF decoders need to be taught how to read EXIF, XMP, or IPTC data.
-    if (shouldRespectOrientation == RespectImageOrientation)
+    if (d.respectImageOrientation() == RespectImageOrientation)
         notImplemented();
 
     return m_imageSize;
@@ -199,10 +199,10 @@ IntSize ImageSource::size(RespectImageOrientationEnum shouldRespectOrientation) 
 
 IntSize ImageSource::frameSizeAtIndex(
     size_t idx,
-    RespectImageOrientationEnum shouldRespectOrientation) const
+    ImageOrientationDescription d) const
 {
     // The JPEG and TIFF decoders need to be taught how to read EXIF, XMP, or IPTC data.
-    if (shouldRespectOrientation == RespectImageOrientation)
+    if (d.respectImageOrientation() == RespectImageOrientation)
         notImplemented();
 
     ASSERT(idx < m_frameInfos.size());

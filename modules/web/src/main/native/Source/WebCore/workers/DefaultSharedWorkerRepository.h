@@ -34,10 +34,10 @@
 #if ENABLE(SHARED_WORKERS)
 
 #include "ContentSecurityPolicy.h"
+#include <memory>
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/Noncopyable.h>
-#include <wtf/PassOwnPtr.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Threading.h>
@@ -46,7 +46,7 @@
 namespace WebCore {
 
     class Document;
-    class KURL;
+    class URL;
     class MessagePortChannel;
     class ScriptExecutionContext;
     class SharedWorker;
@@ -62,10 +62,10 @@ namespace WebCore {
         static bool isAvailable();
 
         // Invoked once the worker script has been loaded to fire up the worker thread.
-        void workerScriptLoaded(SharedWorkerProxy&, const String& userAgent, const String& workerScript, PassOwnPtr<MessagePortChannel>, const String& contentSecurityPolicy, ContentSecurityPolicy::HeaderType);
+        void workerScriptLoaded(SharedWorkerProxy&, const String& userAgent, const String& workerScript, std::unique_ptr<MessagePortChannel>, const String& contentSecurityPolicy, ContentSecurityPolicy::HeaderType);
 
         // Internal implementation of SharedWorkerRepository::connect()
-        void connectToWorker(PassRefPtr<SharedWorker>, PassOwnPtr<MessagePortChannel>, const KURL&, const String& name, ExceptionCode&);
+        void connectToWorker(PassRefPtr<SharedWorker>, std::unique_ptr<MessagePortChannel>, const URL&, const String& name, ExceptionCode&);
 
         // Notification that a document has been detached.
         void documentDetached(Document*);
@@ -80,12 +80,12 @@ namespace WebCore {
         DefaultSharedWorkerRepository();
         ~DefaultSharedWorkerRepository();
 
-        PassRefPtr<SharedWorkerProxy> getProxy(const String& name, const KURL&);
+        PassRefPtr<SharedWorkerProxy> getProxy(const String& name, const URL&);
         // Mutex used to protect internal data structures.
         Mutex m_lock;
 
         // List of shared workers. Expectation is that there will be a limited number of shared workers, and so tracking them in a Vector is more efficient than nested HashMaps.
-        typedef Vector<RefPtr<SharedWorkerProxy> > SharedWorkerProxyRepository;
+        typedef Vector<RefPtr<SharedWorkerProxy>> SharedWorkerProxyRepository;
         SharedWorkerProxyRepository m_proxies;
     };
 

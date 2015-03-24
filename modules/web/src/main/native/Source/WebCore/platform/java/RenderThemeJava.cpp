@@ -29,6 +29,8 @@
 #include "ThemeTypes.h"
 #include "TimeRanges.h"
 #include "UserAgentStyleSheets.h"
+#include "MediaControlElementTypes.h"
+#include "Page.h"
 
 #include "com_sun_webkit_graphics_RenderTheme.h"
 #include "com_sun_webkit_graphics_GraphicsDecoder.h"
@@ -73,7 +75,7 @@ JLObject getJRenderTheme(Page* page)
         //here we can get 0 for synthetic Page object, that is created for processing SVG.
         //NB! dynamic_cast is essential. Returns 0 for SVG ChromeClient on runtime.
         //webnode\Source\WebCore\svg\graphics\SVGImage.cpp::dataChanged(bool allDataReceived)
-        pChromeClientJava = dynamic_cast<ChromeClientJava *>(page->chrome().client());
+        pChromeClientJava = dynamic_cast<ChromeClientJava *>(&page->chrome().client());
     }
 
     if (pChromeClientJava == 0) {
@@ -140,7 +142,7 @@ bool RenderThemeJava::paintWidget(
     }
 
     int state = createWidgetState(object);
-    RGBA32 bgColor = object->style()->visitedDependentColor(
+    RGBA32 bgColor = object->style().visitedDependentColor(
         widgetIndex == JNI_EXPAND(MENU_LIST_BUTTON)
             ? CSSPropertyColor
             : CSSPropertyBackgroundColor
@@ -150,22 +152,22 @@ bool RenderThemeJava::paintWidget(
 
     WTF::Vector<jbyte> extParams;
     if (JNI_EXPAND(SLIDER) == widgetIndex) {
-        HTMLInputElement* input = toRenderSlider(object)->node()->toInputElement();
+        HTMLInputElement& input = toRenderSlider(object)->element();
 
         extParams.grow(sizeof(jint) + 3*sizeof(jfloat));
         jbyte *data = extParams.data();
-        *(jint *)data = jint((object->style()->appearance() == SliderHorizontalPart)
+        *(jint *)data = jint((object->style().appearance() == SliderHorizontalPart)
             ? 0
             : 1);
         data += sizeof(jint);
 
-        *(jfloat *)data = jfloat(input->maximum());
+        *(jfloat *)data = jfloat(input.maximum());
         data += sizeof(jfloat);
 
-        *(jfloat *)data = jfloat(input->minimum());
+        *(jfloat *)data = jfloat(input.minimum());
         data += sizeof(jfloat);
 
-        *(jfloat *)data = jfloat(input->valueAsNumber());
+        *(jfloat *)data = jfloat(input.valueAsNumber());
     } else if (JNI_EXPAND(PROGRESS_BAR) == widgetIndex) {
         RenderProgress* renderProgress = toRenderProgress(object);
 
@@ -380,7 +382,7 @@ static float systemFontSizeForControlSize(JavaControlSize controlSize)
     return sizes[controlSize];
 }
 
-void RenderThemeJava::systemFont(int propId, FontDescription& fontDescription) const
+void RenderThemeJava::systemFont(CSSValueID propId, FontDescription& fontDescription) const
 {
     // This logic owes much to RenderThemeSafari.cpp.
     static FontDescription systemFont;
@@ -615,7 +617,7 @@ bool RenderThemeJava::paintMediaFullscreenButton(RenderObject *o, const PaintInf
 
 bool RenderThemeJava::paintMediaPlayButton(RenderObject *o, const PaintInfo& paintInfo, const IntRect &r)
 {
-    HTMLMediaElement* mediaElement = toParentMediaElement(o);
+    HTMLMediaElement* mediaElement = parentMediaElement(*o);
     if (mediaElement == NULL)
         return false;
 
@@ -630,7 +632,7 @@ bool RenderThemeJava::paintMediaPlayButton(RenderObject *o, const PaintInfo& pai
 
 bool RenderThemeJava::paintMediaMuteButton(RenderObject *o, const PaintInfo& paintInfo, const IntRect &r)
 {
-    HTMLMediaElement* mediaElement = toParentMediaElement(o);
+    HTMLMediaElement* mediaElement = parentMediaElement(*o);
     if (mediaElement == NULL)
         return false;
 
@@ -649,7 +651,7 @@ bool RenderThemeJava::paintMediaSeekForwardButton(RenderObject *o, const PaintIn
 
 bool RenderThemeJava::paintMediaSliderTrack(RenderObject *o, const PaintInfo& paintInfo, const IntRect &r)
 {
-    HTMLMediaElement* mediaElement = toParentMediaElement(o);
+    HTMLMediaElement* mediaElement = parentMediaElement(*o);
     if (mediaElement == NULL)
         return false;
 
@@ -690,7 +692,7 @@ bool RenderThemeJava::paintMediaVolumeSliderContainer(RenderObject *o, const Pai
 
 bool RenderThemeJava::paintMediaVolumeSliderTrack(RenderObject *o, const PaintInfo& paintInfo, const IntRect &r)
 {
-    HTMLMediaElement* mediaElement = toParentMediaElement(o);
+    HTMLMediaElement* mediaElement = parentMediaElement(*o);
     if (mediaElement == NULL)
         return false;
 

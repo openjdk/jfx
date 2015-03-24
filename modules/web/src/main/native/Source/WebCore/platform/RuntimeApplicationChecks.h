@@ -32,11 +32,14 @@ bool applicationIsAOLInstantMessenger();
 bool applicationIsAdobeInstaller();
 bool applicationIsAperture();
 bool applicationIsAppleMail();
+bool applicationIsITunes();
 bool applicationIsMicrosoftMessenger();
 bool applicationIsMicrosoftMyDay();
 bool applicationIsMicrosoftOutlook();
 bool applicationIsSafari();
+bool applicationIsSolidStateNetworksDownloader();
 bool applicationIsVersions();
+bool applicationIsHRBlock();
 
 } // namespace WebCore
 

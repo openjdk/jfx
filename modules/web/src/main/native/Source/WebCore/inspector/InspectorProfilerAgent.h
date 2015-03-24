@@ -30,99 +30,96 @@
 #ifndef InspectorProfilerAgent_h
 #define InspectorProfilerAgent_h
 
-#if ENABLE(JAVASCRIPT_DEBUGGER) && ENABLE(INSPECTOR)
+#if ENABLE(INSPECTOR)
 
-#include "InspectorBaseAgent.h"
-#include "InspectorFrontend.h"
+#include "InspectorWebAgentBase.h"
+#include "InspectorWebBackendDispatchers.h"
+#include "InspectorWebFrontendDispatchers.h"
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/Noncopyable.h>
-#include <wtf/PassOwnPtr.h>
 #include <wtf/text/WTFString.h>
+
+namespace Inspector {
+class InspectorArray;
+class InspectorConsoleAgent;
+class InspectorObject;
+}
 
 namespace WebCore {
 
-class InjectedScriptManager;
-class InspectorArray;
-class InspectorConsoleAgent;
-class InspectorFrontend;
-class InspectorObject;
-class InspectorState;
 class InstrumentingAgents;
 class Page;
 class ScriptHeapSnapshot;
 class ScriptProfile;
-class WorkerContext;
+class WebInjectedScriptManager;
+class WorkerGlobalScope;
 
 typedef String ErrorString;
 
-class InspectorProfilerAgent : public InspectorBaseAgent<InspectorProfilerAgent>, public InspectorBackendDispatcher::ProfilerCommandHandler {
+class InspectorProfilerAgent : public InspectorAgentBase, public Inspector::InspectorProfilerBackendDispatcherHandler {
     WTF_MAKE_NONCOPYABLE(InspectorProfilerAgent); WTF_MAKE_FAST_ALLOCATED;
 public:
-    static PassOwnPtr<InspectorProfilerAgent> create(InstrumentingAgents*, InspectorConsoleAgent*, Page*, InspectorCompositeState*, InjectedScriptManager*);
-#if ENABLE(WORKERS)
-    static PassOwnPtr<InspectorProfilerAgent> create(InstrumentingAgents*, InspectorConsoleAgent*, WorkerContext*, InspectorCompositeState*, InjectedScriptManager*);
-#endif
+    static std::unique_ptr<InspectorProfilerAgent> create(InstrumentingAgents*, Inspector::InspectorConsoleAgent*, Page*, WebInjectedScriptManager*);
+    static std::unique_ptr<InspectorProfilerAgent> create(InstrumentingAgents*, Inspector::InspectorConsoleAgent*, WorkerGlobalScope*, WebInjectedScriptManager*);
+
     virtual ~InspectorProfilerAgent();
 
     void addProfile(PassRefPtr<ScriptProfile> prpProfile, unsigned lineNumber, unsigned columnNumber, const String& sourceURL);
     void addProfileFinishedMessageToConsole(PassRefPtr<ScriptProfile>, unsigned lineNumber, unsigned columnNumber, const String& sourceURL);
     void addStartProfilingMessageToConsole(const String& title, unsigned lineNumber, unsigned columnNumber, const String& sourceURL);
-    virtual void collectGarbage(ErrorString*);
-    virtual void clearProfiles(ErrorString*) { resetState(); }
+    virtual void collectGarbage(ErrorString*) override;
+    virtual void clearProfiles(ErrorString*) override { resetState(); }
     void resetState();
 
-    virtual void causesRecompilation(ErrorString*, bool*);
     virtual void recompileScript() = 0;
-    virtual void isSampling(ErrorString*, bool*);
-    virtual void hasHeapProfiler(ErrorString*, bool*);
+    virtual void isSampling(ErrorString*, bool*) override;
+    virtual void hasHeapProfiler(ErrorString*, bool*) override;
 
-    virtual void enable(ErrorString*);
-    virtual void disable(ErrorString*);
-    virtual void start(ErrorString* = 0);
-    virtual void stop(ErrorString* = 0);
+    virtual void enable(ErrorString*) override;
+    virtual void disable(ErrorString*) override;
+    virtual void start(ErrorString* = nullptr) override;
+    virtual void stop(ErrorString* = nullptr) override;
 
-    void disable();
+    void disable(bool skipRecompile);
     void enable(bool skipRecompile);
-    bool enabled() { return m_enabled; }
+    bool enabled() const { return m_enabled; }
     String getCurrentUserInitiatedProfileName(bool incrementProfileNumber = false);
-    virtual void getProfileHeaders(ErrorString*, RefPtr<TypeBuilder::Array<TypeBuilder::Profiler::ProfileHeader> >&);
-    virtual void getCPUProfile(ErrorString*, int uid, RefPtr<TypeBuilder::Profiler::CPUProfile>&);
-    virtual void getHeapSnapshot(ErrorString*, int uid);
-    virtual void removeProfile(ErrorString*, const String& type, int uid);
+    virtual void getProfileHeaders(ErrorString*, RefPtr<Inspector::TypeBuilder::Array<Inspector::TypeBuilder::Profiler::ProfileHeader>>&) override;
+    virtual void getCPUProfile(ErrorString*, int uid, RefPtr<Inspector::TypeBuilder::Profiler::CPUProfile>&) override;
+    virtual void getHeapSnapshot(ErrorString*, int uid) override;
+    virtual void removeProfile(ErrorString*, const String& type, int uid) override;
 
-    virtual void setFrontend(InspectorFrontend*);
-    virtual void clearFrontend();
-    virtual void restore();
+    virtual void didCreateFrontendAndBackend(Inspector::InspectorFrontendChannel*, Inspector::InspectorBackendDispatcher*) override;
+    virtual void willDestroyFrontendAndBackend(Inspector::InspectorDisconnectReason) override;
 
-    virtual void takeHeapSnapshot(ErrorString*, const bool* reportProgress);
+    virtual void takeHeapSnapshot(ErrorString*, const bool* reportProgress) override;
     void toggleRecordButton(bool isProfiling);
 
-    virtual void getObjectByHeapObjectId(ErrorString*, const String& heapSnapshotObjectId, const String* objectGroup, RefPtr<TypeBuilder::Runtime::RemoteObject>& result);
-    virtual void getHeapObjectId(ErrorString*, const String& objectId, String* heapSnapshotObjectId);
-
-    void willProcessTask();
-    void didProcessTask();
+    virtual void getObjectByHeapObjectId(ErrorString*, const String& heapSnapshotObjectId, const String* objectGroup, RefPtr<Inspector::TypeBuilder::Runtime::RemoteObject>& result) override;
+    virtual void getHeapObjectId(ErrorString*, const String& objectId, String* heapSnapshotObjectId) override;
 
 protected:
-    InspectorProfilerAgent(InstrumentingAgents*, InspectorConsoleAgent*, InspectorCompositeState*, InjectedScriptManager*);
+    InspectorProfilerAgent(InstrumentingAgents*, Inspector::InspectorConsoleAgent*, WebInjectedScriptManager*);
     virtual void startProfiling(const String& title) = 0;
     virtual PassRefPtr<ScriptProfile> stopProfiling(const String& title) = 0;
 
 private:
-    typedef HashMap<unsigned int, RefPtr<ScriptProfile> > ProfilesMap;
-    typedef HashMap<unsigned int, RefPtr<ScriptHeapSnapshot> > HeapSnapshotsMap;
+    typedef HashMap<unsigned int, RefPtr<ScriptProfile>> ProfilesMap;
+    typedef HashMap<unsigned int, RefPtr<ScriptHeapSnapshot>> HeapSnapshotsMap;
 
     void resetFrontendProfiles();
     void restoreEnablement();
 
-    PassRefPtr<TypeBuilder::Profiler::ProfileHeader> createProfileHeader(const ScriptProfile&);
-    PassRefPtr<TypeBuilder::Profiler::ProfileHeader> createSnapshotHeader(const ScriptHeapSnapshot&);
+    PassRefPtr<Inspector::TypeBuilder::Profiler::ProfileHeader> createProfileHeader(const ScriptProfile&);
+    PassRefPtr<Inspector::TypeBuilder::Profiler::ProfileHeader> createSnapshotHeader(const ScriptHeapSnapshot&);
 
-    InspectorConsoleAgent* m_consoleAgent;
-    InjectedScriptManager* m_injectedScriptManager;
-    InspectorFrontend::Profiler* m_frontend;
+    Inspector::InspectorConsoleAgent* m_consoleAgent;
+    WebInjectedScriptManager* m_injectedScriptManager;
+    std::unique_ptr<Inspector::InspectorProfilerFrontendDispatcher> m_frontendDispatcher;
+    RefPtr<Inspector::InspectorProfilerBackendDispatcher> m_backendDispatcher;
     bool m_enabled;
+    bool m_profileHeadersRequested;
     bool m_recordingCPUProfile;
     int m_currentUserInitiatedProfileNumber;
     unsigned m_nextUserInitiatedProfileNumber;
@@ -132,11 +129,10 @@ private:
 
     typedef HashMap<String, double> ProfileNameIdleTimeMap;
     ProfileNameIdleTimeMap* m_profileNameIdleTimeMap;
-    double m_previousTaskEndTime;
 };
 
 } // namespace WebCore
 
-#endif // ENABLE(JAVASCRIPT_DEBUGGER) && ENABLE(INSPECTOR)
+#endif // ENABLE(INSPECTOR)
 
 #endif // !defined(InspectorProfilerAgent_h)

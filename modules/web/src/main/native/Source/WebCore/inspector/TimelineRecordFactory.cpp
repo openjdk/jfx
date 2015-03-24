@@ -36,14 +36,18 @@
 
 #include "Event.h"
 #include "FloatQuad.h"
-#include "InspectorValues.h"
 #include "IntRect.h"
+#include "JSMainThreadExecState.h"
 #include "LayoutRect.h"
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
-#include "ScriptCallStack.h"
-#include "ScriptCallStackFactory.h"
+#include "ScriptProfile.h"
+#include <inspector/InspectorValues.h>
+#include <inspector/ScriptCallStack.h>
+#include <inspector/ScriptCallStackFactory.h>
 #include <wtf/CurrentTime.h>
+
+using namespace Inspector;
 
 namespace WebCore {
 
@@ -53,7 +57,7 @@ PassRefPtr<InspectorObject> TimelineRecordFactory::createGenericRecord(double st
     record->setNumber("startTime", startTime);
 
     if (maxCallStackDepth) {
-        RefPtr<ScriptCallStack> stackTrace = createScriptCallStack(maxCallStackDepth, true);
+        RefPtr<ScriptCallStack> stackTrace = createScriptCallStack(JSMainThreadExecState::currentState(), maxCallStackDepth, true);
         if (stackTrace && stackTrace->size())
             record->setValue("stackTrace", stackTrace->buildInspectorArray());
     }
@@ -178,7 +182,7 @@ PassRefPtr<InspectorObject> TimelineRecordFactory::createReceiveResourceData(con
     data->setNumber("encodedDataLength", length);
     return data.release();
 }
-    
+
 PassRefPtr<InspectorObject> TimelineRecordFactory::createLayoutData(unsigned dirtyObjects, unsigned totalObjects, bool partialLayout)
 {
     RefPtr<InspectorObject> data = InspectorObject::create();
@@ -187,7 +191,7 @@ PassRefPtr<InspectorObject> TimelineRecordFactory::createLayoutData(unsigned dir
     data->setBoolean("partialLayout", partialLayout);
     return data.release();
 }
-
+    
 PassRefPtr<InspectorObject> TimelineRecordFactory::createDecodeImageData(const String& imageType)
 {
     RefPtr<InspectorObject> data = InspectorObject::create();
@@ -247,6 +251,11 @@ PassRefPtr<InspectorObject> TimelineRecordFactory::createPaintData(const FloatQu
 void TimelineRecordFactory::appendLayoutRoot(InspectorObject* data, const FloatQuad& quad)
 {
     data->setArray("root", createQuad(quad));
+}
+
+void TimelineRecordFactory::appendProfile(InspectorObject* data, PassRefPtr<ScriptProfile> profile)
+{
+    data->setValue(ASCIILiteral("profile"), profile->buildInspectorObject());
 }
 
 } // namespace WebCore

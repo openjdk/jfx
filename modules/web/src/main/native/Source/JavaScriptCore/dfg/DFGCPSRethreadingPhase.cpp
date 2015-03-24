@@ -31,7 +31,7 @@
 #include "DFGBasicBlockInlines.h"
 #include "DFGGraph.h"
 #include "DFGPhase.h"
-#include "Operations.h"
+#include "JSCInlines.h"
 
 namespace JSC { namespace DFG {
 
@@ -49,6 +49,7 @@ public:
         
         clearIsLoadedFrom();
         freeUnnecessaryNodes();
+        m_graph.clearReplacements();
         canonicalizeLocalsInBlocks();
         propagatePhis<LocalOperand>();
         propagatePhis<ArgumentOperand>();
@@ -69,8 +70,8 @@ private:
     {
         SamplingRegion samplingRegion("DFG CPS Rethreading: freeUnnecessaryNodes");
         
-        for (BlockIndex blockIndex = m_graph.m_blocks.size(); blockIndex--;) {
-            BasicBlock* block = m_graph.m_blocks[blockIndex].get();
+        for (BlockIndex blockIndex = m_graph.numBlocks(); blockIndex--;) {
+            BasicBlock* block = m_graph.block(blockIndex);
             if (!block)
                 continue;
             ASSERT(block->isReachable);
@@ -99,12 +100,9 @@ private:
                         break;
                     }
                     break;
-                case Nop:
-                    continue;
                 default:
                     break;
                 }
-                node->replacement = 0; // Reset the replacement since the next phase will use it.
                 block->at(toIndex++) = node;
             }
             block->resize(toIndex);
@@ -128,25 +126,25 @@ private:
         }
     }
     
-    ALWAYS_INLINE Node* addPhiSilently(BasicBlock* block, const CodeOrigin& codeOrigin, VariableAccessData* variable)
+    ALWAYS_INLINE Node* addPhiSilently(BasicBlock* block, const NodeOrigin& origin, VariableAccessData* variable)
     {
-        Node* result = m_graph.addNode(SpecNone, Phi, codeOrigin, OpInfo(variable));
+        Node* result = m_graph.addNode(SpecNone, Phi, origin, OpInfo(variable));
         block->phis.append(result);
         return result;
     }
     
     template<OperandKind operandKind>
-    ALWAYS_INLINE Node* addPhi(BasicBlock* block, const CodeOrigin& codeOrigin, VariableAccessData* variable, size_t index)
+    ALWAYS_INLINE Node* addPhi(BasicBlock* block, const NodeOrigin& origin, VariableAccessData* variable, size_t index)
     {
-        Node* result = addPhiSilently(block, codeOrigin, variable);
+        Node* result = addPhiSilently(block, origin, variable);
         phiStackFor<operandKind>().append(PhiStackEntry(block, index, result));
         return result;
     }
     
     template<OperandKind operandKind>
-    ALWAYS_INLINE Node* addPhi(const CodeOrigin& codeOrigin, VariableAccessData* variable, size_t index)
+    ALWAYS_INLINE Node* addPhi(const NodeOrigin& origin, VariableAccessData* variable, size_t index)
     {
-        return addPhi<operandKind>(m_block, codeOrigin, variable, index);
+        return addPhi<operandKind>(m_block, origin, variable, index);
     }
     
     template<OperandKind operandKind>
@@ -200,17 +198,17 @@ private:
             
             if (otherNode->op() == GetLocal) {
                 // Replace all references to this GetLocal with otherNode.
-                node->replacement = otherNode;
+                node->misc.replacement = otherNode;
                 return;
             }
             
             ASSERT(otherNode->op() == SetLocal);
-            node->replacement = otherNode->child1().node();
+            node->misc.replacement = otherNode->child1().node();
             return;
         }
         
         variable->setIsLoadedFrom(true);
-        Node* phi = addPhi<operandKind>(node->codeOrigin, variable, idx);
+        Node* phi = addPhi<operandKind>(node->origin, variable, idx);
         node->children.setChild1(Edge(phi));
         m_block->variablesAtHead.atFor<operandKind>(idx) = phi;
         m_block->variablesAtTail.atFor<operandKind>(idx) = node;
@@ -219,10 +217,10 @@ private:
     void canonicalizeGetLocal(Node* node)
     {
         VariableAccessData* variable = node->variableAccessData();
-        if (operandIsArgument(variable->local()))
-            canonicalizeGetLocalFor<ArgumentOperand>(node, variable, operandToArgument(variable->local()));
+        if (variable->local().isArgument())
+            canonicalizeGetLocalFor<ArgumentOperand>(node, variable, variable->local().toArgument());
         else
-            canonicalizeGetLocalFor<LocalOperand>(node, variable, variable->local());
+            canonicalizeGetLocalFor<LocalOperand>(node, variable, variable->local().toLocal());
     }
     
     void canonicalizeSetLocal(Node* node)
@@ -278,7 +276,7 @@ private:
         }
         
         variable->setIsLoadedFrom(true);
-        node->children.setChild1(Edge(addPhi<operandKind>(node->codeOrigin, variable, idx)));
+        node->children.setChild1(Edge(addPhi<operandKind>(node->origin, variable, idx)));
         m_block->variablesAtHead.atFor<operandKind>(idx) = node;
         m_block->variablesAtTail.atFor<operandKind>(idx) = node;
     }
@@ -287,17 +285,17 @@ private:
     void canonicalizeFlushOrPhantomLocal(Node* node)
     {
         VariableAccessData* variable = node->variableAccessData();
-        if (operandIsArgument(variable->local()))
-            canonicalizeFlushOrPhantomLocalFor<nodeType, ArgumentOperand>(node, variable, operandToArgument(variable->local()));
+        if (variable->local().isArgument())
+            canonicalizeFlushOrPhantomLocalFor<nodeType, ArgumentOperand>(node, variable, variable->local().toArgument());
         else
-            canonicalizeFlushOrPhantomLocalFor<nodeType, LocalOperand>(node, variable, variable->local());
+            canonicalizeFlushOrPhantomLocalFor<nodeType, LocalOperand>(node, variable, variable->local().toLocal());
     }
     
     void canonicalizeSetArgument(Node* node)
     {
-        int local = node->local();
-        ASSERT(operandIsArgument(local));
-        int argument = operandToArgument(local);
+        VirtualRegister local = node->local();
+        ASSERT(local.isArgument());
+        int argument = local.toArgument();
         m_block->variablesAtHead.setArgumentFirstTime(argument, node);
         m_block->variablesAtTail.setArgumentFirstTime(argument, node);
     }
@@ -329,12 +327,14 @@ private:
             // SetArgument may only appear in the root block.
             //
             // Tail variable: the last thing that happened to the variable in the block.
-            // It may be a Flush, PhantomLocal, GetLocal, SetLocal, or SetArgument.
+            // It may be a Flush, PhantomLocal, GetLocal, SetLocal, SetArgument, or Phi.
             // SetArgument may only appear in the root block. Note that if there ever
             // was a GetLocal to the variable, and it was followed by PhantomLocals and
             // Flushes but not SetLocals, then the tail variable will be the GetLocal.
             // This reflects the fact that you only care that the tail variable is a
-            // Flush or PhantomLocal if nothing else interesting happened.
+            // Flush or PhantomLocal if nothing else interesting happened. Likewise, if
+            // there ever was a SetLocal and it was followed by Flushes, then the tail
+            // variable will be a SetLocal and not those subsequent Flushes.
             //
             // Child of GetLocal: the operation that the GetLocal keeps alive. For
             // uncaptured locals, it may be a Phi from the current block. For arguments,
@@ -387,8 +387,8 @@ private:
     {
         SamplingRegion samplingRegion("DFG CPS Rethreading: canonicalizeLocalsInBlocks");
         
-        for (m_blockIndex = m_graph.m_blocks.size(); m_blockIndex--;) {
-            m_block = m_graph.m_blocks[m_blockIndex].get();
+        for (BlockIndex blockIndex = m_graph.numBlocks(); blockIndex--;) {
+            m_block = m_graph.block(blockIndex);
             canonicalizeLocalsInBlock();
         }
     }
@@ -402,24 +402,23 @@ private:
         
         // Ensure that attempts to use this fail instantly.
         m_block = 0;
-        m_blockIndex = NoBlock;
         
         while (!phiStack.isEmpty()) {
             PhiStackEntry entry = phiStack.last();
             phiStack.removeLast();
             
             BasicBlock* block = entry.m_block;
-            PredecessorList& predecessors = block->m_predecessors;
+            PredecessorList& predecessors = block->predecessors;
             Node* currentPhi = entry.m_phi;
             VariableAccessData* variable = currentPhi->variableAccessData();
             size_t index = entry.m_index;
             
             for (size_t i = predecessors.size(); i--;) {
-                BasicBlock* predecessorBlock = m_graph.m_blocks[predecessors[i]].get();
+                BasicBlock* predecessorBlock = predecessors[i];
                 
                 Node* variableInPrevious = predecessorBlock->variablesAtTail.atFor<operandKind>(index);
                 if (!variableInPrevious) {
-                    variableInPrevious = addPhi<operandKind>(predecessorBlock, currentPhi->codeOrigin, variable, index);
+                    variableInPrevious = addPhi<operandKind>(predecessorBlock, currentPhi->origin, variable, index);
                     predecessorBlock->variablesAtTail.atFor<operandKind>(index) = variableInPrevious;
                     predecessorBlock->variablesAtHead.atFor<operandKind>(index) = variableInPrevious;
                 } else {
@@ -453,7 +452,7 @@ private:
                     continue;
                 }
                 
-                Node* newPhi = addPhiSilently(block, currentPhi->codeOrigin, variable);
+                Node* newPhi = addPhiSilently(block, currentPhi->origin, variable);
                 newPhi->children = currentPhi->children;
                 currentPhi->children.initialize(newPhi, variableInPrevious, 0);
             }
@@ -481,7 +480,6 @@ private:
         return m_localPhiStack;
     }
     
-    BlockIndex m_blockIndex;
     BasicBlock* m_block;
     Vector<PhiStackEntry, 128> m_argumentPhiStack;
     Vector<PhiStackEntry, 128> m_localPhiStack;

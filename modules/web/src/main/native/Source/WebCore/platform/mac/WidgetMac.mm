@@ -40,6 +40,7 @@
 #import "ScrollView.h"
 #import "WebCoreFrameView.h"
 #import "WebCoreView.h"
+#import <wtf/Ref.h>
 #import <wtf/RetainPtr.h>
 
 @interface NSWindow (WebWindowDetails)
@@ -58,16 +59,6 @@
 
 namespace WebCore {
 
-class WidgetPrivate {
-public:
-    WidgetPrivate()
-        : previousVisibleRect(NSZeroRect)
-    {
-    }
-
-    NSRect previousVisibleRect;
-};
-
 static void safeRemoveFromSuperview(NSView *view)
 {
     // If the the view is the first responder, then set the window's first responder to nil so
@@ -85,14 +76,12 @@ static void safeRemoveFromSuperview(NSView *view)
 }
 
 Widget::Widget(NSView *view)
-    : m_data(new WidgetPrivate)
 {
     init(view);
 }
 
 Widget::~Widget()
 {
-    delete m_data;
 }
 
 // FIXME: Should move this to Chrome; bad layering that this knows about Frame.
@@ -164,23 +153,21 @@ void Widget::setFrameRect(const IntRect& rect)
     m_frame = rect;
 
     BEGIN_BLOCK_OBJC_EXCEPTIONS;
+
     NSView *outerView = getOuterView();
     if (!outerView)
         return;
 
     // Take a reference to this Widget, because sending messages to outerView can invoke arbitrary
     // code, which can deref it.
-    RefPtr<Widget> protectedThis(this);
+    Ref<Widget> protect(*this);
 
-    NSRect visibleRect = [outerView visibleRect];
-    NSRect f = rect;
-    if (!NSEqualRects(f, [outerView frame])) {
-        [outerView setFrame:f];
-        [outerView setNeedsDisplay:NO];
-    } else if (!NSEqualRects(visibleRect, m_data->previousVisibleRect) && [outerView respondsToSelector:@selector(visibleRectDidChange)])
-        [outerView visibleRectDidChange];
+    NSRect frame = rect;
+    if (!NSEqualRects(frame, outerView.frame)) {
+        outerView.frame = frame;
+        outerView.needsDisplay = NO;
+    }
 
-    m_data->previousVisibleRect = visibleRect;
     END_BLOCK_OBJC_EXCEPTIONS;
 }
 
@@ -204,65 +191,67 @@ void Widget::paint(GraphicsContext* p, const IntRect& r)
         return;
     NSView *view = getOuterView();
 
+    // We don't want to paint the view at all if it's layer backed, because then we'll end up
+    // with multiple copies of the view contents, one in the view's layer itself and one in the
+    // WebHTMLView's backing store (either a layer or the window backing store).
+    if (view.layer)
+        return;
+
     // Take a reference to this Widget, because sending messages to the views can invoke arbitrary
     // code, which can deref it.
-    RefPtr<Widget> protectedThis(this);
+    Ref<Widget> protect(*this);
 
     NSGraphicsContext *currentContext = [NSGraphicsContext currentContext];
     if (currentContext == [[view window] graphicsContext] || ![currentContext isDrawingToScreen]) {
-        // This is the common case of drawing into a window or printing.
+        // This is the common case of drawing into a window or an inclusive layer, or printing.
         BEGIN_BLOCK_OBJC_EXCEPTIONS;
         [view displayRectIgnoringOpacity:[view convertRect:r fromView:[view superview]]];
         END_BLOCK_OBJC_EXCEPTIONS;
-    } else {
-        // This is the case of drawing into a bitmap context other than a window backing store. It gets hit beneath
-        // -cacheDisplayInRect:toBitmapImageRep:, and when painting into compositing layers.
-
-        // Transparent subframes are in fact implemented with scroll views that return YES from -drawsBackground (whenever the WebView
-        // itself is in drawsBackground mode). In the normal drawing code path, the scroll views are never asked to draw the background,
-        // so this is not an issue, but in this code path they are, so the following code temporarily turns background drwaing off.
-        NSView *innerView = platformWidget();
-        NSScrollView *scrollView = 0;
-        if ([innerView conformsToProtocol:@protocol(WebCoreFrameScrollView)]) {
-            ASSERT([innerView isKindOfClass:[NSScrollView class]]);
-            NSScrollView *scrollView = static_cast<NSScrollView *>(innerView);
-            // -copiesOnScroll will return NO whenever the content view is not fully opaque.
-            if ([scrollView drawsBackground] && ![[scrollView contentView] copiesOnScroll])
-                [scrollView setDrawsBackground:NO];
-            else
-                scrollView = 0;
-        }
-
-        CGContextRef cgContext = p->platformContext();
-        ASSERT(cgContext == [currentContext graphicsPort]);
-        CGContextSaveGState(cgContext);
-
-        NSRect viewFrame = [view frame];
-        NSRect viewBounds = [view bounds];
-        // Set up the translation and (flipped) orientation of the graphics context. In normal drawing, AppKit does it as it descends down
-        // the view hierarchy.
-        bool shouldFlipContext = true;
-#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
-        shouldFlipContext = false;
-#endif
-        if (shouldFlipContext) {
-        CGContextTranslateCTM(cgContext, viewFrame.origin.x - viewBounds.origin.x, viewFrame.origin.y + viewFrame.size.height + viewBounds.origin.y);
-        CGContextScaleCTM(cgContext, 1, -1);
-        } else
-            CGContextTranslateCTM(cgContext, viewFrame.origin.x - viewBounds.origin.x, viewFrame.origin.y + viewBounds.origin.y);
-
-        BEGIN_BLOCK_OBJC_EXCEPTIONS;
-        {
-            NSGraphicsContext *nsContext = [NSGraphicsContext graphicsContextWithGraphicsPort:cgContext flipped:YES];
-            [view displayRectIgnoringOpacity:[view convertRect:r fromView:[view superview]] inContext:nsContext];
-        }
-        END_BLOCK_OBJC_EXCEPTIONS;
-
-        CGContextRestoreGState(cgContext);
-
-        if (scrollView)
-            [scrollView setDrawsBackground:YES];
+        return;
     }
+
+    // This is the case of drawing into a bitmap context other than a window backing store. It gets hit beneath
+    // -cacheDisplayInRect:toBitmapImageRep:, and when painting into compositing layers.
+
+    // Transparent subframes are in fact implemented with scroll views that return YES from -drawsBackground (whenever the WebView
+    // itself is in drawsBackground mode). In the normal drawing code path, the scroll views are never asked to draw the background,
+    // so this is not an issue, but in this code path they are, so the following code temporarily turns background drwaing off.
+    NSView *innerView = platformWidget();
+    NSScrollView *scrollView = 0;
+    if ([innerView conformsToProtocol:@protocol(WebCoreFrameScrollView)]) {
+        ASSERT([innerView isKindOfClass:[NSScrollView class]]);
+        NSScrollView *scrollView = static_cast<NSScrollView *>(innerView);
+        // -copiesOnScroll will return NO whenever the content view is not fully opaque.
+        if ([scrollView drawsBackground] && ![[scrollView contentView] copiesOnScroll])
+            [scrollView setDrawsBackground:NO];
+        else
+            scrollView = 0;
+    }
+
+    CGContextRef cgContext = p->platformContext();
+    ASSERT(cgContext == [currentContext graphicsPort]);
+    CGContextSaveGState(cgContext);
+
+    NSRect viewFrame = [view frame];
+    NSRect viewBounds = [view bounds];
+
+    // Set up the translation and (flipped) orientation of the graphics context. In normal drawing, AppKit does it as it descends down
+    // the view hierarchy. Since Widget::paint is always called with a context that has a flipped coordinate system, and
+    // -[NSView displayRectIgnoringOpacity:inContext:] expects an unflipped context we always flip here.
+    CGContextTranslateCTM(cgContext, viewFrame.origin.x - viewBounds.origin.x, viewFrame.origin.y + viewFrame.size.height + viewBounds.origin.y);
+    CGContextScaleCTM(cgContext, 1, -1);
+
+    BEGIN_BLOCK_OBJC_EXCEPTIONS;
+    {
+        NSGraphicsContext *nsContext = [NSGraphicsContext graphicsContextWithGraphicsPort:cgContext flipped:NO];
+        [view displayRectIgnoringOpacity:[view convertRect:r fromView:[view superview]] inContext:nsContext];
+    }
+    END_BLOCK_OBJC_EXCEPTIONS;
+
+    CGContextRestoreGState(cgContext);
+
+    if (scrollView)
+        [scrollView setDrawsBackground:YES];
 }
 
 void Widget::setIsSelected(bool isSelected)
@@ -343,7 +332,6 @@ void Widget::setPlatformWidget(NSView *widget)
         return;
 
     m_widget = widget;
-    m_data->previousVisibleRect = NSZeroRect;
 }
 
 } // namespace WebCore

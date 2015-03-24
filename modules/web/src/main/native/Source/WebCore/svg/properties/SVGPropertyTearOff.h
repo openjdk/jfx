@@ -20,7 +20,6 @@
 #ifndef SVGPropertyTearOff_h
 #define SVGPropertyTearOff_h
 
-#if ENABLE(SVG)
 #include "SVGAnimatedProperty.h"
 #include "SVGElement.h"
 #include "SVGProperty.h"
@@ -89,14 +88,14 @@ public:
         m_animatedProperty = 0;
     }
 
-    virtual void commitChange()
+    virtual void commitChange() override
     {
         if (!m_animatedProperty || m_valueIsCopy)
             return;
         m_animatedProperty->commitChange();
     }
 
-    virtual bool isReadOnly() const
+    virtual bool isReadOnly() const override
     {
         if (m_role == AnimValRole)
             return true;
@@ -142,5 +141,4 @@ protected:
 
 }
 
-#endif // ENABLE(SVG)
 #endif // SVGPropertyTearOff_h

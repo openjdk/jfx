@@ -48,7 +48,7 @@
 #include <CoreServices/CoreServices.h>
 #endif
 
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
 extern "C" void CFURLRequestSetHTTPRequestBody(CFMutableURLRequestRef mutableHTTPRequest, CFDataRef httpBody);
 extern "C" void CFURLRequestSetHTTPHeaderFieldValue(CFMutableURLRequestRef mutableHTTPRequest, CFStringRef httpHeaderField, CFStringRef httpHeaderFieldValue);
 extern "C" void CFURLRequestSetHTTPRequestBodyStream(CFMutableURLRequestRef req, CFReadStreamRef bodyStream);
@@ -107,13 +107,13 @@ struct FormStreamFields {
 #if ENABLE(BLOB)
     long long currentStreamRangeLength;
 #endif
-    char* currentData;
+    MallocPtr<char> currentData;
     CFReadStreamRef formStream;
     unsigned long long streamLength;
     unsigned long long bytesSent;
 };
 
-static void closeCurrentStream(FormStreamFields *form)
+static void closeCurrentStream(FormStreamFields* form)
 {
     if (form->currentStream) {
         CFReadStreamClose(form->currentStream);
@@ -124,10 +124,8 @@ static void closeCurrentStream(FormStreamFields *form)
         form->currentStreamRangeLength = BlobDataItem::toEndOfFile;
 #endif
     }
-    if (form->currentData) {
-        fastFree(form->currentData);
-        form->currentData = 0;
-    }
+
+    form->currentData = nullptr;
 }
 
 // Return false if we cannot advance the stream. Currently the only possible failure is that the underlying file has been removed or changed since File.slice.
@@ -143,9 +141,9 @@ static bool advanceCurrentStream(FormStreamFields* form)
 
     if (nextInput.m_type == FormDataElement::data) {
         size_t size = nextInput.m_data.size();
-        char* data = nextInput.m_data.releaseBuffer();
-        form->currentStream = CFReadStreamCreateWithBytesNoCopy(0, reinterpret_cast<const UInt8*>(data), size, kCFAllocatorNull);
-        form->currentData = data;
+        MallocPtr<char> data = nextInput.m_data.releaseBuffer();
+        form->currentStream = CFReadStreamCreateWithBytesNoCopy(0, reinterpret_cast<const UInt8*>(data.get()), size, kCFAllocatorNull);
+        form->currentData = std::move(data);
     } else {
 #if ENABLE(BLOB)
         // Check if the file has been changed or not if required.
@@ -206,7 +204,6 @@ static void* formCreate(CFReadStreamRef stream, void* context)
 #if ENABLE(BLOB)
     newInfo->currentStreamRangeLength = BlobDataItem::toEndOfFile;
 #endif
-    newInfo->currentData = 0;
     newInfo->formStream = stream; // Don't retain. That would create a reference cycle.
     newInfo->streamLength = formContext->streamLength;
     newInfo->bytesSent = 0;
@@ -390,7 +387,7 @@ void setHTTPBody(CFMutableURLRequestRef request, PassRefPtr<FormData> prpFormDat
 
 #if ENABLE(BLOB)
     formData = formData->resolveBlobReferences();
-        count = formData->elements().size();
+    count = formData->elements().size();
 #endif
 
     // Precompute the content length so NSURLConnection doesn't use chunked mode.

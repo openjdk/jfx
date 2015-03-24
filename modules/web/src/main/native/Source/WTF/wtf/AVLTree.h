@@ -32,8 +32,8 @@
 #ifndef AVL_TREE_H_
 #define AVL_TREE_H_
 
+#include <array>
 #include <wtf/Assertions.h>
-#include <wtf/FixedArray.h>
 
 namespace WTF {
 
@@ -71,7 +71,7 @@ public:
     void reset() { for (unsigned i = 0; i < maxDepth; ++i) m_data[i] = false; }
 
 private:
-    FixedArray<bool, maxDepth> m_data;
+    std::array<bool, maxDepth> m_data;
 };
 
 // How to determine maxDepth:
@@ -124,7 +124,7 @@ private:
 // E.g., if, in a particular instantiation, the maximum number of nodes in a tree instance is 1,000,000, the maximum depth should be 28.
 // You pick 28 because MN(28) is 832,039, which is less than or equal to 1,000,000, and MN(29) is 1,346,268, which is strictly greater than 1,000,000.
 
-template <class Abstractor, unsigned maxDepth = 32, class BSet = AVLTreeDefaultBSet<maxDepth> >
+template <class Abstractor, unsigned maxDepth = 32, class BSet = AVLTreeDefaultBSet<maxDepth>>
 class AVLTree {
 public:
 

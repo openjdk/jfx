@@ -148,11 +148,6 @@ void EditorClientWinCE::getClientPasteboardDataForRange(WebCore::Range*, Vector<
     notImplemented();
 }
 
-void EditorClientWinCE::didSetSelectionTypesForPasteboard()
-{
-    notImplemented();
-}
-
 void EditorClientWinCE::registerUndoStep(WTF::PassRefPtr<WebCore::UndoStep>)
 {
     notImplemented();
@@ -215,16 +210,16 @@ bool EditorClientWinCE::smartInsertDeleteEnabled()
 {
     Page* page = m_webView->page();
     if (!page)
-    return false;
-    return page->settings()->smartInsertDeleteEnabled();
+        return false;
+    return page->settings().smartInsertDeleteEnabled();
 }
 
 bool EditorClientWinCE::isSelectTrailingWhitespaceEnabled()
 {
     Page* page = m_webView->page();
     if (!page)
-    return false;
-    return page->settings()->selectTrailingWhitespaceEnabled();
+        return false;
+    return page->settings().selectTrailingWhitespaceEnabled();
 }
 
 void EditorClientWinCE::toggleContinuousSpellChecking()
@@ -358,36 +353,36 @@ bool EditorClientWinCE::handleEditingKeyboardEvent(KeyboardEvent* event)
 {
     Node* node = event->target()->toNode();
     ASSERT(node);
-    Frame* frame = node->document()->frame();
+    Frame* frame = node->document().frame();
     ASSERT(frame);
 
     const PlatformKeyboardEvent* keyEvent = event->keyEvent();
     if (!keyEvent)
         return false;
 
-    bool caretBrowsing = frame->settings()->caretBrowsingEnabled();
+    bool caretBrowsing = frame->settings().caretBrowsingEnabled();
     if (caretBrowsing) {
         switch (keyEvent->windowsVirtualKeyCode()) {
         case VK_LEFT:
-            frame->selection()->modify(keyEvent->shiftKey() ? FrameSelection::AlterationExtend : FrameSelection::AlterationMove,
+            frame->selection().modify(keyEvent->shiftKey() ? FrameSelection::AlterationExtend : FrameSelection::AlterationMove,
                     DirectionLeft,
                     keyEvent->ctrlKey() ? WordGranularity : CharacterGranularity,
                     UserTriggered);
             return true;
         case VK_RIGHT:
-            frame->selection()->modify(keyEvent->shiftKey() ? FrameSelection::AlterationExtend : FrameSelection::AlterationMove,
+            frame->selection().modify(keyEvent->shiftKey() ? FrameSelection::AlterationExtend : FrameSelection::AlterationMove,
                     DirectionRight,
                     keyEvent->ctrlKey() ? WordGranularity : CharacterGranularity,
                     UserTriggered);
             return true;
         case VK_UP:
-            frame->selection()->modify(keyEvent->shiftKey() ? FrameSelection::AlterationExtend : FrameSelection::AlterationMove,
+            frame->selection().modify(keyEvent->shiftKey() ? FrameSelection::AlterationExtend : FrameSelection::AlterationMove,
                     DirectionBackward,
                     keyEvent->ctrlKey() ? ParagraphGranularity : LineGranularity,
                     UserTriggered);
             return true;
         case VK_DOWN:
-            frame->selection()->modify(keyEvent->shiftKey() ? FrameSelection::AlterationExtend : FrameSelection::AlterationMove,
+            frame->selection().modify(keyEvent->shiftKey() ? FrameSelection::AlterationExtend : FrameSelection::AlterationMove,
                     DirectionForward,
                     keyEvent->ctrlKey() ? ParagraphGranularity : LineGranularity,
                     UserTriggered);
@@ -471,7 +466,7 @@ void EditorClientWinCE::learnWord(const String& text)
     notImplemented();
 }
 
-void EditorClientWinCE::checkSpellingOfString(const UChar* text, int length, int* misspellingLocation, int* misspellingLength)
+void EditorClientWinCE::checkSpellingOfString(StringView, int* misspellingLocation, int* misspellingLength)
 {
     notImplemented();
 }
@@ -483,7 +478,7 @@ String EditorClientWinCE::getAutoCorrectSuggestionForMisspelledWord(const String
     return String();
 }
 
-void EditorClientWinCE::checkGrammarOfString(const UChar*, int, Vector<GrammarDetail>&, int*, int*)
+void EditorClientWinCE::checkGrammarOfString(StringVIew, Vector<GrammarDetail>&, int*, int*)
 {
     notImplemented();
 }

@@ -26,7 +26,7 @@
 #include "JSCJSValue.h"
 
 namespace JSC {
-
+    
     struct ParserError;
     class ExecState;
     class JSScope;

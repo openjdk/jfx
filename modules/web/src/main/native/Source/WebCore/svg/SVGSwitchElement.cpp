@@ -19,11 +19,9 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SVG)
 #include "SVGSwitchElement.h"
 
-#include "NodeRenderingContext.h"
+#include "ElementIterator.h"
 #include "RenderSVGTransformableContainer.h"
 #include "SVGNames.h"
 
@@ -34,45 +32,37 @@ DEFINE_ANIMATED_BOOLEAN(SVGSwitchElement, SVGNames::externalResourcesRequiredAtt
 
 BEGIN_REGISTER_ANIMATED_PROPERTIES(SVGSwitchElement)
     REGISTER_LOCAL_ANIMATED_PROPERTY(externalResourcesRequired)
-    REGISTER_PARENT_ANIMATED_PROPERTIES(SVGStyledTransformableElement)
-    REGISTER_PARENT_ANIMATED_PROPERTIES(SVGTests)
+    REGISTER_PARENT_ANIMATED_PROPERTIES(SVGGraphicsElement)
 END_REGISTER_ANIMATED_PROPERTIES
 
-inline SVGSwitchElement::SVGSwitchElement(const QualifiedName& tagName, Document* document)
-    : SVGStyledTransformableElement(tagName, document)
+inline SVGSwitchElement::SVGSwitchElement(const QualifiedName& tagName, Document& document)
+    : SVGGraphicsElement(tagName, document)
 {
     ASSERT(hasTagName(SVGNames::switchTag));
     registerAnimatedPropertiesForSVGSwitchElement();
 }
 
-PassRefPtr<SVGSwitchElement> SVGSwitchElement::create(const QualifiedName& tagName, Document* document)
+PassRefPtr<SVGSwitchElement> SVGSwitchElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(new SVGSwitchElement(tagName, document));
 }
 
-bool SVGSwitchElement::childShouldCreateRenderer(const NodeRenderingContext& childContext) const
+bool SVGSwitchElement::childShouldCreateRenderer(const Node& child) const
 {
-    // FIXME: This function does not do what the comment below implies it does.
-    // It will create a renderer for any valid SVG element children, not just the first one.
-    for (Node* node = firstChild(); node; node = node->nextSibling()) {
-        if (!node->isSVGElement())
+    // We create a renderer for the first valid SVG element child.
+    // FIXME: The renderer must be updated after dynamic change of the requiredFeatures, requiredExtensions and systemLanguage attributes (https://bugs.webkit.org/show_bug.cgi?id=74749).
+    for (auto& element : childrenOfType<SVGElement>(*this)) {
+        if (!element.isValid())
             continue;
-
-        SVGElement* element = toSVGElement(node);
-        if (!element || !element->isValid())
-            continue;
-
-        return node == childContext.node(); // Only allow this child if it's the first valid child
+        return &element == &child; // Only allow this child if it's the first valid child
     }
 
     return false;
 }
 
-RenderObject* SVGSwitchElement::createRenderer(RenderArena* arena, RenderStyle*)
+RenderPtr<RenderElement> SVGSwitchElement::createElementRenderer(PassRef<RenderStyle> style)
 {
-    return new (arena) RenderSVGTransformableContainer(this);
+    return createRenderer<RenderSVGTransformableContainer>(*this, std::move(style));
 }
 
 }
-
-#endif // ENABLE(SVG)

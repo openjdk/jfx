@@ -27,15 +27,42 @@
 #ifndef ParserModes_h
 #define ParserModes_h
 
+#include "Identifier.h"
+
 namespace JSC {
 
-enum JSParserStrictness { JSParseNormal, JSParseStrict };
+enum JSParserStrictness { JSParseNormal, JSParseBuiltin, JSParseStrict };
 enum JSParserMode { JSParseProgramCode, JSParseFunctionCode };
 
 enum ProfilerMode { ProfilerOff, ProfilerOn };
 enum DebuggerMode { DebuggerOff, DebuggerOn };
 
-enum FunctionNameIsInScopeToggle { FunctionNameIsNotInScope, FunctionNameIsInScope };
+enum FunctionMode { FunctionExpression, FunctionDeclaration };
+
+inline bool functionNameIsInScope(const Identifier& name, FunctionMode functionMode)
+{
+    if (name.isNull())
+        return false;
+
+    if (functionMode != FunctionExpression)
+        return false;
+
+    return true;
+}
+
+inline bool functionNameScopeIsDynamic(bool usesEval, bool isStrictMode)
+{
+    // If non-strict eval is in play, a function gets a separate object in the scope chain for its name.
+    // This enables eval to declare and then delete a name that shadows the function's name.
+
+    if (!usesEval)
+        return false;
+
+    if (isStrictMode)
+        return false;
+
+    return true;
+}
 
 typedef unsigned CodeFeatures;
 
@@ -47,8 +74,9 @@ const CodeFeatures CatchFeature = 1 << 3;
 const CodeFeatures ThisFeature = 1 << 4;
 const CodeFeatures StrictModeFeature = 1 << 5;
 const CodeFeatures ShadowsArgumentsFeature = 1 << 6;
+const CodeFeatures ModifiedParameterFeature = 1 << 7;
 
-const CodeFeatures AllFeatures = EvalFeature | ArgumentsFeature | WithFeature | CatchFeature | ThisFeature | StrictModeFeature | ShadowsArgumentsFeature;
+const CodeFeatures AllFeatures = EvalFeature | ArgumentsFeature | WithFeature | CatchFeature | ThisFeature | StrictModeFeature | ShadowsArgumentsFeature | ModifiedParameterFeature;
 
 } // namespace JSC
 

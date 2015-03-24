@@ -20,17 +20,19 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
 #include "config.h"
-
 #include "ExecutableAllocator.h"
+
+#include "JSCInlines.h"
 
 #if ENABLE(EXECUTABLE_ALLOCATOR_DEMAND)
 #include "CodeProfiling.h"
 #include <wtf/HashSet.h>
 #include <wtf/MetaAllocator.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/PageReservation.h>
 #if ENABLE(ASSEMBLER_WX_EXCLUSIVE)
 #include <wtf/PassOwnPtr.h>
@@ -57,15 +59,15 @@ public:
     DemandExecutableAllocator()
         : MetaAllocator(jitAllocationGranule)
     {
-        MutexLocker lock(allocatorsMutex());
+        std::lock_guard<std::mutex> lock(allocatorsMutex());
         allocators().add(this);
         // Don't preallocate any memory here.
     }
-
+    
     virtual ~DemandExecutableAllocator()
     {
         {
-            MutexLocker lock(allocatorsMutex());
+            std::lock_guard<std::mutex> lock(allocatorsMutex());
             allocators().remove(this);
         }
         for (unsigned i = 0; i < reservations.size(); ++i)
@@ -75,7 +77,7 @@ public:
     static size_t bytesAllocatedByAllAllocators()
     {
         size_t total = 0;
-        MutexLocker lock(allocatorsMutex());
+        std::lock_guard<std::mutex> lock(allocatorsMutex());
         for (HashSet<DemandExecutableAllocator*>::const_iterator allocator = allocators().begin(); allocator != allocators().end(); ++allocator)
             total += (*allocator)->bytesAllocated();
         return total;
@@ -84,7 +86,7 @@ public:
     static size_t bytesCommittedByAllocactors()
     {
         size_t total = 0;
-        MutexLocker lock(allocatorsMutex());
+        std::lock_guard<std::mutex> lock(allocatorsMutex());
         for (HashSet<DemandExecutableAllocator*>::const_iterator allocator = allocators().begin(); allocator != allocators().end(); ++allocator)
             total += (*allocator)->bytesCommitted();
         return total;
@@ -93,7 +95,7 @@ public:
 #if ENABLE(META_ALLOCATOR_PROFILE)
     static void dumpProfileFromAllAllocators()
     {
-        MutexLocker lock(allocatorsMutex());
+        std::lock_guard<std::mutex> lock(allocatorsMutex());
         for (HashSet<DemandExecutableAllocator*>::const_iterator allocator = allocators().begin(); allocator != allocators().end(); ++allocator)
             (*allocator)->dumpProfile();
     }
@@ -103,11 +105,11 @@ protected:
     virtual void* allocateNewSpace(size_t& numPages)
     {
         size_t newNumPages = (((numPages * pageSize() + JIT_ALLOCATOR_LARGE_ALLOC_SIZE - 1) / JIT_ALLOCATOR_LARGE_ALLOC_SIZE * JIT_ALLOCATOR_LARGE_ALLOC_SIZE) + pageSize() - 1) / pageSize();
-
+        
         ASSERT(newNumPages >= numPages);
-
+        
         numPages = newNumPages;
-
+        
 #ifdef EXECUTABLE_MEMORY_LIMIT
         if (bytesAllocatedByAllAllocators() >= EXECUTABLE_MEMORY_LIMIT)
             return 0;
@@ -115,17 +117,17 @@ protected:
         
         PageReservation reservation = PageReservation::reserve(numPages * pageSize(), OSAllocator::JSJITCodePages, EXECUTABLE_POOL_WRITABLE, true);
         RELEASE_ASSERT(reservation);
-
+        
         reservations.append(reservation);
-
+        
         return reservation.base();
     }
-
+    
     virtual void notifyNeedPage(void* page)
     {
         OSAllocator::commit(page, pageSize(), EXECUTABLE_POOL_WRITABLE, true);
     }
-
+    
     virtual void notifyPageIsFree(void* page)
     {
         OSAllocator::decommit(page, pageSize());
@@ -138,9 +140,11 @@ private:
         DEFINE_STATIC_LOCAL(HashSet<DemandExecutableAllocator*>, sAllocators, ());
         return sAllocators;
     }
-    static Mutex& allocatorsMutex()
+
+    static std::mutex& allocatorsMutex()
     {
-        DEFINE_STATIC_LOCAL(Mutex, mutex, ());
+        static NeverDestroyed<std::mutex> mutex;
+
         return mutex;
     }
 };

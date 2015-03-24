@@ -4,6 +4,7 @@ Event
 Events interfaceName=Event
 HTMLEvents interfaceName=Event
 BeforeLoadEvent
+BeforeUnloadEvent
 CloseEvent
 CompositionEvent
 CustomEvent
@@ -42,9 +43,9 @@ SpeechRecognitionEvent conditional=SCRIPTED_SPEECH
 SpeechSynthesisEvent conditional=SPEECH_SYNTHESIS
 WebGLContextEvent conditional=WEBGL
 StorageEvent
-SVGEvents interfaceName=Event, conditional=SVG
-SVGZoomEvent conditional=SVG
-SVGZoomEvents interfaceName=SVGZoomEvent, conditional=SVG
+SVGEvents interfaceName=Event
+SVGZoomEvent
+SVGZoomEvents interfaceName=SVGZoomEvent
 IDBVersionChangeEvent conditional=INDEXED_DATABASE
 TouchEvent conditional=TOUCH_EVENTS, runtimeConditional=touchEnabled
 DeviceMotionEvent conditional=DEVICE_ORIENTATION
@@ -57,4 +58,7 @@ MediaKeyNeededEvent conditional=ENCRYPTED_MEDIA_V2
 TrackEvent conditional=VIDEO_TRACK
 CSSFontFaceLoadEvent conditional=FONT_LOAD_EVENTS
 SecurityPolicyViolationEvent conditional=CSP_NEXT
+UIRequestEvent conditional=INDIE_UI
+GestureEvent conditional=IOS_GESTURE_EVENTS
+WebKitPlaybackTargetAvailabilityEvent conditional=IOS_AIRPLAY
 

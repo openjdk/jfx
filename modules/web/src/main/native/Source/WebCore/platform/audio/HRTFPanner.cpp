@@ -36,8 +36,6 @@
 #include <wtf/MathExtras.h>
 #include <wtf/RefPtr.h>
 
-using namespace std;
-
 namespace WebCore {
 
 // The value of 2 milliseconds is larger than the largest delay which exists in any HRTFKernel from the default HRTFDatabase (0.0136 seconds).
@@ -47,8 +45,9 @@ const double MaxDelayTimeSeconds = 0.002;
 const int UninitializedAzimuth = -1;
 const unsigned RenderingQuantum = 128;
 
-HRTFPanner::HRTFPanner(float sampleRate)
+HRTFPanner::HRTFPanner(float sampleRate, HRTFDatabaseLoader* databaseLoader)
     : Panner(PanningModelHRTF)
+    , m_databaseLoader(databaseLoader)
     , m_sampleRate(sampleRate)
     , m_crossfadeSelection(CrossfadeSelection1)
     , m_azimuthIndex1(UninitializedAzimuth)
@@ -68,6 +67,7 @@ HRTFPanner::HRTFPanner(float sampleRate)
     , m_tempL2(RenderingQuantum)
     , m_tempR2(RenderingQuantum)
 {
+    ASSERT(databaseLoader);
 }
 
 HRTFPanner::~HRTFPanner()
@@ -100,7 +100,7 @@ int HRTFPanner::calculateDesiredAzimuthIndexAndBlend(double azimuth, double& azi
     if (azimuth < 0)
         azimuth += 360.0;
 
-    HRTFDatabase* database = HRTFDatabaseLoader::defaultHRTFDatabase();
+    HRTFDatabase* database = m_databaseLoader->database();
     ASSERT(database);
 
     int numberOfAzimuths = database->numberOfAzimuths();
@@ -113,8 +113,8 @@ int HRTFPanner::calculateDesiredAzimuthIndexAndBlend(double azimuth, double& azi
 
     // We don't immediately start using this azimuth index, but instead approach this index from the last index we rendered at.
     // This minimizes the clicks and graininess for moving sources which occur otherwise.
-    desiredAzimuthIndex = max(0, desiredAzimuthIndex);
-    desiredAzimuthIndex = min(numberOfAzimuths - 1, desiredAzimuthIndex);
+    desiredAzimuthIndex = std::max(0, desiredAzimuthIndex);
+    desiredAzimuthIndex = std::min(numberOfAzimuths - 1, desiredAzimuthIndex);
     return desiredAzimuthIndex;
 }
 
@@ -135,7 +135,7 @@ void HRTFPanner::pan(double desiredAzimuth, double elevation, const AudioBus* in
     }
 
     // This code only runs as long as the context is alive and after database has been loaded.
-    HRTFDatabase* database = HRTFDatabaseLoader::defaultHRTFDatabase();
+    HRTFDatabase* database = m_databaseLoader->database();
     ASSERT(database);
     if (!database) {
         outputBus->zero();

@@ -20,36 +20,29 @@
  * Boston, MA 02110-1301, USA.
  */
 
-[
-        Conditional=SVG
-] interface SVGLength { 
-        // Length Unit Types
-        const unsigned short SVG_LENGTHTYPE_UNKNOWN    = 0;
-        const unsigned short SVG_LENGTHTYPE_NUMBER     = 1;
-        const unsigned short SVG_LENGTHTYPE_PERCENTAGE = 2;
-        const unsigned short SVG_LENGTHTYPE_EMS        = 3;
-        const unsigned short SVG_LENGTHTYPE_EXS        = 4;
-        const unsigned short SVG_LENGTHTYPE_PX         = 5;
-        const unsigned short SVG_LENGTHTYPE_CM         = 6;
-        const unsigned short SVG_LENGTHTYPE_MM         = 7;
-        const unsigned short SVG_LENGTHTYPE_IN         = 8;
-        const unsigned short SVG_LENGTHTYPE_PT         = 9;
-        const unsigned short SVG_LENGTHTYPE_PC         = 10;
+interface SVGLength { 
+    // Length Unit Types
+    const unsigned short SVG_LENGTHTYPE_UNKNOWN    = 0;
+    const unsigned short SVG_LENGTHTYPE_NUMBER     = 1;
+    const unsigned short SVG_LENGTHTYPE_PERCENTAGE = 2;
+    const unsigned short SVG_LENGTHTYPE_EMS        = 3;
+    const unsigned short SVG_LENGTHTYPE_EXS        = 4;
+    const unsigned short SVG_LENGTHTYPE_PX         = 5;
+    const unsigned short SVG_LENGTHTYPE_CM         = 6;
+    const unsigned short SVG_LENGTHTYPE_MM         = 7;
+    const unsigned short SVG_LENGTHTYPE_IN         = 8;
+    const unsigned short SVG_LENGTHTYPE_PT         = 9;
+    const unsigned short SVG_LENGTHTYPE_PC         = 10;
 
-        readonly attribute unsigned short unitType;
-    [Custom, StrictTypeChecking] attribute float value
-            setter raises(DOMException),
-            getter raises(DOMException);
+    readonly attribute unsigned short unitType;
+    [GetterRaisesException, SetterRaisesException, Custom, StrictTypeChecking] attribute float value;
 
     [StrictTypeChecking] attribute float valueInSpecifiedUnits;
-    [TreatNullAs=NullString, StrictTypeChecking] attribute DOMString valueAsString
-            setter raises(DOMException);
+    [TreatNullAs=NullString, StrictTypeChecking, SetterRaisesException] attribute DOMString valueAsString;
 
-    [StrictTypeChecking] void newValueSpecifiedUnits(unsigned short unitType, 
-                                                     float valueInSpecifiedUnits)
-            raises(DOMException);
+    [StrictTypeChecking, RaisesException] void newValueSpecifiedUnits(unsigned short unitType, 
+                                                     float valueInSpecifiedUnits);
 
-    [Custom, StrictTypeChecking] void convertToSpecifiedUnits(unsigned short unitType)
-            raises(DOMException);
-    };
+    [Custom, StrictTypeChecking, RaisesException] void convertToSpecifiedUnits(unsigned short unitType);
+};
 

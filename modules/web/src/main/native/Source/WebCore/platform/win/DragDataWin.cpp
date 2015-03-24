@@ -146,13 +146,13 @@ void DragData::asFilenames(Vector<String>& result) const
 #if USE(CF)
     if (m_platformDragData) {
         WCHAR filename[MAX_PATH];
-        
+
         STGMEDIUM medium;
         if (FAILED(m_platformDragData->GetData(cfHDropFormat(), &medium)))
             return;
-       
+
         HDROP hdrop = reinterpret_cast<HDROP>(GlobalLock(medium.hGlobal)); 
-        
+
         if (!hdrop)
             return;
 
@@ -206,7 +206,7 @@ bool DragData::containsCompatibleContent() const
         || containsColor();
 }
 
-PassRefPtr<DocumentFragment> DragData::asFragment(Frame* frame, PassRefPtr<Range>, bool, bool&) const
+PassRefPtr<DocumentFragment> DragData::asFragment(Frame* frame, Range&, bool, bool&) const
 {     
     /*
      * Order is richest format first. On OSX this is:

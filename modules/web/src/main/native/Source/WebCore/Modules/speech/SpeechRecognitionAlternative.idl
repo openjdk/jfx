@@ -28,6 +28,6 @@
     Conditional=SCRIPTED_SPEECH,
     ImplementationLacksVTable
 ] interface SpeechRecognitionAlternative {
-        readonly attribute DOMString transcript;
-        readonly attribute float confidence;
-    };
+    readonly attribute DOMString transcript;
+    readonly attribute float confidence;
+};

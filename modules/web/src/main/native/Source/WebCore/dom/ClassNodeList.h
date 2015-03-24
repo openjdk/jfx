@@ -38,24 +38,24 @@
 namespace WebCore {
 
 class ClassNodeList : public LiveNodeList {
-    public:
-        static PassRefPtr<ClassNodeList> create(PassRefPtr<Node> rootNode, const String& classNames)
-        {
-            return adoptRef(new ClassNodeList(rootNode, classNames));
-        }
+public:
+    static PassRefPtr<ClassNodeList> create(ContainerNode& rootNode, const String& classNames)
+    {
+        return adoptRef(new ClassNodeList(rootNode, classNames));
+    }
 
-        virtual ~ClassNodeList();
+    virtual ~ClassNodeList();
 
     bool nodeMatchesInlined(Element*) const;
 
-    private:
-        ClassNodeList(PassRefPtr<Node> rootNode, const String& classNames);
+private:
+    ClassNodeList(ContainerNode& rootNode, const String& classNames);
 
-        virtual bool nodeMatches(Element*) const;
+    virtual bool nodeMatches(Element*) const override;
 
-        SpaceSplitString m_classNames;
-        String m_originalClassNames;
-    };
+    SpaceSplitString m_classNames;
+    String m_originalClassNames;
+};
 
 inline bool ClassNodeList::nodeMatchesInlined(Element* testNode) const
 {

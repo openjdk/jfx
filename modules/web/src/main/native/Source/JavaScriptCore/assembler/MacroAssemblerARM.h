@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc.
+ * Copyright (C) 2008, 2013 Apple Inc.
  * Copyright (C) 2009, 2010 University of Szeged
  * All rights reserved.
  *
@@ -81,6 +81,7 @@ public:
     };
 
     static const RegisterID stackPointerRegister = ARMRegisters::sp;
+    static const RegisterID framePointerRegister = ARMRegisters::fp;
     static const RegisterID linkRegister = ARMRegisters::lr;
 
     static const Scale ScalePtr = TimesFour;
@@ -363,6 +364,12 @@ public:
         m_assembler.baseIndexTransfer32(ARMAssembler::LoadUint8, dest, address.base, address.index, static_cast<int>(address.scale), address.offset);
     }
 
+    void load8(const void* address, RegisterID dest)
+    {
+        move(TrustedImmPtr(address), ARMRegisters::S0);
+        m_assembler.dataTransfer32(ARMAssembler::LoadUint8, dest, ARMRegisters::S0, 0);
+    }
+
     void load8Signed(BaseIndex address, RegisterID dest)
     {
         m_assembler.baseIndexTransfer16(ARMAssembler::LoadInt8, dest, address.base, address.index, static_cast<int>(address.scale), address.offset);
@@ -452,6 +459,12 @@ public:
         m_assembler.baseIndexTransfer32(ARMAssembler::StoreUint8, src, address.base, address.index, static_cast<int>(address.scale), address.offset);
     }
 
+    void store8(RegisterID src, const void* address)
+    {
+        move(TrustedImmPtr(address), ARMRegisters::S0);
+        m_assembler.dtrUp(ARMAssembler::StoreUint8, src, ARMRegisters::S0, 0);
+    }
+
     void store8(TrustedImm32 imm, const void* address)
     {
         move(TrustedImm32(reinterpret_cast<ARMWord>(address)), ARMRegisters::S0);
@@ -504,6 +517,12 @@ public:
         m_assembler.pop(dest);
     }
 
+    void popPair(RegisterID dest1, RegisterID dest2)
+    {
+        m_assembler.pop(dest1);
+        m_assembler.pop(dest2);
+    }
+
     void push(RegisterID src)
     {
         m_assembler.push(src);
@@ -519,6 +538,12 @@ public:
     {
         move(imm, ARMRegisters::S0);
         push(ARMRegisters::S0);
+    }
+
+    void pushPair(RegisterID src1, RegisterID src2)
+    {
+        m_assembler.push(src2);
+        m_assembler.push(src1);
     }
 
     void move(TrustedImm32 imm, RegisterID dest)
@@ -569,6 +594,13 @@ public:
         return branch32(cond, ARMRegisters::S1, right);
     }
 
+    Jump branch8(RelationalCondition cond, AbsoluteAddress left, TrustedImm32 right)
+    {
+        move(TrustedImmPtr(left.m_ptr), ARMRegisters::S1);
+        load8(Address(ARMRegisters::S1), ARMRegisters::S1);
+        return branch32(cond, ARMRegisters::S1, right);
+    }
+
     Jump branch32(RelationalCondition cond, RegisterID left, RegisterID right, int useConstantPool = 0)
     {
         m_assembler.cmp(left, right);
@@ -612,6 +644,12 @@ public:
     }
 
     Jump branchTest8(ResultCondition cond, Address address, TrustedImm32 mask = TrustedImm32(-1))
+    {
+        load8(address, ARMRegisters::S1);
+        return branchTest32(cond, ARMRegisters::S1, mask);
+    }
+
+    Jump branchTest8(ResultCondition cond, BaseIndex address, TrustedImm32 mask = TrustedImm32(-1))
     {
         load8(address, ARMRegisters::S1);
         return branchTest32(cond, ARMRegisters::S1, mask);
@@ -812,6 +850,11 @@ public:
         ASSERT((cond == Signed) || (cond == Zero) || (cond == NonZero));
         or32(src, dest);
         return Jump(m_assembler.jmp(ARMCondition(cond)));
+    }
+
+    PatchableJump patchableJump()
+    {
+        return PatchableJump(m_assembler.jmp(ARMAssembler::AL, 1));
     }
 
     PatchableJump patchableBranch32(RelationalCondition cond, RegisterID reg, TrustedImm32 imm)
@@ -1154,7 +1197,7 @@ public:
     {
         m_assembler.vsqrt_f64(dest, src);
     }
-
+    
     void absDouble(FPRegisterID src, FPRegisterID dest)
     {
         m_assembler.vabs_f64(dest, src);
@@ -1260,7 +1303,7 @@ public:
 
         // If the result is zero, it might have been -0.0, and 0.0 equals to -0.0
         if (negZeroCheck)
-        failureCases.append(branchTest32(Zero, dest));
+            failureCases.append(branchTest32(Zero, dest));
     }
 
     Jump branchDoubleNonZero(FPRegisterID reg, FPRegisterID scratch)
@@ -1287,6 +1330,11 @@ public:
     void nop()
     {
         m_assembler.nop();
+    }
+
+    void memoryFence()
+    {
+        m_assembler.dmbSY();
     }
 
     static FunctionPtr readCallTarget(CodeLocationCall call)
@@ -1327,6 +1375,32 @@ public:
     {
         UNREACHABLE_FOR_PLATFORM();
     }
+
+#if USE(MASM_PROBE)
+    struct CPUState {
+        #define DECLARE_REGISTER(_type, _regName) \
+            _type _regName;
+        FOR_EACH_CPU_REGISTER(DECLARE_REGISTER)
+        #undef DECLARE_REGISTER
+    };
+
+    struct ProbeContext;
+    typedef void (*ProbeFunction)(struct ProbeContext*);
+
+    struct ProbeContext {
+        ProbeFunction probeFunction;
+        void* arg1;
+        void* arg2;
+        CPUState cpu;
+
+        void dump(const char* indentation = 0);
+    private:
+        void dumpCPURegisters(const char* indentation);
+    };
+
+    // For details about probe(), see comment in MacroAssemblerX86_64.h.
+    void probe(ProbeFunction, void* arg1 = 0, void* arg2 = 0);
+#endif // USE(MASM_PROBE)
 
 protected:
     ARMAssembler::Condition ARMCondition(RelationalCondition cond)
@@ -1382,6 +1456,23 @@ private:
     {
         ARMAssembler::relinkCall(call.dataLocation(), destination.executableAddress());
     }
+
+#if USE(MASM_PROBE)
+    inline TrustedImm32 trustedImm32FromPtr(void* ptr)
+    {
+        return TrustedImm32(TrustedImmPtr(ptr));
+    }
+
+    inline TrustedImm32 trustedImm32FromPtr(ProbeFunction function)
+    {
+        return TrustedImm32(TrustedImmPtr(reinterpret_cast<void*>(function)));
+    }
+
+    inline TrustedImm32 trustedImm32FromPtr(void (*function)())
+    {
+        return TrustedImm32(TrustedImmPtr(reinterpret_cast<void*>(function)));
+    }
+#endif
 
     static const bool s_isVFPPresent;
 };

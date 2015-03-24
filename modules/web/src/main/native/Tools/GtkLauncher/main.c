@@ -25,7 +25,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#if defined(HAVE_CONFIG_H) && HAVE_CONFIG_H
+#ifdef BUILDING_WITH_CMAKE
+#include "cmakeconfig.h"
+#else
 #include "autotoolsconfig.h"
+#endif
+#endif
+
 #include "LauncherInspectorWindow.h"
 #include <errno.h>
 #include <gdk/gdkkeysyms.h>
@@ -157,7 +164,8 @@ static gboolean webViewWindowStateEvent(GtkWidget *widget, GdkEventWindowState *
                                                     GTK_BUTTONS_CLOSE,
                                                     "%s is now full screen. Press ESC or f to exit.", uri);
         g_signal_connect_swapped(dialog, "response", G_CALLBACK(gtk_widget_destroy), dialog);
-        g_timeout_add(1500, (GSourceFunc) webViewFullscreenMessageWindowClose, dialog);
+        guint id = g_timeout_add(1500, (GSourceFunc) webViewFullscreenMessageWindowClose, dialog);
+        g_source_set_name_by_id(id, "[WebKit] webViewFullscreenMessageWindowClose");
         gtk_dialog_run(GTK_DIALOG(dialog));
     }
     return TRUE;
@@ -231,7 +239,7 @@ static GtkWidget* createBrowser(GtkWidget* window, GtkWidget* uriEntry, GtkWidge
 
     gtk_container_add(GTK_CONTAINER(scrolledWindow), GTK_WIDGET(webView));
 
-    iconDatabasePath = g_build_filename(g_get_user_data_dir(), "webkit", "icondatabase", NULL);
+    iconDatabasePath = g_build_filename(g_get_user_cache_dir(), "GtkLauncher", "icondatabase", NULL);
     webkit_favicon_database_set_path(webkit_get_favicon_database(), iconDatabasePath);
     g_free(iconDatabasePath);
 
@@ -327,7 +335,7 @@ static GtkWidget* createWindow(WebKitWebView** outWebView)
 #else
     vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
 #endif
-    statusbar = createStatusbar(webView);
+    statusbar = createStatusbar();
     gtk_box_pack_start(GTK_BOX(vbox), createToolbar(window, uriEntry, webView), FALSE, FALSE, 0);
     gtk_box_pack_start(GTK_BOX(vbox), createBrowser(window, uriEntry, statusbar, webView, vbox), TRUE, TRUE, 0);
     gtk_box_pack_start(GTK_BOX(vbox), statusbar, FALSE, FALSE, 0);
@@ -533,10 +541,6 @@ int main(int argc, char* argv[])
         soup_uri_free(proxyUri);
     }
 #endif
-
-#ifdef WEBKIT_EXEC_PATH
-    g_setenv("WEBKIT_INSPECTOR_PATH", WEBKIT_EXEC_PATH "resources/inspector", FALSE);
-#endif /* WEBKIT_EXEC_PATH */
 
     WebKitWebView *webView;
     GtkWidget *main_window = createWindow(&webView);

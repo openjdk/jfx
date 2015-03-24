@@ -31,14 +31,15 @@
 
 [
     EnabledAtRuntime,
-        Conditional=SHARED_WORKERS,
+    Conditional=SHARED_WORKERS,
     CustomConstructor(DOMString scriptURL, [Default=NullString] optional DOMString name),
-        CallWith=ScriptExecutionContext,
-        ConstructorRaisesException,
-        JSCustomMarkFunction,
-        JSGenerateToNativeObject,
-        JSGenerateToJSObject
-] interface SharedWorker : AbstractWorker {
-        readonly attribute MessagePort port;
-    };
+    JSCustomMarkFunction,
+    JSGenerateToNativeObject,
+    JSGenerateToJSObject,
+    ActiveDOMObject
+] interface SharedWorker : EventTarget {
+    readonly attribute MessagePort port;
+};
+
+SharedWorker implements AbstractWorker;
 

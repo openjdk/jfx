@@ -28,11 +28,11 @@
     Conditional=GEOLOCATION,
     ImplementationLacksVTable
 ] interface PositionError {
-        readonly attribute unsigned short code;
-        readonly attribute DOMString message;
+    readonly attribute unsigned short code;
+    readonly attribute DOMString message;
 
-        const unsigned short PERMISSION_DENIED = 1;
-        const unsigned short POSITION_UNAVAILABLE = 2;
-        const unsigned short TIMEOUT = 3;
-    };
+    const unsigned short PERMISSION_DENIED = 1;
+    const unsigned short POSITION_UNAVAILABLE = 2;
+    const unsigned short TIMEOUT = 3;
+};
 

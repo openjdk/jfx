@@ -27,63 +27,38 @@
 #define PublicURLManager_h
 
 #if ENABLE(BLOB)
-#include "ScriptExecutionContext.h"
-#include "ThreadableBlobRegistry.h"
+#include "ActiveDOMObject.h"
+#include <memory>
+#include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/text/WTFString.h>
 
-#if ENABLE(MEDIA_STREAM)
-#include "MediaStream.h"
-#include "MediaStreamRegistry.h"
-#endif
-
-#if ENABLE(MEDIA_SOURCE)
-#include "MediaSource.h"
-#include "MediaSourceRegistry.h"
-#endif
-
 namespace WebCore {
 
+class URL;
 class ScriptExecutionContext;
+class SecurityOrigin;
+class URLRegistry;
+class URLRegistrable;
 
-class PublicURLManager {
+class PublicURLManager : public ActiveDOMObject {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static PassOwnPtr<PublicURLManager> create() { return adoptPtr(new PublicURLManager); }
-    void contextDestroyed()
-    {
-        HashSet<String>::iterator blobURLsEnd = m_blobURLs.end();
-        for (HashSet<String>::iterator iter = m_blobURLs.begin(); iter != blobURLsEnd; ++iter)
-            ThreadableBlobRegistry::unregisterBlobURL(KURL(ParsedURLString, *iter));
+    explicit PublicURLManager(ScriptExecutionContext*);
 
-#if ENABLE(MEDIA_STREAM)
-        HashSet<String>::iterator streamURLsEnd = m_streamURLs.end();
-        for (HashSet<String>::iterator iter = m_streamURLs.begin(); iter != streamURLsEnd; ++iter)
-            MediaStreamRegistry::registry().unregisterMediaStreamURL(KURL(ParsedURLString, *iter));
-#endif
-#if ENABLE(MEDIA_SOURCE)
-        HashSet<String>::iterator sourceURLsEnd = m_sourceURLs.end();
-        for (HashSet<String>::iterator iter = m_sourceURLs.begin(); iter != sourceURLsEnd; ++iter)
-            MediaSourceRegistry::registry().unregisterMediaSourceURL(KURL(ParsedURLString, *iter));
-#endif
-    }
+    static std::unique_ptr<PublicURLManager> create(ScriptExecutionContext*);
 
-    HashSet<String>& blobURLs() { return m_blobURLs; }
-#if ENABLE(MEDIA_STREAM)
-    HashSet<String>& streamURLs() { return m_streamURLs; }
-#endif
-#if ENABLE(MEDIA_SOURCE)
-    HashSet<String>& sourceURLs() { return m_sourceURLs; }
-#endif
+    void registerURL(SecurityOrigin*, const URL&, URLRegistrable*);
+    void revoke(const URL&);
 
+    // ActiveDOMObject interface.
+    virtual void stop() override;
 private:
-    HashSet<String> m_blobURLs;
-#if ENABLE(MEDIA_STREAM)
-    HashSet<String> m_streamURLs;
-#endif
-#if ENABLE(MEDIA_SOURCE)
-    HashSet<String> m_sourceURLs;
-#endif
+    
+    typedef HashSet<String> URLSet;
+    typedef HashMap<URLRegistry*, URLSet > RegistryURLMap;
+    RegistryURLMap m_registryToURL;
+    bool m_isStopped;
 };
 
 } // namespace WebCore

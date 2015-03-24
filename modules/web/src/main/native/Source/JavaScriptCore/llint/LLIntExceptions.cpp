@@ -31,33 +31,11 @@
 #include "CallFrame.h"
 #include "CodeBlock.h"
 #include "Instruction.h"
-#include "JITExceptions.h"
 #include "LLIntCommon.h"
 #include "LowLevelInterpreter.h"
-#include "Operations.h"
+#include "JSCInlines.h"
 
 namespace JSC { namespace LLInt {
-
-static void fixupPCforExceptionIfNeeded(ExecState* exec)
-{
-    CodeBlock* codeBlock = exec->codeBlock();
-    ASSERT(!!codeBlock);
-    Instruction* pc = exec->currentVPC();
-    exec->setCurrentVPC(codeBlock->adjustPCIfAtCallSite(pc));
-}
-
-void interpreterThrowInCaller(ExecState* exec, ReturnAddressPtr pc)
-{
-    VM* vm = &exec->vm();
-    NativeCallFrameTracer tracer(vm, exec);
-#if LLINT_SLOW_PATH_TRACING
-    dataLog("Throwing exception ", vm->exception, ".\n");
-#endif
-    fixupPCforExceptionIfNeeded(exec);
-    genericThrow(
-        vm, exec, vm->exception,
-        exec->codeBlock()->bytecodeOffset(exec, pc));
-}
 
 Instruction* returnToThrowForThrownException(ExecState* exec)
 {
@@ -65,31 +43,23 @@ Instruction* returnToThrowForThrownException(ExecState* exec)
     return LLInt::exceptionInstructions();
 }
 
-static void doThrow(ExecState* exec, Instruction* pc)
+Instruction* returnToThrow(ExecState* exec)
 {
-    VM* vm = &exec->vm();
-    NativeCallFrameTracer tracer(vm, exec);
-    fixupPCforExceptionIfNeeded(exec);
-    genericThrow(vm, exec, vm->exception, pc - exec->codeBlock()->instructions().begin());
-}
-
-Instruction* returnToThrow(ExecState* exec, Instruction* pc)
-{
+    UNUSED_PARAM(exec);
 #if LLINT_SLOW_PATH_TRACING
     VM* vm = &exec->vm();
-    dataLog("Throwing exception ", vm->exception, " (returnToThrow).\n");
+    dataLog("Throwing exception ", vm->exception(), " (returnToThrow).\n");
 #endif
-    doThrow(exec, pc);
     return LLInt::exceptionInstructions();
 }
 
-void* callToThrow(ExecState* exec, Instruction* pc)
+void* callToThrow(ExecState* exec)
 {
+    UNUSED_PARAM(exec);
 #if LLINT_SLOW_PATH_TRACING
     VM* vm = &exec->vm();
-    dataLog("Throwing exception ", vm->exception, " (callToThrow).\n");
+    dataLog("Throwing exception ", vm->exception(), " (callToThrow).\n");
 #endif
-    doThrow(exec, pc);
     return LLInt::getCodePtr(llint_throw_during_call_trampoline);
 }
 

@@ -25,7 +25,6 @@
  */
 
 #include "config.h"
-#if USE(ICU_UNICODE)
 #include "TextCodecICU.h"
 
 #include "TextEncoding.h"
@@ -40,11 +39,21 @@
 #include <wtf/text/StringBuilder.h>
 #include <wtf/unicode/CharacterNames.h>
 
-using std::min;
-
 namespace WebCore {
 
 const size_t ConversionBufferSize = 16384;
+
+#if PLATFORM(IOS)
+static const char* textCodecMacAliases[] = {
+    "macos-7_3-10.2", // xmaccyrillic, maccyrillic
+    "macos-6_2-10.4", // xmacgreek
+    "macos-6-10.2",   // macgreek
+    "macos-29-10.2",  // xmaccentraleurroman, maccentraleurroman
+    "macos-35-10.2",  // xmacturkish, macturkish
+    "softbank-sjis",  // softbanksjis
+    nullptr
+};
+#endif
 
 ICUConverterWrapper::~ICUConverterWrapper()
 {
@@ -182,6 +191,29 @@ void TextCodecICU::registerEncodingNames(EncodingNameRegistrar registrar)
     registrar("ISO8859-15", "ISO-8859-15");
     // Not registering ISO8859-16, because Firefox (as of version 3.6.6) doesn't know this particular alias,
     // and because older versions of ICU don't support ISO-8859-16 encoding at all.
+
+#if PLATFORM(IOS)
+    // A.B. adding a few more Mac encodings missing 'cause we don't have TextCodecMac right now
+    // luckily, they are supported in ICU, just need to alias them.
+    // this handles encodings that OS X uses TEC (TextCodecMac)
+    // <http://publib.boulder.ibm.com/infocenter/wmbhelp/v6r0m0/index.jsp?topic=/com.ibm.etools.mft.eb.doc/ac00408_.htm>
+    int32_t i = 0;
+    for (const char* macAlias = textCodecMacAliases[i]; macAlias; macAlias = textCodecMacAliases[++i]) {
+        registrar(macAlias, macAlias);
+
+        UErrorCode error = U_ZERO_ERROR;
+        uint16_t numAliases = ucnv_countAliases(macAlias, &error);
+        ASSERT(U_SUCCESS(error));
+        if (U_SUCCESS(error))
+            for (uint16_t j = 0; j < numAliases; ++j) {
+                error = U_ZERO_ERROR;
+                const char* alias = ucnv_getAlias(macAlias, j, &error);
+                ASSERT(U_SUCCESS(error));
+                if (U_SUCCESS(error) && strcmp(alias, macAlias))
+                    registrar(alias, macAlias);
+            }
+    }
+#endif
 }
 
 void TextCodecICU::registerCodecs(TextCodecRegistrar registrar)
@@ -195,7 +227,7 @@ void TextCodecICU::registerCodecs(TextCodecRegistrar registrar)
     int32_t numConverters = ucnv_countAvailable();
     for (int32_t i = 0; i < numConverters; ++i) {
         canonicalConverterName = ucnv_getAvailableName(i);
-            error = U_ZERO_ERROR;
+        error = U_ZERO_ERROR;
         const char* webStandardName = ucnv_getStandardName(canonicalConverterName, "MIME", &error);
         if (!U_SUCCESS(error) || !webStandardName) {
             error = U_ZERO_ERROR;
@@ -213,12 +245,19 @@ void TextCodecICU::registerCodecs(TextCodecRegistrar registrar)
             continue;
 
         registrar(webStandardName, create, fastStrDup(canonicalConverterName));
-}
+    }
 
     // These encodings currently don't have standard names, so we need to register encoders manually.
     // FIXME: Is there a good way to determine the most up to date variant programmatically?
     registrar("windows-874", create, "windows-874-2000");
     registrar("windows-949", create, "windows-949-2000");
+
+#if PLATFORM(IOS)
+    // See comment above in registerEncodingNames().
+    int32_t i = 0;
+    for (const char* alias = textCodecMacAliases[i]; alias; alias = textCodecMacAliases[++i])
+        registrar(alias, create, 0);
+#endif
 }
 
 TextCodecICU::TextCodecICU(const char* encoding, const char* canonicalConverterName)
@@ -458,7 +497,7 @@ CString TextCodecICU::encode(const UChar* characters, size_t length, Unencodable
     if (shouldShowBackslashAsCurrencySymbolIn(m_encodingName)) {
         copy.append(characters, length);
         copy.replace('\\', 0xA5);
-        source = copy.characters();
+        source = copy.deprecatedCharacters();
         sourceLimit = source + copy.length();
     } else {
         source = characters;
@@ -502,5 +541,3 @@ CString TextCodecICU::encode(const UChar* characters, size_t length, Unencodable
 }
 
 } // namespace WebCore
-#endif
-

@@ -36,10 +36,10 @@
 #include <WebCore/COMPtr.h>
 #include <WebCore/DOMWindow.h>
 #include <WebCore/Document.h>
+#include <WebCore/DragImage.h>
 #include <WebCore/Element.h>
 #include <WebCore/Font.h>
 #include <WebCore/Frame.h>
-#include <WebCore/SimpleFontData.h>
 #include <WebCore/HTMLFormElement.h>
 #include <WebCore/HTMLInputElement.h>
 #include <WebCore/HTMLNames.h>
@@ -47,8 +47,9 @@
 #include <WebCore/HTMLSelectElement.h>
 #include <WebCore/HTMLTextAreaElement.h>
 #include <WebCore/NodeList.h>
-#include <WebCore/RenderObject.h>
+#include <WebCore/RenderElement.h>
 #include <WebCore/RenderTreeAsText.h>
+#include <WebCore/SimpleFontData.h>
 
 #include <initguid.h>
 // {3B0C0EFF-478B-4b0b-8290-D2321E08E23E}
@@ -121,7 +122,7 @@ HRESULT STDMETHODCALLTYPE DOMNode::nodeValue(
     if (!m_node)
         return E_FAIL;
     WTF::String nodeValueStr = m_node->nodeValue();
-    *result = SysAllocStringLen(nodeValueStr.characters(), nodeValueStr.length());
+    *result = SysAllocStringLen(nodeValueStr.deprecatedCharacters(), nodeValueStr.length());
     if (nodeValueStr.length() && !*result)
         return E_OUTOFMEMORY;
     return S_OK;
@@ -484,7 +485,7 @@ IDOMNode* DOMNode::createInstance(WebCore::Node* n)
         break;
         case WebCore::Node::DOCUMENT_NODE:
         {
-            IDOMDocument* newDocument = DOMDocument::createInstance(n->document());
+            IDOMDocument* newDocument = DOMDocument::createInstance(&n->document());
             if (newDocument) {
                 hr = newDocument->QueryInterface(IID_IDOMNode, (void**)&domNode);
                 newDocument->Release();
@@ -990,7 +991,7 @@ HRESULT STDMETHODCALLTYPE DOMElement::boundingBox(
     if (!m_element)
         return E_FAIL;
 
-    WebCore::RenderObject *renderer = m_element->renderer();
+    WebCore::RenderElement *renderer = m_element->renderer();
     if (renderer) {
         IntRect boundsIntRect = renderer->absoluteBoundingBoxRect();
         rect->left = boundsIntRect.x();
@@ -1032,7 +1033,7 @@ HRESULT STDMETHODCALLTYPE DOMElement::getAttribute(
         return E_FAIL;
     WTF::String nameString(name, SysStringLen(name));
     WTF::String& attrValueString = (WTF::String&) m_element->getAttribute(nameString);
-    *result = SysAllocStringLen(attrValueString.characters(), attrValueString.length());
+    *result = SysAllocStringLen(attrValueString.deprecatedCharacters(), attrValueString.length());
     if (attrValueString.length() && !*result)
         return E_OUTOFMEMORY;
     return S_OK;
@@ -1216,7 +1217,7 @@ HRESULT STDMETHODCALLTYPE DOMElement::isFocused(
     if (!m_element)
         return E_FAIL;
 
-    if (m_element->document()->focusedNode() == m_element)
+    if (m_element->document().focusedElement() == m_element)
         *result = TRUE;
     else
         *result = FALSE;
@@ -1250,13 +1251,13 @@ HRESULT STDMETHODCALLTYPE DOMElement::font(WebFontDescription* webFontDescriptio
 
     ASSERT(m_element);
 
-    WebCore::RenderObject* renderer = m_element->renderer();
+    WebCore::RenderElement* renderer = m_element->renderer();
     if (!renderer)
         return E_FAIL;
 
-    FontDescription fontDescription = renderer->style()->font().fontDescription();
+    FontDescription fontDescription = renderer->style().font().fontDescription();
     AtomicString family = fontDescription.firstFamily();
-    webFontDescription->family = family.characters();
+    webFontDescription->family = family.string().deprecatedCharacters();
     webFontDescription->familyLength = family.length();
     webFontDescription->size = fontDescription.computedSize();
     webFontDescription->bold = fontDescription.weight() >= WebCore::FontWeight600;
@@ -1275,11 +1276,11 @@ HRESULT STDMETHODCALLTYPE DOMElement::renderedImage(HBITMAP* image)
 
     ASSERT(m_element);
 
-    Frame* frame = m_element->document()->frame();
+    Frame* frame = m_element->document().frame();
     if (!frame)
         return E_FAIL;
 
-    *image = frame->nodeImage(m_element);
+    *image = createDragImageForNode(*frame, *m_element);
     if (!*image)
         return E_FAIL;
 
@@ -1494,22 +1495,22 @@ IDOMElement* DOMElement::createInstance(WebCore::Element* e)
     HRESULT hr;
     IDOMElement* domElement = 0;
 
-    if (e->hasTagName(formTag)) {
+    if (isHTMLFormElement(e)) {
         DOMHTMLFormElement* newElement = new DOMHTMLFormElement(e);
         hr = newElement->QueryInterface(IID_IDOMElement, (void**)&domElement);
     } else if (e->hasTagName(iframeTag)) {
         DOMHTMLIFrameElement* newElement = new DOMHTMLIFrameElement(e);
         hr = newElement->QueryInterface(IID_IDOMElement, (void**)&domElement);
-    } else if (e->hasTagName(inputTag)) {
+    } else if (isHTMLInputElement(e)) {
         DOMHTMLInputElement* newElement = new DOMHTMLInputElement(e);
         hr = newElement->QueryInterface(IID_IDOMElement, (void**)&domElement);
-    } else if (e->hasTagName(optionTag)) {
+    } else if (isHTMLOptionElement(e)) {
         DOMHTMLOptionElement* newElement = new DOMHTMLOptionElement(e);
         hr = newElement->QueryInterface(IID_IDOMElement, (void**)&domElement);
     } else if (e->hasTagName(selectTag)) {
         DOMHTMLSelectElement* newElement = new DOMHTMLSelectElement(e);
         hr = newElement->QueryInterface(IID_IDOMElement, (void**)&domElement);
-    } else if (e->hasTagName(textareaTag)) {
+    } else if (isHTMLTextAreaElement(e)) {
         DOMHTMLTextAreaElement* newElement = new DOMHTMLTextAreaElement(e);
         hr = newElement->QueryInterface(IID_IDOMElement, (void**)&domElement);
     } else if (e->isHTMLElement()) {

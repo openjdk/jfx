@@ -38,20 +38,20 @@ namespace WebCore {
 class BlobData;
 class BlobStorageData;
 class BlobRegistry;
-class KURL;
+class URL;
 
-BlobRegistry& blobRegistry(); 
+BlobRegistry& blobRegistry();
 
 // BlobRegistry is not thread-safe. It should only be called from main thread.
 class BlobRegistry {
 public:
     // Registers a blob URL referring to the specified blob data.
-    virtual void registerBlobURL(const KURL&, PassOwnPtr<BlobData>) = 0;
+    virtual void registerBlobURL(const URL&, std::unique_ptr<BlobData>) = 0;
     
     // Registers a new blob URL referring to the blob data identified by the specified srcURL.
-    virtual void registerBlobURL(const KURL&, const KURL& srcURL) = 0;
+    virtual void registerBlobURL(const URL&, const URL& srcURL) = 0;
 
-    virtual void unregisterBlobURL(const KURL&) = 0;
+    virtual void unregisterBlobURL(const URL&) = 0;
 
     virtual bool isBlobRegistryImpl() const { return false; }
 

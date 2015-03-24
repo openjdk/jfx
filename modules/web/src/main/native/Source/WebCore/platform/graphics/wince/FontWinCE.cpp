@@ -33,7 +33,7 @@
 #include "FloatRect.h"
 #include "FontCache.h"
 #include "FontData.h"
-#include "FontFallbackList.h"
+#include "FontGlyphs.h"
 #include "GlyphBuffer.h"
 #include "GraphicsContext.h"
 #include "IntRect.h"
@@ -42,7 +42,6 @@
 #include "WidthIterator.h"
 #include <wtf/MathExtras.h>
 #include <wtf/OwnPtr.h>
-#include <wtf/unicode/Unicode.h>
 
 #include <windows.h>
 
@@ -140,7 +139,7 @@ static int generateComponents(TextRunComponents* components, const Font &font, c
             UChar ch = run[i];
             if (U16_IS_LEAD(ch) && U16_IS_TRAIL(run[i-1]))
                 ch = U16_GET_SUPPLEMENTARY(ch, run[i-1]);
-            if (U16_IS_TRAIL(ch) || category(ch) == Mark_NonSpacing)
+            if (U16_IS_TRAIL(ch) || U_GET_GC_MASK(ch) & U_GC_MN_MASK)
                 continue;
             if (Font::treatAsSpace(run[i])) {
                 int add = 0;
@@ -207,8 +206,7 @@ static int generateComponents(TextRunComponents* components, const Font &font, c
     return offset;
 }
 
-void Font::drawComplexText(GraphicsContext* context, const TextRun& run, const FloatPoint& point,
-                           int from, int to) const
+float Font::drawComplexText(GraphicsContext* context, const TextRun& run, const FloatPoint& point, int from, int to) const
 {
     if (to < 0)
         to = run.length();
@@ -218,6 +216,7 @@ void Font::drawComplexText(GraphicsContext* context, const TextRun& run, const F
     TextRunComponents components;
     int w = generateComponents(&components, *this, run);
 
+    float widthOfDrawnText = 0;
     int curPos = 0;
     for (int i = 0; i < (int)components.size(); ++i) {
         const TextRunComponent& comp = components.at(i);
@@ -229,12 +228,13 @@ void Font::drawComplexText(GraphicsContext* context, const TextRun& run, const F
                 pt.setX(point.x() + w - comp.m_offset - comp.m_width);
             else
                 pt.setX(point.x() + comp.m_offset);
-            drawSimpleText(context, comp.m_textRun, pt, from - curPos, std::min(to, curEnd) - curPos);
+            widthOfDrawnText += drawSimpleText(context, comp.m_textRun, pt, from - curPos, std::min(to, curEnd) - curPos);
         }
         curPos += len;
         if (from < curPos)
             from = curPos;
     }
+    return widthOfDrawnText;
 }
 
 void Font::drawEmphasisMarksForComplexText(GraphicsContext* /* context */, const TextRun& /* run */, const AtomicString& /* mark */, const FloatPoint& /* point */, int /* from */, int /* to */) const

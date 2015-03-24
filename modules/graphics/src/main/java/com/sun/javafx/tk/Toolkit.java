@@ -71,6 +71,7 @@ import java.util.WeakHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
+import com.sun.glass.utils.NativeLibLoader;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.beans.event.AbstractNotifyListener;
 import com.sun.javafx.embed.HostInterface;
@@ -136,6 +137,30 @@ public abstract class Toolkit {
         }
 
         final boolean verbose = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.verbose"));
+
+        // This loading of msvcr120.dll and msvcp120.dll (VS2013) is required when run with Java 8
+        // since it was build with VS2010 and doesn't include msvcr120.dll in its JRE.
+        // Note: See README-builds.html on MSVC requirement: VS2013 is required.
+        if (PlatformUtil.isWindows()) {
+            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                try {
+                    NativeLibLoader.loadLibrary("msvcr120");
+                } catch (Throwable t) {
+                    if (verbose) {
+                        System.err.println("Error: failed to load msvcr120.dll : " + t);
+                    }
+                }
+                try {
+                    NativeLibLoader.loadLibrary("msvcp120");
+                } catch (Throwable t) {
+                    if (verbose) {
+                        System.err.println("Error: failed to load msvcp120.dll : " + t);
+                    }
+                }
+                return null;
+            });
+        }
+
         AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
             // Get the javafx.version and javafx.runtime.version from a preconstructed
             // java class, VersionInfo, created at build time.

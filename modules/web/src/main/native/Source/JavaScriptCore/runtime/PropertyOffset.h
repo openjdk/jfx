@@ -63,7 +63,7 @@ inline void checkOffset(PropertyOffset offset, int inlineCapacity)
     ASSERT(offset >= invalidOffset);
     ASSERT(offset == invalidOffset
         || offset < inlineCapacity
-           || isOutOfLineOffset(offset));
+        || isOutOfLineOffset(offset));
 }
 
 inline void validateOffset(PropertyOffset offset)
@@ -139,7 +139,7 @@ inline PropertyOffset offsetForPropertyNumber(int propertyNumber, int inlineCapa
     if (offset >= inlineCapacity) {
         offset += firstOutOfLineOffset;
         offset -= inlineCapacity;
-}
+    }
     return offset;
 }
 

@@ -27,7 +27,6 @@
 #ifndef WebGLUniformLocation_h
 #define WebGLUniformLocation_h
 
-#include "WebGLObject.h"
 #include "WebGLProgram.h"
 
 #include <wtf/PassRefPtr.h>
@@ -39,19 +38,22 @@ class WebGLUniformLocation : public RefCounted<WebGLUniformLocation> {
 public:
     virtual ~WebGLUniformLocation() { }
 
-    static PassRefPtr<WebGLUniformLocation> create(WebGLProgram*, GC3Dint location);
+    static PassRefPtr<WebGLUniformLocation> create(WebGLProgram*, GC3Dint location, GC3Denum type);
 
     WebGLProgram* program() const;
 
     GC3Dint location() const;
+    
+    GC3Denum type() const;
 
 protected:
-    WebGLUniformLocation(WebGLProgram*, GC3Dint location);
+    WebGLUniformLocation(WebGLProgram*, GC3Dint location, GC3Denum type);
 
 private:
     RefPtr<WebGLProgram> m_program;
     GC3Dint m_location;
     unsigned m_linkCount;
+    GC3Denum m_type;
 };
 
 } // namespace WebCore

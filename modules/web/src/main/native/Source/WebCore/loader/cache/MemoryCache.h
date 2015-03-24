@@ -25,6 +25,7 @@
 #ifndef Cache_h
 #define Cache_h
 
+#include "NativeImagePtr.h"
 #include "SecurityOriginHash.h"
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
@@ -38,7 +39,7 @@ namespace WebCore  {
 class CachedCSSStyleSheet;
 class CachedResource;
 class CachedResourceLoader;
-class KURL;
+class URL;
 class ResourceRequest;
 class ResourceResponse;
 class ScriptExecutionContext;
@@ -82,7 +83,7 @@ public:
 
 #if ENABLE(CACHE_PARTITIONING)
     typedef HashMap<String, CachedResource*> CachedResourceItem;
-    typedef HashMap<String, OwnPtr<CachedResourceItem> > CachedResourceMap;
+    typedef HashMap<String, OwnPtr<CachedResourceItem>> CachedResourceMap;
 #else
     typedef HashMap<String, CachedResource*> CachedResourceMap;
 #endif
@@ -100,7 +101,12 @@ public:
         int decodedSize;
         int purgeableSize;
         int purgedSize;
+#if ENABLE(DISK_IMAGE_CACHE)
+        int mappedSize;
+        TypeStatistic() : count(0), size(0), liveSize(0), decodedSize(0), purgeableSize(0), purgedSize(0), mappedSize(0) { }
+#else
         TypeStatistic() : count(0), size(0), liveSize(0), decodedSize(0), purgeableSize(0), purgedSize(0) { }
+#endif
         void addResource(CachedResource*);
     };
     
@@ -111,14 +117,14 @@ public:
         TypeStatistic xslStyleSheets;
         TypeStatistic fonts;
     };
-    
-    CachedResource* resourceForURL(const KURL&);
+
+    CachedResource* resourceForURL(const URL&);
     CachedResource* resourceForRequest(const ResourceRequest&);
     
     bool add(CachedResource* resource);
     void remove(CachedResource* resource) { evict(resource); }
 
-    static KURL removeFragmentIdentifierIfNeeded(const KURL& originalURL);
+    static URL removeFragmentIdentifierIfNeeded(const URL& originalURL);
     
     void revalidationSucceeded(CachedResource* revalidatingResource, const ResourceResponse&);
     void revalidationFailed(CachedResource* revalidatingResource);
@@ -160,6 +166,10 @@ public:
 
     static bool shouldMakeResourcePurgeableOnEviction();
 
+#if ENABLE(DISK_IMAGE_CACHE)
+    void flushCachedImagesToDisk(); // Flush encoded data from resources still referenced by web pages.
+#endif
+
     static void removeUrlFromCache(ScriptExecutionContext*, const String& urlString);
     static void removeRequestFromCache(ScriptExecutionContext*, const ResourceRequest&);
 
@@ -168,7 +178,7 @@ public:
     
     void resourceAccessed(CachedResource*);
 
-    typedef HashSet<RefPtr<SecurityOrigin> > SecurityOriginSet;
+    typedef HashSet<RefPtr<SecurityOrigin>> SecurityOriginSet;
     void removeResourcesWithOrigin(SecurityOrigin*);
     void getOriginsWithCache(SecurityOriginSet& origins);
 
@@ -178,10 +188,27 @@ public:
     unsigned liveSize() const { return m_liveSize; }
     unsigned deadSize() const { return m_deadSize; }
 
+#if USE(CG)
+    // FIXME: Remove the USE(CG) once we either make NativeImagePtr a smart pointer on all platforms or
+    // remove the usage of CFRetain() in MemoryCache::addImageToCache() so as to make the code platform-independent.
+    bool addImageToCache(NativeImagePtr, const URL&, const String& cachePartition);
+    void removeImageFromCache(const URL&, const String& cachePartition);
+#endif
+
+    // pruneDead*() - Flush decoded and encoded data from resources not referenced by Web pages.
+    // pruneLive*() - Flush decoded data from resources still referenced by Web pages.
+    void pruneDeadResources(); // Automatically decide how much to prune.
+    void pruneLiveResources(bool shouldDestroyDecodedDataForAllLiveResources = false);
+
 private:
+    void pruneDeadResourcesToPercentage(float prunePercentage); // Prune to % current size
+    void pruneLiveResourcesToPercentage(float prunePercentage);
+    void pruneDeadResourcesToSize(unsigned targetSize);
+    void pruneLiveResourcesToSize(unsigned targetSize, bool shouldDestroyDecodedDataForAllLiveResources = false);
+
     MemoryCache();
     ~MemoryCache(); // Not implemented to make sure nobody accidentally calls delete -- WebCore does not delete singletons.
-       
+
     LRUList* lruListFor(CachedResource*);
 #ifndef NDEBUG
     void dumpStats();
@@ -190,15 +217,6 @@ private:
 
     unsigned liveCapacity() const;
     unsigned deadCapacity() const;
-
-    // pruneDead*() - Flush decoded and encoded data from resources not referenced by Web pages.
-    // pruneLive*() - Flush decoded data from resources still referenced by Web pages.
-    void pruneDeadResources(); // Automatically decide how much to prune.
-    void pruneLiveResources();
-    void pruneDeadResourcesToPercentage(float prunePercentage); // Prune to % current size
-    void pruneLiveResourcesToPercentage(float prunePercentage);
-    void pruneDeadResourcesToSize(unsigned targetSize);
-    void pruneLiveResourcesToSize(unsigned targetSize);
 
     bool makeResourcePurgeable(CachedResource*);
     void evict(CachedResource*);

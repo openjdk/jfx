@@ -29,12 +29,16 @@
 #include "RenderTheme.h"
 #include "StyleInheritedData.h"
 
+#if PLATFORM(IOS)
+#include "RenderThemeIOS.h"
+#endif
+
 namespace WebCore {
 
 using namespace HTMLNames;
 
-RenderButton::RenderButton(Element* element)
-    : RenderFlexibleBox(element)
+RenderButton::RenderButton(HTMLFormControlElement& element, PassRef<RenderStyle> style)
+    : RenderFlexibleBox(element, std::move(style))
     , m_buttonText(0)
     , m_inner(0)
     , m_default(false)
@@ -45,33 +49,48 @@ RenderButton::~RenderButton()
 {
 }
 
+HTMLFormControlElement& RenderButton::formControlElement() const
+{
+    return toHTMLFormControlElement(nodeForNonAnonymous());
+}
+
+bool RenderButton::canBeSelectionLeaf() const
+{
+    return formControlElement().hasEditableStyle();
+}
+
+bool RenderButton::hasLineIfEmpty() const
+{
+    return formControlElement().toInputElement();
+}
+
 void RenderButton::addChild(RenderObject* newChild, RenderObject* beforeChild)
 {
     if (!m_inner) {
         // Create an anonymous block.
         ASSERT(!firstChild());
-        m_inner = createAnonymousBlock(style()->display());
-        setupInnerStyle(m_inner->style());
+        m_inner = createAnonymousBlock(style().display());
+        setupInnerStyle(&m_inner->style());
         RenderFlexibleBox::addChild(m_inner);
     }
     
     m_inner->addChild(newChild, beforeChild);
 }
 
-void RenderButton::removeChild(RenderObject* oldChild)
+void RenderButton::removeChild(RenderObject& oldChild)
 {
     // m_inner should be the only child, but checking for direct children who
     // are not m_inner prevents security problems when that assumption is
     // violated.
-    if (oldChild == m_inner || !m_inner || oldChild->parent() == this) {
-        ASSERT(oldChild == m_inner || !m_inner);
+    if (&oldChild == m_inner || !m_inner || oldChild.parent() == this) {
+        ASSERT(&oldChild == m_inner || !m_inner);
         RenderFlexibleBox::removeChild(oldChild);
-        m_inner = 0;
+        m_inner = nullptr;
     } else
         m_inner->removeChild(oldChild);
 }
 
-void RenderButton::styleWillChange(StyleDifference diff, const RenderStyle* newStyle)
+void RenderButton::styleWillChange(StyleDifference diff, const RenderStyle& newStyle)
 {
     if (m_inner) {
         // RenderBlock::setStyle is going to apply a new style to the inner block, which
@@ -79,9 +98,9 @@ void RenderButton::styleWillChange(StyleDifference diff, const RenderStyle* newS
         // it right below. Here we change it back to 0 to avoid getting a spurious layout hint
         // because of the difference. Same goes for the other properties.
         // FIXME: Make this hack unnecessary.
-        m_inner->style()->setFlexGrow(newStyle->initialFlexGrow());
-        m_inner->style()->setMarginTop(newStyle->initialMargin());
-        m_inner->style()->setMarginBottom(newStyle->initialMargin());
+        m_inner->style().setFlexGrow(newStyle.initialFlexGrow());
+        m_inner->style().setMarginTop(newStyle.initialMargin());
+        m_inner->style().setMarginBottom(newStyle.initialMargin());
     }
     RenderBlock::styleWillChange(diff, newStyle);
 }
@@ -90,17 +109,15 @@ void RenderButton::styleDidChange(StyleDifference diff, const RenderStyle* oldSt
 {
     RenderBlock::styleDidChange(diff, oldStyle);
 
-    if (m_buttonText)
-        m_buttonText->setStyle(style());
     if (m_inner) // RenderBlock handled updating the anonymous block's style.
-        setupInnerStyle(m_inner->style());
+        setupInnerStyle(&m_inner->style());
 
-    if (!m_default && theme()->isDefault(this)) {
+    if (!m_default && theme().isDefault(this)) {
         if (!m_timer)
             m_timer = adoptPtr(new Timer<RenderButton>(this, &RenderButton::timerFired));
         m_timer->startRepeating(0.03);
         m_default = true;
-    } else if (m_default && !theme()->isDefault(this)) {
+    } else if (m_default && !theme().isDefault(this)) {
         m_default = false;
         m_timer.clear();
     }
@@ -111,20 +128,22 @@ void RenderButton::setupInnerStyle(RenderStyle* innerStyle)
     ASSERT(innerStyle->refCount() == 1);
     // RenderBlock::createAnonymousBlock creates a new RenderStyle, so this is
     // safe to modify.
+    // FIXME: I don't see how the comment above is accurate when this is called
+    // from the RenderButton::styleDidChange function.
     innerStyle->setFlexGrow(1.0f);
     // Use margin:auto instead of align-items:center to get safe centering, i.e.
     // when the content overflows, treat it the same as align-items: flex-start.
     innerStyle->setMarginTop(Length());
     innerStyle->setMarginBottom(Length());
-    innerStyle->setFlexDirection(style()->flexDirection());
+    innerStyle->setFlexDirection(style().flexDirection());
 }
 
 void RenderButton::updateFromElement()
 {
     // If we're an input element, we may need to change our button text.
-    if (node()->hasTagName(inputTag)) {
-        HTMLInputElement* input = static_cast<HTMLInputElement*>(node());
-        String value = input->valueWithDefault();
+    if (isHTMLInputElement(formControlElement())) {
+        HTMLInputElement& input = toHTMLInputElement(formControlElement());
+        String value = input.valueWithDefault();
         setText(value);
     }
 }
@@ -140,8 +159,7 @@ void RenderButton::setText(const String& str)
         if (m_buttonText)
             m_buttonText->setText(str.impl());
         else {
-            m_buttonText = new (renderArena()) RenderTextFragment(document(), str.impl());
-            m_buttonText->setStyle(style());
+            m_buttonText = new RenderTextFragment(document(), str);
             addChild(m_buttonText);
         }
     }
@@ -157,7 +175,7 @@ bool RenderButton::canHaveGeneratedChildren() const
     // Input elements can't have generated children, but button elements can. We'll
     // write the code assuming any other button types that might emerge in the future
     // can also have children.
-    return !node()->hasTagName(inputTag);
+    return !isHTMLInputElement(formControlElement());
 }
 
 LayoutRect RenderButton::controlClipRect(const LayoutPoint& additionalOffset) const
@@ -166,16 +184,26 @@ LayoutRect RenderButton::controlClipRect(const LayoutPoint& additionalOffset) co
     return LayoutRect(additionalOffset.x() + borderLeft(), additionalOffset.y() + borderTop(), width() - borderLeft() - borderRight(), height() - borderTop() - borderBottom());
 }
 
-void RenderButton::timerFired(Timer<RenderButton>*)
+void RenderButton::timerFired(Timer<RenderButton>&)
 {
     // FIXME Bug 25110: Ideally we would stop our timer when our Document
     // enters the page cache. But we currently have no way of being notified
     // when that happens, so we'll just ignore the timer firing as long as
     // we're in the cache.
-    if (document()->inPageCache())
+    if (document().inPageCache())
         return;
 
     repaint();
 }
+
+#if PLATFORM(IOS)
+void RenderButton::layout()
+{
+    RenderFlexibleBox::layout();
+
+    // FIXME: We should not be adjusting styles during layout. See <rdar://problem/7675493>.
+    RenderThemeIOS::adjustRoundBorderRadius(style(), this);
+}
+#endif
 
 } // namespace WebCore

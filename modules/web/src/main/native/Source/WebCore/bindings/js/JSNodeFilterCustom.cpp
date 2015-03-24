@@ -39,17 +39,17 @@ namespace WebCore {
 void JSNodeFilter::visitChildren(JSCell* cell, SlotVisitor& visitor)
 {
     JSNodeFilter* thisObject = jsCast<JSNodeFilter*>(cell);
-    ASSERT_GC_OBJECT_INHERITS(thisObject, &s_info);
+    ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     COMPILE_ASSERT(StructureFlags & OverridesVisitChildren, OverridesVisitChildrenWithoutSettingFlag);
     ASSERT(thisObject->structure()->typeInfo().overridesVisitChildren());
     Base::visitChildren(thisObject, visitor);
-    visitor.addOpaqueRoot(thisObject->impl());
+    visitor.addOpaqueRoot(&thisObject->impl());
 }
 
 PassRefPtr<NodeFilter> toNodeFilter(VM& vm, JSValue value)
 {
-    if (value.inherits(&JSNodeFilter::s_info))
-        return jsCast<JSNodeFilter*>(asObject(value))->impl();
+    if (value.inherits(JSNodeFilter::info()))
+        return &jsCast<JSNodeFilter*>(asObject(value))->impl();
 
     RefPtr<NodeFilter> result = NodeFilter::create();
     result->setCondition(JSNodeFilterCondition::create(vm, result.get(), value));

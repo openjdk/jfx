@@ -26,7 +26,7 @@
 #include "config.h"
 #include "BString.h"
 
-#include "KURL.h"
+#include "URL.h"
 #include <windows.h>
 #include <wtf/text/AtomicString.h>
 #include <wtf/text/WTFString.h>
@@ -65,15 +65,15 @@ BString::BString(const String& s)
     if (s.isNull())
         m_bstr = 0;
     else
-        m_bstr = SysAllocStringLen(s.characters(), s.length());
+        m_bstr = SysAllocStringLen(s.deprecatedCharacters(), s.length());
 }
 
-BString::BString(const KURL& url)
+BString::BString(const URL& url)
 {
     if (url.isNull())
         m_bstr = 0;
     else
-        m_bstr = SysAllocStringLen(url.string().characters(), url.string().length());
+        m_bstr = SysAllocStringLen(url.string().deprecatedCharacters(), url.string().length());
 }
 
 BString::BString(const AtomicString& s)
@@ -81,7 +81,7 @@ BString::BString(const AtomicString& s)
     if (s.isNull())
         m_bstr = 0;
     else
-        m_bstr = SysAllocStringLen(s.characters(), s.length());
+        m_bstr = SysAllocStringLen(s.string().deprecatedCharacters(), s.length());
 }
 
 #if USE(CF)
@@ -119,7 +119,7 @@ BString::BString(const BString& other)
 
 void BString::adoptBSTR(BSTR bstr)
 {
-        SysFreeString(m_bstr);
+    SysFreeString(m_bstr);
     m_bstr = bstr;
 }
 

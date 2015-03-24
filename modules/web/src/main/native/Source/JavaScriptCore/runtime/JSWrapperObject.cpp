@@ -22,21 +22,21 @@
 #include "config.h"
 #include "JSWrapperObject.h"
 
-#include "Operations.h"
+#include "JSCInlines.h"
 
 namespace JSC {
 
-ASSERT_HAS_TRIVIAL_DESTRUCTOR(JSWrapperObject);
+STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(JSWrapperObject);
 
 void JSWrapperObject::visitChildren(JSCell* cell, SlotVisitor& visitor)
 {
     JSWrapperObject* thisObject = jsCast<JSWrapperObject*>(cell);
-    ASSERT_GC_OBJECT_INHERITS(thisObject, &s_info);
+    ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     COMPILE_ASSERT(StructureFlags & OverridesVisitChildren, OverridesVisitChildrenWithoutSettingFlag);
     ASSERT(thisObject->structure()->typeInfo().overridesVisitChildren());
 
     JSObject::visitChildren(thisObject, visitor);
-        visitor.append(&thisObject->m_internalValue);
+    visitor.append(&thisObject->m_internalValue);
 }
 
 } // namespace JSC

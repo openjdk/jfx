@@ -38,20 +38,20 @@ namespace WebCore {
 // Base of checkbox and radio types.
 class BaseCheckableInputType : public InputType {
 protected:
-    BaseCheckableInputType(HTMLInputElement* element) : InputType(element) { }
-    virtual void handleKeydownEvent(KeyboardEvent*);
+    explicit BaseCheckableInputType(HTMLInputElement& element) : InputType(element) { }
+    virtual void handleKeydownEvent(KeyboardEvent*) override;
 
 private:
-    virtual FormControlState saveFormControlState() const OVERRIDE;
-    virtual void restoreFormControlState(const FormControlState&) OVERRIDE;
-    virtual bool appendFormData(FormDataList&, bool) const OVERRIDE;
-    virtual void handleKeypressEvent(KeyboardEvent*) OVERRIDE;
-    virtual bool canSetStringValue() const OVERRIDE;
-    virtual void accessKeyAction(bool sendMouseEvents) OVERRIDE;
-    virtual String fallbackValue() const OVERRIDE;
-    virtual bool storesValueSeparateFromAttribute() OVERRIDE;
-    virtual void setValue(const String&, bool, TextFieldEventBehavior) OVERRIDE;
-    virtual bool isCheckable() OVERRIDE;
+    virtual FormControlState saveFormControlState() const override;
+    virtual void restoreFormControlState(const FormControlState&) override;
+    virtual bool appendFormData(FormDataList&, bool) const override;
+    virtual void handleKeypressEvent(KeyboardEvent*) override;
+    virtual bool canSetStringValue() const override;
+    virtual void accessKeyAction(bool sendMouseEvents) override;
+    virtual String fallbackValue() const override;
+    virtual bool storesValueSeparateFromAttribute() override;
+    virtual void setValue(const String&, bool, TextFieldEventBehavior) override;
+    virtual bool isCheckable() override;
 };
 
 } // namespace WebCore

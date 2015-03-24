@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003, 2006, 2007 Apple Inc.  All rights reserved.
+ * Copyright (C) 2003, 2006, 2007, 2013 Apple Inc.  All rights reserved.
  * Copyright (C) 2007-2009 Torch Mobile, Inc.
  * Copyright (C) 2011 University of Szeged. All rights reserved.
  *
@@ -35,10 +35,12 @@
 #include "Assertions.h"
 
 #include "Compiler.h"
-#include "OwnArrayPtr.h"
+#include <wtf/StdLibExtras.h>
+#include <wtf/StringExtras.h>
+#include <wtf/text/CString.h>
+#include <wtf/text/WTFString.h>
 
 #include <stdio.h>
-#include <stdarg.h>
 #include <string.h>
 
 #if HAVE(SIGNAL_H)
@@ -68,10 +70,6 @@
 #include <cxxabi.h>
 #include <dlfcn.h>
 #include <execinfo.h>
-#endif
-
-#if PLATFORM(BLACKBERRY)
-#include <BlackBerryPlatformLog.h>
 #endif
 
 extern "C" {
@@ -116,8 +114,6 @@ static void vprintf_stderr_common(const char* format, va_list args)
 
     // Fall through to write to stderr in the same manner as other platforms.
 
-#elif PLATFORM(BLACKBERRY)
-    BBLOGV(BlackBerry::Platform::LogLevelCritical, format, args);
 #elif HAVE(ISDEBUGGERPRESENT)
     if (IsDebuggerPresent()) {
         size_t size = 1024;
@@ -152,12 +148,10 @@ static void vprintf_stderr_common(const char* format, va_list args)
         } while (size > 1024);
     }
 #endif
-#if !PLATFORM(BLACKBERRY)
     vfprintf(stderr, format, args);
-#endif
 }
 
-#if COMPILER(CLANG) || (COMPILER(GCC) && GCC_VERSION_AT_LEAST(4, 6, 0))
+#if COMPILER(CLANG) || COMPILER(GCC)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-nonliteral"
 #endif
@@ -166,7 +160,7 @@ static void vprintf_stderr_with_prefix(const char* prefix, const char* format, v
 {
     size_t prefixLength = strlen(prefix);
     size_t formatLength = strlen(format);
-    OwnArrayPtr<char> formatWithPrefix = adoptArrayPtr(new char[prefixLength + formatLength + 1]);
+    auto formatWithPrefix = std::make_unique<char[]>(prefixLength + formatLength + 1);
     memcpy(formatWithPrefix.get(), prefix, prefixLength);
     memcpy(formatWithPrefix.get() + prefixLength, format, formatLength);
     formatWithPrefix[prefixLength + formatLength] = 0;
@@ -182,7 +176,7 @@ static void vprintf_stderr_with_trailing_newline(const char* format, va_list arg
         return;
     }
 
-    OwnArrayPtr<char> formatWithNewline = adoptArrayPtr(new char[formatLength + 2]);
+    auto formatWithNewline = std::make_unique<char[]>(formatLength + 2);
     memcpy(formatWithNewline.get(), format, formatLength);
     formatWithNewline[formatLength] = '\n';
     formatWithNewline[formatLength + 1] = 0;
@@ -190,7 +184,7 @@ static void vprintf_stderr_with_trailing_newline(const char* format, va_list arg
     vprintf_stderr_common(formatWithNewline.get(), args);
 }
 
-#if COMPILER(CLANG) || (COMPILER(GCC) && GCC_VERSION_AT_LEAST(4, 6, 0))
+#if COMPILER(CLANG) || COMPILER(GCC)
 #pragma GCC diagnostic pop
 #endif
 
@@ -277,7 +271,7 @@ void WTFReportBacktrace()
 }
 
 #if OS(DARWIN) || OS(LINUX)
-#  if PLATFORM(QT) || PLATFORM(GTK)
+#  if PLATFORM(GTK)
 #    if defined(__GLIBC__) && !defined(__UCLIBC__)
 #      define WTF_USE_BACKTRACE_SYMBOLS 1
 #    endif
@@ -349,6 +343,20 @@ void WTFCrash()
 #else
     ((void(*)())0)();
 #endif
+#endif
+}
+
+void WTFCrashWithSecurityImplication()
+{
+    if (globalHook)
+        globalHook();
+    WTFReportBacktrace();
+    *(int *)(uintptr_t)0xfbadbeef = 0;
+    // More reliable, but doesn't say fbadbeef.
+#if COMPILER(CLANG)
+    __builtin_trap();
+#else
+    ((void(*)())0)();
 #endif
 }
 
@@ -432,12 +440,70 @@ void WTFLogVerbose(const char* file, int line, const char* function, WTFLogChann
     printCallSite(file, line, function);
 }
 
+void WTFLogAlwaysV(const char* format, va_list args)
+{
+    vprintf_stderr_with_trailing_newline(format, args);
+}
+
 void WTFLogAlways(const char* format, ...)
 {
     va_list args;
     va_start(args, format);
-    vprintf_stderr_with_trailing_newline(format, args);
+    WTFLogAlwaysV(format, args);
     va_end(args);
+}
+
+void WTFLogAlwaysAndCrash(const char* format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    WTFLogAlwaysV(format, args);
+    va_end(args);
+    WTFCrash();
+}
+
+WTFLogChannel* WTFLogChannelByName(WTFLogChannel* channels[], size_t count, const char* name)
+{
+    for (size_t i = 0; i < count; ++i) {
+        WTFLogChannel* channel = channels[i];
+        if (!strcasecmp(name, channel->name))
+            return channel;
+    }
+
+    return 0;
+}
+
+static void setStateOfAllChannels(WTFLogChannel* channels[], size_t channelCount, WTFLogChannelState state)
+{
+    for (size_t i = 0; i < channelCount; ++i)
+        channels[i]->state = state;
+}
+
+void WTFInitializeLogChannelStatesFromString(WTFLogChannel* channels[], size_t count, const char* logLevel)
+{
+    String logLevelString = logLevel;
+    Vector<String> components;
+    logLevelString.split(',', components);
+
+    for (size_t i = 0; i < components.size(); ++i) {
+        String component = components[i];
+
+        WTFLogChannelState logChannelState = WTFLogChannelOn;
+        if (component.startsWith('-')) {
+            logChannelState = WTFLogChannelOff;
+            component = component.substring(1);
+        }
+
+        if (equalIgnoringCase(component, "all")) {
+            setStateOfAllChannels(channels, count, logChannelState);
+            continue;
+        }
+
+        if (WTFLogChannel* channel = WTFLogChannelByName(channels, count, component.utf8().data()))
+            channel->state = logChannelState;
+        else
+            WTFLogAlways("Unknown logging channel: %s", component.utf8().data());
+    }
 }
 
 } // extern "C"

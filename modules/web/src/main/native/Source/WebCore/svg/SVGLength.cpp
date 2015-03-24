@@ -20,8 +20,6 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SVG)
 #include "SVGLength.h"
 
 #include "CSSHelper.h"
@@ -226,7 +224,7 @@ void SVGLength::setValueAsString(const String& string, ExceptionCode& ec)
         return;
 
     float convertedNumber = 0;
-    const UChar* ptr = string.characters();
+    const UChar* ptr = string.deprecatedCharacters();
     const UChar* end = ptr + string.length();
 
     if (!parseNumber(ptr, end, convertedNumber, false)) {
@@ -413,5 +411,3 @@ SVGLengthMode SVGLength::lengthModeForAnimatedLengthAttribute(const QualifiedNam
 }
 
 }
-
-#endif

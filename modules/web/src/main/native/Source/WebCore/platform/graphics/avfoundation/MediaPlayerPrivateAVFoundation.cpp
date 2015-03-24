@@ -35,20 +35,20 @@
 #include "GraphicsContext.h"
 #include "InbandTextTrackPrivateAVF.h"
 #include "InbandTextTrackPrivateClient.h"
-#include "KURL.h"
+#include "URL.h"
 #include "Logging.h"
 #include "PlatformLayer.h"
+#include "Settings.h"
 #include "SoftLinking.h"
 #include "TimeRanges.h"
 #include <CoreMedia/CoreMedia.h>
 #include <wtf/MainThread.h>
 
-using namespace std;
-
 namespace WebCore {
 
 MediaPlayerPrivateAVFoundation::MediaPlayerPrivateAVFoundation(MediaPlayer* player)
     : m_player(player)
+    , m_weakPtrFactory(this)
     , m_queuedNotifications()
     , m_queueMutex()
     , m_networkState(MediaPlayer::Empty)
@@ -60,9 +60,9 @@ MediaPlayerPrivateAVFoundation::MediaPlayerPrivateAVFoundation(MediaPlayer* play
     , m_cachedDuration(MediaPlayer::invalidTime())
     , m_reportedDuration(MediaPlayer::invalidTime())
     , m_maxTimeLoadedAtLastDidLoadingProgress(MediaPlayer::invalidTime())
-    , m_seekTo(MediaPlayer::invalidTime())
     , m_requestedRate(1)
     , m_delayCallbacks(0)
+    , m_delayCharacteristicsChangedNotification(0)
     , m_mainThreadCallPending(false)
     , m_assetIsPlayable(false)
     , m_visible(false)
@@ -74,9 +74,10 @@ MediaPlayerPrivateAVFoundation::MediaPlayerPrivateAVFoundation(MediaPlayer* play
     , m_ignoreLoadStateChanges(false)
     , m_haveReportedFirstVideoFrame(false)
     , m_playWhenFramesAvailable(false)
-#if !PLATFORM(WIN)
     , m_inbandTrackConfigurationPending(false)
-#endif
+    , m_characteristicsChanged(false)
+    , m_shouldMaintainAspectRatio(true)
+    , m_seeking(false)
 {
     LOG(Media, "MediaPlayerPrivateAVFoundation::MediaPlayerPrivateAVFoundation(%p)", this);
 }
@@ -90,10 +91,8 @@ MediaPlayerPrivateAVFoundation::~MediaPlayerPrivateAVFoundation()
 
 MediaPlayerPrivateAVFoundation::MediaRenderingMode MediaPlayerPrivateAVFoundation::currentRenderingMode() const
 {
-#if USE(ACCELERATED_COMPOSITING)
     if (platformLayer())
         return MediaRenderingToLayer;
-#endif
 
     if (hasContextRenderer())
         return MediaRenderingToContext;
@@ -106,10 +105,8 @@ MediaPlayerPrivateAVFoundation::MediaRenderingMode MediaPlayerPrivateAVFoundatio
     if (!m_player->visible() || !m_player->frameView() || assetStatus() == MediaPlayerAVAssetStatusUnknown)
         return MediaRenderingNone;
 
-#if USE(ACCELERATED_COMPOSITING)
     if (supportsAcceleratedRendering() && m_player->mediaPlayerClient()->mediaPlayerRenderingCanBeAccelerated(m_player))
         return MediaRenderingToLayer;
-#endif
 
     return MediaRenderingToContext;
 }
@@ -139,21 +136,17 @@ void MediaPlayerPrivateAVFoundation::setUpVideoRendering()
     case MediaRenderingToContext:
         createContextVideoRenderer();
         break;
-        
-#if USE(ACCELERATED_COMPOSITING)
+
     case MediaRenderingToLayer:
         createVideoLayer();
         break;
-#endif
     }
 
-#if USE(ACCELERATED_COMPOSITING)
     // If using a movie layer, inform the client so the compositing tree is updated.
     if (currentMode == MediaRenderingToLayer || preferredMode == MediaRenderingToLayer) {
         LOG(Media, "MediaPlayerPrivateAVFoundation::setUpVideoRendering(%p) - calling mediaPlayerRenderingModeChanged()", this);
         m_player->mediaPlayerClient()->mediaPlayerRenderingModeChanged(m_player);
     }
-#endif
 }
 
 void MediaPlayerPrivateAVFoundation::tearDownVideoRendering()
@@ -162,10 +155,8 @@ void MediaPlayerPrivateAVFoundation::tearDownVideoRendering()
 
     destroyContextVideoRenderer();
 
-#if USE(ACCELERATED_COMPOSITING)
     if (platformLayer())
         destroyVideoLayer();
-#endif
 }
 
 bool MediaPlayerPrivateAVFoundation::hasSetUpVideoRendering() const
@@ -194,6 +185,15 @@ void MediaPlayerPrivateAVFoundation::load(const String& url)
 
     setPreload(m_preload);
 }
+
+#if ENABLE(MEDIA_SOURCE)
+void MediaPlayerPrivateAVFoundation::load(const String&, MediaSourcePrivateClient*)
+{
+    m_networkState = MediaPlayer::FormatError;
+    m_player->networkStateChanged();
+}
+#endif
+
 
 void MediaPlayerPrivateAVFoundation::playabilityKnown()
 {
@@ -257,6 +257,20 @@ float MediaPlayerPrivateAVFoundation::duration() const
 
 void MediaPlayerPrivateAVFoundation::seek(float time)
 {
+    seekWithTolerance(time, 0, 0);
+}
+
+void MediaPlayerPrivateAVFoundation::seekWithTolerance(double time, double negativeTolerance, double positiveTolerance)
+{
+    if (m_seeking) {
+        LOG(Media, "MediaPlayerPrivateAVFoundation::seekWithTolerance(%p) - save pending seek", this);
+        m_pendingSeek = [this, time, negativeTolerance, positiveTolerance]() {
+            seekWithTolerance(time, negativeTolerance, positiveTolerance);
+        };
+        return;
+    }
+    m_seeking = true;
+
     if (!metaDataAvailable())
         return;
 
@@ -266,15 +280,12 @@ void MediaPlayerPrivateAVFoundation::seek(float time)
     if (currentTime() == time)
         return;
 
-#if !PLATFORM(WIN)
     if (currentTrack())
         currentTrack()->beginSeeking();
-#endif
     
     LOG(Media, "MediaPlayerPrivateAVFoundation::seek(%p) - seeking to %f", this, time);
-    m_seekTo = time;
 
-    seekToTime(time);
+    seekToTime(time, negativeTolerance, positiveTolerance);
 }
 
 void MediaPlayerPrivateAVFoundation::setRate(float rate)
@@ -298,7 +309,7 @@ bool MediaPlayerPrivateAVFoundation::seeking() const
     if (!metaDataAvailable())
         return false;
 
-    return m_seekTo != MediaPlayer::invalidTime();
+    return m_seeking;
 }
 
 IntSize MediaPlayerPrivateAVFoundation::naturalSize() const
@@ -330,7 +341,7 @@ void MediaPlayerPrivateAVFoundation::setHasVideo(bool b)
 {
     if (m_cachedHasVideo != b) {
         m_cachedHasVideo = b;
-        m_player->characteristicChanged();
+        characteristicsChanged();
     }
 }
 
@@ -338,7 +349,7 @@ void MediaPlayerPrivateAVFoundation::setHasAudio(bool b)
 {
     if (m_cachedHasAudio != b) {
         m_cachedHasAudio = b;
-        m_player->characteristicChanged();
+        characteristicsChanged();
     }
 }
 
@@ -346,8 +357,32 @@ void MediaPlayerPrivateAVFoundation::setHasClosedCaptions(bool b)
 {
     if (m_cachedHasCaptions != b) {
         m_cachedHasCaptions = b;
-        m_player->characteristicChanged();
+        characteristicsChanged();
     }
+}
+
+void MediaPlayerPrivateAVFoundation::characteristicsChanged()
+{
+    if (m_delayCharacteristicsChangedNotification) {
+        m_characteristicsChanged = true;
+        return;
+    }
+
+    m_characteristicsChanged = false;
+    m_player->characteristicChanged();
+}
+
+void MediaPlayerPrivateAVFoundation::setDelayCharacteristicsChangedNotification(bool delay)
+{
+    if (delay) {
+        m_delayCharacteristicsChangedNotification++;
+        return;
+    }
+    
+    ASSERT(m_delayCharacteristicsChangedNotification);
+    m_delayCharacteristicsChangedNotification--;
+    if (!m_delayCharacteristicsChangedNotification && m_characteristicsChanged)
+        characteristicsChanged();
 }
 
 PassRefPtr<TimeRanges> MediaPlayerPrivateAVFoundation::buffered() const
@@ -430,6 +465,10 @@ bool MediaPlayerPrivateAVFoundation::supportsFullscreen() const
     return true;
 #else
     // FIXME: WebVideoFullscreenController assumes a QTKit/QuickTime media engine
+#if PLATFORM(IOS)
+    if (Settings::avKitEnabled())
+        return true;
+#endif
     return false;
 #endif
 }
@@ -489,6 +528,7 @@ void MediaPlayerPrivateAVFoundation::updateStates()
                 // If the readyState is already HaveEnoughData, don't go lower because of this state change.
                 if (m_readyState == MediaPlayer::HaveEnoughData)
                     break;
+                FALLTHROUGH;
 
             case MediaPlayerAVPlayerItemStatusPlaybackBufferEmpty:
                 if (maxTimeLoaded() > currentTime())
@@ -558,6 +598,15 @@ void MediaPlayerPrivateAVFoundation::acceleratedRenderingStateChanged()
     setUpVideoRendering();
 }
 
+void MediaPlayerPrivateAVFoundation::setShouldMaintainAspectRatio(bool maintainAspectRatio)
+{
+    if (maintainAspectRatio == m_shouldMaintainAspectRatio)
+        return;
+
+    m_shouldMaintainAspectRatio = maintainAspectRatio;
+    updateVideoLayerGravity();
+}
+
 void MediaPlayerPrivateAVFoundation::metadataLoaded()
 {
     m_loadingMetadata = false;
@@ -592,13 +641,21 @@ void MediaPlayerPrivateAVFoundation::seekCompleted(bool finished)
 {
     LOG(Media, "MediaPlayerPrivateAVFoundation::seekCompleted(%p) - finished = %d", this, finished);
     UNUSED_PARAM(finished);
-    
-#if !PLATFORM(WIN)
+
+    m_seeking = false;
+
+    std::function<void()> pendingSeek;
+    std::swap(pendingSeek, m_pendingSeek);
+
+    if (pendingSeek) {
+        LOG(Media, "MediaPlayerPrivateAVFoundation::seekCompleted(%p) - issuing pending seek", this);
+        pendingSeek();
+        return;
+    }
+
     if (currentTrack())
         currentTrack()->endSeeking();
-#endif
 
-    m_seekTo = MediaPlayer::invalidTime();
     updateStates();
     m_player->timeChanged();
 }
@@ -763,7 +820,7 @@ void MediaPlayerPrivateAVFoundation::dispatchNotification()
         
         if (!m_queuedNotifications.isEmpty() && !m_mainThreadCallPending)
             callOnMainThread(mainThreadCallback, this);
-        
+
         if (!notification.isValid())
             return;
     }
@@ -827,10 +884,11 @@ void MediaPlayerPrivateAVFoundation::dispatchNotification()
         contentsNeedsDisplay();
         break;
     case Notification::InbandTracksNeedConfiguration:
-#if !PLATFORM(WIN)
         m_inbandTrackConfigurationPending = false;
         configureInbandTracks();
-#endif
+        break;
+    case Notification::FunctionType:
+        notification.function()();
         break;
 
     case Notification::None:
@@ -839,7 +897,6 @@ void MediaPlayerPrivateAVFoundation::dispatchNotification()
     }
 }
 
-#if !PLATFORM(WIN)
 void MediaPlayerPrivateAVFoundation::configureInbandTracks()
 {
     RefPtr<InbandTextTrackPrivateAVF> trackToEnable;
@@ -866,7 +923,51 @@ void MediaPlayerPrivateAVFoundation::trackModeChanged()
     m_inbandTrackConfigurationPending = true;
     scheduleMainThreadNotification(Notification::InbandTracksNeedConfiguration);
 }
-#endif
+
+size_t MediaPlayerPrivateAVFoundation::extraMemoryCost() const
+{
+    double duration = this->duration();
+    if (!duration)
+        return 0;
+
+    unsigned long long extra = totalBytes() * buffered()->totalDuration() / duration;
+    return static_cast<unsigned>(extra);
+}
+
+void MediaPlayerPrivateAVFoundation::clearTextTracks()
+{
+    for (unsigned i = 0; i < m_textTracks.size(); ++i) {
+        RefPtr<InbandTextTrackPrivateAVF> track = m_textTracks[i];
+        player()->removeTextTrack(track);
+        track->disconnect();
+    }
+    m_textTracks.clear();
+}
+
+void MediaPlayerPrivateAVFoundation::processNewAndRemovedTextTracks(const Vector<RefPtr<InbandTextTrackPrivateAVF>>& removedTextTracks)
+{
+    if (removedTextTracks.size()) {
+        for (unsigned i = 0; i < m_textTracks.size(); ++i) {
+            if (!removedTextTracks.contains(m_textTracks[i]))
+                continue;
+            
+            player()->removeTextTrack(removedTextTracks[i].get());
+            m_textTracks.remove(i);
+        }
+    }
+    
+    for (unsigned i = 0; i < m_textTracks.size(); ++i) {
+        RefPtr<InbandTextTrackPrivateAVF> track = m_textTracks[i];
+        
+        track->setTextTrackIndex(i);
+        if (track->hasBeenReported())
+            continue;
+        
+        track->setHasBeenReported(true);
+        player()->addTextTrack(track.get());
+    }
+    LOG(Media, "MediaPlayerPrivateAVFoundation::processNewAndRemovedTextTracks(%p) - found %lu text tracks", this, m_textTracks.size());
+}
 
 } // namespace WebCore
 

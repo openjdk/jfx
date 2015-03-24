@@ -54,21 +54,18 @@ public:
     }
     virtual ~AudioTrack();
 
-    AtomicString id() const { return m_id; }
-    void setId(const AtomicString& id) { m_id = id; }
-
     static const AtomicString& alternativeKeyword();
     static const AtomicString& descriptionKeyword();
     static const AtomicString& mainKeyword();
     static const AtomicString& mainDescKeyword();
     static const AtomicString& translationKeyword();
     static const AtomicString& commentaryKeyword();
-    virtual const AtomicString& defaultKindKeyword() const OVERRIDE { return emptyAtom; }
+    virtual const AtomicString& defaultKindKeyword() const override { return emptyAtom; }
 
-    bool enabled() const { return m_enabled; }
+    virtual bool enabled() const override { return m_enabled; }
     virtual void setEnabled(const bool);
 
-    virtual void clearClient() OVERRIDE { m_client = 0; }
+    virtual void clearClient() override { m_client = 0; }
     AudioTrackClient* client() const { return m_client; }
 
     size_t inbandTrackIndex();
@@ -77,10 +74,14 @@ protected:
     AudioTrack(AudioTrackClient*, PassRefPtr<AudioTrackPrivate>);
 
 private:
-    virtual bool isValidKind(const AtomicString&) const OVERRIDE;
-    virtual void willRemoveAudioTrackPrivate(AudioTrackPrivate*) OVERRIDE;
+    virtual bool isValidKind(const AtomicString&) const override;
 
-    AtomicString m_id;
+    virtual void enabledChanged(AudioTrackPrivate*, bool) override;
+    virtual void idChanged(TrackPrivateBase*, const AtomicString&) override;
+    virtual void labelChanged(TrackPrivateBase*, const AtomicString&) override;
+    virtual void languageChanged(TrackPrivateBase*, const AtomicString&) override;
+    virtual void willRemove(TrackPrivateBase*) override;
+
     bool m_enabled;
     AudioTrackClient* m_client;
 
@@ -89,7 +90,7 @@ private:
 
 inline AudioTrack* toAudioTrack(TrackBase* track)
 {
-    ASSERT(track->type() == TrackBase::AudioTrack);
+    ASSERT_WITH_SECURITY_IMPLICATION(track->type() == TrackBase::AudioTrack);
     return static_cast<AudioTrack*>(track);
 }
 

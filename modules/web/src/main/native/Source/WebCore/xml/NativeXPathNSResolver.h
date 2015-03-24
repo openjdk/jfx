@@ -33,17 +33,17 @@ namespace WebCore {
 
 class Node;
 
-    class NativeXPathNSResolver : public XPathNSResolver {
-    public:
-        static PassRefPtr<NativeXPathNSResolver> create(PassRefPtr<Node> node) { return adoptRef(new NativeXPathNSResolver(node)); }
-        virtual ~NativeXPathNSResolver();
+class NativeXPathNSResolver : public XPathNSResolver {
+public:
+    static PassRefPtr<NativeXPathNSResolver> create(PassRefPtr<Node> node) { return adoptRef(new NativeXPathNSResolver(node)); }
+    virtual ~NativeXPathNSResolver();
 
-        virtual String lookupNamespaceURI(const String& prefix);
+    virtual String lookupNamespaceURI(const String& prefix);
 
-    private:
+private:
     explicit NativeXPathNSResolver(PassRefPtr<Node>);
-        RefPtr<Node> m_node;
-    };
+    RefPtr<Node> m_node;
+};
 
 } // namespace WebCore
 

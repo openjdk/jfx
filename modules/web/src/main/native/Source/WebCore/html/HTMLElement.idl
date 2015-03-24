@@ -19,73 +19,48 @@
  */
 
 [
-        JSGenerateToNativeObject,
-        JSCustomPushEventHandlerScope,
+    JSGenerateToNativeObject,
+    JSCustomPushEventHandlerScope,
 ] interface HTMLElement : Element {
-                 // iht.com relies on id returning the empty string when no id is present. 
-                 // Other browsers do this as well. So we don't convert null to JS null.
+#if defined(LANGUAGE_OBJECTIVE_C) && LANGUAGE_OBJECTIVE_C
+             // FIXME: id should be moved to Element for ObjC as well.
              [Reflect] attribute DOMString id;
+#endif
              [Reflect] attribute DOMString title;
              [Reflect] attribute DOMString lang;
-                 attribute boolean             translate;
+             attribute boolean             translate;
              [Reflect] attribute DOMString dir;
 
-                 attribute long              tabIndex;
-                 attribute boolean           draggable;
+             attribute long              tabIndex;
+             attribute boolean           draggable;
              [Reflect] attribute DOMString webkitdropzone;
              [Reflect] attribute boolean hidden;
              [Reflect] attribute DOMString accessKey;
 
-        // Extensions
-             [TreatNullAs=NullString] attribute DOMString innerHTML
-                     setter raises(DOMException);
-             [TreatNullAs=NullString] attribute DOMString innerText
-                     setter raises(DOMException);
-             [TreatNullAs=NullString] attribute DOMString outerHTML
-                     setter raises(DOMException);
-             [TreatNullAs=NullString] attribute DOMString outerText
-                     setter raises(DOMException);
+    // Extensions
+             [TreatNullAs=NullString, SetterRaisesException] attribute DOMString innerHTML;
+             [TreatNullAs=NullString, SetterRaisesException] attribute DOMString innerText;
+             [TreatNullAs=NullString, SetterRaisesException] attribute DOMString outerHTML;
+             [TreatNullAs=NullString, SetterRaisesException] attribute DOMString outerText;
 
-    Element insertAdjacentElement([Default=Undefined] optional DOMString where,
-                                  [Default=Undefined] optional Element element)
-            raises(DOMException);
-    void insertAdjacentHTML([Default=Undefined] optional DOMString where,
-                            [Default=Undefined] optional DOMString html)
-            raises(DOMException);
-    void insertAdjacentText([Default=Undefined] optional DOMString where,
-                            [Default=Undefined] optional DOMString text)
-            raises(DOMException);
+    [RaisesException] Element insertAdjacentElement([Default=Undefined] optional DOMString where,
+                                  [Default=Undefined] optional Element element);
+    [RaisesException] void insertAdjacentHTML([Default=Undefined] optional DOMString where,
+                            [Default=Undefined] optional DOMString html);
+    [RaisesException] void insertAdjacentText([Default=Undefined] optional DOMString where,
+                            [Default=Undefined] optional DOMString text);
 
-        readonly attribute HTMLCollection children;
+    readonly attribute HTMLCollection children;
 
-             [TreatNullAs=NullString] attribute DOMString contentEditable
-                     setter raises(DOMException);
-        readonly attribute boolean isContentEditable;
+             [TreatNullAs=NullString, SetterRaisesException] attribute DOMString contentEditable;
+    readonly attribute boolean isContentEditable;
 
-                 attribute boolean spellcheck;
-
-#if !defined(LANGUAGE_OBJECTIVE_C) || !LANGUAGE_OBJECTIVE_C // No Objective-C bindings yet.
-             [Conditional=MICRODATA, Reflect] attribute boolean itemScope;
-    [Conditional=MICRODATA] readonly attribute DOMSettableTokenList itemType;
-             [Conditional=MICRODATA, Reflect, URL] attribute DOMString itemId;
-
-    [Conditional=MICRODATA] readonly attribute DOMSettableTokenList itemRef;
-    [Conditional=MICRODATA] readonly attribute DOMSettableTokenList itemProp;
-
-    [Conditional=MICRODATA] readonly attribute HTMLPropertiesCollection properties;
-#endif
-
-#if !defined(LANGUAGE_CPP) || !LANGUAGE_CPP
-#if !defined(LANGUAGE_OBJECTIVE_C) || !LANGUAGE_OBJECTIVE_C
-             [Conditional=MICRODATA, Custom] attribute any itemValue
-                     setter raises(DOMException);
-#endif
-#endif
+             attribute boolean spellcheck;
 
 #if defined(LANGUAGE_OBJECTIVE_C) && LANGUAGE_OBJECTIVE_C
-        readonly attribute DOMString titleDisplayString;
+    readonly attribute DOMString titleDisplayString;
 #endif
 
-        void click();
-    };
+    void click();
+};
 

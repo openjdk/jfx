@@ -22,11 +22,11 @@
 
 #include "Executable.h"
 #include "JSFunction.h"
-#include "Operations.h"
+#include "JSCInlines.h"
 
 namespace JSC {
 
-void HashTable::createTable(VM* vm) const
+void HashTable::createTable(VM& vm) const
 {
     ASSERT(!table);
     int linkIndex = compactHashSizeMask + 1;
@@ -34,8 +34,8 @@ void HashTable::createTable(VM* vm) const
     for (int i = 0; i < compactSize; ++i)
         entries[i].setKey(0);
     for (int i = 0; values[i].key; ++i) {
-        StringImpl* identifier = Identifier::add(vm, values[i].key).leakRef();
-        int hashIndex = identifier->existingHash() & compactHashSizeMask;
+        StringImpl& identifier = Identifier::add(&vm, values[i].key).leakRef();
+        int hashIndex = identifier.existingHash() & compactHashSizeMask;
         HashEntry* entry = &entries[hashIndex];
 
         if (entry->key()) {
@@ -47,7 +47,7 @@ void HashTable::createTable(VM* vm) const
             entry = entry->next();
         }
 
-        entry->initialize(identifier, values[i].attributes, values[i].value1, values[i].value2, values[i].intrinsic);
+        entry->initialize(&identifier, values[i].attributes, values[i].value1, values[i].value2, values[i].intrinsic);
     }
     table = entries;
 }
@@ -68,23 +68,29 @@ void HashTable::deleteTable() const
 bool setUpStaticFunctionSlot(ExecState* exec, const HashEntry* entry, JSObject* thisObj, PropertyName propertyName, PropertySlot& slot)
 {
     ASSERT(thisObj->globalObject());
-    ASSERT(entry->attributes() & Function);
-    PropertyOffset offset = thisObj->getDirectOffset(exec->vm(), propertyName);
+    ASSERT(entry->attributes() & BuiltinOrFunction);
+    VM& vm = exec->vm();
+    unsigned attributes;
+    PropertyOffset offset = thisObj->getDirectOffset(vm, propertyName, attributes);
 
     if (!isValidOffset(offset)) {
         // If a property is ever deleted from an object with a static table, then we reify
         // all static functions at that time - after this we shouldn't be re-adding anything.
         if (thisObj->staticFunctionsReified())
             return false;
-
-        thisObj->putDirectNativeFunction(
-            exec, thisObj->globalObject(), propertyName, entry->functionLength(),
-            entry->function(), entry->intrinsic(), entry->attributes());
-        offset = thisObj->getDirectOffset(exec->vm(), propertyName);
+    
+        if (entry->attributes() & Builtin)
+            thisObj->putDirectBuiltinFunction(vm, thisObj->globalObject(), propertyName, entry->builtinGenerator()(vm), entry->attributes());
+        else {
+            thisObj->putDirectNativeFunction(
+                vm, thisObj->globalObject(), propertyName, entry->functionLength(),
+                entry->function(), entry->intrinsic(), entry->attributes());
+        }
+        offset = thisObj->getDirectOffset(vm, propertyName, attributes);
         ASSERT(isValidOffset(offset));
     }
 
-    slot.setValue(thisObj, thisObj->getDirect(offset), offset);
+    slot.setValue(thisObj, attributes, thisObj->getDirect(offset), offset);
     return true;
 }
 

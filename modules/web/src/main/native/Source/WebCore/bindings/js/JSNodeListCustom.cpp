@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 Apple Inc. All rights reserved.
+ * Copyright (C) 2007, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #include "config.h"
 #include "JSNodeList.h"
 
+#include "ChildNodeList.h"
 #include "JSNode.h"
 #include "LiveNodeList.h"
 #include "Node.h"
@@ -41,20 +42,22 @@ bool JSNodeListOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handl
     JSNodeList* jsNodeList = jsCast<JSNodeList*>(handle.get().asCell());
     if (!jsNodeList->hasCustomProperties())
         return false;
-    if (!jsNodeList->impl()->isLiveNodeList())
-        return false;
-    return visitor.containsOpaqueRoot(root(static_cast<LiveNodeList*>(jsNodeList->impl())->ownerNode()));
+    if (jsNodeList->impl().isLiveNodeList())
+        return visitor.containsOpaqueRoot(root(static_cast<LiveNodeList&>(jsNodeList->impl()).ownerNode()));
+    if (jsNodeList->impl().isChildNodeList())
+        return visitor.containsOpaqueRoot(root(static_cast<ChildNodeList&>(jsNodeList->impl()).ownerNode()));
+    if (jsNodeList->impl().isEmptyNodeList())
+        return visitor.containsOpaqueRoot(root(static_cast<EmptyNodeList&>(jsNodeList->impl()).ownerNode()));
+    return false;
 }
 
-bool JSNodeList::canGetItemsForName(ExecState*, NodeList* impl, PropertyName propertyName)
+bool JSNodeList::getOwnPropertySlotDelegate(ExecState* exec, PropertyName propertyName, PropertySlot& slot)
 {
-    return impl->namedItem(propertyNameToAtomicString(propertyName));
-}
-
-JSValue JSNodeList::nameGetter(ExecState* exec, JSValue slotBase, PropertyName propertyName)
-{
-    JSNodeList* thisObj = jsCast<JSNodeList*>(asObject(slotBase));
-    return toJS(exec, thisObj->globalObject(), thisObj->impl()->namedItem(propertyNameToAtomicString(propertyName)));
+    if (Node* item = impl().namedItem(propertyNameToAtomicString(propertyName))) {
+        slot.setValue(this, ReadOnly | DontDelete | DontEnum, toJS(exec, globalObject(), item));
+        return true;
+    }
+    return false;
 }
 
 } // namespace WebCore

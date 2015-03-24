@@ -31,10 +31,10 @@ set LIB=
 set LIBPATH=
 
 REM Run the vsvars32.bat file, sending it's output to neverland.
-set VSVER=100
-set VSVARSDIR=%VS100COMNTOOLS%
-if "%VSVARSDIR%"=="" set VSVER=120
-if "%VSVARSDIR%"=="" set VSVARSDIR=%VS120COMNTOOLS%
+set VSVER=120
+set VSVARSDIR=%VS120COMNTOOLS%
+if "%VSVARSDIR%"=="" set VSVER=100
+if "%VSVARSDIR%"=="" set VSVARSDIR=%VS100COMNTOOLS%
 if "%VSVARSDIR%"=="" set VSVER=110
 if "%VSVARSDIR%"=="" set VSVARSDIR=%VS110COMNTOOLS%
 

@@ -26,9 +26,9 @@
 #ifndef TestController_h
 #define TestController_h
 
+#include "GeolocationProviderMock.h"
 #include "WebNotificationProvider.h"
 #include "WorkQueueManager.h"
-#include <GeolocationProviderMock.h>
 #include <WebKit2/WKRetainPtr.h>
 #include <string>
 #include <vector>
@@ -63,14 +63,17 @@ public:
     PlatformWebView* mainWebView() { return m_mainWebView.get(); }
     WKContextRef context() { return m_context.get(); }
 
+    EventSenderProxy* eventSenderProxy() { return m_eventSenderProxy.get(); }
+
     void ensureViewSupportsOptions(WKDictionaryRef options);
+    bool shouldUseRemoteLayerTree() const { return m_shouldUseRemoteLayerTree; }
     
     // Runs the run loop until `done` is true or the timeout elapses.
     enum TimeoutDuration { ShortTimeout, LongTimeout, NoTimeout, CustomTimeout };
     bool useWaitToDumpWatchdogTimer() { return m_useWaitToDumpWatchdogTimer; }
     void runUntil(bool& done, TimeoutDuration);
     void notifyDone();
-    
+
     int getCustomTimeout();
     
     bool beforeUnloadReturnValue() const { return m_beforeUnloadReturnValue; }
@@ -88,15 +91,18 @@ public:
     void setCustomPolicyDelegate(bool enabled, bool permissive);
 
     // Page Visibility.
-    void setVisibilityState(WKPageVisibilityState, bool isInitialState);
+    void setHidden(bool);
 
     bool resetStateToConsistentValues();
+    void resetPreferencesToConsistentValues();
 
     WorkQueueManager& workQueueManager() { return m_workQueueManager; }
 
     void setHandlesAuthenticationChallenges(bool value) { m_handlesAuthenticationChallenges = value; }
     void setAuthenticationUsername(String username) { m_authenticationUsername = username; }
     void setAuthenticationPassword(String password) { m_authenticationPassword = password; }
+
+    void setBlockAllPlugins(bool shouldBlock) { m_shouldBlockAllPlugins = shouldBlock; }
 
 private:
     void initialize(int argc, const char* argv[]);
@@ -134,6 +140,10 @@ private:
     static void processDidCrash(WKPageRef, const void* clientInfo);
     void processDidCrash();
 
+    static WKPluginLoadPolicy pluginLoadPolicy(WKPageRef, WKPluginLoadPolicy currentPluginLoadPolicy, WKDictionaryRef pluginInformation, WKStringRef* unavailabilityDescription, const void* clientInfo);
+    WKPluginLoadPolicy pluginLoadPolicy(WKPageRef, WKPluginLoadPolicy currentPluginLoadPolicy, WKDictionaryRef pluginInformation, WKStringRef* unavailabilityDescription);
+    
+
     static void decidePolicyForNotificationPermissionRequest(WKPageRef, WKSecurityOriginRef, WKNotificationPermissionRequestRef, const void*);
     void decidePolicyForNotificationPermissionRequest(WKPageRef, WKSecurityOriginRef, WKNotificationPermissionRequestRef);
 
@@ -143,10 +153,10 @@ private:
     void didReceiveAuthenticationChallengeInFrame(WKPageRef, WKFrameRef, WKAuthenticationChallengeRef);
 
     // WKPagePolicyClient
-    static void decidePolicyForNavigationAction(WKPageRef, WKFrameRef, WKFrameNavigationType, WKEventModifiers, WKEventMouseButton, WKURLRequestRef, WKFramePolicyListenerRef, WKTypeRef, const void*);
+    static void decidePolicyForNavigationAction(WKPageRef, WKFrameRef, WKFrameNavigationType, WKEventModifiers, WKEventMouseButton, WKFrameRef, WKURLRequestRef, WKFramePolicyListenerRef, WKTypeRef, const void*);
     void decidePolicyForNavigationAction(WKFramePolicyListenerRef);
 
-    static void decidePolicyForResponse(WKPageRef, WKFrameRef, WKURLResponseRef, WKURLRequestRef, WKFramePolicyListenerRef, WKTypeRef, const void*);
+    static void decidePolicyForResponse(WKPageRef, WKFrameRef, WKURLResponseRef, WKURLRequestRef, bool canShowMIMEType, WKFramePolicyListenerRef, WKTypeRef, const void*);
     void decidePolicyForResponse(WKFrameRef, WKURLResponseRef, WKFramePolicyListenerRef);
 
     static WKPageRef createOtherPage(WKPageRef oldPage, WKURLRequestRef, WKDictionaryRef, WKEventModifiers, WKEventMouseButton, const void*);
@@ -207,14 +217,13 @@ private:
     String m_authenticationUsername;
     String m_authenticationPassword;
 
-#if PLATFORM(MAC) || PLATFORM(QT) || PLATFORM(GTK) || PLATFORM(EFL)
-    OwnPtr<EventSenderProxy> m_eventSenderProxy;
-#endif
+    bool m_shouldBlockAllPlugins;
 
-#if PLATFORM(QT)
-    class RunLoop;
-    RunLoop* m_runLoop;
-#endif
+    bool m_forceComplexText;
+    bool m_shouldUseAcceleratedDrawing;
+    bool m_shouldUseRemoteLayerTree;
+
+    OwnPtr<EventSenderProxy> m_eventSenderProxy;
 
     WorkQueueManager m_workQueueManager;
 };

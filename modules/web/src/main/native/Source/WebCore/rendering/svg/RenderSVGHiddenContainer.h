@@ -20,35 +20,32 @@
 #ifndef RenderSVGHiddenContainer_h
 #define RenderSVGHiddenContainer_h
 
-#if ENABLE(SVG)
 #include "RenderSVGContainer.h"
 
 namespace WebCore {
     
-class SVGStyledElement;
+class SVGElement;
 
 // This class is for containers which are never drawn, but do need to support style
 // <defs>, <linearGradient>, <radialGradient> are all good examples
 class RenderSVGHiddenContainer : public RenderSVGContainer {
 public:
-    explicit RenderSVGHiddenContainer(SVGStyledElement*);
-
-    virtual const char* renderName() const { return "RenderSVGHiddenContainer"; }
+    RenderSVGHiddenContainer(SVGElement&, PassRef<RenderStyle>);
 
 protected:
-    virtual void layout();
+    virtual void layout() override;
 
 private:
-    virtual bool isSVGHiddenContainer() const { return true; }
+    virtual bool isSVGHiddenContainer() const override final { return true; }
+    virtual const char* renderName() const override { return "RenderSVGHiddenContainer"; }
 
-    virtual void paint(PaintInfo&, const LayoutPoint&);
+    virtual void paint(PaintInfo&, const LayoutPoint&) override final;
     
-    virtual LayoutRect clippedOverflowRectForRepaint(const RenderLayerModelObject*) const OVERRIDE { return LayoutRect(); }
-    virtual void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const;
+    virtual LayoutRect clippedOverflowRectForRepaint(const RenderLayerModelObject*) const override final { return LayoutRect(); }
+    virtual void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const override final;
 
-    virtual bool nodeAtFloatPoint(const HitTestRequest&, HitTestResult&, const FloatPoint& pointInParent, HitTestAction);
+    virtual bool nodeAtFloatPoint(const HitTestRequest&, HitTestResult&, const FloatPoint& pointInParent, HitTestAction) override final;
 };
 }
 
-#endif // ENABLE(SVG)
 #endif // RenderSVGHiddenContainer_h

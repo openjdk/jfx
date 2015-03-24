@@ -34,6 +34,8 @@ enum Intrinsic {
     MinIntrinsic,
     MaxIntrinsic,
     SqrtIntrinsic,
+    SinIntrinsic,
+    CosIntrinsic,
     ArrayPushIntrinsic,
     ArrayPopIntrinsic,
     CharCodeAtIntrinsic,
@@ -48,7 +50,13 @@ enum Intrinsic {
     RegExpExecIntrinsic,
     RegExpTestIntrinsic,
     StringPrototypeValueOfIntrinsic,
-    IMulIntrinsic
+    IMulIntrinsic,
+    ArrayIteratorNextValueIntrinsic,
+    ArrayIteratorNextKeyIntrinsic,
+    ArrayIteratorNextGenericIntrinsic,
+    
+    // Debugging intrinsics
+    DFGTrue
 };
 
 } // namespace JSC

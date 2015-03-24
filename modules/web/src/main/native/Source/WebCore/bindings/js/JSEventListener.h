@@ -22,10 +22,10 @@
 
 #include "EventListener.h"
 #include "JSDOMWindow.h"
-#include <heap/PassWeak.h>
 #include <heap/StrongInlines.h>
 #include <heap/Weak.h>
 #include <heap/WeakInlines.h>
+#include <wtf/Ref.h>
 
 namespace WebCore {
 
@@ -33,9 +33,9 @@ namespace WebCore {
 
     class JSEventListener : public EventListener {
     public:
-        static PassRefPtr<JSEventListener> create(JSC::JSObject* listener, JSC::JSObject* wrapper, bool isAttribute, DOMWrapperWorld* isolatedWorld)
+        static PassRefPtr<JSEventListener> create(JSC::JSObject* listener, JSC::JSObject* wrapper, bool isAttribute, DOMWrapperWorld& world)
         {
-            return adoptRef(new JSEventListener(listener, wrapper, isAttribute, isolatedWorld));
+            return adoptRef(new JSEventListener(listener, wrapper, isAttribute, world));
         }
 
         static const JSEventListener* cast(const EventListener* listener)
@@ -47,25 +47,25 @@ namespace WebCore {
 
         virtual ~JSEventListener();
 
-        virtual bool operator==(const EventListener& other);
+        virtual bool operator==(const EventListener& other) override;
 
         // Returns true if this event listener was created for an event handler attribute, like "onload" or "onclick".
         bool isAttribute() const { return m_isAttribute; }
 
         JSC::JSObject* jsFunction(ScriptExecutionContext*) const;
-        DOMWrapperWorld* isolatedWorld() const { return m_isolatedWorld.get(); }
+        DOMWrapperWorld& isolatedWorld() const { return *m_isolatedWorld; }
 
         JSC::JSObject* wrapper() const { return m_wrapper.get(); }
-        void setWrapper(JSC::VM&, JSC::JSObject* wrapper) const { m_wrapper = JSC::PassWeak<JSC::JSObject>(wrapper); }
+        void setWrapper(JSC::VM&, JSC::JSObject* wrapper) const { m_wrapper = JSC::Weak<JSC::JSObject>(wrapper); }
 
     private:
         virtual JSC::JSObject* initializeJSFunction(ScriptExecutionContext*) const;
-        virtual void visitJSFunction(JSC::SlotVisitor&);
-        virtual bool virtualisAttribute() const;
+        virtual void visitJSFunction(JSC::SlotVisitor&) override;
+        virtual bool virtualisAttribute() const override;
 
     protected:
-        JSEventListener(JSC::JSObject* function, JSC::JSObject* wrapper, bool isAttribute, DOMWrapperWorld* isolatedWorld);
-        virtual void handleEvent(ScriptExecutionContext*, Event*);
+        JSEventListener(JSC::JSObject* function, JSC::JSObject* wrapper, bool isAttribute, DOMWrapperWorld&);
+        virtual void handleEvent(ScriptExecutionContext*, Event*) override;
 
     private:
         mutable JSC::Weak<JSC::JSObject> m_jsFunction;
@@ -79,13 +79,15 @@ namespace WebCore {
     {
         // initializeJSFunction can trigger code that deletes this event listener
         // before we're done. It should always return 0 in this case.
-        RefPtr<JSEventListener> protect(const_cast<JSEventListener*>(this));
+        Ref<JSEventListener> protect(const_cast<JSEventListener&>(*this));
         JSC::Strong<JSC::JSObject> wrapper(*m_isolatedWorld->vm(), m_wrapper.get());
 
         if (!m_jsFunction) {
             JSC::JSObject* function = initializeJSFunction(scriptExecutionContext);
-            JSC::Heap::writeBarrier(m_wrapper.get(), function);
-            m_jsFunction = JSC::PassWeak<JSC::JSObject>(function);
+            JSC::JSObject* wrapper = m_wrapper.get();
+            if (wrapper)
+                JSC::Heap::heap(wrapper)->writeBarrier(wrapper, function);
+            m_jsFunction = JSC::Weak<JSC::JSObject>(function);
         }
 
         // Verify that we have a valid wrapper protecting our function from

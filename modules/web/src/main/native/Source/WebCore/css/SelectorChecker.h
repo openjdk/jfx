@@ -29,7 +29,7 @@
 #define SelectorChecker_h
 
 #include "CSSSelector.h"
-#include "InspectorInstrumentation.h"
+#include "Element.h"
 #include "SpaceSplitString.h"
 #include <wtf/HashSet.h>
 #include <wtf/Vector.h>
@@ -43,12 +43,13 @@ class RenderStyle;
 
 class SelectorChecker {
     WTF_MAKE_NONCOPYABLE(SelectorChecker);
-public:
     enum Match { SelectorMatches, SelectorFailsLocally, SelectorFailsAllSiblings, SelectorFailsCompletely };
+
+public:
     enum VisitedMatchType { VisitedMatchDisabled, VisitedMatchEnabled };
-    enum Mode { ResolvingStyle = 0, CollectingRules, QueryingRules, SharingRules };
-    explicit SelectorChecker(Document*, Mode);
-    enum BehaviorAtBoundary { DoesNotCrossBoundary, CrossesBoundary, StaysWithinTreeScope };
+    enum Mode { ResolvingStyle = 0, CollectingRules, QueryingRules, SharingRules, StyleInvalidation };
+
+    SelectorChecker(Document&, Mode);
 
     struct SelectorCheckingContext {
         // Initial selector constructor
@@ -64,7 +65,6 @@ public:
             , isSubSelector(false)
             , hasScrollbarPseudo(false)
             , hasSelectionPseudo(false)
-            , behaviorAtBoundary(DoesNotCrossBoundary)
         { }
 
         const CSSSelector* selector;
@@ -78,33 +78,31 @@ public:
         bool isSubSelector;
         bool hasScrollbarPseudo;
         bool hasSelectionPseudo;
-        BehaviorAtBoundary behaviorAtBoundary;
     };
 
-    Match match(const SelectorCheckingContext&, PseudoId&) const;
-    bool checkOne(const SelectorCheckingContext&) const;
-
-    bool strictParsing() const { return m_strictParsing; }
-
-    Mode mode() const { return m_mode; }
+    bool match(const SelectorCheckingContext& context, PseudoId& pseudoId) const
+    {
+        return matchRecursively(context, pseudoId) == SelectorMatches;
+    }
 
     static bool tagMatches(const Element*, const QualifiedName&);
     static bool isCommonPseudoClassSelector(const CSSSelector*);
     static bool matchesFocusPseudoClass(const Element*);
-    static bool checkExactAttribute(const Element*, const QualifiedName& selectorAttributeName, const AtomicStringImpl* value);
+    static bool checkExactAttribute(const Element*, const CSSSelector*, const QualifiedName& selectorAttributeName, const AtomicStringImpl* value);
 
     enum LinkMatchMask { MatchLink = 1, MatchVisited = 2, MatchAll = MatchLink | MatchVisited };
     static unsigned determineLinkMatchType(const CSSSelector*);
 
 private:
-    bool checkScrollbarPseudoClass(const SelectorCheckingContext&, Document*, const CSSSelector*) const;
+    Match matchRecursively(const SelectorCheckingContext&, PseudoId&) const;
+    bool checkOne(const SelectorCheckingContext&) const;
 
-    static bool isFrameFocused(const Element*);
+    bool checkScrollbarPseudoClass(const SelectorCheckingContext&, Document*, const CSSSelector*) const;
 
     bool m_strictParsing;
     bool m_documentIsHTML;
     Mode m_mode;
-    };
+};
 
 inline bool SelectorChecker::isCommonPseudoClassSelector(const CSSSelector* selector)
 {
@@ -128,14 +126,13 @@ inline bool SelectorChecker::tagMatches(const Element* element, const QualifiedN
     return namespaceURI == starAtom || namespaceURI == element->namespaceURI();
 }
 
-inline bool SelectorChecker::checkExactAttribute(const Element* element, const QualifiedName& selectorAttributeName, const AtomicStringImpl* value)
+inline bool SelectorChecker::checkExactAttribute(const Element* element, const CSSSelector* selector, const QualifiedName& selectorAttributeName, const AtomicStringImpl* value)
 {
     if (!element->hasAttributesWithoutUpdate())
         return false;
-    unsigned size = element->attributeCount();
-    for (unsigned i = 0; i < size; ++i) {
-        const Attribute* attribute = element->attributeItem(i);
-        if (attribute->matches(selectorAttributeName) && (!value || attribute->value().impl() == value))
+    const AtomicString& localName = element->isHTMLElement() ? selector->attributeCanonicalLocalName() : selectorAttributeName.localName();
+    for (const Attribute& attribute : element->attributesIterator()) {
+        if (attribute.matches(selectorAttributeName.prefix(), localName, selectorAttributeName.namespaceURI()) && (!value || attribute.value().impl() == value))
             return true;
     }
     return false;

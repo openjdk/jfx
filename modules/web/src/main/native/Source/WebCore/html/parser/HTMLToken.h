@@ -90,20 +90,20 @@ public:
         Vector<UChar, 32> value;
     };
 
-    typedef WTF::Vector<Attribute, 10> AttributeList;
-    typedef WTF::Vector<UChar, 1024> DataVector;
+    typedef Vector<Attribute, 10> AttributeList;
+    typedef Vector<UChar, 256> DataVector;
 
     HTMLToken() { clear(); }
 
     void clear()
-        {
+    {
         m_type = Uninitialized;
         m_range.start = 0;
         m_range.end = 0;
         m_baseOffset = 0;
         m_data.clear();
         m_orAllData = 0;
-        }
+    }
 
     bool isUninitialized() { return m_type == Uninitialized; }
     Type type() const { return m_type; }
@@ -114,7 +114,7 @@ public:
         m_type = EndOfFile;
     }
 
-    /* Range and offset methods exposed for HTMLSourceTracker and HTMLViewSourceParser */
+    /* Range and offset methods exposed for HTMLSourceTracker */
     int startIndex() const { return m_range.start; }
     int endIndex() const { return m_range.end; }
 
@@ -138,7 +138,7 @@ public:
     {
         return (m_orAllData <= 0xff);
     }
-    
+
     const DataVector& name() const
     {
         ASSERT(m_type == StartTag || m_type == EndTag || m_type == DOCTYPE);
@@ -171,7 +171,7 @@ public:
     {
         ASSERT(m_type == Uninitialized);
         m_type = DOCTYPE;
-        m_doctypeData = adoptPtr(new DoctypeData);
+        m_doctypeData = std::make_unique<DoctypeData>();
     }
 
     void beginDOCTYPE(UChar character)
@@ -226,9 +226,9 @@ public:
         m_doctypeData->m_systemIdentifier.append(character);
     }
 
-    PassOwnPtr<DoctypeData> releaseDoctypeData()
+    std::unique_ptr<DoctypeData> releaseDoctypeData()
     {
-        return m_doctypeData.release();
+        return std::move(m_doctypeData);
     }
 
     /* Start/End Tag Tokens */
@@ -445,7 +445,7 @@ private:
     Attribute* m_currentAttribute;
 
     // For DOCTYPE
-    OwnPtr<DoctypeData> m_doctypeData;
+    std::unique_ptr<DoctypeData> m_doctypeData;
 };
 
 }

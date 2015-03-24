@@ -36,12 +36,11 @@
 #include "TextTrack.h"
 
 #include "Event.h"
-#include "ExceptionCode.h"
 #include "HTMLMediaElement.h"
+#include "SourceBuffer.h"
 #include "TextTrackCueList.h"
 #include "TextTrackList.h"
 #include "TextTrackRegionList.h"
-#include "TrackBase.h"
 
 namespace WebCore {
 
@@ -76,7 +75,7 @@ const AtomicString& TextTrack::metadataKeyword()
     DEFINE_STATIC_LOCAL(const AtomicString, metadata, ("metadata", AtomicString::ConstructFromLiteral));
     return metadata;
 }
-
+    
 const AtomicString& TextTrack::forcedKeyword()
 {
     DEFINE_STATIC_LOCAL(const AtomicString, forced, ("forced", AtomicString::ConstructFromLiteral));
@@ -103,18 +102,18 @@ const AtomicString& TextTrack::showingKeyword()
 
 TextTrack* TextTrack::captionMenuOffItem()
 {
-    DEFINE_STATIC_LOCAL(RefPtr<TextTrack>, off, (TextTrack::create(0, 0, "off menu item", "", "")));
-    return off.get();
+    static TextTrack* off = TextTrack::create(0, 0, "off menu item", "", "", "").leakRef();
+    return off;
 }
 
 TextTrack* TextTrack::captionMenuAutomaticItem()
 {
-    DEFINE_STATIC_LOCAL(RefPtr<TextTrack>, automatic, (TextTrack::create(0, 0, "automatic menu item", "", "")));
-    return automatic.get();
+    static TextTrack* automatic = TextTrack::create(0, 0, "automatic menu item", "", "", "").leakRef();
+    return automatic;
 }
 
-TextTrack::TextTrack(ScriptExecutionContext* context, TextTrackClient* client, const AtomicString& kind, const AtomicString& label, const AtomicString& language, TextTrackType type)
-    : TrackBase(TrackBase::TextTrack, label, language)
+TextTrack::TextTrack(ScriptExecutionContext* context, TextTrackClient* client, const AtomicString& kind, const AtomicString& id, const AtomicString& label, const AtomicString& language, TextTrackType type)
+    : TrackBase(TrackBase::TextTrack, id, label, language)
     , m_cues(0)
     , m_scriptExecutionContext(context)
 #if ENABLE(WEBVTT_REGIONS)
@@ -128,14 +127,14 @@ TextTrack::TextTrack(ScriptExecutionContext* context, TextTrackClient* client, c
     , m_renderedTrackIndex(invalidTrackIndex)
     , m_hasBeenConfigured(false)
 {
-    setKind(kind);
+    setKindInternal(kind);
 }
 
 TextTrack::~TextTrack()
 {
     if (m_cues) {
         if (m_client)
-        m_client->textTrackRemoveCues(this, m_cues.get());
+            m_client->textTrackRemoveCues(this, m_cues.get());
 
         for (size_t i = 0; i < m_cues->length(); ++i)
             m_cues->item(i)->setTrack(0);
@@ -147,29 +146,14 @@ TextTrack::~TextTrack()
     clearClient();
 }
 
-const AtomicString& TextTrack::interfaceName() const
-{
-    return eventNames().interfaceForTextTrack;
-}
-
-ScriptExecutionContext* TextTrack::scriptExecutionContext() const
-{
-    return m_scriptExecutionContext;
-}
-
-EventTargetData* TextTrack::eventTargetData()
-{
-    return &m_eventTargetData;
-}
-
-EventTargetData* TextTrack::ensureEventTargetData()
-{
-    return &m_eventTargetData;
-}
-
 bool TextTrack::isValidKind(const AtomicString& value) const
 {
     return TextTrack::isValidKindKeyword(value);
+}
+
+bool TextTrack::enabled() const
+{
+    return m_mode != disabledKeyword();
 }
 
 bool TextTrack::isValidKindKeyword(const AtomicString& value)
@@ -194,7 +178,28 @@ void TextTrack::setKind(const AtomicString& newKind)
 {
     String oldKind = kind();
 
+#if ENABLE(MEDIA_SOURCE)
+    // 10.1 kind, on setting:
+    // 1. If the value being assigned to this attribute does not match one of the text track kinds,
+    // then abort these steps.
+    if (!isValidKindKeyword(newKind))
+        return;
+
+    // 2. Update this attribute to the new value.
+    setKindInternal(newKind);
+
+    // 3. If the sourceBuffer attribute on this track is not null, then queue a task to fire a simple
+    // event named change at sourceBuffer.textTracks.
+    if (m_sourceBuffer)
+        m_sourceBuffer->textTracks()->scheduleChangeEvent();
+
+    // 4. Queue a task to fire a simple event named change at the TextTrackList object referenced by
+    // the textTracks attribute on the HTMLMediaElement.
+    if (mediaElement())
+        mediaElement()->textTracks()->scheduleChangeEvent();
+#else
     TrackBase::setKind(newKind);
+#endif
 
     if (m_client && oldKind != kind())
         m_client->textTrackKindChanged(this);
@@ -215,9 +220,13 @@ void TextTrack::setMode(const AtomicString& mode)
     if (mode == disabledKeyword() && m_client && m_cues)
         m_client->textTrackRemoveCues(this, m_cues.get());
          
-    if (mode != showingKeyword() && m_cues)
-        for (size_t i = 0; i < m_cues->length(); ++i)
-            m_cues->item(i)->removeDisplayTree();
+    if (mode != showingKeyword() && m_cues) {
+        for (size_t i = 0; i < m_cues->length(); ++i) {
+            TextTrackCue* cue = m_cues->item(i);
+            if (cue->isRenderable())
+                toVTTCue(cue)->removeDisplayTree();
+        }
+    }
 
     m_mode = mode;
 
@@ -264,12 +273,23 @@ TextTrackCueList* TextTrack::activeCues() const
     return 0;
 }
 
-void TextTrack::addCue(PassRefPtr<TextTrackCue> prpCue)
+void TextTrack::addCue(PassRefPtr<TextTrackCue> prpCue, ExceptionCode& ec)
 {
     if (!prpCue)
         return;
 
     RefPtr<TextTrackCue> cue = prpCue;
+
+    // 4.7.10.12.6 Text tracks exposing in-band metadata
+    // The UA will use DataCue to expose only text track cue objects that belong to a text track that has a text
+    // track kind of metadata.
+    // If a DataCue is added to a TextTrack via the addCue() method but the text track does not have its text
+    // track kind set to metadata, throw a InvalidNodeTypeError exception and don't add the cue to the TextTrackList
+    // of the TextTrack.
+    if (cue->cueType() == TextTrackCue::Data && kind() != metadataKeyword()) {
+        ec = INVALID_NODE_TYPE_ERR;
+        return;
+    }
 
     // TODO(93143): Add spec-compliant behavior for negative time values.
     if (std::isnan(cue->startTime()) || std::isnan(cue->endTime()) || cue->startTime() < 0 || cue->endTime() < 0)
@@ -308,7 +328,7 @@ void TextTrack::removeCue(TextTrackCue* cue, ExceptionCode& ec)
         ec = NOT_FOUND_ERR;
         return;
     }
-    
+
     // 2. Remove cue from the method's TextTrack object's text track's text track list of cues.
     if (!m_cues || !m_cues->remove(cue)) {
         ec = INVALID_STATE_ERR;
@@ -466,7 +486,7 @@ int TextTrack::trackIndexRelativeToRenderedTracks()
     return m_renderedTrackIndex;
 }
 
-bool TextTrack::hasCue(TextTrackCue* cue, TextTrackCue::CueMatchRules match)
+bool TextTrack::hasCue(VTTCue* cue, VTTCue::CueMatchRules match)
 {
     if (cue->startTime() < 0 || cue->endTime() < 0)
         return false;
@@ -502,10 +522,13 @@ bool TextTrack::hasCue(TextTrackCue* cue, TextTrackCue::CueMatchRules match)
                     return false;
 
                 existingCue = m_cues->item(searchStart - 1);
+                if (!cue->isRenderable())
+                    continue;
+
                 if (!existingCue || cue->startTime() > existingCue->startTime())
                     return false;
 
-                if (!existingCue->isEqual(*cue, match))
+                if (!toVTTCue(existingCue)->isEqual(*cue, match))
                     continue;
                 
                 return true;
@@ -514,7 +537,7 @@ bool TextTrack::hasCue(TextTrackCue* cue, TextTrackCue::CueMatchRules match)
         
         size_t index = (searchStart + searchEnd) / 2;
         existingCue = m_cues->item(index);
-        if (cue->startTime() < existingCue->startTime() || (match != TextTrackCue::IgnoreDuration && cue->startTime() == existingCue->startTime() && cue->endTime() > existingCue->endTime()))
+        if (cue->startTime() < existingCue->startTime() || (match != VTTCue::IgnoreDuration && cue->startTime() == existingCue->startTime() && cue->endTime() > existingCue->endTime()))
             searchEnd = index;
         else
             searchStart = index + 1;
@@ -527,6 +550,8 @@ bool TextTrack::hasCue(TextTrackCue* cue, TextTrackCue::CueMatchRules match)
 #if USE(PLATFORM_TEXT_TRACK_MENU)
 PassRefPtr<PlatformTextTrack> TextTrack::platformTextTrack()
 {
+    static int uniqueId = 0;
+
     if (m_platformTextTrack)
         return m_platformTextTrack;
 
@@ -552,7 +577,7 @@ PassRefPtr<PlatformTextTrack> TextTrack::platformTextTrack()
     else if (m_trackType == InBand)
         type = PlatformTextTrack::InBand;
 
-    m_platformTextTrack = PlatformTextTrack::create(this, label(), language(), platformKind, type);
+    m_platformTextTrack = PlatformTextTrack::create(this, label(), language(), platformKind, type, ++uniqueId);
 
     return m_platformTextTrack;
 }
@@ -566,6 +591,29 @@ bool TextTrack::isMainProgramContent() const
     // tracks are main content and all other track types are not.
     return kind() == captionsKeyword();
 }
+
+#if ENABLE(MEDIA_SOURCE)
+void TextTrack::setLanguage(const AtomicString& language)
+{
+    // 11.1 language, on setting:
+    // 1. If the value being assigned to this attribute is not an empty string or a BCP 47 language
+    // tag[BCP47], then abort these steps.
+    // FIXME(123926): Validate the BCP47-ness of langague.
+
+    // 2. Update this attribute to the new value.
+    TrackBase::setLanguage(language);
+
+    // 3. If the sourceBuffer attribute on this track is not null, then queue a task to fire a simple
+    // event named change at sourceBuffer.textTracks.
+    if (m_sourceBuffer)
+        m_sourceBuffer->textTracks()->scheduleChangeEvent();
+
+    // 4. Queue a task to fire a simple event named change at the TextTrackList object referenced by
+    // the textTracks attribute on the HTMLMediaElement.
+    if (mediaElement())
+        mediaElement()->textTracks()->scheduleChangeEvent();
+}
+#endif
 
 } // namespace WebCore
 

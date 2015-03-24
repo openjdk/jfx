@@ -20,7 +20,6 @@
 #ifndef SVGPathSegList_h
 #define SVGPathSegList_h
 
-#if ENABLE(SVG)
 #include "SVGListProperty.h"
 #include "SVGPathSeg.h"
 #include "SVGPropertyTraits.h"
@@ -32,7 +31,7 @@ namespace WebCore {
 
 class SVGElement;
 
-class SVGPathSegList : public Vector<RefPtr<SVGPathSeg> > {
+class SVGPathSegList : public Vector<RefPtr<SVGPathSeg>> {
 public:
     SVGPathSegList(SVGPathSegRole role)
         : m_role(role)
@@ -56,5 +55,4 @@ struct SVGPropertyTraits<SVGPathSegList> {
 
 } // namespace WebCore
 
-#endif // ENABLE(SVG)
 #endif

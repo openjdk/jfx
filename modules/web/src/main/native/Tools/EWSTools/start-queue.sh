@@ -57,30 +57,30 @@ do
     # machine as well. Not advised to run this while using Chrome.
     find /tmp -name ".org.chromium.Chromium.*" | xargs rm -rf
 
-  # This somewhat quirky sequence of steps seems to clear up all the broken
-  # git situations we've gotten ourself into in the past.
+    # This somewhat quirky sequence of steps seems to clear up all the broken
+    # git situations we've gotten ourself into in the past.
     git clean -f -d # Remove any left-over layout test results, added files, etc.
-  git rebase --abort # If we got killed during a git rebase, we need to clean up.
-  git fetch origin # Avoid updating the working copy to a stale revision.
-  git checkout origin/master -f
-  git branch -D master
-  git checkout origin/master -b master
+    git rebase --abort # If we got killed during a git rebase, we need to clean up.
+    git fetch origin # Avoid updating the working copy to a stale revision.
+    git checkout origin/master -f
+    git branch -D master
+    git checkout origin/master -b master
 
-  # Most queues auto-update as part of their normal operation, but updating
-  # here makes sure that we get the latest version of the master process.
-  ./Tools/Scripts/update-webkit
+    # Most queues auto-update as part of their normal operation, but updating
+    # here makes sure that we get the latest version of the master process.
+    ./Tools/Scripts/update-webkit
 
-  # test-webkitpy has code to remove orphaned .pyc files, so we
-  # run it before running webkit-patch to avoid stale .pyc files
-  # preventing webkit-patch from launching.
-  ./Tools/Scripts/test-webkitpy
+    # test-webkitpy has code to remove orphaned .pyc files, so we
+    # run it before running webkit-patch to avoid stale .pyc files
+    # preventing webkit-patch from launching.
+    ./Tools/Scripts/test-webkitpy
 
     # Run the given reset script.
     if [[ -n "$RESET_SCRIPT" ]]; then
         bash "$RESET_SCRIPT"
     fi
 
-  # We use --exit-after-iteration to pick up any changes to webkit-patch, including
+    # We use --exit-after-iteration to pick up any changes to webkit-patch, including
     # changes to the contributors.json file.
     ./Tools/Scripts/webkit-patch $QUEUE_NAME --bot-id=$BOT_ID --no-confirm --exit-after-iteration $RESET_AFTER_ITERATION $QUEUE_PARAMS
 done

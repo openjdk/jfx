@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
 #include "config.h"
@@ -41,16 +41,15 @@ void StructureStubInfo::deref()
         delete polymorphicStructures;
         return;
     }
-    case access_get_by_id_proto_list: {
-        PolymorphicAccessStructureList* polymorphicStructures = u.getByIdProtoList.structureList;
-        delete polymorphicStructures;
-        return;
-    }
     case access_put_by_id_list:
         delete u.putByIdList.list;
         return;
+    case access_in_list: {
+        PolymorphicAccessStructureList* polymorphicStructures = u.inList.structureList;
+        delete polymorphicStructures;
+        return;
+    }
     case access_get_by_id_self:
-    case access_get_by_id_proto:
     case access_get_by_id_chain:
     case access_put_by_id_transition_normal:
     case access_put_by_id_transition_direct:
@@ -74,11 +73,6 @@ bool StructureStubInfo::visitWeakReferences()
         if (!Heap::isMarked(u.getByIdSelf.baseObjectStructure.get()))
             return false;
         break;
-    case access_get_by_id_proto:
-        if (!Heap::isMarked(u.getByIdProto.baseObjectStructure.get())
-            || !Heap::isMarked(u.getByIdProto.prototypeStructure.get()))
-            return false;
-        break;
     case access_get_by_id_chain:
         if (!Heap::isMarked(u.getByIdChain.baseObjectStructure.get())
             || !Heap::isMarked(u.getByIdChain.chain.get()))
@@ -87,12 +81,6 @@ bool StructureStubInfo::visitWeakReferences()
     case access_get_by_id_self_list: {
         PolymorphicAccessStructureList* polymorphicStructures = u.getByIdSelfList.structureList;
         if (!polymorphicStructures->visitWeak(u.getByIdSelfList.listSize))
-            return false;
-        break;
-    }
-    case access_get_by_id_proto_list: {
-        PolymorphicAccessStructureList* polymorphicStructures = u.getByIdProtoList.structureList;
-        if (!polymorphicStructures->visitWeak(u.getByIdProtoList.listSize))
             return false;
         break;
     }
@@ -111,6 +99,12 @@ bool StructureStubInfo::visitWeakReferences()
         if (!u.putByIdList.list->visitWeak())
             return false;
         break;
+    case access_in_list: {
+        PolymorphicAccessStructureList* polymorphicStructures = u.inList.structureList;
+        if (!polymorphicStructures->visitWeak(u.inList.listSize))
+            return false;
+        break;
+    }
     default:
         // The rest of the instructions don't require references, so there is no need to
         // do anything.

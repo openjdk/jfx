@@ -29,42 +29,40 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SVG)
 #include "RenderSVGModelObject.h"
 
 #include "RenderLayerModelObject.h"
 #include "RenderSVGResource.h"
 #include "SVGNames.h"
 #include "SVGResourcesCache.h"
-#include "SVGStyledElement.h"
+#include "ShadowRoot.h"
 
 namespace WebCore {
 
-RenderSVGModelObject::RenderSVGModelObject(SVGStyledElement* node)
-    : RenderObject(node)
+RenderSVGModelObject::RenderSVGModelObject(SVGElement& element, PassRef<RenderStyle> style)
+    : RenderElement(element, std::move(style), 0)
     , m_hasSVGShadow(false)
 {
 }
 
 LayoutRect RenderSVGModelObject::clippedOverflowRectForRepaint(const RenderLayerModelObject* repaintContainer) const
 {
-    return SVGRenderSupport::clippedOverflowRectForRepaint(this, repaintContainer);
+    return SVGRenderSupport::clippedOverflowRectForRepaint(*this, repaintContainer);
 }
 
 void RenderSVGModelObject::computeFloatRectForRepaint(const RenderLayerModelObject* repaintContainer, FloatRect& repaintRect, bool fixed) const
 {
-    SVGRenderSupport::computeFloatRectForRepaint(this, repaintContainer, repaintRect, fixed);
+    SVGRenderSupport::computeFloatRectForRepaint(*this, repaintContainer, repaintRect, fixed);
 }
 
 void RenderSVGModelObject::mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState& transformState, MapCoordinatesFlags, bool* wasFixed) const
 {
-    SVGRenderSupport::mapLocalToContainer(this, repaintContainer, transformState, wasFixed);
+    SVGRenderSupport::mapLocalToContainer(*this, repaintContainer, transformState, wasFixed);
 }
 
 const RenderObject* RenderSVGModelObject::pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap& geometryMap) const
 {
-    return SVGRenderSupport::pushMappingToContainer(this, ancestorToStopAt, geometryMap);
+    return SVGRenderSupport::pushMappingToContainer(*this, ancestorToStopAt, geometryMap);
 }
 
 // Copied from RenderBox, this method likely requires further refactoring to work easily for both SVG and CSS Box Model content.
@@ -93,24 +91,19 @@ void RenderSVGModelObject::absoluteQuads(Vector<FloatQuad>& quads, bool* wasFixe
 
 void RenderSVGModelObject::willBeDestroyed()
 {
-    SVGResourcesCache::clientDestroyed(this);
-    RenderObject::willBeDestroyed();
-}
-
-void RenderSVGModelObject::styleWillChange(StyleDifference diff, const RenderStyle* newStyle)
-{
-    if (diff == StyleDifferenceLayout) {
-        setNeedsBoundariesUpdate();
-        if (newStyle->hasTransform())
-            setNeedsTransformUpdate();
-    }
-    RenderObject::styleWillChange(diff, newStyle);
+    SVGResourcesCache::clientDestroyed(*this);
+    RenderElement::willBeDestroyed();
 }
 
 void RenderSVGModelObject::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
-    RenderObject::styleDidChange(diff, oldStyle);
-    SVGResourcesCache::clientStyleChanged(this, diff, style());
+    if (diff == StyleDifferenceLayout) {
+        setNeedsBoundariesUpdate();
+        if (style().hasTransform())
+            setNeedsTransformUpdate();
+    }
+    RenderElement::styleDidChange(diff, oldStyle);
+    SVGResourcesCache::clientStyleChanged(*this, diff, style());
 }
 
 bool RenderSVGModelObject::nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation&, const LayoutPoint&, HitTestAction)
@@ -122,7 +115,7 @@ bool RenderSVGModelObject::nodeAtPoint(const HitTestRequest&, HitTestResult&, co
 static void getElementCTM(SVGElement* element, AffineTransform& transform)
 {
     ASSERT(element);
-    element->document()->updateLayoutIgnorePendingStylesheets();
+    element->document().updateLayoutIgnorePendingStylesheets();
 
     SVGElement* stopAtElement = SVGLocatable::nearestViewportElement(element);
     ASSERT(stopAtElement);
@@ -132,10 +125,8 @@ static void getElementCTM(SVGElement* element, AffineTransform& transform)
 
     while (current && current->isSVGElement()) {
         SVGElement* currentElement = toSVGElement(current);
-        if (currentElement->isSVGStyledElement()) {
-            localTransform = currentElement->renderer()->localToParentTransform();
-            transform = localTransform.multiply(transform);
-        }
+        localTransform = currentElement->renderer()->localToParentTransform();
+        transform = localTransform.multiply(transform);
         // For getCTM() computation, stop at the nearest viewport element
         if (currentElement == stopAtElement)
             break;
@@ -161,9 +152,9 @@ static bool intersectsAllowingEmpty(const FloatRect& r, const FloatRect& other)
 
 // One of the element types that can cause graphics to be drawn onto the target canvas. Specifically: circle, ellipse,
 // image, line, path, polygon, polyline, rect, text and use.
-static bool isGraphicsElement(RenderObject* renderer)
+static bool isGraphicsElement(const RenderElement& renderer)
 {
-    return renderer->isSVGShape() || renderer->isSVGText() || renderer->isSVGImage() || renderer->node()->hasTagName(SVGNames::useTag);
+    return renderer.isSVGShape() || renderer.isSVGText() || renderer.isSVGImage() || renderer.element()->hasTagName(SVGNames::useTag);
 }
 
 // The SVG addFocusRingRects() method adds rects in local coordinates so the default absoluteFocusRingQuads
@@ -173,32 +164,30 @@ void RenderSVGModelObject::absoluteFocusRingQuads(Vector<FloatQuad>& quads)
     quads.append(localToAbsoluteQuad(FloatQuad(repaintRectInLocalCoordinates())));
 }
     
-bool RenderSVGModelObject::checkIntersection(RenderObject* renderer, const FloatRect& rect)
+bool RenderSVGModelObject::checkIntersection(RenderElement* renderer, const FloatRect& rect)
 {
-    if (!renderer || renderer->style()->pointerEvents() == PE_NONE)
+    if (!renderer || renderer->style().pointerEvents() == PE_NONE)
         return false;
-    if (!isGraphicsElement(renderer))
+    if (!isGraphicsElement(*renderer))
         return false;
     AffineTransform ctm;
-    SVGElement* svgElement = toSVGElement(renderer->node());
+    SVGElement* svgElement = toSVGElement(renderer->element());
     getElementCTM(svgElement, ctm);
     ASSERT(svgElement->renderer());
     return intersectsAllowingEmpty(rect, ctm.mapRect(svgElement->renderer()->repaintRectInLocalCoordinates()));
 }
 
-bool RenderSVGModelObject::checkEnclosure(RenderObject* renderer, const FloatRect& rect)
+bool RenderSVGModelObject::checkEnclosure(RenderElement* renderer, const FloatRect& rect)
 {
-    if (!renderer || renderer->style()->pointerEvents() == PE_NONE)
+    if (!renderer || renderer->style().pointerEvents() == PE_NONE)
         return false;
-    if (!isGraphicsElement(renderer))
+    if (!isGraphicsElement(*renderer))
         return false;
     AffineTransform ctm;
-    SVGElement* svgElement = toSVGElement(renderer->node());
+    SVGElement* svgElement = toSVGElement(renderer->element());
     getElementCTM(svgElement, ctm);
     ASSERT(svgElement->renderer());
     return rect.contains(ctm.mapRect(svgElement->renderer()->repaintRectInLocalCoordinates()));
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(SVG)

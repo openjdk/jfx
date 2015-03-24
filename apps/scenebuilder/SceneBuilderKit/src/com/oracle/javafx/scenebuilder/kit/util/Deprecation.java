@@ -207,11 +207,7 @@ public class Deprecation {
 //    public static ParseTraceElement[] getParseTrace(FXMLLoader loader) {
 //        return loader.getParseTrace();
 //    }
-    // Deprecated stuff in JavaFXBuilderFactory
-//    // RT-21230 : Promote JavaFXBuilderFactory(ClassLoader classLoader, boolean alwaysUseBuilders) constructor to public API
-//    public static JavaFXBuilderFactory getJavaFXBuilderFactory(boolean alwaysUseBuilders) {
-//        return new JavaFXBuilderFactory(Thread.currentThread().getContextClassLoader(), alwaysUseBuilders);
-//    }
+
     public static void setPlatformEventHandler(EventHandler eventHandler) {
         Application.GetApplication().setEventHandler(eventHandler);
     }
@@ -249,9 +245,8 @@ public class Deprecation {
         }
     }
 
-    // RT-21230 : Promote JavaFXBuilderFactory(ClassLoader classLoader, boolean alwaysUseBuilders) constructor to public API
     public static JavaFXBuilderFactory newJavaFXBuilderFactory(ClassLoader classLoader) {
-        return new JavaFXBuilderFactory(classLoader, false /* alwaysUseBuilders */);
+        return new JavaFXBuilderFactory(classLoader);
     }
     
     // Deprecated as of FX 8 u20, and replaced by new method getTreeItemLevel:

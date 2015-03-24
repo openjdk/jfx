@@ -41,14 +41,14 @@ public:
     virtual IntSize size() const { return IntSize(m_data->m_bitmap->width(), m_data->m_bitmap->height()); }
     virtual void destroyDecodedData(bool destroyAll = true) {}
     virtual unsigned decodedSize() const { return 0; }
-    virtual void draw(GraphicsContext*, const FloatRect& dstRect, const FloatRect& srcRect, ColorSpace styleColorSpace, CompositeOperator, BlendMode);
+    virtual void draw(GraphicsContext*, const FloatRect& dstRect, const FloatRect& srcRect, ColorSpace styleColorSpace, CompositeOperator, BlendMode, ImageOrientationDescription);
     virtual void drawPattern(GraphicsContext*, const FloatRect& srcRect, const AffineTransform& patternTransform,
                              const FloatPoint& phase, ColorSpace styleColorSpace, CompositeOperator, const FloatRect& destRect);
 
     const ImageBufferData* m_data;
 };
 
-void BufferedImage::draw(GraphicsContext* ctxt, const FloatRect& dstRect, const FloatRect& srcRect, ColorSpace styleColorSpace, CompositeOperator compositeOp, BlendMode blendMode)
+void BufferedImage::draw(GraphicsContext* ctxt, const FloatRect& dstRect, const FloatRect& srcRect, ColorSpace styleColorSpace, CompositeOperator compositeOp, BlendMode blendMode, ImageOrientationDescription)
 {
     IntRect intDstRect = enclosingIntRect(dstRect);
     IntRect intSrcRect(srcRect);
@@ -56,7 +56,7 @@ void BufferedImage::draw(GraphicsContext* ctxt, const FloatRect& dstRect, const 
 }
 
 void BufferedImage::drawPattern(GraphicsContext* ctxt, const FloatRect& tileRectIn, const AffineTransform& patternTransform,
-                             const FloatPoint& phase, ColorSpace styleColorSpace, CompositeOperator op, const FloatRect& destRect)
+    const FloatPoint& phase, ColorSpace styleColorSpace, CompositeOperator op, const FloatRect& destRect, BlendMode)
 {
     m_data->m_bitmap->drawPattern(ctxt, tileRectIn, patternTransform, phase, styleColorSpace, op, destRect, size());
 }
@@ -114,7 +114,7 @@ void ImageBuffer::draw(GraphicsContext* context, ColorSpace styleColorSpace, con
                        CompositeOperator op, BlendMode blendMode, bool useLowQualityScale)
 {
     RefPtr<Image> imageCopy = copyImage(CopyBackingStore);
-    context->drawImage(imageCopy.get(), styleColorSpace, destRect, srcRect, op, blendMode, DoNotRespectImageOrientation, useLowQualityScale);
+    context->drawImage(imageCopy.get(), styleColorSpace, destRect, srcRect, op, blendMode, ImageOrientationDescription(), useLowQualityScale);
 }
 
 void ImageBuffer::drawPattern(GraphicsContext* context, const FloatRect& srcRect, const AffineTransform& patternTransform,

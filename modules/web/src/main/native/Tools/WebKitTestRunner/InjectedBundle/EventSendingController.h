@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2010, 2011, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,10 +31,6 @@
 #include <WebKit2/WKGeometry.h>
 #include <wtf/PassRefPtr.h>
 
-#if !PLATFORM(MAC) && !PLATFORM(QT) && !PLATFORM(GTK) && !PLATFORM(EFL)
-#define USE_WEBPROCESS_EVENT_SIMULATION
-#endif
-
 namespace WTR {
 
 class EventSendingController : public JSWrappable {
@@ -51,6 +47,7 @@ public:
     void mouseUp(int button, JSValueRef modifierArray);
     void mouseMoveTo(int x, int y);
     void mouseScrollBy(int x, int y);
+    void mouseScrollByWithWheelAndMomentumPhases(int x, int y, JSStringRef phase, JSStringRef momentum, bool asyncScrolling);
     void continuousMouseScrollBy(int x, int y, bool paged);
     JSValueRef contextClick();
     void leapForward(int milliseconds);
@@ -83,18 +80,6 @@ public:
 
 private:
     EventSendingController();
-
-#ifdef USE_WEBPROCESS_EVENT_SIMULATION
-    void updateClickCount(WKEventMouseButton);
-
-    double m_time;
-    WKPoint m_position;
-
-    int m_clickCount;
-    double m_clickTime;
-    WKPoint m_clickPosition;
-    WKEventMouseButton m_clickButton;
-#endif
 };
 
 } // namespace WTR

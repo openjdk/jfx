@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,21 +27,25 @@
 #define JSCellInlines_h
 
 #include "CallFrame.h"
+#include "DeferGC.h"
 #include "Handle.h"
 #include "JSCell.h"
 #include "JSObject.h"
 #include "JSString.h"
 #include "Structure.h"
+#include <wtf/CompilationThread.h>
 
 namespace JSC {
 
 inline JSCell::JSCell(CreatingEarlyCellTag)
 {
+    ASSERT(!isCompilationThread());
 }
 
 inline JSCell::JSCell(VM& vm, Structure* structure)
     : m_structure(vm, this, structure)
 {
+    ASSERT(!isCompilationThread());
 }
 
 inline void JSCell::finishCreation(VM& vm)
@@ -82,11 +86,8 @@ inline void JSCell::visitChildren(JSCell* cell, SlotVisitor& visitor)
 template<typename T>
 void* allocateCell(Heap& heap, size_t size)
 {
+    ASSERT(!DisallowGC::isGCDisallowedOnCurrentThread());
     ASSERT(size >= sizeof(T));
-#if ENABLE(GC_VALIDATION)
-    ASSERT(!heap.vm()->isInitializingObject());
-    heap.vm()->setInitializingObjectClass(&T::s_info);
-#endif
     JSCell* result = 0;
     if (T::needsDestruction && T::hasImmortalStructure)
         result = static_cast<JSCell*>(heap.allocateWithImmortalStructureDestructor(size));
@@ -94,6 +95,10 @@ void* allocateCell(Heap& heap, size_t size)
         result = static_cast<JSCell*>(heap.allocateWithNormalDestructor(size));
     else 
         result = static_cast<JSCell*>(heap.allocateWithoutDestructor(size));
+#if ENABLE(GC_VALIDATION)
+    ASSERT(!heap.vm()->isInitializingObject());
+    heap.vm()->setInitializingObjectClass(T::info());
+#endif
     result->clearStructure();
     return result;
 }
@@ -162,23 +167,16 @@ inline bool JSCell::inherits(const ClassInfo* info) const
     return classInfo()->isSubClassOf(info);
 }
 
-ALWAYS_INLINE bool JSCell::fastGetOwnPropertySlot(ExecState* exec, PropertyName propertyName, PropertySlot& slot)
-{
-    if (!structure()->typeInfo().overridesGetOwnPropertySlot())
-        return asObject(this)->inlineGetOwnPropertySlot(exec, propertyName, slot);
-    return methodTable()->getOwnPropertySlot(this, exec, propertyName, slot);
-}
-
 // Fast call to get a property where we may not yet have converted the string to an
 // identifier. The first time we perform a property access with a given string, try
 // performing the property map lookup without forming an identifier. We detect this
 // case by checking whether the hash has yet been set for this string.
-ALWAYS_INLINE JSValue JSCell::fastGetOwnProperty(ExecState* exec, const String& name)
+ALWAYS_INLINE JSValue JSCell::fastGetOwnProperty(VM& vm, const String& name)
 {
     if (!structure()->typeInfo().overridesGetOwnPropertySlot() && !structure()->hasGetterSetterProperties()) {
         PropertyOffset offset = name.impl()->hasHash()
-            ? structure()->get(exec->vm(), Identifier(exec, name))
-            : structure()->get(exec->vm(), name);
+            ? structure()->get(vm, Identifier(&vm, name))
+            : structure()->get(vm, name);
         if (offset != invalidOffset)
             return asObject(this)->locationForOffset(offset)->get();
     }

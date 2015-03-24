@@ -5,11 +5,11 @@
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
- * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
- * 2.  Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE INC. AND ITS CONTRIBUTORS ``AS IS''
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
@@ -27,18 +27,22 @@
 #include "config.h"
 #include "SimpleFontData.h"
 
+#if !PLATFORM(IOS)
 #include <ApplicationServices/ApplicationServices.h>
+#else
+#include <CoreText/CoreText.h>
+#endif
 
 namespace WebCore {
 
 CFDictionaryRef SimpleFontData::getCFStringAttributes(TypesettingFeatures typesettingFeatures, FontOrientation orientation) const
 {
     unsigned key = typesettingFeatures + 1;
-    HashMap<unsigned, RetainPtr<CFDictionaryRef> >::AddResult addResult = m_CFStringAttributes.add(key, RetainPtr<CFDictionaryRef>());
+    HashMap<unsigned, RetainPtr<CFDictionaryRef>>::AddResult addResult = m_CFStringAttributes.add(key, RetainPtr<CFDictionaryRef>());
     RetainPtr<CFDictionaryRef>& attributesDictionary = addResult.iterator->value;
     if (!addResult.isNewEntry)
         return attributesDictionary.get();
-    
+
     attributesDictionary = adoptCF(CFDictionaryCreateMutable(kCFAllocatorDefault, 4, &kCFCopyStringDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
     CFMutableDictionaryRef mutableAttributes = (CFMutableDictionaryRef)attributesDictionary.get();
 

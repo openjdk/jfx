@@ -77,14 +77,14 @@ EventTargetData* NetworkInfoConnection::eventTargetData()
     return &m_eventTargetData;
 }
 
-EventTargetData* NetworkInfoConnection::ensureEventTargetData()
+EventTargetData& NetworkInfoConnection::ensureEventTargetData()
 {
-    return &m_eventTargetData;
+    return m_eventTargetData;
 }
 
-const AtomicString& NetworkInfoConnection::interfaceName() const
+EventTargetInterface NetworkInfoConnection::eventTargetInterface() const
 {
-    return eventNames().interfaceForNetworkInfoConnection;
+    return NetworkInfoConnectionEventTargetInterfaceType;
 }
 
 void NetworkInfoConnection::suspend(ReasonForSuspension)

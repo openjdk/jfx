@@ -23,9 +23,9 @@
  */
 
 [
-        Conditional=MEDIA_STREAM,
+    Conditional=MEDIA_STREAM,
     ConstructorTemplate=Event
 ] interface MediaStreamEvent : Event {
    [InitializedByEventConstructor] readonly attribute MediaStream stream;
-    };
+};
 

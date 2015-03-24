@@ -29,9 +29,9 @@
 #include "HeapStatistics.h"
 #include <algorithm>
 #include <limits>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <wtf/DataLog.h>
 #include <wtf/NumberOfCores.h>
 #include <wtf/PageBlock.h>
 #include <wtf/StdLibExtras.h>
@@ -77,36 +77,41 @@ static bool parse(const char* string, OptionRange& value)
 }
 
 template<typename T>
-void overrideOptionWithHeuristic(T& variable, const char* name)
+bool overrideOptionWithHeuristic(T& variable, const char* name)
 {
 #if !OS(WINCE)
     const char* stringValue = getenv(name);
     if (!stringValue)
-        return;
+        return false;
     
     if (parse(stringValue, variable))
-        return;
+        return true;
     
     fprintf(stderr, "WARNING: failed to parse %s=%s\n", name, stringValue);
 #endif
+    return false;
 }
 
-static unsigned computeNumberOfGCMarkers(int maxNumberOfGCMarkers)
+static unsigned computeNumberOfWorkerThreads(int maxNumberOfWorkerThreads)
 {
-    int cpusToUse = 1;
-
-#if ENABLE(PARALLEL_GC)
-    cpusToUse = std::min(WTF::numberOfProcessorCores(), maxNumberOfGCMarkers);
+    int cpusToUse = std::min(WTF::numberOfProcessorCores(), maxNumberOfWorkerThreads);
 
     // Be paranoid, it is the OS we're dealing with, after all.
     ASSERT(cpusToUse >= 1);
     if (cpusToUse < 1)
         cpusToUse = 1;
+    
+    return cpusToUse;
+}
+
+static unsigned computeNumberOfGCMarkers(unsigned maxNumberOfGCMarkers)
+{
+#if ENABLE(PARALLEL_GC)
+    return computeNumberOfWorkerThreads(maxNumberOfGCMarkers);
 #else
     UNUSED_PARAM(maxNumberOfGCMarkers);
+    return 1;
 #endif
-
-    return cpusToUse;
 }
 
 bool OptionRange::init(const char* rangeString)
@@ -172,6 +177,47 @@ const Options::EntryInfo Options::s_optionsInfo[Options::numberOfOptions] = {
 #undef FOR_EACH_OPTION
 };
 
+static void recomputeDependentOptions()
+{
+#if !ENABLE(JIT)
+    Options::useJIT() = false;
+    Options::useDFGJIT() = false;
+#endif
+#if !ENABLE(YARR_JIT)
+    Options::useRegExpJIT() = false;
+#endif
+    
+    if (Options::showDisassembly()
+        || Options::showDFGDisassembly()
+        || Options::showFTLDisassembly()
+        || Options::dumpBytecodeAtDFGTime()
+        || Options::dumpGraphAtEachPhase()
+        || Options::verboseCompilation()
+        || Options::verboseFTLCompilation()
+        || Options::logCompilationChanges()
+        || Options::validateGraph()
+        || Options::validateGraphAtEachPhase()
+        || Options::verboseOSR()
+        || Options::verboseCompilationQueue()
+        || Options::reportCompileTimes()
+        || Options::reportFTLCompileTimes()
+        || Options::verboseCFA()
+        || Options::verboseFTLFailure())
+        Options::alwaysComputeHash() = true;
+    
+    // Compute the maximum value of the reoptimization retry counter. This is simply
+    // the largest value at which we don't overflow the execute counter, when using it
+    // to left-shift the execution counter by this amount. Currently the value ends
+    // up being 18, so this loop is not so terrible; it probably takes up ~100 cycles
+    // total on a 32-bit processor.
+    Options::reoptimizationRetryCounterMax() = 0;
+    while ((static_cast<int64_t>(Options::thresholdForOptimizeAfterLongWarmUp()) << (Options::reoptimizationRetryCounterMax() + 1)) <= static_cast<int64_t>(std::numeric_limits<int32_t>::max()))
+        Options::reoptimizationRetryCounterMax()++;
+
+    ASSERT((static_cast<int64_t>(Options::thresholdForOptimizeAfterLongWarmUp()) << Options::reoptimizationRetryCounterMax()) > 0);
+    ASSERT((static_cast<int64_t>(Options::thresholdForOptimizeAfterLongWarmUp()) << Options::reoptimizationRetryCounterMax()) <= static_cast<int64_t>(std::numeric_limits<int32_t>::max()));
+}
+
 void Options::initialize()
 {
     // Initialize each of the options with their default values:
@@ -193,7 +239,8 @@ void Options::initialize()
     // The evn var should be the name of the option prefixed with
     // "JSC_".
 #define FOR_EACH_OPTION(type_, name_, defaultValue_) \
-    overrideOptionWithHeuristic(name_(), "JSC_" #name_);
+    if (overrideOptionWithHeuristic(name_(), "JSC_" #name_)) \
+        s_options[OPT_##name_].didOverride = true;
     JSC_OPTIONS(FOR_EACH_OPTION)
 #undef FOR_EACH_OPTION
 
@@ -201,30 +248,12 @@ void Options::initialize()
     ; // Deconfuse editors that do auto indentation
 #endif
     
-#if !ENABLE(JIT)
-    useJIT() = false;
-    useDFGJIT() = false;
-#endif
-#if !ENABLE(YARR_JIT)
-    useRegExpJIT() = false;
-#endif
-    
+    recomputeDependentOptions();
+
     // Do range checks where needed and make corrections to the options:
-    ASSERT(thresholdForOptimizeAfterLongWarmUp() >= thresholdForOptimizeAfterWarmUp());
-    ASSERT(thresholdForOptimizeAfterWarmUp() >= thresholdForOptimizeSoon());
-    ASSERT(thresholdForOptimizeAfterWarmUp() >= 0);
-
-    // Compute the maximum value of the reoptimization retry counter. This is simply
-    // the largest value at which we don't overflow the execute counter, when using it
-    // to left-shift the execution counter by this amount. Currently the value ends
-    // up being 18, so this loop is not so terrible; it probably takes up ~100 cycles
-    // total on a 32-bit processor.
-    reoptimizationRetryCounterMax() = 0;
-    while ((static_cast<int64_t>(thresholdForOptimizeAfterLongWarmUp()) << (reoptimizationRetryCounterMax() + 1)) <= static_cast<int64_t>(std::numeric_limits<int32>::max()))
-        reoptimizationRetryCounterMax()++;
-
-    ASSERT((static_cast<int64_t>(thresholdForOptimizeAfterLongWarmUp()) << reoptimizationRetryCounterMax()) > 0);
-    ASSERT((static_cast<int64_t>(thresholdForOptimizeAfterLongWarmUp()) << reoptimizationRetryCounterMax()) <= static_cast<int64_t>(std::numeric_limits<int32>::max()));
+    ASSERT(Options::thresholdForOptimizeAfterLongWarmUp() >= Options::thresholdForOptimizeAfterWarmUp());
+    ASSERT(Options::thresholdForOptimizeAfterWarmUp() >= Options::thresholdForOptimizeSoon());
+    ASSERT(Options::thresholdForOptimizeAfterWarmUp() >= 0);
 }
 
 // Parses a single command line option in the format "<optionName>=<value>"
@@ -248,6 +277,8 @@ bool Options::setOption(const char* arg)
         bool success = parse(valueStr, value);          \
         if (success) {                                  \
             name_() = value;                            \
+            s_options[OPT_##name_].didOverride = true;  \
+            recomputeDependentOptions();                \
             return true;                                \
         }                                               \
         return false;                                   \
@@ -256,7 +287,7 @@ bool Options::setOption(const char* arg)
     JSC_OPTIONS(FOR_EACH_OPTION)
 #undef FOR_EACH_OPTION
 
-        return false; // No option matched.
+    return false; // No option matched.
 }
 
 void Options::dumpAllOptions(FILE* stream)

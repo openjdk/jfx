@@ -25,15 +25,17 @@
  */
 
 [
-        Constructor,
-        CallWith=ScriptExecutionContext,
-        JSCustomMarkFunction,
+    GlobalContext=DOMWindow&WorkerGlobalScope,
+    Conditional=CHANNEL_MESSAGING,
+    Constructor,
+    ConstructorCallWith=ScriptExecutionContext,
+    JSCustomMarkFunction,
     JSNoStaticTables,
     ImplementationLacksVTable
 ] interface MessageChannel {
 
-        readonly attribute MessagePort port1;
-        readonly attribute MessagePort port2;
+    readonly attribute MessagePort port1;
+    readonly attribute MessagePort port2;
 
-    };
+};
 

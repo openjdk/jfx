@@ -24,20 +24,18 @@
  */
 
 [
-        Conditional=SVG,
-        DoNotCheckConstants
-] interface SVGGradientElement : SVGStyledElement,
-                           SVGURIReference,
-                       SVGExternalResourcesRequired
-                           /* SVGUnitTypes */ {
-        // Spread Method Types
-        const unsigned short SVG_SPREADMETHOD_UNKNOWN = 0;
-        const unsigned short SVG_SPREADMETHOD_PAD     = 1;
-        const unsigned short SVG_SPREADMETHOD_REFLECT = 2;
-        const unsigned short SVG_SPREADMETHOD_REPEAT  = 3;
+    DoNotCheckConstants
+] interface SVGGradientElement : SVGElement {
+    // Spread Method Types
+    const unsigned short SVG_SPREADMETHOD_UNKNOWN = 0;
+    const unsigned short SVG_SPREADMETHOD_PAD     = 1;
+    const unsigned short SVG_SPREADMETHOD_REFLECT = 2;
+    const unsigned short SVG_SPREADMETHOD_REPEAT  = 3;
 
-        readonly attribute SVGAnimatedEnumeration   gradientUnits;
-        readonly attribute SVGAnimatedTransformList gradientTransform;
-        readonly attribute SVGAnimatedEnumeration   spreadMethod;
-    };
+    readonly attribute SVGAnimatedEnumeration   gradientUnits;
+    readonly attribute SVGAnimatedTransformList gradientTransform;
+    readonly attribute SVGAnimatedEnumeration   spreadMethod;
+};
 
+SVGGradientElement implements SVGExternalResourcesRequired;
+SVGGradientElement implements SVGURIReference;

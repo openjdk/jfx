@@ -32,7 +32,7 @@ JLString String::toJavaString(JNIEnv *env) const
 {
     return isNull()
         ? NULL
-        : env->NewString((jchar*)(characters()), length());
+        : env->NewString((jchar*)(deprecatedCharacters()), length());
 }
 
 } // namespace WTF

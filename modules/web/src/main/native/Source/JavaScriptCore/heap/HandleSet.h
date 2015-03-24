@@ -69,7 +69,7 @@ public:
 
     HandleSet(VM*);
     ~HandleSet();
-    
+
     VM* vm();
 
     HandleSlot allocate();

@@ -28,6 +28,8 @@
 
 #if ENABLE(DFG_JIT)
 
+#include "JSCInlines.h"
+
 namespace JSC { namespace DFG {
 
 void ValueSource::dump(PrintStream& out) const
@@ -40,19 +42,22 @@ void ValueSource::dump(PrintStream& out) const
         out.print("IsDead");
         break;
     case ValueInJSStack:
-        out.print("InStack");
+        out.print("JS:r", virtualRegister());
         break;
     case Int32InJSStack:
-        out.print("Int32");
+        out.print("Int32:r", virtualRegister());
+        break;
+    case Int52InJSStack:
+        out.print("Int52:r", virtualRegister());
         break;
     case CellInJSStack:
-        out.print("Cell");
+        out.print("Cell:r", virtualRegister());
         break;
     case BooleanInJSStack:
-        out.print("Bool");
+        out.print("Bool:r", virtualRegister());
         break;
     case DoubleInJSStack:
-        out.print("Double");
+        out.print("Double:r", virtualRegister());
         break;
     case ArgumentsSource:
         out.print("Arguments");
