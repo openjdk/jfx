@@ -341,13 +341,13 @@ public class Sphere extends Shape3D {
 
         float textureDelta = 1.f / 256;
         for (int i = 0; i < div; ++i) {
-            tPoints[tPos + 0] = rDiv * (0.5f + i);
+            tPoints[tPos + 0] = 1.0f - rDiv * (0.5f + i);
             tPoints[tPos + 1] = textureDelta;
             tPos += 2;
         }
 
         for (int i = 0; i < div; ++i) {
-            tPoints[tPos + 0] = rDiv * (0.5f + i);
+            tPoints[tPos + 0] = 1.0f - rDiv * (0.5f + i);
             tPoints[tPos + 1] = 1 - textureDelta;
             tPos += 2;
         }
