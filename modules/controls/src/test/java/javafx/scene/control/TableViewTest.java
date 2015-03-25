@@ -5141,4 +5141,49 @@ public class TableViewTest {
         sm.getSelectedIndices().addListener(l);
         sm.selectIndices(indices[0], indices);
     }
+
+    @Test public void test_rt_40319_toRight_toBottom()          { test_rt_40319(true, true, false);   }
+    @Test public void test_rt_40319_toRight_toTop()             { test_rt_40319(true, false, false);  }
+    @Test public void test_rt_40319_toLeft_toBottom()           { test_rt_40319(false, true, false);  }
+    @Test public void test_rt_40319_toLeft_toTop()              { test_rt_40319(false, false, false); }
+    @Test public void test_rt_40319_toRight_toBottom_useMouse() { test_rt_40319(true, true, true);    }
+    @Test public void test_rt_40319_toRight_toTop_useMouse()    { test_rt_40319(true, false, true);   }
+    @Test public void test_rt_40319_toLeft_toBottom_useMouse()  { test_rt_40319(false, true, true);   }
+    @Test public void test_rt_40319_toLeft_toTop_useMouse()     { test_rt_40319(false, false, true);  }
+
+    private void test_rt_40319(boolean toRight, boolean toBottom, boolean useMouse) {
+        ObservableList<Person> p = FXCollections.observableArrayList();
+        p.add(new Person("FirstName1", "LastName1", ""));
+        p.add(new Person("FirstName2", "LastName2", ""));
+        p.add(new Person("FirstName3", "LastName3", ""));
+
+        TableView<Person> t = new TableView<>(p);
+        sm = t.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        TableColumn<Person, String> c1 = new TableColumn<>("First Name");
+        c1.setCellValueFactory(new PropertyValueFactory<>("firstname"));
+        TableColumn<Person, String> c2 = new TableColumn<>("Last Name");
+        c2.setCellValueFactory(new PropertyValueFactory<>("lastname"));
+        t.getColumns().addAll(c1, c2);
+
+        final int startIndex = toRight ? 0 : 2;
+        final int endIndex = toRight ? 2 : 0;
+        final TableColumn<Person,String> startColumn = toBottom ? c1 : c2;
+        final TableColumn<Person,String> endColumn = toBottom ? c2 : c1;
+
+        sm.select(startIndex, startColumn);
+
+        if (useMouse) {
+            Cell endCell = VirtualFlowTestUtils.getCell(t, endIndex, toRight ? 1 : 0);
+            MouseEventFirer mouse = new MouseEventFirer(endCell);
+            mouse.fireMousePressAndRelease(KeyModifier.SHIFT);
+        } else {
+            t.getSelectionModel().selectRange(startIndex, startColumn, endIndex, endColumn);
+        }
+
+        assertEquals(3, sm.getSelectedItems().size());
+        assertEquals(3, sm.getSelectedIndices().size());
+        assertEquals(3, sm.getSelectedCells().size());
+    }
 }

@@ -2922,6 +2922,10 @@ public class TreeTableView<S> extends Control {
                 }
             }
 
+            // to prevent duplication we remove all currently selected cells from
+            // our list of cells to select.
+            cellsToSelect.removeAll(getSelectedCells());
+
             selectedCellsMap.addAll(cellsToSelect);
             stopAtomic();
 
@@ -2930,8 +2934,10 @@ public class TreeTableView<S> extends Control {
             updateSelectedIndex(maxRow);
             focus(maxRow, (TreeTableColumn<S,?>)maxColumn);
 
-            final int startChangeIndex = selectedCellsMap.indexOf(new TreeTablePosition<>(treeTableView, minRow, (TreeTableColumn<S,?>)minColumn));
-            final int endChangeIndex = selectedCellsMap.indexOf(new TreeTablePosition<>(treeTableView, maxRow, (TreeTableColumn<S,?>)maxColumn));
+            final TreeTableColumn<S,?> startColumn = (TreeTableColumn<S,?>)minColumn;
+            final TreeTableColumn<S,?> endColumn = isCellSelectionEnabled ? (TreeTableColumn<S,?>)maxColumn : startColumn;
+            final int startChangeIndex = selectedCellsMap.indexOf(new TreeTablePosition<>(treeTableView, minRow, startColumn));
+            final int endChangeIndex = selectedCellsMap.indexOf(new TreeTablePosition<>(treeTableView, maxRow, endColumn));
 
             if (startChangeIndex > -1 && endChangeIndex > -1) {
                 final int startIndex = Math.min(startChangeIndex, endChangeIndex);

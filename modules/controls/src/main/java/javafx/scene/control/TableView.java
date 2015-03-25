@@ -2665,6 +2665,10 @@ public class TableView<S> extends Control {
                 }
             }
 
+            // to prevent duplication we remove all currently selected cells from
+            // our list of cells to select.
+            cellsToSelect.removeAll(getSelectedCells());
+
             selectedCellsMap.addAll(cellsToSelect);
             stopAtomic();
 
@@ -2673,8 +2677,10 @@ public class TableView<S> extends Control {
             updateSelectedIndex(maxRow);
             focus(maxRow, (TableColumn<S,?>)maxColumn);
 
-            final int startChangeIndex = selectedCellsMap.indexOf(new TablePosition<>(tableView, minRow, (TableColumn<S,?>)minColumn));
-            final int endChangeIndex = selectedCellsMap.indexOf(new TablePosition<>(tableView, maxRow, (TableColumn<S,?>)maxColumn));
+            final TableColumn<S,?> startColumn = (TableColumn<S,?>)minColumn;
+            final TableColumn<S,?> endColumn = isCellSelectionEnabled ? (TableColumn<S,?>)maxColumn : startColumn;
+            final int startChangeIndex = selectedCellsMap.indexOf(new TablePosition<>(tableView, minRow, startColumn));
+            final int endChangeIndex = selectedCellsMap.indexOf(new TablePosition<>(tableView, maxRow, endColumn));
 
             if (startChangeIndex > -1 && endChangeIndex > -1) {
                 final int startIndex = Math.min(startChangeIndex, endChangeIndex);
