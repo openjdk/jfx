@@ -4181,6 +4181,7 @@ final public class CSSParser {
         }
 
         Stylesheet importedStylesheet = null;
+        final String _sourceOfStylesheet = sourceOfStylesheet;
 
         if (fname != null) {
             // let URLConverter do the conversion
@@ -4193,6 +4194,12 @@ final public class CSSParser {
 
             String urlString = parsedValue.convert(null);
             importedStylesheet = StyleManager.loadStylesheet(urlString);
+
+            // When we load an imported stylesheet, the sourceOfStylesheet field
+            // gets set to the new stylesheet. Once it is done loading we must reset
+            // this field back to the previous value, otherwise we will potentially
+            // run into problems (for example, see RT-40346).
+            sourceOfStylesheet = _sourceOfStylesheet;
         }
         if (importedStylesheet == null) {
             final String msg =
