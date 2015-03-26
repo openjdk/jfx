@@ -18,6 +18,10 @@ mac*|linux* {
     QMAKE_CXXFLAGS += -include string.h # todo tav temp
 }
 
+linux* {
+    QMAKE_LFLAGS += -static-libstdc++
+}
+
 *clang* {
     QMAKE_CXXFLAGS += -stdlib=libc++
 }

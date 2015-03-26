@@ -5684,4 +5684,57 @@ public class TreeTableViewTest {
         sm.getSelectedIndices().addListener(l);
         sm.selectIndices(indices[0], indices);
     }
+
+    @Test public void test_rt_40319_toRight_toBottom()          { test_rt_40319(true, true, false);   }
+    @Test public void test_rt_40319_toRight_toTop()             { test_rt_40319(true, false, false);  }
+    @Test public void test_rt_40319_toLeft_toBottom()           { test_rt_40319(false, true, false);  }
+    @Test public void test_rt_40319_toLeft_toTop()              { test_rt_40319(false, false, false); }
+    @Test public void test_rt_40319_toRight_toBottom_useMouse() { test_rt_40319(true, true, true);    }
+    @Test public void test_rt_40319_toRight_toTop_useMouse()    { test_rt_40319(true, false, true);   }
+    @Test public void test_rt_40319_toLeft_toBottom_useMouse()  { test_rt_40319(false, true, true);   }
+    @Test public void test_rt_40319_toLeft_toTop_useMouse()     { test_rt_40319(false, false, true);  }
+
+    private void test_rt_40319(boolean toRight, boolean toBottom, boolean useMouse) {
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        root.getChildren().addAll(
+                new TreeItem<>("0"),
+                new TreeItem<>("1"),
+                new TreeItem<>("2"),
+                new TreeItem<>("3"),
+                new TreeItem<>("4"),
+                new TreeItem<>("5")
+        );
+
+        TreeTableView<String> t = new TreeTableView<>(root);
+        t.setShowRoot(false);
+
+        sm = t.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        TreeTableColumn<String,String> c1 = new TreeTableColumn<>("Column");
+        c1.setCellValueFactory(cdf -> new ReadOnlyStringWrapper(cdf.getValue().getValue()));
+        TreeTableColumn<String,String> c2 = new TreeTableColumn<>("Column");
+        c2.setCellValueFactory(cdf -> new ReadOnlyStringWrapper(cdf.getValue().getValue()));
+        t.getColumns().addAll(c1, c2);
+
+        final int startIndex = toRight ? 0 : 2;
+        final int endIndex = toRight ? 2 : 0;
+        final TreeTableColumn<String,String> startColumn = toBottom ? c1 : c2;
+        final TreeTableColumn<String,String> endColumn = toBottom ? c2 : c1;
+
+        sm.select(startIndex, startColumn);
+
+        if (useMouse) {
+            Cell endCell = VirtualFlowTestUtils.getCell(t, endIndex, toRight ? 1 : 0);
+            MouseEventFirer mouse = new MouseEventFirer(endCell);
+            mouse.fireMousePressAndRelease(KeyModifier.SHIFT);
+        } else {
+            t.getSelectionModel().selectRange(startIndex, startColumn, endIndex, endColumn);
+        }
+
+        assertEquals(3, sm.getSelectedItems().size());
+        assertEquals(3, sm.getSelectedIndices().size());
+        assertEquals(3, sm.getSelectedCells().size());
+    }
 }
