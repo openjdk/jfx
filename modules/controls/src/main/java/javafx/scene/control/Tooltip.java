@@ -282,7 +282,8 @@ public class Tooltip extends PopupControl {
 
         @Override public void set(Font value) {
             final Font oldValue = get();
-            if (value != null ? !value.equals(oldValue) : oldValue != null) {
+            StyleOrigin origin = ((StyleableObjectProperty<Font>)font).getStyleOrigin();
+            if (origin == null || (value != null ? !value.equals(oldValue) : oldValue != null)) {
                 super.set(value);
             }
         }
