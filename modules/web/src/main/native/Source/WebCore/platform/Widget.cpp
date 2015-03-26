@@ -59,8 +59,8 @@ ScrollView* Widget::root() const
     while (top->parent())
         top = top->parent();
     if (top->isFrameView())
-        return const_cast<ScrollView*>(static_cast<const ScrollView*>(top));
-    return 0;
+        return const_cast<ScrollView*>(toScrollView(top));
+    return nullptr;
 }
     
 void Widget::removeFromParent()
@@ -141,7 +141,7 @@ IntPoint Widget::convertToContainingWindow(const IntPoint& localPoint) const
     return convertFromRootToContainingWindow(this, localPoint);
 }
 
-#if !PLATFORM(MAC)
+#if !PLATFORM(COCOA)
 IntRect Widget::convertFromRootToContainingWindow(const Widget*, const IntRect& rect)
 {
     return rect;
@@ -199,11 +199,5 @@ IntPoint Widget::convertFromContainingView(const IntPoint& parentPoint) const
 
     return parentPoint;
 }
-
-#if !PLATFORM(EFL)
-void Widget::frameRectsChanged()
-{
-}
-#endif
 
 } // namespace WebCore

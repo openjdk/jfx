@@ -20,6 +20,7 @@
 #ifndef JSImageConstructor_h
 #define JSImageConstructor_h
 
+#include "DOMConstructorWithDocument.h"
 #include "JSDOMBinding.h"
 #include "JSDocument.h"
 
@@ -29,23 +30,23 @@ namespace WebCore {
     public:
         typedef DOMConstructorWithDocument Base;
 
-        static JSImageConstructor* create(JSC::ExecState* exec, JSC::Structure* structure, JSDOMGlobalObject* globalObject)
+        static JSImageConstructor* create(JSC::VM& vm, JSC::Structure* structure, JSDOMGlobalObject* globalObject)
         {
-            JSImageConstructor* constructor = new (NotNull, JSC::allocateCell<JSImageConstructor>(*exec->heap())) JSImageConstructor(structure, globalObject);
-            constructor->finishCreation(exec, globalObject);
+            JSImageConstructor* constructor = new (NotNull, JSC::allocateCell<JSImageConstructor>(vm.heap)) JSImageConstructor(structure, globalObject);
+            constructor->finishCreation(vm, globalObject);
             return constructor;
         }
 
         static JSC::Structure* createStructure(JSC::VM& vm, JSC::JSGlobalObject* globalObject, JSC::JSValue prototype)
         {
-            return JSC::Structure::create(vm, globalObject, prototype, JSC::TypeInfo(JSC::ObjectType, StructureFlags), &s_info);
+            return JSC::Structure::create(vm, globalObject, prototype, JSC::TypeInfo(JSC::ObjectType, StructureFlags), info());
         }
 
-        static const JSC::ClassInfo s_info;
+        DECLARE_INFO;
 
     private:
         JSImageConstructor(JSC::Structure*, JSDOMGlobalObject*);
-        void finishCreation(JSC::ExecState*, JSDOMGlobalObject*);
+        void finishCreation(JSC::VM&, JSDOMGlobalObject*);
         static JSC::ConstructType getConstructData(JSC::JSCell*, JSC::ConstructData&);
     };
 

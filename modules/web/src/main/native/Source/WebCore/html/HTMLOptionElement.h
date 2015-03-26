@@ -32,11 +32,11 @@ namespace WebCore {
 class HTMLDataListElement;
 class HTMLSelectElement;
 
-class HTMLOptionElement FINAL : public HTMLElement {
+class HTMLOptionElement final : public HTMLElement {
 public:
-    static PassRefPtr<HTMLOptionElement> create(Document*);
-    static PassRefPtr<HTMLOptionElement> create(const QualifiedName&, Document*);
-    static PassRefPtr<HTMLOptionElement> createForJSConstructor(Document*, const String& data, const String& value,
+    static PassRefPtr<HTMLOptionElement> create(Document&);
+    static PassRefPtr<HTMLOptionElement> create(const QualifiedName&, Document&);
+    static PassRefPtr<HTMLOptionElement> createForJSConstructor(Document&, const String& data, const String& value,
        bool defaultSelected, bool selected, ExceptionCode&);
 
     virtual String text() const;
@@ -60,34 +60,33 @@ public:
 
     bool ownElementDisabled() const { return m_disabled; }
 
-    virtual bool isDisabledFormControl() const OVERRIDE;
+    virtual bool isDisabledFormControl() const override;
 
     String textIndentedToRespectGroupLabel() const;
 
     void setSelectedState(bool);
 
 private:
-    HTMLOptionElement(const QualifiedName&, Document*);
+    HTMLOptionElement(const QualifiedName&, Document&);
 
-    virtual bool supportsFocus() const OVERRIDE;
-    virtual bool isFocusable() const OVERRIDE;
-    virtual bool rendererIsNeeded(const NodeRenderingContext&) { return false; }
-    virtual void attach();
-    virtual void detach();
+    virtual bool isFocusable() const override;
+    virtual bool rendererIsNeeded(const RenderStyle&) override { return false; }
+    virtual void didAttachRenderers() override;
+    virtual void willDetachRenderers() override;
 
-    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
 
-    virtual InsertionNotificationRequest insertedInto(ContainerNode*) OVERRIDE;
-    virtual void accessKeyAction(bool);
+    virtual InsertionNotificationRequest insertedInto(ContainerNode&) override;
+    virtual void accessKeyAction(bool) override;
 
-    virtual void childrenChanged(bool changedByParser = false, Node* beforeChange = 0, Node* afterChange = 0, int childCountDelta = 0);
+    virtual void childrenChanged(const ChildChange&) override;
 
     // <option> never has a renderer so we manually manage a cached style.
     void updateNonRenderStyle();
-    virtual RenderStyle* nonRendererStyle() const OVERRIDE;
-    virtual PassRefPtr<RenderStyle> customStyleForRenderer() OVERRIDE;
+    virtual RenderStyle* nonRendererStyle() const override;
+    virtual PassRefPtr<RenderStyle> customStyleForRenderer() override;
 
-    void didRecalcStyle(StyleChange) OVERRIDE;
+    virtual void didRecalcStyle(Style::Change) override;
 
     String collectOptionInnerText() const;
 
@@ -96,25 +95,7 @@ private:
     RefPtr<RenderStyle> m_style;
 };
 
-HTMLOptionElement* toHTMLOptionElement(Node*);
-const HTMLOptionElement* toHTMLOptionElement(const Node*);
-void toHTMLOptionElement(const HTMLOptionElement*); // This overload will catch anyone doing an unnecessary cast.
-
-#ifdef NDEBUG
-
-// The debug versions of these, with assertions, are not inlined.
-
-inline HTMLOptionElement* toHTMLOptionElement(Node* node)
-{
-    return static_cast<HTMLOptionElement*>(node);
-}
-
-inline const HTMLOptionElement* toHTMLOptionElement(const Node* node)
-{
-    return static_cast<const HTMLOptionElement*>(node);
-}
-
-#endif
+NODE_TYPE_CASTS(HTMLOptionElement)
 
 } // namespace
 

@@ -19,7 +19,7 @@
 
 #include "config.h"
 
-#if ENABLE(SVG) && ENABLE(FILTERS)
+#if ENABLE(FILTERS)
 #include "SVGFEDisplacementMapElement.h"
 
 #include "Attribute.h"
@@ -46,7 +46,7 @@ BEGIN_REGISTER_ANIMATED_PROPERTIES(SVGFEDisplacementMapElement)
     REGISTER_PARENT_ANIMATED_PROPERTIES(SVGFilterPrimitiveStandardAttributes)
 END_REGISTER_ANIMATED_PROPERTIES
 
-inline SVGFEDisplacementMapElement::SVGFEDisplacementMapElement(const QualifiedName& tagName, Document* document)
+inline SVGFEDisplacementMapElement::SVGFEDisplacementMapElement(const QualifiedName& tagName, Document& document)
     : SVGFilterPrimitiveStandardAttributes(tagName, document)
     , m_xChannelSelector(CHANNEL_A)
     , m_yChannelSelector(CHANNEL_A)
@@ -55,7 +55,7 @@ inline SVGFEDisplacementMapElement::SVGFEDisplacementMapElement(const QualifiedN
     registerAnimatedPropertiesForSVGFEDisplacementMapElement();
 }
 
-PassRefPtr<SVGFEDisplacementMapElement> SVGFEDisplacementMapElement::create(const QualifiedName& tagName, Document* document)
+PassRefPtr<SVGFEDisplacementMapElement> SVGFEDisplacementMapElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(new SVGFEDisplacementMapElement(tagName, document));
 }
@@ -70,7 +70,7 @@ bool SVGFEDisplacementMapElement::isSupportedAttribute(const QualifiedName& attr
         supportedAttributes.add(SVGNames::yChannelSelectorAttr);
         supportedAttributes.add(SVGNames::scaleAttr);
     }
-    return supportedAttributes.contains<QualifiedName, SVGAttributeHashTranslator>(attrName);
+    return supportedAttributes.contains<SVGAttributeHashTranslator>(attrName);
 }
 
 void SVGFEDisplacementMapElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
@@ -166,4 +166,4 @@ PassRefPtr<FilterEffect> SVGFEDisplacementMapElement::build(SVGFilterBuilder* fi
 
 }
 
-#endif // ENABLE(SVG)
+#endif // ENABLE(FILTERS)

@@ -57,14 +57,14 @@ PassRefPtr<SpeechRecognitionEvent> SpeechRecognitionEvent::createNoMatch(PassRef
         Vector<RefPtr<SpeechRecognitionResult> > results;
         results.append(result);
         return adoptRef(new SpeechRecognitionEvent(eventNames().nomatchEvent, 0, SpeechRecognitionResultList::create(results)));
-}
+    }
 
     return adoptRef(new SpeechRecognitionEvent(eventNames().nomatchEvent, 0, 0));
 }
 
-const AtomicString& SpeechRecognitionEvent::interfaceName() const
+EventInterface SpeechRecognitionEvent::eventInterface() const
 {
-    return eventNames().interfaceForSpeechRecognitionEvent;
+    return SpeechRecognitionEventInterfaceType;
 }
 
 SpeechRecognitionEvent::SpeechRecognitionEvent()

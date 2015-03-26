@@ -29,7 +29,7 @@
 #include "CSSParser.h"
 #include "CSSRuleList.h"
 #include "CSSStyleSheet.h"
-#include "StylePropertySet.h"
+#include "StyleProperties.h"
 #include "StyleSheet.h"
 #include "WebKitCSSKeyframeRule.h"
 #include <wtf/text/StringBuilder.h>
@@ -116,7 +116,7 @@ void WebKitCSSKeyframesRule::insertRule(const String& ruleText)
 
     CSSParser parser(parserContext());
     CSSStyleSheet* styleSheet = parentStyleSheet();
-    RefPtr<StyleKeyframe> keyframe = parser.parseKeyframeRule(styleSheet ? styleSheet->contents() : 0, ruleText);
+    RefPtr<StyleKeyframe> keyframe = parser.parseKeyframeRule(styleSheet ? &styleSheet->contents() : nullptr, ruleText);
     if (!keyframe)
         return;
 
@@ -188,7 +188,7 @@ WebKitCSSKeyframeRule* WebKitCSSKeyframesRule::item(unsigned index) const
 CSSRuleList* WebKitCSSKeyframesRule::cssRules()
 {
     if (!m_ruleListCSSOMWrapper)
-        m_ruleListCSSOMWrapper = adoptPtr(new LiveCSSRuleList<WebKitCSSKeyframesRule>(this));
+        m_ruleListCSSOMWrapper = std::make_unique<LiveCSSRuleList<WebKitCSSKeyframesRule>>(this);
     return m_ruleListCSSOMWrapper.get();
 }
 

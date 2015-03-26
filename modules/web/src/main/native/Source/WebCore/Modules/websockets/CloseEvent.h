@@ -70,7 +70,7 @@ public:
     String reason() const { return m_reason; }
 
     // Event function.
-    virtual const AtomicString& interfaceName() const OVERRIDE { return eventNames().interfaceForCloseEvent; }
+    virtual EventInterface eventInterface() const override { return CloseEventInterfaceType; }
 
 private:
     CloseEvent()

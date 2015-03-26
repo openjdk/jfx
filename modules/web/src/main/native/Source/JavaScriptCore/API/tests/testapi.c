@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "JavaScriptCore.h"
@@ -28,11 +28,12 @@
 #include "JSContextRefPrivate.h"
 #include "JSObjectRefPrivate.h"
 #include "JSScriptRefPrivate.h"
+#include "JSStringRefPrivate.h"
 #include <math.h>
 #define ASSERT_DISABLED 0
 #include <wtf/Assertions.h>
 
-#if PLATFORM(MAC) || PLATFORM(IOS)
+#if OS(DARWIN)
 #include <mach/mach.h>
 #include <mach/mach_time.h>
 #include <sys/time.h>
@@ -40,20 +41,6 @@
 
 #if OS(WINDOWS)
 #include <windows.h>
-#endif
-
-#if COMPILER(MSVC)
-
-#include <wtf/MathExtras.h>
-
-static double nan(const char*)
-{
-    return std::numeric_limits<double>::quiet_NaN();
-}
-
-using std::isinf;
-using std::isnan;
-
 #endif
 
 #if JSC_OBJC_API_ENABLED
@@ -1042,6 +1029,72 @@ static bool checkForCycleInPrototypeChain()
     return result;
 }
 
+static JSValueRef valueToObjectExceptionCallAsFunction(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
+{
+    UNUSED_PARAM(function);
+    UNUSED_PARAM(thisObject);
+    UNUSED_PARAM(argumentCount);
+    UNUSED_PARAM(arguments);
+    JSValueRef jsUndefined = JSValueMakeUndefined(JSContextGetGlobalContext(ctx));
+    JSValueToObject(JSContextGetGlobalContext(ctx), jsUndefined, exception);
+    
+    return JSValueMakeUndefined(ctx);
+}
+static bool valueToObjectExceptionTest()
+{
+    JSGlobalContextRef testContext;
+    JSClassDefinition globalObjectClassDefinition = kJSClassDefinitionEmpty;
+    globalObjectClassDefinition.initialize = globalObject_initialize;
+    globalObjectClassDefinition.staticValues = globalObject_staticValues;
+    globalObjectClassDefinition.staticFunctions = globalObject_staticFunctions;
+    globalObjectClassDefinition.attributes = kJSClassAttributeNoAutomaticPrototype;
+    JSClassRef globalObjectClass = JSClassCreate(&globalObjectClassDefinition);
+    testContext = JSGlobalContextCreateInGroup(NULL, globalObjectClass);
+    JSObjectRef globalObject = JSContextGetGlobalObject(testContext);
+
+    JSStringRef valueToObject = JSStringCreateWithUTF8CString("valueToObject");
+    JSObjectRef valueToObjectFunction = JSObjectMakeFunctionWithCallback(testContext, valueToObject, valueToObjectExceptionCallAsFunction);
+    JSObjectSetProperty(testContext, globalObject, valueToObject, valueToObjectFunction, kJSPropertyAttributeNone, NULL);
+    JSStringRelease(valueToObject);
+
+    JSStringRef test = JSStringCreateWithUTF8CString("valueToObject();");
+    JSEvaluateScript(testContext, test, NULL, NULL, 1, NULL);
+    
+    JSStringRelease(test);
+    JSClassRelease(globalObjectClass);
+    JSGlobalContextRelease(testContext);
+    
+    return true;
+}
+
+static bool globalContextNameTest()
+{
+    bool result = true;
+    JSGlobalContextRef context = JSGlobalContextCreate(0);
+
+    JSStringRef str = JSGlobalContextCopyName(context);
+    result &= assertTrue(!str, "Default context name is NULL");
+
+    JSStringRef name1 = JSStringCreateWithUTF8CString("name1");
+    JSStringRef name2 = JSStringCreateWithUTF8CString("name2");
+
+    JSGlobalContextSetName(context, name1);
+    JSStringRef fetchName1 = JSGlobalContextCopyName(context);
+    JSGlobalContextSetName(context, name2);
+    JSStringRef fetchName2 = JSGlobalContextCopyName(context);
+
+    result &= assertTrue(JSStringIsEqual(name1, fetchName1), "Unexpected Context name");
+    result &= assertTrue(JSStringIsEqual(name2, fetchName2), "Unexpected Context name");
+    result &= assertTrue(!JSStringIsEqual(fetchName1, fetchName2), "Unexpected Context name");
+
+    JSStringRelease(name1);
+    JSStringRelease(name2);
+    JSStringRelease(fetchName1);
+    JSStringRelease(fetchName2);
+
+    return result;
+}
+
 static void checkConstnessInJSObjectNames()
 {
     JSStaticFunction fun;
@@ -1050,7 +1103,7 @@ static void checkConstnessInJSObjectNames()
     val.name = "something";
 }
 
-#if PLATFORM(MAC) || PLATFORM(IOS)
+#if OS(DARWIN)
 static double currentCPUTime()
 {
     mach_msg_type_number_t infoCount = THREAD_BASIC_INFO_COUNT;
@@ -1109,7 +1162,7 @@ static bool extendTerminateCallback(JSContextRef ctx, void* context)
     }
     return true;
 }
-#endif /* PLATFORM(MAC) || PLATFORM(IOS) */
+#endif /* OS(DARWIN) */
 
 
 int main(int argc, char* argv[])
@@ -1205,6 +1258,11 @@ int main(int argc, char* argv[])
     free(buffer);
     JSValueRef jsCFEmptyStringWithCharacters = JSValueMakeString(context, jsCFEmptyIStringWithCharacters);
 
+    JSChar constantString[] = { 'H', 'e', 'l', 'l', 'o', };
+    JSStringRef constantStringRef = JSStringCreateWithCharactersNoCopy(constantString, sizeof(constantString) / sizeof(constantString[0]));
+    ASSERT(JSStringGetCharactersPtr(constantStringRef) == constantString);
+    JSStringRelease(constantStringRef);
+
     ASSERT(JSValueGetType(context, NULL) == kJSTypeNull);
     ASSERT(JSValueGetType(context, jsUndefined) == kJSTypeUndefined);
     ASSERT(JSValueGetType(context, jsNull) == kJSTypeNull);
@@ -1239,6 +1297,14 @@ int main(int argc, char* argv[])
     } else
         printf("PASS: returned null when accessing character pointer of a null String.\n");
 
+    JSStringRef emptyString = JSStringCreateWithCFString(CFSTR(""));
+    characters = JSStringGetCharactersPtr(emptyString);
+    if (!characters) {
+        printf("FAIL: Returned null when accessing character pointer of an empty String.\n");
+        failed = 1;
+    } else
+        printf("PASS: returned empty when accessing character pointer of an empty String.\n");
+
     size_t length = JSStringGetLength(nullString);
     if (length) {
         printf("FAIL: Didn't return 0 length for null String.\n");
@@ -1246,6 +1312,14 @@ int main(int argc, char* argv[])
     } else
         printf("PASS: returned 0 length for null String.\n");
     JSStringRelease(nullString);
+
+    length = JSStringGetLength(emptyString);
+    if (length) {
+        printf("FAIL: Didn't return 0 length for empty String.\n");
+        failed = 1;
+    } else
+        printf("PASS: returned 0 length for empty String.\n");
+    JSStringRelease(emptyString);
 
     JSObjectRef propertyCatchalls = JSObjectMake(context, PropertyCatchalls_class(context), NULL);
     JSStringRef propertyCatchallsString = JSStringCreateWithUTF8CString("PropertyCatchalls");
@@ -1555,6 +1629,26 @@ int main(int argc, char* argv[])
     JSStringRelease(line);
 
     exception = NULL;
+    functionBody = JSStringCreateWithUTF8CString("rreturn Array;");
+    line = JSStringCreateWithUTF8CString("line");
+    ASSERT(!JSObjectMakeFunction(context, NULL, 0, NULL, functionBody, NULL, -42, &exception));
+    ASSERT(JSValueIsObject(context, exception));
+    v = JSObjectGetProperty(context, JSValueToObject(context, exception, NULL), line, NULL);
+    assertEqualsAsNumber(v, 1);
+    JSStringRelease(functionBody);
+    JSStringRelease(line);
+
+    exception = NULL;
+    functionBody = JSStringCreateWithUTF8CString("// Line one.\nrreturn Array;");
+    line = JSStringCreateWithUTF8CString("line");
+    ASSERT(!JSObjectMakeFunction(context, NULL, 0, NULL, functionBody, NULL, 1, &exception));
+    ASSERT(JSValueIsObject(context, exception));
+    v = JSObjectGetProperty(context, JSValueToObject(context, exception, NULL), line, NULL);
+    assertEqualsAsNumber(v, 2);
+    JSStringRelease(functionBody);
+    JSStringRelease(line);
+
+    exception = NULL;
     functionBody = JSStringCreateWithUTF8CString("return Array;");
     function = JSObjectMakeFunction(context, NULL, 0, NULL, functionBody, NULL, 1, &exception);
     JSStringRelease(functionBody);
@@ -1759,7 +1853,7 @@ int main(int argc, char* argv[])
         free(scriptUTF8);
     }
 
-#if PLATFORM(MAC) || PLATFORM(IOS)
+#if OS(DARWIN)
     JSStringRef currentCPUTimeStr = JSStringCreateWithUTF8CString("currentCPUTime");
     JSObjectRef currentCPUTimeFunction = JSObjectMakeFunctionWithCallback(context, currentCPUTimeStr, currentCPUTime_callAsFunction);
     JSObjectSetProperty(context, globalObject, currentCPUTimeStr, currentCPUTimeFunction, kJSPropertyAttributeNone, NULL); 
@@ -1910,7 +2004,7 @@ int main(int argc, char* argv[])
             failed = true;
         }
     }
-#endif /* PLATFORM(MAC) || PLATFORM(IOS) */
+#endif /* OS(DARWIN) */
 
     // Clear out local variables pointing at JSObjectRefs to allow their values to be collected
     function = NULL;
@@ -1953,6 +2047,11 @@ int main(int argc, char* argv[])
         printf("FAIL: A cycle in a prototype chain can be created.\n");
         failed = true;
     }
+    if (valueToObjectExceptionTest())
+        printf("PASS: throwException did not crash when handling an error with appendMessageToError set and no codeBlock available.\n");
+
+    if (globalContextNameTest())
+        printf("PASS: global context name behaves as expected.\n");
 
     if (failed) {
         printf("FAIL: Some tests failed.\n");
@@ -1974,6 +2073,7 @@ static char* createStringWithContentsOfFile(const char* fileName)
     FILE* f = fopen(fileName, "r");
     if (!f) {
         fprintf(stderr, "Could not open file: %s\n", fileName);
+        free(buffer);
         return 0;
     }
     

@@ -57,15 +57,18 @@ public:
     };
     typedef unsigned Options;
 
-    static void deleteSelection(Document*, Options = 0);
-    static void deleteKeyPressed(Document*, Options = 0, TextGranularity = CharacterGranularity);
-    static void forwardDeleteKeyPressed(Document*, Options = 0, TextGranularity = CharacterGranularity);
-    static void insertText(Document*, const String&, Options, TextCompositionType = TextCompositionNone);
-    static void insertText(Document*, const String&, const VisibleSelection&, Options, TextCompositionType = TextCompositionNone);
-    static void insertLineBreak(Document*, Options);
-    static void insertParagraphSeparator(Document*, Options);
-    static void insertParagraphSeparatorInQuotedContent(Document*);
+    static void deleteSelection(Document&, Options = 0);
+    static void deleteKeyPressed(Document&, Options = 0, TextGranularity = CharacterGranularity);
+    static void forwardDeleteKeyPressed(Document&, Options = 0, TextGranularity = CharacterGranularity);
+    static void insertText(Document&, const String&, Options, TextCompositionType = TextCompositionNone);
+    static void insertText(Document&, const String&, const VisibleSelection&, Options, TextCompositionType = TextCompositionNone);
+    static void insertLineBreak(Document&, Options);
+    static void insertParagraphSeparator(Document&, Options);
+    static void insertParagraphSeparatorInQuotedContent(Document&);
     static void closeTyping(Frame*);
+#if PLATFORM(IOS)
+    static void ensureLastEditCommandHasCurrentSelectionIfOpenForMoreTyping(Frame*, const VisibleSelection&);
+#endif
 
     void insertText(const String &text, bool selectInsertedText);
     void insertTextRunWithoutNewlines(const String &text, bool selectInsertedText);
@@ -77,18 +80,22 @@ public:
     void deleteSelection(bool smartDelete);
     void setCompositionType(TextCompositionType type) { m_compositionType = type; }
 
+#if PLATFORM(IOS)
+    void setEndingSelectionOnLastInsertCommand(const VisibleSelection& selection);
+#endif
+
 private:
-    static PassRefPtr<TypingCommand> create(Document* document, ETypingCommand command, const String& text = "", Options options = 0, TextGranularity granularity = CharacterGranularity)
+    static PassRefPtr<TypingCommand> create(Document& document, ETypingCommand command, const String& text = "", Options options = 0, TextGranularity granularity = CharacterGranularity)
     {
         return adoptRef(new TypingCommand(document, command, text, options, granularity, TextCompositionNone));
     }
 
-    static PassRefPtr<TypingCommand> create(Document* document, ETypingCommand command, const String& text, Options options, TextCompositionType compositionType)
+    static PassRefPtr<TypingCommand> create(Document& document, ETypingCommand command, const String& text, Options options, TextCompositionType compositionType)
     {
         return adoptRef(new TypingCommand(document, command, text, options, CharacterGranularity, compositionType));
     }
 
-    TypingCommand(Document*, ETypingCommand, const String& text, Options, TextGranularity, TextCompositionType);
+    TypingCommand(Document&, ETypingCommand, const String& text, Options, TextGranularity, TextCompositionType);
 
     bool smartDelete() const { return m_smartDelete; }
     void setSmartDelete(bool smartDelete) { m_smartDelete = smartDelete; }
@@ -100,7 +107,6 @@ private:
     virtual void doApply();
     virtual EditAction editingAction() const;
     virtual bool isTypingCommand() const;
-    virtual bool callsAppliedEditingInDoApply() const;
     virtual bool preservesTypingStyle() const { return m_preservesTypingStyle; }
     virtual bool shouldRetainAutocorrectionIndicator() const
     {

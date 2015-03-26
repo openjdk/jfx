@@ -119,7 +119,7 @@
  *                                  NULL, &status);
  * if (U_SUCCESS(status)) {
  *     for (int pos = usearch_first(search, &status); 
- *                                      pos != USEARCH_DONE; 
+ *          pos != USEARCH_DONE; 
  *          pos = usearch_next(search, &status))
  *     {
  *         printf("Found match at %d pos, length is %d\n", pos, 
@@ -159,7 +159,7 @@ typedef enum {
     /** 
      * Option for canonical matches. option 1 in header documentation.
      * The default value will be USEARCH_OFF
-    */
+     */
     USEARCH_CANONICAL_MATCH,
     /** 
      * Option to control how collation elements are compared.

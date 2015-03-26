@@ -27,24 +27,24 @@
 #include "CSSPropertyNames.h"
 #include "CSSValueKeywords.h"
 #include "HTMLNames.h"
-#include "RenderBR.h"
+#include "RenderLineBreak.h"
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-HTMLBRElement::HTMLBRElement(const QualifiedName& tagName, Document* document)
+HTMLBRElement::HTMLBRElement(const QualifiedName& tagName, Document& document)
     : HTMLElement(tagName, document)
 {
     ASSERT(hasTagName(brTag));
 }
 
-PassRefPtr<HTMLBRElement> HTMLBRElement::create(Document* document)
+PassRefPtr<HTMLBRElement> HTMLBRElement::create(Document& document)
 {
     return adoptRef(new HTMLBRElement(brTag, document));
 }
 
-PassRefPtr<HTMLBRElement> HTMLBRElement::create(const QualifiedName& tagName, Document* document)
+PassRefPtr<HTMLBRElement> HTMLBRElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(new HTMLBRElement(tagName, document));
 }
@@ -56,7 +56,7 @@ bool HTMLBRElement::isPresentationAttribute(const QualifiedName& name) const
     return HTMLElement::isPresentationAttribute(name);
 }
 
-void HTMLBRElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStylePropertySet* style)
+void HTMLBRElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStyleProperties& style)
 {
     if (name == clearAttr) {
         // If the string is empty, then don't add the clear property.
@@ -71,12 +71,12 @@ void HTMLBRElement::collectStyleForPresentationAttribute(const QualifiedName& na
         HTMLElement::collectStyleForPresentationAttribute(name, value, style);
 }
 
-RenderObject* HTMLBRElement::createRenderer(RenderArena* arena, RenderStyle* style)
+RenderPtr<RenderElement> HTMLBRElement::createElementRenderer(PassRef<RenderStyle> style)
 {
-     if (style->hasContent())
-        return RenderObject::createObject(this, style);
+    if (style.get().hasContent())
+        return RenderElement::createFor(*this, std::move(style));
 
-     return new (arena) RenderBR(this);
+    return createRenderer<RenderLineBreak>(*this, std::move(style));
 }
 
 }

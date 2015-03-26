@@ -31,7 +31,7 @@
 #ifndef RenderRubyRun_h
 #define RenderRubyRun_h
 
-#include "RenderBlock.h"
+#include "RenderBlockFlow.h"
 
 namespace WebCore {
 
@@ -41,8 +41,9 @@ class RenderRubyText;
 // RenderRubyRun are 'inline-block/table' like objects,and wrap a single pairing of a ruby base with its ruby text(s).
 // See RenderRuby.h for further comments on the structure
 
-class RenderRubyRun : public RenderBlock {
+class RenderRubyRun final : public RenderBlockFlow {
 public:
+    RenderRubyRun(Document&, PassRef<RenderStyle>);
     virtual ~RenderRubyRun();
 
     bool hasRubyText() const;
@@ -55,9 +56,9 @@ public:
     virtual RenderObject* layoutSpecialExcludedChild(bool relayoutChildren);
     virtual void layout();
 
-    virtual bool isChildAllowed(RenderObject*, RenderStyle*) const;
+    virtual bool isChildAllowed(const RenderObject&, const RenderStyle&) const;
     virtual void addChild(RenderObject* child, RenderObject* beforeChild = 0);
-    virtual void removeChild(RenderObject* child);
+    virtual void removeChild(RenderObject&) override;
 
     virtual RenderBlock* firstLineBlock() const;
     virtual void updateFirstLetter();
@@ -70,27 +71,13 @@ protected:
     RenderRubyBase* createRubyBase() const;
 
 private:
-    RenderRubyRun();
-
     virtual bool isRubyRun() const { return true; }
     virtual const char* renderName() const { return "RenderRubyRun (anonymous)"; }
     virtual bool createsAnonymousWrapper() const { return true; }
     virtual void removeLeftoverAnonymousBlock(RenderBlock*) { }
 };
 
-inline RenderRubyRun* toRenderRubyRun(RenderObject* object)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isRubyRun());
-    return static_cast<RenderRubyRun*>(object);
-}
-
-inline const RenderRubyRun* toRenderRubyRun(const RenderObject* object)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isBox());
-    return static_cast<const RenderRubyRun*>(object);
-}
-
-void toRenderRubyRun(const RenderRubyRun*);
+RENDER_OBJECT_TYPE_CASTS(RenderRubyRun, isRubyRun())
 
 } // namespace WebCore
 

@@ -36,13 +36,14 @@
 #include "AudioContext.h"
 #include "AudioFileReader.h"
 #include "ExceptionCode.h"
+#include "ExceptionCodePlaceholder.h"
 
 namespace WebCore {
 
 PassRefPtr<AudioBuffer> AudioBuffer::create(unsigned numberOfChannels, size_t numberOfFrames, float sampleRate)
 {
     if (sampleRate < 22050 || sampleRate > 96000 || numberOfChannels > AudioContext::maxNumberOfChannels() || !numberOfFrames)
-        return 0;
+        return nullptr;
     
     return adoptRef(new AudioBuffer(numberOfChannels, numberOfFrames, sampleRate));
 }
@@ -53,7 +54,7 @@ PassRefPtr<AudioBuffer> AudioBuffer::createFromAudioFileData(const void* data, s
     if (bus.get())
         return adoptRef(new AudioBuffer(bus.get()));
 
-    return 0;
+    return nullptr;
 }
 
 AudioBuffer::AudioBuffer(unsigned numberOfChannels, size_t numberOfFrames, float sampleRate)
@@ -65,6 +66,7 @@ AudioBuffer::AudioBuffer(unsigned numberOfChannels, size_t numberOfFrames, float
 
     for (unsigned i = 0; i < numberOfChannels; ++i) {
         RefPtr<Float32Array> channelDataArray = Float32Array::create(m_length);
+        channelDataArray->setNeuterable(false);
         m_channels.append(channelDataArray);
     }
 }
@@ -79,6 +81,7 @@ AudioBuffer::AudioBuffer(AudioBus* bus)
     m_channels.reserveCapacity(numberOfChannels);
     for (unsigned i = 0; i < numberOfChannels; ++i) {
         RefPtr<Float32Array> channelDataArray = Float32Array::create(m_length);
+        channelDataArray->setNeuterable(false);
         channelDataArray->setRange(bus->channel(i)->data(), m_length, 0);
         m_channels.append(channelDataArray);
     }
@@ -89,20 +92,21 @@ void AudioBuffer::releaseMemory()
     m_channels.clear();
 }
 
-Float32Array* AudioBuffer::getChannelData(unsigned channelIndex, ExceptionCode& ec)
+PassRefPtr<Float32Array> AudioBuffer::getChannelData(unsigned channelIndex, ExceptionCode& ec)
 {
     if (channelIndex >= m_channels.size()) {
         ec = SYNTAX_ERR;
-        return 0;
+        return nullptr;
     }
 
-    return m_channels[channelIndex].get();
+    Float32Array* channelData = m_channels[channelIndex].get();
+    return Float32Array::create(channelData->buffer(), channelData->byteOffset(), channelData->length());
 }
 
 Float32Array* AudioBuffer::getChannelData(unsigned channelIndex)
 {
     if (channelIndex >= m_channels.size())
-        return 0;
+        return nullptr;
 
     return m_channels[channelIndex].get();
 }

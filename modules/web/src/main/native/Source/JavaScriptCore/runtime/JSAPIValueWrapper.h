@@ -39,23 +39,24 @@ namespace JSC {
 
         static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
         {
-            return Structure::create(vm, globalObject, prototype, TypeInfo(APIValueWrapperType, OverridesVisitChildren | OverridesGetPropertyNames), &s_info);
+            return Structure::create(vm, globalObject, prototype, TypeInfo(APIValueWrapperType, OverridesVisitChildren | OverridesGetPropertyNames), info());
         }
-
-        static JS_EXPORTDATA const ClassInfo s_info;
-
-        static JSAPIValueWrapper* create(ExecState* exec, JSValue value)
+        
+        DECLARE_EXPORT_INFO;
+        
+        static JSAPIValueWrapper* create(ExecState* exec, JSValue value) 
         {
-            JSAPIValueWrapper* wrapper = new (NotNull, allocateCell<JSAPIValueWrapper>(*exec->heap())) JSAPIValueWrapper(exec);
-            wrapper->finishCreation(exec, value);
+            VM& vm = exec->vm();
+            JSAPIValueWrapper* wrapper = new (NotNull, allocateCell<JSAPIValueWrapper>(vm.heap)) JSAPIValueWrapper(exec);
+            wrapper->finishCreation(vm, value);
             return wrapper;
         }
 
     protected:
-        void finishCreation(ExecState* exec, JSValue value)
+        void finishCreation(VM& vm, JSValue value)
         {
-            Base::finishCreation(exec->vm());
-            m_value.set(exec->vm(), this, value);
+            Base::finishCreation(vm);
+            m_value.set(vm, this, value);
             ASSERT(!value.isCell());
         }
 

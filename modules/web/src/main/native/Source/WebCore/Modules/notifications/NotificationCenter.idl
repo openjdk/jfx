@@ -31,13 +31,12 @@
 
 [
     NoInterfaceObject,
-        Conditional=LEGACY_NOTIFICATIONS,
-        ActiveDOMObject,
-        OmitConstructor
+    Conditional=LEGACY_NOTIFICATIONS,
+    ActiveDOMObject,
 ] interface NotificationCenter {
-   Notification createNotification(DOMString iconUrl, DOMString title, DOMString body) raises(DOMException);
+   [RaisesException] Notification createNotification(DOMString iconUrl, DOMString title, DOMString body);
 
-       int checkPermission();
+   int checkPermission();
    void requestPermission(optional VoidCallback callback);
-    };
+};
 

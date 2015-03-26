@@ -33,14 +33,14 @@ class DOMImplementation;
     
 class FTPDirectoryDocument : public HTMLDocument {
 public:
-    static PassRefPtr<FTPDirectoryDocument> create(Frame* frame, const KURL& url)
+    static PassRefPtr<FTPDirectoryDocument> create(Frame* frame, const URL& url)
     {
         return adoptRef(new FTPDirectoryDocument(frame, url));
     }
 
 private:
-    FTPDirectoryDocument(Frame*, const KURL&);
-    virtual PassRefPtr<DocumentParser> createParser();
+    FTPDirectoryDocument(Frame*, const URL&);
+    virtual PassRefPtr<DocumentParser> createParser() override;
 };
     
 } // namespace WebCore

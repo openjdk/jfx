@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -20,13 +20,14 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
 #include "config.h"
 #include "Watchpoint.h"
 
 #include "LinkBuffer.h"
+#include <wtf/CompilationThread.h>
 #include <wtf/PassRefPtr.h>
 
 namespace JSC {
@@ -37,35 +38,41 @@ Watchpoint::~Watchpoint()
         remove();
 }
 
-WatchpointSet::WatchpointSet(InitialWatchpointSetMode mode)
-    : m_isWatched(mode == InitializedWatching)
-    , m_isInvalidated(false)
+WatchpointSet::WatchpointSet(WatchpointState state)
+    : m_state(state)
+    , m_setIsNotEmpty(false)
 {
 }
 
 WatchpointSet::~WatchpointSet()
 {
-    // Fire all watchpoints. This is necessary because it is possible, say with
-    // structure watchpoints, for the watchpoint set owner to die while the
-    // watchpoint owners are still live.
-    fireAllWatchpoints();
+    // Remove all watchpoints, so that they don't try to remove themselves. Note that we
+    // don't fire watchpoints on deletion. We assume that any code that is interested in
+    // watchpoints already also separately has a mechanism to make sure that the code is
+    // either keeping the watchpoint set's owner alive, or does some weak reference thing.
+    while (!m_set.isEmpty())
+        m_set.begin()->remove();
 }
 
 void WatchpointSet::add(Watchpoint* watchpoint)
 {
+    ASSERT(!isCompilationThread());
+    ASSERT(state() != IsInvalidated);
     if (!watchpoint)
         return;
     m_set.push(watchpoint);
-    m_isWatched = true;
+    m_setIsNotEmpty = true;
+    m_state = IsWatched;
 }
 
-void WatchpointSet::notifyWriteSlow()
+void WatchpointSet::fireAllSlow()
 {
-    ASSERT(m_isWatched);
-
+    ASSERT(state() == IsWatched);
+    
+    WTF::storeStoreFence();
     fireAllWatchpoints();
-    m_isWatched = false;
-    m_isInvalidated = true;
+    m_state = IsInvalidated;
+    WTF::storeStoreFence();
 }
 
 void WatchpointSet::fireAllWatchpoints()
@@ -82,11 +89,9 @@ void InlineWatchpointSet::add(Watchpoint* watchpoint)
 WatchpointSet* InlineWatchpointSet::inflateSlow()
 {
     ASSERT(isThin());
-    WatchpointSet* fat = adoptRef(new WatchpointSet(InitializedBlind)).leakRef();
-    if (m_data & IsInvalidatedFlag)
-        fat->m_isInvalidated = true;
-    if (m_data & IsWatchedFlag)
-        fat->m_isWatched = true;
+    ASSERT(!isCompilationThread());
+    WatchpointSet* fat = adoptRef(new WatchpointSet(decodeState(m_data))).leakRef();
+    WTF::storeStoreFence();
     m_data = bitwise_cast<uintptr_t>(fat);
     return fat;
 }

@@ -29,11 +29,14 @@
 #include "ResourceHandle.h"
 
 #include "CachedResourceLoader.h"
+#include "CredentialStorage.h"
+#include "FileSystem.h"
+#include "Logging.h"
 #include "NetworkingContext.h"
 #include "NotImplemented.h"
 #include "ResourceHandleInternal.h"
 #include "ResourceHandleManager.h"
-#include "SharedBuffer.h"
+#include "SSLHandle.h"
 
 #if PLATFORM(WIN) && USE(CF)
 #include <wtf/PassRefPtr.h>
@@ -47,7 +50,7 @@ public:
     WebCoreSynchronousLoader();
 
     virtual void didReceiveResponse(ResourceHandle*, const ResourceResponse&);
-    virtual void didReceiveData(ResourceHandle*, const char*, int, int encodedDataLength);
+    virtual void didReceiveData(ResourceHandle*, const char*, unsigned, int encodedDataLength);
     virtual void didFinishLoading(ResourceHandle*, double /*finishTime*/);
     virtual void didFail(ResourceHandle*, const ResourceError&);
 
@@ -70,7 +73,7 @@ void WebCoreSynchronousLoader::didReceiveResponse(ResourceHandle*, const Resourc
     m_response = response;
 }
 
-void WebCoreSynchronousLoader::didReceiveData(ResourceHandle*, const char* data, int length, int)
+void WebCoreSynchronousLoader::didReceiveData(ResourceHandle*, const char* data, unsigned length, int)
 {
     m_data.append(data, length);
 }
@@ -115,19 +118,18 @@ void ResourceHandle::cancel()
     ResourceHandleManager::sharedInstance()->cancel(this);
 }
 
-#if PLATFORM(WIN) && USE(CF)
-static HashSet<String>& allowsAnyHTTPSCertificateHosts()
-{
-    static HashSet<String> hosts;
-
-    return hosts;
-}
-
 void ResourceHandle::setHostAllowsAnyHTTPSCertificate(const String& host)
 {
-    allowsAnyHTTPSCertificateHosts().add(host.lower());
+    allowsAnyHTTPSCertificateHosts(host.lower());
 }
-#endif
+
+void ResourceHandle::setClientCertificateInfo(const String& host, const String& certificate, const String& key)
+{
+    if (fileExists(certificate))
+        addAllowedClientCertificate(host, certificate, key);
+    else
+        LOG(Network, "Invalid client certificate file: %s!\n", certificate.latin1().data());
+}
 
 #if PLATFORM(WIN) && USE(CF)
 // FIXME:  The CFDataRef will need to be something else when
@@ -168,6 +170,11 @@ bool ResourceHandle::loadsBlocked()
     return false;
 }
 
+bool ResourceHandle::shouldUseCredentialStorage()
+{
+    return (!client() || client()->shouldUseCredentialStorage(this)) && firstRequest().url().protocolIsInHTTPFamily();
+}
+
 void ResourceHandle::platformLoadResourceSynchronously(NetworkingContext* context, const ResourceRequest& request, StoredCredentials storedCredentials, ResourceError& error, ResourceResponse& response, Vector<char>& data)
 {
     WebCoreSynchronousLoader syncLoader;
@@ -182,25 +189,95 @@ void ResourceHandle::platformLoadResourceSynchronously(NetworkingContext* contex
     response = syncLoader.resourceResponse();
 }
 
-//stubs needed for windows version
-void ResourceHandle::didReceiveAuthenticationChallenge(const AuthenticationChallenge&) 
+void ResourceHandle::didReceiveAuthenticationChallenge(const AuthenticationChallenge& challenge)
 {
-    notImplemented();
+    if (!d->m_user.isNull() && !d->m_pass.isNull()) {
+        Credential credential(d->m_user, d->m_pass, CredentialPersistenceNone);
+
+        URL urlToStore;
+        if (challenge.failureResponse().httpStatusCode() == 401)
+            urlToStore = challenge.failureResponse().url();
+        CredentialStorage::set(credential, challenge.protectionSpace(), urlToStore);
+        
+        String userpass = credential.user() + ":" + credential.password();
+        curl_easy_setopt(d->m_handle, CURLOPT_USERPWD, userpass.utf8().data());
+
+        d->m_user = String();
+        d->m_pass = String();
+        // FIXME: Per the specification, the user shouldn't be asked for credentials if there were incorrect ones provided explicitly.
+        return;
+    }
+
+    if (shouldUseCredentialStorage()) {
+        if (!d->m_initialCredential.isEmpty() || challenge.previousFailureCount()) {
+            // The stored credential wasn't accepted, stop using it.
+            // There is a race condition here, since a different credential might have already been stored by another ResourceHandle,
+            // but the observable effect should be very minor, if any.
+            CredentialStorage::remove(challenge.protectionSpace());
+        }
+
+        if (!challenge.previousFailureCount()) {
+            Credential credential = CredentialStorage::get(challenge.protectionSpace());
+            if (!credential.isEmpty() && credential != d->m_initialCredential) {
+                ASSERT(credential.persistence() == CredentialPersistenceNone);
+                if (challenge.failureResponse().httpStatusCode() == 401) {
+                    // Store the credential back, possibly adding it as a default for this directory.
+                    CredentialStorage::set(credential, challenge.protectionSpace(), challenge.failureResponse().url());
+                }
+                String userpass = credential.user() + ":" + credential.password();
+                curl_easy_setopt(d->m_handle, CURLOPT_USERPWD, userpass.utf8().data());
+                return;
+            }
+        }
+    }
+
+    d->m_currentWebChallenge = challenge;
+    
+    if (client())
+        client()->didReceiveAuthenticationChallenge(this, d->m_currentWebChallenge);
 }
 
-void ResourceHandle::receivedCredential(const AuthenticationChallenge&, const Credential&) 
+void ResourceHandle::receivedCredential(const AuthenticationChallenge& challenge, const Credential& credential)
 {
-    notImplemented();
+    if (challenge != d->m_currentWebChallenge)
+        return;
+
+    if (credential.isEmpty()) {
+        receivedRequestToContinueWithoutCredential(challenge);
+        return;
+    }
+
+    if (shouldUseCredentialStorage()) {
+        if (challenge.failureResponse().httpStatusCode() == 401) {
+            URL urlToStore = challenge.failureResponse().url();
+            CredentialStorage::set(credential, challenge.protectionSpace(), urlToStore);
+        }
+    }
+
+    String userpass = credential.user() + ":" + credential.password();
+    curl_easy_setopt(d->m_handle, CURLOPT_USERPWD, userpass.utf8().data());
+
+    clearAuthentication();
 }
 
-void ResourceHandle::receivedRequestToContinueWithoutCredential(const AuthenticationChallenge&) 
+void ResourceHandle::receivedRequestToContinueWithoutCredential(const AuthenticationChallenge& challenge)
 {
-    notImplemented();
+    if (challenge != d->m_currentWebChallenge)
+        return;
+
+    String userpass = "";
+    curl_easy_setopt(d->m_handle, CURLOPT_USERPWD, userpass.utf8().data());
+
+    clearAuthentication();
 }
 
-void ResourceHandle::receivedCancellation(const AuthenticationChallenge&)
+void ResourceHandle::receivedCancellation(const AuthenticationChallenge& challenge)
 {
-    notImplemented();
+    if (challenge != d->m_currentWebChallenge)
+        return;
+
+    if (client())
+        client()->receivedCancellation(this, challenge);
 }
 
 } // namespace WebCore

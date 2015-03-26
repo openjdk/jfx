@@ -14,16 +14,11 @@ INCLUDEPATH += $$PWD/wtf \
                $$PWD/../WebCore/platform
 
 HEADERS += \
-    Alignment.h \
-    AlwaysInline.h \
-    ArrayBuffer.h \
-    ArrayBufferView.h \
     ASCIICType.h \
     Assertions.h \
     Atomics.h \
     AVLTree.h \
     Bitmap.h \
-    BitArray.h \
     BitVector.h \
     BloomFilter.h \
     BoundsCheckedPointer.h \
@@ -52,15 +47,10 @@ HEADERS += \
     dtoa/utils.h \
     DynamicAnnotations.h \
     Encoder.h \
-    EnumClass.h \
     ExportMacros.h \
-    FastAllocBase.h \
     FastMalloc.h \
     FeatureDefines.h \
     FilePrintStream.h \
-    FixedArray.h \
-    Float32Array.h \
-    Float64Array.h \
     Forward.h \
     FunctionDispatcher.h \
     Functional.h \
@@ -74,9 +64,6 @@ HEADERS += \
     HashTable.h \
     HashTraits.h \
     HexNumber.h \
-    Int16Array.h \
-    Int32Array.h \
-    Int8Array.h \
     ListHashSet.h \
     Locker.h \
     MainThread.h \
@@ -87,14 +74,10 @@ HEADERS += \
     MetaAllocator.h \
     MetaAllocatorHandle.h \
     Noncopyable.h \
-    NonCopyingSort.h \
-    NotFound.h \
-    NullPtr.h \
     NumberOfCores.h \
     RAMSize.h \
     OSAllocator.h \
     OSRandomSource.h \
-    OwnArrayPtr.h \
     OwnPtr.h \
     OwnPtrCommon.h \
     PackedIntVector.h \
@@ -106,10 +89,8 @@ HEADERS += \
     ParallelJobsGeneric.h \
     ParallelJobsLibdispatch.h \
     ParallelJobsOpenMP.h \
-    PassOwnArrayPtr.h \
     PassOwnPtr.h \
     PassRefPtr.h \
-    PassTraits.h \
     Platform.h \
     PossiblyNull.h \
     PrintStream.h \
@@ -153,20 +134,10 @@ HEADERS += \
     threads/BinarySemaphore.h \
     Threading.h \
     ThreadingPrimitives.h \
-    ThreadRestrictionVerifier.h \
     ThreadSafeRefCounted.h \
     ThreadSpecific.h \
-    TypeTraits.h \
-    Uint16Array.h \
-    Uint32Array.h \
-    Uint8Array.h \
-    Uint8ClampedArray.h \
     unicode/CharacterNames.h \
     unicode/Collator.h \
-    unicode/icu/UnicodeIcu.h \
-    unicode/ScriptCodesFromICU.h \
-    unicode/Unicode.h \
-    unicode/UnicodeMacrosFromICU.h \
     unicode/UTF8.h \
     ValueCheck.h \
     Vector.h \
@@ -178,16 +149,18 @@ HEADERS += \
 unix: HEADERS += ThreadIdentifierDataPthreads.h
 
 SOURCES += \
-    ArrayBuffer.cpp \
-    ArrayBufferView.cpp \
     Assertions.cpp \
     Atomics.cpp \
     BitVector.cpp \
     CryptographicallyRandomNumber.cpp \
     CurrentTime.cpp \
+    CompilationThread.cpp \
     DateMath.cpp \
     DataLog.cpp \
     DecimalNumber.cpp \
+    PrintStream.cpp \
+    FastBitVector.cpp \
+#    cf/RunLoopCF.cpp \
     dtoa.cpp \
     dtoa/bignum-dtoa.cc \
     dtoa/bignum.cc \
@@ -201,19 +174,15 @@ SOURCES += \
     FilePrintStream.cpp \
     FunctionDispatcher.cpp \
     GregorianDateTime.cpp \
-    gobject/GOwnPtr.cpp \
     gobject/GRefPtr.cpp \
     HashTable.cpp \
     MD5.cpp \
     MainThread.cpp \
     MediaTime.cpp \
     MetaAllocator.cpp \
-    NullPtr.cpp \
     NumberOfCores.cpp \
     RAMSize.cpp \
     OSRandomSource.cpp \
-#   qt/MainThreadQt.cpp \
-#   qt/StringQt.cpp \
     PageAllocationAligned.cpp \
     PageBlock.cpp \
     ParallelJobsGeneric.cpp \
@@ -223,10 +192,11 @@ SOURCES += \
     SHA1.cpp \
     StackBounds.cpp \
     StringPrintStream.cpp \
+    SixCharacterHash.cpp \
     TCSystemAlloc.cpp \
     Threading.cpp \
-    TypeTraits.cpp \
     WTFThreadData.cpp \
+    text/AtomicStringTable.cpp \
     text/AtomicString.cpp \
     text/Base64.cpp \
     text/CString.cpp \
@@ -237,6 +207,14 @@ SOURCES += \
     unicode/CollatorDefault.cpp \
     unicode/icu/CollatorICU.cpp \
     unicode/UTF8.cpp
+
+contains(DEFINES, WTF_USE_CF=1) {
+    SOURCES += \
+#       text/cf/AtomicStringCF.cpp \
+        text/cf/StringImplCF.cpp \
+        text/cf/StringCF.cpp \
+#       text/cf/StringViewCF.cpp \
+}
     
 unix: SOURCES += \
     OSAllocatorPosix.cpp \
@@ -244,7 +222,6 @@ unix: SOURCES += \
     ThreadingPthreads.cpp
 
 win*|wince*: SOURCES += \
-    win/OwnPtrWin.cpp \
     OSAllocatorWin.cpp \
     ThreadSpecificWin.cpp \
     ThreadingWin.cpp

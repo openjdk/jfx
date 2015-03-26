@@ -46,11 +46,8 @@ namespace WebCore {
     class ContextMenuController {
         WTF_MAKE_NONCOPYABLE(ContextMenuController); WTF_MAKE_FAST_ALLOCATED;
     public:
+        ContextMenuController(Page&, ContextMenuClient&);
         ~ContextMenuController();
-
-        static PassOwnPtr<ContextMenuController> create(Page*, ContextMenuClient*);
-
-        ContextMenuClient* client() const { return m_client; }
 
         ContextMenu* contextMenu() const { return m_contextMenu.get(); }
         void clearContextMenu();
@@ -68,7 +65,7 @@ namespace WebCore {
         const HitTestResult& hitTestResult() { return m_hitTestResult; }
 
 #if PLATFORM(JAVA)
-        Page* page() const { return m_page; }
+        Page* page() const { return &m_page; }
 #endif
 
 #if USE(ACCESSIBILITY_CONTEXT_MENUS)
@@ -76,8 +73,6 @@ namespace WebCore {
 #endif
 
     private:
-        ContextMenuController(Page*, ContextMenuClient*);
-
         PassOwnPtr<ContextMenu> createContextMenu(Event*);
         void showContextMenu(Event*);
         
@@ -95,8 +90,8 @@ namespace WebCore {
         void createAndAppendUnicodeSubMenu(ContextMenuItem&);
 #endif
 
-        Page* m_page;
-        ContextMenuClient* m_client;
+        Page& m_page;
+        ContextMenuClient& m_client;
         OwnPtr<ContextMenu> m_contextMenu;
         RefPtr<ContextMenuProvider> m_menuProvider;
         HitTestResult m_hitTestResult;

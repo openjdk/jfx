@@ -33,8 +33,6 @@
 #include "MutationObserverRegistration.h"
 
 #include "Document.h"
-#include "Node.h"
-#include "QualifiedName.h"
 
 namespace WebCore {
 
@@ -44,8 +42,8 @@ PassOwnPtr<MutationObserverRegistration> MutationObserverRegistration::create(Pa
 }
 
 MutationObserverRegistration::MutationObserverRegistration(PassRefPtr<MutationObserver> observer, Node* registrationNode, MutationObserverOptions options, const HashSet<AtomicString>& attributeFilter)
-     : m_observer(observer)
-     , m_registrationNode(registrationNode)
+    : m_observer(observer)
+    , m_registrationNode(registrationNode)
     , m_options(options)
     , m_attributeFilter(attributeFilter)
 {
@@ -100,9 +98,9 @@ void MutationObserverRegistration::clearTransientRegistrations()
 
 void MutationObserverRegistration::unregisterAndDelete(MutationObserverRegistration* registry)
 {
-        RefPtr<Node> registrationNode(registry->m_registrationNode); 
- 	registrationNode->unregisterMutationObserver(registry); 
- 	// The above line will cause registry to be deleted, so don't do any more in this function. 
+    RefPtr<Node> registrationNode(registry->m_registrationNode);
+    registrationNode->unregisterMutationObserver(registry);
+    // The above line will cause registry to be deleted, so don't do any more in this function.
 }
 
 bool MutationObserverRegistration::shouldReceiveMutationFrom(Node* node, MutationObserver::MutationType type, const QualifiedName* attributeName) const

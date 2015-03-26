@@ -31,9 +31,8 @@
 #ifndef RenderSVGModelObject_h
 #define RenderSVGModelObject_h
 
-#if ENABLE(SVG)
-
-#include "RenderObject.h"
+#include "RenderElement.h"
+#include "SVGElement.h"
 #include "SVGRenderSupport.h"
 
 namespace WebCore {
@@ -43,44 +42,46 @@ namespace WebCore {
 // required by SVG renders need to be declared on RenderObject, but shared
 // logic can go in this class or in SVGRenderSupport.
 
-class SVGStyledElement;
+class SVGElement;
 
-class RenderSVGModelObject : public RenderObject {
+class RenderSVGModelObject : public RenderElement {
 public:
-    explicit RenderSVGModelObject(SVGStyledElement*);
+    virtual LayoutRect clippedOverflowRectForRepaint(const RenderLayerModelObject* repaintContainer) const override;
+    virtual void computeFloatRectForRepaint(const RenderLayerModelObject* repaintContainer, FloatRect&, bool fixed = false) const override final;
+    virtual LayoutRect outlineBoundsForRepaint(const RenderLayerModelObject* repaintContainer, const RenderGeometryMap*) const override final;
 
-    virtual bool requiresLayer() const { return false; }
+    virtual void absoluteRects(Vector<IntRect>&, const LayoutPoint& accumulatedOffset) const override final;
+    virtual void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const override;
 
-    virtual LayoutRect clippedOverflowRectForRepaint(const RenderLayerModelObject* repaintContainer) const OVERRIDE;
-    virtual void computeFloatRectForRepaint(const RenderLayerModelObject* repaintContainer, FloatRect&, bool fixed = false) const OVERRIDE;
-    virtual LayoutRect outlineBoundsForRepaint(const RenderLayerModelObject* repaintContainer, const RenderGeometryMap*) const OVERRIDE;
+    virtual void mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState&, MapCoordinatesFlags = ApplyContainerFlip, bool* wasFixed = 0) const override final;
+    virtual const RenderObject* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const override final;
+    virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
 
-    virtual void absoluteRects(Vector<IntRect>&, const LayoutPoint& accumulatedOffset) const;
-    virtual void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const;
-
-    virtual void mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState&, MapCoordinatesFlags = ApplyContainerFlip, bool* wasFixed = 0) const OVERRIDE;
-    virtual const RenderObject* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const OVERRIDE;
-    virtual void styleWillChange(StyleDifference, const RenderStyle* newStyle);
-    virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle);
-
-    static bool checkIntersection(RenderObject*, const FloatRect&);
-    static bool checkEnclosure(RenderObject*, const FloatRect&);
+    static bool checkIntersection(RenderElement*, const FloatRect&);
+    static bool checkEnclosure(RenderElement*, const FloatRect&);
 
     virtual FloatRect repaintRectInLocalCoordinatesExcludingSVGShadow() const { return repaintRectInLocalCoordinates(); }
     bool hasSVGShadow() const { return m_hasSVGShadow; }
     void setHasSVGShadow(bool hasShadow) { m_hasSVGShadow = hasShadow; }
 
+    SVGElement& element() const { return toSVGElement(nodeForNonAnonymous()); }
+
 protected:
-    virtual void willBeDestroyed();
+    RenderSVGModelObject(SVGElement&, PassRef<RenderStyle>);
+
+    virtual void willBeDestroyed() override;
 
 private:
+    virtual bool isRenderSVGModelObject() const override final { return true; }
+
     // This method should never be called, SVG uses a different nodeAtPoint method
-    bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) OVERRIDE;
-    virtual void absoluteFocusRingQuads(Vector<FloatQuad>&);
+    virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) override;
+    virtual void absoluteFocusRingQuads(Vector<FloatQuad>&) override final;
     bool m_hasSVGShadow;
 };
 
+RENDER_OBJECT_TYPE_CASTS(RenderSVGModelObject, isRenderSVGModelObject());
+
 }
 
-#endif // ENABLE(SVG)
 #endif

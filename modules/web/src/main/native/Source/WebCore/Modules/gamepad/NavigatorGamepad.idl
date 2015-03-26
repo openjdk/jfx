@@ -18,8 +18,8 @@
  */
 
 [
-        Conditional=GAMEPAD,
+    Conditional=GAMEPAD,
 ] partial interface Navigator {
     GamepadList webkitGetGamepads();
-    };
+};
 

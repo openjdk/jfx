@@ -26,24 +26,25 @@
 #ifndef JSClassRef_h
 #define JSClassRef_h
 
-#include <JavaScriptCore/JSObjectRef.h>
-
-#include "Weak.h"
+#include "OpaqueJSString.h"
 #include "Protect.h"
+#include "Weak.h"
+#include <JavaScriptCore/JSObjectRef.h>
 #include <wtf/HashMap.h>
 #include <wtf/text/WTFString.h>
 
 struct StaticValueEntry {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    StaticValueEntry(JSObjectGetPropertyCallback _getProperty, JSObjectSetPropertyCallback _setProperty, JSPropertyAttributes _attributes)
-        : getProperty(_getProperty), setProperty(_setProperty), attributes(_attributes)
+    StaticValueEntry(JSObjectGetPropertyCallback _getProperty, JSObjectSetPropertyCallback _setProperty, JSPropertyAttributes _attributes, String& propertyName)
+    : getProperty(_getProperty), setProperty(_setProperty), attributes(_attributes), propertyNameRef(OpaqueJSString::create(propertyName))
     {
     }
     
     JSObjectGetPropertyCallback getProperty;
     JSObjectSetPropertyCallback setProperty;
     JSPropertyAttributes attributes;
+    RefPtr<OpaqueJSString> propertyNameRef;
 };
 
 struct StaticFunctionEntry {
@@ -58,8 +59,8 @@ public:
     JSPropertyAttributes attributes;
 };
 
-typedef HashMap<RefPtr<StringImpl>, OwnPtr<StaticValueEntry> > OpaqueJSClassStaticValuesTable;
-typedef HashMap<RefPtr<StringImpl>, OwnPtr<StaticFunctionEntry> > OpaqueJSClassStaticFunctionsTable;
+typedef HashMap<RefPtr<StringImpl>, std::unique_ptr<StaticValueEntry>> OpaqueJSClassStaticValuesTable;
+typedef HashMap<RefPtr<StringImpl>, std::unique_ptr<StaticFunctionEntry>> OpaqueJSClassStaticFunctionsTable;
 
 struct OpaqueJSClass;
 
@@ -78,8 +79,8 @@ public:
     // 4. When it is used, the old context data is found in VM and used.
     RefPtr<OpaqueJSClass> m_class;
 
-    OwnPtr<OpaqueJSClassStaticValuesTable> staticValues;
-    OwnPtr<OpaqueJSClassStaticFunctionsTable> staticFunctions;
+    std::unique_ptr<OpaqueJSClassStaticValuesTable> staticValues;
+    std::unique_ptr<OpaqueJSClassStaticFunctionsTable> staticFunctions;
     JSC::Weak<JSC::JSObject> cachedPrototype;
 };
 

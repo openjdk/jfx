@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,26 +26,24 @@
 #include "config.h"
 #include "LazyOperandValueProfile.h"
 
-#if ENABLE(VALUE_PROFILER)
-
-#include "Operations.h"
+#include "JSCInlines.h"
 
 namespace JSC {
 
 CompressedLazyOperandValueProfileHolder::CompressedLazyOperandValueProfileHolder() { }
 CompressedLazyOperandValueProfileHolder::~CompressedLazyOperandValueProfileHolder() { }
 
-void CompressedLazyOperandValueProfileHolder::computeUpdatedPredictions(OperationInProgress operation)
+void CompressedLazyOperandValueProfileHolder::computeUpdatedPredictions(const ConcurrentJITLocker& locker)
 {
     if (!m_data)
         return;
     
     for (unsigned i = 0; i < m_data->size(); ++i)
-        m_data->at(i).computeUpdatedPrediction(operation);
+        m_data->at(i).computeUpdatedPrediction(locker);
 }
 
 LazyOperandValueProfile* CompressedLazyOperandValueProfileHolder::add(
-    const LazyOperandValueProfileKey& key)
+    const ConcurrentJITLocker&, const LazyOperandValueProfileKey& key)
 {
     if (!m_data)
         m_data = adoptPtr(new LazyOperandValueProfile::List());
@@ -60,19 +58,21 @@ LazyOperandValueProfile* CompressedLazyOperandValueProfileHolder::add(
     return &m_data->last();
 }
 
-LazyOperandValueProfileParser::LazyOperandValueProfileParser(
-    CompressedLazyOperandValueProfileHolder& holder)
-    : m_holder(holder)
+LazyOperandValueProfileParser::LazyOperandValueProfileParser() { }
+LazyOperandValueProfileParser::~LazyOperandValueProfileParser() { }
+
+void LazyOperandValueProfileParser::initialize(
+    const ConcurrentJITLocker&, CompressedLazyOperandValueProfileHolder& holder)
 {
-    if (!m_holder.m_data)
+    ASSERT(m_map.isEmpty());
+    
+    if (!holder.m_data)
         return;
     
-    LazyOperandValueProfile::List& data = *m_holder.m_data;
+    LazyOperandValueProfile::List& data = *holder.m_data;
     for (unsigned i = 0; i < data.size(); ++i)
         m_map.add(data[i].key(), &data[i]);
 }
-
-LazyOperandValueProfileParser::~LazyOperandValueProfileParser() { }
 
 LazyOperandValueProfile* LazyOperandValueProfileParser::getIfPresent(
     const LazyOperandValueProfileKey& key) const
@@ -87,16 +87,14 @@ LazyOperandValueProfile* LazyOperandValueProfileParser::getIfPresent(
 }
 
 SpeculatedType LazyOperandValueProfileParser::prediction(
-    const LazyOperandValueProfileKey& key) const
+    const ConcurrentJITLocker& locker, const LazyOperandValueProfileKey& key) const
 {
     LazyOperandValueProfile* profile = getIfPresent(key);
     if (!profile)
         return SpecNone;
     
-    return profile->computeUpdatedPrediction();
+    return profile->computeUpdatedPrediction(locker);
 }
 
 } // namespace JSC
-
-#endif // ENABLE(VALUE_PROFILER)
 

@@ -57,7 +57,7 @@ class TestRunResults(object):
         for expectation in test_expectations.TestExpectations.EXPECTATIONS.values():
             self.tests_by_expectation[expectation] = set()
         for timeline in test_expectations.TestExpectations.TIMELINES.values():
-            self.tests_by_timeline[timeline] = expectations.get_tests_with_timeline(timeline)
+            self.tests_by_timeline[timeline] = expectations.model().get_tests_with_timeline(timeline)
         self.slow_tests = set()
         self.interrupted = False
 
@@ -117,8 +117,8 @@ def _interpret_test_failures(failures):
 
     return test_dict
 
-
-def summarize_results(port_obj, expectations, initial_results, retry_results, enabled_pixel_tests_in_retry):
+# These results must match ones in print_unexpected_results() in views/buildbot_results.py.
+def summarize_results(port_obj, expectations, initial_results, retry_results, enabled_pixel_tests_in_retry, include_passes=False, include_time_and_modifiers=False):
     """Returns a dictionary containing a summary of the test runs, with the following fields:
         'version': a version indicator
         'fixable': The number of fixable tests (NOW - PASS)
@@ -154,7 +154,7 @@ def summarize_results(port_obj, expectations, initial_results, retry_results, en
         # Note that if a test crashed in the original run, we ignore
         # whether or not it crashed when we retried it (if we retried it),
         # and always consider the result not flaky.
-        expected = expectations.get_expectations_string(test_name)
+        expected = expectations.model().get_expectations_string(test_name)
         result_type = result.type
         actual = [keywords[result_type]]
 
@@ -168,39 +168,50 @@ def summarize_results(port_obj, expectations, initial_results, retry_results, en
         if result.reftest_type:
             test_dict.update(reftest_type=list(result.reftest_type))
 
-        if expectations.has_modifier(test_name, test_expectations.WONTFIX):
+        if expectations.model().has_modifier(test_name, test_expectations.WONTFIX):
             test_dict['wontfix'] = True
 
         if result_type == test_expectations.PASS:
             num_passes += 1
             # FIXME: include passing tests that have stderr output.
-            if expected == 'PASS':
+            if expected == 'PASS' and not include_passes:
                 continue
         elif result_type == test_expectations.CRASH:
             if test_name in initial_results.unexpected_results_by_name:
                 num_regressions += 1
+                test_dict['report'] = 'REGRESSION'
         elif result_type == test_expectations.MISSING:
             if test_name in initial_results.unexpected_results_by_name:
                 num_missing += 1
+                test_dict['report'] = 'MISSING'
         elif test_name in initial_results.unexpected_results_by_name:
             if retry_results and test_name not in retry_results.unexpected_results_by_name:
-                actual.extend(expectations.get_expectations_string(test_name).split(" "))
+                actual.extend(expectations.model().get_expectations_string(test_name).split(" "))
                 num_flaky += 1
+                test_dict['report'] = 'FLAKY'
             elif retry_results:
                 retry_result_type = retry_results.unexpected_results_by_name[test_name].type
                 if result_type != retry_result_type:
                     if enabled_pixel_tests_in_retry and result_type == test_expectations.TEXT and retry_result_type == test_expectations.IMAGE_PLUS_TEXT:
                         num_regressions += 1
+                        test_dict['report'] = 'REGRESSION'
                     else:
                         num_flaky += 1
+                        test_dict['report'] = 'FLAKY'
                     actual.append(keywords[retry_result_type])
                 else:
                     num_regressions += 1
+                    test_dict['report'] = 'REGRESSION'
             else:
                 num_regressions += 1
+                test_dict['report'] = 'REGRESSION'
 
         test_dict['expected'] = expected
         test_dict['actual'] = " ".join(actual)
+        if include_time_and_modifiers:
+            test_dict['time'] = round(1000 * result.test_run_time)
+            # FIXME: Fix get_modifiers to return modifiers in new format.
+            test_dict['modifiers'] = ' '.join(expectations.model().get_modifiers(test_name)).replace('BUGWK', 'webkit.org/b/')
 
         test_dict.update(_interpret_test_failures(result.failures))
 
@@ -238,8 +249,7 @@ def summarize_results(port_obj, expectations, initial_results, retry_results, en
     results['uses_expectations_file'] = port_obj.uses_test_expectations_file()
     results['interrupted'] = initial_results.interrupted  # Does results.html have enough information to compute this itself? (by checking total number of results vs. total number of tests?)
     results['layout_tests_dir'] = port_obj.layout_tests_dir()
-    results['has_wdiff'] = port_obj.wdiff_available()
-    results['has_pretty_patch'] = port_obj.pretty_patch_available()
+    results['has_pretty_patch'] = port_obj.pretty_patch.pretty_patch_available()
     results['pixel_tests_enabled'] = port_obj.get_option('pixel_tests')
 
     try:

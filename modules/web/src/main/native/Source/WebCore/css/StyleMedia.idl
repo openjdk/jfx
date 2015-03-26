@@ -26,8 +26,8 @@
 
 [
     NoInterfaceObject,
-    GenerateIsReachable=ImplFrame
+    GenerateIsReachable=ImplFrame,
 ] interface StyleMedia {
-        readonly attribute DOMString type;
+    readonly attribute DOMString type;
     boolean matchMedium([Default=Undefined] optional DOMString mediaquery);
-    };
+};

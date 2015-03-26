@@ -25,44 +25,42 @@
 #include "SVGFontElement.h"
 #include "SVGFontFaceElement.h"
 #include "SVGNames.h"
+#include "SVGParserUtilities.h"
 
 namespace WebCore {
 
-inline SVGVKernElement::SVGVKernElement(const QualifiedName& tagName, Document* document)
+inline SVGVKernElement::SVGVKernElement(const QualifiedName& tagName, Document& document)
     : SVGElement(tagName, document)
 {
     ASSERT(hasTagName(SVGNames::vkernTag));
 }
 
-PassRefPtr<SVGVKernElement> SVGVKernElement::create(const QualifiedName& tagName, Document* document)
+PassRefPtr<SVGVKernElement> SVGVKernElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(new SVGVKernElement(tagName, document));
 }
 
-Node::InsertionNotificationRequest SVGVKernElement::insertedInto(ContainerNode* rootParent)
+Node::InsertionNotificationRequest SVGVKernElement::insertedInto(ContainerNode& rootParent)
 {
-    if (rootParent->inDocument()) {
+    if (rootParent.inDocument()) {
         ContainerNode* fontNode = parentNode();
-        if (fontNode && fontNode->hasTagName(SVGNames::fontTag)) {
-            if (SVGFontElement* element = static_cast<SVGFontElement*>(fontNode))
-                element->invalidateGlyphCache();
-        }
+        if (fontNode && isSVGFontElement(fontNode))
+            toSVGFontElement(fontNode)->invalidateGlyphCache();
     }
 
     return SVGElement::insertedInto(rootParent);
 }
 
-void SVGVKernElement::removedFrom(ContainerNode* rootParent)
+void SVGVKernElement::removedFrom(ContainerNode& rootParent)
 {
     ContainerNode* fontNode = parentNode();
-    if (fontNode && fontNode->hasTagName(SVGNames::fontTag)) {
-        if (SVGFontElement* element = static_cast<SVGFontElement*>(fontNode))
-            element->invalidateGlyphCache();
-    }
+    if (fontNode && isSVGFontElement(fontNode))
+        toSVGFontElement(fontNode)->invalidateGlyphCache();
+
     SVGElement::removedFrom(rootParent);
 }
 
-void SVGVKernElement::buildVerticalKerningPair(KerningPairVector& kerningPairs)
+void SVGVKernElement::buildVerticalKerningPair(SVGKerningMap& kerningMap)
 {
     String u1 = fastGetAttribute(SVGNames::u1Attr);
     String g1 = fastGetAttribute(SVGNames::g1Attr);
@@ -77,7 +75,7 @@ void SVGVKernElement::buildVerticalKerningPair(KerningPairVector& kerningPairs)
         && parseKerningUnicodeString(u1, kerningPair.unicodeRange1, kerningPair.unicodeName1)
         && parseKerningUnicodeString(u2, kerningPair.unicodeRange2, kerningPair.unicodeName2)) {
         kerningPair.kerning = fastGetAttribute(SVGNames::kAttr).string().toFloat();
-        kerningPairs.append(kerningPair);
+        kerningMap.insert(kerningPair);
     }
 }
 

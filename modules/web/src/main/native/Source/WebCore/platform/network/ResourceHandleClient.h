@@ -32,16 +32,17 @@
 #if USE(CFNETWORK)
 #include <CFNetwork/CFURLCachePriv.h>
 #include <CFNetwork/CFURLResponsePriv.h>
+#include <wtf/RetainPtr.h>
 #endif
 
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
 OBJC_CLASS NSCachedURLResponse;
 #endif
 
 namespace WebCore {
     class AuthenticationChallenge;
     class Credential;
-    class KURL;
+    class URL;
     class ProtectionSpace;
     class ResourceHandle;
     class ResourceError;
@@ -66,7 +67,7 @@ namespace WebCore {
 
         virtual void didReceiveResponse(ResourceHandle*, const ResourceResponse&) { }
         
-        virtual void didReceiveData(ResourceHandle*, const char*, int, int /*encodedDataLength*/) { }
+        virtual void didReceiveData(ResourceHandle*, const char*, unsigned, int /*encodedDataLength*/) { }
         virtual void didReceiveBuffer(ResourceHandle*, PassRefPtr<SharedBuffer>, int encodedDataLength);
         
         virtual void didFinishLoading(ResourceHandle*, double /*finishTime*/) { }
@@ -88,8 +89,10 @@ namespace WebCore {
         // Client will pass an updated request using ResourceHandle::continueCanAuthenticateAgainstProtectionSpace() when ready.
         virtual void canAuthenticateAgainstProtectionSpaceAsync(ResourceHandle*, const ProtectionSpace&);
 #endif
-#if PLATFORM(MAC)
         // Client will pass an updated request using ResourceHandle::continueWillCacheResponse() when ready.
+#if USE(CFNETWORK)
+        virtual void willCacheResponseAsync(ResourceHandle*, CFCachedURLResponseRef);
+#elif PLATFORM(COCOA)
         virtual void willCacheResponseAsync(ResourceHandle*, NSCachedURLResponse *);
 #endif
 
@@ -110,16 +113,15 @@ namespace WebCore {
 #endif
         virtual void receivedCancellation(ResourceHandle*, const AuthenticationChallenge&) { }
 
-#if PLATFORM(MAC)
 #if USE(CFNETWORK)
         virtual CFCachedURLResponseRef willCacheResponse(ResourceHandle*, CFCachedURLResponseRef response) { return response; }
-#else
-        virtual NSCachedURLResponse* willCacheResponse(ResourceHandle*, NSCachedURLResponse* response) { return response; }
-#endif
-        virtual void willStopBufferingData(ResourceHandle*, const char*, int) { }
-#endif // PLATFORM(MAC)
-#if PLATFORM(WIN) && USE(CFNETWORK)
+        virtual RetainPtr<CFDictionaryRef> connectionProperties(ResourceHandle*) { return nullptr; }
+#if PLATFORM(WIN)
         virtual bool shouldCacheResponse(ResourceHandle*, CFCachedURLResponseRef) { return true; }
+#endif // PLATFORM(WIN)
+
+#elif PLATFORM(COCOA)
+        virtual NSCachedURLResponse *willCacheResponse(ResourceHandle*, NSCachedURLResponse *response) { return response; }
 #endif
 
     };

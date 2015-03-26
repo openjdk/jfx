@@ -30,7 +30,6 @@
 #include "FragmentScriptingPermission.h"
 #include "HTMLElementStack.h"
 #include "HTMLFormattingElementList.h"
-#include "NotImplemented.h"
 #include <wtf/Noncopyable.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefPtr.h>
@@ -44,7 +43,7 @@ struct HTMLConstructionSiteTask {
         InsertAlreadyParsedChild,
         Reparent,
         TakeAllChildren,
-    };    
+    };
 
     explicit HTMLConstructionSiteTask(Operation op)
         : operation(op)
@@ -89,8 +88,8 @@ class HTMLFormElement;
 class HTMLConstructionSite {
     WTF_MAKE_NONCOPYABLE(HTMLConstructionSite);
 public:
-    HTMLConstructionSite(Document*, ParserContentPolicy, unsigned maximumDOMTreeDepth);
-    HTMLConstructionSite(DocumentFragment*, ParserContentPolicy, unsigned maximumDOMTreeDepth);
+    HTMLConstructionSite(Document&, ParserContentPolicy, unsigned maximumDOMTreeDepth);
+    HTMLConstructionSite(DocumentFragment&, ParserContentPolicy, unsigned maximumDOMTreeDepth);
     ~HTMLConstructionSite();
 
     void detach();
@@ -144,7 +143,8 @@ public:
     ContainerNode* currentNode() const { return m_openElements.topNode(); }
     HTMLStackItem* currentStackItem() const { return m_openElements.topStackItem(); }
     HTMLStackItem* oneBelowTop() const { return m_openElements.oneBelowTop(); }
-    Document* ownerDocumentForCurrentNode();
+    Document& ownerDocumentForCurrentNode();
+    bool insideTemplateElement();
     HTMLElementStack* openElements() const { return &m_openElements; }
     HTMLFormattingElementList* activeFormattingElements() const { return &m_activeFormattingElements; }
     bool currentIsRootNode() { return m_openElements.topNode() == m_openElements.rootNode(); }
@@ -157,6 +157,10 @@ public:
     PassRefPtr<HTMLFormElement> takeForm();
 
     ParserContentPolicy parserContentPolicy() { return m_parserContentPolicy; }
+
+#if PLATFORM(IOS)
+    bool isTelephoneNumberParsingEnabled() { return m_document->isTelephoneNumberParsingEnabled(); }
+#endif
 
     class RedirectToFosterParentGuard {
         WTF_MAKE_NONCOPYABLE(RedirectToFosterParentGuard);

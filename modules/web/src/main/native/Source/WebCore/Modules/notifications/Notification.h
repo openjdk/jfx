@@ -35,7 +35,7 @@
 #include "ActiveDOMObject.h"
 #include "EventNames.h"
 #include "EventTarget.h"
-#include "KURL.h"
+#include "URL.h"
 #include "NotificationClient.h"
 #include "SharedBuffer.h"
 #include "TextDirection.h"
@@ -63,7 +63,7 @@ class ThreadableLoader;
 
 typedef int ExceptionCode;
 
-class Notification : public RefCounted<Notification>, public ActiveDOMObject, public EventTarget {
+class Notification final : public RefCounted<Notification>, public ActiveDOMObject, public EventTargetWithInlineData {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     Notification();
@@ -71,7 +71,7 @@ public:
     static PassRefPtr<Notification> create(const String& title, const String& body, const String& iconURI, ScriptExecutionContext*, ExceptionCode&, PassRefPtr<NotificationCenter> provider);
 #endif
 #if ENABLE(NOTIFICATIONS)
-    static PassRefPtr<Notification> create(ScriptExecutionContext*, const String& title, const Dictionary& options);
+    static PassRefPtr<Notification> create(ScriptExecutionContext&, const String& title, const Dictionary& options);
 #endif
     
     virtual ~Notification();
@@ -82,8 +82,8 @@ public:
 #endif
     void close();
 
-    KURL iconURL() const { return m_icon; }
-    void setIconURL(const KURL& url) { m_icon = url; }
+    URL iconURL() const { return m_icon; }
+    void setIconURL(const URL& url) { m_icon = url; }
 
     String title() const { return m_title; }
     String body() const { return m_body; }
@@ -122,11 +122,8 @@ public:
     using RefCounted<Notification>::deref;
 
     // EventTarget interface
-    virtual const AtomicString& interfaceName() const;
-    virtual ScriptExecutionContext* scriptExecutionContext() const { return ActiveDOMObject::scriptExecutionContext(); }
-
-    // ActiveDOMObject interface
-    virtual void contextDestroyed();
+    virtual EventTargetInterface eventTargetInterface() const override { return NotificationEventTargetInterfaceType; }
+    virtual ScriptExecutionContext* scriptExecutionContext() const override { return ActiveDOMObject::scriptExecutionContext(); }
 
     void stopLoadingIcon();
 
@@ -146,26 +143,27 @@ private:
     Notification(const String& title, const String& body, const String& iconURI, ScriptExecutionContext*, ExceptionCode&, PassRefPtr<NotificationCenter>);
 #endif
 #if ENABLE(NOTIFICATIONS)
-    Notification(ScriptExecutionContext*, const String& title);
+    Notification(ScriptExecutionContext&, const String& title);
 #endif
 
     void setBody(const String& body) { m_body = body; }
 
+    // ActiveDOMObject interface
+    virtual void contextDestroyed() override;
+
     // EventTarget interface
-    virtual void refEventTarget() { ref(); }
-    virtual void derefEventTarget() { deref(); }
-    virtual EventTargetData* eventTargetData();
-    virtual EventTargetData* ensureEventTargetData();
+    virtual void refEventTarget() override { ref(); }
+    virtual void derefEventTarget() override { deref(); }
 
     void startLoadingIcon();
     void finishLoadingIcon();
 
 #if ENABLE(NOTIFICATIONS)
-    void taskTimerFired(Timer<Notification>*);
+    void taskTimerFired(Timer<Notification>&);
 #endif
-    
+
     // Text notifications.
-    KURL m_icon;
+    URL m_icon;
     String m_title;
     String m_body;
     String m_direction;
@@ -181,11 +179,9 @@ private:
     NotificationState m_state;
 
     RefPtr<NotificationCenter> m_notificationCenter;
-    
-    EventTargetData m_eventTargetData;
 
 #if ENABLE(NOTIFICATIONS)
-    OwnPtr<Timer<Notification> > m_taskTimer;
+    OwnPtr<Timer<Notification>> m_taskTimer;
 #endif
 };
 

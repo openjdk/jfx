@@ -18,8 +18,7 @@
  */
 
 [
-        Conditional=BATTERY_STATUS,
+    Conditional=BATTERY_STATUS,
 ] partial interface Navigator {
-        readonly attribute BatteryManager webkitBattery;
-    };
-
+    readonly attribute BatteryManager webkitBattery;
+};

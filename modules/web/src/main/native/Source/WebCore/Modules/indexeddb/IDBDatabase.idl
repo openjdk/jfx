@@ -25,40 +25,26 @@
  */
 
 [
-        Conditional=INDEXED_DATABASE,
-        ActiveDOMObject,
+    Conditional=INDEXED_DATABASE,
+    ActiveDOMObject,
     EventTarget,
-    JSNoStaticTables
-] interface IDBDatabase {
-        readonly attribute DOMString name;
-    readonly attribute IDBAny version;
-        readonly attribute DOMStringList objectStoreNames;
+    JSNoStaticTables,
+    JSGenerateToJSObject,
+    JSGenerateToNativeObject,
+] interface IDBDatabase : EventTarget {
+    readonly attribute DOMString name;
+    readonly attribute unsigned long long version;
+    readonly attribute DOMStringList objectStoreNames;
 
-        attribute EventListener onabort;
-        attribute EventListener onerror;
-        attribute EventListener onversionchange;
+    [Custom, RaisesException] IDBObjectStore createObjectStore(DOMString name, optional Dictionary options);
+    [RaisesException] void deleteObjectStore(DOMString name);
+    [CallWith=ScriptExecutionContext, RaisesException] IDBTransaction transaction(DOMString storeName, [Default=NullString] optional DOMString mode);
+    [CallWith=ScriptExecutionContext, RaisesException] IDBTransaction transaction(sequence<DOMString> storeNames, [Default=NullString] optional DOMString mode);
+    void close();
 
-    [Custom] IDBObjectStore createObjectStore(DOMString name, optional Dictionary options)
-        raises (DOMException);
-    void deleteObjectStore(DOMString name)
-        raises (DOMException);
-    [CallWith=ScriptExecutionContext] IDBTransaction transaction(DOMStringList storeNames, [Default=NullString] optional DOMString mode)
-        raises (DOMException);
-    [CallWith=ScriptExecutionContext] IDBTransaction transaction(sequence<DOMString> storeNames, [Default=NullString] optional DOMString mode)
-        raises (DOMException);
-    [CallWith=ScriptExecutionContext] IDBTransaction transaction(DOMString storeName, [Default=NullString] optional DOMString mode)
-        raises (DOMException);
+    attribute EventListener onabort;
+    attribute EventListener onerror;
+    attribute EventListener onversionchange;
 
-        void close();
-
-        // EventTarget interface
-    void addEventListener(DOMString type,
-                          EventListener listener,
-                          optional boolean useCapture);
-    void removeEventListener(DOMString type,
-                             EventListener listener,
-                             optional boolean useCapture);
-    boolean dispatchEvent(Event evt)
-            raises(EventException);
-    };
+};
 

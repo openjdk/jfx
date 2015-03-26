@@ -44,23 +44,25 @@ public:
 private:
     explicit AccessibilityScrollbar(Scrollbar*);
 
-    virtual bool canSetValueAttribute() const { return true; }
-    virtual bool canSetNumericValue() const { return true; }
+    virtual bool canSetValueAttribute() const override { return true; }
+    virtual bool canSetNumericValue() const override { return true; }
 
-    virtual bool isAccessibilityScrollbar() const { return true; }
-    virtual LayoutRect elementRect() const;
+    virtual bool isAccessibilityScrollbar() const override { return true; }
+    virtual LayoutRect elementRect() const override;
     
-    virtual AccessibilityRole roleValue() const { return ScrollBarRole; }
-    virtual AccessibilityOrientation orientation() const;
-    virtual Document* document() const;
-    virtual bool isEnabled() const;
+    virtual AccessibilityRole roleValue() const override { return ScrollBarRole; }
+    virtual AccessibilityOrientation orientation() const override;
+    virtual Document* document() const override;
+    virtual bool isEnabled() const override;
     
     // Assumes float [0..1]
-    virtual void setValue(float);
-    virtual float valueForRange() const;
+    virtual void setValue(float) override;
+    virtual float valueForRange() const override;
 
     RefPtr<Scrollbar> m_scrollbar;
 };
+
+ACCESSIBILITY_OBJECT_TYPE_CASTS(AccessibilityScrollbar, isAccessibilityScrollbar())
 
 } // namespace WebCore
 

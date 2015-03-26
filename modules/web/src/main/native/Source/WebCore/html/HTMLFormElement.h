@@ -30,6 +30,10 @@
 #include "HTMLElement.h"
 #include <wtf/OwnPtr.h>
 
+#if ENABLE(IOS_AUTOCORRECT_AND_AUTOCAPITALIZE)
+#include "Autocapitalize.h"
+#endif
+
 namespace WebCore {
 
 class Event;
@@ -40,14 +44,15 @@ class HTMLImageElement;
 class HTMLInputElement;
 class TextEncoding;
 
-class HTMLFormElement FINAL : public HTMLElement {
+class HTMLFormElement final : public HTMLElement {
 public:
-    static PassRefPtr<HTMLFormElement> create(Document*);
-    static PassRefPtr<HTMLFormElement> create(const QualifiedName&, Document*);
+    static PassRefPtr<HTMLFormElement> create(Document&);
+    static PassRefPtr<HTMLFormElement> create(const QualifiedName&, Document&);
     virtual ~HTMLFormElement();
 
     PassRefPtr<HTMLCollection> elements();
-    void getNamedElements(const AtomicString&, Vector<RefPtr<Node> >&);
+    bool hasNamedElement(const AtomicString&);
+    void getNamedElements(const AtomicString&, Vector<Ref<Element>>&);
 
     unsigned length() const;
     Node* item(unsigned index);
@@ -59,6 +64,15 @@ public:
     void setEncoding(const String& value) { setEnctype(value); }
 
     bool shouldAutocomplete() const;
+
+#if ENABLE(IOS_AUTOCORRECT_AND_AUTOCAPITALIZE)
+    bool autocorrect() const;
+    void setAutocorrect(bool);
+
+    WebAutocapitalizeType autocapitalizeType() const;
+    const AtomicString& autocapitalize() const;
+    void setAutocapitalize(const AtomicString&);
+#endif
 
     // FIXME: Should rename these two functions to say "form control" or "form-associated element" instead of "form element".
     void registerFormElement(FormAssociatedElement*);
@@ -90,16 +104,13 @@ public:
     String method() const;
     void setMethod(const String&);
 
-    virtual String target() const;
+    virtual String target() const override;
 
     bool wasUserSubmitted() const;
 
     HTMLFormControlElement* defaultButton() const;
 
     bool checkValidity();
-
-    HTMLFormControlElement* elementForAlias(const AtomicString&);
-    void addElementAlias(HTMLFormControlElement*, const AtomicString& alias);
 
     CheckedRadioButtons& checkedRadioButtons() { return m_checkedRadioButtons; }
 
@@ -108,24 +119,26 @@ public:
 
     void getTextFieldValues(StringPairVector& fieldNamesAndValues) const;
 
+    static HTMLFormElement* findClosestFormAncestor(const Element&);
+
 private:
-    HTMLFormElement(const QualifiedName&, Document*);
+    HTMLFormElement(const QualifiedName&, Document&);
 
-    virtual bool rendererIsNeeded(const NodeRenderingContext&);
-    virtual InsertionNotificationRequest insertedInto(ContainerNode*) OVERRIDE;
-    virtual void removedFrom(ContainerNode*) OVERRIDE;
-    virtual void finishParsingChildren() OVERRIDE;
+    virtual bool rendererIsNeeded(const RenderStyle&) override;
+    virtual InsertionNotificationRequest insertedInto(ContainerNode&) override;
+    virtual void removedFrom(ContainerNode&) override;
+    virtual void finishParsingChildren() override;
 
-    virtual void handleLocalEvents(Event*);
+    virtual void handleLocalEvents(Event&) override;
 
-    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
-    virtual bool isURLAttribute(const Attribute&) const OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
+    virtual bool isURLAttribute(const Attribute&) const override;
 
-    virtual void documentDidResumeFromPageCache();
+    virtual void documentDidResumeFromPageCache() override;
 
-    virtual void didMoveToNewDocument(Document* oldDocument) OVERRIDE;
+    virtual void didMoveToNewDocument(Document* oldDocument) override;
 
-    virtual void copyNonAttributePropertiesFromElement(const Element&) OVERRIDE;
+    virtual void copyNonAttributePropertiesFromElement(const Element&) override;
 
     void submit(Event*, bool activateSubmitButton, bool processingUserGesture, FormSubmissionTrigger);
 
@@ -138,12 +151,17 @@ private:
     // Validates each of the controls, and stores controls of which 'invalid'
     // event was not canceled to the specified vector. Returns true if there
     // are any invalid controls in this form.
-    bool checkInvalidControlsAndCollectUnhandled(Vector<RefPtr<FormAssociatedElement> >&);
+    bool checkInvalidControlsAndCollectUnhandled(Vector<RefPtr<FormAssociatedElement>>&);
 
-    typedef HashMap<RefPtr<AtomicStringImpl>, RefPtr<HTMLFormControlElement> > AliasMap;
+    HTMLElement* elementFromPastNamesMap(const AtomicString&) const;
+    void addToPastNamesMap(FormNamedItem*, const AtomicString& pastName);
+    void assertItemCanBeInPastNamesMap(FormNamedItem*) const;
+    void removeFromPastNamesMap(FormNamedItem*);
+
+    typedef HashMap<RefPtr<AtomicStringImpl>, FormNamedItem*> PastNamesMap;
 
     FormSubmission::Attributes m_attributes;
-    OwnPtr<AliasMap> m_elementAliases;
+    OwnPtr<PastNamesMap> m_pastNamesMap;
 
     CheckedRadioButtons m_checkedRadioButtons;
 
@@ -160,6 +178,8 @@ private:
 
     bool m_wasDemoted;
 };
+
+NODE_TYPE_CASTS(HTMLFormElement)
 
 } // namespace WebCore
 

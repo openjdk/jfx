@@ -37,7 +37,6 @@
 
 #include "Document.h"
 #include "DocumentLoader.h"
-#include "Frame.h"
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
 #include "IconDatabase.h"
@@ -45,12 +44,14 @@
 #include "IconLoader.h"
 #include "IconURL.h"
 #include "Logging.h"
+#include "MainFrame.h"
 #include "Page.h"
 #include "Settings.h"
+#include <wtf/text/CString.h>
 
 namespace WebCore {
 
-IconController::IconController(Frame* frame)
+IconController::IconController(Frame& frame)
     : m_frame(frame)
     , m_waitingForLoadDecision(false)
 {
@@ -60,21 +61,21 @@ IconController::~IconController()
 {
 }
 
-KURL IconController::url()
+URL IconController::url()
 {
     IconURLs iconURLs = urlsForTypes(Favicon);
-    return iconURLs.isEmpty() ? KURL() : iconURLs[0].m_iconURL;
+    return iconURLs.isEmpty() ? URL() : iconURLs[0].m_iconURL;
 }
 
 IconURL IconController::iconURL(IconType iconType) const
 {
     IconURL result;
-    const Vector<IconURL>& iconURLs = m_frame->document()->iconURLs(iconType);
+    const Vector<IconURL>& iconURLs = m_frame.document()->iconURLs(iconType);
     Vector<IconURL>::const_iterator iter(iconURLs.begin());
     for (; iter != iconURLs.end(); ++iter) {
-            if (result.m_iconURL.isEmpty() || !iter->m_mimeType.isEmpty())
-                result = *iter;
-        }
+        if (result.m_iconURL.isEmpty() || !iter->m_mimeType.isEmpty())
+            result = *iter;
+    }
 
     return result;
 }
@@ -82,7 +83,7 @@ IconURL IconController::iconURL(IconType iconType) const
 IconURLs IconController::urlsForTypes(int iconTypesMask)
 {
     IconURLs iconURLs;
-    if (m_frame->tree() && m_frame->tree()->parent())
+    if (m_frame.tree().parent())
         return iconURLs;
         
     if (iconTypesMask & Favicon && !appendToIconURLs(Favicon, &iconURLs))
@@ -104,7 +105,7 @@ IconURLs IconController::urlsForTypes(int iconTypesMask)
 #endif
 
     // Finally, append all remaining icons of this type.
-    const Vector<IconURL>& allIconURLs = m_frame->document()->iconURLs(iconTypesMask);
+    const Vector<IconURL>& allIconURLs = m_frame.document()->iconURLs(iconTypesMask);
     for (Vector<IconURL>::const_iterator iter = allIconURLs.begin(); iter != allIconURLs.end(); ++iter) {
         int i;
         int iconCount = iconURLs.size();
@@ -119,53 +120,53 @@ IconURLs IconController::urlsForTypes(int iconTypesMask)
     return iconURLs;
 }
 
-void IconController::commitToDatabase(const KURL& icon)
+void IconController::commitToDatabase(const URL& icon)
 {
-    LOG(IconDatabase, "Committing iconURL %s to database for pageURLs %s and %s", icon.string().ascii().data(), m_frame->document()->url().string().ascii().data(), m_frame->loader()->initialRequest().url().string().ascii().data());
-    iconDatabase().setIconURLForPageURL(icon.string(), m_frame->document()->url().string());
-    iconDatabase().setIconURLForPageURL(icon.string(), m_frame->loader()->initialRequest().url().string());
+    LOG(IconDatabase, "Committing iconURL %s to database for pageURLs %s and %s", icon.string().ascii().data(), m_frame.document()->url().string().ascii().data(), m_frame.loader().initialRequest().url().string().ascii().data());
+    iconDatabase().setIconURLForPageURL(icon.string(), m_frame.document()->url().string());
+    iconDatabase().setIconURLForPageURL(icon.string(), m_frame.loader().initialRequest().url().string());
 }
 
 void IconController::startLoader()
 {
     // FIXME: We kick off the icon loader when the frame is done receiving its main resource.
     // But we should instead do it when we're done parsing the head element.
-    if (!m_frame->loader()->isLoadingMainFrame())
+
+    if (!m_frame.isMainFrame())
         return;
 
     if (!iconDatabase().isEnabled())
         return;
 
-    ASSERT(!m_frame->tree()->parent());
-    if (!documentCanHaveIcon(m_frame->document()->url()))
+    ASSERT(!m_frame.tree().parent());
+    if (!documentCanHaveIcon(m_frame.document()->url()))
         return;
 
-    KURL iconURL(url());
+    URL iconURL(url());
     String urlString(iconURL.string());
     if (urlString.isEmpty())
         return;
 
     // People who want to avoid loading images generally want to avoid loading all images, unless an exception has been made for site icons.
     // Now that we've accounted for URL mapping, avoid starting the network load if images aren't set to display automatically.
-    Settings* settings = m_frame->settings();
-    if (settings && !settings->loadsImagesAutomatically() && !settings->loadsSiteIconsIgnoringImageLoadingSetting())
+    if (!m_frame.settings().loadsImagesAutomatically() && !m_frame.settings().loadsSiteIconsIgnoringImageLoadingSetting())
         return;
 
     // If we're reloading the page, always start the icon load now.
     // FIXME: How can this condition ever be true?
-    if (m_frame->loader()->loadType() == FrameLoadTypeReload && m_frame->loader()->loadType() == FrameLoadTypeReloadFromOrigin) {
+    if (m_frame.loader().loadType() == FrameLoadTypeReload && m_frame.loader().loadType() == FrameLoadTypeReloadFromOrigin) {
         continueLoadWithDecision(IconLoadYes);
         return;
     }
 
     if (iconDatabase().supportsAsynchronousMode()) {
-        m_frame->loader()->documentLoader()->getIconLoadDecisionForIconURL(urlString);
+        m_frame.loader().documentLoader()->getIconLoadDecisionForIconURL(urlString);
         // Commit the icon url mapping to the database just in case we don't end up loading later.
         commitToDatabase(iconURL);
         return;
     }
 
-    IconLoadDecision decision = iconDatabase().synchronousLoadDecisionForIconURL(urlString, m_frame->loader()->documentLoader());
+    IconLoadDecision decision = iconDatabase().synchronousLoadDecisionForIconURL(urlString, m_frame.loader().documentLoader());
 
     if (decision == IconLoadUnknown) {
         // In this case, we may end up loading the icon later, but we still want to commit the icon url mapping to the database
@@ -174,7 +175,7 @@ void IconController::startLoader()
         // icon is later read in from disk
         LOG(IconDatabase, "IconController %p might load icon %s later", this, urlString.ascii().data());
         m_waitingForLoadDecision = true;    
-        m_frame->loader()->client()->registerForIconNotification();
+        m_frame.loader().client().registerForIconNotification();
         commitToDatabase(iconURL);
         return;
     }
@@ -203,11 +204,11 @@ void IconController::continueLoadWithDecision(IconLoadDecision iconLoadDecision)
     ASSERT(iconLoadDecision != IconLoadUnknown);
 
     //  FIXME (<rdar://problem/9168605>) - We should support in-memory-only private browsing icons in asynchronous icon database mode.
-    if (iconDatabase().supportsAsynchronousMode() && m_frame->page()->settings()->privateBrowsingEnabled())
+    if (iconDatabase().supportsAsynchronousMode() && m_frame.page()->settings().privateBrowsingEnabled())
         return;
 
     if (iconLoadDecision == IconLoadNo) {
-        KURL iconURL(url());
+        URL iconURL(url());
         String urlString(iconURL.string());
         if (urlString.isEmpty())
             return;
@@ -216,7 +217,7 @@ void IconController::continueLoadWithDecision(IconLoadDecision iconLoadDecision)
         commitToDatabase(iconURL);
 
         if (iconDatabase().supportsAsynchronousMode()) {
-            m_frame->loader()->documentLoader()->getIconDataForIconURL(urlString);
+            m_frame.loader().documentLoader()->getIconDataForIconURL(urlString);
             return;
         }
 
@@ -226,17 +227,17 @@ void IconController::continueLoadWithDecision(IconLoadDecision iconLoadDecision)
         // Otherwise if the icon data *is* available, notify the delegate
         if (!iconDatabase().synchronousIconDataKnownForIconURL(urlString)) {
             LOG(IconDatabase, "Told not to load icon %s but icon data is not yet available - registering for notification and requesting load from disk", urlString.ascii().data());
-            m_frame->loader()->client()->registerForIconNotification();
-            iconDatabase().synchronousIconForPageURL(m_frame->document()->url().string(), IntSize(0, 0));
-            iconDatabase().synchronousIconForPageURL(m_frame->loader()->initialRequest().url().string(), IntSize(0, 0));
+            m_frame.loader().client().registerForIconNotification();
+            iconDatabase().synchronousIconForPageURL(m_frame.document()->url().string(), IntSize(0, 0));
+            iconDatabase().synchronousIconForPageURL(m_frame.loader().initialRequest().url().string(), IntSize(0, 0));
         } else
-            m_frame->loader()->client()->dispatchDidReceiveIcon();
+            m_frame.loader().client().dispatchDidReceiveIcon();
 
         return;
     } 
 
     if (!m_iconLoader)
-        m_iconLoader = IconLoader::create(m_frame);
+        m_iconLoader = std::make_unique<IconLoader>(m_frame);
 
     m_iconLoader->startLoading();
 }
@@ -254,11 +255,11 @@ bool IconController::appendToIconURLs(IconType iconType, IconURLs* iconURLs)
 IconURL IconController::defaultURL(IconType iconType)
 {
     // Don't return a favicon iconURL unless we're http or https
-    KURL documentURL = m_frame->document()->url();
+    URL documentURL = m_frame.document()->url();
     if (!documentURL.protocolIsInHTTPFamily())
         return IconURL();
 
-    KURL url;
+    URL url;
     bool couldSetProtocol = url.setProtocol(documentURL.protocol());
     ASSERT_UNUSED(couldSetProtocol, couldSetProtocol);
     url.setHost(documentURL.host());

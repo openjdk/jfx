@@ -43,22 +43,29 @@ static HashSet<String>* protocolWhitelist;
 static void initProtocolHandlerWhitelist()
 {
     protocolWhitelist = new HashSet<String>;
-#if !PLATFORM(BLACKBERRY)
     static const char* protocols[] = {
+        "bitcoin",
+        "geo",
+        "im",
         "irc",
+        "ircs",
+        "magnet",
         "mailto",
         "mms",
         "news",
         "nntp",
+        "sip",
         "sms",
         "smsto",
+        "ssh",
         "tel",
         "urn",
         "webcal",
+        "wtai",
+        "xmpp",
     };
     for (size_t i = 0; i < WTF_ARRAY_LENGTH(protocols); ++i)
         protocolWhitelist->add(protocols[i]);
-#endif
 }
 
 static bool verifyCustomHandlerURL(const String& baseURL, const String& url, ExceptionCode& ec)
@@ -77,8 +84,8 @@ static bool verifyCustomHandlerURL(const String& baseURL, const String& url, Exc
     String newURL = url;
     newURL.remove(index, WTF_ARRAY_LENGTH(token) - 1);
 
-    KURL base(ParsedURLString, baseURL);
-    KURL kurl(base, newURL);
+    URL base(ParsedURLString, baseURL);
+    URL kurl(base, newURL);
 
     if (kurl.isEmpty() || !kurl.isValid()) {
         ec = SYNTAX_ERR;
@@ -98,7 +105,8 @@ static bool isProtocolWhitelisted(const String& scheme)
 static bool verifyProtocolHandlerScheme(const String& scheme, ExceptionCode& ec)
 {
     if (scheme.startsWith("web+")) {
-        if (isValidProtocol(scheme))
+        // The specification requires that the length of scheme is at least five characteres (including 'web+' prefix).
+        if (scheme.length() >= 5 && isValidProtocol(scheme))
             return true;
         ec = SECURITY_ERR;
         return false;

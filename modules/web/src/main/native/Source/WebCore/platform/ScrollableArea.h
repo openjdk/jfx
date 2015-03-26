@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2011 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008, 2011, 2014 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,13 +33,11 @@ namespace WebCore {
 
 class FloatPoint;
 class GraphicsContext;
-class PlatformGestureEvent;
+class PlatformTouchEvent;
 class PlatformWheelEvent;
 class ScrollAnimator;
-#if USE(ACCELERATED_COMPOSITING)
 class GraphicsLayer;
 class TiledBacking;
-#endif
 
 class ScrollableArea {
 public:
@@ -57,6 +55,19 @@ public:
     virtual bool requestScrollPositionUpdate(const IntPoint&) { return false; }
 
     bool handleWheelEvent(const PlatformWheelEvent&);
+
+#if ENABLE(TOUCH_EVENTS)
+    virtual bool isTouchScrollable() const { return false; }
+    virtual bool handleTouchEvent(const PlatformTouchEvent&);
+#endif
+
+#if PLATFORM(IOS)
+    virtual bool isOverflowScroll() const { return false; }
+    virtual void didStartScroll() { }
+    virtual void didEndScroll() { }
+    virtual void didUpdateScroll() { }
+    virtual void setIsUserScroll(bool) { }
+#endif
 
     // Functions for controlling if you can scroll past the end of the document.
     bool constrainsScrollingToContentEdge() const { return m_constrainsScrollingToContentEdge; }
@@ -81,8 +92,8 @@ public:
     void contentAreaDidShow() const;
     void contentAreaDidHide() const;
 
-    void finishCurrentScrollAnimations() const;
-    virtual bool scrollbarAnimationsAreSuppressed() const { return false; }
+    void lockOverlayScrollbarStateToHidden(bool shouldLockState) const;
+    bool scrollbarsCanBeActive() const;
 
     virtual void didAddScrollbar(Scrollbar*, ScrollbarOrientation);
     virtual void willRemoveScrollbar(Scrollbar*, ScrollbarOrientation);
@@ -109,7 +120,8 @@ public:
     virtual bool isScrollCornerVisible() const = 0;
     virtual IntRect scrollCornerRect() const = 0;
     virtual void invalidateScrollCorner(const IntRect&);
-    virtual void getTickmarks(Vector<IntRect>&) const { }
+
+    virtual bool updatesScrollLayerPositionOnMainThread() const = 0;
 
     // Convert points and rects between the scrollbar and its containing view.
     // The client needs to implement these in order to be aware of layout effects
@@ -137,11 +149,29 @@ public:
     virtual IntPoint scrollPosition() const;
     virtual IntPoint minimumScrollPosition() const;
     virtual IntPoint maximumScrollPosition() const;
+    virtual bool scrolledToTop() const;
+    virtual bool scrolledToBottom() const;
+    virtual bool scrolledToLeft() const;
+    virtual bool scrolledToRight() const;
 
     enum VisibleContentRectIncludesScrollbars { ExcludeScrollbars, IncludeScrollbars };
-    virtual IntRect visibleContentRect(VisibleContentRectIncludesScrollbars = ExcludeScrollbars) const;
-    virtual int visibleHeight() const = 0;
-    virtual int visibleWidth() const = 0;
+    enum VisibleContentRectBehavior {
+        ContentsVisibleRect,
+#if PLATFORM(IOS)
+        LegacyIOSDocumentViewRect,
+        LegacyIOSDocumentVisibleRect = LegacyIOSDocumentViewRect
+#else
+        LegacyIOSDocumentVisibleRect = ContentsVisibleRect
+#endif
+    };
+
+    IntRect visibleContentRect(VisibleContentRectBehavior = ContentsVisibleRect) const;
+    IntRect visibleContentRectIncludingScrollbars(VisibleContentRectBehavior = ContentsVisibleRect) const;
+
+    int visibleWidth() const { return visibleSize().width(); }
+    int visibleHeight() const { return visibleSize().height(); }
+    virtual IntSize visibleSize() const = 0;
+
     virtual IntSize contentsSize() const = 0;
     virtual IntSize overhangAmount() const { return IntSize(); }
     virtual IntPoint lastKnownMousePosition() const { return IntPoint(); }
@@ -156,8 +186,6 @@ public:
     virtual bool shouldSuspendScrollAnimations() const { return true; }
     virtual void scrollbarStyleChanged(int /*newStyle*/, bool /*forceUpdate*/) { }
     virtual void setVisibleScrollerThumbRect(const IntRect&) { }
-
-    virtual bool scrollbarsCanBeActive() const = 0;
     
     // Note that this only returns scrollable areas that can actually be scrolled.
     virtual ScrollableArea* enclosingScrollableArea() const = 0;
@@ -165,7 +193,6 @@ public:
     // Returns the bounding box of this scrollable area, in the coordinate system of the enclosing scroll view.
     virtual IntRect scrollableAreaBoundingBox() const = 0;
 
-    virtual bool shouldRubberBandInDirection(ScrollDirection) const { return true; }
     virtual bool isRubberBandInProgress() const { return false; }
 
     virtual bool scrollAnimatorEnabled() const { return false; }
@@ -176,15 +203,34 @@ public:
     static IntPoint constrainScrollPositionForOverhang(const IntRect& visibleContentRect, const IntSize& totalContentsSize, const IntPoint& scrollPosition, const IntPoint& scrollOrigin, int headerHeight, int footetHeight);
     IntPoint constrainScrollPositionForOverhang(const IntPoint& scrollPosition);
 
+    // Computes the double value for the scrollbar's current position and the current overhang amount.
+    // This function is static so that it can be called from the main thread or the scrolling thread.
+    static void computeScrollbarValueAndOverhang(float currentPosition, float totalSize, float visibleSize, float& doubleValue, float& overhangAmount);
+
     // Let subclasses provide a way of asking for and servicing scroll
     // animations.
     virtual bool scheduleAnimation() { return false; }
     void serviceScrollAnimations();
 
-#if USE(ACCELERATED_COMPOSITING)
-    virtual TiledBacking* tiledBacking() { return 0; }
-    virtual bool usesCompositedScrolling() const { return false; }
+#if PLATFORM(IOS)
+    bool isHorizontalScrollerPinnedToMinimumPosition() const { return !horizontalScrollbar() || scrollPosition(horizontalScrollbar()) <= minimumScrollPosition().x(); }
+    bool isHorizontalScrollerPinnedToMaximumPosition() const { return !horizontalScrollbar() || scrollPosition(horizontalScrollbar()) >= maximumScrollPosition().x(); }
+    bool isVerticalScrollerPinnedToMinimumPosition() const { return !verticalScrollbar() || scrollPosition(verticalScrollbar()) <= minimumScrollPosition().y(); }
+    bool isVerticalScrollerPinnedToMaximumPosition() const { return !verticalScrollbar() || scrollPosition(verticalScrollbar()) >= maximumScrollPosition().y(); } 
+
+    bool isPinnedInBothDirections(const IntSize&) const; 
+    bool isPinnedHorizontallyInDirection(int horizontalScrollDelta) const; 
+    bool isPinnedVerticallyInDirection(int verticalScrollDelta) const;
 #endif
+
+    virtual TiledBacking* tiledBacking() const { return 0; }
+    virtual bool usesCompositedScrolling() const { return false; }
+
+    virtual GraphicsLayer* layerForHorizontalScrollbar() const { return 0; }
+    virtual GraphicsLayer* layerForVerticalScrollbar() const { return 0; }
+
+    void verticalScrollbarLayerDidChange();
+    void horizontalScrollbarLayerDidChange();
 
 protected:
     ScrollableArea();
@@ -196,21 +242,21 @@ protected:
     virtual void invalidateScrollbarRect(Scrollbar*, const IntRect&) = 0;
     virtual void invalidateScrollCornerRect(const IntRect&) = 0;
 
-#if USE(ACCELERATED_COMPOSITING)
     friend class ScrollingCoordinator;
     virtual GraphicsLayer* layerForScrolling() const { return 0; }
-    virtual GraphicsLayer* layerForHorizontalScrollbar() const { return 0; }
-    virtual GraphicsLayer* layerForVerticalScrollbar() const { return 0; }
     virtual GraphicsLayer* layerForScrollCorner() const { return 0; }
 #if ENABLE(RUBBER_BANDING)
     virtual GraphicsLayer* layerForOverhangAreas() const { return 0; }
 #endif
-#endif
+
     bool hasLayerForHorizontalScrollbar() const;
     bool hasLayerForVerticalScrollbar() const;
     bool hasLayerForScrollCorner() const;
 
+    virtual void sendWillRevealEdgeEventsIfNeeded(const IntPoint&, const IntPoint&) { }
+
 private:
+    virtual IntRect visibleContentRectInternal(VisibleContentRectIncludesScrollbars, VisibleContentRectBehavior) const;
     void scrollPositionChanged(const IntPoint&);
     
     // NOTE: Only called from the ScrollAnimator.
@@ -222,16 +268,6 @@ private:
     virtual void setScrollOffset(const IntPoint&) = 0;
 
     mutable OwnPtr<ScrollAnimator> m_scrollAnimator;
-    unsigned m_constrainsScrollingToContentEdge : 1;
-
-    unsigned m_inLiveResize : 1;
-
-    unsigned m_verticalScrollElasticity : 2; // ScrollElasticity
-    unsigned m_horizontalScrollElasticity : 2; // ScrollElasticity
-
-    unsigned m_scrollbarOverlayStyle : 2; // ScrollbarOverlayStyle
-
-    unsigned m_scrollOriginChanged : 1;
 
     // There are 8 possible combinations of writing mode and direction. Scroll origin will be non-zero in the x or y axis
     // if there is any reversed direction or writing-mode. The combinations are:
@@ -245,6 +281,17 @@ private:
     // vertical-rl / ltr            YES                     NO
     // vertical-rl / rtl            YES                     YES
     IntPoint m_scrollOrigin;
+
+    unsigned m_constrainsScrollingToContentEdge : 1;
+
+    unsigned m_inLiveResize : 1;
+
+    unsigned m_verticalScrollElasticity : 2; // ScrollElasticity
+    unsigned m_horizontalScrollElasticity : 2; // ScrollElasticity
+
+    unsigned m_scrollbarOverlayStyle : 2; // ScrollbarOverlayStyle
+
+    unsigned m_scrollOriginChanged : 1;
 };
 
 } // namespace WebCore

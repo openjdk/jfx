@@ -20,8 +20,6 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SVG)
 #include "SVGColor.h"
 
 #include "CSSParser.h"
@@ -73,7 +71,7 @@ void SVGColor::setColor(unsigned short, const String&, const String&, ExceptionC
     ec = NO_MODIFICATION_ALLOWED_ERR;
 }
 
-String SVGColor::customCssText() const
+String SVGColor::customCSSText() const
 {
     switch (m_colorType) {
     case SVG_COLORTYPE_UNKNOWN:
@@ -110,5 +108,3 @@ bool SVGColor::equals(const SVGColor& other) const
 }
 
 }
-
-#endif // ENABLE(SVG)

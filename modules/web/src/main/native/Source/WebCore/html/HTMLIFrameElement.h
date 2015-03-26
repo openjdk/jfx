@@ -28,29 +28,26 @@
 
 namespace WebCore {
 
-class HTMLIFrameElement FINAL : public HTMLFrameElementBase {
+class HTMLIFrameElement final : public HTMLFrameElementBase {
 public:
-    static PassRefPtr<HTMLIFrameElement> create(const QualifiedName&, Document*);
-
-    bool shouldDisplaySeamlessly() const;
+    static PassRefPtr<HTMLIFrameElement> create(const QualifiedName&, Document&);
 
 private:
-    HTMLIFrameElement(const QualifiedName&, Document*);
+    HTMLIFrameElement(const QualifiedName&, Document&);
 
-    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
-    virtual bool isPresentationAttribute(const QualifiedName&) const OVERRIDE;
-    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStylePropertySet*) OVERRIDE;
-
-    virtual bool rendererIsNeeded(const NodeRenderingContext&);
-    virtual RenderObject* createRenderer(RenderArena*, RenderStyle*);
-
-    virtual void didRecalcStyle(StyleChange) OVERRIDE;
-
-#if ENABLE(MICRODATA)
-    virtual String itemValueText() const OVERRIDE;
-    virtual void setItemValueText(const String&, ExceptionCode&) OVERRIDE;
+#if PLATFORM(IOS)
+    virtual bool isKeyboardFocusable(KeyboardEvent*) const override { return false; }
 #endif
+
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
+    virtual bool isPresentationAttribute(const QualifiedName&) const override;
+    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStyleProperties&) override;
+
+    virtual bool rendererIsNeeded(const RenderStyle&) override;
+    virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) override;
 };
+
+NODE_TYPE_CASTS(HTMLIFrameElement)
 
 } // namespace WebCore
 

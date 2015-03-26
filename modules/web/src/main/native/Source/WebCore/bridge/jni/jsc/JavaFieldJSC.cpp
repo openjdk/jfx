@@ -37,6 +37,8 @@
 #include "runtime_object.h"
 #include <runtime/Error.h>
 
+#include <APICast.h>
+
 using namespace JSC;
 using namespace JSC::Bindings;
 using namespace WebCore;

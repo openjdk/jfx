@@ -27,6 +27,9 @@
 #ifndef AccessibilityObjectWrapperWin_h
 #define AccessibilityObjectWrapperWin_h
 
+#include <unknwn.h>
+#include <wtf/text/AtomicString.h>
+
 namespace WebCore {
 
     class AccessibilityObject;
@@ -41,6 +44,8 @@ namespace WebCore {
         virtual void detach() = 0;
         bool attached() const { return m_object; }
         AccessibilityObject* accessibilityObject() const { return m_object; }
+
+        void accessibilityAttributeValue(const AtomicString&, VARIANT*);
 
     protected:
         AccessibilityObjectWrapper(AccessibilityObject* obj) : m_object(obj) { }

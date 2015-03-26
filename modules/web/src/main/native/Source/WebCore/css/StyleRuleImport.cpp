@@ -34,9 +34,9 @@
 
 namespace WebCore {
 
-PassRefPtr<StyleRuleImport> StyleRuleImport::create(const String& href, PassRefPtr<MediaQuerySet> media)
+PassRef<StyleRuleImport> StyleRuleImport::create(const String& href, PassRefPtr<MediaQuerySet> media)
 {
-    return adoptRef(new StyleRuleImport(href, media));
+    return adoptRef(*new StyleRuleImport(href, media));
 }
 
 StyleRuleImport::StyleRuleImport(const String& href, PassRefPtr<MediaQuerySet> media)
@@ -60,7 +60,7 @@ StyleRuleImport::~StyleRuleImport()
         m_cachedSheet->removeClient(&m_styleSheetClient);
 }
 
-void StyleRuleImport::setCSSStyleSheet(const String& href, const KURL& baseURL, const String& charset, const CachedCSSStyleSheet* cachedStyleSheet)
+void StyleRuleImport::setCSSStyleSheet(const String& href, const URL& baseURL, const String& charset, const CachedCSSStyleSheet* cachedStyleSheet)
 {
     if (m_styleSheet)
         m_styleSheet->clearOwnerRule();
@@ -100,10 +100,10 @@ void StyleRuleImport::requestStyleSheet()
     if (!cachedResourceLoader)
         return;
 
-    KURL absURL;
+    URL absURL;
     if (!m_parentStyleSheet->baseURL().isNull())
         // use parent styleheet's URL as the base URL
-        absURL = KURL(m_parentStyleSheet->baseURL(), m_strHref);
+        absURL = URL(m_parentStyleSheet->baseURL(), m_strHref);
     else
         absURL = document->completeURL(m_strHref);
 
@@ -119,6 +119,8 @@ void StyleRuleImport::requestStyleSheet()
 
     CachedResourceRequest request(ResourceRequest(absURL), m_parentStyleSheet->charset());
     request.setInitiator(cachedResourceRequestInitiators().css);
+    if (m_cachedSheet)
+        m_cachedSheet->removeClient(&m_styleSheetClient);
     if (m_parentStyleSheet->isUserStyleSheet())
         m_cachedSheet = cachedResourceLoader->requestUserCSSStyleSheet(request);
     else

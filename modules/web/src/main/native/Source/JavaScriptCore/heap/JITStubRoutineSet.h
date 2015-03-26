@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
 #ifndef JITStubRoutineSet_h
@@ -29,7 +29,7 @@
 #include <wtf/Platform.h>
 
 #include "JITStubRoutine.h"
-#include <wtf/FastAllocBase.h>
+#include <wtf/FastMalloc.h>
 #include <wtf/HashMap.h>
 #include <wtf/Vector.h>
 
@@ -43,34 +43,34 @@ class SlotVisitor;
 class JITStubRoutineSet {
     WTF_MAKE_NONCOPYABLE(JITStubRoutineSet);
     WTF_MAKE_FAST_ALLOCATED;
-
+    
 public:
     JITStubRoutineSet();
     ~JITStubRoutineSet();
-
+    
     void add(GCAwareJITStubRoutine*);
 
     void clearMarks();
-
+    
     void mark(void* candidateAddress)
     {
         uintptr_t address = reinterpret_cast<uintptr_t>(candidateAddress);
         if (!JITStubRoutine::passesFilter(address))
             return;
-
+        
         markSlow(address);
     }
-
+    
     void deleteUnmarkedJettisonedStubRoutines();
-
+    
     void traceMarkedStubRoutines(SlotVisitor&);
-
+    
     unsigned size() const { return m_listOfRoutines.size(); }
     GCAwareJITStubRoutine* at(unsigned i) const { return m_listOfRoutines[i]; }
     
 private:
     void markSlow(uintptr_t address);
-
+    
     HashMap<uintptr_t, GCAwareJITStubRoutine*> m_addressToRoutineMap;
     Vector<GCAwareJITStubRoutine*> m_listOfRoutines;
 };
@@ -80,7 +80,7 @@ private:
 class JITStubRoutineSet {
     WTF_MAKE_NONCOPYABLE(JITStubRoutineSet);
     WTF_MAKE_FAST_ALLOCATED;
-
+    
 public:
     JITStubRoutineSet() { }
     ~JITStubRoutineSet() { }
@@ -97,3 +97,4 @@ public:
 } // namespace JSC
 
 #endif // JITStubRoutineSet_h
+

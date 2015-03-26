@@ -29,17 +29,17 @@
 
 namespace WebCore {
 
-class TextDocument FINAL : public HTMLDocument {
+class TextDocument final : public HTMLDocument {
 public:
-    static PassRefPtr<TextDocument> create(Frame* frame, const KURL& url)
+    static PassRefPtr<TextDocument> create(Frame* frame, const URL& url)
     {
         return adoptRef(new TextDocument(frame, url));
     }
 
 private:
-    TextDocument(Frame*, const KURL&);
+    TextDocument(Frame*, const URL&);
     
-    virtual PassRefPtr<DocumentParser> createParser();
+    virtual PassRefPtr<DocumentParser> createParser() override;
 };
 
 }

@@ -25,4 +25,4 @@
 
 callback interface VoidCallback {
     boolean handleEvent();
-    };
+};

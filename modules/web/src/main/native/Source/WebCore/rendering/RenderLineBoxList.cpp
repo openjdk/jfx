@@ -30,14 +30,14 @@
 #include "RenderLineBoxList.h"
 
 #include "HitTestResult.h"
+#include "InlineElementBox.h"
 #include "InlineTextBox.h"
 #include "PaintInfo.h"
-#include "RenderArena.h"
+#include "RenderBlockFlow.h"
 #include "RenderInline.h"
+#include "RenderLineBreak.h"
 #include "RenderView.h"
 #include "RootInlineBox.h"
-
-using namespace std;
 
 namespace WebCore {
 
@@ -49,28 +49,31 @@ RenderLineBoxList::~RenderLineBoxList()
 }
 #endif
 
-void RenderLineBoxList::appendLineBox(InlineFlowBox* box)
+void RenderLineBoxList::appendLineBox(std::unique_ptr<InlineFlowBox> box)
 {
     checkConsistency();
-    
-    if (!m_firstLineBox)
-        m_firstLineBox = m_lastLineBox = box;
-    else {
-        m_lastLineBox->setNextLineBox(box);
-        box->setPreviousLineBox(m_lastLineBox);
-        m_lastLineBox = box;
+
+    InlineFlowBox* boxPtr = box.release();
+
+    if (!m_firstLineBox) {
+        m_firstLineBox = boxPtr;
+        m_lastLineBox = boxPtr;
+    } else {
+        m_lastLineBox->setNextLineBox(boxPtr);
+        boxPtr->setPreviousLineBox(m_lastLineBox);
+        m_lastLineBox = boxPtr;
     }
 
     checkConsistency();
 }
 
-void RenderLineBoxList::deleteLineBoxTree(RenderArena* arena)
+void RenderLineBoxList::deleteLineBoxTree()
 {
     InlineFlowBox* line = m_firstLineBox;
     InlineFlowBox* nextLine;
     while (line) {
         nextLine = line->nextLineBox();
-        line->deleteLine(arena);
+        line->deleteLine();
         line = nextLine;
     }
     m_firstLineBox = m_lastLineBox = 0;
@@ -127,13 +130,13 @@ void RenderLineBoxList::removeLineBox(InlineFlowBox* box)
     checkConsistency();
 }
 
-void RenderLineBoxList::deleteLineBoxes(RenderArena* arena)
+void RenderLineBoxList::deleteLineBoxes()
 {
     if (m_firstLineBox) {
         InlineFlowBox* next;
         for (InlineFlowBox* curr = m_firstLineBox; curr; curr = next) {
             next = curr->nextLineBox();
-            curr->destroy(arena);
+            delete curr;
         }
         m_firstLineBox = 0;
         m_lastLineBox = 0;
@@ -156,9 +159,9 @@ bool RenderLineBoxList::rangeIntersectsRect(RenderBoxModelObject* renderer, Layo
     LayoutUnit physicalStart = block->flipForWritingMode(logicalTop);
     LayoutUnit physicalEnd = block->flipForWritingMode(logicalBottom);
     LayoutUnit physicalExtent = absoluteValue(physicalEnd - physicalStart);
-    physicalStart = min(physicalStart, physicalEnd);
+    physicalStart = std::min(physicalStart, physicalEnd);
     
-    if (renderer->style()->isHorizontalWritingMode()) {
+    if (renderer->style().isHorizontalWritingMode()) {
         physicalStart += offset.y();
         if (physicalStart >= rect.maxY() || physicalStart + physicalExtent <= rect.y())
             return false;
@@ -177,14 +180,14 @@ bool RenderLineBoxList::anyLineIntersectsRect(RenderBoxModelObject* renderer, co
     // intersect.  This is a quick short-circuit that we can take to avoid walking any lines.
     // FIXME: This check is flawed in the following extremely obscure way:
     // if some line in the middle has a huge overflow, it might actually extend below the last line.
-    RootInlineBox* firstRootBox = firstLineBox()->root();
-    RootInlineBox* lastRootBox = lastLineBox()->root();
-    LayoutUnit firstLineTop = firstLineBox()->logicalTopVisualOverflow(firstRootBox->lineTop());
+    const RootInlineBox& firstRootBox = firstLineBox()->root();
+    const RootInlineBox& lastRootBox = lastLineBox()->root();
+    LayoutUnit firstLineTop = firstLineBox()->logicalTopVisualOverflow(firstRootBox.lineTop());
     if (usePrintRect && !firstLineBox()->parent())
-        firstLineTop = min(firstLineTop, firstLineBox()->root()->lineTop());
-    LayoutUnit lastLineBottom = lastLineBox()->logicalBottomVisualOverflow(lastRootBox->lineBottom());
+        firstLineTop = std::min(firstLineTop, firstRootBox.lineTop());
+    LayoutUnit lastLineBottom = lastLineBox()->logicalBottomVisualOverflow(lastRootBox.lineBottom());
     if (usePrintRect && !lastLineBox()->parent())
-        lastLineBottom = max(lastLineBottom, lastLineBox()->root()->lineBottom());
+        lastLineBottom = std::max(lastLineBottom, lastRootBox.lineBottom());
     LayoutUnit logicalTop = firstLineTop - outlineSize;
     LayoutUnit logicalBottom = outlineSize + lastLineBottom;
     
@@ -193,9 +196,9 @@ bool RenderLineBoxList::anyLineIntersectsRect(RenderBoxModelObject* renderer, co
 
 bool RenderLineBoxList::lineIntersectsDirtyRect(RenderBoxModelObject* renderer, InlineFlowBox* box, const PaintInfo& paintInfo, const LayoutPoint& offset) const
 {
-    RootInlineBox* root = box->root();
-    LayoutUnit logicalTop = min<LayoutUnit>(box->logicalTopVisualOverflow(root->lineTop()), root->selectionTop()) - renderer->maximalOutlineSize(paintInfo.phase);
-    LayoutUnit logicalBottom = box->logicalBottomVisualOverflow(root->lineBottom()) + renderer->maximalOutlineSize(paintInfo.phase);
+    const RootInlineBox& rootBox = box->root();
+    LayoutUnit logicalTop = std::min<LayoutUnit>(box->logicalTopVisualOverflow(rootBox.lineTop()), rootBox.selectionTop()) - renderer->maximalOutlineSize(paintInfo.phase);
+    LayoutUnit logicalBottom = box->logicalBottomVisualOverflow(rootBox.lineBottom()) + renderer->maximalOutlineSize(paintInfo.phase);
     
     return rangeIntersectsRect(renderer, logicalTop, logicalBottom, paintInfo.rect, offset);
 }
@@ -216,8 +219,8 @@ void RenderLineBoxList::paint(RenderBoxModelObject* renderer, PaintInfo& paintIn
 
     // FIXME: Paint-time pagination is obsolete and is now only used by embedded WebViews inside AppKit
     // NSViews.  Do not add any more code for this.
-    RenderView* v = renderer->view();
-    bool usePrintRect = !v->printRect().isEmpty();
+    RenderView& v = renderer->view();
+    bool usePrintRect = !v.printRect().isEmpty();
     LayoutUnit outlineSize = renderer->maximalOutlineSize(paintInfo.phase);
     if (!anyLineIntersectsRect(renderer, paintInfo.rect, paintOffset, usePrintRect, outlineSize))
         return;
@@ -234,32 +237,32 @@ void RenderLineBoxList::paint(RenderBoxModelObject* renderer, PaintInfo& paintIn
             // FIXME: This is the deprecated pagination model that is still needed
             // for embedded views inside AppKit.  AppKit is incapable of paginating vertical
             // text pages, so we don't have to deal with vertical lines at all here.
-            RootInlineBox* root = curr->root();
-            LayoutUnit topForPaginationCheck = curr->logicalTopVisualOverflow(root->lineTop());
+            const RootInlineBox& rootBox = curr->root();
+            LayoutUnit topForPaginationCheck = curr->logicalTopVisualOverflow(rootBox.lineTop());
             LayoutUnit bottomForPaginationCheck = curr->logicalLeftVisualOverflow();
             if (!curr->parent()) {
                 // We're a root box.  Use lineTop and lineBottom as well here.
-                topForPaginationCheck = min(topForPaginationCheck, root->lineTop());
-                bottomForPaginationCheck = max(bottomForPaginationCheck, root->lineBottom());
+                topForPaginationCheck = std::min(topForPaginationCheck, rootBox.lineTop());
+                bottomForPaginationCheck = std::max(bottomForPaginationCheck, rootBox.lineBottom());
             }
-            if (bottomForPaginationCheck - topForPaginationCheck <= v->printRect().height()) {
-                if (paintOffset.y() + bottomForPaginationCheck > v->printRect().maxY()) {
-                    if (RootInlineBox* nextRootBox = curr->root()->nextRootBox())
-                        bottomForPaginationCheck = min(bottomForPaginationCheck, min<LayoutUnit>(nextRootBox->logicalTopVisualOverflow(), nextRootBox->lineTop()));
+            if (bottomForPaginationCheck - topForPaginationCheck <= v.printRect().height()) {
+                if (paintOffset.y() + bottomForPaginationCheck > v.printRect().maxY()) {
+                    if (RootInlineBox* nextRootBox = rootBox.nextRootBox())
+                        bottomForPaginationCheck = std::min(bottomForPaginationCheck, std::min<LayoutUnit>(nextRootBox->logicalTopVisualOverflow(), nextRootBox->lineTop()));
                 }
-                if (paintOffset.y() + bottomForPaginationCheck > v->printRect().maxY()) {
-                    if (paintOffset.y() + topForPaginationCheck < v->truncatedAt())
-                        v->setBestTruncatedAt(paintOffset.y() + topForPaginationCheck, renderer);
+                if (paintOffset.y() + bottomForPaginationCheck > v.printRect().maxY()) {
+                    if (paintOffset.y() + topForPaginationCheck < v.truncatedAt())
+                        v.setBestTruncatedAt(paintOffset.y() + topForPaginationCheck, renderer);
                     // If we were able to truncate, don't paint.
-                    if (paintOffset.y() + topForPaginationCheck >= v->truncatedAt())
+                    if (paintOffset.y() + topForPaginationCheck >= v.truncatedAt())
                         break;
                 }
             }
         }
 
         if (lineIntersectsDirtyRect(renderer, curr, info, paintOffset)) {
-            RootInlineBox* root = curr->root();
-            curr->paint(info, paintOffset, root->lineTop(), root->lineBottom());
+            const RootInlineBox& rootBox = curr->root();
+            curr->paint(info, paintOffset, rootBox.lineTop(), rootBox.lineBottom());
         }
     }
 
@@ -296,9 +299,9 @@ bool RenderLineBoxList::hitTest(RenderBoxModelObject* renderer, const HitTestReq
     // them further.  Note that boxes can easily overlap, so we can't make any assumptions
     // based off positions of our first line box or our last line box.
     for (InlineFlowBox* curr = lastLineBox(); curr; curr = curr->prevLineBox()) {
-        RootInlineBox* root = curr->root();
-        if (rangeIntersectsRect(renderer, curr->logicalTopVisualOverflow(root->lineTop()), curr->logicalBottomVisualOverflow(root->lineBottom()), rect, accumulatedOffset)) {
-            bool inside = curr->nodeAtPoint(request, result, locationInContainer, accumulatedOffset, root->lineTop(), root->lineBottom());
+        const RootInlineBox& rootBox = curr->root();
+        if (rangeIntersectsRect(renderer, curr->logicalTopVisualOverflow(rootBox.lineTop()), curr->logicalBottomVisualOverflow(rootBox.lineBottom()), rect, accumulatedOffset)) {
+            bool inside = curr->nodeAtPoint(request, result, locationInContainer, accumulatedOffset, rootBox.lineTop(), rootBox.lineBottom());
             if (inside) {
                 renderer->updateHitTestResult(result, locationInContainer.point() - toLayoutSize(accumulatedOffset));
                 return true;
@@ -309,9 +312,10 @@ bool RenderLineBoxList::hitTest(RenderBoxModelObject* renderer, const HitTestReq
     return false;
 }
 
-void RenderLineBoxList::dirtyLinesFromChangedChild(RenderObject* container, RenderObject* child)
+void RenderLineBoxList::dirtyLinesFromChangedChild(RenderBoxModelObject* container, RenderObject* child)
 {
-    if (!container->parent() || (container->isRenderBlock() && (container->selfNeedsLayout() || !container->isBlockFlow())))
+    ASSERT(container->isRenderInline() || container->isRenderBlockFlow());
+    if (!container->parent() || (container->isRenderBlockFlow() && container->selfNeedsLayout()))
         return;
 
     RenderInline* inlineContainer = container->isRenderInline() ? toRenderInline(container) : 0;
@@ -338,17 +342,19 @@ void RenderLineBoxList::dirtyLinesFromChangedChild(RenderObject* container, Rend
             continue;
 
         if (curr->isReplaced()) {
-            InlineBox* wrapper = toRenderBox(curr)->inlineBoxWrapper();
-            if (wrapper)
-                box = wrapper->root();
+            if (auto wrapper = toRenderBox(curr)->inlineBoxWrapper())
+                box = &wrapper->root();
+        } if (curr->isLineBreak()) {
+            if (auto wrapper = toRenderLineBreak(curr)->inlineBoxWrapper())
+                box = &wrapper->root();
         } else if (curr->isText()) {
             InlineTextBox* textBox = toRenderText(curr)->lastTextBox();
             if (textBox)
-                box = textBox->root();
+                box = &textBox->root();
         } else if (curr->isRenderInline()) {
             InlineBox* lastSiblingBox = toRenderInline(curr)->lastLineBoxIncludingCulling();
             if (lastSiblingBox)
-                box = lastSiblingBox->root();
+                box = &lastSiblingBox->root();
         }
 
         if (box)
@@ -367,7 +373,7 @@ void RenderLineBoxList::dirtyLinesFromChangedChild(RenderObject* container, Rend
             }
             return;
         }
-        box = firstBox->root();
+        box = &firstBox->root();
     }
 
     // If we found a line box, then dirty it.
@@ -390,7 +396,8 @@ void RenderLineBoxList::dirtyLinesFromChangedChild(RenderObject* container, Rend
         // space, the search for |child|'s linebox will go past the leading space to the previous linebox and select that
         // one as |box|. If we hit that situation here, dirty the |box| actually containing the child too. 
         bool insertedAfterLeadingSpace = box->lineBreakObj() == child->previousSibling();
-        if (adjacentBox && (adjacentBox->lineBreakObj() == child || child->isBR() || (curr && curr->isBR()) || insertedAfterLeadingSpace))
+        if (adjacentBox && (adjacentBox->lineBreakObj() == child || child->isBR() || (curr && curr->isBR())
+            || insertedAfterLeadingSpace || isIsolated(container->style().unicodeBidi())))
             adjacentBox->markDirty();
     }
 }

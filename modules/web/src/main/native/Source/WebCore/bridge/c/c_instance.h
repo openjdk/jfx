@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef BINDINGS_C_INSTANCE_H_
@@ -51,22 +51,22 @@ public:
     static void setGlobalException(String);
     static void moveGlobalExceptionToExecState(ExecState*);
 
-    ~CInstance ();
+    virtual ~CInstance();
 
-    virtual Class *getClass() const;
+    virtual Class *getClass() const override;
 
-    virtual JSValue valueOf(ExecState*) const;
-    virtual JSValue defaultValue(ExecState*, PreferredPrimitiveType) const;
+    virtual JSValue valueOf(ExecState*) const override;
+    virtual JSValue defaultValue(ExecState*, PreferredPrimitiveType) const override;
 
-    virtual JSValue getMethod(ExecState*, PropertyName);
-    virtual JSValue invokeMethod(ExecState*, RuntimeMethod* method);
-    virtual bool supportsInvokeDefaultMethod() const;
-    virtual JSValue invokeDefaultMethod(ExecState*);
+    virtual JSValue getMethod(ExecState*, PropertyName) override;
+    virtual JSValue invokeMethod(ExecState*, RuntimeMethod*) override;
+    virtual bool supportsInvokeDefaultMethod() const override;
+    virtual JSValue invokeDefaultMethod(ExecState*) override;
 
-    virtual bool supportsConstruct() const;
-    virtual JSValue invokeConstruct(ExecState*, const ArgList&);
+    virtual bool supportsConstruct() const override;
+    virtual JSValue invokeConstruct(ExecState*, const ArgList&) override;
 
-    virtual void getPropertyNames(ExecState*, PropertyNameArray&);
+    virtual void getPropertyNames(ExecState*, PropertyNameArray&) override;
 
     JSValue stringValue(ExecState*) const;
     JSValue numberValue(ExecState*) const;
@@ -77,7 +77,7 @@ public:
 private:
     CInstance(NPObject*, PassRefPtr<RootObject>);
 
-    virtual RuntimeObject* newRuntimeObject(ExecState*);
+    virtual RuntimeObject* newRuntimeObject(ExecState*) override;
     bool toJSPrimitive(ExecState*, const char*, JSValue&) const;
 
 

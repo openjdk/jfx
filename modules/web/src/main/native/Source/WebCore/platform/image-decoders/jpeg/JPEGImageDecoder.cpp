@@ -39,7 +39,6 @@
 
 #include "config.h"
 #include "JPEGImageDecoder.h"
-#include "PlatformInstrumentation.h"
 #include <wtf/PassOwnPtr.h>
 
 extern "C" {
@@ -104,11 +103,7 @@ void init_source(j_decompress_ptr jd);
 boolean fill_input_buffer(j_decompress_ptr jd);
 void skip_input_data(j_decompress_ptr jd, long num_bytes);
 void term_source(j_decompress_ptr jd);
-#if PLATFORM(QT)
-void error_exit(j_common_ptr) NO_RETURN;
-#else
 void error_exit(j_common_ptr cinfo);
-#endif
 
 // Implementation of a JPEG src object that understands our state machine
 struct decoder_source_mgr {
@@ -624,11 +619,8 @@ ImageFrame* JPEGImageDecoder::frameBufferAtIndex(size_t index)
     }
 
     ImageFrame& frame = m_frameBufferCache[0];
-    if (frame.status() != ImageFrame::FrameComplete) {
-        PlatformInstrumentation::willDecodeImage("JPEG");
+    if (frame.status() != ImageFrame::FrameComplete)
         decode(false);
-        PlatformInstrumentation::didDecodeImage();
-    }
     return &frame;
 }
 
@@ -749,7 +741,7 @@ bool JPEGImageDecoder::outputScanlines()
     case JCS_CMYK:
         return outputScanlines<JCS_CMYK>(buffer);
     default:
-                ASSERT_NOT_REACHED();
+        ASSERT_NOT_REACHED();
     }
 
     return setFailed();

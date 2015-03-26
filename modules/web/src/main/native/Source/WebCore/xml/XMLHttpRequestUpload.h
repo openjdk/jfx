@@ -26,36 +26,27 @@
 #ifndef XMLHttpRequestUpload_h
 #define XMLHttpRequestUpload_h
 
-#include "EventListener.h"
-#include "EventNames.h"
-#include "EventTarget.h"
 #include "XMLHttpRequest.h"
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
-#include <wtf/PassOwnPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
-#include <wtf/Vector.h>
-#include <wtf/text/AtomicStringHash.h>
 
 namespace WebCore {
 
     class ScriptExecutionContext;
     class XMLHttpRequest;
 
-    class XMLHttpRequestUpload : public EventTarget {
+    class XMLHttpRequestUpload final : public EventTargetWithInlineData {
     public:
-        static PassOwnPtr<XMLHttpRequestUpload> create(XMLHttpRequest* xmlHttpRequest)
-        {
-            return adoptPtr(new XMLHttpRequestUpload(xmlHttpRequest));
-        }
+        explicit XMLHttpRequestUpload(XMLHttpRequest*);
 
         void ref() { m_xmlHttpRequest->ref(); }
         void deref() { m_xmlHttpRequest->deref(); }
         XMLHttpRequest* xmlHttpRequest() const { return m_xmlHttpRequest; }
 
-        virtual const AtomicString& interfaceName() const;
-        ScriptExecutionContext* scriptExecutionContext() const;
+        virtual EventTargetInterface eventTargetInterface() const override { return XMLHttpRequestUploadEventTargetInterfaceType; }
+        virtual ScriptExecutionContext* scriptExecutionContext() const override { return m_xmlHttpRequest->scriptExecutionContext(); }
 
         DEFINE_ATTRIBUTE_EVENT_LISTENER(abort);
         DEFINE_ATTRIBUTE_EVENT_LISTENER(error);
@@ -64,18 +55,17 @@ namespace WebCore {
         DEFINE_ATTRIBUTE_EVENT_LISTENER(loadstart);
         DEFINE_ATTRIBUTE_EVENT_LISTENER(progress);
 
-        void dispatchEventAndLoadEnd(PassRefPtr<Event>);
+        void dispatchThrottledProgressEvent(bool lengthComputable, unsigned long long loaded, unsigned long long total);
+        void dispatchProgressEvent(const AtomicString &type);
 
     private:
-        explicit XMLHttpRequestUpload(XMLHttpRequest*);
-
-        virtual void refEventTarget() { ref(); }
-        virtual void derefEventTarget() { deref(); }
-        virtual EventTargetData* eventTargetData();
-        virtual EventTargetData* ensureEventTargetData();
+        virtual void refEventTarget() override final { ref(); }
+        virtual void derefEventTarget() override final { deref(); }
 
         XMLHttpRequest* m_xmlHttpRequest;
-        EventTargetData m_eventTargetData;
+        bool m_lengthComputable;
+        unsigned long long m_loaded;
+        unsigned long long m_total;
     };
     
 } // namespace WebCore

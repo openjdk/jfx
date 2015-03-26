@@ -71,16 +71,17 @@ public:
     void requestPermission(PassRefPtr<VoidCallback> = 0);
 #endif
 
-    virtual void stop() OVERRIDE;
-
 private:
     NotificationCenter(ScriptExecutionContext*, NotificationClient*);
+
+    // ActiveDOMObject
+    virtual void stop() override;
 
     class NotificationRequestCallback : public RefCounted<NotificationRequestCallback> {
     public:
         static PassRefPtr<NotificationRequestCallback> createAndStartTimer(NotificationCenter*, PassRefPtr<VoidCallback>);
         void startTimer();
-        void timerFired(Timer<NotificationRequestCallback>*);
+        void timerFired(Timer<NotificationRequestCallback>&);
     private:
         NotificationRequestCallback(NotificationCenter*, PassRefPtr<VoidCallback>);
 
@@ -92,7 +93,7 @@ private:
     void requestTimedOut(NotificationRequestCallback*);
 
     NotificationClient* m_client;
-    HashSet<RefPtr<NotificationRequestCallback> > m_callbacks;
+    HashSet<RefPtr<NotificationRequestCallback>> m_callbacks;
 };
 
 } // namespace WebCore

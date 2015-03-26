@@ -31,26 +31,27 @@
 #ifndef RenderRubyText_h
 #define RenderRubyText_h
 
-#include "RenderBlock.h"
+#include "RenderBlockFlow.h"
 
 namespace WebCore {
 
-class RenderRubyText : public RenderBlock {
+class RenderRubyText final : public RenderBlockFlow {
 public:
-    RenderRubyText(Element*);
+    RenderRubyText(Element&, PassRef<RenderStyle>);
     virtual ~RenderRubyText();
 
-    virtual const char* renderName() const { return "RenderRubyText"; }
+    Element& element() const { return toElement(nodeForNonAnonymous()); }
 
-    virtual bool isRubyText() const { return true; }
-
-    virtual bool isChildAllowed(RenderObject*, RenderStyle*) const;
+    virtual bool isChildAllowed(const RenderObject&, const RenderStyle&) const override;
 
 private:
-    virtual bool avoidsFloats() const;
+    virtual const char* renderName() const override { return "RenderRubyText"; }
+    virtual bool isRubyText() const override { return true; }
 
-    virtual ETextAlign textAlignmentForLine(bool endsWithSoftBreak) const;
-    virtual void adjustInlineDirectionLineBounds(int expansionOpportunityCount, float& logicalLeft, float& logicalWidth) const;
+    virtual bool avoidsFloats() const override;
+
+    virtual ETextAlign textAlignmentForLine(bool endsWithSoftBreak) const override;
+    virtual void adjustInlineDirectionLineBounds(int expansionOpportunityCount, float& logicalLeft, float& logicalWidth) const override;
 };
 
 } // namespace WebCore

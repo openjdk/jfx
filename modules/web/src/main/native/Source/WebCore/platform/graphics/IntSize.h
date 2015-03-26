@@ -26,33 +26,31 @@
 #ifndef IntSize_h
 #define IntSize_h
 
+#include <algorithm>
+#include <wtf/PrintStream.h>
+
 #if USE(CG)
 typedef struct CGSize CGSize;
 #endif
 
-#if PLATFORM(MAC) || (PLATFORM(QT) && USE(QTKIT))
+#if PLATFORM(MAC)
 #ifdef NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES
 typedef struct CGSize NSSize;
 #else
 typedef struct _NSSize NSSize;
 #endif
+#elif PLATFORM(JAVA)
+// TODO
+#endif
+
+#if PLATFORM(IOS)
+#ifndef NSSize
+#define NSSize CGSize
+#endif
 #endif
 
 #if PLATFORM(WIN)
 typedef struct tagSIZE SIZE;
-#elif PLATFORM(QT)
-#include <qglobal.h>
-QT_BEGIN_NAMESPACE
-class QSize;
-QT_END_NAMESPACE
-#elif PLATFORM(JAVA)
-// TODO
-#elif PLATFORM(BLACKBERRY)
-namespace BlackBerry {
-namespace Platform {
-class IntSize;
-}
-}
 #endif
 
 namespace WebCore {
@@ -92,14 +90,12 @@ public:
 
     IntSize expandedTo(const IntSize& other) const
     {
-        return IntSize(m_width > other.m_width ? m_width : other.m_width,
-            m_height > other.m_height ? m_height : other.m_height);
+        return IntSize(std::max(m_width, other.m_width), std::max(m_height, other.m_height));
     }
 
     IntSize shrunkTo(const IntSize& other) const
     {
-        return IntSize(m_width < other.m_width ? m_width : other.m_width,
-            m_height < other.m_height ? m_height : other.m_height);
+        return IntSize(std::min(m_width, other.m_width), std::min(m_height, other.m_height));
     }
 
     void clampNegativeToZero()
@@ -135,7 +131,7 @@ public:
     operator CGSize() const;
 #endif
 
-#if (PLATFORM(MAC) || (PLATFORM(QT) && USE(QTKIT))) && !defined(NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES)
+#if PLATFORM(MAC) && !defined(NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES)
     explicit IntSize(const NSSize &); // don't do this implicitly since it's lossy
     operator NSSize() const;
 #endif
@@ -145,15 +141,7 @@ public:
     operator SIZE() const;
 #endif
 
-#if PLATFORM(QT)
-    IntSize(const QSize&);
-    operator QSize() const;
-#endif
-
-#if PLATFORM(BLACKBERRY)
-    IntSize(const BlackBerry::Platform::IntSize&);
-    operator BlackBerry::Platform::IntSize() const;
-#endif
+    void dump(PrintStream& out) const;
 
 private:
     int m_width, m_height;

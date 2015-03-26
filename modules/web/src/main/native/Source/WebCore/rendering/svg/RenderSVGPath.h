@@ -26,25 +26,24 @@
 #ifndef RenderSVGPath_h
 #define RenderSVGPath_h
 
-#if ENABLE(SVG)
 #include "RenderSVGShape.h"
 
 namespace WebCore {
 
-class RenderSVGPath : public RenderSVGShape {
+class RenderSVGPath final : public RenderSVGShape {
 public:
-    explicit RenderSVGPath(SVGStyledTransformableElement*);
+    RenderSVGPath(SVGGraphicsElement&, PassRef<RenderStyle>);
     virtual ~RenderSVGPath();
 
 private:
-    virtual bool isSVGPath() const OVERRIDE { return true; }
+    virtual bool isSVGPath() const override { return true; }
     virtual const char* renderName() const { return "RenderSVGPath"; }
 
-    virtual void updateShapeFromElement() OVERRIDE;
+    virtual void updateShapeFromElement() override;
     FloatRect calculateUpdatedStrokeBoundingBox() const;
 
-    virtual void strokeShape(GraphicsContext*) const OVERRIDE;
-    virtual bool shapeDependentStrokeContains(const FloatPoint&) OVERRIDE;
+    virtual void strokeShape(GraphicsContext*) const override;
+    virtual bool shapeDependentStrokeContains(const FloatPoint&) override;
 
     bool shouldStrokeZeroLengthSubpath() const;
     Path* zeroLengthLinecapPath(const FloatPoint&) const;
@@ -54,13 +53,8 @@ private:
     Vector<FloatPoint> m_zeroLengthLinecapLocations;
 };
 
-inline RenderSVGPath* toRenderSVGPath(RenderObject* object)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isSVGPath());
-    return static_cast<RenderSVGPath*>(object);
-}
+RENDER_OBJECT_TYPE_CASTS(RenderSVGPath, isSVGPath())
 
 }
 
-#endif // ENABLE(SVG)
 #endif

@@ -24,6 +24,7 @@
 
 #include "DOMWrapperWorld.h"
 #include "DOMObjectHashTableMap.h"
+#include "WebCoreTypedArrayController.h"
 #include <wtf/HashSet.h>
 #include <wtf/RefPtr.h>
 
@@ -35,7 +36,10 @@ class WebCoreJSClientData : public JSC::VM::ClientData {
     friend void initNormalWorldClientData(JSC::VM*);
 
 public:
-    WebCoreJSClientData() { }
+    WebCoreJSClientData()
+    {
+    }
+
     virtual ~WebCoreJSClientData()
     {
         ASSERT(m_worldSet.contains(m_normalWorld.get()));
@@ -45,22 +49,27 @@ public:
         ASSERT(m_worldSet.isEmpty());
     }
 
-    DOMWrapperWorld* normalWorld() { return m_normalWorld.get(); }
+    DOMWrapperWorld& normalWorld() { return *m_normalWorld; }
 
-    void getAllWorlds(Vector<RefPtr<DOMWrapperWorld> >& worlds)
+    void getAllWorlds(Vector<Ref<DOMWrapperWorld>>& worlds)
     {
-        copyToVector(m_worldSet, worlds);
+        ASSERT(worlds.isEmpty());
+
+        worlds.reserveInitialCapacity(m_worldSet.size());
+        for (auto it = m_worldSet.begin(), end = m_worldSet.end(); it != end; ++it)
+            worlds.uncheckedAppend(*(*it));
     }
 
-    void rememberWorld(DOMWrapperWorld* world)
+    void rememberWorld(DOMWrapperWorld& world)
     {
-        ASSERT(!m_worldSet.contains(world));
-        m_worldSet.add(world);
+        ASSERT(!m_worldSet.contains(&world));
+        m_worldSet.add(&world);
     }
-    void forgetWorld(DOMWrapperWorld* world)
+
+    void forgetWorld(DOMWrapperWorld& world)
     {
-        ASSERT(m_worldSet.contains(world));
-        m_worldSet.remove(world);
+        ASSERT(m_worldSet.contains(&world));
+        m_worldSet.remove(&world);
     }
 
     DOMObjectHashTableMap hashTableMap;
@@ -75,6 +84,7 @@ inline void initNormalWorldClientData(JSC::VM* vm)
     WebCoreJSClientData* webCoreJSClientData = new WebCoreJSClientData;
     vm->clientData = webCoreJSClientData; // ~VM deletes this pointer.
     webCoreJSClientData->m_normalWorld = DOMWrapperWorld::create(vm, true);
+    vm->m_typedArrayController = adoptRef(new WebCoreTypedArrayController());
 }
 
 } // namespace WebCore

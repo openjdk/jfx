@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
+ *     notice, this list of conditions and the following disclaimer. 
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
+ *     documentation and/or other materials provided with the distribution. 
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission.
+ *     from this software without specific prior written permission. 
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -38,15 +38,27 @@
 #include <wtf/RetainPtr.h>
 #include <wtf/WTFThreadData.h>
 
+#if PLATFORM(EFL)
+#include <wtf/MainThread.h>
+#endif
+
 namespace JSC {
 
-#if USE(CF) || PLATFORM(QT)
+bool GCActivityCallback::s_shouldCreateGCTimer = true;
+
+#if USE(CF) || PLATFORM(EFL)
 
 const double gcTimeSlicePerMB = 0.01; // Percentage of CPU time we will spend to reclaim 1 MB
 const double maxGCTimeSlice = 0.05; // The maximum amount of CPU time we want to use for opportunistic timer-triggered collections.
 const double timerSlop = 2.0; // Fudge factor to avoid performance cost of resetting timer.
+
+#if !PLATFORM(IOS)
 const double pagingTimeOut = 0.1; // Time in seconds to allow opportunistic timer to iterate over all blocks to see if the Heap is paged out.
+#endif
+
+#if !USE(CF)
 const double hour = 60 * 60;
+#endif
 
 #if USE(CF)
 DefaultGCActivityCallback::DefaultGCActivityCallback(Heap* heap)
@@ -60,9 +72,9 @@ DefaultGCActivityCallback::DefaultGCActivityCallback(Heap* heap, CFRunLoopRef ru
     , m_delay(s_decade)
 {
 }
-#elif PLATFORM(QT)
+#elif PLATFORM(EFL)
 DefaultGCActivityCallback::DefaultGCActivityCallback(Heap* heap)
-    : GCActivityCallback(heap->vm())
+    : GCActivityCallback(heap->vm(), WTF::isMainThread())
     , m_delay(hour)
 {
 }
@@ -83,7 +95,8 @@ void DefaultGCActivityCallback::doWork()
         return;
     }
 #endif
-    heap->collect(Heap::DoNotSweep);
+    heap->gcTimerDidFire();
+    heap->collect();
 }
     
 #if USE(CF)
@@ -101,25 +114,35 @@ void DefaultGCActivityCallback::cancelTimer()
     m_delay = s_decade;
     CFRunLoopTimerSetNextFireDate(m_timer.get(), CFAbsoluteTimeGetCurrent() + s_decade);
 }
-#elif PLATFORM(QT)
-
+#elif PLATFORM(EFL)
 void DefaultGCActivityCallback::scheduleTimer(double newDelay)
 {
     if (newDelay * timerSlop > m_delay)
         return;
+
+    stop();
     m_delay = newDelay;
-    m_timer.start(newDelay * 1000, this);
+    
+    ASSERT(!m_timer);
+    m_timer = add(newDelay, this);
 }
 
 void DefaultGCActivityCallback::cancelTimer()
 {
     m_delay = hour;
-    m_timer.stop();
+    stop();
 }
 #endif
 
 void DefaultGCActivityCallback::didAllocate(size_t bytes)
 {
+#if PLATFORM(EFL)
+    if (!isEnabled())
+        return;
+
+    ASSERT(WTF::isMainThread());
+#endif
+
     // The first byte allocated in an allocation cycle will report 0 bytes to didAllocate. 
     // We pretend it's one byte so that we don't ignore this allocation entirely.
     if (!bytes)

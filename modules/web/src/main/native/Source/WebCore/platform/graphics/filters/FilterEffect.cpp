@@ -28,7 +28,9 @@
 #include "Filter.h"
 #include "ImageBuffer.h"
 #include "TextStream.h"
-#include <wtf/Uint8ClampedArray.h>
+#include <runtime/JSCInlines.h>
+#include <runtime/TypedArrayInlines.h>
+#include <runtime/Uint8ClampedArray.h>
 
 #if HAVE(ARM_NEON_INTRINSICS)
 #include <arm_neon.h>
@@ -226,7 +228,7 @@ void FilterEffect::forceValidPreMultipliedPixels()
 void FilterEffect::clearResult()
 {
     if (m_imageBufferResult)
-        m_imageBufferResult.clear();
+        m_imageBufferResult.reset();
     if (m_unmultipliedImageResult)
         m_unmultipliedImageResult.clear();
     if (m_premultipliedImageResult)

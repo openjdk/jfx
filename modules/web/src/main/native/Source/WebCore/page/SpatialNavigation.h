@@ -36,11 +36,9 @@ class HTMLAreaElement;
 class IntRect;
 class RenderObject;
 
-using namespace std;
-
 inline long long maxDistance()
 {
-    return numeric_limits<long long>::max();
+    return std::numeric_limits<long long>::max();
 }
 
 inline int fudgeFactor()
@@ -105,9 +103,7 @@ struct FocusCandidate {
         , focusableNode(0)
         , enclosingScrollableBox(0)
         , distance(maxDistance())
-        , parentDistance(maxDistance())
         , alignment(None)
-        , parentAlignment(None)
         , isOffscreen(true)
         , isOffscreenAfterScrolling(true)
     {
@@ -118,7 +114,7 @@ struct FocusCandidate {
     bool isNull() const { return !visibleNode; }
     bool inScrollableContainer() const { return visibleNode && enclosingScrollableBox; }
     bool isFrameOwnerElement() const { return visibleNode && visibleNode->isFrameOwnerElement(); }
-    Document* document() const { return visibleNode ? visibleNode->document() : 0; }
+    Document* document() const { return visibleNode ? &visibleNode->document() : 0; }
 
     // We handle differently visibleNode and FocusableNode to properly handle the areas of imagemaps,
     // where visibleNode would represent the image element and focusableNode would represent the area element.
@@ -127,9 +123,7 @@ struct FocusCandidate {
     Node* focusableNode;
     Node* enclosingScrollableBox;
     long long distance;
-    long long parentDistance;
     RectsAlignment alignment;
-    RectsAlignment parentAlignment;
     LayoutRect rect;
     bool isOffscreen;
     bool isOffscreenAfterScrolling;
@@ -142,6 +136,7 @@ bool canScrollInDirection(const Node* container, FocusDirection);
 bool canScrollInDirection(const Frame*, FocusDirection);
 bool canBeScrolledIntoView(FocusDirection, const FocusCandidate&);
 bool areElementsOnSameLine(const FocusCandidate& firstCandidate, const FocusCandidate& secondCandidate);
+bool isValidCandidate(FocusDirection, const FocusCandidate&, FocusCandidate&);
 void distanceDataForNode(FocusDirection, const FocusCandidate& current, FocusCandidate& candidate);
 Node* scrollableEnclosingBoxOrParentFrameForNodeInDirection(FocusDirection, Node*);
 LayoutRect nodeRectInAbsoluteCoordinates(Node*, bool ignoreBorder = false);

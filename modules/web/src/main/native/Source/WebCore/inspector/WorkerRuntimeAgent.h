@@ -31,36 +31,34 @@
 #ifndef WorkerRuntimeAgent_h
 #define WorkerRuntimeAgent_h
 
-#if ENABLE(INSPECTOR) && ENABLE(WORKERS)
+#if ENABLE(INSPECTOR)
 
-#include "InspectorRuntimeAgent.h"
-#include <wtf/PassOwnPtr.h>
+#include <inspector/agents/InspectorRuntimeAgent.h>
 
 namespace WebCore {
 
-class WorkerContext;
+class WorkerGlobalScope;
+typedef String ErrorString;
 
-class WorkerRuntimeAgent : public InspectorRuntimeAgent {
+class WorkerRuntimeAgent final : public Inspector::InspectorRuntimeAgent {
 public:
-    static PassOwnPtr<WorkerRuntimeAgent> create(InstrumentingAgents* instrumentingAgents, InspectorCompositeState* state, InjectedScriptManager* injectedScriptManager, WorkerContext* context)
-    {
-        return adoptPtr(new WorkerRuntimeAgent(instrumentingAgents, state, injectedScriptManager, context));
-    }
-    virtual ~WorkerRuntimeAgent();
+    WorkerRuntimeAgent(Inspector::InjectedScriptManager*, WorkerGlobalScope*);
+    virtual ~WorkerRuntimeAgent() { }
 
-    // Protocol commands.
-    virtual void run(ErrorString*);
+    virtual void didCreateFrontendAndBackend(Inspector::InspectorFrontendChannel*, Inspector::InspectorBackendDispatcher*) override;
+    virtual void willDestroyFrontendAndBackend(Inspector::InspectorDisconnectReason) override;
 
-#if ENABLE(JAVASCRIPT_DEBUGGER)
-    void pauseWorkerContext(WorkerContext*);
-#endif // ENABLE(JAVASCRIPT_DEBUGGER)
+    virtual void run(ErrorString*) override;
+
+    void pauseWorkerGlobalScope(WorkerGlobalScope*);
 
 private:
-    WorkerRuntimeAgent(InstrumentingAgents*, InspectorCompositeState*, InjectedScriptManager*, WorkerContext*);
-    virtual InjectedScript injectedScriptForEval(ErrorString*, const int* executionContextId);
-    virtual void muteConsole();
-    virtual void unmuteConsole();
-    WorkerContext* m_workerContext;
+    virtual JSC::VM* globalVM() override;
+    virtual Inspector::InjectedScript injectedScriptForEval(ErrorString*, const int* executionContextId) override;
+    virtual void muteConsole() override;
+    virtual void unmuteConsole() override;
+    WorkerGlobalScope* m_workerGlobalScope;
+    RefPtr<Inspector::InspectorRuntimeBackendDispatcher> m_backendDispatcher;
     bool m_paused;
 };
 

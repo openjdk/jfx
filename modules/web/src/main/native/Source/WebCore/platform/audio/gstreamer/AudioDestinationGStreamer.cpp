@@ -24,13 +24,12 @@
 
 #include "AudioChannel.h"
 #include "AudioSourceProvider.h"
-#include <wtf/gobject/GOwnPtr.h>
 #include "GRefPtrGStreamer.h"
-#include "GStreamerVersioning.h"
 #include "Logging.h"
 #include "WebKitWebAudioSourceGStreamer.h"
 #include <gst/gst.h>
 #include <gst/pbutils/pbutils.h>
+#include <wtf/gobject/GUniquePtr.h>
 
 namespace WebCore {
 
@@ -43,7 +42,7 @@ gboolean messageCallback(GstBus*, GstMessage* message, AudioDestinationGStreamer
     return destination->handleMessage(message);
 }
 
-PassOwnPtr<AudioDestination> AudioDestination::create(AudioIOCallback& callback, const String&, unsigned numberOfInputChannels, unsigned numberOfOutputChannels, float sampleRate)
+std::unique_ptr<AudioDestination> AudioDestination::create(AudioIOCallback& callback, const String&, unsigned numberOfInputChannels, unsigned numberOfOutputChannels, float sampleRate)
 {
     // FIXME: make use of inputDeviceId as appropriate.
 
@@ -55,7 +54,7 @@ PassOwnPtr<AudioDestination> AudioDestination::create(AudioIOCallback& callback,
     if (numberOfOutputChannels != 2)
         LOG(Media, "AudioDestination::create(%u, %u, %f) - unhandled output channels", numberOfInputChannels, numberOfOutputChannels, sampleRate);
 
-    return adoptPtr(new AudioDestinationGStreamer(callback, sampleRate));
+    return std::make_unique<AudioDestinationGStreamer>(callback, sampleRate);
 }
 
 float AudioDestination::hardwareSampleRate()
@@ -70,13 +69,6 @@ unsigned long AudioDestination::maxChannelCount()
     return 0;
 }
 
-#ifndef GST_API_VERSION_1
-static void onGStreamerWavparsePadAddedCallback(GstElement*, GstPad* pad, AudioDestinationGStreamer* destination)
-{
-    destination->finishBuildingPipelineAfterWavParserPadReady(pad);
-}
-#endif
-
 AudioDestinationGStreamer::AudioDestinationGStreamer(AudioIOCallback& callback, float sampleRate)
     : m_callback(callback)
     , m_renderBus(AudioBus::create(2, framesToPull, false))
@@ -84,7 +76,7 @@ AudioDestinationGStreamer::AudioDestinationGStreamer(AudioIOCallback& callback, 
     , m_isPlaying(false)
 {
     m_pipeline = gst_pipeline_new("play");
-    GRefPtr<GstBus> bus = webkitGstPipelineGetBus(GST_PIPELINE(m_pipeline));
+    GRefPtr<GstBus> bus = adoptGRef(gst_pipeline_get_bus(GST_PIPELINE(m_pipeline)));
     ASSERT(bus);
     gst_bus_add_signal_watch(bus.get());
     g_signal_connect(bus.get(), "message", G_CALLBACK(messageCallback), this);
@@ -102,21 +94,16 @@ AudioDestinationGStreamer::AudioDestinationGStreamer(AudioIOCallback& callback, 
     if (!m_wavParserAvailable)
         return;
 
-#ifndef GST_API_VERSION_1
-    g_signal_connect(wavParser, "pad-added", G_CALLBACK(onGStreamerWavparsePadAddedCallback), this);
-#endif
     gst_bin_add_many(GST_BIN(m_pipeline), webkitAudioSrc, wavParser, NULL);
     gst_element_link_pads_full(webkitAudioSrc, "src", wavParser, "sink", GST_PAD_LINK_CHECK_NOTHING);
 
-#ifdef GST_API_VERSION_1
     GRefPtr<GstPad> srcPad = adoptGRef(gst_element_get_static_pad(wavParser, "src"));
     finishBuildingPipelineAfterWavParserPadReady(srcPad.get());
-#endif
 }
 
 AudioDestinationGStreamer::~AudioDestinationGStreamer()
 {
-    GRefPtr<GstBus> bus = webkitGstPipelineGetBus(GST_PIPELINE(m_pipeline));
+    GRefPtr<GstBus> bus = adoptGRef(gst_pipeline_get_bus(GST_PIPELINE(m_pipeline)));
     ASSERT(bus);
     g_signal_handlers_disconnect_by_func(bus.get(), reinterpret_cast<gpointer>(messageCallback), this);
     gst_bus_remove_signal_watch(bus.get());
@@ -163,8 +150,8 @@ void AudioDestinationGStreamer::finishBuildingPipelineAfterWavParserPadReady(Gst
 
 gboolean AudioDestinationGStreamer::handleMessage(GstMessage* message)
 {
-    GOwnPtr<GError> error;
-    GOwnPtr<gchar> debug;
+    GUniqueOutPtr<GError> error;
+    GUniqueOutPtr<gchar> debug;
 
     switch (GST_MESSAGE_TYPE(message)) {
     case GST_MESSAGE_WARNING:

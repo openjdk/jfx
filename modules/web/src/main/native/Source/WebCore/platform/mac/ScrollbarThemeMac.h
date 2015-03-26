@@ -28,8 +28,6 @@
 
 #include "ScrollbarThemeComposite.h"
 
-typedef id ScrollbarPainter;
-
 namespace WebCore {
 
 class ScrollbarThemeMac : public ScrollbarThemeComposite {
@@ -47,6 +45,7 @@ public:
     
     virtual bool supportsControlTints() const { return true; }
     virtual bool usesOverlayScrollbars() const;
+    virtual void usesOverlayScrollbarsChanged() override;
     virtual void updateScrollbarOverlayStyle(ScrollbarThemeClient*);
 
     virtual double initialAutoscrollTimerDelay();
@@ -60,8 +59,18 @@ public:
     void setNewPainterForScrollbar(ScrollbarThemeClient*, ScrollbarPainter);
     ScrollbarPainter painterForScrollbar(ScrollbarThemeClient*);
 
+    void setPaintCharacteristicsForScrollbar(ScrollbarThemeClient*);
+
     static bool isCurrentlyDrawingIntoLayer();
     static void setIsCurrentlyDrawingIntoLayer(bool);
+
+#if ENABLE(RUBBER_BANDING)
+    static void setUpOverhangAreaBackground(CALayer *, const Color& customBackgroundColor = Color());
+    static void removeOverhangAreaBackground(CALayer *);
+
+    static void setUpOverhangAreaShadow(CALayer *);
+    static void removeOverhangAreaShadow(CALayer *);
+#endif
 
 protected:
     virtual bool hasButtons(ScrollbarThemeClient*);
@@ -79,9 +88,9 @@ protected:
     virtual bool shouldDragDocumentInsteadOfThumb(ScrollbarThemeClient*, const PlatformMouseEvent&);
     int scrollbarPartToHIPressedState(ScrollbarPart);
 
-#if USE(ACCELERATED_COMPOSITING) && ENABLE(RUBBER_BANDING)
-    virtual void setUpOverhangAreasLayerContents(GraphicsLayer*, const Color&) OVERRIDE;
-    virtual void setUpContentShadowLayer(GraphicsLayer*) OVERRIDE;
+#if ENABLE(RUBBER_BANDING)
+    virtual void setUpOverhangAreasLayerContents(GraphicsLayer*, const Color&) override;
+    virtual void setUpContentShadowLayer(GraphicsLayer*) override;
 #endif
 };
 

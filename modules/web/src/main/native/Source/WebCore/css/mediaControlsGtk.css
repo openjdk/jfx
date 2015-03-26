@@ -79,6 +79,31 @@ audio::-webkit-media-controls-panel, video::-webkit-media-controls-panel {
     background-color: rgba(20, 20, 20, 0.8);
     border-radius: 5px;
     overflow: visible;
+    transition: opacity 0.25s linear;
+}
+
+video::-webkit-media-controls-panel {
+    opacity: 0;
+}
+
+video::-webkit-media-controls-panel.show,
+video::-webkit-media-controls-panel.paused {
+    opacity: 1;
+}
+
+video::-webkit-media-controls-panel div.mute-box,
+audio::-webkit-media-controls-panel div.mute-box {
+    display: -webkit-flex;
+    -webkit-flex: none;
+    box-sizing: border-box;
+    width: 30px;
+    height: 30px;
+    margin: 0 9px 0 -7px;
+}
+
+video::-webkit-media-controls-panel div.mute-box.hidden,
+audio::-webkit-media-controls-panel div.mute-box.hidden {
+    display: none;
 }
 
 audio::-webkit-media-controls-mute-button, video::-webkit-media-controls-mute-button {
@@ -90,7 +115,7 @@ audio::-webkit-media-controls-mute-button, video::-webkit-media-controls-mute-bu
     width: 30px;
     height: 30px;
     line-height: 30px;
-    margin: 0 9px 0 -7px;
+    outline: none;
 }
 
 audio::-webkit-media-controls-play-button, video::-webkit-media-controls-play-button {
@@ -103,6 +128,7 @@ audio::-webkit-media-controls-play-button, video::-webkit-media-controls-play-bu
     height: 30px;
     line-height: 30px;
     margin: 0 9px;
+    outline: none;
 }
 
 audio::-webkit-media-controls-current-time-display, video::-webkit-media-controls-current-time-display,
@@ -110,7 +136,6 @@ audio::-webkit-media-controls-time-remaining-display, video::-webkit-media-contr
     -webkit-appearance: media-current-time-display;
     -webkit-user-select: none;
     -webkit-flex: none;
-    display: block;
     border: none;
     cursor: default;
 
@@ -132,6 +157,27 @@ audio::-webkit-media-controls-time-remaining-display, video::-webkit-media-contr
     text-decoration: none;
 }
 
+audio::-webkit-media-controls-current-time-display, video::-webkit-media-controls-current-time-display {
+    display: block;
+}
+
+audio::-webkit-media-controls-time-remaining-display,
+video::-webkit-media-controls-time-remaining-display {
+    display: none;
+}
+
+audio::-webkit-media-controls-time-remaining-display.show,
+video::-webkit-media-controls-time-remaining-display.show {
+    display: block;
+}
+
+audio::-webkit-media-controls-current-time-display.hidden,
+video::-webkit-media-controls-current-time-display.hidden,
+audio::-webkit-media-controls-time-remaining-display.hidden,
+video::-webkit-media-controls-time-remaining-display.hidden {
+    display: none;
+}
+
 audio::-webkit-media-controls-timeline, video::-webkit-media-controls-timeline {
     -webkit-appearance: media-slider;
     display: -webkit-flex;
@@ -143,10 +189,12 @@ audio::-webkit-media-controls-timeline, video::-webkit-media-controls-timeline {
     min-width: 25px;
     border-radius: 4px;
     color: rgba(230, 230, 230, 0.35);
+    outline: none;
 }
 
 audio::-webkit-media-controls-volume-slider-container, video::-webkit-media-controls-volume-slider-container {
     -webkit-appearance: media-volume-slider-container;
+    overflow: hidden;
     position: absolute;
     padding: 0;
     height: 100px;
@@ -156,6 +204,24 @@ audio::-webkit-media-controls-volume-slider-container, video::-webkit-media-cont
     background-color: rgba(20, 20, 20, 0.8);
     right: 9px;
     border-radius: 5px 5px 0px 0px;
+    transition: height 0.10s linear;
+}
+
+audio::-webkit-media-controls-volume-slider-container.hidden,
+video::-webkit-media-controls-volume-slider-container.hidden {
+    height: 0;
+}
+
+audio::-webkit-media-controls-volume-slider-container.down,
+video::-webkit-media-controls-volume-slider-container.down {
+    bottom: -100px;
+    border-radius: 0px 0px 5px 5px;
+    transition: height 0.10s linear, bottom 0.10s linear;
+}
+
+audio::-webkit-media-controls-panel .hidden.down,
+video::-webkit-media-controls-panel .hidden.down {
+    bottom: 0;
 }
 
 audio::-webkit-media-controls-volume-slider, video::-webkit-media-controls-volume-slider {
@@ -170,6 +236,7 @@ audio::-webkit-media-controls-volume-slider, video::-webkit-media-controls-volum
     border-radius: 4px;
     background-color: transparent;
     color: rgba(230, 230, 230, 0.35);
+    outline: none;
 }
 
 audio::-webkit-media-controls-volume-slider-container input[type="range"]::-webkit-media-slider-container > div, video::-webkit-media-controls-volume-slider-container input[type="range"]::-webkit-media-slider-container > div {
@@ -222,6 +289,57 @@ audio::-webkit-media-controls-toggle-closed-captions-button, video::-webkit-medi
     height: 30px;
     line-height: 30px;
     margin: 0 9px 0 -7px;
+    outline: none;
+}
+
+video::-webkit-media-controls-closed-captions-container {
+    -webkit-appearance: media-closed-captions-container;
+    display: -webkit-flex;
+    position: absolute;
+    bottom: 35px;
+    z-index: 2;
+    background-color: rgba(20, 20, 20, 0.8);
+    border-radius: 5px 5px 0px 0px;
+    overflow: hidden;
+    max-width: -webkit-calc(100% - 48px); /* right + 10px */
+    max-height: -webkit-calc(100% - 35px); /* bottom + 10px */
+    cursor: default;
+    font-family: -webkit-small-control;
+    font-size: 10pt;
+    font-weight: normal;
+    font-style: normal;
+    color: white;
+    -webkit-user-select: none;
+    transition: height 0.10s linear;
+}
+
+video::-webkit-media-controls-closed-captions-container h3 {
+    margin: 1px 10px;
+    padding-top: 4px;
+}
+
+video::-webkit-media-controls-closed-captions-container ul {
+    list-style-type: none;
+    margin: 0 0 4px 0;
+    padding: 0;
+}
+
+video::-webkit-media-controls-closed-captions-container li {
+    position: relative;
+    color: white;
+    margin: 0;
+    padding-left: 17px;
+    padding-right: 15px;
+    padding-top: 0.15em;
+    padding-bottom: 0.2em;
+    box-sizing: border-box;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    outline: none;
+}
+video::-webkit-media-controls-closed-captions-container li.selected {
+    background-color: rgba(230, 230, 230, 0.15);
 }
 
 audio::-webkit-media-controls-fullscreen-button, video::-webkit-media-controls-fullscreen-button {
@@ -234,4 +352,10 @@ audio::-webkit-media-controls-fullscreen-button, video::-webkit-media-controls-f
     height: 30px;
     line-height: 30px;
     margin: 0 9px 0 -7px;
+    outline: none;
+}
+
+video::-webkit-media-controls-panel button.hidden,
+audio::-webkit-media-controls-panel button.hidden {
+    display: none;
 }

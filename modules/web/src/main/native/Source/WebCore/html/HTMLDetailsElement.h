@@ -25,24 +25,26 @@
 
 namespace WebCore {
 
-class HTMLDetailsElement FINAL : public HTMLElement {
+class HTMLDetailsElement final : public HTMLElement {
 public:
-    static PassRefPtr<HTMLDetailsElement> create(const QualifiedName& tagName, Document* document);
+    static PassRefPtr<HTMLDetailsElement> create(const QualifiedName& tagName, Document& document);
     void toggleOpen();
 
-    Element* findMainSummary() const;
+    const Element* findMainSummary() const;
 
 private:
-    HTMLDetailsElement(const QualifiedName&, Document*);
+    HTMLDetailsElement(const QualifiedName&, Document&);
 
-    virtual RenderObject* createRenderer(RenderArena*, RenderStyle*);
-    virtual bool childShouldCreateRenderer(const NodeRenderingContext&) const OVERRIDE;
-    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
+    virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) override;
+    virtual bool childShouldCreateRenderer(const Node&) const override;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
 
-    virtual void didAddUserAgentShadowRoot(ShadowRoot*) OVERRIDE;
+    virtual void didAddUserAgentShadowRoot(ShadowRoot*) override;
 
     bool m_isOpen;
 };
+
+NODE_TYPE_CASTS(HTMLDetailsElement)
 
 } // namespace WebCore
 

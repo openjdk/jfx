@@ -34,11 +34,10 @@
 #include "Settings.h"
 #include "TextTrackList.h"
 #include "UserStyleSheetTypes.h"
-#include <wtf/NonCopyingSort.h>
 
 namespace WebCore {
 
-CaptionUserPreferences::CaptionUserPreferences(PageGroup* group)
+CaptionUserPreferences::CaptionUserPreferences(PageGroup& group)
     : m_pageGroup(group)
     , m_displayMode(ForcedOnly)
     , m_timer(this, &CaptionUserPreferences::timerFired)
@@ -51,7 +50,7 @@ CaptionUserPreferences::~CaptionUserPreferences()
 {
 }
 
-void CaptionUserPreferences::timerFired(Timer<CaptionUserPreferences>*)
+void CaptionUserPreferences::timerFired(Timer<CaptionUserPreferences>&)
 {
     captionPreferencesChanged();
 }
@@ -80,64 +79,64 @@ void CaptionUserPreferences::setCaptionDisplayMode(CaptionUserPreferences::Capti
 
 bool CaptionUserPreferences::userPrefersCaptions() const
 {
-    Page* page = *(pageGroup()->pages().begin());
+    Page* page = *(m_pageGroup.pages().begin());
     if (!page)
         return false;
 
-    return page->settings()->shouldDisplayCaptions();
+    return page->settings().shouldDisplayCaptions();
 }
 
 void CaptionUserPreferences::setUserPrefersCaptions(bool preference)
 {
-    Page* page = *(pageGroup()->pages().begin());
+    Page* page = *(m_pageGroup.pages().begin());
     if (!page)
         return;
 
-    page->settings()->setShouldDisplayCaptions(preference);
+    page->settings().setShouldDisplayCaptions(preference);
     notify();
 }
 
 bool CaptionUserPreferences::userPrefersSubtitles() const
 {
-    Page* page = *(pageGroup()->pages().begin());
+    Page* page = *(pageGroup().pages().begin());
     if (!page)
         return false;
 
-    return page->settings()->shouldDisplaySubtitles();
+    return page->settings().shouldDisplaySubtitles();
 }
 
 void CaptionUserPreferences::setUserPrefersSubtitles(bool preference)
 {
-    Page* page = *(pageGroup()->pages().begin());
+    Page* page = *(m_pageGroup.pages().begin());
     if (!page)
         return;
 
-    page->settings()->setShouldDisplaySubtitles(preference);
+    page->settings().setShouldDisplaySubtitles(preference);
     notify();
 }
 
 bool CaptionUserPreferences::userPrefersTextDescriptions() const
 {
-    Page* page = *(pageGroup()->pages().begin());
+    Page* page = *(m_pageGroup.pages().begin());
     if (!page)
         return false;
     
-    return page->settings()->shouldDisplayTextDescriptions();
+    return page->settings().shouldDisplayTextDescriptions();
 }
 
 void CaptionUserPreferences::setUserPrefersTextDescriptions(bool preference)
 {
-    Page* page = *(pageGroup()->pages().begin());
+    Page* page = *(m_pageGroup.pages().begin());
     if (!page)
         return;
     
-    page->settings()->setShouldDisplayTextDescriptions(preference);
+    page->settings().setShouldDisplayTextDescriptions(preference);
     notify();
 }
 
 void CaptionUserPreferences::captionPreferencesChanged()
 {
-    m_pageGroup->captionPreferencesChanged();
+    m_pageGroup.captionPreferencesChanged();
 }
 
 Vector<String> CaptionUserPreferences::preferredLanguages() const
@@ -157,6 +156,11 @@ void CaptionUserPreferences::setPreferredLanguage(const String& language)
 
 static String trackDisplayName(TextTrack* track)
 {
+    if (track == TextTrack::captionMenuOffItem())
+        return textTrackOffMenuItemText();
+    if (track == TextTrack::captionMenuAutomaticItem())
+        return textTrackAutomaticMenuItemText();
+
     if (track->label().isEmpty() && track->language().isEmpty())
         return textTrackNoLabelText();
     if (!track->label().isEmpty())
@@ -169,21 +173,25 @@ String CaptionUserPreferences::displayNameForTrack(TextTrack* track) const
     return trackDisplayName(track);
 }
     
-static bool textTrackCompare(const RefPtr<TextTrack>& a, const RefPtr<TextTrack>& b)
-{
-    return codePointCompare(trackDisplayName(a.get()), trackDisplayName(b.get())) < 0;
-}
-
-Vector<RefPtr<TextTrack> > CaptionUserPreferences::sortedTrackListForMenu(TextTrackList* trackList)
+Vector<RefPtr<TextTrack>> CaptionUserPreferences::sortedTrackListForMenu(TextTrackList* trackList)
 {
     ASSERT(trackList);
 
-    Vector<RefPtr<TextTrack> > tracksForMenu;
+    Vector<RefPtr<TextTrack>> tracksForMenu;
 
-    for (unsigned i = 0, length = trackList->length(); i < length; ++i)
-        tracksForMenu.append(trackList->item(i));
+    for (unsigned i = 0, length = trackList->length(); i < length; ++i) {
+        TextTrack* track = trackList->item(i);
+        const AtomicString& kind = track->kind();
+        if (kind == TextTrack::captionsKeyword() || kind == TextTrack::descriptionsKeyword() || kind == TextTrack::subtitlesKeyword())
+            tracksForMenu.append(track);
+    }
 
-    nonCopyingSort(tracksForMenu.begin(), tracksForMenu.end(), textTrackCompare);
+    std::sort(tracksForMenu.begin(), tracksForMenu.end(), [](const RefPtr<TextTrack>& a, const RefPtr<TextTrack>& b) {
+        return codePointCompare(trackDisplayName(a.get()), trackDisplayName(b.get())) < 0;
+    });
+
+    tracksForMenu.insert(0, TextTrack::captionMenuOffItem());
+    tracksForMenu.insert(1, TextTrack::captionMenuAutomaticItem());
 
     return tracksForMenu;
 }
@@ -229,15 +237,15 @@ void CaptionUserPreferences::setCaptionsStyleSheetOverride(const String& overrid
 void CaptionUserPreferences::updateCaptionStyleSheetOveride()
 {
     // Identify our override style sheet with a unique URL - a new scheme and a UUID.
-    DEFINE_STATIC_LOCAL(KURL, captionsStyleSheetURL, (ParsedURLString, "user-captions-override:01F6AF12-C3B0-4F70-AF5E-A3E00234DC23"));
+    DEFINE_STATIC_LOCAL(URL, captionsStyleSheetURL, (ParsedURLString, "user-captions-override:01F6AF12-C3B0-4F70-AF5E-A3E00234DC23"));
 
-    pageGroup()->removeUserStyleSheetFromWorld(mainThreadNormalWorld(), captionsStyleSheetURL);
+    m_pageGroup.removeUserStyleSheetFromWorld(mainThreadNormalWorld(), captionsStyleSheetURL);
 
     String captionsOverrideStyleSheet = captionsStyleSheetOverride();
     if (captionsOverrideStyleSheet.isEmpty())
         return;
 
-    pageGroup()->addUserStyleSheetToWorld(mainThreadNormalWorld(), captionsOverrideStyleSheet, captionsStyleSheetURL, Vector<String>(),
+    m_pageGroup.addUserStyleSheetToWorld(mainThreadNormalWorld(), captionsOverrideStyleSheet, captionsStyleSheetURL, Vector<String>(),
         Vector<String>(), InjectInAllFrames, UserStyleAuthorLevel, InjectInExistingDocuments);
 }
 

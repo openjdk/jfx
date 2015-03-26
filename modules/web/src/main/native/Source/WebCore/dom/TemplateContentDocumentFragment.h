@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Google Inc. All rights reserved.
+ * Copyright (C) 2012, 2013 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -33,9 +33,9 @@
 
 namespace WebCore {
 
-class TemplateContentDocumentFragment FINAL : public DocumentFragment {
+class TemplateContentDocumentFragment final : public DocumentFragment {
 public:
-    static PassRefPtr<TemplateContentDocumentFragment> create(Document* document, const Element* host)
+    static PassRefPtr<TemplateContentDocumentFragment> create(Document& document, const Element* host)
     {
         return adoptRef(new TemplateContentDocumentFragment(document, host));
     }
@@ -44,13 +44,13 @@ public:
     void clearHost() { m_host = 0; }
 
 private:
-    TemplateContentDocumentFragment(Document* document, const Element* host)
+    TemplateContentDocumentFragment(Document& document, const Element* host)
         : DocumentFragment(document, CreateDocumentFragment)
         , m_host(host)
     {
     }
 
-    virtual bool isTemplateContent() const OVERRIDE { return true; }
+    virtual bool isTemplateContent() const override { return true; }
 
     const Element* m_host;
 };

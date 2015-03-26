@@ -38,10 +38,10 @@ public:
         UNMASKED_RENDERER_WEBGL = 0x9246
     };
 
-    static PassOwnPtr<WebGLDebugRendererInfo> create(WebGLRenderingContext*);
+    static OwnPtr<WebGLDebugRendererInfo> create(WebGLRenderingContext*);
 
     virtual ~WebGLDebugRendererInfo();
-    virtual ExtensionName getName() const;
+    virtual ExtensionName getName() const override;
 
 private:
     WebGLDebugRendererInfo(WebGLRenderingContext*);

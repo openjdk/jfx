@@ -26,12 +26,12 @@
 
 namespace WebCore {
 
-inline CDATASection::CDATASection(Document* document, const String& data)
+inline CDATASection::CDATASection(Document& document, const String& data)
     : Text(document, data, CreateText)
 {
 }
 
-PassRefPtr<CDATASection> CDATASection::create(Document* document, const String& data)
+PassRefPtr<CDATASection> CDATASection::create(Document& document, const String& data)
 {
     return adoptRef(new CDATASection(document, data));
 }

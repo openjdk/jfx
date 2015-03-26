@@ -17,8 +17,8 @@
  * Boston, MA 02110-1301, USA.
  */
 
-    interface Notation : Node {
+interface Notation : Node {
     [TreatReturnedNullStringAs=Null] readonly attribute DOMString publicId;
     [TreatReturnedNullStringAs=Null] readonly attribute DOMString systemId;
-    };
+};
 

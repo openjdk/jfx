@@ -23,8 +23,8 @@
  */
 
 [
-        Conditional=MEDIA_STREAM,
+    Conditional=MEDIA_STREAM,
 ] callback interface NavigatorUserMediaErrorCallback {
     boolean handleEvent(NavigatorUserMediaError error);
-    };
+};
 

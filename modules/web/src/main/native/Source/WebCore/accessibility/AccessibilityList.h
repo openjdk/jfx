@@ -41,22 +41,19 @@ public:
     static PassRefPtr<AccessibilityList> create(RenderObject*);
     virtual ~AccessibilityList();
     
-    virtual bool isList() const { return true; }
+    virtual bool isList() const override { return true; }
     bool isUnorderedList() const;
     bool isOrderedList() const;
     bool isDescriptionList() const;
 
-    virtual AccessibilityRole roleValue() const { return ListRole; }
+    virtual AccessibilityRole roleValue() const override final;
 private:
-    virtual bool computeAccessibilityIsIgnored() const;
+    virtual bool computeAccessibilityIsIgnored() const override;
+    virtual AccessibilityRole determineAccessibilityRole() override;
 };
-    
-inline AccessibilityList* toAccessibilityList(AccessibilityObject* object)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isList());
-    return static_cast<AccessibilityList*>(object);
-}
-    
+
+ACCESSIBILITY_OBJECT_TYPE_CASTS(AccessibilityList, isList())
+
 } // namespace WebCore
 
 #endif // AccessibilityList_h

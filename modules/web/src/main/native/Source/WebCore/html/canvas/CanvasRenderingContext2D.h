@@ -32,26 +32,20 @@
 #include "CanvasStyle.h"
 #include "Color.h"
 #include "ColorSpace.h"
-#include "DashArray.h"
 #include "FloatSize.h"
 #include "Font.h"
 #include "GraphicsTypes.h"
 #include "ImageBuffer.h"
 #include "Path.h"
+#include "PlatformLayer.h"
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
-
-#if USE(ACCELERATED_COMPOSITING)
-#include "PlatformLayer.h"
-#endif
 
 namespace WebCore {
 
 class CanvasGradient;
 class CanvasPattern;
-#if ENABLE(CANVAS_PATH)
 class DOMPath;
-#endif
 class FloatRect;
 class GraphicsContext;
 class HTMLCanvasElement;
@@ -64,7 +58,7 @@ typedef int ExceptionCode;
 
 class CanvasRenderingContext2D : public CanvasRenderingContext, public CanvasPathMethods {
 public:
-    static PassOwnPtr<CanvasRenderingContext2D> create(HTMLCanvasElement* canvas, bool usesCSSCompatibilityParseMode, bool usesDashboardCompatibilityMode)
+    static OwnPtr<CanvasRenderingContext2D> create(HTMLCanvasElement* canvas, bool usesCSSCompatibilityParseMode, bool usesDashboardCompatibilityMode)
     {
         return adoptPtr(new CanvasRenderingContext2D(canvas, usesCSSCompatibilityParseMode, usesDashboardCompatibilityMode));
     }
@@ -144,6 +138,7 @@ public:
     PassRefPtr<DOMPath> currentPath();
     void setCurrentPath(DOMPath*);
 #endif
+
     void fill(const String& winding = "nonzero");
     void stroke();
     void clip(const String& winding = "nonzero");
@@ -235,7 +230,7 @@ private:
         State(const State&);
         State& operator=(const State&);
 
-        virtual void fontsNeedUpdate(FontSelector*) OVERRIDE;
+        virtual void fontsNeedUpdate(FontSelector*) override;
 
         String m_unparsedStrokeColor;
         String m_unparsedFillColor;
@@ -252,7 +247,7 @@ private:
         CompositeOperator m_globalComposite;
         BlendMode m_globalBlend;
         AffineTransform m_transform;
-        bool m_invertibleCTM;
+        bool m_hasInvertibleTransform;
         Vector<float> m_lineDash;
         float m_lineDashOffset;
         bool m_imageSmoothingEnabled;
@@ -314,7 +309,7 @@ private:
     bool rectContainsCanvas(const FloatRect&) const;
 
     template<class T> IntRect calculateCompositingBufferRect(const T&, IntSize*);
-    PassOwnPtr<ImageBuffer> createCompositingBuffer(const IntRect&);
+    std::unique_ptr<ImageBuffer> createCompositingBuffer(const IntRect&);
     void compositeBuffer(ImageBuffer*, const IntRect&, CompositeOperator);
 
     void inflateStrokeRect(FloatRect&) const;
@@ -327,13 +322,13 @@ private:
     PassRefPtr<ImageData> getImageData(ImageBuffer::CoordinateSystem, float sx, float sy, float sw, float sh, ExceptionCode&) const;
     void putImageData(ImageData*, ImageBuffer::CoordinateSystem, float dx, float dy, float dirtyX, float dirtyY, float dirtyWidth, float dirtyHeight, ExceptionCode&);
 
-    virtual bool is2d() const OVERRIDE { return true; }
-    virtual bool isAccelerated() const OVERRIDE;
+    virtual bool is2d() const override { return true; }
+    virtual bool isAccelerated() const override;
 
-    virtual bool isTransformInvertible() const { return state().m_invertibleCTM; }
+    virtual bool hasInvertibleTransform() const override { return state().m_hasInvertibleTransform; }
 
-#if ENABLE(ACCELERATED_2D_CANVAS) && USE(ACCELERATED_COMPOSITING)
-    virtual PlatformLayer* platformLayer() const OVERRIDE;
+#if ENABLE(ACCELERATED_2D_CANVAS)
+    virtual PlatformLayer* platformLayer() const override;
 #endif
 
     Vector<State, 1> m_stateStack;

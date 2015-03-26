@@ -30,28 +30,22 @@
 #include "FloatPoint3D.h"
 #include "IntPoint.h"
 #include <string.h> //for memcpy
-#include <wtf/FastAllocBase.h>
+#include <wtf/FastMalloc.h>
 
 #if USE(CA)
 typedef struct CATransform3D CATransform3D;
-#endif
-#if USE(CLUTTER)
-typedef struct _CoglMatrix CoglMatrix;
 #endif
 #if USE(CG)
 typedef struct CGAffineTransform CGAffineTransform;
 #elif USE(CAIRO)
 #include <cairo.h>
-#elif PLATFORM(QT)
-#include <QMatrix4x4>
-#include <QTransform>
 #elif PLATFORM(JAVA)
 #include <jni.h>
 const int MCOUNT = 6;
 typedef double* PlatformTransformationMatrix;
 #endif
 
-#if PLATFORM(WIN) || (PLATFORM(GTK) && OS(WINDOWS)) || (PLATFORM(QT) && OS(WINDOWS))
+#if PLATFORM(WIN) || (PLATFORM(GTK) && OS(WINDOWS))
 #if COMPILER(MINGW) && !COMPILER(MINGW64)
 typedef struct _XFORM XFORM;
 #else
@@ -96,11 +90,6 @@ public:
     {
         setMatrix(m11, m12, m13, m14, m21, m22, m23, m24, m31, m32, m33, m34, m41, m42, m43, m44);
     }
-
-#if PLATFORM(QT)
-    TransformationMatrix(const QTransform&);
-    TransformationMatrix(const QMatrix4x4&);
-#endif
 
     void setMatrix(double a, double b, double c, double d, double e, double f)
     {
@@ -239,7 +228,8 @@ public:
     TransformationMatrix& scale(double);
     TransformationMatrix& scaleNonUniform(double sx, double sy);
     TransformationMatrix& scale3d(double sx, double sy, double sz);
-    
+
+    // Angle is in degrees.
     TransformationMatrix& rotate(double d) { return rotate3d(0, 0, d); }
     TransformationMatrix& rotateFromVector(double x, double y);
     TransformationMatrix& rotate3d(double rx, double ry, double rz);
@@ -275,17 +265,29 @@ public:
 
     // decompose the matrix into its component parts
     typedef struct {
+        double scaleX, scaleY;
+        double translateX, translateY;
+        double angle;
+        double m11, m12, m21, m22;
+    } Decomposed2Type;
+
+    typedef struct {
         double scaleX, scaleY, scaleZ;
         double skewXY, skewXZ, skewYZ;
         double quaternionX, quaternionY, quaternionZ, quaternionW;
         double translateX, translateY, translateZ;
         double perspectiveX, perspectiveY, perspectiveZ, perspectiveW;
-    } DecomposedType;
+    } Decomposed4Type;
     
-    bool decompose(DecomposedType& decomp) const;
-    void recompose(const DecomposedType& decomp);
-    
+    bool decompose2(Decomposed2Type&) const;
+    void recompose2(const Decomposed2Type&);
+
+    bool decompose4(Decomposed4Type&) const;
+    void recompose4(const Decomposed4Type&);
+
     void blend(const TransformationMatrix& from, double progress);
+    void blend2(const TransformationMatrix& from, double progress);
+    void blend4(const TransformationMatrix& from, double progress);
 
     bool isAffine() const
     {
@@ -338,21 +340,14 @@ public:
     TransformationMatrix(const CATransform3D&);
     operator CATransform3D() const;
 #endif
-#if USE(CLUTTER)
-    TransformationMatrix(const CoglMatrix*);
-    operator CoglMatrix() const;
-#endif
 #if USE(CG)
     TransformationMatrix(const CGAffineTransform&);
     operator CGAffineTransform() const;
 #elif USE(CAIRO)
     operator cairo_matrix_t() const;
-#elif PLATFORM(QT)
-    operator QTransform() const;
-    operator QMatrix4x4() const;
 #endif
 
-#if PLATFORM(WIN) || (PLATFORM(GTK) && OS(WINDOWS)) || (PLATFORM(QT) && OS(WINDOWS))
+#if PLATFORM(WIN) || (PLATFORM(GTK) && OS(WINDOWS))
     operator XFORM() const;
 #endif
 

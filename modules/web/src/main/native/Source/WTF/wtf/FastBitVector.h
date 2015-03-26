@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,12 +26,13 @@
 #ifndef FastBitVector_h
 #define FastBitVector_h
 
+#include <string.h>
 #include <wtf/FastMalloc.h>
-#include <wtf/OwnArrayPtr.h>
-#include <wtf/PassOwnArrayPtr.h>
 #include <wtf/StdLibExtras.h>
 
 namespace WTF {
+
+class PrintStream;
 
 class FastBitVector {
 public:
@@ -73,7 +74,7 @@ public:
         // Use fastCalloc instead of fastRealloc because we expect the common
         // use case for this method to be initializing the size of the bitvector.
         
-        size_t newLength = (numBits + 31) >> 5;
+        size_t newLength = arrayLength(numBits);
         uint32_t* newArray = static_cast<uint32_t*>(fastCalloc(newLength, 4));
         memcpy(newArray, m_array, arrayLength() * 4);
         if (m_array)
@@ -103,10 +104,8 @@ public:
         bool changed = false;
         ASSERT(m_numBits == other.m_numBits);
         for (unsigned i = arrayLength(); i--;) {
-            if (m_array[i] == other.m_array[i])
-                continue;
+            changed |= m_array[i] != other.m_array[i];
             m_array[i] = other.m_array[i];
-            changed = true;
         }
         return changed;
     }
@@ -169,10 +168,22 @@ public:
         ASSERT_WITH_SECURITY_IMPLICATION(i < m_numBits);
         return !!(m_array[i >> 5] & (1 << (i & 31)));
     }
-private:
-    size_t arrayLength() const { return (m_numBits + 31) >> 5; }
     
-    uint32_t* m_array; // No, this can't be an OwnArrayPtr.
+    size_t bitCount() const
+    {
+        size_t result = 0;
+        for (unsigned i = arrayLength(); i--;)
+            result += WTF::bitCount(m_array[i]);
+        return result;
+    }
+    
+    WTF_EXPORT_PRIVATE void dump(PrintStream&) const;
+    
+private:
+    static size_t arrayLength(size_t numBits) { return (numBits + 31) >> 5; }
+    size_t arrayLength() const { return arrayLength(m_numBits); }
+    
+    uint32_t* m_array; // No, this can't be an std::unique_ptr<uint32_t[]>.
     size_t m_numBits;
 };
 

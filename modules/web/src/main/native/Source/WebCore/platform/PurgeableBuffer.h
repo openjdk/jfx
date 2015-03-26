@@ -31,10 +31,11 @@
 #include <wtf/Vector.h>
 
 namespace WebCore {
-    
+
     class PurgeableBuffer {
         WTF_MAKE_NONCOPYABLE(PurgeableBuffer);
     public:
+        static PassOwnPtr<PurgeableBuffer> createUninitialized(size_t, char*& data);
         static PassOwnPtr<PurgeableBuffer> create(const char* data, size_t);
         
         ~PurgeableBuffer();
@@ -50,7 +51,7 @@ namespace WebCore {
         bool wasPurged() const;
 
         bool makePurgeable(bool purgeable);
-        
+
     private:
         PurgeableBuffer(char* data, size_t);
     
@@ -63,6 +64,7 @@ namespace WebCore {
     };
 
 #if !ENABLE(PURGEABLE_MEMORY)
+    inline PassOwnPtr<PurgeableBuffer> PurgeableBuffer::createUninitialized(size_t, char*&) { return nullptr; }
     inline PassOwnPtr<PurgeableBuffer> PurgeableBuffer::create(const char*, size_t) { return nullptr; }
     inline PurgeableBuffer::~PurgeableBuffer() { }
     inline const char* PurgeableBuffer::data() const { return 0; }

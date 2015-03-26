@@ -32,13 +32,14 @@
 #include "CSSValueKeywords.h"
 #include "CSSValueList.h"
 #include "Document.h"
+#include "ElementIterator.h"
 #include "Font.h"
 #include "SVGDocumentExtensions.h"
 #include "SVGFontElement.h"
 #include "SVGFontFaceSrcElement.h"
 #include "SVGGlyphElement.h"
 #include "SVGNames.h"
-#include "StylePropertySet.h"
+#include "StyleProperties.h"
 #include "StyleResolver.h"
 #include "StyleRule.h"
 #include <math.h>
@@ -47,74 +48,24 @@ namespace WebCore {
 
 using namespace SVGNames;
 
-inline SVGFontFaceElement::SVGFontFaceElement(const QualifiedName& tagName, Document* document)
+inline SVGFontFaceElement::SVGFontFaceElement(const QualifiedName& tagName, Document& document)
     : SVGElement(tagName, document)
-    , m_fontFaceRule(StyleRuleFontFace::create())
+    , m_fontFaceRule(StyleRuleFontFace::create(MutableStyleProperties::create(CSSStrictMode)))
     , m_fontElement(0)
 {
     ASSERT(hasTagName(font_faceTag));
-    RefPtr<MutableStylePropertySet> styleDeclaration = MutableStylePropertySet::create(CSSStrictMode);
-    m_fontFaceRule->setProperties(styleDeclaration.release());
 }
 
-PassRefPtr<SVGFontFaceElement> SVGFontFaceElement::create(const QualifiedName& tagName, Document* document)
+PassRefPtr<SVGFontFaceElement> SVGFontFaceElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(new SVGFontFaceElement(tagName, document));
-}
-
-static CSSPropertyID cssPropertyIdForSVGAttributeName(const QualifiedName& attrName)
-{
-    if (!attrName.namespaceURI().isNull())
-        return CSSPropertyInvalid;
-    
-    static HashMap<AtomicStringImpl*, CSSPropertyID>* propertyNameToIdMap = 0;
-    if (!propertyNameToIdMap) {
-        propertyNameToIdMap = new HashMap<AtomicStringImpl*, CSSPropertyID>;
-        // This is a list of all @font-face CSS properties which are exposed as SVG XML attributes
-        // Those commented out are not yet supported by WebCore's style system
-        // mapAttributeToCSSProperty(propertyNameToIdMap, accent_heightAttr);
-        // mapAttributeToCSSProperty(propertyNameToIdMap, alphabeticAttr);
-        // mapAttributeToCSSProperty(propertyNameToIdMap, ascentAttr);
-        // mapAttributeToCSSProperty(propertyNameToIdMap, bboxAttr);
-        // mapAttributeToCSSProperty(propertyNameToIdMap, cap_heightAttr);
-        // mapAttributeToCSSProperty(propertyNameToIdMap, descentAttr);
-        mapAttributeToCSSProperty(propertyNameToIdMap, font_familyAttr);
-        mapAttributeToCSSProperty(propertyNameToIdMap, font_sizeAttr);
-        mapAttributeToCSSProperty(propertyNameToIdMap, font_stretchAttr);
-        mapAttributeToCSSProperty(propertyNameToIdMap, font_styleAttr);
-        mapAttributeToCSSProperty(propertyNameToIdMap, font_variantAttr);
-        mapAttributeToCSSProperty(propertyNameToIdMap, font_weightAttr);
-        // mapAttributeToCSSProperty(propertyNameToIdMap, hangingAttr);
-        // mapAttributeToCSSProperty(propertyNameToIdMap, ideographicAttr);
-        // mapAttributeToCSSProperty(propertyNameToIdMap, mathematicalAttr);
-        // mapAttributeToCSSProperty(propertyNameToIdMap, overline_positionAttr);
-        // mapAttributeToCSSProperty(propertyNameToIdMap, overline_thicknessAttr);
-        // mapAttributeToCSSProperty(propertyNameToIdMap, panose_1Attr);
-        // mapAttributeToCSSProperty(propertyNameToIdMap, slopeAttr);
-        // mapAttributeToCSSProperty(propertyNameToIdMap, stemhAttr);
-        // mapAttributeToCSSProperty(propertyNameToIdMap, stemvAttr);
-        // mapAttributeToCSSProperty(propertyNameToIdMap, strikethrough_positionAttr);
-        // mapAttributeToCSSProperty(propertyNameToIdMap, strikethrough_thicknessAttr);
-        // mapAttributeToCSSProperty(propertyNameToIdMap, underline_positionAttr);
-        // mapAttributeToCSSProperty(propertyNameToIdMap, underline_thicknessAttr);
-        // mapAttributeToCSSProperty(propertyNameToIdMap, unicode_rangeAttr);
-        // mapAttributeToCSSProperty(propertyNameToIdMap, units_per_emAttr);
-        // mapAttributeToCSSProperty(propertyNameToIdMap, v_alphabeticAttr);
-        // mapAttributeToCSSProperty(propertyNameToIdMap, v_hangingAttr);
-        // mapAttributeToCSSProperty(propertyNameToIdMap, v_ideographicAttr);
-        // mapAttributeToCSSProperty(propertyNameToIdMap, v_mathematicalAttr);
-        // mapAttributeToCSSProperty(propertyNameToIdMap, widthsAttr);
-        // mapAttributeToCSSProperty(propertyNameToIdMap, x_heightAttr);
-    }
-    
-    return propertyNameToIdMap->get(attrName.localName().impl());
 }
 
 void SVGFontFaceElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {    
     CSSPropertyID propId = cssPropertyIdForSVGAttributeName(name);
     if (propId > 0) {
-        m_fontFaceRule->mutableProperties()->setProperty(propId, value, false);
+        m_fontFaceRule->mutableProperties().setProperty(propId, value, false);
         rebuildFontFace();
         return;
     }
@@ -259,13 +210,13 @@ int SVGFontFaceElement::descent() const
 
 String SVGFontFaceElement::fontFamily() const
 {
-    return m_fontFaceRule->properties()->getPropertyValue(CSSPropertyFontFamily);
+    return m_fontFaceRule->properties().getPropertyValue(CSSPropertyFontFamily);
 }
 
 SVGFontElement* SVGFontFaceElement::associatedFontElement() const
 {
     ASSERT(parentNode() == m_fontElement);
-    ASSERT(!parentNode() || parentNode()->hasTagName(SVGNames::fontTag));
+    ASSERT(!parentNode() || isSVGFontElement(parentNode()));
     return m_fontElement;
 }
 
@@ -277,18 +228,13 @@ void SVGFontFaceElement::rebuildFontFace()
     }
 
     // we currently ignore all but the first src element, alternatively we could concat them
-    SVGFontFaceSrcElement* srcElement = 0;
+    auto srcElement = childrenOfType<SVGFontFaceSrcElement>(*this).first();
 
-    for (Node* child = firstChild(); child && !srcElement; child = child->nextSibling()) {
-        if (child->hasTagName(font_face_srcTag))
-            srcElement = static_cast<SVGFontFaceSrcElement*>(child);
-    }
-
-    bool describesParentFont = parentNode()->hasTagName(SVGNames::fontTag);
+    bool describesParentFont = isSVGFontElement(parentNode());
     RefPtr<CSSValueList> list;
 
     if (describesParentFont) {
-        m_fontElement = static_cast<SVGFontElement*>(parentNode());
+        m_fontElement = toSVGFontElement(parentNode());
 
         list = CSSValueList::createCommaSeparated();
         list->append(CSSFontFaceSrcValue::createLocal(fontFamily()));
@@ -302,53 +248,53 @@ void SVGFontFaceElement::rebuildFontFace()
         return;
 
     // Parse in-memory CSS rules
-    m_fontFaceRule->mutableProperties()->addParsedProperty(CSSProperty(CSSPropertySrc, list));
+    m_fontFaceRule->mutableProperties().addParsedProperty(CSSProperty(CSSPropertySrc, list));
 
     if (describesParentFont) {    
         // Traverse parsed CSS values and associate CSSFontFaceSrcValue elements with ourselves.
-        RefPtr<CSSValue> src = m_fontFaceRule->properties()->getPropertyCSSValue(CSSPropertySrc);
-        CSSValueList* srcList = static_cast<CSSValueList*>(src.get());
+        RefPtr<CSSValue> src = m_fontFaceRule->properties().getPropertyCSSValue(CSSPropertySrc);
+        CSSValueList* srcList = toCSSValueList(src.get());
 
         unsigned srcLength = srcList ? srcList->length() : 0;
         for (unsigned i = 0; i < srcLength; i++) {
-            if (CSSFontFaceSrcValue* item = static_cast<CSSFontFaceSrcValue*>(srcList->itemWithoutBoundsCheck(i)))
+            if (CSSFontFaceSrcValue* item = toCSSFontFaceSrcValue(srcList->itemWithoutBoundsCheck(i)))
                 item->setSVGFontFaceElement(this);
         }
     }
 
-    document()->styleResolverChanged(DeferRecalcStyle);
+    document().styleResolverChanged(DeferRecalcStyle);
 }
 
-Node::InsertionNotificationRequest SVGFontFaceElement::insertedInto(ContainerNode* rootParent)
+Node::InsertionNotificationRequest SVGFontFaceElement::insertedInto(ContainerNode& rootParent)
 {
     SVGElement::insertedInto(rootParent);
-    if (!rootParent->inDocument()) {
+    if (!rootParent.inDocument()) {
         ASSERT(!m_fontElement);
         return InsertionDone;
     }
-    document()->accessSVGExtensions()->registerSVGFontFaceElement(this);
+    document().accessSVGExtensions()->registerSVGFontFaceElement(this);
 
     rebuildFontFace();
     return InsertionDone;
 }
 
-void SVGFontFaceElement::removedFrom(ContainerNode* rootParent)
+void SVGFontFaceElement::removedFrom(ContainerNode& rootParent)
 {
     SVGElement::removedFrom(rootParent);
 
-    if (rootParent->inDocument()) {
+    if (rootParent.inDocument()) {
         m_fontElement = 0;
-        document()->accessSVGExtensions()->unregisterSVGFontFaceElement(this);
-        m_fontFaceRule->mutableProperties()->clear();
+        document().accessSVGExtensions()->unregisterSVGFontFaceElement(this);
+        m_fontFaceRule->mutableProperties().clear();
 
-        document()->styleResolverChanged(DeferRecalcStyle);
+        document().styleResolverChanged(DeferRecalcStyle);
     } else
         ASSERT(!m_fontElement);
 }
 
-void SVGFontFaceElement::childrenChanged(bool changedByParser, Node* beforeChange, Node* afterChange, int childCountDelta)
+void SVGFontFaceElement::childrenChanged(const ChildChange& change)
 {
-    SVGElement::childrenChanged(changedByParser, beforeChange, afterChange, childCountDelta);
+    SVGElement::childrenChanged(change);
     rebuildFontFace();
 }
 

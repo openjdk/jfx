@@ -50,10 +50,11 @@ def run_results(port):
     tests = ['passes/text.html', 'failures/expected/timeout.html', 'failures/expected/crash.html', 'failures/expected/hang.html',
              'failures/expected/audio.html']
     expectations = test_expectations.TestExpectations(port, tests)
+    expectations.parse_all_expectations()
     return test_run_results.TestRunResults(expectations, len(tests))
 
 
-def summarized_results(port, expected, passing, flaky):
+def summarized_results(port, expected, passing, flaky, include_passes=False):
     test_is_slow = False
 
     initial_results = run_results(port)
@@ -84,7 +85,8 @@ def summarized_results(port, expected, passing, flaky):
     else:
         retry_results = None
 
-    return test_run_results.summarize_results(port, initial_results.expectations, initial_results, retry_results, enabled_pixel_tests_in_retry=False)
+    return test_run_results.summarize_results(port, initial_results.expectations, initial_results, retry_results,
+        enabled_pixel_tests_in_retry=False, include_passes=include_passes)
 
 
 class InterpretTestFailuresTest(unittest.TestCase):
@@ -133,3 +135,8 @@ class SummarizedResultsTest(unittest.TestCase):
         self.port._options.builder_name = 'dummy builder'
         summary = summarized_results(self.port, expected=False, passing=False, flaky=False)
         self.assertTrue(summary['tests']['failures']['expected']['hang.html']['wontfix'])
+
+    def test_summarized_results_include_passes(self):
+        self.port._options.builder_name = 'dummy builder'
+        summary = summarized_results(self.port, expected=False, passing=True, flaky=False, include_passes=True)
+        self.assertEqual(summary['tests']['passes']['text.html']['expected'], 'PASS')

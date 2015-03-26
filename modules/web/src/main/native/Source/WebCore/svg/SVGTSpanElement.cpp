@@ -19,48 +19,45 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SVG)
 #include "SVGTSpanElement.h"
 
-#include "NodeRenderingContext.h"
 #include "RenderInline.h"
 #include "RenderSVGTSpan.h"
 #include "SVGNames.h"
 
 namespace WebCore {
 
-inline SVGTSpanElement::SVGTSpanElement(const QualifiedName& tagName, Document* document)
+inline SVGTSpanElement::SVGTSpanElement(const QualifiedName& tagName, Document& document)
     : SVGTextPositioningElement(tagName, document)
 {
     ASSERT(hasTagName(SVGNames::tspanTag));
 }
 
-PassRefPtr<SVGTSpanElement> SVGTSpanElement::create(const QualifiedName& tagName, Document* document)
+PassRefPtr<SVGTSpanElement> SVGTSpanElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(new SVGTSpanElement(tagName, document));
 }
 
-RenderObject* SVGTSpanElement::createRenderer(RenderArena* arena, RenderStyle*)
+RenderPtr<RenderElement> SVGTSpanElement::createElementRenderer(PassRef<RenderStyle> style)
 {
-    return new (arena) RenderSVGTSpan(this);
+    return createRenderer<RenderSVGTSpan>(*this, std::move(style));
 }
 
-bool SVGTSpanElement::childShouldCreateRenderer(const NodeRenderingContext& childContext) const
+bool SVGTSpanElement::childShouldCreateRenderer(const Node& child) const
 {
-    if (childContext.node()->isTextNode()
-        || childContext.node()->hasTagName(SVGNames::aTag)
+    if (child.isTextNode()
+        || child.hasTagName(SVGNames::aTag)
 #if ENABLE(SVG_FONTS)
-        || childContext.node()->hasTagName(SVGNames::altGlyphTag)
+        || child.hasTagName(SVGNames::altGlyphTag)
 #endif
-        || childContext.node()->hasTagName(SVGNames::trefTag)
-        || childContext.node()->hasTagName(SVGNames::tspanTag))
+        || child.hasTagName(SVGNames::trefTag)
+        || child.hasTagName(SVGNames::tspanTag))
         return true;
 
     return false;
 }
 
-bool SVGTSpanElement::rendererIsNeeded(const NodeRenderingContext& context)
+bool SVGTSpanElement::rendererIsNeeded(const RenderStyle& style)
 {
     if (parentNode()
         && (parentNode()->hasTagName(SVGNames::aTag)
@@ -70,11 +67,9 @@ bool SVGTSpanElement::rendererIsNeeded(const NodeRenderingContext& context)
             || parentNode()->hasTagName(SVGNames::textTag)
             || parentNode()->hasTagName(SVGNames::textPathTag)
             || parentNode()->hasTagName(SVGNames::tspanTag)))
-        return StyledElement::rendererIsNeeded(context);
+        return StyledElement::rendererIsNeeded(style);
 
     return false;
 }
 
 }
-
-#endif // ENABLE(SVG)

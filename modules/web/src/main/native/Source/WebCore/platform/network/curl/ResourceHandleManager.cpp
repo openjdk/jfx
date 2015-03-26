@@ -7,6 +7,9 @@
  * Copyright (C) 2008 Nuanti Ltd.
  * Copyright (C) 2009 Appcelerator Inc.
  * Copyright (C) 2009 Brent Fulgham <bfulgham@webkit.org>
+ * Copyright (C) 2013 Peter Gal <galpeter@inf.u-szeged.hu>, University of Szeged
+ * Copyright (C) 2013 Alex Christensen <achristensen@webkit.org>
+ * Copyright (C) 2013 University of Szeged
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -34,13 +37,25 @@
 #include "config.h"
 #include "ResourceHandleManager.h"
 
+#include "CredentialStorage.h"
+#include "CurlCacheManager.h"
 #include "DataURL.h"
 #include "HTTPParsers.h"
 #include "MIMETypeRegistry.h"
-#include "NotImplemented.h"
+#include "MultipartHandle.h"
 #include "ResourceError.h"
 #include "ResourceHandle.h"
 #include "ResourceHandleInternal.h"
+#include "SSLHandle.h"
+
+#if OS(WINDOWS)
+#include "WebCoreBundleWin.h"
+#include <shlobj.h>
+#include <shlwapi.h>
+#else
+#include <sys/param.h>
+#define MAX_PATH MAXPATHLEN
+#endif
 
 #include <errno.h>
 #include <stdio.h>
@@ -51,10 +66,6 @@
 #include <wtf/Vector.h>
 #include <wtf/text/CString.h>
 
-#if !OS(WINDOWS)
-#include <sys/param.h>
-#define MAX_PATH MAXPATHLEN
-#endif
 
 namespace WebCore {
 
@@ -67,9 +78,9 @@ static const bool ignoreSSLErrors = getenv("WEBKIT_IGNORE_SSL_ERRORS");
 static CString certificatePath()
 {
 #if USE(CF)
-    CFBundleRef webKitBundle = CFBundleGetBundleWithIdentifier(CFSTR("com.apple.WebKit"));
-    if (webKitBundle) {
-        RetainPtr<CFURLRef> certURLRef = adoptCF(CFBundleCopyResourceURL(webKitBundle, CFSTR("cacert"), CFSTR("pem"), CFSTR("certificates")));
+    CFBundleRef webKitBundleRef = webKitBundle();
+    if (webKitBundleRef) {
+        RetainPtr<CFURLRef> certURLRef = adoptCF(CFBundleCopyResourceURL(webKitBundleRef, CFSTR("cacert"), CFSTR("pem"), CFSTR("certificates")));
         if (certURLRef) {
             char path[MAX_PATH];
             CFURLGetFileSystemRepresentation(certURLRef.get(), false, reinterpret_cast<UInt8*>(path), MAX_PATH);
@@ -90,7 +101,30 @@ static char* cookieJarPath()
     if (cookieJarPath)
         return fastStrDup(cookieJarPath);
 
+#if OS(WINDOWS)
+    char executablePath[MAX_PATH];
+    char appDataDirectory[MAX_PATH];
+    char cookieJarFullPath[MAX_PATH];
+    char cookieJarDirectory[MAX_PATH];
+
+    if (FAILED(::SHGetFolderPathA(0, CSIDL_LOCAL_APPDATA | CSIDL_FLAG_CREATE, 0, 0, appDataDirectory))
+        || FAILED(::GetModuleFileNameA(0, executablePath, MAX_PATH)))
+        return fastStrDup("cookies.dat");
+
+    ::PathRemoveExtensionA(executablePath);
+    LPSTR executableName = ::PathFindFileNameA(executablePath);
+    sprintf_s(cookieJarDirectory, MAX_PATH, "%s/%s", appDataDirectory, executableName);
+    sprintf_s(cookieJarFullPath, MAX_PATH, "%s/cookies.dat", cookieJarDirectory);
+
+    if (::SHCreateDirectoryExA(0, cookieJarDirectory, 0) != ERROR_SUCCESS
+        && ::GetLastError() != ERROR_FILE_EXISTS
+        && ::GetLastError() != ERROR_ALREADY_EXISTS)
+        return fastStrDup("cookies.dat");
+
+    return fastStrDup(cookieJarFullPath);
+#else
     return fastStrDup("cookies.dat");
+#endif
 }
 
 static Mutex* sharedResourceMutex(curl_lock_data data) {
@@ -114,13 +148,13 @@ static Mutex* sharedResourceMutex(curl_lock_data data) {
 // libcurl does not implement its own thread synchronization primitives.
 // these two functions provide mutexes for cookies, and for the global DNS
 // cache.
-static void curl_lock_callback(CURL* handle, curl_lock_data data, curl_lock_access access, void* userPtr)
+static void curl_lock_callback(CURL* /* handle */, curl_lock_data data, curl_lock_access /* access */, void* /* userPtr */)
 {
     if (Mutex* mutex = sharedResourceMutex(data))
         mutex->lock();
 }
 
-static void curl_unlock_callback(CURL* handle, curl_lock_data data, void* userPtr)
+static void curl_unlock_callback(CURL* /* handle */, curl_lock_data data, void* /* userPtr */)
 {
     if (Mutex* mutex = sharedResourceMutex(data))
         mutex->unlock();
@@ -134,6 +168,11 @@ inline static bool isHttpInfo(int statusCode)
 inline static bool isHttpRedirect(int statusCode)
 {
     return 300 <= statusCode && statusCode < 400 && statusCode != 304;
+}
+
+inline static bool isHttpAuthentication(int statusCode)
+{
+    return statusCode == 401;
 }
 
 ResourceHandleManager::ResourceHandleManager()
@@ -195,7 +234,7 @@ static void handleLocalReceiveResponse (CURL* handle, ResourceHandle* job, Resou
      const char* hdr;
      CURLcode err = curl_easy_getinfo(handle, CURLINFO_EFFECTIVE_URL, &hdr);
      ASSERT_UNUSED(err, CURLE_OK == err);
-     d->m_response.setURL(KURL(ParsedURLString, hdr));
+     d->m_response.setURL(URL(ParsedURLString, hdr));
      if (d->client())
          d->client()->didReceiveResponse(job, d->m_response);
      d->m_response.setResponseFired(true);
@@ -230,9 +269,119 @@ static size_t writeCallback(void* ptr, size_t size, size_t nmemb, void* data)
             return 0;
     }
 
-    if (d->client())
+    if (d->m_multipartHandle)
+        d->m_multipartHandle->contentReceived(static_cast<const char*>(ptr), totalSize);
+    else if (d->client()) {
         d->client()->didReceiveData(job, static_cast<char*>(ptr), totalSize, 0);
+        CurlCacheManager::getInstance().didReceiveData(job->firstRequest().url().string(), static_cast<char*>(ptr), totalSize);
+    }
+
     return totalSize;
+}
+
+static bool isAppendableHeader(const String &key)
+{
+    static const char* appendableHeaders[] = {
+        "access-control-allow-headers",
+        "access-control-allow-methods",
+        "access-control-allow-origin",
+        "access-control-expose-headers",
+        "allow",
+        "cache-control",
+        "connection",
+        "content-encoding",
+        "content-language",
+        "if-match",
+        "if-none-match",
+        "keep-alive",
+        "pragma",
+        "proxy-authenticate",
+        "public",
+        "server",
+        "set-cookie",
+        "te",
+        "trailer",
+        "transfer-encoding",
+        "upgrade",
+        "user-agent",
+        "vary",
+        "via",
+        "warning",
+        "www-authenticate",
+        0
+    };
+
+    // Custom headers start with 'X-', and need no further checking.
+    if (key.startsWith("x-", /* caseSensitive */ false))
+        return true;
+
+    for (unsigned i = 0; appendableHeaders[i]; ++i)
+        if (equalIgnoringCase(key, appendableHeaders[i]))
+            return true;
+
+    return false;
+}
+
+static void removeLeadingAndTrailingQuotes(String& value)
+{
+    unsigned length = value.length();
+    if (value.startsWith('"') && value.endsWith('"') && length > 1)
+        value = value.substring(1, length-2);
+}
+
+static bool getProtectionSpace(CURL* h, const ResourceResponse& response, ProtectionSpace& protectionSpace)
+{
+    CURLcode err;
+
+    long port = 0;
+    err = curl_easy_getinfo(h, CURLINFO_PRIMARY_PORT, &port);
+    if (err != CURLE_OK)
+        return false;
+
+    long availableAuth = CURLAUTH_NONE;
+    err = curl_easy_getinfo(h, CURLINFO_HTTPAUTH_AVAIL, &availableAuth);
+    if (err != CURLE_OK)
+        return false;
+
+    const char* effectiveUrl = 0;
+    err = curl_easy_getinfo(h, CURLINFO_EFFECTIVE_URL, &effectiveUrl);
+    if (err != CURLE_OK)
+        return false;
+
+    URL url(ParsedURLString, effectiveUrl);
+
+    String host = url.host();
+    String protocol = url.protocol();
+
+    String realm;
+
+    const String authHeader = response.httpHeaderField("WWW-Authenticate");
+    const String realmString = "realm=";
+    int realmPos = authHeader.find(realmString);
+    if (realmPos > 0) {
+        realm = authHeader.substring(realmPos + realmString.length());
+        realm = realm.left(realm.find(','));
+        removeLeadingAndTrailingQuotes(realm);
+    }
+
+    ProtectionSpaceServerType serverType = ProtectionSpaceServerHTTP;
+    if (protocol == "https")
+        serverType = ProtectionSpaceServerHTTPS;
+
+    ProtectionSpaceAuthenticationScheme authScheme = ProtectionSpaceAuthenticationSchemeUnknown;
+
+    if (availableAuth & CURLAUTH_BASIC)
+        authScheme = ProtectionSpaceAuthenticationSchemeHTTPBasic;
+    if (availableAuth & CURLAUTH_DIGEST)
+        authScheme = ProtectionSpaceAuthenticationSchemeHTTPDigest;
+    if (availableAuth & CURLAUTH_GSSNEGOTIATE)
+        authScheme = ProtectionSpaceAuthenticationSchemeNegotiate;
+    if (availableAuth & CURLAUTH_NTLM)
+        authScheme = ProtectionSpaceAuthenticationSchemeNTLM;
+
+    protectionSpace = ProtectionSpace(host, port, serverType, realm, authScheme);
+
+    return true;
 }
 
 /*
@@ -257,7 +406,7 @@ static size_t headerCallback(char* ptr, size_t size, size_t nmemb, void* data)
     size_t totalSize = size * nmemb;
     ResourceHandleClient* client = d->client();
 
-    String header(static_cast<const char*>(ptr), totalSize);
+    String header = String::fromUTF8WithLatin1Fallback(static_cast<const char*>(ptr), totalSize);
 
     /*
      * a) We can finish and send the ResourceResponse
@@ -268,10 +417,9 @@ static size_t headerCallback(char* ptr, size_t size, size_t nmemb, void* data)
      */
     if (header == String("\r\n") || header == String("\n")) {
         CURL* h = d->m_handle;
-        CURLcode err;
 
         long httpCode = 0;
-        err = curl_easy_getinfo(h, CURLINFO_RESPONSE_CODE, &httpCode);
+        curl_easy_getinfo(h, CURLINFO_RESPONSE_CODE, &httpCode);
 
         if (isHttpInfo(httpCode)) {
             // Just return when receiving http info, e.g. HTTP/1.1 100 Continue.
@@ -280,23 +428,30 @@ static size_t headerCallback(char* ptr, size_t size, size_t nmemb, void* data)
         }
 
         double contentLength = 0;
-        err = curl_easy_getinfo(h, CURLINFO_CONTENT_LENGTH_DOWNLOAD, &contentLength);
+        curl_easy_getinfo(h, CURLINFO_CONTENT_LENGTH_DOWNLOAD, &contentLength);
         d->m_response.setExpectedContentLength(static_cast<long long int>(contentLength));
 
         const char* hdr;
-        err = curl_easy_getinfo(h, CURLINFO_EFFECTIVE_URL, &hdr);
-        d->m_response.setURL(KURL(ParsedURLString, hdr));
+        curl_easy_getinfo(h, CURLINFO_EFFECTIVE_URL, &hdr);
+        d->m_response.setURL(URL(ParsedURLString, hdr));
 
         d->m_response.setHTTPStatusCode(httpCode);
         d->m_response.setMimeType(extractMIMETypeFromMediaType(d->m_response.httpHeaderField("Content-Type")).lower());
         d->m_response.setTextEncodingName(extractCharsetFromMediaType(d->m_response.httpHeaderField("Content-Type")));
         d->m_response.setSuggestedFilename(filenameFromHTTPContentDisposition(d->m_response.httpHeaderField("Content-Disposition")));
 
+        if (d->m_response.isMultipart()) {
+            String boundary;
+            bool parsed = MultipartHandle::extractBoundary(d->m_response.httpHeaderField("Content-Type"), boundary);
+            if (parsed)
+                d->m_multipartHandle = MultipartHandle::create(job, boundary);
+        }
+
         // HTTP redirection
         if (isHttpRedirect(httpCode)) {
             String location = d->m_response.httpHeaderField("location");
             if (!location.isEmpty()) {
-                KURL newURL = KURL(job->firstRequest().url(), location);
+                URL newURL = URL(job->firstRequest().url(), location);
 
                 ResourceRequest redirectedRequest = job->firstRequest();
                 redirectedRequest.setURL(newURL);
@@ -307,16 +462,54 @@ static size_t headerCallback(char* ptr, size_t size, size_t nmemb, void* data)
 
                 return totalSize;
             }
+        } else if (isHttpAuthentication(httpCode)) {
+            ProtectionSpace protectionSpace;
+            if (getProtectionSpace(d->m_handle, d->m_response, protectionSpace)) {
+                Credential credential;
+                AuthenticationChallenge challenge(protectionSpace, credential, d->m_authFailureCount, d->m_response, ResourceError());
+                challenge.setAuthenticationClient(job);
+                job->didReceiveAuthenticationChallenge(challenge);
+                d->m_authFailureCount++;
+                return totalSize;
+            }
         }
 
-        if (client)
+        if (client) {
             client->didReceiveResponse(job, d->m_response);
+            CurlCacheManager::getInstance().didReceiveResponse(job, d->m_response);
+        }
         d->m_response.setResponseFired(true);
 
     } else {
         int splitPos = header.find(":");
-        if (splitPos != -1)
-            d->m_response.setHTTPHeaderField(header.left(splitPos), header.substring(splitPos+1).stripWhiteSpace());
+        if (splitPos != -1) {
+            String key = header.left(splitPos).stripWhiteSpace();
+            String value = header.substring(splitPos + 1).stripWhiteSpace();
+
+            if (isAppendableHeader(key))
+                d->m_response.addHTTPHeaderField(key, value);
+            else
+                d->m_response.setHTTPHeaderField(key, value);
+        } else if (header.startsWith("HTTP", false)) {
+            // This is the first line of the response.
+            // Extract the http status text from this.
+            //
+            // If the FOLLOWLOCATION option is enabled for the curl handle then
+            // curl will follow the redirections internally. Thus this header callback
+            // will be called more than one time with the line starting "HTTP" for one job.
+            long httpCode = 0;
+            curl_easy_getinfo(d->m_handle, CURLINFO_RESPONSE_CODE, &httpCode);
+
+            String httpCodeString = String::number(httpCode);
+            int statusCodePos = header.find(httpCodeString);
+
+            if (statusCodePos != -1) {
+                // The status text is after the status code.
+                String status = header.substring(statusCodePos + httpCodeString.length());
+                d->m_response.setHTTPStatusText(status.stripWhiteSpace());
+            }
+
+        }
     }
 
     return totalSize;
@@ -352,7 +545,7 @@ size_t readCallback(void* ptr, size_t size, size_t nmemb, void* data)
     return sent;
 }
 
-void ResourceHandleManager::downloadTimerCallback(Timer<ResourceHandleManager>* timer)
+void ResourceHandleManager::downloadTimerCallback(Timer<ResourceHandleManager>* /* timer */)
 {
     startScheduledJobs();
 
@@ -426,16 +619,25 @@ void ResourceHandleManager::downloadTimerCallback(Timer<ResourceHandleManager>* 
                 }
             }
 
-            if (d->client())
+            if (d->m_multipartHandle)
+                d->m_multipartHandle->contentEnded();
+
+            if (d->client()) {
                 d->client()->didFinishLoading(job, 0);
+                CurlCacheManager::getInstance().didFinishLoading(job->firstRequest().url().string());
+            }
         } else {
             char* url = 0;
             curl_easy_getinfo(d->m_handle, CURLINFO_EFFECTIVE_URL, &url);
 #ifndef NDEBUG
             fprintf(stderr, "Curl ERROR for url='%s', error: '%s'\n", url, curl_easy_strerror(msg->data.result));
 #endif
-            if (d->client())
-                d->client()->didFail(job, ResourceError(String(), msg->data.result, String(url), String(curl_easy_strerror(msg->data.result))));
+            if (d->client()) {
+                ResourceError resourceError(String(), msg->data.result, String(url), String(curl_easy_strerror(msg->data.result)));
+                resourceError.setSSLErrors(d->m_sslErrors);
+                d->client()->didFail(job, resourceError);
+                CurlCacheManager::getInstance().didFail(job->firstRequest().url().string());
+            }
         }
 
         removeFromCurl(job);
@@ -479,42 +681,30 @@ void ResourceHandleManager::removeFromCurl(ResourceHandle* job)
     job->deref();
 }
 
-void ResourceHandleManager::setupPUT(ResourceHandle*, struct curl_slist**)
+static inline size_t getFormElementsCount(ResourceHandle* job)
 {
-    notImplemented();
+    RefPtr<FormData> formData = job->firstRequest().httpBody();
+
+    if (!formData)
+        return 0;
+
+#if ENABLE(BLOB)
+    // Resolve the blob elements so the formData can correctly report it's size.
+    formData = formData->resolveBlobReferences();
+    job->firstRequest().setHTTPBody(formData);
+#endif
+
+    return formData->elements().size();
 }
 
-/* Calculate the length of the POST.
-   Force chunked data transfer if size of files can't be obtained.
- */
-void ResourceHandleManager::setupPOST(ResourceHandle* job, struct curl_slist** headers)
+static void setupFormData(ResourceHandle* job, CURLoption sizeOption, struct curl_slist** headers)
 {
     ResourceHandleInternal* d = job->getInternal();
-    curl_easy_setopt(d->m_handle, CURLOPT_POST, TRUE);
-    curl_easy_setopt(d->m_handle, CURLOPT_POSTFIELDSIZE, 0);
-
-    if (!job->firstRequest().httpBody())
-        return;
-
     Vector<FormDataElement> elements = job->firstRequest().httpBody()->elements();
     size_t numElements = elements.size();
-    if (!numElements)
-        return;
 
-    // Do not stream for simple POST data
-    if (numElements == 1) {
-        job->firstRequest().httpBody()->flatten(d->m_postBytes);
-        if (d->m_postBytes.size() != 0) {
-            curl_easy_setopt(d->m_handle, CURLOPT_POSTFIELDSIZE, d->m_postBytes.size());
-            curl_easy_setopt(d->m_handle, CURLOPT_POSTFIELDS, d->m_postBytes.data());
-        }
-        return;
-    }
-
-    // Obtain the total size of the POST
     // The size of a curl_off_t could be different in WebKit and in cURL depending on
-    // compilation flags of both. For CURLOPT_POSTFIELDSIZE_LARGE we have to pass the
-    // right size or random data will be used as the size.
+    // compilation flags of both.
     static int expectedSizeOfCurlOffT = 0;
     if (!expectedSizeOfCurlOffT) {
         curl_version_info_data *infoData = curl_version_info(CURLVERSION_NOW);
@@ -524,12 +714,8 @@ void ResourceHandleManager::setupPOST(ResourceHandle* job, struct curl_slist** h
             expectedSizeOfCurlOffT = sizeof(int);
     }
 
-#if COMPILER(MSVC)
-    // work around compiler error in Visual Studio 2005.  It can't properly
-    // handle math with 64-bit constant declarations.
-#pragma warning(disable: 4307)
-#endif
     static const long long maxCurlOffT = (1LL << (expectedSizeOfCurlOffT * 8 - 1)) - 1;
+    // Obtain the total size of the form data
     curl_off_t size = 0;
     bool chunkedTransfer = false;
     for (size_t i = 0; i < numElements; i++) {
@@ -556,13 +742,52 @@ void ResourceHandleManager::setupPOST(ResourceHandle* job, struct curl_slist** h
         *headers = curl_slist_append(*headers, "Transfer-Encoding: chunked");
     else {
         if (sizeof(long long) == expectedSizeOfCurlOffT)
-          curl_easy_setopt(d->m_handle, CURLOPT_POSTFIELDSIZE_LARGE, (long long)size);
+            curl_easy_setopt(d->m_handle, sizeOption, (long long)size);
         else
-          curl_easy_setopt(d->m_handle, CURLOPT_POSTFIELDSIZE_LARGE, (int)size);
+            curl_easy_setopt(d->m_handle, sizeOption, (int)size);
     }
 
     curl_easy_setopt(d->m_handle, CURLOPT_READFUNCTION, readCallback);
     curl_easy_setopt(d->m_handle, CURLOPT_READDATA, job);
+}
+
+void ResourceHandleManager::setupPUT(ResourceHandle* job, struct curl_slist** headers)
+{
+    ResourceHandleInternal* d = job->getInternal();
+    curl_easy_setopt(d->m_handle, CURLOPT_UPLOAD, TRUE);
+    curl_easy_setopt(d->m_handle, CURLOPT_INFILESIZE, 0);
+
+    // Disable the Expect: 100 continue header
+    *headers = curl_slist_append(*headers, "Expect:");
+
+    size_t numElements = getFormElementsCount(job);
+    if (!numElements)
+        return;
+
+    setupFormData(job, CURLOPT_INFILESIZE_LARGE, headers);
+}
+
+void ResourceHandleManager::setupPOST(ResourceHandle* job, struct curl_slist** headers)
+{
+    ResourceHandleInternal* d = job->getInternal();
+    curl_easy_setopt(d->m_handle, CURLOPT_POST, TRUE);
+    curl_easy_setopt(d->m_handle, CURLOPT_POSTFIELDSIZE, 0);
+
+    size_t numElements = getFormElementsCount(job);
+    if (!numElements)
+        return;
+
+    // Do not stream for simple POST data
+    if (numElements == 1) {
+        job->firstRequest().httpBody()->flatten(d->m_postBytes);
+        if (d->m_postBytes.size()) {
+            curl_easy_setopt(d->m_handle, CURLOPT_POSTFIELDSIZE, d->m_postBytes.size());
+            curl_easy_setopt(d->m_handle, CURLOPT_POSTFIELDS, d->m_postBytes.data());
+        }
+        return;
+    }
+
+    setupFormData(job, CURLOPT_POSTFIELDSIZE_LARGE, headers);
 }
 
 void ResourceHandleManager::add(ResourceHandle* job)
@@ -604,7 +829,7 @@ bool ResourceHandleManager::startScheduledJobs()
 
 void ResourceHandleManager::dispatchSynchronousJob(ResourceHandle* job)
 {
-    KURL kurl = job->firstRequest().url();
+    URL kurl = job->firstRequest().url();
 
     if (kurl.protocolIsData()) {
         handleDataURL(job);
@@ -623,8 +848,9 @@ void ResourceHandleManager::dispatchSynchronousJob(ResourceHandle* job)
     // curl_easy_perform blocks until the transfert is finished.
     CURLcode ret =  curl_easy_perform(handle->m_handle);
 
-    if (ret != 0) {
+    if (ret != CURLE_OK) {
         ResourceError error(String(handle->m_url), ret, String(handle->m_url), String(curl_easy_strerror(ret)));
+        error.setSSLErrors(handle->m_sslErrors);
         handle->client()->didFail(job, error);
     }
 
@@ -633,7 +859,7 @@ void ResourceHandleManager::dispatchSynchronousJob(ResourceHandle* job)
 
 void ResourceHandleManager::startJob(ResourceHandle* job)
 {
-    KURL kurl = job->firstRequest().url();
+    URL kurl = job->firstRequest().url();
 
     if (kurl.protocolIsData()) {
         handleDataURL(job);
@@ -655,23 +881,59 @@ void ResourceHandleManager::startJob(ResourceHandle* job)
     }
 }
 
+void ResourceHandleManager::applyAuthenticationToRequest(ResourceHandle* handle, ResourceRequest& request)
+{
+    // m_user/m_pass are credentials given manually, for instance, by the arguments passed to XMLHttpRequest.open().
+    ResourceHandleInternal* d = handle->getInternal();
+
+    if (handle->shouldUseCredentialStorage()) {
+        if (d->m_user.isEmpty() && d->m_pass.isEmpty()) {
+            // <rdar://problem/7174050> - For URLs that match the paths of those previously challenged for HTTP Basic authentication, 
+            // try and reuse the credential preemptively, as allowed by RFC 2617.
+            d->m_initialCredential = CredentialStorage::get(request.url());
+        } else {
+            // If there is already a protection space known for the URL, update stored credentials
+            // before sending a request. This makes it possible to implement logout by sending an
+            // XMLHttpRequest with known incorrect credentials, and aborting it immediately (so that
+            // an authentication dialog doesn't pop up).
+            CredentialStorage::set(Credential(d->m_user, d->m_pass, CredentialPersistenceNone), request.url());
+        }
+    }
+
+    String user = d->m_user;
+    String password = d->m_pass;
+
+    if (!d->m_initialCredential.isEmpty()) {
+        user = d->m_initialCredential.user();
+        password = d->m_initialCredential.password();
+        curl_easy_setopt(d->m_handle, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+    }
+
+    // It seems we need to set CURLOPT_USERPWD even if username and password is empty.
+    // Otherwise cURL will not automatically continue with a new request after a 401 response.
+
+    // curl CURLOPT_USERPWD expects username:password
+    String userpass = user + ":" + password;
+    curl_easy_setopt(d->m_handle, CURLOPT_USERPWD, userpass.utf8().data());
+}
+
 void ResourceHandleManager::initializeHandle(ResourceHandle* job)
 {
-    KURL kurl = job->firstRequest().url();
+    static const int allowedProtocols = CURLPROTO_FILE | CURLPROTO_FTP | CURLPROTO_FTPS | CURLPROTO_HTTP | CURLPROTO_HTTPS;
+    URL url = job->firstRequest().url();
 
     // Remove any fragment part, otherwise curl will send it as part of the request.
-    kurl.removeFragmentIdentifier();
+    url.removeFragmentIdentifier();
 
     ResourceHandleInternal* d = job->getInternal();
-    String url = kurl.string();
+    String urlString = url.string();
 
-    if (kurl.isLocalFile()) {
-        String query = kurl.query();
+    if (url.isLocalFile()) {
         // Remove any query part sent to a local file.
-        if (!query.isEmpty()) {
-            int queryIndex = url.find(query);
-            if (queryIndex != -1)
-                url = url.left(queryIndex - 1);
+        if (!url.query().isEmpty()) {
+            // By setting the query to a null string it'll be removed.
+            url.setQuery(String());
+            urlString = url.string();
         }
         // Determine the MIME type based on the path.
         d->m_response.setMimeType(MIMETypeRegistry::getMIMETypeForPath(url));
@@ -689,6 +951,8 @@ void ResourceHandleManager::initializeHandle(ResourceHandle* job)
     if (getenv("DEBUG_CURL"))
         curl_easy_setopt(d->m_handle, CURLOPT_VERBOSE, 1);
 #endif
+    curl_easy_setopt(d->m_handle, CURLOPT_SSL_VERIFYPEER, 1L);
+    curl_easy_setopt(d->m_handle, CURLOPT_SSL_VERIFYHOST, 2L);
     curl_easy_setopt(d->m_handle, CURLOPT_PRIVATE, job);
     curl_easy_setopt(d->m_handle, CURLOPT_ERRORBUFFER, m_curlErrorBuffer);
     curl_easy_setopt(d->m_handle, CURLOPT_WRITEFUNCTION, writeCallback);
@@ -701,10 +965,14 @@ void ResourceHandleManager::initializeHandle(ResourceHandle* job)
     curl_easy_setopt(d->m_handle, CURLOPT_HTTPAUTH, CURLAUTH_ANY);
     curl_easy_setopt(d->m_handle, CURLOPT_SHARE, m_curlShareHandle);
     curl_easy_setopt(d->m_handle, CURLOPT_DNS_CACHE_TIMEOUT, 60 * 5); // 5 minutes
-    // FIXME: Enable SSL verification when we have a way of shipping certs
-    // and/or reporting SSL errors to the user.
+    curl_easy_setopt(d->m_handle, CURLOPT_PROTOCOLS, allowedProtocols);
+    curl_easy_setopt(d->m_handle, CURLOPT_REDIR_PROTOCOLS, allowedProtocols);
+    setSSLClientCertificate(job);
+
     if (ignoreSSLErrors)
         curl_easy_setopt(d->m_handle, CURLOPT_SSL_VERIFYPEER, false);
+    else
+        setSSLVerifyOptions(job);
 
     if (!m_certificatePath.isNull())
        curl_easy_setopt(d->m_handle, CURLOPT_CAINFO, m_certificatePath.data());
@@ -716,7 +984,7 @@ void ResourceHandleManager::initializeHandle(ResourceHandle* job)
     ASSERT(!d->m_url);
 
     // url is in ASCII so latin1() will only convert it to char* without character translation.
-    d->m_url = fastStrDup(url.latin1().data());
+    d->m_url = fastStrDup(urlString.latin1().data());
     curl_easy_setopt(d->m_handle, CURLOPT_URL, d->m_url);
 
     if (m_cookieJarFileName)
@@ -725,36 +993,56 @@ void ResourceHandleManager::initializeHandle(ResourceHandle* job)
     struct curl_slist* headers = 0;
     if (job->firstRequest().httpHeaderFields().size() > 0) {
         HTTPHeaderMap customHeaders = job->firstRequest().httpHeaderFields();
+
+        if (CurlCacheManager::getInstance().isCached(url)) {
+            HTTPHeaderMap& requestHeaders = CurlCacheManager::getInstance().requestHeaders(url);
+
+            // append additional cache information
+            HTTPHeaderMap::const_iterator it = requestHeaders.begin();
+            HTTPHeaderMap::const_iterator end = requestHeaders.end();
+            while (it != end) {
+                customHeaders.set(it->key, it->value);
+                ++it;
+            }
+        }
+
         HTTPHeaderMap::const_iterator end = customHeaders.end();
         for (HTTPHeaderMap::const_iterator it = customHeaders.begin(); it != end; ++it) {
             String key = it->key;
             String value = it->value;
             String headerString(key);
-            headerString.append(": ");
-            headerString.append(value);
+            if (value.isEmpty())
+                // Insert the ; to tell curl that this header has an empty value.
+                headerString.append(";");
+            else {
+                headerString.append(": ");
+                headerString.append(value);
+            }
             CString headerLatin1 = headerString.latin1();
             headers = curl_slist_append(headers, headerLatin1.data());
         }
     }
 
-    if ("GET" == job->firstRequest().httpMethod())
+    String method = job->firstRequest().httpMethod();
+    if ("GET" == method)
         curl_easy_setopt(d->m_handle, CURLOPT_HTTPGET, TRUE);
-    else if ("POST" == job->firstRequest().httpMethod())
+    else if ("POST" == method)
         setupPOST(job, &headers);
-    else if ("PUT" == job->firstRequest().httpMethod())
+    else if ("PUT" == method)
         setupPUT(job, &headers);
-    else if ("HEAD" == job->firstRequest().httpMethod())
+    else if ("HEAD" == method)
         curl_easy_setopt(d->m_handle, CURLOPT_NOBODY, TRUE);
+    else {
+        curl_easy_setopt(d->m_handle, CURLOPT_CUSTOMREQUEST, method.latin1().data());
+        setupPUT(job, &headers);
+    }
 
     if (headers) {
         curl_easy_setopt(d->m_handle, CURLOPT_HTTPHEADER, headers);
         d->m_customHeaders = headers;
     }
-    // curl CURLOPT_USERPWD expects username:password
-    if (d->m_user.length() || d->m_pass.length()) {
-        String userpass = d->m_user + ":" + d->m_pass;
-        curl_easy_setopt(d->m_handle, CURLOPT_USERPWD, userpass.utf8().data());
-    }
+
+    applyAuthenticationToRequest(job, job->firstRequest());
 
     // Set proxy options if we have them.
     if (m_proxy.length()) {

@@ -31,9 +31,10 @@
 #include "AudioDestinationNode.h"
 #include "EventListener.h"
 #include "EventTarget.h"
+#include "MediaCanStartListener.h"
+#include <atomic>
 #include <wtf/HashSet.h>
 #include <wtf/MainThread.h>
-#include <wtf/OwnPtr.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
@@ -67,15 +68,15 @@ class AnalyserNode;
 class WaveShaperNode;
 class ScriptProcessorNode;
 class OscillatorNode;
-class WaveTable;
+class PeriodicWave;
 
 // AudioContext is the cornerstone of the web audio API and all AudioNodes are created from it.
 // For thread safety between the audio thread and the main thread, it has a rendering graph locking mechanism. 
 
-class AudioContext : public ActiveDOMObject, public ThreadSafeRefCounted<AudioContext>, public EventTarget {
+class AudioContext : public ActiveDOMObject, public ThreadSafeRefCounted<AudioContext>, public EventTargetWithInlineData, public MediaCanStartListener {
 public:
     // Create an AudioContext for rendering to the audio hardware.
-    static PassRefPtr<AudioContext> create(Document*, ExceptionCode&);
+    static PassRefPtr<AudioContext> create(Document&, ExceptionCode&);
 
     // Create an AudioContext for offline (non-realtime) rendering.
     static PassRefPtr<AudioContext> createOfflineContext(Document*, unsigned numberOfChannels, size_t numberOfFrames, float sampleRate, ExceptionCode&);
@@ -89,11 +90,12 @@ public:
     // Returns true when initialize() was called AND all asynchronous initialization has completed.
     bool isRunnable() const;
 
+    HRTFDatabaseLoader* hrtfDatabaseLoader() const { return m_hrtfDatabaseLoader.get(); }
+
     // Document notification
-    virtual void stop();
+    virtual void stop() override;
 
     Document* document() const; // ASSERTs if document no longer exists.
-    bool hasDocument();
 
     AudioDestinationNode* destination() { return m_destinationNode.get(); }
     size_t currentSampleFrame() const { return m_destinationNode->currentSampleFrame(); }
@@ -138,7 +140,7 @@ public:
     PassRefPtr<ChannelMergerNode> createChannelMerger(ExceptionCode&);
     PassRefPtr<ChannelMergerNode> createChannelMerger(size_t numberOfInputs, ExceptionCode&);
     PassRefPtr<OscillatorNode> createOscillator();
-    PassRefPtr<WaveTable> createWaveTable(Float32Array* real, Float32Array* imag, ExceptionCode&);
+    PassRefPtr<PeriodicWave> createPeriodicWave(Float32Array* real, Float32Array* imag, ExceptionCode&);
 
     // When a source node has no more processing to do (has finished playing), then it tells the context to dereference it.
     void notifyNodeFinishedProcessing(AudioNode*);
@@ -201,20 +203,20 @@ public:
 
     class AutoLocker {
     public:
-        AutoLocker(AudioContext* context)
+        explicit AutoLocker(AudioContext& context)
             : m_context(context)
         {
-            ASSERT(context);
-            context->lock(m_mustReleaseLock);
+            m_context.lock(m_mustReleaseLock);
         }
         
         ~AutoLocker()
         {
             if (m_mustReleaseLock)
-                m_context->unlock();
+                m_context.unlock();
         }
+
     private:
-        AudioContext* m_context;
+        AudioContext& m_context;
         bool m_mustReleaseLock;
     };
     
@@ -232,10 +234,8 @@ public:
     void removeMarkedSummingJunction(AudioSummingJunction*);
 
     // EventTarget
-    virtual const AtomicString& interfaceName() const;
-    virtual ScriptExecutionContext* scriptExecutionContext() const;
-    virtual EventTargetData* eventTargetData() { return &m_eventTargetData; }
-    virtual EventTargetData* ensureEventTargetData() { return &m_eventTargetData; }
+    virtual EventTargetInterface eventTargetInterface() const override final { return AudioContextEventTargetInterfaceType; }
+    virtual ScriptExecutionContext* scriptExecutionContext() const override final;
 
     DEFINE_ATTRIBUTE_EVENT_LISTENER(complete);
 
@@ -247,10 +247,24 @@ public:
     void fireCompletionEvent();
     
     static unsigned s_hardwareContextCount;
-    
+
+    // Restrictions to change default behaviors.
+    enum BehaviorRestrictionFlags {
+        NoRestrictions = 0,
+        RequireUserGestureForAudioStartRestriction = 1 << 0,
+        RequirePageConsentForAudioStartRestriction = 1 << 1,
+    };
+    typedef unsigned BehaviorRestrictions;
+
+    bool userGestureRequiredForAudioStart() const { return m_restrictions & RequireUserGestureForAudioStartRestriction; }
+    bool pageConsentRequiredForAudioStart() const { return m_restrictions & RequirePageConsentForAudioStartRestriction; }
+
+    void addBehaviorRestriction(BehaviorRestrictions restriction) { m_restrictions |= restriction; }
+    void removeBehaviorRestriction(BehaviorRestrictions restriction) { m_restrictions &= ~restriction; }
+
 protected:
-    explicit AudioContext(Document*);
-    AudioContext(Document*, unsigned numberOfChannels, size_t numberOfFrames, float sampleRate);
+    explicit AudioContext(Document&);
+    AudioContext(Document&, unsigned numberOfChannels, size_t numberOfFrames, float sampleRate);
     
     static bool isSampleRateRangeGood(float sampleRate);
     
@@ -268,7 +282,9 @@ private:
 
     void scheduleNodeDeletion();
     static void deleteMarkedNodesDispatch(void* userData);
-    
+
+    virtual void mediaCanStart() override;
+
     bool m_isInitialized;
     bool m_isAudioThreadFinished;
 
@@ -332,9 +348,8 @@ private:
     RefPtr<HRTFDatabaseLoader> m_hrtfDatabaseLoader;
 
     // EventTarget
-    virtual void refEventTarget() { ref(); }
-    virtual void derefEventTarget() { deref(); }
-    EventTargetData m_eventTargetData;
+    virtual void refEventTarget() override { ref(); }
+    virtual void derefEventTarget() override { deref(); }
 
     RefPtr<AudioBuffer> m_renderTarget;
     
@@ -347,7 +362,9 @@ private:
     enum { MaxNumberOfChannels = 32 };
 
     // Number of AudioBufferSourceNodes that are active (playing).
-    int m_activeSourceCount;
+    std::atomic<int> m_activeSourceCount;
+
+    BehaviorRestrictions m_restrictions;
 };
 
 } // WebCore

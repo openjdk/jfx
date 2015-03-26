@@ -1,6 +1,7 @@
 # Copyright (C) 2009 Google Inc. All rights reserved.
 # Copyright (C) 2010 Chris Jerdonek (chris.jerdonek@gmail.com)
 # Copyright (C) 2010 ProFUSION embedded systems
+# Copyright (C) 2013 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -40,7 +41,11 @@ from checkers.common import CarriageReturnChecker
 from checkers.changelog import ChangeLogChecker
 from checkers.cpp import CppChecker
 from checkers.cmake import CMakeChecker
+from checkers.featuredefines import FeatureDefinesChecker
+from checkers.js import JSChecker
 from checkers.jsonchecker import JSONChecker
+from checkers.jsonchecker import JSONContributorsChecker
+from checkers.messagesin import MessagesInChecker
 from checkers.png import PNGChecker
 from checkers.python import PythonChecker
 from checkers.test_expectations import TestExpectationsChecker
@@ -134,36 +139,12 @@ _PATH_RULES_SPECIFIER = [
       # The API test harnesses have no config.h and use funny macros like
       # TEST_CLASS_NAME.
       "Tools/WebKitAPITest/",
-      "Tools/TestWebKitAPI/",
-      "Source/WebKit/qt/tests/qdeclarativewebview"],
+      "Tools/TestWebKitAPI/"],
      ["-build/include",
       "-readability/naming"]),
     ([# There is no clean way to avoid "yy_*" names used by flex.
-      "Source/WebCore/css/CSSParser.cpp",
-      # Qt code uses '_' in some places (such as private slots
-      # and on test xxx_data methos on tests)
-      "Source/JavaScriptCore/qt/",
-      "Source/WebKit/qt/tests/",
-      "Source/WebKit/qt/declarative/",
-      "Source/WebKit/qt/examples/"],
+      "Source/WebCore/css/CSSParser.cpp"],
      ["-readability/naming"]),
-
-    ([# The Qt APIs use Qt declaration style, it puts the * to
-      # the variable name, not to the class.
-      "Source/WebKit/qt/Api/",
-      "Source/WebKit/qt/WidgetApi/"],
-     ["-readability/naming",
-      "-whitespace/declaration"]),
-
-     ([# Qt's MiniBrowser has no config.h
-       "Tools/MiniBrowser/qt",
-       "Tools/MiniBrowser/qt/raw"],
-      ["-build/include"]),
-
-    ([# The Qt APIs use Qt/QML naming style, which includes
-      # naming parameters in h files.
-      "Source/WebKit2/UIProcess/API/qt"],
-     ["-readability/parameter_name"]),
 
     ([# The GTK+ port uses the autotoolsconfig.h header in some C sources
       # to serve the same purpose of config.h.
@@ -174,6 +155,9 @@ _PATH_RULES_SPECIFIER = [
       # lower-cased, underscore-separated values, whitespace before
       # parens for function calls, and always having variable names.
       # Also, GTK+ allows the use of NULL.
+      "Source/WebCore/bindings/gobject/WebKitDOMCustom.h",
+      "Source/WebCore/bindings/gobject/WebKitDOMDeprecated.h",
+      "Source/WebCore/bindings/gobject/WebKitDOMEventTarget.h",
       "Source/WebCore/bindings/scripts/test/GObject",
       "Source/WebKit/gtk/webkit/",
       "Tools/DumpRenderTree/gtk/"],
@@ -216,6 +200,7 @@ _PATH_RULES_SPECIFIER = [
       "Tools/MiniBrowser/efl/"],
      ["-readability/naming",
       "-readability/parameter_name",
+      "-runtime/ctype_function",
       "-whitespace/declaration",
       "-build/include_order"]),
 
@@ -238,15 +223,17 @@ _PATH_RULES_SPECIFIER = [
       "-whitespace/declaration"]),
     ([# These files define GObjects, which implies some definitions of
       # variables and functions containing underscores.
-      "Source/WebCore/platform/graphics/clutter/GraphicsLayerActor.cpp",
-      "Source/WebCore/platform/graphics/clutter/GraphicsLayerActor.h",
+      "Source/WebCore/bindings/gobject/WebKitDOMCustom.cpp",
+      "Source/WebCore/bindings/gobject/WebKitDOMDeprecated.cpp",
+      "Source/WebCore/bindings/gobject/WebKitDOMEventTarget.cpp",
       "Source/WebCore/platform/graphics/gstreamer/VideoSinkGStreamer1.cpp",
       "Source/WebCore/platform/graphics/gstreamer/VideoSinkGStreamer.cpp",
       "Source/WebCore/platform/graphics/gstreamer/WebKitWebSourceGStreamer.cpp",
       "Source/WebCore/platform/audio/gstreamer/WebKitWebAudioSourceGStreamer.cpp",
       "Source/WebCore/platform/network/soup/ProxyResolverSoup.cpp",
       "Source/WebCore/platform/network/soup/ProxyResolverSoup.h"],
-     ["-readability/naming"]),
+     ["-readability/naming",
+      "-readability/enum_casing"]),
 
     # For third-party Python code, keep only the following checks--
     #
@@ -259,13 +246,6 @@ _PATH_RULES_SPECIFIER = [
       "+pep8/W191",  # Tabs
       "+pep8/W291",  # Trailing white space
       "+whitespace/carriage_return"]),
-
-    ([# glu's libtess is third-party code, and doesn't follow WebKit style.
-      "Source/ThirdParty/glu"],
-     ["-readability",
-      "-whitespace",
-      "-build/header_guard",
-      "-build/include_order"]),
 
     ([# There is no way to avoid the symbols __jit_debug_register_code
       # and __jit_debug_descriptor when integrating with gdb.
@@ -284,6 +264,8 @@ _CPP_FILE_EXTENSIONS = [
     'h',
     ]
 
+_JS_FILE_EXTENSION = 'js'
+
 _JSON_FILE_EXTENSION = 'json'
 
 _PYTHON_FILE_EXTENSION = 'py'
@@ -300,7 +282,6 @@ _TEXT_FILE_EXTENSIONS = [
     'html',
     'idl',
     'in',
-    'js',
     'mm',
     'php',
     'pl',
@@ -333,7 +314,7 @@ _CMAKE_FILE_EXTENSION = 'cmake'
 # WebKit maintains some files in Mozilla style on purpose to ease
 # future merges.
 _SKIPPED_FILES_WITH_WARNING = [
-    "Source/WebKit/gtk/tests/",
+    "Tools/TestWebKitAPI/Tests/WebKitGtk/",
     # All WebKit*.h files in Source/WebKit2/UIProcess/API/gtk,
     # except those ending in ...Private.h are GTK+ API headers,
     # which differ greatly from WebKit coding style.
@@ -371,10 +352,12 @@ def _all_categories():
     """Return the set of all categories used by check-webkit-style."""
     # Take the union across all checkers.
     categories = CommonCategories.union(CppChecker.categories)
+    categories = categories.union(JSChecker.categories)
     categories = categories.union(JSONChecker.categories)
     categories = categories.union(TestExpectationsChecker.categories)
     categories = categories.union(ChangeLogChecker.categories)
     categories = categories.union(PNGChecker.categories)
+    categories = categories.union(FeatureDefinesChecker.categories)
 
     # FIXME: Consider adding all of the pep8 categories.  Since they
     #        are not too meaningful for documentation purposes, for
@@ -417,7 +400,7 @@ def check_webkit_style_configuration(options):
                max_reports_per_category=_MAX_REPORTS_PER_CATEGORY,
                min_confidence=options.min_confidence,
                output_format=options.output_format,
-               stderr_write=sys.stderr.write)
+               commit_queue=options.commit_queue)
 
 
 def _create_log_handlers(stream):
@@ -515,15 +498,16 @@ class FileType:
     # Alphabetize remaining types
     CHANGELOG = 1
     CPP = 2
-    JSON = 3
-    PNG = 4
-    PYTHON = 5
-    TEXT = 6
-    WATCHLIST = 7
-    XML = 8
-    XCODEPROJ = 9
-    CMAKE = 10
-
+    JS = 3
+    JSON = 4
+    PNG = 5
+    PYTHON = 6
+    TEXT = 7
+    WATCHLIST = 8
+    XML = 9
+    XCODEPROJ = 10
+    CMAKE = 11
+    FEATUREDEFINES = 12
 
 class CheckerDispatcher(object):
 
@@ -587,6 +571,8 @@ class CheckerDispatcher(object):
             # reading from stdin, cpp_style tests should not rely on
             # the extension.
             return FileType.CPP
+        elif file_extension == _JS_FILE_EXTENSION:
+            return FileType.JS
         elif file_extension == _JSON_FILE_EXTENSION:
             return FileType.JSON
         elif file_extension == _PYTHON_FILE_EXTENSION:
@@ -606,11 +592,13 @@ class CheckerDispatcher(object):
         elif ((not file_extension and os.path.join("Tools", "Scripts") in file_path) or
               file_extension in _TEXT_FILE_EXTENSIONS or os.path.basename(file_path) == 'TestExpectations'):
             return FileType.TEXT
+        elif os.path.basename(file_path) == "FeatureDefines.xcconfig":
+            return FileType.FEATUREDEFINES
         else:
             return FileType.NONE
 
     def _create_checker(self, file_type, file_path, handle_style_error,
-                        min_confidence):
+                        min_confidence, commit_queue):
         """Instantiate and return a style checker based on file type."""
         if file_type == FileType.NONE:
             checker = None
@@ -623,8 +611,18 @@ class CheckerDispatcher(object):
             file_extension = self._file_extension(file_path)
             checker = CppChecker(file_path, file_extension,
                                  handle_style_error, min_confidence)
+        elif file_type == FileType.JS:
+            # Do not attempt to check non-Inspector or 3rd-party JavaScript files as JS.
+            if os.path.join('WebInspectorUI', 'UserInterface') in file_path and (not 'External' in file_path):
+                checker = JSChecker(file_path, handle_style_error)
+            else:
+                checker = TextChecker(file_path, handle_style_error)
         elif file_type == FileType.JSON:
-            checker = JSONChecker(file_path, handle_style_error)
+            basename = os.path.basename(file_path)
+            if commit_queue and basename == 'contributors.json':
+                checker = JSONContributorsChecker(file_path, handle_style_error)
+            else:
+                checker = JSONChecker(file_path, handle_style_error)
         elif file_type == FileType.PYTHON:
             checker = PythonChecker(file_path, handle_style_error)
         elif file_type == FileType.XML:
@@ -639,10 +637,14 @@ class CheckerDispatcher(object):
             basename = os.path.basename(file_path)
             if basename == 'TestExpectations':
                 checker = TestExpectationsChecker(file_path, handle_style_error)
+            elif file_path.endswith('.messages.in'):
+                checker = MessagesInChecker(file_path, handle_style_error)
             else:
                 checker = TextChecker(file_path, handle_style_error)
         elif file_type == FileType.WATCHLIST:
             checker = WatchListChecker(file_path, handle_style_error)
+        elif file_type == FileType.FEATUREDEFINES:
+            checker = FeatureDefinesChecker(file_path, handle_style_error)
         else:
             raise ValueError('Invalid file type "%(file_type)s": the only valid file types '
                              "are %(NONE)s, %(CPP)s, and %(TEXT)s."
@@ -653,19 +655,18 @@ class CheckerDispatcher(object):
 
         return checker
 
-    def dispatch(self, file_path, handle_style_error, min_confidence):
+    def dispatch(self, file_path, handle_style_error, min_confidence, commit_queue):
         """Instantiate and return a style checker based on file path."""
         file_type = self._file_type(file_path)
 
         checker = self._create_checker(file_type,
                                        file_path,
                                        handle_style_error,
-                                       min_confidence)
+                                       min_confidence,
+                                       commit_queue)
         return checker
 
 
-# FIXME: Remove the stderr_write attribute from this class and replace
-#        its use with calls to a logging module logger.
 class StyleProcessorConfiguration(object):
 
     """Stores configuration values for the StyleProcessor class.
@@ -677,9 +678,6 @@ class StyleProcessorConfiguration(object):
       max_reports_per_category: The maximum number of errors to report
                                 per category, per file.
 
-      stderr_write: A function that takes a string as a parameter and
-                    serves as stderr.write.
-
     """
 
     def __init__(self,
@@ -687,7 +685,7 @@ class StyleProcessorConfiguration(object):
                  max_reports_per_category,
                  min_confidence,
                  output_format,
-                 stderr_write):
+                 commit_queue):
         """Create a StyleProcessorConfiguration instance.
 
         Args:
@@ -706,8 +704,8 @@ class StyleProcessorConfiguration(object):
                          output formats are "emacs" which emacs can parse
                          and "vs7" which Microsoft Visual Studio 7 can parse.
 
-          stderr_write: A function that takes a string as a parameter and
-                        serves as stderr.write.
+          commit_queue: A bool indicating whether the style check is performed
+                        by the commit queue or not.
 
         """
         self._filter_configuration = filter_configuration
@@ -715,7 +713,7 @@ class StyleProcessorConfiguration(object):
 
         self.max_reports_per_category = max_reports_per_category
         self.min_confidence = min_confidence
-        self.stderr_write = stderr_write
+        self.commit_queue = commit_queue
 
     def is_reportable(self, category, confidence_in_error, file_path):
         """Return whether an error is reportable.
@@ -745,11 +743,11 @@ class StyleProcessorConfiguration(object):
                           message):
         """Write a style error to the configured stderr."""
         if self._output_format == 'vs7':
-            format_string = "%s(%s):  %s  [%s] [%d]\n"
+            format_string = "%s(%s):  %s  [%s] [%d]"
         else:
-            format_string = "%s:%s:  %s  [%s] [%d]\n"
+            format_string = "%s:%s:  %s  [%s] [%d]"
 
-        self.stderr_write(format_string % (file_path,
+        _log.error(format_string % (file_path,
                                            line_number,
                                            message,
                                            category,
@@ -885,7 +883,8 @@ class StyleProcessor(ProcessorBase):
         min_confidence = self._configuration.min_confidence
         checker = self._dispatcher.dispatch(file_path,
                                             style_error_handler,
-                                            min_confidence)
+                                            min_confidence,
+                                            self._configuration.commit_queue)
 
         if checker is None:
             raise AssertionError("File should not be checked: '%s'" % file_path)
