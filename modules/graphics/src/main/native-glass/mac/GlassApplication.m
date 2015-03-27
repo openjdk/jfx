@@ -191,7 +191,30 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
                 }
                 else
                 {
-                [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(GlassApplicationDidChangeScreenParameters) name:NSApplicationDidChangeScreenParametersNotification object:nil];
+                    [[NSNotificationCenter defaultCenter] addObserver:self
+                                                             selector:@selector(GlassApplicationDidChangeScreenParameters)
+                                                                 name:NSApplicationDidChangeScreenParametersNotification
+                                                               object:nil];
+
+                    // localMonitor = [NSEvent addLocalMonitorForEventsMatchingMask: NSRightMouseDownMask
+                    //                                                      handler:^(NSEvent *incomingEvent) {
+                    //                                                          NSEvent *result = incomingEvent;
+                    //                                                          NSWindow *targetWindowForEvent = [incomingEvent window];
+                    //                                                          LOG("NSRightMouseDownMask local");
+                    //                                                          return result;
+                    //                                                      }];
+                    //
+                    // globalMonitor = [NSEvent addGlobalMonitorForEventsMatchingMask: NSRightMouseDownMask
+                    //                                                      handler:^(NSEvent *incomingEvent) {
+                    //                                                          NSEvent *result = incomingEvent;
+                    //                                                          NSWindow *targetWindowForEvent = [incomingEvent window];
+                    //                                                          NSWindow *window = [[NSApplication sharedApplication]
+                    //                                                                       windowWithWindowNumber:[incomingEvent windowNumber]];
+                    //                                                          NSWindow *appWindow = [[NSApplication sharedApplication] mainWindow];
+                    //                                                          LOG("NSRightMouseDownMask global: %p num %d win %p appwin %p",
+                    //                                                              targetWindowForEvent, [incomingEvent windowNumber], window,
+                    //                                                              [[NSApplication sharedApplication] mainWindow]);
+                    //                                                     }];
                 }
             }
             else if (runnableClass == 0)

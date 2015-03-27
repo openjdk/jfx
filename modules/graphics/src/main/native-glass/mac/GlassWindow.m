@@ -107,6 +107,7 @@ static inline NSView<GlassView> *getMacView(JNIEnv *env, jobject jview)
 - (void)dealloc                                                                         \
 {                                                                                       \
     id window = self->gWindow;                                                          \
+    LOG("dealloc window: %p", window);                                                  \
     [super dealloc];                                                                    \
     [window release];                                                                   \
 }                                                                                       \
@@ -115,7 +116,9 @@ static inline NSView<GlassView> *getMacView(JNIEnv *env, jobject jview)
 {                                                                                       \
     self->gWindow->isClosed = YES;                                                      \
     [self->gWindow close];                                                              \
+    LOG("gWindow close: %p", self->gWindow);                                            \
     [super close];                                                                      \
+    LOG("super close");                                                                 \
 }                                                                                       \
 /* super calls NSWindow on the next run-loop pass when NSWindow could be released */    \
 - (BOOL)performKeyEquivalent:(NSEvent *)theEvent                                        \
@@ -964,7 +967,16 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1close
         GlassWindow *window = getGlassWindow(env, jPtr);
         // this call will always close the window
         // without calling the windowShouldClose
-        [window->nsWindow close];
+        
+        // RT-39813 When closing a window as the result of a global right-click
+        //          mouse event outside the bounds of the window, using an immediate
+        //          [window->nsWindow close] crashes the JDK as the AppKit at this
+        //          point still has another [NSWindow _resignKeyFocus] from the
+        //          right-click handling in [NSApplication sendEvent].  This defers
+        //          the close until the [NSWindow _resignKeyFocus] can be performed.
+        
+        [window->nsWindow performSelectorOnMainThread:@selector(close) withObject:nil waitUntilDone:NO];
+         
         // The NSWindow will be automatically released after closing
         // The GlassWindow is released in the [NSWindow dealloc] override        
     }
@@ -1215,7 +1227,8 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setResizable
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setVisible
 (JNIEnv *env, jobject jWindow, jlong jPtr, jboolean jVisible)
 {
-    LOG("Java_com_sun_glass_ui_mac_MacWindow__1setVisible");
+    LOG("Java_com_sun_glass_ui_mac_MacWindow__1setVisible: %d", jVisible);
+    LOG("   window: %p", jPtr);
     if (!jPtr) return JNI_FALSE;
     
     jboolean now = JNI_FALSE;
@@ -1239,6 +1252,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setVisible
             [window _ungrabFocus];
             if (window->owner != nil)
             {
+                LOG("   removeChildWindow: %p", window);
                 [window->owner removeChildWindow:window->nsWindow];
             }
             [window->nsWindow orderOut:window->nsWindow];

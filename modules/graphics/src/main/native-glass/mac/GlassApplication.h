@@ -39,6 +39,11 @@
     jobject         jLaunchable;
     jboolean        jTaskBarApp;
     jlong           jshareContextPtr;
+
+    // local and intra-app event monitoring
+    //
+    // id              localMonitor;
+    // id              globalMonitor;
 }
 
 - (void)runLoop:(id)selector;
