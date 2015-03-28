@@ -911,6 +911,7 @@ public abstract class TextInputControl extends Control {
     public boolean deleteNextChar() {
         boolean failed = true;
         if (isEditable() && !isDisabled()) {
+            final int textLength = getLength();
             final String text = getText();
             final int dot = getCaretPosition();
             final int mark = getAnchor();
@@ -918,7 +919,7 @@ public abstract class TextInputControl extends Control {
                 // there is a selection of text to remove
                 replaceSelection("");
                 failed = false;
-            } else if (text.length() > 0 && dot < text.length()) {
+            } else if (textLength > 0 && dot < textLength) {
                 // The caret is not at the end, so remove some characters.
                 // Typically you'd only be removing a single character, but
                 // in some cases you must remove two depending on the unicode
