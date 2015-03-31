@@ -214,11 +214,10 @@ public class WinAppBundlerTest {
             Properties p = new Properties();
             p.load(fis);
             
-            // - verify we have app.mainjar, app.version, app.id, app.preferences, app.mainclass, and app.classpath
+            // - verify we have app.mainjar, app.version, app.identifier, app.preferences, app.mainclass, and app.classpath
             assertNotNull(p.getProperty("app.runtime"));
             assertNotNull(p.getProperty("app.mainjar"));
             assertNotNull(p.getProperty("app.version"));
-            assertNotNull(p.getProperty("app.id"));
             assertNotNull(p.getProperty("app.preferences.id"));
             assertNotNull(p.getProperty("app.mainclass"));
             assertNotNull(p.getProperty("app.classpath"));
