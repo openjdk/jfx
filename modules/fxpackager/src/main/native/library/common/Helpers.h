@@ -35,7 +35,8 @@
 #define HELPERS_H
 
 #include "Platform.h"
-#include "PropertyFile.h"
+#include "OrderedMap.h"
+#include "IniFile.h"
 
 
 class Helpers {
@@ -44,6 +45,12 @@ private:
     ~Helpers(void) {}
 
 public:
+    // Supports two formats for option:
+    // Example 1:
+    // foo=bar
+    //
+    // Example 2:
+    // <name=foo=, value=goo>
     static bool SplitOptionIntoNameValue(TString option, TString& Name, TString& Value);
     static TString ReplaceString(TString subject, const TString& search,
                                  const TString& replace);
@@ -51,52 +58,17 @@ public:
     static TString ConvertIdToJavaPath(TString Value);
     static TString ConvertPathToId(TString Value);
 
-    static std::map<TString, TValueIndex> GetJVMArgsFromConfig(PropertyContainer* config);
-    static std::map<TString, TValueIndex> GetJVMUserArgsFromConfig(PropertyContainer* config);
-    static std::map<TString, TString> GetConfigFromJVMUserArgs(std::map<TString, TValueIndex> OrderedMap);
-    static std::list<TString> GetArgsFromConfig(PropertyContainer* config);
-    
-    static std::list<TString> GetOrderedKeysFromMap(std::map<TString, TValueIndex> OrderedMap);
-    
-    static TString NameValueToString(TString name, TString value);
-};
+    static OrderedMap<TString, TString> GetJVMArgsFromConfig(IPropertyContainer* config);
+    static OrderedMap<TString, TString> GetJVMUserArgsFromConfig(IPropertyContainer* config);
+    //static OrderedMap<TString, TString> GetConfigFromJVMUserArgs(OrderedMap<TString, TString> Value);
+    static std::list<TString> GetArgsFromConfig(IPropertyContainer* config);
 
-template <typename T>
-class AutoFreePtr {
-private:
-    T* FObject;
-    
-public:
-    AutoFreePtr(T* Value) {
-        FObject = Value;
-    }
-    
-    ~AutoFreePtr() {
-        if (FObject != NULL) {
-            delete FObject;
-        }
-    }
-    
-    operator T* () const {
-        return FObject;
-    }
-    
-    T& operator* () const {
-        return *FObject;
-    }
-    
-    T* operator->() const {
-        return FObject;
-    }
-    
-    T** operator&() {
-        return &FObject;
-    }
-    
-    T* operator=(const T * rhs) {
-        FObject = rhs;
-        return FObject;
-    }
+    static void LoadOldConfigFile(TString FileName, IniFile* Container);
+    static void LoadOldUserConfigFile(TString FileName, IniFile* Container);
+
+    static std::list<TString> MapToNameValueList(OrderedMap<TString, TString> Map);
+
+    static TString NameValueToString(TString name, TString value);
 };
 
 #endif //HELPERS_H

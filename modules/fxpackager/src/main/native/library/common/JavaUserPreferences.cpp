@@ -59,6 +59,6 @@ JavaUserPreferences* JavaUserPreferences::CreateInstance(void) {
 JavaUserPreferences::~JavaUserPreferences(void){
 }
 
-TOrderedMap JavaUserPreferences::GetData() {
+OrderedMap<TString, TString> JavaUserPreferences::GetData() {
     return FMap;
 }

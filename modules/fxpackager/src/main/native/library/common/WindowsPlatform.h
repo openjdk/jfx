@@ -53,12 +53,15 @@ private:
 public:
     WindowsPlatform(void);
     virtual ~WindowsPlatform(void);
-    
+
     virtual TCHAR* ConvertStringToFileSystemString(TCHAR* Source, bool &release);
     virtual TCHAR* ConvertFileSystemStringToString(TCHAR* Source, bool &release);
 
     virtual void ShowMessage(TString title, TString description);
     virtual void ShowMessage(TString description);
+    virtual MessageResponse ShowResponseMessage(TString title, TString description);
+    //virtual MessageResponse ShowResponseMessage(TString description);
+
     virtual void SetCurrentDirectory(TString Value);
     virtual TString GetPackageRootDirectory();
     virtual TString GetAppDataDirectory();
@@ -66,7 +69,7 @@ public:
     virtual TString GetSystemJVMLibraryFileName();
     virtual TString GetSystemJRE();
 
-    virtual PropertyContainer* GetConfigFile(TString FileName);
+    virtual ISectionalPropertyContainer* GetConfigFile(TString FileName);
 
     virtual TString GetModuleFileName();
     virtual Module LoadLibrary(TString FileName);
@@ -74,6 +77,8 @@ public:
     virtual Procedure GetProcAddress(Module AModule, std::string MethodName);
     virtual std::vector<TString> GetLibraryImports(const TString FileName);
     virtual std::vector<TString> FilterOutRuntimeDependenciesForPlatform(std::vector<TString> Imports);
+
+    virtual Process* CreateProcess();
 
     virtual bool IsMainThread();
     virtual TPlatformNumber GetMemorySize();
@@ -150,6 +155,43 @@ public:
 
     std::vector<TString> GetImports();
 };
+
+
+class WindowsJob {
+private:
+    HANDLE FHandle;
+
+public:
+    WindowsJob();
+    ~WindowsJob();
+
+    HANDLE GetHandle();
+};
+
+
+class WindowsProcess : public Process {
+private:
+    bool FRunning;
+
+    PROCESS_INFORMATION FProcessInfo;
+    static WindowsJob FJob;
+
+    void Cleanup();
+
+public:
+    WindowsProcess();
+    virtual ~WindowsProcess();
+
+    virtual bool IsRunning();
+    virtual bool Terminate();
+    virtual bool Execute(const TString Application, const std::vector<TString> Arguments,
+        bool AWait = false);
+    virtual bool Wait();
+    virtual TProcessID GetProcessID();
+};
+
+
+
 
 #endif //WINDOWSPLATFORM_H
 

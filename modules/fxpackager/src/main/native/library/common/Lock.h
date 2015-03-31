@@ -49,7 +49,7 @@ private:
 #ifdef POSIX
     pthread_mutex_t FMutex;
 #endif //POSIX
-    
+
     void Initialize();
 
 public:

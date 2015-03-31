@@ -54,7 +54,7 @@ public:
 public:
     virtual void ShowMessage(TString title, TString description);
     virtual void ShowMessage(TString description);
-    
+
     virtual TCHAR* ConvertStringToFileSystemString(TCHAR* Source, bool &release);
     virtual TCHAR* ConvertFileSystemStringToString(TCHAR* Source, bool &release);
 
@@ -66,14 +66,14 @@ public:
     virtual TString GetSystemJRE();
     virtual TString GetAppName();
 
-    virtual PropertyContainer* GetConfigFile(TString FileName);
+    virtual ISectionalPropertyContainer* GetConfigFile(TString FileName);
     virtual TString GetModuleFileName();
 
     virtual bool IsMainThread();
     virtual TPlatformNumber GetMemorySize();
 
     virtual std::map<TString, TString> GetKeys();
-    
+
 #ifdef DEBUG
     virtual bool IsNativeDebuggerPresent();
     virtual int GetProcessID();
@@ -84,7 +84,7 @@ public:
 class MacJavaUserPreferences : public JavaUserPreferences {
 public:
   MacJavaUserPreferences(void);
-    
+
   virtual bool Load(TString Appid);
 };
 

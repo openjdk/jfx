@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2015, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -30,47 +30,56 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-
-#ifndef PROPERTYFILE_H
-#define PROPERTYFILE_H
+#ifndef INIFILE_H
+#define INIFILE_H
 
 #include "Platform.h"
-#include "Helpers.h"
+#include "OrderedMap.h"
+
+#include <map>
 
 
-class PropertyFile : public IPropertyContainer {
+class IniSectionData : public IPropertyContainer {
 private:
-    bool FReadOnly;
-    bool FModified;
-    OrderedMap<TString, TString> FData;
-
-    void SetModified(bool Value);
+    OrderedMap<TString, TString> FMap;
 
 public:
-    PropertyFile(void);
-    PropertyFile(const TString FileName);
-    PropertyFile(OrderedMap<TString, TString> Value);
-    PropertyFile(const PropertyFile &Value);
-    virtual ~PropertyFile(void);
+    IniSectionData();
+    IniSectionData(OrderedMap<TString, TString> Values);
 
-    bool IsModified();
-    bool GetReadOnly();
-    void SetReadOnly(bool Value);
+    std::vector<TString> GetKeys();
+    std::list<TString> GetLines();
+    OrderedMap<TString, TString> GetData();
 
-    //void Assign(std::map<TString, TString> Value);
+    bool SetValue(const TString Key, TString Value);
+    void Append(OrderedMap<TString, TString> Values);
+
+    virtual bool GetValue(const TString Key, TString& Value);
+    virtual size_t GetCount();
+};
+
+
+class IniFile : public ISectionalPropertyContainer {
+private:
+    OrderedMap<TString, IniSectionData*> FMap;
+
+public:
+    IniFile();
+    virtual ~IniFile();
+
+    void internalTest();
 
     bool LoadFromFile(const TString FileName);
     bool SaveToFile(const TString FileName, bool ownerOnly = true);
 
-    bool SetValue(const TString Key, TString Value);
-    bool RemoveKey(const TString Key);
+    void Append(const TString SectionName, const TString Key, TString Value);
+    void AppendSection(const TString SectionName, OrderedMap<TString, TString> Values);
+    bool SetValue(const TString SectionName, const TString Key, TString Value);
 
-    OrderedMap<TString, TString> GetData();
-
-    // IPropertyContainer
-    virtual bool GetValue(const TString Key, TString& Value);
-    virtual size_t GetCount();
-    //virtual std::vector<TString> GetKeys();
+    // ISectionalPropertyContainer
+    virtual bool GetSection(const TString SectionName, OrderedMap<TString, TString> &Data);
+    virtual bool ContainsSection(const TString SectionName);
+    virtual bool GetValue(const TString SectionName, const TString Key, TString& Value);
 };
 
-#endif //PROPERTYFILE_H
+#endif //INIFILE_H

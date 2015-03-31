@@ -611,6 +611,7 @@ public class WinMsiBundler  extends AbstractBundler {
         }
 
         data.put("UI_BLOCK", getUIBlock(params));
+        data.put("APP_CDS_BLOCK", getAppCDSBlock(params));
 
         List<Map<String, ? super Object>> secondaryLaunchers = SECONDARY_LAUNCHERS.fetchFrom(params);
 
@@ -684,6 +685,23 @@ public class WinMsiBundler  extends AbstractBundler {
         }
 
         return uiBlock;
+    }
+    
+    private String getAppCDSBlock(Map<String, ? super Object> params) {
+        String cdsBlock = "";
+        if (UNLOCK_COMMERCIAL_FEATURES.fetchFrom(params) && ENABLE_APP_CDS.fetchFrom(params)) {
+            cdsBlock = 
+                    "     <CustomAction Id=\"CACHE_CDS\"\n" +
+                    "          Directory=\"APPLICATIONFOLDER\"\n" +
+                    "          ExeCommand=\"[APPLICATIONFOLDER]" + WinAppBundler.getLauncherName(params) +" -Xappcds:generatecache\"\n" +
+                    "          Execute=\"commit\"\n" +
+                    "          Return=\"check\"/>\n" +
+                    "\n" +
+                    "     <InstallExecuteSequence>\n" +
+                    "         <Custom Action=\"CACHE_CDS\" Before=\"InstallFinalize\" />\n" +
+                    "     </InstallExecuteSequence>";
+        }
+        return cdsBlock;
     }
     
     private void walkFileTree(Map<String, ? super Object> params, File root, PrintStream out, String prefix) {

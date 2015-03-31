@@ -103,6 +103,7 @@ public class CLITest {
                     "-paramFile", f.getPath(),
                     "-native", "image",
                     "-name", "SmokeParams",
+                    "-Blauncher-cfg-format=prop",
                     "-BOptionThatWillNeverExist=true",
                     "-BuserJvmOptions=-Xmx=1g",
                     "-BuserJvmOptions=-Xms=512m",

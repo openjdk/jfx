@@ -162,11 +162,11 @@ TString WindowsPlatform::GetPackageRootDirectory() {
 TString WindowsPlatform::GetAppDataDirectory() {
     TString result;
     TCHAR path[MAX_PATH];
-    
+
     if (SHGetFolderPath(NULL, CSIDL_APPDATA, NULL, 0, path) == S_OK) {
         result = path;
     }
-    
+
     return result;
 }
 
@@ -179,6 +179,11 @@ TString WindowsPlatform::GetAppDataDirectory() {
 // return TRUE if found, and path is set in lpszJavaHome
 // return FALSE otherwise
 TString WindowsPlatform::GetSystemJRE() {
+    if (GetAppCDSState() == cdsOn || GetAppCDSState() == cdsGenCache) {
+        //TODO throw exception
+        return _T("");
+    }
+
     TString result;
     Registry registry(HKEY_LOCAL_MACHINE);
 
@@ -206,26 +211,42 @@ void WindowsPlatform::ShowMessage(TString title, TString description) {
 void WindowsPlatform::ShowMessage(TString description) {
     TString appname = GetModuleFileName();
     appname = FilePath::ExtractFileName(appname);
-    MessageBox(NULL, appname.data(), description.data(), MB_ICONERROR | MB_OK);
+    MessageBox(NULL, description.data(), appname.data(), MB_ICONERROR | MB_OK);
 }
+
+MessageResponse WindowsPlatform::ShowResponseMessage(TString title, TString description) {
+    MessageResponse result = mrCancel;
+
+    if (::MessageBox(NULL, description.data(), title.data(), MB_OKCANCEL) == IDOK) {
+        result = mrOK;
+    }
+
+    return result;
+}
+
+//MessageResponse WindowsPlatform::ShowResponseMessage(TString description) {
+//    TString appname = GetModuleFileName();
+//    appname = FilePath::ExtractFileName(appname);
+//    return ShowResponseMessage(appname, description);
+//}
 
 TString WindowsPlatform::GetBundledJVMLibraryFileName(TString RuntimePath) {
 
-    TString result = FilePath::IncludeTrailingSlash(RuntimePath) +
+    TString result = FilePath::IncludeTrailingSeparater(RuntimePath) +
         _T("jre\\bin\\client\\jvm.dll");
 
     if (FilePath::FileExists(result) == false) {
-        result = FilePath::IncludeTrailingSlash(RuntimePath) +
+        result = FilePath::IncludeTrailingSeparater(RuntimePath) +
             _T("jre\\bin\\server\\jvm.dll");
     }
 
     if (FilePath::FileExists(result) == false) {
-        result = FilePath::IncludeTrailingSlash(RuntimePath) +
+        result = FilePath::IncludeTrailingSeparater(RuntimePath) +
             _T("bin\\client\\jvm.dll");
     }
 
     if (FilePath::FileExists(result) == false) {
-        result = FilePath::IncludeTrailingSlash(RuntimePath) +
+        result = FilePath::IncludeTrailingSeparater(RuntimePath) +
             _T("bin\\server\\jvm.dll");
     }
 
@@ -243,8 +264,15 @@ TString WindowsPlatform::GetSystemJVMLibraryFileName() {
     return result;
 }
 
-PropertyContainer* WindowsPlatform::GetConfigFile(TString FileName) {
-    return new PropertyFile(FileName);
+ISectionalPropertyContainer* WindowsPlatform::GetConfigFile(TString FileName) {
+    IniFile *result = new IniFile();
+
+    if (result->LoadFromFile(FileName) == false) {
+        // New property file format was not found, attempt to load old property file format.
+        Helpers::LoadOldConfigFile(FileName, result);
+    }
+
+    return result;
 }
 
 TString WindowsPlatform::GetModuleFileName() {
@@ -287,15 +315,15 @@ TPlatformNumber WindowsPlatform::GetMemorySize() {
 }
 
 std::vector<TString> WindowsPlatform::GetLibraryImports(const TString FileName) {
-	std::vector<TString> result;
+ std::vector<TString> result;
     WindowsLibrary library(FileName);
     result = library.GetImports();
-	return result;
+ return result;
 }
 
 std::vector<TString> FilterList(std::vector<TString> &Items, std::wregex Pattern) {
     std::vector<TString> result;
- 
+
     for (std::vector<TString>::iterator it = Items.begin(); it != Items.end(); ++it) {
         TString item = *it;
         std::wsmatch match;
@@ -308,7 +336,7 @@ std::vector<TString> FilterList(std::vector<TString> &Items, std::wregex Pattern
 }
 
 std::vector<TString> WindowsPlatform::FilterOutRuntimeDependenciesForPlatform(std::vector<TString> Imports) {
-	std::vector<TString> result;
+ std::vector<TString> result;
 
     Package& package = Package::GetInstance();
     Macros& macros = Macros::GetInstance();
@@ -317,14 +345,14 @@ std::vector<TString> WindowsPlatform::FilterOutRuntimeDependenciesForPlatform(st
 
     for (std::vector<TString>::iterator it = filelist.begin(); it != filelist.end(); ++it) {
         TString filename = *it;
-        TString msvcr100FileName = FilePath::IncludeTrailingSlash(runtimeDir) + _T("jre\\bin\\") + filename;
+        TString msvcr100FileName = FilePath::IncludeTrailingSeparater(runtimeDir) + _T("jre\\bin\\") + filename;
 
         if (FilePath::FileExists(msvcr100FileName) == true) {
             result.push_back(msvcr100FileName);
             break;
         }
         else {
-            msvcr100FileName = FilePath::IncludeTrailingSlash(runtimeDir) + _T("bin\\") + filename;
+            msvcr100FileName = FilePath::IncludeTrailingSeparater(runtimeDir) + _T("bin\\") + filename;
 
             if (FilePath::FileExists(msvcr100FileName) == true) {
                 result.push_back(msvcr100FileName);
@@ -333,17 +361,21 @@ std::vector<TString> WindowsPlatform::FilterOutRuntimeDependenciesForPlatform(st
         }
     }
 
-	return result;
+ return result;
+}
+
+Process* WindowsPlatform::CreateProcess() {
+    return new WindowsProcess();
 }
 
 #ifdef DEBUG
 bool WindowsPlatform::IsNativeDebuggerPresent() {
     bool result = false;
-    
+
     if (IsDebuggerPresent() == TRUE) {
         result = true;
     }
-    
+
     return result;
 }
 
@@ -374,7 +406,7 @@ TString ConvertStringToJavaEcodedString(TString Value) {
             case '\\':
                 result += _T("//");
                 break;
-        
+
             case '/':
                 result += '\\';
                 break;
@@ -400,16 +432,16 @@ TString ConvertStringToJavaEcodedString(TString Value) {
 // See WindowsPreferences.java toJavaName()
 TString ConvertJavaEcodedStringToString(TString Value) {
     TString result;
-    
+
     for (size_t index = 0; index < Value.length(); index++) {
         TCHAR c = Value[index];
-        
+
         switch (c) {
             case '/':
                 if ((index + 1) < Value.length()) {
                     index++;
                     TCHAR nextc = Value[index];
-                    
+
                     if (nextc >= 'A' && nextc <= 'Z') {
                         result += nextc;
                     }
@@ -426,7 +458,7 @@ TString ConvertJavaEcodedStringToString(TString Value) {
                 break;
         }
     }
-    
+
     return result;
 }
 
@@ -439,8 +471,7 @@ bool WindowsJavaUserPreferences::Load(TString Appid) {
 
     if (registry.Open(registryKey) == true) {
         std::list<TString> keys = registry.GetKeys();
-        TOrderedMap mapOfKeysAndValues;
-        int index = 1;
+        OrderedMap<TString, TString> mapOfKeysAndValues;
 
         for (std::list<TString>::const_iterator iterator = keys.begin(); iterator != keys.end(); iterator++) {
             TString key = *iterator;
@@ -449,13 +480,8 @@ bool WindowsJavaUserPreferences::Load(TString Appid) {
             value = ConvertJavaEcodedStringToString(value);
 
             if (key.empty() == false) {
-                TValueIndex item;
-                item.value = value;
-                item.index = index;
-
-                mapOfKeysAndValues.insert(TOrderedMap::value_type(key, item));
+                mapOfKeysAndValues.Append(key, value);
                 result = true;
-                index++;
             }
         }
 
@@ -560,7 +586,7 @@ PIMAGE_SECTION_HEADER WindowsLibrary::GetEnclosingSectionHeader(DWORD rva,
 
     for (unsigned index = 0; index < pNTHeader->FileHeader.NumberOfSections; index++, section++) {
         // Is the RVA is within this section?
-        if ((rva >= section->VirtualAddress) && 
+        if ((rva >= section->VirtualAddress) &&
             (rva < (section->VirtualAddress + section->Misc.VirtualSize))) {
             result = section;
         }
@@ -629,5 +655,141 @@ std::vector<TString> WindowsLibrary::DumpPEFile(PIMAGE_DOS_HEADER dosHeader) {
 }
 
 //--------------------------------------------------------------------------------------------------
+
+#include <TlHelp32.h>
+
+WindowsJob::WindowsJob() {
+    FHandle = NULL;
+}
+
+WindowsJob::~WindowsJob() {
+    if (FHandle != NULL) {
+        CloseHandle(FHandle);
+    }
+}
+
+HANDLE WindowsJob::GetHandle() {
+    if (FHandle == NULL) {
+        FHandle = CreateJobObject(NULL, NULL); // GLOBAL
+
+        if (FHandle == NULL)
+        {
+            ::MessageBox( 0, _T("Could not create job object"), _T("TEST"), MB_OK);
+        }
+        else
+        {
+            JOBOBJECT_EXTENDED_LIMIT_INFORMATION jeli = { 0 };
+
+            // Configure all child processes associated with the job to terminate when the
+            jeli.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+            if (0 == SetInformationJobObject(FHandle, JobObjectExtendedLimitInformation, &jeli, sizeof(jeli)))
+            {
+                ::MessageBox( 0, _T("Could not SetInformationJobObject"), _T("TEST"), MB_OK);
+            }
+        }
+    }
+
+    return FHandle;
+}
+
+// Initialize static member of WindowsProcess
+WindowsJob WindowsProcess::FJob;
+
+WindowsProcess::WindowsProcess() : Process() {
+    FRunning = false;
+}
+
+WindowsProcess::~WindowsProcess() {
+    Terminate();
+}
+
+void WindowsProcess::Cleanup() {
+    CloseHandle(FProcessInfo.hProcess);
+    CloseHandle(FProcessInfo.hThread);
+}
+
+bool WindowsProcess::IsRunning() {
+    bool result = false;
+
+    HANDLE handle = ::CreateToolhelp32Snapshot(TH32CS_SNAPALL, 0);
+    PROCESSENTRY32 process = { 0 };
+    process.dwSize = sizeof(process);
+
+    if (::Process32First(handle, &process)) {
+        do {
+            if (process.th32ProcessID == FProcessInfo.dwProcessId) {
+                result = true;
+                break;
+            }
+        }
+        while (::Process32Next(handle, &process));
+    }
+
+    CloseHandle(handle);
+
+    return result;
+}
+
+bool WindowsProcess::Terminate() {
+    bool result = false;
+
+    if (IsRunning() == true && FRunning == true) {
+        FRunning = false;
+    }
+
+    return result;
+}
+
+bool WindowsProcess::Execute(const TString Application, const std::vector<TString> Arguments, bool AWait) {
+    bool result = false;
+
+    if (FRunning == false) {
+        FRunning = true;
+
+        STARTUPINFO startupInfo;
+        ZeroMemory(&startupInfo, sizeof(startupInfo));
+        startupInfo.cb = sizeof(startupInfo);
+        ZeroMemory(&FProcessInfo, sizeof(FProcessInfo));
+
+        TString command = Application;
+
+        for (std::vector<TString>::const_iterator iterator = Arguments.begin(); iterator != Arguments.end(); iterator++) {
+            command += TString(_T(" ")) + *iterator;
+        }
+
+        if (::CreateProcess(Application.data(), (wchar_t*)command.data(), NULL,
+            NULL, FALSE, 0, NULL, NULL, &startupInfo, &FProcessInfo) == TRUE) {
+            TString message = PlatformString::Format(_T("Error: Unable to create process %s"), Application.data());
+            throw Exception(message);
+        }
+        else {
+            if (FJob.GetHandle() != NULL) {
+                if (::AssignProcessToJobObject(FJob.GetHandle(), FProcessInfo.hProcess) == 0) {
+                    // Failed to assign process to job. It doesn't prevent anything from continuing so continue.
+                }
+            }
+
+            // Wait until child process exits.
+            if (AWait == true) {
+                Wait();
+                // Close process and thread handles.
+                Cleanup();
+            }
+        }
+    }
+
+    return result;
+}
+
+bool WindowsProcess::Wait() {
+    bool result = false;
+
+    WaitForSingleObject(FProcessInfo.hProcess, INFINITE);
+    return result;
+}
+
+TProcessID WindowsProcess::GetProcessID() {
+    return FProcessInfo.dwProcessId;
+}
 
 #endif //WINDOWS

@@ -39,16 +39,20 @@
 #include "Package.h"
 #include "PlatformThread.h"
 #include "Macros.h"
+#include "Messages.h"
 
-#include "jni.h"
 
 #ifdef WINDOWS
 #include <Shellapi.h>
 #endif
 
 
+#include <stdio.h>
+#include <signal.h>
+#include <stdlib.h>
+
 /*
-This is launcher program for application packaging on Windows, Mac and Linux.
+This is the launcher program for application packaging on Windows, Mac and Linux.
 
 Basic approach:
   - Launcher executable loads packager.dll/libpackager.dylib/libpackager.so and calls start_launcher below.
@@ -67,7 +71,6 @@ Limitations and future work:
     See CR 6316197 for more information.
 */
 
-
 extern "C" {
 
 #ifdef WINDOWS
@@ -80,44 +83,121 @@ extern "C" {
 
     bool start_launcher(int argc, TCHAR* argv[]) {
         bool result = false;
-        
-        // Platform and Package must be initialize first.
+        bool parentProcess = true;
+
+        // Platform must be initialize first.
         Platform& platform = Platform::GetInstance();
 
-#ifdef DEBUG
-        if (argc > 1 && TString(argv[1]) == _T("-debug")) {
-#ifdef WINDOWS
-            if (::MessageBox(NULL, PlatformString(platform.GetProcessID()), _T("Would you like to debug?"), MB_OKCANCEL) != IDCANCEL) {
-#endif //WINDOWS
-#ifdef POSIX
-            printf("%s\n", PlatformString(platform.GetProcessID()).c_str());
-            fflush(stdout);
-#endif //POSIX
-                while (platform.IsNativeDebuggerPresent() == false) {
+        try {
+            platform.SetAppCDSState(cdsOn);
+
+            for (int index = 0; index < argc; index++) {
+                TString argument = argv[index];
+
+                if (argument == _T("-Xappcds:generatecache")) {
+                    platform.SetAppCDSState(cdsGenCache);
                 }
-#ifdef WINDOWS
-            }
-#endif //WINDOWS
-        }
+                else if (argument == _T("-Xappcds:off")) {
+                    platform.SetAppCDSState(cdsNone);
+                }
+                else if (argument == _T("-Xapp:child")) {
+                    parentProcess = false;
+                }
+#ifdef DEBUG
+//TODO There appears to be a compiler bug on Mac overloading ShowResponseMessage. Investigate.
+                else if (argument == _T("-nativedebug")) {
+                    if (platform.ShowResponseMessage(_T("Test"),
+                                                     TString(_T("Would you like to debug?\n\nProcessID: ")) +
+                                                     PlatformString(platform.GetProcessID()).toString()) == mrOK) {
+                        while (platform.IsNativeDebuggerPresent() == false) {
+                        }
+                    }
+                }
 #endif //DEBUG
+            }
 
-        Package& package = Package::GetInstance();
-        Macros::Initialize();
-        package.SetCommandLineArguments(argc, argv);
-        platform.SetCurrentDirectory(package.GetPackageAppDirectory());
-        JavaVirtualMachine javavm;
+            // Package must be initialized after Platform is fully initialized.
+            Package& package = Package::GetInstance();
+            Macros::Initialize();
+            package.SetCommandLineArguments(argc, argv);
+            platform.SetCurrentDirectory(package.GetPackageAppDirectory());
 
-        if (javavm.StartJVM() == true) {
-            result = true;
-            javavm.ShutdownJVM();
+            switch (platform.GetAppCDSState()) {
+                case cdsGenCache: {
+                        TString cacheDirectory = package.GetAppCDSCacheDirectory();
+
+                        if (FilePath::DirectoryExists(cacheDirectory) == false) {
+                            FilePath::CreateDirectory(cacheDirectory, true);
+                        }
+                        else {
+                            TString cacheFileName = package.GetAppCDSCacheFileName();
+
+                            if (FilePath::FileExists(cacheFileName) == true) {
+                                FilePath::DeleteFile(cacheFileName);
+                            }
+                        }
+
+
+                        break;
+                    }
+
+                case cdsAuto: {
+                    TString cacheFileName = package.GetAppCDSCacheFileName();
+
+                    if (parentProcess == true && FilePath::FileExists(cacheFileName) == false) {
+                        AutoFreePtr<Process> process = platform.CreateProcess();
+                        std::vector<TString> args;
+                        args.push_back(_T("-Xappcds:generatecache"));
+                        args.push_back(_T("-Xapp:child"));
+                        process->Execute(platform.GetModuleFileName(), args, true);
+
+                        if (FilePath::FileExists(cacheFileName) == false) {
+                            // Cache does not exist after trying to generate it,
+                            // so run without cache.
+                            platform.SetAppCDSState(cdsNone);
+                            package.Clear();
+                            package.Initialize();
+                        }
+                    }
+
+                    break;
+                }
+
+                case cdsNone:
+                case cdsOn: {
+                    break;
+                }
+            }
+
+            // Validation
+            {
+                switch (platform.GetAppCDSState()) {
+                    case cdsOn:
+                    case cdsAuto: {
+                            TString cacheFileName = package.GetAppCDSCacheFileName();
+
+                            if (FilePath::FileExists(cacheFileName) == false) {
+                                Messages& messages = Messages::GetInstance();
+                                TString message = PlatformString::Format(messages.GetMessage(APPCDS_CACHE_FILE_NOT_FOUND), cacheFileName.data());
+                                throw FileNotFoundException(message);
+                            }
+                            break;
+                        }
+                }
+            }
+
+            TString logFileName = FilePath::IncludeTrailingSeparater(platform.GetAppDataDirectory().data()) + _T("log.txt");
+
+            // Run App
+            result = RunVM();
         }
-        else {
-            platform.ShowMessage(_T("Failed to launch JVM\n"));
+        catch (FileNotFoundException &e) {
+            platform.ShowMessage(e.GetMessage());
         }
 
         return result;
     }
-    
+
     void stop_launcher() {
     }
 }

@@ -25,7 +25,7 @@
 
 package com.oracle.tools.packager.windows;
 
-import com.oracle.tools.packager.AbstractBundler;
+import com.oracle.tools.packager.AbstractImageBundler;
 import com.oracle.tools.packager.BundlerParamInfo;
 import com.oracle.tools.packager.StandardBundlerParam;
 import com.oracle.tools.packager.Log;
@@ -51,7 +51,7 @@ import static com.oracle.tools.packager.windows.WindowsBundlerParam.BIT_ARCH_64;
 import static com.oracle.tools.packager.windows.WindowsBundlerParam.BIT_ARCH_64_RUNTIME;
 import static com.oracle.tools.packager.windows.WindowsBundlerParam.WIN_RUNTIME;
 
-public class WinAppBundler extends AbstractBundler {
+public class WinAppBundler extends AbstractImageBundler {
 
     private static final ResourceBundle I18N = 
             ResourceBundle.getBundle(WinAppBundler.class.getName());
@@ -226,9 +226,7 @@ public class WinAppBundler extends AbstractBundler {
 
     //remove
     protected void cleanupConfigFiles(Map<String, ? super Object> params) {
-        if (getConfig_AppIcon(params) != null) {
-            getConfig_AppIcon(params).delete();
-        }
+        getConfig_AppIcon(params).delete();
     }
 
     private void prepareConfigFiles(Map<String, ? super Object> params) throws IOException {
@@ -257,7 +255,7 @@ public class WinAppBundler extends AbstractBundler {
     }
 
     File doBundle(Map<String, ? super Object> p, File outputDirectory, boolean dependentTask) {
-        Map<String, ? super Object> originalParams = new HashMap<String, Object>(p);
+        Map<String, ? super Object> originalParams = new HashMap<>(p);
         if (!outputDirectory.isDirectory() && !outputDirectory.mkdirs()) {
             throw new RuntimeException(MessageFormat.format(I18N.getString("error.cannot-create-output-dir"), outputDirectory.getAbsolutePath()));
         }
@@ -276,10 +274,12 @@ public class WinAppBundler extends AbstractBundler {
 
             File appDirectory = new File(rootDirectory, "app");
             appDirectory.mkdirs();
-            copyApplication(p, appDirectory);
 
             // create the .exe launchers
             createLauncherForEntryPoint(p, rootDirectory);
+
+            // copy the jars
+            copyApplication(p, appDirectory);
 
             // Copy runtime 
             File runtimeDirectory = new File(rootDirectory, "runtime");
@@ -295,7 +295,7 @@ public class WinAppBundler extends AbstractBundler {
             // create the secondary launchers, if any
             List<Map<String, ? super Object>> entryPoints = StandardBundlerParam.SECONDARY_LAUNCHERS.fetchFrom(p);
             for (Map<String, ? super Object> entryPoint : entryPoints) {
-                Map<String, ? super Object> tmp = new HashMap<String, Object>(originalParams);
+                Map<String, ? super Object> tmp = new HashMap<>(originalParams);
                 tmp.putAll(entryPoint);
                 createLauncherForEntryPoint(tmp, rootDirectory);
             }
@@ -374,7 +374,12 @@ public class WinAppBundler extends AbstractBundler {
     private void createLauncherForEntryPoint(Map<String, ? super Object> p, File rootDirectory) throws IOException {
         prepareConfigFiles(p);
 
-        writePkgInfo(p, rootDirectory);
+        // Generate launcher .cfg file
+        if (LAUNCHER_CFG_FORMAT.fetchFrom(p).equals(CFG_FORMAT_PROPERTIES)) {
+            writeCfgFile(p, rootDirectory);
+        } else {
+            writeCfgFile(p, new File(rootDirectory, getLauncherCfgName(p)), "$APPDIR\\runtime");
+        }
 
         // Copy executable root folder
         File executableFile = new File(rootDirectory, getLauncherName(p));
@@ -426,12 +431,12 @@ public class WinAppBundler extends AbstractBundler {
         }
     }
 
-    private void writePkgInfo(Map<String, ? super Object> params, File rootDir) throws FileNotFoundException {
-        File pkgInfoFile = new File(rootDir, getLauncherCfgName(params));
+    private void writeCfgFile(Map<String, ? super Object> params, File rootDir) throws FileNotFoundException {
+        File cfgFile = new File(rootDir, getLauncherCfgName(params));
 
-        pkgInfoFile.delete();
+        cfgFile.delete();
 
-        PrintStream out = new PrintStream(pkgInfoFile);
+        PrintStream out = new PrintStream(cfgFile);
         if (WIN_RUNTIME.fetchFrom(params) == null) {
             out.println("app.runtime=");
         } else {
@@ -442,6 +447,7 @@ public class WinAppBundler extends AbstractBundler {
         //for future AU support (to be able to find app in the registry)
         out.println("app.id=" + IDENTIFIER.fetchFrom(params));
         out.println("app.preferences.id=" + PREFERENCES_ID.fetchFrom(params));
+        out.println("app.identifier=" + IDENTIFIER.fetchFrom(params));
 
         out.println("app.mainclass=" +
                 MAIN_CLASS.fetchFrom(params).replaceAll("\\.", "/"));
@@ -552,5 +558,10 @@ public class WinAppBundler extends AbstractBundler {
     @Override
     public File execute(Map<String, ? super Object> params, File outputParentDir) {
         return doBundle(params, outputParentDir, false);
+    }
+
+    @Override
+    protected String getCacheLocation(Map<String, ? super Object> params) {
+        return "$APPDIR/";
     }
 }

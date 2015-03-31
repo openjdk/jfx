@@ -48,6 +48,23 @@
 #include <list>
 
 
+bool RunVM() {
+    bool result = false;
+    JavaVirtualMachine javavm;
+
+    if (javavm.StartJVM() == true) {
+        result = true;
+        javavm.ShutdownJVM();
+    }
+    else {
+        Platform& platform = Platform::GetInstance();
+        platform.ShowMessage(_T("Failed to launch JVM\n"));
+    }
+
+    return result;
+}
+
+
 // Private typedef for function pointer casting
 #ifndef USE_JLI_LAUNCH
 #define LAUNCH_FUNC "JNI_CreateJavaVM"
@@ -200,10 +217,6 @@ public:
         }
     }
 
-    void AppendValue(const TString Key, TString Value) {
-        AppendValue(Key, Value, NULL);
-    }
-
     void AppendValue(const TString Key, TString Value, void* Extra) {
         JavaOptionItem item;
         item.name = Key;
@@ -212,22 +225,29 @@ public:
         FItems.push_back(item);
     }
 
-    void AppendValues(TOrderedMap Values) {
-        std::list<TString> orderedKeys = Helpers::GetOrderedKeysFromMap(Values);
-        
-        for (std::list<TString>::const_iterator iterator = orderedKeys.begin(); iterator != orderedKeys.end(); iterator++) {
+    void AppendValue(const TString Key, TString Value) {
+        AppendValue(Key, Value, NULL);
+    }
+
+    void AppendValues(OrderedMap<TString, TString> Values) {
+        std::vector<TString> orderedKeys = Values.GetKeys();
+
+        for (std::vector<TString>::const_iterator iterator = orderedKeys.begin(); iterator != orderedKeys.end(); iterator++) {
             TString name = *iterator;
-            TValueIndex value = Values[name];
-            AppendValue(name, value.value);
+            TString value;
+
+            if (Values.GetValue(name, value) == true) {
+                AppendValue(name, value);
+            }
         }
     }
-    
+
     void ReplaceValue(const TString Key, TString Value) {
         for (std::list<JavaOptionItem>::iterator iterator = FItems.begin();
              iterator != FItems.end(); iterator++) {
-            
+
             TString lkey = iterator->name;
-            
+
             if (lkey == Key) {
                 JavaOptionItem item = *iterator;
                 item.value = Value;
@@ -244,7 +264,7 @@ public:
         memset(FOptions, 0, sizeof(JavaVMOption) * FItems.size());
         Macros& macros = Macros::GetInstance();
         unsigned int index = 0;
-        
+
         for (std::list<JavaOptionItem>::const_iterator iterator = FItems.begin();
              iterator != FItems.end(); iterator++) {
             TString key = iterator->name;
@@ -265,7 +285,7 @@ public:
     std::list<TString> ToList() {
         std::list<TString> result;
         Macros& macros = Macros::GetInstance();
-        
+
         for (std::list<JavaOptionItem>::const_iterator iterator = FItems.begin();
              iterator != FItems.end(); iterator++) {
             TString key = iterator->name;
@@ -286,34 +306,38 @@ public:
 
 // jvmuserargs can have a trailing equals in the key. This needs to be removed to use
 // other parts of the launcher.
-TOrderedMap RemoveTrailingEquals(TOrderedMap Map) {
-    TOrderedMap result;
+OrderedMap<TString, TString> RemoveTrailingEquals(OrderedMap<TString, TString> Map) {
+    OrderedMap<TString, TString> result;
 
-    for (TOrderedMap::const_iterator iterator = Map.begin(); iterator != Map.end(); iterator++) {
-        TString name = iterator->first;
-        TValueIndex value = iterator->second;
+    std::vector<TString> keys = Map.GetKeys();
 
-        // If the last character of the key is an equals, then remove it. If there is no
-        // equals then combine the two as a key.
-        TString::iterator i = name.end();
-        i--;
+    for (size_t index = 0; index < keys.size(); index++) {
+        TString name = keys[index];
+        TString value;
 
-        if (*i == '=') {
-            name = name.substr(0, name.size() - 1);
-        }
-        else {
-            i = value.value.begin();
-            
+        if (Map.GetValue(name, value) == true) {
+            // If the last character of the key is an equals, then remove it. If there is no
+            // equals then combine the two as a key.
+            TString::iterator i = name.end();
+            i--;
+
             if (*i == '=') {
-                value.value = value.value.substr(1, value.value.size() - 1);
+                name = name.substr(0, name.size() - 1);
             }
             else {
-                name = name + value.value;
-                value.value = _T("");
-            }
-        }
+                i = value.begin();
 
-        result.insert(TOrderedMap::value_type(name, value));
+                if (*i == '=') {
+                    value = value.substr(1, value.size() - 1);
+                }
+                else {
+                    name = name + value;
+                    value = _T("");
+                }
+            }
+
+            result.Append(name, value);
+        }
     }
 
     return result;
@@ -344,7 +368,7 @@ bool JavaVirtualMachine::StartJVM() {
     options.AppendValue(_T("-Dapp.preferences.id"), package.GetAppID());
     options.AppendValues(package.GetJVMArgs());
     options.AppendValues(RemoveTrailingEquals(package.GetJVMUserArgs()));
- 
+
 #ifdef DEBUG
     if (package.Debugging() == dsJava) {
         options.AppendValue(_T("-Xdebug"), _T(""));
@@ -382,7 +406,7 @@ bool JavaVirtualMachine::StartJVM() {
     JavaLibrary javaLibrary;
     javaLibrary.AddDependencies(platform.FilterOutRuntimeDependenciesForPlatform(platform.GetLibraryImports(package.GetJVMLibraryFileName())));
     javaLibrary.Load(package.GetJVMLibraryFileName());
-    
+
 #ifndef USE_JLI_LAUNCH
     if (package.HasSplashScreen() == true) {
         options.AppendValue(TString(_T("-splash:")) + package.GetSplashScreenFileName(), _T(""));
@@ -402,14 +426,14 @@ bool JavaVirtualMachine::StartJVM() {
             JavaStaticMethod mainMethod = mainClass.GetStaticMethod(_T("main"), _T("([Ljava/lang/String;)V"));
             std::list<TString> appargs = package.GetArgs();
             JavaStringArray largs(FEnv, appargs);
-            
+
             package.FreeBootFields();
-            
+
             mainMethod.CallVoidMethod(1, largs.GetData());
             return true;
         }
         catch (JavaException& exception) {
-            platform.ShowMessage(PlatformString(exception.what()).toString());
+            platform.ShowMessage(exception.GetMessage());
             return false;
         }
     }
@@ -446,7 +470,7 @@ bool JavaVirtualMachine::StartJVM() {
     std::list<TString> largs = package.GetArgs();
     vmargs.splice(vmargs.end(), largs, largs.begin(), largs.end());
     size_t argc = vmargs.size();
-    DynamicBuffer<char*> argv(argc+1);
+    DynamicBuffer<char*> argv(argc + 1);
     unsigned int index = 0;
 
     for (std::list<TString>::const_iterator iterator = vmargs.begin();
@@ -463,11 +487,13 @@ bool JavaVirtualMachine::StartJVM() {
     argv[argc] = NULL;
 
     // On Mac we can only free the boot fields if the calling thread is not the main thread.
-#ifdef MAC
+    #ifdef MAC
     if (platform.IsMainThread() == false) {
         package.FreeBootFields();
     }
-#endif //MAC
+    #else
+    package.FreeBootFields();
+    #endif //MAC
 
     if (javaLibrary.JavaVMCreate(argc, argv.GetData()) == true) {
         return true;

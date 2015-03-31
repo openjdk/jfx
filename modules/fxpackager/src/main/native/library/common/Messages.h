@@ -49,6 +49,7 @@
 
 #define BUNDLED_JVM_NOT_FOUND _T("bundled.jvm.not.found")
 
+#define APPCDS_CACHE_FILE_NOT_FOUND _T("appcds.cache.file.not.found")
 
 class Messages {
 private:

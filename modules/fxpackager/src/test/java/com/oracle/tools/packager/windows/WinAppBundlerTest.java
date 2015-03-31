@@ -222,6 +222,7 @@ public class WinAppBundlerTest {
             assertNotNull(p.getProperty("app.preferences.id"));
             assertNotNull(p.getProperty("app.mainclass"));
             assertNotNull(p.getProperty("app.classpath"));
+            assertNotNull(p.getProperty("app.identifier"));
 
             // - make sure 'app.classpath=null' doesn't show up, prefer 'app.classpath='
             assertFalse(p.getProperty("app.classpath").equals("null"));
@@ -378,5 +379,36 @@ public class WinAppBundlerTest {
         System.err.println("Bundle at - " + output);
         assertNotNull(output);
         assertTrue(output.exists());
-    }    
+    }
+
+    /**
+     * Turn on AppCDS
+     */
+    @Test
+    public void testAppCDS() throws IOException, ConfigException, UnsupportedPlatformException {
+        Bundler bundler = new WinAppBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        // not part of the typical setup, for testing
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+        bundleParams.put(VERBOSE.getID(), true);
+        if (runtimeJdk != null) {
+            bundleParams.put(WIN_RUNTIME.getID(), runtimeJdk);
+        }
+
+        bundleParams.put(APP_NAME.getID(), "AppCDS");
+        bundleParams.put(IDENTIFIER.getID(), "com.example.appcds.image.Test");
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(UNLOCK_COMMERCIAL_FEATURES.getID(), true);
+        bundleParams.put(ENABLE_APP_CDS.getID(), true);
+
+        boolean valid = bundler.validate(bundleParams);
+        assertTrue(valid);
+
+        File output = bundler.execute(bundleParams, new File(workDir, "CDSTest"));
+        System.err.println("Bundle at - " + output);
+        assertNotNull(output);
+        assertTrue(output.exists());
+    }
 }
