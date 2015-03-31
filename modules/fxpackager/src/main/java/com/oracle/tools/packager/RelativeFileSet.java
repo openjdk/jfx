@@ -27,6 +27,7 @@ package com.oracle.tools.packager;
 
 import java.io.File;
 
+import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -44,7 +45,7 @@ public class RelativeFileSet {
     private File basedir;
     Set<String> files = new LinkedHashSet<>();
 
-    public RelativeFileSet(File base, Set<File> files) {
+    public RelativeFileSet(File base, Collection<File> files) {
         basedir = base;
         String baseAbsolute = basedir.getAbsolutePath();
         for (File f: files) {
@@ -58,6 +59,10 @@ public class RelativeFileSet {
             }
         }
     }
+
+    public RelativeFileSet(File base, Set<File> files) {
+        this(base, (Collection<File>) files);
+    }    
 
     public boolean contains(String[] requiredFiles) {
         boolean result = true;

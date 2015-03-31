@@ -39,22 +39,33 @@
 #include <string>
 
 
-PropertyFile::PropertyFile(void) : PropertyContainer() {
+PropertyFile::PropertyFile(void) : IPropertyContainer() {
     FReadOnly = false;
     FModified = false;
 }
 
-PropertyFile::PropertyFile(const TString FileName) : PropertyContainer() {
+PropertyFile::PropertyFile(const TString FileName) : IPropertyContainer() {
     FReadOnly = true;
     FModified = false;
     LoadFromFile(FileName);
 }
 
-PropertyFile::PropertyFile(std::map<TString, TString> Value) : PropertyContainer() {
-    FData.insert(Value.begin(), Value.end());
+PropertyFile::PropertyFile(OrderedMap<TString, TString> Value) {
+    FData.Append(Value);
+}
+
+//PropertyFile::PropertyFile(std::map<TString, TString> Value) : PropertyContainer() {
+//    FData.Append(Value);
+//}
+
+PropertyFile::PropertyFile(const PropertyFile &Value) {
+    FData = Value.FData;
+    FReadOnly = Value.FReadOnly;
+    FModified = Value.FModified;
 }
 
 PropertyFile::~PropertyFile(void) {
+    FData.Clear();
 }
 
 void PropertyFile::SetModified(bool Value) {
@@ -73,11 +84,11 @@ void PropertyFile::SetReadOnly(bool Value) {
     FReadOnly = Value;
 }
 
-void PropertyFile::Assign(std::map<TString, TString> Value) {
-    FData.clear();
-    FData.insert(Value.begin(), Value.end());
-    SetModified(true);
-}
+//void PropertyFile::Assign(std::map<TString, TString> Value) {
+//    FData.Clear();
+//    FData.Assign(Value);
+//    SetModified(true);
+//}
 
 bool PropertyFile::LoadFromFile(const TString FileName) {
     bool result = false;
@@ -92,7 +103,7 @@ bool PropertyFile::LoadFromFile(const TString FileName) {
             TString value;
 
             if (Helpers::SplitOptionIntoNameValue(line, name, value) == true) {
-                FData.insert(std::map<TString, TString>::value_type(name, value));
+                FData.Append(name, value);
             }
         }
 
@@ -108,15 +119,21 @@ bool PropertyFile::SaveToFile(const TString FileName, bool ownerOnly) {
 
     if (GetReadOnly() == false && IsModified()) {
         std::list<TString> contents;
+        std::vector<TString> keys = FData.GetKeys();
 
-        for (std::map<TString, TString>::iterator iterator = FData.begin();
-            iterator != FData.end();
-            iterator++) {
+        for (size_t index = 0; index < keys.size(); index++) {
+            TString name = keys[index];
 
-            TString name = iterator->first;
-            TString value = iterator->second;
-            TString line = name + _T('=') + value;
-            contents.push_back(line);
+            try {
+                TString value;// = FData[index];
+
+                if (FData.GetValue(name, value) == true) {
+                    TString line = name + _T('=') + value;
+                    contents.push_back(line);
+                }
+            }
+            catch (std::out_of_range) {
+            }
         }
 
         Platform& platform = Platform::GetInstance();
@@ -130,22 +147,14 @@ bool PropertyFile::SaveToFile(const TString FileName, bool ownerOnly) {
 }
 
 bool PropertyFile::GetValue(const TString Key, TString& Value) {
-    bool result = false;
-    std::map<TString, TString>::const_iterator iterator = FData.find(Key);
-
-    if (iterator != FData.end()) {
-        Value = iterator->second;
-        result = true;
-    }
-
-    return result;
+    return FData.GetValue(Key, Value);
 }
 
 bool PropertyFile::SetValue(const TString Key, TString Value) {
     bool result = false;
 
     if (GetReadOnly() == false) {
-        FData[Key] = Value;
+        FData.SetValue(Key, Value);
         SetModified(true);
         result = true;
     }
@@ -157,12 +166,10 @@ bool PropertyFile::RemoveKey(const TString Key) {
     bool result = false;
 
     if (GetReadOnly() == false) {
-        std::map<TString, TString>::iterator iterator = FData.find(Key);
+        result = FData.RemoveByKey(Key);
 
-        if (iterator != FData.end()) {
-            FData.erase(iterator);
+        if (result == true) {
             SetModified(true);
-            result = true;
         }
     }
 
@@ -170,9 +177,13 @@ bool PropertyFile::RemoveKey(const TString Key) {
 }
 
 size_t PropertyFile::GetCount() {
-    return FData.size();
+    return FData.Count();
 }
 
-std::map<TString, TString> PropertyFile::GetData() {
+//std::vector<TString> PropertyFile::GetKeys() {
+//    return FData.GetKeys();
+//}
+
+OrderedMap<TString, TString> PropertyFile::GetData() {
     return FData;
 }

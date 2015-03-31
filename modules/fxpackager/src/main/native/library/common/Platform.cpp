@@ -93,7 +93,7 @@ void Library::LoadDependencies() {
         for (std::vector<TString>::const_iterator iterator = FDependentLibraryNames->begin();
                 iterator != FDependentLibraryNames->end(); iterator++) {
             Library* library = new Library();
-            
+
             if (library->Load(*iterator) == true) {
                 FDependenciesLibraries->push_back(library);
             }

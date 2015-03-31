@@ -219,6 +219,7 @@ public class LinuxAppBundlerTest {
             assertNotNull(p.getProperty("app.preferences.id"));
             assertNotNull(p.getProperty("app.mainclass"));
             assertNotNull(p.getProperty("app.classpath"));
+            assertNotNull(p.getProperty("app.identifier"));
 
             // - make sure 'app.classpath=null' doesn't show up, prefer 'app.classpath='
             assertFalse(p.getProperty("app.classpath").equals("null"));

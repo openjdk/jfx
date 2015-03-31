@@ -570,6 +570,37 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     (s, p) -> new File(s)
             );
 
+    public static final StandardBundlerParam<Boolean> UNLOCK_COMMERCIAL_FEATURES =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.commercial-features.name"),
+                    I18N.getString("param.commercial-features.description"),
+                    "commercialFeatures",
+                    Boolean.class,
+                    p -> false,
+                    (s, p) -> Boolean.parseBoolean(s)
+            );
+
+    public static final StandardBundlerParam<Boolean> ENABLE_APP_CDS =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.com-app-cds.name"),
+                    I18N.getString("param.com-app-cds.description"),
+                    "commercial.AppCDS",
+                    Boolean.class,
+                    p -> false,
+                    (s, p) -> Boolean.parseBoolean(s)
+            );
+
+    @SuppressWarnings("unchecked")
+    public static final StandardBundlerParam<List<String>> APP_CDS_CLASS_ROOTS =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.com-app-cds-root.name"),
+                    I18N.getString("param.com-app-cds-root.description"),
+                    "commercial.AppCDS.classRoots",
+                    (Class<List<String>>)((Object)List.class),
+                    p -> Arrays.asList(MAIN_CLASS.fetchFrom(p)),
+                    (s, p) -> Arrays.asList(s.split("[ ,:]"))
+            );
+
     public static void extractMainClassInfoFromAppResources(Map<String, ? super Object> params) {
         boolean hasMainClass = params.containsKey(MAIN_CLASS.getID());
         boolean hasMainJar = params.containsKey(MAIN_JAR.getID());

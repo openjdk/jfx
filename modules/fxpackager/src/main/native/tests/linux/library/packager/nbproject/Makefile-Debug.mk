@@ -39,6 +39,7 @@ OBJECTFILES= \
 	${OBJECTDIR}/_ext/839896833/FilePath.o \
 	${OBJECTDIR}/_ext/839896833/GenericPlatform.o \
 	${OBJECTDIR}/_ext/839896833/Helpers.o \
+	${OBJECTDIR}/_ext/839896833/IniFile.o \
 	${OBJECTDIR}/_ext/839896833/Java.o \
 	${OBJECTDIR}/_ext/839896833/JavaUserPreferences.o \
 	${OBJECTDIR}/_ext/839896833/JavaVirtualMachine.o \
@@ -99,6 +100,11 @@ ${OBJECTDIR}/_ext/839896833/Helpers.o: ../../../../library/common/Helpers.cpp
 	${MKDIR} -p ${OBJECTDIR}/_ext/839896833
 	${RM} "$@.d"
 	$(COMPILE.cc) -g -DDEBUG -DJAVAARCH=\"i386\" -I${HOME}/jdk/include -I${HOME}/jdk/include/linux -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/839896833/Helpers.o ../../../../library/common/Helpers.cpp
+
+${OBJECTDIR}/_ext/839896833/IniFile.o: ../../../../library/common/IniFile.cpp 
+	${MKDIR} -p ${OBJECTDIR}/_ext/839896833
+	${RM} "$@.d"
+	$(COMPILE.cc) -g -DDEBUG -DJAVAARCH=\"i386\" -I${HOME}/jdk/include -I${HOME}/jdk/include/linux -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/839896833/IniFile.o ../../../../library/common/IniFile.cpp
 
 ${OBJECTDIR}/_ext/839896833/Java.o: ../../../../library/common/Java.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/839896833

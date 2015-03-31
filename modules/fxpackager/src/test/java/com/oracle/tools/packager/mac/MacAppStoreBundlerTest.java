@@ -185,7 +185,7 @@ public class MacAppStoreBundlerTest {
         );
         bundleParams.put(MAC_CF_BUNDLE_VERSION.getID(), "1.0." + new SimpleDateFormat("YYYYMMddHHmm").format(new Date()));
         bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
-        bundleParams.put(IDENTIFIER.getID(), "com.example.javapacakger.hello.TestPackager");
+        bundleParams.put(IDENTIFIER.getID(), "com.example.javapackager.hello.TestPackager");
         bundleParams.put(MacAppBundler.MAC_CATEGORY.getID(), "public.app-category.developer-tools");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(VERBOSE.getID(), true);
@@ -320,7 +320,7 @@ public class MacAppStoreBundlerTest {
                         new HashSet<>(Arrays.asList(fakeMainJar)))
         );
         bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
-        bundleParams.put(IDENTIFIER.getID(), "com.example.javapacakger.hello.TestPackager");
+        bundleParams.put(IDENTIFIER.getID(), "com.example.javapackager.hello.TestPackager");
         bundleParams.put(MacAppBundler.MAC_CATEGORY.getID(), "public.app-category.developer-tools");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(VERBOSE.getID(), true);
@@ -355,7 +355,7 @@ public class MacAppStoreBundlerTest {
                         new HashSet<>(Arrays.asList(fakeMainJar)))
         );
         bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
-        bundleParams.put(IDENTIFIER.getID(), "com.example.javapacakger.hello.TestPackager");
+        bundleParams.put(IDENTIFIER.getID(), "com.example.javapackager.hello.TestPackager");
         bundleParams.put(MacAppBundler.MAC_CATEGORY.getID(), "public.app-category.developer-tools");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(VERBOSE.getID(), true);

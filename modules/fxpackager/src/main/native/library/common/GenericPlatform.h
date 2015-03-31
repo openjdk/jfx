@@ -35,7 +35,7 @@
 #define GENERICPLATFORM_H
 
 #include "FilePath.h"
-#include "Platform.h"
+//#include "Platform.h"
 
 
 #pragma warning( push )
@@ -48,7 +48,7 @@ public:
 
     virtual TString GetPackageAppDirectory();
     virtual TString GetPackageLauncherDirectory();
-    
+
     virtual TString GetConfigFileName();
 
     virtual std::list<TString> LoadFromFile(TString FileName);
@@ -59,7 +59,7 @@ public:
 #endif //WINDOWS || LINUX
 
     virtual std::map<TString, TString> GetKeys();
-    
+
 #ifdef DEBUG
     virtual DebugState GetDebugState();
 #endif //DEBUG

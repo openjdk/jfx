@@ -45,6 +45,9 @@ public:
     virtual ~PosixPlatform(void);
 
 public:
+    virtual MessageResponse ShowResponseMessage(TString title, TString description);
+    //virtual MessageResponse ShowResponseMessageB(TString description);
+
     virtual void SetCurrentDirectory(TString Value);
 
     virtual Module LoadLibrary(TString FileName);
@@ -52,6 +55,32 @@ public:
     virtual Procedure GetProcAddress(Module AModule, std::string MethodName);
     virtual std::vector<TString> GetLibraryImports(const TString FileName);
     virtual std::vector<TString> FilterOutRuntimeDependenciesForPlatform(std::vector<TString> Imports);
+
+    virtual Process* CreateProcess();
+};
+
+
+class PosixProcess : public Process {
+private:
+    pid_t FChildPID;
+    sigset_t saveblock;
+#ifdef MAC
+    struct sigaction savintr, savequit;
+#endif //MAC
+    bool FRunning;
+
+    void Cleanup();
+
+public:
+    PosixProcess();
+    virtual ~PosixProcess();
+
+    virtual bool IsRunning();
+    virtual bool Terminate();
+    virtual bool Execute(const TString Application, const std::vector<TString> Arguments,
+        bool AWait = false);
+    virtual bool Wait();
+    virtual TProcessID GetProcessID();
 };
 
 #endif //POSIXPLATFORM_H

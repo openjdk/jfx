@@ -55,7 +55,7 @@ public class DeployParams extends CommonParams {
         WEBSTART, EMBEDDED, STANDALONE, ALL
     }
 
-    final List<DeployResource> resources = new ArrayList<>();
+    final List<RelativeFileSet> resources = new ArrayList<>();
 
     String id;
     String title;
@@ -120,14 +120,14 @@ public class DeployParams extends CommonParams {
 
     //list of jvm args (in theory string can contain spaces and need to be escaped
     List<String> jvmargs = new LinkedList<>();
-    Map<String, String> jvmUserArgs = new HashMap<>();
+    Map<String, String> jvmUserArgs = new LinkedHashMap<>();
 
     //list of jvm properties (can also be passed as VM args
     // but keeping them separate make it a bit more convinient for JNLP generation)
-    Map<String, String> properties = new HashMap<>();
+    Map<String, String> properties = new LinkedHashMap<>();
     
     // raw arguments to the bundler
-    Map<String, ? super Object> bundlerArguments = new HashMap<>();
+    Map<String, ? super Object> bundlerArguments = new LinkedHashMap<>();
 
     String fallbackApp = null;
 
@@ -354,16 +354,16 @@ public class DeployParams extends CommonParams {
     List<File> expandFileset(File root) {
         List<File> files = new LinkedList<>();
         if (com.oracle.tools.packager.IOUtils.isNotSymbolicLink(root)) {
-           if (root.isDirectory()) {
-               File[] children = root.listFiles();
-               if (children != null) {
-                   for (File f : children) {
-                       files.addAll(expandFileset(f));
-                   }
-               }
-           } else {
-               files.add(root);
-           }
+            if (root.isDirectory()) {
+                File[] children = root.listFiles();
+                if (children != null) {
+                    for (File f : children) {
+                        files.addAll(expandFileset(f));
+                    }
+                }
+            } else {
+                files.add(root);
+            }
         }
         return files;
     }
@@ -371,41 +371,76 @@ public class DeployParams extends CommonParams {
     @Override
     public void addResource(File baseDir, String path) {
         File file = new File(baseDir, path);
-        try {
-            //normalize top level dir
-            // to strip things like "." in the path
-            // or it can confuse symlink detection logic
-            file = file.getCanonicalFile();
-        } catch (IOException ignored) {}
-        for (File f: expandFileset(file)) {
-           resources.add(new DeployResource(baseDir, f));
+        //normalize top level dir
+        // to strip things like "." in the path
+        // or it can confuse symlink detection logic
+        file = file.getAbsoluteFile();
+
+        if (baseDir == null) {
+            baseDir = file.getParentFile();
         }
+        resources.add(new RelativeFileSet(baseDir, new LinkedHashSet<>(expandFileset(file))));
     }
 
     @Override
     public void addResource(File baseDir, File file) {
-        try {
-            //normalize initial file
-            // to strip things like "." in the path
-            // or it can confuse symlink detection logic
-            file = file.getCanonicalFile();
-        } catch (IOException ignored) {}
-        for (File f: expandFileset(file)) {
-           resources.add(new DeployResource(baseDir, f));
+        //normalize initial file
+        // to strip things like "." in the path
+        // or it can confuse symlink detection logic
+        file = file.getAbsoluteFile();
+
+        if (baseDir == null) {
+            baseDir = file.getParentFile();
         }
+        resources.add(new RelativeFileSet(baseDir, new LinkedHashSet<>(expandFileset(file))));
     }
 
     public void addResource(File baseDir, String path, String type) {
-        resources.add(new DeployResource(baseDir, path, type));
+        addResource(baseDir, createFile(baseDir, path), type);
     }
 
     public void addResource(File baseDir, File file, String type) {
-        resources.add(new DeployResource(baseDir, file, type));
+        addResource(baseDir, file, "eager", type, null, null);
     }
 
     public void addResource(File baseDir, File file, String mode, String type, String os, String arch) {
-        resources.add(new DeployResource(baseDir, file, mode, type, os, arch));
+        Set<File> singleFile = new LinkedHashSet<>();
+        singleFile.add(file);
+        if (baseDir == null) {
+            baseDir = file.getParentFile();
+        }
+        RelativeFileSet rfs = new RelativeFileSet(baseDir, singleFile);
+        rfs.setArch(arch);
+        rfs.setMode(mode);
+        rfs.setOs(os);
+        rfs.setType(parseTypeFromString(type, file));
+        resources.add(rfs);
     }
+
+    private RelativeFileSet.Type parseTypeFromString(String type, File file) {
+        if (type == null) {
+            if (file.getName().endsWith(".jar")) {
+                return RelativeFileSet.Type.jar;
+            } else if (file.getName().endsWith(".jnlp")) {
+                return RelativeFileSet.Type.jnlp;
+            } else {
+                return RelativeFileSet.Type.UNKNOWN;
+            }
+        } else {
+            return RelativeFileSet.Type.valueOf(type);
+        }
+    }
+    
+    private static File createFile(final File baseDir, final String path) {
+        final File testFile = new File(path);
+        return testFile.isAbsolute()
+                ? testFile
+                : new File(baseDir == null 
+                    ? null
+                    : baseDir.getAbsolutePath(),
+                      path);
+    }
+
 
     @Override
     public void validate() throws PackagerException {
@@ -523,30 +558,23 @@ public class DeployParams extends CommonParams {
         String currentOS = System.getProperty("os.name").toLowerCase();
         String currentArch = getArch();
 
-        Map<File, Set<File>> fileResources = new LinkedHashMap<>();
-        
-        for (DeployResource r: resources) {
-            String os = r.getOs();
-            String arch = r.getArch();
+        for (RelativeFileSet rfs : resources) {
+            String os = rfs.getOs();
+            String arch = rfs.getArch();
             //skip resources for other OS
             // and nativelib jars (we are including raw libraries)
             if ((os == null || currentOS.contains(os.toLowerCase())) &&
                     (arch == null || currentArch.startsWith(arch.toLowerCase()))
-                    && r.getType() != DeployResource.Type.nativelib) {
-                if (r.getType() == DeployResource.Type.license) {
-                    bundleParams.addLicenseFile(r.getRelativePath());
+                    && rfs.getType() != RelativeFileSet.Type.nativelib) {
+                if (rfs.getType() == RelativeFileSet.Type.license) {
+                    for (String s : rfs.getIncludedFiles()) {
+                        bundleParams.addLicenseFile(s);
+                    }
                 }
-                Set<File> files = fileResources.get(r.getBaseDir());
-                if (files == null) {
-                    fileResources.put(r.getBaseDir(), files = new LinkedHashSet<>());
-                }
-                files.add(new File(r.getBaseDir(), r.getRelativePath()));
             }
         }
         
-        bundleParams.setAppResourcesList(fileResources.entrySet().stream()
-                .map(e -> new RelativeFileSet(e.getKey(), e.getValue()))
-                .collect(Collectors.toList()));
+        bundleParams.setAppResourcesList(resources);
 
         bundleParams.setIdentifier(id);
 
@@ -585,7 +613,8 @@ public class DeployParams extends CommonParams {
             // currently everything is marked as webstart internally and runmode
             // is not publicly documented property
             if (/* (ic.mode == RunMode.ALL || ic.mode == RunMode.STANDALONE) && */
-                (ic.kind == null || ic.kind.equals("default"))) {
+                (ic.kind == null || ic.kind.equals("default"))) 
+            {
                 //could be full path or something relative to the output folder
                 appIcon = new File(ic.href);
                 if (!appIcon.exists()) {

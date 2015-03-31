@@ -25,7 +25,7 @@
 
 package com.oracle.tools.packager.linux;
 
-import com.oracle.tools.packager.AbstractBundler;
+import com.oracle.tools.packager.AbstractImageBundler;
 import com.oracle.tools.packager.BundlerParamInfo;
 import com.oracle.tools.packager.JreUtils;
 import com.oracle.tools.packager.JreUtils.Rule;
@@ -48,7 +48,7 @@ import java.util.*;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
 
-public class LinuxAppBundler extends AbstractBundler {
+public class LinuxAppBundler extends AbstractImageBundler {
 
     private static final ResourceBundle I18N =
             ResourceBundle.getBundle(LinuxAppBundler.class.getName());
@@ -260,8 +260,12 @@ public class LinuxAppBundler extends AbstractBundler {
         executableFile.setExecutable(true, false);
         executableFile.setWritable(true, true); //for str
 
-        // Generate PkgInfo
-        writePkgInfo(p, rootDir);
+        // Generate launcher .cfg file
+        if (LAUNCHER_CFG_FORMAT.fetchFrom(p).equals(CFG_FORMAT_PROPERTIES)) {
+            writeCfgFile(p, rootDir);
+        } else {
+            writeCfgFile(p, new File(rootDir, getLauncherCfgName(p)), "$APPDIR/runtime");
+        }
     }
 
     private void copyApplication(Map<String, ? super Object> params, File appDirectory) throws IOException {
@@ -281,11 +285,11 @@ public class LinuxAppBundler extends AbstractBundler {
         }
     }
 
-    private void writePkgInfo(Map<String, ? super Object> params, File rootDir) throws FileNotFoundException {
-        File pkgInfoFile = new File(rootDir, getLauncherCfgName(params));
+    private void writeCfgFile(Map<String, ? super Object> params, File rootDir) throws FileNotFoundException {
+        File cfgFile = new File(rootDir, getLauncherCfgName(params));
 
-        pkgInfoFile.delete();
-        PrintStream out = new PrintStream(pkgInfoFile);
+        cfgFile.delete();
+        PrintStream out = new PrintStream(cfgFile);
         if (LINUX_RUNTIME.fetchFrom(params) == null) {
             out.println("app.runtime=");                    
         } else {
@@ -325,6 +329,7 @@ public class LinuxAppBundler extends AbstractBundler {
         
         //app.id required for setting user preferences (Java Preferences API)
         out.println("app.preferences.id=" + PREFERENCES_ID.fetchFrom(params));
+        out.println("app.identifier=" + IDENTIFIER.fetchFrom(params));
 
         Map<String, String> overridableJVMOptions = USER_JVM_OPTIONS.fetchFrom(params);
         idx = 1;
@@ -413,5 +418,10 @@ public class LinuxAppBundler extends AbstractBundler {
     @Override
     public File execute(Map<String, ? super Object> params, File outputParentDir) {
         return doBundle(params, outputParentDir, false);
+    }
+
+    @Override
+    protected String getCacheLocation(Map<String, ? super Object> params) {
+        return "$APPDIR/";
     }
 }
