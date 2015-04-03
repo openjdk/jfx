@@ -79,7 +79,7 @@ void DOMTokenList::add(const Vector<String>& tokens, ExceptionCode& ec)
     for (size_t i = 0; i < tokens.size(); ++i) {
         if (!validateToken(tokens[i], ec))
             return;
-        if (!containsInternal(tokens[i]))
+        if (!containsInternal(tokens[i]) && !filteredTokens.contains(tokens[i]))
             filteredTokens.append(tokens[i]);
     }
 
@@ -169,13 +169,13 @@ String DOMTokenList::addTokens(const AtomicString& input, const Vector<String>& 
 
     StringBuilder builder;
     if (!input.isEmpty()) {
-    builder.append(input);
+        builder.append(input);
         needsSpace = !isHTMLSpace(input[input.length() - 1]);
     }
 
     for (size_t i = 0; i < tokens.size(); ++i) {
         if (needsSpace)
-        builder.append(' ');
+            builder.append(' ');
         builder.append(tokens[i]);
         needsSpace = true;
     }

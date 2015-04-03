@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2008, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,23 +27,15 @@
 #include "Frame.h"
 #include "FrameWin.h"
 
-#include "EditorClient.h"
 #include "NotImplemented.h"
-
-using std::min;
+#include <wtf/win/GDIObject.h>
 
 namespace WebCore {
 
-HBITMAP imageFromSelection(Frame* frame, bool forceBlackText)
+GDIObject<HBITMAP> imageFromRect(const Frame*, IntRect&)
 {
     notImplemented();
-    return 0;
-}
-
-DragImageRef Frame::nodeImage(Node*)
-{
-    notImplemented();
-    return 0;
+    return GDIObject<HBITMAP>();
 }
 
 } // namespace WebCore

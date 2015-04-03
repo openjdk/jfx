@@ -30,21 +30,23 @@ class CachedResourceLoader;
 class Element;
 class StyleCachedImage;
 class StyleImage;
-class RenderObject;
+class RenderElement;
+struct ResourceLoaderOptions;
 
 class CSSImageValue : public CSSValue {
 public:
-    static PassRefPtr<CSSImageValue> create(const String& url) { return adoptRef(new CSSImageValue(url)); }
-    static PassRefPtr<CSSImageValue> create(const String& url, StyleImage* image) { return adoptRef(new CSSImageValue(url, image)); }
+    static PassRef<CSSImageValue> create(const String& url) { return adoptRef(*new CSSImageValue(url)); }
+    static PassRef<CSSImageValue> create(const String& url, StyleImage* image) { return adoptRef(*new CSSImageValue(url, image)); }
     ~CSSImageValue();
 
+    StyleCachedImage* cachedImage(CachedResourceLoader*, const ResourceLoaderOptions&);
     StyleCachedImage* cachedImage(CachedResourceLoader*);
     // Returns a StyleCachedImage if the image is cached already, otherwise a StylePendingImage.
     StyleImage* cachedOrPendingImage();
 
-    const String& url() { return m_url; }
+    const String& url() const { return m_url; }
 
-    String customCssText() const;
+    String customCSSText() const;
 
     PassRefPtr<CSSValue> cloneForCSSOM() const;
 
@@ -52,7 +54,7 @@ public:
 
     bool equals(const CSSImageValue&) const;
 
-    bool knownToBeOpaque(const RenderObject*) const;
+    bool knownToBeOpaque(const RenderElement*) const;
 
     void setInitiator(const AtomicString& name) { m_initiatorName = name; }
 
@@ -66,6 +68,8 @@ private:
     bool m_accessedImage;
     AtomicString m_initiatorName;
 };
+
+CSS_VALUE_TYPE_CASTS(CSSImageValue, isImageValue())
 
 } // namespace WebCore
 

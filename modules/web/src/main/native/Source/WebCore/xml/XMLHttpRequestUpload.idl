@@ -28,26 +28,25 @@
 
 [
     GenerateIsReachable=Impl,
-        EventTarget,
-        JSNoStaticTables
+    EventTarget,
+    JSNoStaticTables,
 ] interface XMLHttpRequestUpload {
-        // From XMLHttpRequestEventTarget
-        // event handler attributes
-        attribute EventListener onabort;
-        attribute EventListener onerror;
-        attribute EventListener onload;
-        attribute EventListener onloadend;
-        attribute EventListener onloadstart;
-        attribute EventListener onprogress;
+    // From XMLHttpRequestEventTarget
+    // event handler attributes
+    attribute EventListener onabort;
+    attribute EventListener onerror;
+    attribute EventListener onload;
+    attribute EventListener onloadend;
+    attribute EventListener onloadstart;
+    attribute EventListener onprogress;
 
-        // EventTarget interface
+    // EventTarget interface
     void addEventListener(DOMString type, 
                           EventListener listener, 
                           optional boolean useCapture);
     void removeEventListener(DOMString type, 
                              EventListener listener, 
                              optional boolean useCapture);
-    boolean dispatchEvent(Event evt)
-            raises(EventException);
-    };
+    [RaisesException] boolean dispatchEvent(Event evt);
+};
 

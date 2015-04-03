@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2008, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,45 +29,31 @@
 #include "config.h"
 #include "Collator.h"
 
-#if !USE(ICU_UNICODE) || UCONFIG_NO_COLLATION
+#if UCONFIG_NO_COLLATION
 
 namespace WTF {
 
-Collator::Collator(const char*)
+int Collator::collate(StringView a, StringView b) const
 {
-}
-
-Collator::~Collator()
-{
-}
-
-void Collator::setOrderLowerFirst(bool)
-{
-}
-
-PassOwnPtr<Collator> Collator::userDefault()
-{
-    return adoptPtr(new Collator(0));
-}
-
-// A default implementation for platforms that lack Unicode-aware collation.
-Collator::Result Collator::collate(const UChar* lhs, size_t lhsLength, const UChar* rhs, size_t rhsLength) const
-{
-    int lmin = lhsLength < rhsLength ? lhsLength : rhsLength;
-    int l = 0;
-    while (l < lmin && *lhs == *rhs) {
-        lhs++;
-        rhs++;
-        l++;
+    unsigned commonLength = std::min(a.length(), b.length());
+    for (unsigned i = 0; i < commonLength; ++i) {
+        if (a[i] < b[i])
+            return -1;
+        if (a[i] > b[i])
+            return 1;
     }
 
-    if (l < lmin)
-        return (*lhs > *rhs) ? Greater : Less;
+    if (a.length() < b.length())
+        return -1;
+    if (a.length() > b.length())
+        return 1;
 
-    if (lhsLength == rhsLength)
-        return Equal;
+    return 0;
+}
 
-    return (lhsLength > rhsLength) ? Greater : Less;
+int Collator::collateUTF8(const char* a, const char* b) const
+{
+    return collate(String::fromUTF8(a), String::fromUTF8(b));
 }
 
 }

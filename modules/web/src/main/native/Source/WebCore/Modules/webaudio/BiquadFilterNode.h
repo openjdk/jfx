@@ -50,7 +50,7 @@ public:
     {
         return adoptRef(new BiquadFilterNode(context, sampleRate));      
     }
-    
+
     String type() const;
     bool setType(unsigned); // Returns true on success.
     void setType(const String&);

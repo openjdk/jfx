@@ -26,11 +26,9 @@
 
 [
     NoInterfaceObject,
-        Conditional=SVG,
-        ObjCProtocol,
-        SuppressToJSObject,
-        OmitConstructor
+    ObjCProtocol,
+    SuppressToJSObject,
 ] interface SVGURIReference {
-        readonly attribute SVGAnimatedString href;
-    };
+    readonly attribute SVGAnimatedString href;
+};
 

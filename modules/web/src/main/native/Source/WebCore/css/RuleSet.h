@@ -23,6 +23,7 @@
 #define RuleSet_h
 
 #include "RuleFeature.h"
+#include "SelectorCompiler.h"
 #include "StyleRule.h"
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
@@ -55,6 +56,8 @@ class StyleSheetContents;
 
 class RuleData {
 public:
+    static const unsigned maximumSelectorComponentCount = 8192;
+
     RuleData(StyleRule*, unsigned selectorIndex, unsigned position, AddRuleFlags);
 
     unsigned position() const { return m_position; }
@@ -74,6 +77,16 @@ public:
     static const unsigned maximumIdentifierCount = 4;
     const unsigned* descendantSelectorIdentifierHashes() const { return m_descendantSelectorIdentifierHashes; }
 
+#if ENABLE(CSS_SELECTOR_JIT)
+    SelectorCompilationStatus compilationStatus() const { return m_compilationStatus; }
+    JSC::MacroAssemblerCodeRef compiledSelectorCodeRef() const { return m_compiledSelectorCodeRef; }
+    void setCompiledSelector(SelectorCompilationStatus status, JSC::MacroAssemblerCodeRef codeRef) const
+    {
+        m_compilationStatus = status;
+        m_compiledSelectorCodeRef = codeRef;
+    }
+#endif // ENABLE(CSS_SELECTOR_JIT)
+
 private:
     StyleRule* m_rule;
     unsigned m_selectorIndex : 13;
@@ -90,9 +103,19 @@ private:
     unsigned m_propertyWhitelistType : 2;
     // Use plain array instead of a Vector to minimize memory overhead.
     unsigned m_descendantSelectorIdentifierHashes[maximumIdentifierCount];
+#if ENABLE(CSS_SELECTOR_JIT)
+    mutable SelectorCompilationStatus m_compilationStatus;
+    mutable JSC::MacroAssemblerCodeRef m_compiledSelectorCodeRef;
+#endif // ENABLE(CSS_SELECTOR_JIT)
 };
     
 struct SameSizeAsRuleData {
+#if ENABLE(CSS_SELECTOR_JIT)
+    unsigned compilationStatus;
+    void* compiledSelectorPointer;
+    void* codeRefPtr;
+#endif // ENABLE(CSS_SELECTOR_JIT)
+
     void* a;
     unsigned b;
     unsigned c;
@@ -104,11 +127,19 @@ COMPILE_ASSERT(sizeof(RuleData) == sizeof(SameSizeAsRuleData), RuleData_should_s
 class RuleSet {
     WTF_MAKE_NONCOPYABLE(RuleSet); WTF_MAKE_FAST_ALLOCATED;
 public:
-    static PassOwnPtr<RuleSet> create() { return adoptPtr(new RuleSet); }
+    struct RuleSetSelectorPair {
+        RuleSetSelectorPair(const CSSSelector* selector, std::unique_ptr<RuleSet> ruleSet) : selector(selector), ruleSet(std::move(ruleSet)) { }
+        RuleSetSelectorPair(const RuleSetSelectorPair& pair) : selector(pair.selector), ruleSet(const_cast<RuleSetSelectorPair*>(&pair)->ruleSet.release()) { }
 
-    typedef HashMap<AtomicStringImpl*, OwnPtr<Vector<RuleData> > > AtomRuleMap;
+        const CSSSelector* selector;
+        std::unique_ptr<RuleSet> ruleSet;
+    };
 
-    void addRulesFromSheet(StyleSheetContents*, const MediaQueryEvaluator&, StyleResolver* = 0, const ContainerNode* = 0);
+    RuleSet();
+
+    typedef HashMap<AtomicStringImpl*, std::unique_ptr<Vector<RuleData>>> AtomRuleMap;
+
+    void addRulesFromSheet(StyleSheetContents*, const MediaQueryEvaluator&, StyleResolver* = 0);
 
     void addStyleRule(StyleRule*, AddRuleFlags);
     void addRule(StyleRule*, unsigned selectorIndex, AddRuleFlags);
@@ -131,13 +162,15 @@ public:
     const Vector<RuleData>* focusPseudoClassRules() const { return &m_focusPseudoClassRules; }
     const Vector<RuleData>* universalRules() const { return &m_universalRules; }
     const Vector<StyleRulePage*>& pageRules() const { return m_pageRules; }
+    const Vector<RuleSetSelectorPair>& regionSelectorsAndRuleSets() const { return m_regionSelectorsAndRuleSets; }
+
+    unsigned ruleCount() const { return m_ruleCount; }
+
+    bool hasShadowPseudoElementRules() const { return !m_shadowPseudoElementRules.isEmpty(); }
 
 private:
-    void addChildRules(const Vector<RefPtr<StyleRuleBase> >&, const MediaQueryEvaluator& medium, StyleResolver*, const ContainerNode* scope, bool hasDocumentSecurityOrigin, AddRuleFlags);
+    void addChildRules(const Vector<RefPtr<StyleRuleBase>>&, const MediaQueryEvaluator& medium, StyleResolver*, bool hasDocumentSecurityOrigin, AddRuleFlags);
     bool findBestRuleSetAndAdd(const CSSSelector*, RuleData&);
-
-public:
-    RuleSet();
 
     AtomRuleMap m_idRules;
     AtomRuleMap m_classRules;
@@ -153,15 +186,6 @@ public:
     unsigned m_ruleCount;
     bool m_autoShrinkToFitEnabled;
     RuleFeatureSet m_features;
-
-    struct RuleSetSelectorPair {
-        RuleSetSelectorPair(const CSSSelector* selector, PassOwnPtr<RuleSet> ruleSet) : selector(selector), ruleSet(ruleSet) { }
-        RuleSetSelectorPair(const RuleSetSelectorPair& rs) : selector(rs.selector), ruleSet(const_cast<RuleSetSelectorPair*>(&rs)->ruleSet.release()) { }
-
-        const CSSSelector* selector;
-        OwnPtr<RuleSet> ruleSet;
-    };
-
     Vector<RuleSetSelectorPair> m_regionSelectorsAndRuleSets;
 };
 
@@ -172,5 +196,11 @@ inline RuleSet::RuleSet()
 }
 
 } // namespace WebCore
+
+namespace WTF {
+// RuleData is simple enough that initializing to 0 and moving with memcpy will totally work.
+template<> struct VectorTraits<WebCore::RuleData> : SimpleClassVectorTraits { };
+
+} // namespace WTF
 
 #endif // RuleSet_h

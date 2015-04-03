@@ -229,7 +229,7 @@ class PrintLogger extends Logger {
      */
     @Override
     public void pulseEnd() {
-        if (!fxData.pushedRender) {
+        if (fxData != null && !fxData.pushedRender) {
             fxData.state = COMPLETE;
             if (active.incrementAndGet() == 1) {
                 fxData.printAndReset();

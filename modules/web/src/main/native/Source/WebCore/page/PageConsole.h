@@ -29,11 +29,14 @@
 #ifndef PageConsole_h
 #define PageConsole_h
 
-#include "ConsoleTypes.h"
-#include "ScriptCallStack.h"
-#include "ScriptState.h"
+#include <inspector/ConsoleTypes.h>
+#include <inspector/ScriptCallStack.h>
 #include <wtf/Forward.h>
 #include <wtf/PassOwnPtr.h>
+
+namespace JSC {
+class ExecState;
+}
 
 namespace WebCore {
 
@@ -42,14 +45,14 @@ class Page;
 
 class PageConsole {
 public:
-    static PassOwnPtr<PageConsole> create(Page* page) { return adoptPtr(new PageConsole(page)); }
-    virtual ~PageConsole();
+    PageConsole(Page&);
+    ~PageConsole();
 
-    static void printSourceURLAndLine(const String& sourceURL, unsigned lineNumber);
-    static void printMessageSourceAndLevelPrefix(MessageSource, MessageLevel);
+    static void printSourceURLAndPosition(const String& sourceURL, unsigned lineNumber, unsigned columnNumber = 0);
+    static void printMessageSourceAndLevelPrefix(MessageSource, MessageLevel, bool showAsTrace = false);
 
-    void addMessage(MessageSource, MessageLevel, const String& message, const String& sourceURL, unsigned lineNumber, unsigned columnNumber, PassRefPtr<ScriptCallStack> = 0, ScriptState* = 0, unsigned long requestIdentifier = 0);
-    void addMessage(MessageSource, MessageLevel, const String& message, PassRefPtr<ScriptCallStack>);
+    void addMessage(MessageSource, MessageLevel, const String& message, const String& sourceURL, unsigned lineNumber, unsigned columnNumber, PassRefPtr<Inspector::ScriptCallStack> = 0, JSC::ExecState* = 0, unsigned long requestIdentifier = 0);
+    void addMessage(MessageSource, MessageLevel, const String& message, PassRefPtr<Inspector::ScriptCallStack>);
     void addMessage(MessageSource, MessageLevel, const String& message, unsigned long requestIdentifier = 0, Document* = 0);
 
     static void mute();
@@ -59,11 +62,7 @@ public:
     static void setShouldPrintExceptions(bool);
 
 private:
-    PageConsole(Page*);
-
-    Page* page() { return m_page; };
-
-    Page* m_page;
+    Page& m_page;
 };
 
 } // namespace WebCore

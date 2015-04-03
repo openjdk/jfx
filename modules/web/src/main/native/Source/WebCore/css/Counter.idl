@@ -17,12 +17,12 @@
  * Boston, MA 02110-1301, USA.
  */
 
-    // Introduced in DOM Level 2:
+// Introduced in DOM Level 2:
 [
     ImplementationLacksVTable
 ] interface Counter {
-        readonly attribute DOMString identifier;
-        readonly attribute DOMString listStyle;
-        readonly attribute DOMString separator;
-    };
+    readonly attribute DOMString identifier;
+    readonly attribute DOMString listStyle;
+    readonly attribute DOMString separator;
+};
 

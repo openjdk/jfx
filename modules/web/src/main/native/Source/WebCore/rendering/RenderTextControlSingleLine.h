@@ -32,52 +32,52 @@ class HTMLInputElement;
 
 class RenderTextControlSingleLine : public RenderTextControl {
 public:
-    RenderTextControlSingleLine(Element*);
+    RenderTextControlSingleLine(HTMLInputElement&, PassRef<RenderStyle>);
     virtual ~RenderTextControlSingleLine();
     // FIXME: Move create*Style() to their classes.
-    virtual PassRefPtr<RenderStyle> createInnerTextStyle(const RenderStyle* startStyle) const;
-    PassRefPtr<RenderStyle> createInnerBlockStyle(const RenderStyle* startStyle) const;
+    virtual PassRef<RenderStyle> createInnerTextStyle(const RenderStyle* startStyle) const override;
+    PassRef<RenderStyle> createInnerBlockStyle(const RenderStyle* startStyle) const;
 
     void capsLockStateMayHaveChanged();
 
 protected:
     virtual void centerContainerIfNeeded(RenderBox*) const { }
     virtual LayoutUnit computeLogicalHeightLimit() const;
+    void centerRenderer(RenderBox& renderer) const;
     HTMLElement* containerElement() const;
     HTMLElement* innerBlockElement() const;
-    HTMLInputElement* inputElement() const;
-    virtual void updateFromElement() OVERRIDE;
+    HTMLInputElement& inputElement() const;
 
 private:
-    virtual bool hasControlClip() const;
-    virtual LayoutRect controlClipRect(const LayoutPoint&) const;
-    virtual bool isTextField() const { return true; }
+    void textFormControlElement() const = delete;
 
-    virtual void paint(PaintInfo&, const LayoutPoint&);
-    virtual void layout();
+    virtual bool hasControlClip() const override;
+    virtual LayoutRect controlClipRect(const LayoutPoint&) const override;
+    virtual bool isTextField() const override final { return true; }
 
-    virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) OVERRIDE;
+    virtual void paint(PaintInfo&, const LayoutPoint&) override;
+    virtual void layout() override;
 
-    virtual void autoscroll(const IntPoint&);
+    virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) override;
+
+    virtual void autoscroll(const IntPoint&) override;
 
     // Subclassed to forward to our inner div.
-    virtual int scrollLeft() const;
-    virtual int scrollTop() const;
-    virtual int scrollWidth() const;
-    virtual int scrollHeight() const;
-    virtual void setScrollLeft(int);
-    virtual void setScrollTop(int);
-    virtual bool scroll(ScrollDirection, ScrollGranularity, float multiplier = 1, Node** stopNode = 0);
-    virtual bool logicalScroll(ScrollLogicalDirection, ScrollGranularity, float multiplier = 1, Node** stopNode = 0);
+    virtual int scrollLeft() const override;
+    virtual int scrollTop() const override;
+    virtual int scrollWidth() const override;
+    virtual int scrollHeight() const override;
+    virtual void setScrollLeft(int) override;
+    virtual void setScrollTop(int) override;
+    virtual bool scroll(ScrollDirection, ScrollGranularity, float multiplier = 1, Element** stopElement = nullptr, RenderBox* startBox = nullptr, const IntPoint& wheelEventAbsolutePoint = IntPoint()) override final;
+    virtual bool logicalScroll(ScrollLogicalDirection, ScrollGranularity, float multiplier = 1, Element** stopElement = 0) override final;
 
     int textBlockWidth() const;
-    virtual float getAvgCharWidth(AtomicString family);
-    virtual LayoutUnit preferredContentLogicalWidth(float charWidth) const;
-    virtual LayoutUnit computeControlLogicalHeight(LayoutUnit lineHeight, LayoutUnit nonContentHeight) const OVERRIDE;
+    virtual float getAvgCharWidth(AtomicString family) override;
+    virtual LayoutUnit preferredContentLogicalWidth(float charWidth) const override;
+    virtual LayoutUnit computeControlLogicalHeight(LayoutUnit lineHeight, LayoutUnit nonContentHeight) const override;
     
-    virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle);
-
-    virtual RenderStyle* textBaseStyle() const;
+    virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
 
     bool textShouldBeTruncated() const;
 
@@ -89,32 +89,31 @@ private:
 
 inline HTMLElement* RenderTextControlSingleLine::containerElement() const
 {
-    return inputElement()->containerElement();
+    return inputElement().containerElement();
 }
 
 inline HTMLElement* RenderTextControlSingleLine::innerBlockElement() const
 {
-    return inputElement()->innerBlockElement();
+    return inputElement().innerBlockElement();
 }
 
-inline RenderTextControlSingleLine* toRenderTextControlSingleLine(RenderObject* object)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isTextField());
-    return static_cast<RenderTextControlSingleLine*>(object);
-}
-
-// This will catch anyone doing an unnecessary cast.
-void toRenderTextControlSingleLine(const RenderTextControlSingleLine*);
+RENDER_OBJECT_TYPE_CASTS(RenderTextControlSingleLine, isTextField())
 
 // ----------------------------
 
-class RenderTextControlInnerBlock : public RenderBlock {
+class RenderTextControlInnerBlock final : public RenderBlockFlow {
 public:
-    RenderTextControlInnerBlock(Element* element) : RenderBlock(element) { }
+    RenderTextControlInnerBlock(Element& element, PassRef<RenderStyle> style)
+        : RenderBlockFlow(element, std::move(style))
+    {
+    }
 
 private:
-    virtual bool hasLineIfEmpty() const { return true; }
+    virtual bool hasLineIfEmpty() const override { return true; }
+    virtual bool isTextControlInnerBlock() const override { return true; }
 };
+
+RENDER_OBJECT_TYPE_CASTS(RenderTextControlInnerBlock, isTextControlInnerBlock())
 
 }
 

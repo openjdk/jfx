@@ -31,33 +31,32 @@ namespace JSC {
     public:
         typedef InternalFunction Base;
 
-        static StringConstructor* create(ExecState* exec, JSGlobalObject* globalObject , Structure* structure, StringPrototype* stringPrototype)
+        static StringConstructor* create(VM& vm, Structure* structure, StringPrototype* stringPrototype)
         {
-            StringConstructor* constructor = new (NotNull, allocateCell<StringConstructor>(*exec->heap())) StringConstructor(globalObject, structure);
-            constructor->finishCreation(exec, stringPrototype);
+            StringConstructor* constructor = new (NotNull, allocateCell<StringConstructor>(vm.heap)) StringConstructor(vm, structure);
+            constructor->finishCreation(vm, stringPrototype);
             return constructor;
         }
 
-        static const ClassInfo s_info;
+        DECLARE_INFO;
 
         static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
         {
-            return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), &s_info);
+            return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
         }
 
     protected:
         static const unsigned StructureFlags = OverridesGetOwnPropertySlot | InternalFunction::StructureFlags;
 
     private:
-        StringConstructor(JSGlobalObject*, Structure*);
-        void finishCreation(ExecState*, StringPrototype*);
+        StringConstructor(VM&, Structure*);
+        void finishCreation(VM&, StringPrototype*);
         static ConstructType getConstructData(JSCell*, ConstructData&);
         static CallType getCallData(JSCell*, CallData&);
 
-        static bool getOwnPropertySlot(JSCell*, ExecState*, PropertyName, PropertySlot&);
-        static bool getOwnPropertyDescriptor(JSObject*, ExecState*, PropertyName, PropertyDescriptor&);
+        static bool getOwnPropertySlot(JSObject*, ExecState*, PropertyName, PropertySlot&);
     };
-
+    
     JSCell* JSC_HOST_CALL stringFromCharCode(ExecState*, int32_t);
 
 } // namespace JSC

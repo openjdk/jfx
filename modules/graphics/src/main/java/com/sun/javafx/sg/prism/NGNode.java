@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -80,20 +80,6 @@ import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
  * clear this dirty flag.
  */
 public abstract class NGNode {
-    protected static float highestPixelScale;
-    static {
-        // TODO: temporary until RT-27958 is fixed. Screens may be null or could be not initialized
-        // when running unit tests
-        try {
-            for (Screen s : Screen.getScreens()) {
-                highestPixelScale = Math.max(s.getScale(), highestPixelScale);
-            }
-        } catch (RuntimeException ex) {
-            System.err.println("WARNING: unable to get max pixel scale for screens");
-            highestPixelScale = 1.0f;
-        }
-    }
-
     private final static GraphicsPipeline pipeline =
         GraphicsPipeline.getPipeline();
 

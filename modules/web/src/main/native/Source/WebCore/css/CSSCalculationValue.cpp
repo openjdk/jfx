@@ -31,12 +31,12 @@
 #include "config.h"
 #include "CSSCalculationValue.h"
 
+#include "CSSPrimitiveValueMappings.h"
 #include "CSSValueList.h"
 #include "Length.h"
 #include "StyleResolver.h"
 
-#include <wtf/OwnPtr.h>
-#include <wtf/PassOwnPtr.h>
+#include <wtf/MathExtras.h>
 #include <wtf/text/StringBuilder.h>
 
 static const int maxExpressionDepth = 100;
@@ -68,15 +68,75 @@ static CalculationCategory unitCategory(CSSPrimitiveValue::UnitTypes type)
     case CSSPrimitiveValue::CSS_REMS:
     case CSSPrimitiveValue::CSS_CHS:
         return CalcLength;
-#if ENABLE(CSS_VARIABLES)
-    case CSSPrimitiveValue::CSS_VARIABLE_NAME:
-        return CalcVariable;
-#endif
     default:
         return CalcOther;
     }
 }
-    
+
+static bool hasDoubleValue(CSSPrimitiveValue::UnitTypes type)
+{
+    switch (type) {
+    case CSSPrimitiveValue::CSS_FR:
+    case CSSPrimitiveValue::CSS_NUMBER:
+    case CSSPrimitiveValue::CSS_PARSER_INTEGER:
+    case CSSPrimitiveValue::CSS_PERCENTAGE:
+    case CSSPrimitiveValue::CSS_EMS:
+    case CSSPrimitiveValue::CSS_EXS:
+    case CSSPrimitiveValue::CSS_CHS:
+    case CSSPrimitiveValue::CSS_REMS:
+    case CSSPrimitiveValue::CSS_PX:
+    case CSSPrimitiveValue::CSS_CM:
+    case CSSPrimitiveValue::CSS_MM:
+    case CSSPrimitiveValue::CSS_IN:
+    case CSSPrimitiveValue::CSS_PT:
+    case CSSPrimitiveValue::CSS_PC:
+    case CSSPrimitiveValue::CSS_DEG:
+    case CSSPrimitiveValue::CSS_RAD:
+    case CSSPrimitiveValue::CSS_GRAD:
+    case CSSPrimitiveValue::CSS_MS:
+    case CSSPrimitiveValue::CSS_S:
+    case CSSPrimitiveValue::CSS_HZ:
+    case CSSPrimitiveValue::CSS_KHZ:
+    case CSSPrimitiveValue::CSS_DIMENSION:
+    case CSSPrimitiveValue::CSS_VW:
+    case CSSPrimitiveValue::CSS_VH:
+    case CSSPrimitiveValue::CSS_VMIN:
+    case CSSPrimitiveValue::CSS_VMAX:
+    case CSSPrimitiveValue::CSS_DPPX:
+    case CSSPrimitiveValue::CSS_DPI:
+    case CSSPrimitiveValue::CSS_DPCM:
+        return true;
+    case CSSPrimitiveValue::CSS_UNKNOWN:
+    case CSSPrimitiveValue::CSS_STRING:
+    case CSSPrimitiveValue::CSS_URI:
+    case CSSPrimitiveValue::CSS_IDENT:
+    case CSSPrimitiveValue::CSS_ATTR:
+    case CSSPrimitiveValue::CSS_COUNTER:
+    case CSSPrimitiveValue::CSS_RECT:
+    case CSSPrimitiveValue::CSS_RGBCOLOR:
+    case CSSPrimitiveValue::CSS_PAIR:
+    case CSSPrimitiveValue::CSS_UNICODE_RANGE:
+    case CSSPrimitiveValue::CSS_PARSER_OPERATOR:
+    case CSSPrimitiveValue::CSS_PARSER_HEXCOLOR:
+    case CSSPrimitiveValue::CSS_PARSER_IDENTIFIER:
+    case CSSPrimitiveValue::CSS_TURN:
+    case CSSPrimitiveValue::CSS_COUNTER_NAME:
+    case CSSPrimitiveValue::CSS_SHAPE:
+    case CSSPrimitiveValue::CSS_QUAD:
+    case CSSPrimitiveValue::CSS_CALC:
+    case CSSPrimitiveValue::CSS_CALC_PERCENTAGE_WITH_NUMBER:
+    case CSSPrimitiveValue::CSS_CALC_PERCENTAGE_WITH_LENGTH:
+    case CSSPrimitiveValue::CSS_PROPERTY_ID:
+    case CSSPrimitiveValue::CSS_VALUE_ID:
+#if ENABLE(DASHBOARD_SUPPORT)
+    case CSSPrimitiveValue::CSS_DASHBOARD_REGION:
+#endif
+        return false;
+    };
+    ASSERT_NOT_REACHED();
+    return false;
+}
+
 static String buildCssText(const String& expression)
 {
     StringBuilder result;
@@ -87,12 +147,12 @@ static String buildCssText(const String& expression)
     result.append(expression);
     if (expressionHasSingleTerm)
         result.append(')');
-    return result.toString(); 
+    return result.toString();
 }
-    
-String CSSCalcValue::customCssText() const
+
+String CSSCalcValue::customCSSText() const
 {
-    return buildCssText(m_expression->customCssText());
+    return buildCssText(m_expression->customCSSText());
 }
 
 bool CSSCalcValue::equals(const CSSCalcValue& other) const
@@ -100,25 +160,13 @@ bool CSSCalcValue::equals(const CSSCalcValue& other) const
     return compareCSSValuePtr(m_expression, other.m_expression);
 }
 
-#if ENABLE(CSS_VARIABLES)
-String CSSCalcValue::customSerializeResolvingVariables(const HashMap<AtomicString, String>& variables) const
-{
-    return buildCssText(m_expression->serializeResolvingVariables(variables));
-}
-
-bool CSSCalcValue::hasVariableReference() const
-{
-    return m_expression->hasVariableReference();
-}
-#endif
-
 double CSSCalcValue::clampToPermittedRange(double value) const
 {
     return m_nonNegative && value < 0 ? 0 : value;
-}    
-    
-double CSSCalcValue::doubleValue() const 
-{ 
+}
+
+double CSSCalcValue::doubleValue() const
+{
     return clampToPermittedRange(m_expression->doubleValue());
 }
 
@@ -126,58 +174,53 @@ double CSSCalcValue::computeLengthPx(const RenderStyle* currentStyle, const Rend
 {
     return clampToPermittedRange(m_expression->computeLengthPx(currentStyle, rootStyle, multiplier, computingFontSize));
 }
-    
-CSSCalcExpressionNode::~CSSCalcExpressionNode() 
+
+CSSCalcExpressionNode::~CSSCalcExpressionNode()
 {
 }
-    
+
 class CSSCalcPrimitiveValue : public CSSCalcExpressionNode {
     WTF_MAKE_FAST_ALLOCATED;
 public:
 
-    static PassRefPtr<CSSCalcPrimitiveValue> create(CSSPrimitiveValue* value, bool isInteger)
+    static PassRefPtr<CSSCalcPrimitiveValue> create(PassRefPtr<CSSPrimitiveValue> value, bool isInteger)
     {
         return adoptRef(new CSSCalcPrimitiveValue(value, isInteger));
     }
-    
+
+    static PassRefPtr<CSSCalcPrimitiveValue> create(double value, CSSPrimitiveValue::UnitTypes type, bool isInteger)
+    {
+        if (std::isnan(value) || std::isinf(value))
+            return 0;
+        return adoptRef(new CSSCalcPrimitiveValue(CSSPrimitiveValue::create(value, type), isInteger));
+    }
+
     virtual bool isZero() const
     {
         return !m_value->getDoubleValue();
     }
 
-    virtual String customCssText() const
+    virtual String customCSSText() const
     {
         return m_value->cssText();
     }
 
-#if ENABLE(CSS_VARIABLES)
-    virtual String serializeResolvingVariables(const HashMap<AtomicString, String>& variables) const
-    {
-        return m_value->customSerializeResolvingVariables(variables);
-    }
-    
-    virtual bool hasVariableReference() const
-    {
-        return m_value->isVariableName();
-    }
-#endif
-
-    virtual PassOwnPtr<CalcExpressionNode> toCalcValue(const RenderStyle* style, const RenderStyle* rootStyle, double zoom) const
+    virtual std::unique_ptr<CalcExpressionNode> toCalcValue(const RenderStyle* style, const RenderStyle* rootStyle, double zoom) const
     {
         switch (m_category) {
         case CalcNumber:
-            return adoptPtr(new CalcExpressionNumber(m_value->getFloatValue()));
+            return std::make_unique<CalcExpressionNumber>(m_value->getFloatValue());
         case CalcLength:
-            return adoptPtr(new CalcExpressionNumber(m_value->computeLength<float>(style, rootStyle, zoom)));
+            return std::make_unique<CalcExpressionLength>(Length(m_value->computeLength<float>(style, rootStyle, zoom), WebCore::Fixed));
         case CalcPercent:
-        case CalcPercentLength:
-            return adoptPtr(new CalcExpressionLength(StyleResolver::convertToFloatLength(m_value.get(), style, rootStyle, zoom)));
+        case CalcPercentLength: {
+            CSSPrimitiveValue* primitiveValue = m_value.get();
+            return std::make_unique<CalcExpressionLength>(primitiveValue
+                ? primitiveValue->convertToLength<FixedFloatConversion | PercentConversion | FractionConversion>(style, rootStyle, zoom) : Length(Undefined));
+        }
         // Only types that could be part of a Length expression can be converted
         // to a CalcExpressionNode. CalcPercentNumber makes no sense as a Length.
         case CalcPercentNumber:
-#if ENABLE(CSS_VARIABLES)
-        case CalcVariable:
-#endif
         case CalcOther:
             ASSERT_NOT_REACHED();
         }
@@ -186,23 +229,12 @@ public:
 
     virtual double doubleValue() const
     {
-        switch (m_category) {
-        case CalcNumber:
-        case CalcPercent:                
+        if (hasDoubleValue(primitiveType()))
             return m_value->getDoubleValue();
-        case CalcLength:
-        case CalcPercentLength:
-        case CalcPercentNumber:
-#if ENABLE(CSS_VARIABLES)
-        case CalcVariable:
-#endif
-        case CalcOther:
-            ASSERT_NOT_REACHED();
-            break;
-        }
+        ASSERT_NOT_REACHED();
         return 0;
     }
-    
+
     virtual double computeLengthPx(const RenderStyle* currentStyle, const RenderStyle* rootStyle, double multiplier, bool computingFontSize) const
     {
         switch (m_category) {
@@ -213,16 +245,14 @@ public:
             return m_value->getDoubleValue();
         case CalcPercentLength:
         case CalcPercentNumber:
-#if ENABLE(CSS_VARIABLES)
-        case CalcVariable:
-#endif
         case CalcOther:
             ASSERT_NOT_REACHED();
             break;
         }
-        return 0;        
+        ASSERT_NOT_REACHED();
+        return 0;
     }
-    
+
     virtual bool equals(const CSSCalcExpressionNode& other) const
     {
         if (type() != other.type())
@@ -232,11 +262,15 @@ public:
     }
 
     virtual Type type() const { return CssCalcPrimitiveValue; }
-    
+    virtual CSSPrimitiveValue::UnitTypes primitiveType() const
+    {
+        return CSSPrimitiveValue::UnitTypes(m_value->primitiveType());
+    }
+
 private:
-    explicit CSSCalcPrimitiveValue(CSSPrimitiveValue* value, bool isInteger)
+    explicit CSSCalcPrimitiveValue(PassRefPtr<CSSPrimitiveValue> value, bool isInteger)
         : CSSCalcExpressionNode(unitCategory((CSSPrimitiveValue::UnitTypes)value->primitiveType()), isInteger)
-        , m_value(value)                 
+        , m_value(value)
     {
     }
 
@@ -244,32 +278,28 @@ private:
 };
 
 static const CalculationCategory addSubtractResult[CalcOther][CalcOther] = {
-    { CalcNumber,        CalcOther,         CalcPercentNumber, CalcPercentNumber, CalcOther },
-    { CalcOther,         CalcLength,        CalcPercentLength, CalcOther,         CalcPercentLength },
-    { CalcPercentNumber, CalcPercentLength, CalcPercent,       CalcPercentNumber, CalcPercentLength },
-    { CalcPercentNumber, CalcOther,         CalcPercentNumber, CalcPercentNumber, CalcOther },
-    { CalcOther,         CalcPercentLength, CalcPercentLength, CalcOther,         CalcPercentLength },
-};    
-    
+//    CalcNumber         CalcLength         CalcPercent        CalcPercentNumber  CalcPercentLength
+    { CalcNumber,        CalcOther,         CalcPercentNumber, CalcPercentNumber, CalcOther }, //         CalcNumber
+    { CalcOther,         CalcLength,        CalcPercentLength, CalcOther,         CalcPercentLength }, // CalcLength
+    { CalcPercentNumber, CalcPercentLength, CalcPercent,       CalcPercentNumber, CalcPercentLength }, // CalcPercent
+    { CalcPercentNumber, CalcOther,         CalcPercentNumber, CalcPercentNumber, CalcOther }, //         CalcPercentNumber
+    { CalcOther,         CalcPercentLength, CalcPercentLength, CalcOther,         CalcPercentLength }, // CalcPercentLength
+};
+
 static CalculationCategory determineCategory(const CSSCalcExpressionNode& leftSide, const CSSCalcExpressionNode& rightSide, CalcOperator op)
-    {
+{
     CalculationCategory leftCategory = leftSide.category();
     CalculationCategory rightCategory = rightSide.category();
-        
+
     if (leftCategory == CalcOther || rightCategory == CalcOther)
         return CalcOther;
 
-#if ENABLE(CSS_VARIABLES)
-    if (leftCategory == CalcVariable || rightCategory == CalcVariable)
-        return CalcVariable;
-#endif
-        
-        switch (op) {
-        case CalcAdd:
-        case CalcSubtract:             
+    switch (op) {
+    case CalcAdd:
+    case CalcSubtract:
         return addSubtractResult[leftCategory][rightCategory];
-        case CalcMultiply:
-            if (leftCategory != CalcNumber && rightCategory != CalcNumber) 
+    case CalcMultiply:
+        if (leftCategory != CalcNumber && rightCategory != CalcNumber)
             return CalcOther;
         return leftCategory == CalcNumber ? rightCategory : leftCategory;
     case CalcDivide:
@@ -277,47 +307,111 @@ static CalculationCategory determineCategory(const CSSCalcExpressionNode& leftSi
             return CalcOther;
         return leftCategory;
     }
-            
+
     ASSERT_NOT_REACHED();
     return CalcOther;
 }
-                
+
+static bool isIntegerResult(const CSSCalcExpressionNode* leftSide, const CSSCalcExpressionNode* rightSide, CalcOperator op)
+{
+    // Performs W3C spec's type checking for calc integers.
+    // http://www.w3.org/TR/css3-values/#calc-type-checking
+    return op != CalcDivide && leftSide->isInteger() && rightSide->isInteger();
+}
+
 class CSSCalcBinaryOperation : public CSSCalcExpressionNode {
 
 public:
-    static PassRefPtr<CSSCalcBinaryOperation> create(PassRefPtr<CSSCalcExpressionNode> leftSide, PassRefPtr<CSSCalcExpressionNode> rightSide, CalcOperator op)
+    static PassRefPtr<CSSCalcExpressionNode> create(PassRefPtr<CSSCalcExpressionNode> leftSide, PassRefPtr<CSSCalcExpressionNode> rightSide, CalcOperator op)
     {
         ASSERT(leftSide->category() != CalcOther && rightSide->category() != CalcOther);
-        
+
         CalculationCategory newCategory = determineCategory(*leftSide, *rightSide, op);
-        
+
         if (newCategory == CalcOther)
             return 0;
-            
+
         return adoptRef(new CSSCalcBinaryOperation(leftSide, rightSide, op, newCategory));
     }
-    
+
+    static PassRefPtr<CSSCalcExpressionNode> createSimplified(PassRefPtr<CSSCalcExpressionNode> leftSide, PassRefPtr<CSSCalcExpressionNode> rightSide, CalcOperator op)
+    {
+        CalculationCategory leftCategory = leftSide->category();
+        CalculationCategory rightCategory = rightSide->category();
+        ASSERT(leftCategory != CalcOther && rightCategory != CalcOther);
+
+        bool isInteger = isIntegerResult(leftSide.get(), rightSide.get(), op);
+
+        // Simplify numbers.
+        if (leftCategory == CalcNumber && rightCategory == CalcNumber) {
+            CSSPrimitiveValue::UnitTypes evaluationType = isInteger ? CSSPrimitiveValue::CSS_PARSER_INTEGER : CSSPrimitiveValue::CSS_NUMBER;
+            return CSSCalcPrimitiveValue::create(evaluateOperator(leftSide->doubleValue(), rightSide->doubleValue(), op), evaluationType, isInteger);
+        }
+
+        // Simplify addition and subtraction between same types.
+        if (op == CalcAdd || op == CalcSubtract) {
+            if (leftCategory == rightSide->category()) {
+                CSSPrimitiveValue::UnitTypes leftType = leftSide->primitiveType();
+                if (hasDoubleValue(leftType)) {
+                    CSSPrimitiveValue::UnitTypes rightType = rightSide->primitiveType();
+                    if (leftType == rightType)
+                        return CSSCalcPrimitiveValue::create(evaluateOperator(leftSide->doubleValue(), rightSide->doubleValue(), op), leftType, isInteger);
+                    CSSPrimitiveValue::UnitCategory leftUnitCategory = CSSPrimitiveValue::unitCategory(leftType);
+                    if (leftUnitCategory != CSSPrimitiveValue::UOther && leftUnitCategory == CSSPrimitiveValue::unitCategory(rightType)) {
+                        CSSPrimitiveValue::UnitTypes canonicalType = CSSPrimitiveValue::canonicalUnitTypeForCategory(leftUnitCategory);
+                        if (canonicalType != CSSPrimitiveValue::CSS_UNKNOWN) {
+                            double leftValue = leftSide->doubleValue() * CSSPrimitiveValue::conversionToCanonicalUnitsScaleFactor(leftType);
+                            double rightValue = rightSide->doubleValue() * CSSPrimitiveValue::conversionToCanonicalUnitsScaleFactor(rightType);
+                            return CSSCalcPrimitiveValue::create(evaluateOperator(leftValue, rightValue, op), canonicalType, isInteger);
+                        }
+                    }
+                }
+            }
+        } else {
+            // Simplify multiplying or dividing by a number for simplifiable types.
+            ASSERT(op == CalcMultiply || op == CalcDivide);
+            CSSCalcExpressionNode* numberSide = getNumberSide(leftSide.get(), rightSide.get());
+            if (!numberSide)
+                return create(leftSide, rightSide, op);
+            if (numberSide == leftSide && op == CalcDivide)
+                return 0;
+            CSSCalcExpressionNode* otherSide = leftSide == numberSide ? rightSide.get() : leftSide.get();
+
+            double number = numberSide->doubleValue();
+            if (std::isnan(number) || std::isinf(number))
+                return 0;
+            if (op == CalcDivide && !number)
+                return 0;
+
+            CSSPrimitiveValue::UnitTypes otherType = otherSide->primitiveType();
+            if (hasDoubleValue(otherType))
+                return CSSCalcPrimitiveValue::create(evaluateOperator(otherSide->doubleValue(), number, op), otherType, isInteger);
+        }
+
+        return create(leftSide, rightSide, op);
+    }
+
     virtual bool isZero() const
     {
         return !doubleValue();
     }
 
-    virtual PassOwnPtr<CalcExpressionNode> toCalcValue(const RenderStyle* style, const RenderStyle* rootStyle, double zoom) const
+    virtual std::unique_ptr<CalcExpressionNode> toCalcValue(const RenderStyle* style, const RenderStyle* rootStyle, double zoom) const
     {
-        OwnPtr<CalcExpressionNode> left(m_leftSide->toCalcValue(style, rootStyle, zoom));
+        std::unique_ptr<CalcExpressionNode> left(m_leftSide->toCalcValue(style, rootStyle, zoom));
         if (!left)
             return nullptr;
-        OwnPtr<CalcExpressionNode> right(m_rightSide->toCalcValue(style, rootStyle, zoom));
+        std::unique_ptr<CalcExpressionNode> right(m_rightSide->toCalcValue(style, rootStyle, zoom));
         if (!right)
             return nullptr;
-        return adoptPtr(new CalcExpressionBinaryOperation(left.release(), right.release(), m_operator));
+        return std::make_unique<CalcExpressionBinaryOperation>(std::move(left), std::move(right), m_operator);
     }
 
-    virtual double doubleValue() const 
+    virtual double doubleValue() const
     {
         return evaluate(m_leftSide->doubleValue(), m_rightSide->doubleValue());
     }
-    
+
     virtual double computeLengthPx(const RenderStyle* currentStyle, const RenderStyle* rootStyle, double multiplier, bool computingFontSize) const
     {
         const double leftValue = m_leftSide->computeLengthPx(currentStyle, rootStyle, multiplier, computingFontSize);
@@ -335,26 +429,15 @@ public:
         result.append(' ');
         result.append(rightExpression);
         result.append(')');
-    
-        return result.toString();    
+
+        return result.toString();
     }
 
-    virtual String customCssText() const
+    virtual String customCSSText() const
     {
-        return buildCssText(m_leftSide->customCssText(), m_rightSide->customCssText(), m_operator);
+        return buildCssText(m_leftSide->customCSSText(), m_rightSide->customCSSText(), m_operator);
     }
 
-#if ENABLE(CSS_VARIABLES)
-    virtual String serializeResolvingVariables(const HashMap<AtomicString, String>& variables) const
-    {
-        return buildCssText(m_leftSide->serializeResolvingVariables(variables), m_rightSide->serializeResolvingVariables(variables), m_operator);
-    }
-
-    virtual bool hasVariableReference() const
-    {
-        return m_leftSide->hasVariableReference() || m_rightSide->hasVariableReference();
-    }
-#endif
 
     virtual bool equals(const CSSCalcExpressionNode& exp) const
     {
@@ -369,18 +452,60 @@ public:
 
     virtual Type type() const { return CssCalcBinaryOperation; }
 
+    virtual CSSPrimitiveValue::UnitTypes primitiveType() const
+    {
+        switch (m_category) {
+        case CalcNumber:
+            ASSERT(m_leftSide->category() == CalcNumber && m_rightSide->category() == CalcNumber);
+            if (m_isInteger)
+                return CSSPrimitiveValue::CSS_PARSER_INTEGER;
+            return CSSPrimitiveValue::CSS_NUMBER;
+        case CalcLength:
+        case CalcPercent: {
+            if (m_leftSide->category() == CalcNumber)
+                return m_rightSide->primitiveType();
+            if (m_rightSide->category() == CalcNumber)
+                return m_leftSide->primitiveType();
+            CSSPrimitiveValue::UnitTypes leftType = m_leftSide->primitiveType();
+            if (leftType == m_rightSide->primitiveType())
+                return leftType;
+            return CSSPrimitiveValue::CSS_UNKNOWN;
+        }
+        case CalcPercentLength:
+        case CalcPercentNumber:
+        case CalcOther:
+            return CSSPrimitiveValue::CSS_UNKNOWN;
+        }
+        ASSERT_NOT_REACHED();
+        return CSSPrimitiveValue::CSS_UNKNOWN;
+    }
+
 private:
     CSSCalcBinaryOperation(PassRefPtr<CSSCalcExpressionNode> leftSide, PassRefPtr<CSSCalcExpressionNode> rightSide, CalcOperator op, CalculationCategory category)
-        : CSSCalcExpressionNode(category, leftSide->isInteger() && rightSide->isInteger())
+        : CSSCalcExpressionNode(category, isIntegerResult(leftSide.get(), rightSide.get(), op))
         , m_leftSide(leftSide)
         , m_rightSide(rightSide)
         , m_operator(op)
     {
     }
-    
-    double evaluate(double leftValue, double rightValue) const
+
+    static CSSCalcExpressionNode* getNumberSide(CSSCalcExpressionNode* leftSide, CSSCalcExpressionNode* rightSide)
     {
-        switch (m_operator) {
+        if (leftSide->category() == CalcNumber)
+            return leftSide;
+        if (rightSide->category() == CalcNumber)
+            return rightSide;
+        return 0;
+    }
+
+    double evaluate(double leftSide, double rightSide) const
+    {
+        return evaluateOperator(leftSide, rightSide, m_operator);
+    }
+
+    static double evaluateOperator(double leftValue, double rightValue, CalcOperator op)
+    {
+        switch (op) {
         case CalcAdd:
             return leftValue + rightValue;
         case CalcSubtract:
@@ -394,7 +519,7 @@ private:
         }
         return 0;
     }
-    
+
     const RefPtr<CSSCalcExpressionNode> m_leftSide;
     const RefPtr<CSSCalcExpressionNode> m_rightSide;
     const CalcOperator m_operator;
@@ -449,7 +574,7 @@ private:
         if (!value || !value->isPrimitiveValue())
             return false;
 
-        CSSPrimitiveValue* primitiveValue = static_cast<CSSPrimitiveValue*>(value.get());
+        CSSPrimitiveValue* primitiveValue = toCSSPrimitiveValue(value.get());
         result->value = CSSCalcPrimitiveValue::create(primitiveValue, parserValue->isInt);
 
         ++*index;
@@ -459,8 +584,8 @@ private:
     bool parseValueTerm(CSSParserValueList* tokens, int depth, unsigned* index, Value* result)
     {
         if (checkDepthAndIndex(&depth, *index, tokens) != OK)
-            return false;    
-        
+            return false;
+
         if (operatorValue(tokens, *index) == '(') {
             unsigned currentIndex = *index + 1;
             if (!parseValueExpression(tokens, depth, &currentIndex, result))
@@ -478,7 +603,7 @@ private:
     bool parseValueMultiplicativeExpression(CSSParserValueList* tokens, int depth, unsigned* index, Value* result)
     {
         if (checkDepthAndIndex(&depth, *index, tokens) != OK)
-            return false;    
+            return false;
 
         if (!parseValueTerm(tokens, depth, index, result))
             return false;
@@ -493,7 +618,7 @@ private:
             if (!parseValueTerm(tokens, depth, index, &rhs))
                 return false;
 
-            result->value = CSSCalcBinaryOperation::create(result->value, rhs.value, static_cast<CalcOperator>(operatorCharacter));
+            result->value = CSSCalcBinaryOperation::createSimplified(result->value, rhs.value, static_cast<CalcOperator>(operatorCharacter));
             if (!result->value)
                 return false;
         }
@@ -505,7 +630,7 @@ private:
     bool parseAdditiveValueExpression(CSSParserValueList* tokens, int depth, unsigned* index, Value* result)
     {
         if (checkDepthAndIndex(&depth, *index, tokens) != OK)
-            return false;    
+            return false;
 
         if (!parseValueMultiplicativeExpression(tokens, depth, index, result))
             return false;
@@ -520,7 +645,7 @@ private:
             if (!parseValueMultiplicativeExpression(tokens, depth, index, &rhs))
                 return false;
 
-            result->value = CSSCalcBinaryOperation::create(result->value, rhs.value, static_cast<CalcOperator>(operatorCharacter));
+            result->value = CSSCalcBinaryOperation::createSimplified(result->value, rhs.value, static_cast<CalcOperator>(operatorCharacter));
             if (!result->value)
                 return false;
         }
@@ -535,16 +660,96 @@ private:
     }
 };
 
+PassRefPtr<CSSCalcExpressionNode> CSSCalcValue::createExpressionNode(PassRefPtr<CSSPrimitiveValue> value, bool isInteger)
+{
+    return CSSCalcPrimitiveValue::create(value, isInteger);
+}
+
+PassRefPtr<CSSCalcExpressionNode> CSSCalcValue::createExpressionNode(PassRefPtr<CSSCalcExpressionNode> leftSide, PassRefPtr<CSSCalcExpressionNode> rightSide, CalcOperator op)
+{
+    return CSSCalcBinaryOperation::create(leftSide, rightSide, op);
+}
+
+PassRefPtr<CSSCalcExpressionNode> CSSCalcValue::createExpressionNode(const CalcExpressionNode* node, const RenderStyle* style)
+{
+    switch (node->type()) {
+    case CalcExpressionNodeNumber: {
+        float value = toCalcExpressionNumber(node)->value();
+        return createExpressionNode(CSSPrimitiveValue::create(value, CSSPrimitiveValue::CSS_NUMBER), value == trunc(value));
+    }
+    case CalcExpressionNodeLength:
+        return createExpressionNode(toCalcExpressionLength(node)->length(), style);
+    case CalcExpressionNodeBinaryOperation: {
+        const CalcExpressionBinaryOperation* binaryNode = toCalcExpressionBinaryOperation(node);
+        return createExpressionNode(createExpressionNode(binaryNode->leftSide(), style), createExpressionNode(binaryNode->rightSide(), style), binaryNode->getOperator());
+    }
+    case CalcExpressionNodeBlendLength: {
+        // FIXME: (http://webkit.org/b/122036) Create a CSSCalcExpressionNode equivalent of CalcExpressionBlendLength.
+        const CalcExpressionBlendLength* blendNode = toCalcExpressionBlendLength(node);
+        const double progress = blendNode->progress();
+        const bool isInteger = !progress || (progress == 1);
+        return createExpressionNode(
+            createExpressionNode(
+                createExpressionNode(blendNode->from(), style),
+                createExpressionNode(CSSPrimitiveValue::create(1 - progress, CSSPrimitiveValue::CSS_NUMBER), isInteger),
+                CalcMultiply),
+            createExpressionNode(
+                createExpressionNode(blendNode->to(), style),
+                createExpressionNode(CSSPrimitiveValue::create(progress, CSSPrimitiveValue::CSS_NUMBER), isInteger),
+                CalcMultiply),
+            CalcAdd);
+    }
+    case CalcExpressionNodeUndefined:
+        ASSERT_NOT_REACHED();
+        return 0;
+    }
+    ASSERT_NOT_REACHED();
+    return 0;
+}
+
+PassRefPtr<CSSCalcExpressionNode> CSSCalcValue::createExpressionNode(const Length& length, const RenderStyle* style)
+{
+    switch (length.type()) {
+    case Percent:
+    case ViewportPercentageWidth:
+    case ViewportPercentageHeight:
+    case ViewportPercentageMin:
+    case ViewportPercentageMax:
+    case Fixed:
+        return createExpressionNode(CSSPrimitiveValue::create(length, style), length.value() == trunc(length.value()));
+    case Calculated:
+        return createExpressionNode(length.calculationValue()->expression(), style);
+    case Auto:
+    case Intrinsic:
+    case MinIntrinsic:
+    case MinContent:
+    case MaxContent:
+    case FillAvailable:
+    case FitContent:
+    case Relative:
+    case Undefined:
+        ASSERT_NOT_REACHED();
+        return 0;
+    }
+    ASSERT_NOT_REACHED();
+    return 0;
+}
+
 PassRefPtr<CSSCalcValue> CSSCalcValue::create(CSSParserString name, CSSParserValueList* parserValueList, CalculationPermittedValueRange range)
-{    
-    CSSCalcExpressionNodeParser parser;    
+{
+    CSSCalcExpressionNodeParser parser;
     RefPtr<CSSCalcExpressionNode> expression;
-    
+
     if (equalIgnoringCase(name, "calc(") || equalIgnoringCase(name, "-webkit-calc("))
-        expression = parser.parseCalc(parserValueList);    
-    // FIXME calc (http://webkit.org/b/16662) Add parsing for min and max here
+        expression = parser.parseCalc(parserValueList);
+    // FIXME: calc (http://webkit.org/b/16662) Add parsing for min and max here
 
     return expression ? adoptRef(new CSSCalcValue(expression, range)) : 0;
+}
+
+PassRef<CSSCalcValue> CSSCalcValue::create(PassRefPtr<CSSCalcExpressionNode> expression, CalculationPermittedValueRange range)
+{
+    return adoptRef(*new CSSCalcValue(expression, range));
 }
 
 } // namespace WebCore

@@ -23,12 +23,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-[
-        Conditional=SVG
-] interface SVGScriptElement : SVGElement,
-                                                   SVGURIReference,
-                                                   SVGExternalResourcesRequired {
-                 attribute [TreatNullAs=NullString] DOMString type
-                     /*setter raises(DOMException)*/;
-    };
+interface SVGScriptElement : SVGElement {
+    [TreatNullAs=NullString, Reflect] attribute DOMString type;
+};
 
+SVGScriptElement implements SVGExternalResourcesRequired;
+SVGScriptElement implements SVGURIReference;

@@ -27,19 +27,20 @@
 #include "config.h"
 #include "ShadowRoot.h"
 
-#include "ContentDistributor.h"
-#include "ElementShadow.h"
+#include "ElementTraversal.h"
 #include "HistogramSupport.h"
 #include "InsertionPoint.h"
+#include "RenderElement.h"
 #include "RuntimeEnabledFeatures.h"
 #include "StyleResolver.h"
-#include "Text.h"
 #include "markup.h"
 
 namespace WebCore {
 
 struct SameSizeAsShadowRoot : public DocumentFragment, public TreeScope {
     unsigned countersAndFlags[1];
+    ContentDistributor distributor;
+    void* host;
 };
 
 COMPILE_ASSERT(sizeof(ShadowRoot) == sizeof(SameSizeAsShadowRoot), shadowroot_should_stay_small);
@@ -50,15 +51,13 @@ enum ShadowRootUsageOriginType {
     ShadowRootUsageOriginMax
 };
 
-ShadowRoot::ShadowRoot(Document* document, ShadowRootType type)
-    : DocumentFragment(0, CreateShadowRoot)
-    , TreeScope(this, document)
-    , m_numberOfStyles(0)
-    , m_applyAuthorStyles(false)
+ShadowRoot::ShadowRoot(Document& document, ShadowRootType type)
+    : DocumentFragment(document, CreateShadowRoot)
+    , TreeScope(*this, document)
     , m_resetStyleInheritance(false)
     , m_type(type)
+    , m_hostElement(0)
 {
-    ASSERT(document);
 }
 
 ShadowRoot::~ShadowRoot()
@@ -67,21 +66,11 @@ ShadowRoot::~ShadowRoot()
     // for this ShadowRoot instance because TreeScope destructor
     // clears Node::m_treeScope thus ContainerNode is no longer able
     // to access it Document reference after that.
-    willBeDeletedFrom(documentInternal());
+    willBeDeletedFrom(document());
 
     // We must remove all of our children first before the TreeScope destructor
     // runs so we don't go through TreeScopeAdopter for each child with a
     // destructed tree scope in each descendant.
-    removeDetachedChildren();
-
-    // We must call clearRareData() here since a ShadowRoot class inherits TreeScope
-    // as well as Node. See a comment on TreeScope.h for the reason.
-    if (hasRareData())
-        clearRareData();
-}
-
-void ShadowRoot::dispose()
-{
     removeDetachedChildren();
 }
 
@@ -93,7 +82,7 @@ PassRefPtr<Node> ShadowRoot::cloneNode(bool, ExceptionCode& ec)
 
 String ShadowRoot::innerHTML() const
 {
-    return createMarkup(this, ChildrenOnly);
+    return createMarkup(*this, ChildrenOnly);
 }
 
 void ShadowRoot::setInnerHTML(const String& markup, ExceptionCode& ec)
@@ -103,8 +92,8 @@ void ShadowRoot::setInnerHTML(const String& markup, ExceptionCode& ec)
         return;
     }
 
-    if (RefPtr<DocumentFragment> fragment = createFragmentForInnerOuterHTML(markup, host(), AllowScriptingContent, ec))
-        replaceChildrenWithFragment(this, fragment.release(), ec);
+    if (RefPtr<DocumentFragment> fragment = createFragmentForInnerOuterHTML(markup, hostElement(), AllowScriptingContent, ec))
+        replaceChildrenWithFragment(*this, fragment.release(), ec);
 }
 
 bool ShadowRoot::childTypeAllowed(NodeType type) const
@@ -122,37 +111,6 @@ bool ShadowRoot::childTypeAllowed(NodeType type) const
     }
 }
 
-void ShadowRoot::recalcStyle(StyleChange change)
-{
-    // ShadowRoot doesn't support custom callbacks.
-    ASSERT(!hasCustomStyleCallbacks());
-
-    StyleResolver* styleResolver = document()->ensureStyleResolver();
-    styleResolver->pushParentShadowRoot(this);
-
-    for (Node* child = firstChild(); child; child = child->nextSibling()) {
-        if (child->isElementNode())
-            toElement(child)->recalcStyle(change);
-        else if (child->isTextNode())
-            toText(child)->recalcTextStyle(change);
-}
-
-    styleResolver->popParentShadowRoot(this);
-    clearNeedsStyleRecalc();
-    clearChildNeedsStyleRecalc();
-}
-
-void ShadowRoot::setApplyAuthorStyles(bool value)
-{
-    if (isOrphan())
-        return;
-
-    if (m_applyAuthorStyles != value) {
-        m_applyAuthorStyles = value;
-        host()->setNeedsStyleRecalc();
-    }
-}
-
 void ShadowRoot::setResetStyleInheritance(bool value)
 {
     if (isOrphan())
@@ -160,39 +118,25 @@ void ShadowRoot::setResetStyleInheritance(bool value)
 
     if (value != m_resetStyleInheritance) {
         m_resetStyleInheritance = value;
-        if (attached() && owner())
-            owner()->recalcStyle(Force);
+        if (hostElement())
+            setNeedsStyleRecalc();
     }
 }
 
-void ShadowRoot::attach()
-{
-    StyleResolver* styleResolver = document()->ensureStyleResolver();
-    styleResolver->pushParentShadowRoot(this);
-    DocumentFragment::attach();
-    styleResolver->popParentShadowRoot(this);
-}
-
-void ShadowRoot::childrenChanged(bool changedByParser, Node* beforeChange, Node* afterChange, int childCountDelta)
+void ShadowRoot::childrenChanged(const ChildChange& change)
 {
     if (isOrphan())
         return;
 
-    ContainerNode::childrenChanged(changedByParser, beforeChange, afterChange, childCountDelta);
-    owner()->invalidateDistribution();
+    ContainerNode::childrenChanged(change);
+    invalidateDistribution();
 }
 
-void ShadowRoot::registerScopedHTMLStyleChild()
+void ShadowRoot::removeAllEventListeners()
 {
-    ++m_numberOfStyles;
-    setHasScopedHTMLStyleChild(true);
-}
-
-void ShadowRoot::unregisterScopedHTMLStyleChild()
-{
-    ASSERT(hasScopedHTMLStyleChild() && m_numberOfStyles > 0);
-    --m_numberOfStyles;
-    setHasScopedHTMLStyleChild(m_numberOfStyles > 0);
+    DocumentFragment::removeAllEventListeners();
+    for (Node* node = firstChild(); node; node = NodeTraversal::next(node))
+        node->removeAllEventListeners();
 }
 
 }

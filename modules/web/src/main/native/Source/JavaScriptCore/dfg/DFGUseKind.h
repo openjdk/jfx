@@ -39,6 +39,7 @@ enum UseKind {
     UntypedUse,
     Int32Use,
     KnownInt32Use,
+    MachineIntUse,
     RealNumberUse,
     NumberUse,
     KnownNumberUse,
@@ -46,7 +47,9 @@ enum UseKind {
     CellUse,
     KnownCellUse,
     ObjectUse,
+    FinalObjectUse,
     ObjectOrOtherUse,
+    StringIdentUse,
     StringUse,
     KnownStringUse,
     StringObjectUse,
@@ -60,15 +63,17 @@ ALWAYS_INLINE SpeculatedType typeFilterFor(UseKind useKind)
 {
     switch (useKind) {
     case UntypedUse:
-        return SpecEmptyOrTop; // TOP isn't good enough; untyped uses may use the normally unseen empty value, in the case of lazy registers.
+        return SpecFullTop;
     case Int32Use:
     case KnownInt32Use:
         return SpecInt32;
+    case MachineIntUse:
+        return SpecMachineInt;
     case RealNumberUse:
-        return SpecRealNumber;
+        return SpecFullRealNumber;
     case NumberUse:
     case KnownNumberUse:
-        return SpecNumber;
+        return SpecFullNumber;
     case BooleanUse:
         return SpecBoolean;
     case CellUse:
@@ -76,8 +81,12 @@ ALWAYS_INLINE SpeculatedType typeFilterFor(UseKind useKind)
         return SpecCell;
     case ObjectUse:
         return SpecObject;
+    case FinalObjectUse:
+        return SpecFinalObject;
     case ObjectOrOtherUse:
         return SpecObject | SpecOther;
+    case StringIdentUse:
+        return SpecStringIdent;
     case StringUse:
     case KnownStringUse:
         return SpecString;
@@ -91,8 +100,27 @@ ALWAYS_INLINE SpeculatedType typeFilterFor(UseKind useKind)
         return SpecOther;
     default:
         RELEASE_ASSERT_NOT_REACHED();
-        return SpecTop;
+        return SpecFullTop;
     }
+}
+
+ALWAYS_INLINE bool shouldNotHaveTypeCheck(UseKind kind)
+{
+    switch (kind) {
+    case UntypedUse:
+    case KnownInt32Use:
+    case KnownNumberUse:
+    case KnownCellUse:
+    case KnownStringUse:
+        return true;
+    default:
+        return false;
+    }
+}
+
+ALWAYS_INLINE bool mayHaveTypeCheck(UseKind kind)
+{
+    return !shouldNotHaveTypeCheck(kind);
 }
 
 ALWAYS_INLINE bool isNumerical(UseKind kind)
@@ -100,8 +128,53 @@ ALWAYS_INLINE bool isNumerical(UseKind kind)
     switch (kind) {
     case Int32Use:
     case KnownInt32Use:
+    case MachineIntUse:
     case RealNumberUse:
     case NumberUse:
+    case KnownNumberUse:
+        return true;
+    default:
+        return false;
+    }
+}
+
+ALWAYS_INLINE bool isDouble(UseKind kind)
+{
+    switch (kind) {
+    case RealNumberUse:
+    case NumberUse:
+    case KnownNumberUse:
+        return true;
+    default:
+        return false;
+    }
+}
+
+ALWAYS_INLINE bool isCell(UseKind kind)
+{
+    switch (kind) {
+    case CellUse:
+    case KnownCellUse:
+    case ObjectUse:
+    case FinalObjectUse:
+    case StringIdentUse:
+    case StringUse:
+    case KnownStringUse:
+    case StringObjectUse:
+    case StringOrStringObjectUse:
+        return true;
+    default:
+        return false;
+    }
+}
+
+// Returns true if it uses structure in a way that could be clobbered by
+// things that change the structure.
+ALWAYS_INLINE bool usesStructure(UseKind kind)
+{
+    switch (kind) {
+    case StringObjectUse:
+    case StringOrStringObjectUse:
         return true;
     default:
         return false;

@@ -29,7 +29,7 @@
 #include "config.h"
 #include "SecurityPolicy.h"
 
-#include "KURL.h"
+#include "URL.h"
 #include <wtf/MainThread.h>
 #include "OriginAccessEntry.h"
 #include "SecurityOrigin.h"
@@ -42,7 +42,7 @@ namespace WebCore {
 static SecurityPolicy::LocalLoadPolicy localLoadPolicy = SecurityPolicy::AllowLocalLoadsForLocalOnly;
 
 typedef Vector<OriginAccessEntry> OriginAccessWhiteList;
-typedef HashMap<String, OwnPtr<OriginAccessWhiteList> > OriginAccessMap;
+typedef HashMap<String, OwnPtr<OriginAccessWhiteList>> OriginAccessMap;
 
 static OriginAccessMap& originAccessMap()
 {
@@ -50,7 +50,7 @@ static OriginAccessMap& originAccessMap()
     return originAccessMap;
 }
 
-bool SecurityPolicy::shouldHideReferrer(const KURL& url, const String& referrer)
+bool SecurityPolicy::shouldHideReferrer(const URL& url, const String& referrer)
 {
     bool referrerIsSecureURL = protocolIs(referrer, "https");
     bool referrerIsWebURL = referrerIsSecureURL || protocolIs(referrer, "http");
@@ -66,9 +66,12 @@ bool SecurityPolicy::shouldHideReferrer(const KURL& url, const String& referrer)
     return !URLIsSecureURL;
 }
 
-String SecurityPolicy::generateReferrerHeader(ReferrerPolicy referrerPolicy, const KURL& url, const String& referrer)
+String SecurityPolicy::generateReferrerHeader(ReferrerPolicy referrerPolicy, const URL& url, const String& referrer)
 {
     if (referrer.isEmpty())
+        return String();
+
+    if (!protocolIsInHTTPFamily(referrer))
         return String();
 
     switch (referrerPolicy) {
@@ -117,7 +120,7 @@ bool SecurityPolicy::isAccessWhiteListed(const SecurityOrigin* activeOrigin, con
     return false;
 }
 
-bool SecurityPolicy::isAccessToURLWhiteListed(const SecurityOrigin* activeOrigin, const KURL& url)
+bool SecurityPolicy::isAccessToURLWhiteListed(const SecurityOrigin* activeOrigin, const URL& url)
 {
     RefPtr<SecurityOrigin> targetOrigin = SecurityOrigin::create(url);
     return isAccessWhiteListed(activeOrigin, targetOrigin.get());

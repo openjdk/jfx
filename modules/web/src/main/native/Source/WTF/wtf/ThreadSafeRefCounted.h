@@ -59,11 +59,10 @@
 #ifndef ThreadSafeRefCounted_h
 #define ThreadSafeRefCounted_h
 
-#include <wtf/Platform.h>
-
-#include <wtf/Atomics.h>
+#include <atomic>
 #include <wtf/DynamicAnnotations.h>
-#include <wtf/ThreadingPrimitives.h>
+#include <wtf/FastMalloc.h>
+#include <wtf/Noncopyable.h>
 
 namespace WTF {
 
@@ -78,12 +77,7 @@ public:
 
     void ref()
     {
-#if USE(LOCKFREE_THREADSAFEREFCOUNTED)
-        atomicIncrement(&m_refCount);
-#else
-        MutexLocker locker(m_mutex);
         ++m_refCount;
-#endif
     }
 
     bool hasOneRef()
@@ -93,40 +87,24 @@ public:
 
     int refCount() const
     {
-#if !USE(LOCKFREE_THREADSAFEREFCOUNTED)
-        MutexLocker locker(m_mutex);
-#endif
-        return static_cast<int const volatile &>(m_refCount);
+        return m_refCount;
     }
 
 protected:
     // Returns whether the pointer should be freed or not.
     bool derefBase()
     {
-#if USE(LOCKFREE_THREADSAFEREFCOUNTED)
         WTF_ANNOTATE_HAPPENS_BEFORE(&m_refCount);
-        if (atomicDecrement(&m_refCount) <= 0) {
+        if (--m_refCount <= 0) {
             WTF_ANNOTATE_HAPPENS_AFTER(&m_refCount);
             return true;
         }
-#else
-        int refCount;
-        {
-            MutexLocker locker(m_mutex);
-            --m_refCount;
-            refCount = m_refCount;
-        }
-        if (refCount <= 0)
-            return true;
-#endif
+
         return false;
     }
 
 private:
-    int m_refCount;
-#if !USE(LOCKFREE_THREADSAFEREFCOUNTED)
-    mutable Mutex m_mutex;
-#endif
+    std::atomic<int> m_refCount;
 };
 
 template<class T> class ThreadSafeRefCounted : public ThreadSafeRefCountedBase {

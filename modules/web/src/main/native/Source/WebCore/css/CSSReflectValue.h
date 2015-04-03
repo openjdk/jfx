@@ -37,22 +37,19 @@ class CSSPrimitiveValue;
 
 class CSSReflectValue : public CSSValue {
 public:
-    static PassRefPtr<CSSReflectValue> create(PassRefPtr<CSSPrimitiveValue> direction,
+    static PassRef<CSSReflectValue> create(PassRefPtr<CSSPrimitiveValue> direction,
         PassRefPtr<CSSPrimitiveValue> offset, PassRefPtr<CSSValue> mask)
     {
-        return adoptRef(new CSSReflectValue(direction, offset, mask));
+        return adoptRef(*new CSSReflectValue(direction, offset, mask));
     }
 
     CSSPrimitiveValue* direction() const { return m_direction.get(); }
     CSSPrimitiveValue* offset() const { return m_offset.get(); }
     CSSValue* mask() const { return m_mask.get(); }
 
-    String customCssText() const;
-#if ENABLE(CSS_VARIABLES)
-    String customSerializeResolvingVariables(const HashMap<AtomicString, String>&) const;
-#endif
+    String customCSSText() const;
 
-    void addSubresourceStyleURLs(ListHashSet<KURL>&, const StyleSheetContents*) const;
+    void addSubresourceStyleURLs(ListHashSet<URL>&, const StyleSheetContents*) const;
 
     bool equals(const CSSReflectValue&) const;
 
@@ -69,6 +66,8 @@ private:
     RefPtr<CSSPrimitiveValue> m_offset;
     RefPtr<CSSValue> m_mask;
 };
+
+CSS_VALUE_TYPE_CASTS(CSSReflectValue, isReflectValue())
 
 } // namespace WebCore
 

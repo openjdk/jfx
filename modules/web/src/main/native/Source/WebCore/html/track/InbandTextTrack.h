@@ -28,7 +28,6 @@
 
 #if ENABLE(VIDEO_TRACK)
 
-#include "InbandTextTrackPrivate.h"
 #include "InbandTextTrackPrivateClient.h"
 #include "TextTrack.h"
 #include "TextTrackCueGeneric.h"
@@ -36,61 +35,34 @@
 
 namespace WebCore {
 
-class Document;
-class InbandTextTrackPrivate;
-class TextTrackCue;
-
-class TextTrackCueMap {
-public:
-    TextTrackCueMap() { }
-    virtual ~TextTrackCueMap() { }
-
-    void add(GenericCueData*, TextTrackCueGeneric*);
-
-    void remove(GenericCueData*);
-    void remove(TextTrackCueGeneric*);
-    
-    PassRefPtr<GenericCueData> find(TextTrackCueGeneric*);
-    PassRefPtr<TextTrackCueGeneric> find(GenericCueData*);
-    
-private:
-    typedef HashMap<RefPtr<TextTrackCueGeneric>, RefPtr<GenericCueData> > GenericCueToCueDataMap;
-    typedef HashMap<RefPtr<GenericCueData>, RefPtr<TextTrackCueGeneric> > GenericCueDataToCueMap;
-    
-    GenericCueToCueDataMap m_cueToDataMap;
-    GenericCueDataToCueMap m_dataToCueMap;
-};
-
 class InbandTextTrack : public TextTrack, public InbandTextTrackPrivateClient {
 public:
     static PassRefPtr<InbandTextTrack> create(ScriptExecutionContext*, TextTrackClient*, PassRefPtr<InbandTextTrackPrivate>);
     virtual ~InbandTextTrack();
 
-    virtual bool isClosedCaptions() const OVERRIDE;
-    virtual bool containsOnlyForcedSubtitles() const OVERRIDE;
-    virtual bool isMainProgramContent() const OVERRIDE;
-    virtual bool isEasyToRead() const OVERRIDE;
-    virtual void setMode(const AtomicString&) OVERRIDE;
+    virtual bool isClosedCaptions() const override;
+    virtual bool isSDH() const override;
+    virtual bool containsOnlyForcedSubtitles() const override;
+    virtual bool isMainProgramContent() const override;
+    virtual bool isEasyToRead() const override;
+    virtual void setMode(const AtomicString&) override;
     size_t inbandTrackIndex();
 
-private:
+protected:
     InbandTextTrack(ScriptExecutionContext*, TextTrackClient*, PassRefPtr<InbandTextTrackPrivate>);
 
-    virtual void addGenericCue(InbandTextTrackPrivate*, PassRefPtr<GenericCueData>) OVERRIDE;
-    virtual void updateGenericCue(InbandTextTrackPrivate*, GenericCueData*) OVERRIDE;
-    virtual void removeGenericCue(InbandTextTrackPrivate*, GenericCueData*) OVERRIDE;
-    virtual void removeCue(TextTrackCue*, ExceptionCode&) OVERRIDE;
-    virtual void willRemoveTextTrackPrivate(InbandTextTrackPrivate*) OVERRIDE;
+    RefPtr<InbandTextTrackPrivate> m_private;
 
-    PassRefPtr<TextTrackCueGeneric> createCue(PassRefPtr<GenericCueData>);
-    void updateCueFromCueData(TextTrackCueGeneric*, GenericCueData*);
+private:
+
+    virtual void idChanged(TrackPrivateBase*, const AtomicString&) override;
+    virtual void labelChanged(TrackPrivateBase*, const AtomicString&) override;
+    virtual void languageChanged(TrackPrivateBase*, const AtomicString&) override;
+    virtual void willRemove(TrackPrivateBase*) override;
 
 #if USE(PLATFORM_TEXT_TRACK_MENU)
-    virtual InbandTextTrackPrivate* privateTrack() OVERRIDE { return m_private.get(); }
+    virtual InbandTextTrackPrivate* privateTrack() override { return m_private.get(); }
 #endif
-
-    TextTrackCueMap m_cueMap;
-    RefPtr<InbandTextTrackPrivate> m_private;
 };
 
 } // namespace WebCore

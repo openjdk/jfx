@@ -20,25 +20,21 @@
  */
 
 [
-    Conditional=SVG,
-    ImplementationLacksVTable
+    ImplementationLacksVTable,
 ] interface SVGColor : CSSValue {
-        const unsigned short SVG_COLORTYPE_UNKNOWN = 0;
-        const unsigned short SVG_COLORTYPE_RGBCOLOR = 1;
-        const unsigned short SVG_COLORTYPE_RGBCOLOR_ICCCOLOR = 2;
-        const unsigned short SVG_COLORTYPE_CURRENTCOLOR = 3;
+    const unsigned short SVG_COLORTYPE_UNKNOWN = 0;
+    const unsigned short SVG_COLORTYPE_RGBCOLOR = 1;
+    const unsigned short SVG_COLORTYPE_RGBCOLOR_ICCCOLOR = 2;
+    const unsigned short SVG_COLORTYPE_CURRENTCOLOR = 3;
 
-        readonly attribute unsigned short colorType;
-        readonly attribute RGBColor rgbColor;
-        // FIXME: readonly attribute SVGICCColor iccColor;
+    readonly attribute unsigned short colorType;
+    readonly attribute RGBColor rgbColor;
+    // FIXME: readonly attribute SVGICCColor iccColor;
 
-    [StrictTypeChecking] void setRGBColor(DOMString rgbColor)
-            raises(DOMException, SVGException);
+    [StrictTypeChecking, RaisesException] void setRGBColor(DOMString rgbColor);
 
-    [StrictTypeChecking] void setRGBColorICCColor(DOMString rgbColor, DOMString iccColor)
-            raises(DOMException, SVGException);
+    [StrictTypeChecking, RaisesException] void setRGBColorICCColor(DOMString rgbColor, DOMString iccColor);
 
-    [StrictTypeChecking] void setColor(unsigned short colorType, DOMString rgbColor, DOMString iccColor)
-            raises(DOMException, SVGException);
-    };
+    [StrictTypeChecking, RaisesException] void setColor(unsigned short colorType, DOMString rgbColor, DOMString iccColor);
+};
 

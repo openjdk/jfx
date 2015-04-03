@@ -292,7 +292,7 @@ void StorageAreaImpl::closeDatabaseIfIdle()
         m_closeDatabaseTimer.stop();
 
         closeDatabaseTimerFired(&m_closeDatabaseTimer);
-}
+    }
 }
 
 void StorageAreaImpl::dispatchStorageEvent(const String& key, const String& oldValue, const String& newValue, Frame* sourceFrame)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2013, 2015, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -109,7 +109,7 @@ public class DatePickerApp extends Application {
         hbox.setAlignment(Pos.CENTER);
         hbox.getChildren().add(datePickerText);
         
-        createDatePicker();
+        datePicker = createDatePicker();
         
         VBox vbox = new VBox(22);
         vbox.getChildren().addAll(datePickerMenuBar, hbox);
@@ -118,13 +118,13 @@ public class DatePickerApp extends Application {
         return vbox;
     }
 
-    private void createDatePicker() {
+    private DatePicker createDatePicker() {
         hbox.getChildren().remove(datePicker);
         LocalDate value = null;
         if (datePicker != null) {
             value = datePicker.getValue();
         }
-        datePicker = new DatePicker();       
+        DatePicker picker = new DatePicker();
         // day cell factory
         final Callback<DatePicker, DateCell> dayCellFactory = new Callback<DatePicker, DateCell>() {
             @Override
@@ -147,8 +147,8 @@ public class DatePickerApp extends Application {
         //Create the menubar to experiment with the DatePicker
         datePickerMenuBar = createMenuBar(dayCellFactory);
         // Listen for DatePicker actions
-        datePicker.setOnAction((ActionEvent t) -> {
-            LocalDate isoDate = datePicker.getValue();
+        picker.setOnAction((ActionEvent t) -> {
+            LocalDate isoDate = picker.getValue();
             if ((isoDate != null) && (!isoDate.equals(LocalDate.now()))) {
                 for (Menu menu : datePickerMenuBar.getMenus()) {
                     if (menu.getText().equals("Options for Locale")) {
@@ -163,10 +163,11 @@ public class DatePickerApp extends Application {
                 }
             }
         });
-        hbox.getChildren().add(datePicker);
+        hbox.getChildren().add(picker);
         if (value != null) {
-            datePicker.setValue(value);
+            picker.setValue(value);
         }
+        return picker;
     }
 
     private MenuBar createMenuBar(final Callback<DatePicker, DateCell> dayCellFac) {
@@ -183,7 +184,9 @@ public class DatePickerApp extends Application {
 
         Menu optionsMenu = new Menu("Options for Locale");
         //Style DatePicker with cell factory
-        final CheckMenuItem cellFactoryMenuItem = new CheckMenuItem("Use cell factory to color past days and add tooltip to tomorrow");
+        // XXX - localize
+        final String MSG = "Use cell factory to color past days and add tooltip to tomorrow";
+        final CheckMenuItem cellFactoryMenuItem = new CheckMenuItem(MSG);
         optionsMenu.getItems().add(cellFactoryMenuItem);
         cellFactoryMenuItem.setOnAction((ActionEvent t) -> {
             if (cellFactoryMenuItem.isSelected()) {
@@ -209,12 +212,14 @@ public class DatePickerApp extends Application {
             datePicker.setShowWeekNumbers(showWeekNumMenuItem.isSelected());
         });        
         
-        localeToggleGroup.selectedToggleProperty().addListener((ObservableValue<? extends Toggle> ov, Toggle oldToggle, Toggle newToggle) -> {
+        localeToggleGroup.selectedToggleProperty().addListener((ObservableValue<? extends Toggle> ov,
+                                                                Toggle oldToggle, Toggle newToggle) -> {
             if (localeToggleGroup.getSelectedToggle() != null) {
                 String selectedLocale = ((RadioMenuItem) localeToggleGroup.getSelectedToggle()).getText();
                 Locale locale = Locale.forLanguageTag(selectedLocale.replace('_', '-'));
                 Locale.setDefault(locale);
-                createDatePicker();
+                datePicker = createDatePicker();
+                datePicker.setShowWeekNumbers(showWeekNumMenuItem.isSelected());
             }
         });       
 

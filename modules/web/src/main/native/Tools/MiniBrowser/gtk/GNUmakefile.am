@@ -10,6 +10,7 @@ Programs_MiniBrowser_CPPFLAGS = \
 	-I$(top_builddir)/DerivedSources/WebKit2/webkit2gtk/include \
 	-DWEBKIT_EXEC_PATH=\"${shell pwd}/$(top_builddir)/Programs/\" \
 	-DWEBKIT_INJECTED_BUNDLE_PATH=\"${shell pwd}/$(top_builddir)/.libs\" \
+	-DGDK_VERSION_MIN_REQUIRED=GDK_VERSION_3_6 \
 	$(global_cppflags) \
 	$(javascriptcore_cppflags) \
 	$(FREETYPE_CFLAGS) \
@@ -22,6 +23,8 @@ Programs_MiniBrowser_SOURCES = \
 	Tools/MiniBrowser/gtk/BrowserCellRendererVariant.c \
 	Tools/MiniBrowser/gtk/BrowserDownloadsBar.h \
 	Tools/MiniBrowser/gtk/BrowserDownloadsBar.c \
+	Tools/MiniBrowser/gtk/BrowserSearchBar.h \
+	Tools/MiniBrowser/gtk/BrowserSearchBar.c \
 	Tools/MiniBrowser/gtk/BrowserSettingsDialog.h \
 	Tools/MiniBrowser/gtk/BrowserSettingsDialog.c \
 	Tools/MiniBrowser/gtk/BrowserWindow.h \
@@ -42,7 +45,6 @@ Programs_MiniBrowser_LDADD = \
 	$(LIBSOUP_LIBS)
 
 Programs_MiniBrowser_LDFLAGS = \
-	-no-fast-install \
 	-no-install
 
 CLEANFILES += \
@@ -64,7 +66,7 @@ stamp-mini-browser-marshal.c: $(minibrowser_marshal_list)
 	$(AM_V_GEN)$(GLIB_GENMARSHAL) --prefix=browser_marshal $(minibrowser_marshal_list) --body > $(GENSOURCES_WEBKIT2)/BrowserMarshal.c && \
 	echo timestamp > $(@F)
 
-stamp-mini-browser-marshal.h: $(MiniBrowser_marshal_list)
+stamp-mini-browser-marshal.h: $(minibrowser_marshal_list)
 	$(AM_V_GEN)$(GLIB_GENMARSHAL) --prefix=browser_marshal $(minibrowser_marshal_list) --header > $(GENSOURCES_WEBKIT2)/BrowserMarshal.h && \
 	echo timestamp > $(@F)
 

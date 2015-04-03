@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -71,7 +71,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         TEXT_AREA_BINDINGS.add(new KeyBinding(PAGE_UP, KEY_PRESSED, "PreviousPage")); // new
         TEXT_AREA_BINDINGS.add(new KeyBinding(PAGE_DOWN, KEY_PRESSED, "NextPage")); // new
         TEXT_AREA_BINDINGS.add(new KeyBinding(ENTER, KEY_PRESSED, "InsertNewLine")); // changed
-        TEXT_AREA_BINDINGS.add(new KeyBinding(TAB, KEY_PRESSED, "InsertTab")); // changed
+        TEXT_AREA_BINDINGS.add(new KeyBinding(TAB, KEY_PRESSED, "TraverseOrInsertTab")); // changed
 
         TEXT_AREA_BINDINGS.add(new KeyBinding(HOME, KEY_PRESSED, "SelectLineStart").shift()); // changed
         TEXT_AREA_BINDINGS.add(new KeyBinding(END, KEY_PRESSED, "SelectLineEnd").shift()); // changed
@@ -216,7 +216,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
             setEditing(true);
             done = true;
             if ("InsertNewLine".equals(name)) insertNewLine();
-            else if ("InsertTab".equals(name)) insertTab();
+            else if ("TraverseOrInsertTab".equals(name)) insertTab();
             else {
                 done = false;
             }
@@ -245,7 +245,11 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
             else if ("NextPage".equals(name)) skin.nextPage(false);
             else if ("SelectPreviousPage".equals(name)) skin.previousPage(true);
             else if ("SelectNextPage".equals(name)) skin.nextPage(true);
-            else {
+            else if ("TraverseOrInsertTab".equals(name)) {
+                // RT-40312: Non-editabe mode means traverse instead of insert.
+                name = "TraverseNext";
+                done = false;
+            } else {
                 done = false;
             }
         }
@@ -449,7 +453,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
             skin.populateContextMenu(contextMenu);
             double menuWidth = contextMenu.prefWidth(-1);
             double menuX = screenX - (IS_TOUCH_SUPPORTED ? (menuWidth / 2) : 0);
-            Screen currentScreen = com.sun.javafx.Utils.getScreenForPoint(screenX, 0);
+            Screen currentScreen = com.sun.javafx.util.Utils.getScreenForPoint(screenX, 0);
             Rectangle2D bounds = currentScreen.getBounds();
 
             if (menuX < bounds.getMinX()) {

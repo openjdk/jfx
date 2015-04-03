@@ -25,10 +25,9 @@
 
 [
     NoInterfaceObject,
-        Conditional=GEOLOCATION,
-    OmitConstructor,
+    Conditional=GEOLOCATION,
     ImplementationLacksVTable
 ] interface Geoposition {
-        readonly attribute Coordinates coords;
-        readonly attribute DOMTimeStamp timestamp;
-    };
+    readonly attribute Coordinates coords;
+    readonly attribute DOMTimeStamp timestamp;
+};

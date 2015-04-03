@@ -61,23 +61,30 @@
 #import <WebCore/LegacyWebArchive.h>
 #import <WebCore/Page.h>
 #import <WebCore/PlatformKeyboardEvent.h>
-#import <WebCore/RunLoop.h>
 #import <WebCore/Settings.h>
 #import <WebCore/SpellChecker.h>
-#import <WebCore/StylePropertySet.h>
+#import <WebCore/StyleProperties.h>
 #import <WebCore/UndoStep.h>
 #import <WebCore/UserTypingGestureIndicator.h>
 #import <WebCore/WebCoreObjCExtras.h>
 #import <runtime/InitializeThreading.h>
 #import <wtf/MainThread.h>
 #import <wtf/PassRefPtr.h>
+#import <wtf/RunLoop.h>
 #import <wtf/text/WTFString.h>
+
+#if PLATFORM(IOS)
+#import <WebCore/WebCoreThreadMessage.h>
+#import "DOMElementInternal.h"
+#import "WebFrameView.h"
+#import "WebUIKitDelegate.h"
+#endif
 
 using namespace WebCore;
 
 using namespace HTMLNames;
 
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
+#if !PLATFORM(IOS)
 @interface NSSpellChecker (WebNSSpellCheckerDetails)
 - (NSString *)languageForWordRange:(NSRange)range inString:(NSString *)string orthography:(NSOrthography *)orthography;
 @end
@@ -93,9 +100,6 @@ static WebViewInsertAction kit(EditorInsertAction coreAction)
     return static_cast<WebViewInsertAction>(coreAction);
 }
 
-static const int InvalidCorrectionPanelTag = 0;
-
-
 @interface WebUndoStep : NSObject
 {
     RefPtr<UndoStep> m_step;   
@@ -110,9 +114,11 @@ static const int InvalidCorrectionPanelTag = 0;
 
 + (void)initialize
 {
+#if !PLATFORM(IOS)
     JSC::initializeThreading();
     WTF::initializeMainThreadToProcessMainThread();
-    WebCore::RunLoop::initializeMainRunLoop();
+    RunLoop::initializeMainRunLoop();
+#endif
     WebCoreObjCFinalizeOnMainThread(self);
 }
 
@@ -187,6 +193,10 @@ WebEditorClient::WebEditorClient(WebView *webView)
     : m_webView(webView)
     , m_undoTarget([[[WebEditorUndoTarget alloc] init] autorelease])
     , m_haveUndoRedoOperations(false)
+#if PLATFORM(IOS)
+    , m_delayingContentChangeNotifications(0)
+    , m_hasDelayedContentChangeNotification(0)
+#endif
 {
 }
 
@@ -199,6 +209,7 @@ bool WebEditorClient::isContinuousSpellCheckingEnabled()
     return [m_webView isContinuousSpellCheckingEnabled];
 }
 
+#if !PLATFORM(IOS)
 void WebEditorClient::toggleContinuousSpellChecking()
 {
     [m_webView toggleContinuousSpellChecking:nil];
@@ -218,6 +229,7 @@ int WebEditorClient::spellCheckerDocumentTag()
 {
     return [m_webView spellCheckerDocumentTag];
 }
+#endif
 
 bool WebEditorClient::shouldDeleteRange(Range* range)
 {
@@ -238,7 +250,7 @@ bool WebEditorClient::smartInsertDeleteEnabled()
     Page* page = [m_webView page];
     if (!page)
         return false;
-    return page->settings()->smartInsertDeleteEnabled();
+    return page->settings().smartInsertDeleteEnabled();
 }
 
 bool WebEditorClient::isSelectTrailingWhitespaceEnabled()
@@ -246,12 +258,12 @@ bool WebEditorClient::isSelectTrailingWhitespaceEnabled()
     Page* page = [m_webView page];
     if (!page)
         return false;
-    return page->settings()->selectTrailingWhitespaceEnabled();
+    return page->settings().selectTrailingWhitespaceEnabled();
 }
 
-bool WebEditorClient::shouldApplyStyle(StylePropertySet* style, Range* range)
+bool WebEditorClient::shouldApplyStyle(StyleProperties* style, Range* range)
 {
-    RefPtr<MutableStylePropertySet> mutableStyle = style->isMutable() ? static_cast<MutableStylePropertySet*>(style) : style->mutableCopy();
+    Ref<MutableStyleProperties> mutableStyle(style->isMutable() ? static_cast<MutableStyleProperties&>(*style) : style->mutableCopy());
     return [[m_webView _editingDelegateForwarder] webView:m_webView
         shouldApplyStyle:kit(mutableStyle->ensureCSSStyleDeclaration()) toElementsInDOMRange:kit(range)];
 }
@@ -289,15 +301,44 @@ bool WebEditorClient::shouldChangeSelectedRange(Range* fromRange, Range* toRange
 
 void WebEditorClient::didBeginEditing()
 {
+#if !PLATFORM(IOS)
     [[NSNotificationCenter defaultCenter] postNotificationName:WebViewDidBeginEditingNotification object:m_webView];
+#else
+    WebThreadPostNotification(WebViewDidBeginEditingNotification, m_webView, nil);
+#endif
 }
+
+#if PLATFORM(IOS)
+void WebEditorClient::startDelayingAndCoalescingContentChangeNotifications()
+{
+    m_delayingContentChangeNotifications = true;
+}
+
+void WebEditorClient::stopDelayingAndCoalescingContentChangeNotifications()
+{
+    m_delayingContentChangeNotifications = false;
+    
+    if (m_hasDelayedContentChangeNotification)
+        this->respondToChangedContents();
+    
+    m_hasDelayedContentChangeNotification = false;
+}
+#endif
 
 void WebEditorClient::respondToChangedContents()
 {
+#if !PLATFORM(IOS)
     NSView <WebDocumentView> *view = [[[m_webView selectedFrame] frameView] documentView];
     if ([view isKindOfClass:[WebHTMLView class]])
         [(WebHTMLView *)view _updateFontPanel];
     [[NSNotificationCenter defaultCenter] postNotificationName:WebViewDidChangeNotification object:m_webView];    
+#else
+    if (m_delayingContentChangeNotifications) {
+        m_hasDelayedContentChangeNotification = true;
+    } else {
+        WebThreadPostNotification(WebViewDidChangeNotification, m_webView, nil);
+    }
+#endif
 }
 
 void WebEditorClient::respondToChangedSelection(Frame* frame)
@@ -306,21 +347,34 @@ void WebEditorClient::respondToChangedSelection(Frame* frame)
     if ([documentView isKindOfClass:[WebHTMLView class]])
         [(WebHTMLView *)documentView _selectionChanged];
 
+#if !PLATFORM(IOS)
     // FIXME: This quirk is needed due to <rdar://problem/5009625> - We can phase it out once Aperture can adopt the new behavior on their end
     if (!WebKitLinkedOnOrAfter(WEBKIT_FIRST_VERSION_WITHOUT_APERTURE_QUIRK) && [[[NSBundle mainBundle] bundleIdentifier] isEqualToString:@"com.apple.Aperture"])
         return;
 
     [[NSNotificationCenter defaultCenter] postNotificationName:WebViewDidChangeSelectionNotification object:m_webView];
+#else
+    // Selection can be changed while deallocating down the WebView / Frame / Editor.  Do not post in that case because it's already too late
+    // for the NSInvocation to retain the WebView.
+    if (![m_webView _isClosing])
+        WebThreadPostNotification(WebViewDidChangeSelectionNotification, m_webView, nil);
+#endif
 }
 
 void WebEditorClient::didEndEditing()
 {
+#if !PLATFORM(IOS)
     [[NSNotificationCenter defaultCenter] postNotificationName:WebViewDidEndEditingNotification object:m_webView];
+#else
+    WebThreadPostNotification(WebViewDidEndEditingNotification, m_webView, nil);
+#endif
 }
 
 void WebEditorClient::didWriteSelectionToPasteboard()
 {
+#if !PLATFORM(IOS)
     [[m_webView _editingDelegateForwarder] webView:m_webView didWriteSelectionToPasteboard:[NSPasteboard generalPasteboard]];
+#endif
 }
 
 void WebEditorClient::willWriteSelectionToPasteboard(WebCore::Range*)
@@ -328,14 +382,9 @@ void WebEditorClient::willWriteSelectionToPasteboard(WebCore::Range*)
     // Not implemented WebKit, only WebKit2.
 }
 
-void WebEditorClient::getClientPasteboardDataForRange(WebCore::Range*, Vector<String>& pasteboardTypes, Vector<RefPtr<WebCore::SharedBuffer> >& pasteboardData)
+void WebEditorClient::getClientPasteboardDataForRange(WebCore::Range*, Vector<String>& pasteboardTypes, Vector<RefPtr<WebCore::SharedBuffer>>& pasteboardData)
 {
     // Not implemented WebKit, only WebKit2.
-}
-
-void WebEditorClient::didSetSelectionTypesForPasteboard()
-{
-    [[m_webView _editingDelegateForwarder] webView:m_webView didSetSelectionTypesForPasteboard:[NSPasteboard generalPasteboard]];
 }
 
 NSString *WebEditorClient::userVisibleString(NSURL *URL)
@@ -373,13 +422,16 @@ static NSArray *createExcludedElementsForAttributedStringConversion()
     return elements;
 }
 
-DocumentFragment* WebEditorClient::documentFragmentFromAttributedString(NSAttributedString *string, Vector<RefPtr<ArchiveResource> >& resources)
+#if PLATFORM(IOS)
+static NSString *NSExcludedElementsDocumentAttribute = @"ExcludedElements";
+#endif
+
+DocumentFragment* WebEditorClient::documentFragmentFromAttributedString(NSAttributedString *string, Vector<RefPtr<ArchiveResource>>& resources)
 {
     static NSArray *excludedElements = createExcludedElementsForAttributedStringConversion();
     
-    NSDictionary *dictionary = [[NSDictionary alloc] initWithObjectsAndKeys: excludedElements, NSExcludedElementsDocumentAttribute, 
-        nil, @"WebResourceHandler", nil];
-    
+    NSDictionary *dictionary = [NSDictionary dictionaryWithObject:excludedElements forKey:NSExcludedElementsDocumentAttribute];
+
     NSArray *subResources;
     DOMDocumentFragment* fragment = [string _documentFromRange:NSMakeRange(0, [string length])
                                                       document:[[m_webView mainFrame] DOMDocument]
@@ -387,15 +439,16 @@ DocumentFragment* WebEditorClient::documentFragmentFromAttributedString(NSAttrib
                                                   subresources:&subResources];
     for (WebResource* resource in subResources)
         resources.append([resource _coreResource]);
-    
-    [dictionary release];
+
     return core(fragment);
 }
 
 void WebEditorClient::setInsertionPasteboard(const String& pasteboardName)
 {
+#if !PLATFORM(IOS)
     NSPasteboard *pasteboard = pasteboardName.isEmpty() ? nil : [NSPasteboard pasteboardWithName:pasteboardName];
     [m_webView _setInsertionPasteboard:pasteboard];
+#endif
 }
 
 #if USE(APPKIT)
@@ -533,6 +586,10 @@ static NSString* undoNameForEditAction(EditAction editAction)
         case EditActionOutdent: return UI_STRING_KEY_INTERNAL("Outdent", "Outdent (Undo action name)", "Undo action name");
         case EditActionBold: return UI_STRING_KEY_INTERNAL("Bold", "Bold (Undo action name)", "Undo action name");
         case EditActionItalics: return UI_STRING_KEY_INTERNAL("Italics", "Italics (Undo action name)", "Undo action name");
+#if PLATFORM(IOS)
+        case EditActionDelete: return UI_STRING_KEY_INTERNAL("Delete", "Delete (Undo action name)", "Undo action name (Used only by PLATFORM(IOS) code)");
+        case EditActionDictation: return UI_STRING_KEY_INTERNAL("Dictation", "Dictation (Undo action name)", "Undo action name (Used only by PLATFORM(IOS) code)");
+#endif
     }
     return nil;
 }
@@ -542,6 +599,13 @@ void WebEditorClient::registerUndoOrRedoStep(PassRefPtr<UndoStep> step, bool isR
     ASSERT(step);
     
     NSUndoManager *undoManager = [m_webView undoManager];
+#if PLATFORM(IOS)
+    // While we are undoing, we shouldn't be asked to register another Undo operation, we shouldn't even be touching the DOM.  But
+    // just in case this happens, return to avoid putting the undo manager into an inconsistent state.  Same for being
+    // asked to register a Redo operation in the midst of another Redo.
+    if (([undoManager isUndoing] && !isRedo) || ([undoManager isRedoing] && isRedo))
+        return;
+#endif
     NSString *actionName = undoNameForEditAction(step->editingAction());
     WebUndoStep *webEntry = [WebUndoStep stepWithUndoStep:step];
     [undoManager registerUndoWithTarget:m_undoTarget.get() selector:(isRedo ? @selector(redoEditing:) : @selector(undoEditing:)) object:webEntry];
@@ -614,53 +678,65 @@ void WebEditorClient::redo()
 
 void WebEditorClient::handleKeyboardEvent(KeyboardEvent* event)
 {
-    Frame* frame = event->target()->toNode()->document()->frame();
+    Frame* frame = event->target()->toNode()->document().frame();
+#if !PLATFORM(IOS)
     WebHTMLView *webHTMLView = [[kit(frame) frameView] documentView];
     if ([webHTMLView _interpretKeyEvent:event savingCommands:NO])
         event->setDefaultHandled();
+#else
+    WebHTMLView *webHTMLView = (WebHTMLView *)[[kit(frame) frameView] documentView];
+    if ([webHTMLView _handleEditingKeyEvent:event])
+        event->setDefaultHandled();
+#endif
 }
 
 void WebEditorClient::handleInputMethodKeydown(KeyboardEvent* event)
 {
-    Frame* frame = event->target()->toNode()->document()->frame();
+#if !PLATFORM(IOS)
+    Frame* frame = event->target()->toNode()->document().frame();
     WebHTMLView *webHTMLView = [[kit(frame) frameView] documentView];
     if ([webHTMLView _interpretKeyEvent:event savingCommands:YES])
         event->setDefaultHandled();
+#else
+    // iOS does not use input manager this way
+#endif
 }
 
 #define FormDelegateLog(ctrl)  LOG(FormDelegate, "control=%@", ctrl)
 
 void WebEditorClient::textFieldDidBeginEditing(Element* element)
 {
-    if (!element->hasTagName(inputTag))
+    if (!isHTMLInputElement(element))
         return;
 
-    DOMHTMLInputElement* inputElement = kit(static_cast<HTMLInputElement*>(element));
+    DOMHTMLInputElement* inputElement = kit(toHTMLInputElement(element));
     FormDelegateLog(inputElement);
-    CallFormDelegate(m_webView, @selector(textFieldDidBeginEditing:inFrame:), inputElement, kit(element->document()->frame()));
+    CallFormDelegate(m_webView, @selector(textFieldDidBeginEditing:inFrame:), inputElement, kit(element->document().frame()));
 }
 
 void WebEditorClient::textFieldDidEndEditing(Element* element)
 {
-    if (!element->hasTagName(inputTag))
+    if (!isHTMLInputElement(element))
         return;
 
-    DOMHTMLInputElement* inputElement = kit(static_cast<HTMLInputElement*>(element));
+    DOMHTMLInputElement* inputElement = kit(toHTMLInputElement(element));
     FormDelegateLog(inputElement);
-    CallFormDelegate(m_webView, @selector(textFieldDidEndEditing:inFrame:), inputElement, kit(element->document()->frame()));
+    CallFormDelegate(m_webView, @selector(textFieldDidEndEditing:inFrame:), inputElement, kit(element->document().frame()));
 }
 
 void WebEditorClient::textDidChangeInTextField(Element* element)
 {
-    if (!element->hasTagName(inputTag))
+    if (!isHTMLInputElement(element))
         return;
 
+#if !PLATFORM(IOS)
     if (!UserTypingGestureIndicator::processingUserTypingGesture() || UserTypingGestureIndicator::focusedElementAtGestureStart() != element)
         return;
+#endif
 
-    DOMHTMLInputElement* inputElement = kit(static_cast<HTMLInputElement*>(element));
+    DOMHTMLInputElement* inputElement = kit(toHTMLInputElement(element));
     FormDelegateLog(inputElement);
-    CallFormDelegate(m_webView, @selector(textDidChangeInTextField:inFrame:), inputElement, kit(element->document()->frame()));
+    CallFormDelegate(m_webView, @selector(textDidChangeInTextField:inFrame:), inputElement, kit(element->document().frame()));
 }
 
 static SEL selectorForKeyEvent(KeyboardEvent* event)
@@ -688,51 +764,137 @@ static SEL selectorForKeyEvent(KeyboardEvent* event)
 
 bool WebEditorClient::doTextFieldCommandFromEvent(Element* element, KeyboardEvent* event)
 {
-    if (!element->hasTagName(inputTag))
+    if (!isHTMLInputElement(element))
         return NO;
 
-    DOMHTMLInputElement* inputElement = kit(static_cast<HTMLInputElement*>(element));
+    DOMHTMLInputElement* inputElement = kit(toHTMLInputElement(element));
     FormDelegateLog(inputElement);
     if (SEL commandSelector = selectorForKeyEvent(event))
-        return CallFormDelegateReturningBoolean(NO, m_webView, @selector(textField:doCommandBySelector:inFrame:), inputElement, commandSelector, kit(element->document()->frame()));
+        return CallFormDelegateReturningBoolean(NO, m_webView, @selector(textField:doCommandBySelector:inFrame:), inputElement, commandSelector, kit(element->document().frame()));
     return NO;
 }
 
 void WebEditorClient::textWillBeDeletedInTextField(Element* element)
 {
-    if (!element->hasTagName(inputTag))
+    if (!isHTMLInputElement(element))
         return;
 
-    DOMHTMLInputElement* inputElement = kit(static_cast<HTMLInputElement*>(element));
+    DOMHTMLInputElement* inputElement = kit(toHTMLInputElement(element));
     FormDelegateLog(inputElement);
     // We're using the deleteBackward selector for all deletion operations since the autofill code treats all deletions the same way.
-    CallFormDelegateReturningBoolean(NO, m_webView, @selector(textField:doCommandBySelector:inFrame:), inputElement, @selector(deleteBackward:), kit(element->document()->frame()));
+    CallFormDelegateReturningBoolean(NO, m_webView, @selector(textField:doCommandBySelector:inFrame:), inputElement, @selector(deleteBackward:), kit(element->document().frame()));
 }
 
 void WebEditorClient::textDidChangeInTextArea(Element* element)
 {
-    if (!element->hasTagName(textareaTag))
+    if (!isHTMLTextAreaElement(element))
         return;
 
-    DOMHTMLTextAreaElement* textAreaElement = kit(static_cast<HTMLTextAreaElement*>(element));
+    DOMHTMLTextAreaElement* textAreaElement = kit(toHTMLTextAreaElement(element));
     FormDelegateLog(textAreaElement);
-    CallFormDelegate(m_webView, @selector(textDidChangeInTextArea:inFrame:), textAreaElement, kit(element->document()->frame()));
+    CallFormDelegate(m_webView, @selector(textDidChangeInTextArea:inFrame:), textAreaElement, kit(element->document().frame()));
 }
+
+#if PLATFORM(IOS)
+
+void WebEditorClient::writeDataToPasteboard(NSDictionary* representation)
+{
+    if ([[m_webView _UIKitDelegateForwarder] respondsToSelector:@selector(writeDataToPasteboard:)])
+        [[m_webView _UIKitDelegateForwarder] writeDataToPasteboard:representation];
+}
+
+NSArray* WebEditorClient::supportedPasteboardTypesForCurrentSelection() 
+{
+    if ([[m_webView _UIKitDelegateForwarder] respondsToSelector:@selector(supportedPasteboardTypesForCurrentSelection)]) 
+        return [[m_webView _UIKitDelegateForwarder] supportedPasteboardTypesForCurrentSelection]; 
+
+    return nil; 
+}
+
+NSArray* WebEditorClient::readDataFromPasteboard(NSString* type, int index)
+{
+    if ([[m_webView _UIKitDelegateForwarder] respondsToSelector:@selector(readDataFromPasteboard:withIndex:)])
+        return [[m_webView _UIKitDelegateForwarder] readDataFromPasteboard:type withIndex:index];
+    
+    return nil;
+}
+
+bool WebEditorClient::hasRichlyEditableSelection()
+{
+    if ([[m_webView _UIKitDelegateForwarder] respondsToSelector:@selector(hasRichlyEditableSelection)])
+        return [[m_webView _UIKitDelegateForwarder] hasRichlyEditableSelection];
+    
+    return false;
+}
+
+int WebEditorClient::getPasteboardItemsCount()
+{
+    if ([[m_webView _UIKitDelegateForwarder] respondsToSelector:@selector(getPasteboardItemsCount)])
+        return [[m_webView _UIKitDelegateForwarder] getPasteboardItemsCount];
+    
+    return 0;
+}
+
+WebCore::DocumentFragment* WebEditorClient::documentFragmentFromDelegate(int index)
+{
+    if ([[m_webView _editingDelegateForwarder] respondsToSelector:@selector(documentFragmentForPasteboardItemAtIndex:)]) {
+        DOMDocumentFragment *fragmentFromDelegate = [[m_webView _editingDelegateForwarder] documentFragmentForPasteboardItemAtIndex:index];
+        if (fragmentFromDelegate)
+            return core(fragmentFromDelegate);
+    }
+    
+    return 0;
+}
+
+bool WebEditorClient::performsTwoStepPaste(WebCore::DocumentFragment* fragment)
+{
+    if ([[m_webView _UIKitDelegateForwarder] respondsToSelector:@selector(performsTwoStepPaste:)])
+        return [[m_webView _UIKitDelegateForwarder] performsTwoStepPaste:kit(fragment)];
+
+    return false;
+}
+
+int WebEditorClient::pasteboardChangeCount()
+{
+    if ([[m_webView _UIKitDelegateForwarder] respondsToSelector:@selector(getPasteboardChangeCount)])
+        return [[m_webView _UIKitDelegateForwarder] getPasteboardChangeCount];
+    
+    return 0;
+}
+
+Vector<TextCheckingResult> WebEditorClient::checkTextOfParagraph(StringView string, TextCheckingTypeMask checkingTypes)
+{
+    ASSERT(checkingTypes & NSTextCheckingTypeSpelling);
+
+    Vector<TextCheckingResult> results;
+
+    NSArray *incomingResults = [[m_webView _UIKitDelegateForwarder] checkSpellingOfString:string.createNSStringWithoutCopying().get()];
+    for (NSValue *incomingResult in incomingResults) {
+        NSRange resultRange = [incomingResult rangeValue];
+        ASSERT(resultRange.location != NSNotFound && resultRange.length > 0);
+        TextCheckingResult result;
+        result.type = TextCheckingTypeSpelling;
+        result.location = resultRange.location;
+        result.length = resultRange.length;
+        results.append(result);
+    }
+
+    return results;
+}
+
+#endif // PLATFORM(IOS)
+
+#if !PLATFORM(IOS)
 
 bool WebEditorClient::shouldEraseMarkersAfterChangeSelection(TextCheckingType type) const
 {
     // This prevents erasing spelling markers on OS X Lion or later to match AppKit on these Mac OS X versions.
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     return type != TextCheckingTypeSpelling;
-#else
-    return true;
-#endif
 }
 
 void WebEditorClient::ignoreWordInSpellDocument(const String& text)
 {
-    [[NSSpellChecker sharedSpellChecker] ignoreWord:text 
-                             inSpellDocumentWithTag:spellCheckerDocumentTag()];
+    [[NSSpellChecker sharedSpellChecker] ignoreWord:text inSpellDocumentWithTag:spellCheckerDocumentTag()];
 }
 
 void WebEditorClient::learnWord(const String& text)
@@ -740,11 +902,10 @@ void WebEditorClient::learnWord(const String& text)
     [[NSSpellChecker sharedSpellChecker] learnWord:text];
 }
 
-void WebEditorClient::checkSpellingOfString(const UChar* text, int length, int* misspellingLocation, int* misspellingLength)
+void WebEditorClient::checkSpellingOfString(StringView text, int* misspellingLocation, int* misspellingLength)
 {
-    NSString* textString = [[NSString alloc] initWithCharactersNoCopy:const_cast<UChar*>(text) length:length freeWhenDone:NO];
-    NSRange range = [[NSSpellChecker sharedSpellChecker] checkSpellingOfString:textString startingAt:0 language:nil wrap:NO inSpellDocumentWithTag:spellCheckerDocumentTag() wordCount:NULL];
-    [textString release];
+    NSRange range = [[NSSpellChecker sharedSpellChecker] checkSpellingOfString:text.createNSStringWithoutCopying().get() startingAt:0 language:nil wrap:NO inSpellDocumentWithTag:spellCheckerDocumentTag() wordCount:NULL];
+
     if (misspellingLocation) {
         // WebCore expects -1 to represent "not found"
         if (range.location == NSNotFound)
@@ -764,12 +925,10 @@ String WebEditorClient::getAutoCorrectSuggestionForMisspelledWord(const String& 
     return String();
 }
 
-void WebEditorClient::checkGrammarOfString(const UChar* text, int length, Vector<GrammarDetail>& details, int* badGrammarLocation, int* badGrammarLength)
+void WebEditorClient::checkGrammarOfString(StringView text, Vector<GrammarDetail>& details, int* badGrammarLocation, int* badGrammarLength)
 {
     NSArray *grammarDetails;
-    NSString* textString = [[NSString alloc] initWithCharactersNoCopy:const_cast<UChar*>(text) length:length freeWhenDone:NO];
-    NSRange range = [[NSSpellChecker sharedSpellChecker] checkGrammarOfString:textString startingAt:0 language:nil wrap:NO inSpellDocumentWithTag:spellCheckerDocumentTag() details:&grammarDetails];
-    [textString release];
+    NSRange range = [[NSSpellChecker sharedSpellChecker] checkGrammarOfString:text.createNSStringWithoutCopying().get() startingAt:0 language:nil wrap:NO inSpellDocumentWithTag:spellCheckerDocumentTag() details:&grammarDetails];
     if (badGrammarLocation)
         // WebCore expects -1 to represent "not found"
         *badGrammarLocation = (range.location == NSNotFound) ? -1 : static_cast<int>(range.location);
@@ -872,12 +1031,9 @@ static Vector<TextCheckingResult> core(NSArray *incomingResults, TextCheckingTyp
     return results;
 }
 
-void WebEditorClient::checkTextOfParagraph(const UChar* text, int length, TextCheckingTypeMask checkingTypes, Vector<TextCheckingResult>& results)
+Vector<TextCheckingResult> WebEditorClient::checkTextOfParagraph(StringView string, TextCheckingTypeMask checkingTypes)
 {
-    NSString *textString = [[NSString alloc] initWithCharactersNoCopy:const_cast<UChar*>(text) length:length freeWhenDone:NO];
-    NSArray *incomingResults = [[NSSpellChecker sharedSpellChecker] checkString:textString range:NSMakeRange(0, [textString length]) types:(checkingTypes|NSTextCheckingTypeOrthography) options:nil inSpellDocumentWithTag:spellCheckerDocumentTag() orthography:NULL wordCount:NULL];
-    [textString release];
-    results = core(incomingResults, checkingTypes);
+    return core([[NSSpellChecker sharedSpellChecker] checkString:string.createNSStringWithoutCopying().get() range:NSMakeRange(0, string.length()) types:(checkingTypes | NSTextCheckingTypeOrthography) options:nil inSpellDocumentWithTag:spellCheckerDocumentTag() orthography:NULL wordCount:NULL], checkingTypes);
 }
 
 void WebEditorClient::updateSpellingUIWithGrammarString(const String& badGrammarPhrase, const GrammarDetail& grammarDetail)
@@ -915,7 +1071,6 @@ bool WebEditorClient::spellingUIIsShowing()
 
 void WebEditorClient::getGuessesForWord(const String& word, const String& context, Vector<String>& guesses) {
     guesses.clear();
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     NSString* language = nil;
     NSOrthography* orthography = nil;
     NSSpellChecker *checker = [NSSpellChecker sharedSpellChecker];
@@ -924,9 +1079,6 @@ void WebEditorClient::getGuessesForWord(const String& word, const String& contex
         language = [checker languageForWordRange:NSMakeRange(0, context.length()) inString:context orthography:orthography];
     }
     NSArray* stringsArray = [checker guessesForWordRange:NSMakeRange(0, word.length()) inString:word language:language inSpellDocumentWithTag:spellCheckerDocumentTag()];
-#else
-    NSArray* stringsArray = [[NSSpellChecker sharedSpellChecker] guessesForWord:word];
-#endif
     unsigned count = [stringsArray count];
 
     if (count > 0) {
@@ -937,6 +1089,8 @@ void WebEditorClient::getGuessesForWord(const String& word, const String& contex
     }
 }
 
+#endif // !PLATFORM(IOS)
+
 void WebEditorClient::willSetInputMethodState()
 {
 }
@@ -945,6 +1099,7 @@ void WebEditorClient::setInputMethodState(bool)
 {
 }
 
+#if !PLATFORM(IOS)
 @interface WebEditorSpellCheckResponder : NSObject
 {
     WebEditorClient* _client;
@@ -980,9 +1135,11 @@ void WebEditorClient::didCheckSucceed(int sequence, NSArray* results)
     m_textCheckingRequest->didSucceed(core(results, m_textCheckingRequest->data().mask()));
     m_textCheckingRequest.clear();
 }
+#endif
 
 void WebEditorClient::requestCheckingOfString(PassRefPtr<WebCore::TextCheckingRequest> request)
 {
+#if !PLATFORM(IOS)
     ASSERT(!m_textCheckingRequest);
     m_textCheckingRequest = request;
 
@@ -995,4 +1152,5 @@ void WebEditorClient::requestCheckingOfString(PassRefPtr<WebCore::TextCheckingRe
                                   target:[[[WebEditorSpellCheckResponder alloc] initWithClient:this sequence:sequence results:results] autorelease]
                                 argument:nil order:0 modes:[NSArray arrayWithObject:NSDefaultRunLoopMode]];
         }];
+#endif
 }

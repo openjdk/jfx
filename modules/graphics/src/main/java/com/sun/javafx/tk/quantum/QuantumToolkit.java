@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -140,15 +140,12 @@ public final class QuantumToolkit extends Toolkit {
     public static final boolean pulseDebug =
             AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("quantum.pulse"));
 
-    private static boolean userSetMultithreaded = false;
     private static final boolean multithreaded =
             AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
                 // If it is not specified, or it is true, then it should
                 // be true. Otherwise it should be false.
                 String value = System.getProperty("quantum.multithreaded");
                 if (value == null) return true;
-
-                userSetMultithreaded = true;
                 final boolean result = Boolean.parseBoolean(value);
                 if (verbose) {
                     System.out.println(result ? "Multi-Threading Enabled" : "Multi-Threading Disabled");
@@ -217,9 +214,6 @@ public final class QuantumToolkit extends Toolkit {
 
     private final PerformanceTracker perfTracker = new PerformanceTrackerImpl();
 
-    // This is a workaround fix for Mac to serialize the access to Prism context when EmbeddedStage is used.
-    private static boolean hasEmbeddedStage = false;
-
     @Override public boolean init() {
         /*
          * Glass Mac, X11 need Application.setDeviceDetails to happen prior to Glass Application.Run
@@ -285,16 +279,7 @@ public final class QuantumToolkit extends Toolkit {
         // not implemented
     }
 
-    static void setHasEmbeddedStage(boolean embeddedStage) {
-        hasEmbeddedStage = embeddedStage;
-    }
-
-    // Called by PaintCollector as a workaround to RT-15195 and RT-38808.
     boolean shouldWaitForRenderingToComplete() {
-        if (userSetMultithreaded) return !multithreaded;
-        // Work around for RT-38808, crash on Mac
-        // This is to serialize the access to Prism context when EmbeddedStage is used.
-        if ((PlatformUtil.isMac()) && hasEmbeddedStage) return true;
         return !multithreaded; 
     }
 
@@ -697,6 +682,11 @@ public final class QuantumToolkit extends Toolkit {
 
     @Override public List<?> getScreens() {
         return Screen.getScreens();
+    }
+
+    @Override
+    public ScreenConfigurationAccessor getScreenConfigurationAccessor() {
+        return screenAccessor;
     }
 
     @Override
@@ -1316,6 +1306,8 @@ public final class QuantumToolkit extends Toolkit {
         public PlatformImage getFrame(int index) { return image; }
         @Override
         public int getFrameDelay(int index) { return 0; }
+        @Override
+        public int getLoopCount() { return 0; }
         @Override
         public int getWidth() { return image.getWidth(); }
         @Override

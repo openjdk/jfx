@@ -25,36 +25,34 @@
 #define HTMLFieldSetElement_h
 
 #include "HTMLFormControlElement.h"
-#include <wtf/OwnPtr.h>
 
 namespace WebCore {
 
 class FormAssociatedElement;
 class HTMLCollection;
 
-class HTMLFieldSetElement FINAL : public HTMLFormControlElement {
+class HTMLFieldSetElement final : public HTMLFormControlElement {
 public:
-    static PassRefPtr<HTMLFieldSetElement> create(const QualifiedName&, Document*, HTMLFormElement*);
-    HTMLLegendElement* legend() const;
+    static PassRefPtr<HTMLFieldSetElement> create(const QualifiedName&, Document&, HTMLFormElement*);
 
+    HTMLLegendElement* legend() const;
     PassRefPtr<HTMLCollection> elements();
 
     const Vector<FormAssociatedElement*>& associatedElements() const;
     unsigned length() const;
 
 protected:
-    virtual void disabledAttributeChanged() OVERRIDE;
+    virtual void disabledAttributeChanged() override;
 
 private:
-    HTMLFieldSetElement(const QualifiedName&, Document*, HTMLFormElement*);
+    HTMLFieldSetElement(const QualifiedName&, Document&, HTMLFormElement*);
 
-    virtual bool isEnumeratable() const { return true; }
-    virtual bool supportsFocus() const OVERRIDE;
-    virtual RenderObject* createRenderer(RenderArena*, RenderStyle*);
-    virtual const AtomicString& formControlType() const;
-    virtual bool recalcWillValidate() const { return false; }
-    virtual void childrenChanged(bool changedByParser, Node* beforeChange, Node* afterChange, int childCountDelta) OVERRIDE;
-    virtual bool areAuthorShadowsAllowed() const OVERRIDE { return false; }
+    virtual bool isEnumeratable() const override { return true; }
+    virtual bool supportsFocus() const override;
+    virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) override;
+    virtual const AtomicString& formControlType() const override;
+    virtual bool recalcWillValidate() const override { return false; }
+    virtual void childrenChanged(const ChildChange&) override;
 
     static void invalidateDisabledStateUnder(Element*);
     void refreshElementsIfNeeded() const;
@@ -63,6 +61,8 @@ private:
     // When dom tree is modified, we have to refresh the m_associatedElements array.
     mutable uint64_t m_documentVersion;
 };
+
+NODE_TYPE_CASTS(HTMLFieldSetElement)
 
 } // namespace
 

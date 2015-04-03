@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -33,7 +33,6 @@ package ensemble.samplepage;
 
 
 import ensemble.samples.charts.pie.chart.PieChartApp;
-import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -41,8 +40,8 @@ import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.chart.PieChart;
 import javafx.scene.chart.PieChart.Data;
-import javafx.scene.control.ContextMenuBuilder;
-import javafx.scene.control.MenuItemBuilder;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TableColumn;
@@ -50,7 +49,6 @@ import javafx.scene.control.TableColumn.CellDataFeatures;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.input.ContextMenuEvent;
-import javafx.util.Callback;
 import javafx.util.StringConverter;
 
 
@@ -119,50 +117,39 @@ public class PieChartDataVisualizer extends TableView<Data> {
             }
         });
 
-        setContextMenu(ContextMenuBuilder.create()
-                .items(
-                    MenuItemBuilder.create()
-                        .text("Insert item")
-//                        .accelerator(new KeyCodeCombination(KeyCode.INSERT, KeyCombination.CONTROL_DOWN))
-                        .onAction(new EventHandler<ActionEvent>() {
-                            
-                            long itemIndex = 0;
+        MenuItem item1 = new MenuItem("Insert item");
+        item1.setOnAction(new EventHandler<ActionEvent>() {
+            long itemIndex = 0;
+            @Override
+            public void handle(ActionEvent t) {
+                int index = getSelectionModel().getSelectedIndex();
+                if (index < 0 || index >= chart.getData().size()) {
+                    index = chart.getData().size();
+                }
+                chart.getData().add(index, new Data("Item " + (++itemIndex), Math.random() * 100));
+                getSelectionModel().select(index);
+            }
+        });
 
-                            @Override
-                            public void handle(ActionEvent t) {
-                                int index = getSelectionModel().getSelectedIndex();
-                                if (index < 0 || index >= chart.getData().size()) {
-                                    index = chart.getData().size();
-                                }
-                                chart.getData().add(index, new Data("Item " + (++itemIndex), Math.random() * 100));
-                                getSelectionModel().select(index);
-                            }
-                        })
-                        .build(),
-                    MenuItemBuilder.create()
-                        .text("Delete item")
-//                        .accelerator(new KeyCodeCombination(KeyCode.DELETE, KeyCombination.CONTROL_DOWN))
-                        .onAction((ActionEvent t) -> {
-                            int index = getSelectionModel().getSelectedIndex();
-                            if (index >= 0 && index < chart.getData().size()) {
-                                chart.getData().remove(index);
-                            }
-        })
-                        .build(),
-                    MenuItemBuilder.create()
-                        .text("Clear data")
-                        .onAction((ActionEvent t) -> {
-                            chart.getData().clear();
-        })
-                        .build(),
-                    MenuItemBuilder.create()
-                        .text("Set new data")
-                        .onAction((ActionEvent t) -> {
-                            chart.setData(PieChartApp.generateData());
-        })
-                        .build())
-                .build());
-        
+        MenuItem item2 = new MenuItem("Delete item");
+        item2.setOnAction((ActionEvent t) -> {
+            int index = getSelectionModel().getSelectedIndex();
+            if (index >= 0 && index < chart.getData().size()) {
+                chart.getData().remove(index);
+            }
+        });
+
+        MenuItem item3 = new MenuItem("Clear data");
+        item3.setOnAction((ActionEvent t) -> {
+            chart.getData().clear();
+        });
+
+        MenuItem item4 = new MenuItem("Set new data");
+        item4.setOnAction((ActionEvent t) -> {
+            chart.setData(PieChartApp.generateData());
+        });
+
+        setContextMenu(new ContextMenu(item1, item2, item3, item4));
         getColumns().setAll(nameColumn, pieValueColumn);
     }
 }

@@ -34,10 +34,10 @@
 #include "VectorMath.h"
 #include <algorithm>
 #include <complex>
-#include <wtf/Float32Array.h>
+#include <runtime/Float32Array.h>
+#include <runtime/Uint8Array.h>
 #include <wtf/MainThread.h>
 #include <wtf/MathExtras.h>
-#include <wtf/Uint8Array.h>
 
 namespace WebCore {
 
@@ -60,7 +60,7 @@ RealtimeAnalyser::RealtimeAnalyser()
     , m_minDecibels(DefaultMinDecibels)
     , m_maxDecibels(DefaultMaxDecibels)
 {
-    m_analysisFrame = adoptPtr(new FFTFrame(DefaultFFTSize));
+    m_analysisFrame = std::make_unique<FFTFrame>(DefaultFFTSize);
 }
 
 RealtimeAnalyser::~RealtimeAnalyser()
@@ -86,7 +86,7 @@ bool RealtimeAnalyser::setFftSize(size_t size)
         return false;
 
     if (m_fftSize != size) {
-        m_analysisFrame = adoptPtr(new FFTFrame(size));
+        m_analysisFrame = std::make_unique<FFTFrame>(size);
         // m_magnitudeBuffer has size = fftSize / 2 because it contains floats reduced from complex values in m_analysisFrame.
         m_magnitudeBuffer.allocate(size / 2);
         m_fftSize = size;

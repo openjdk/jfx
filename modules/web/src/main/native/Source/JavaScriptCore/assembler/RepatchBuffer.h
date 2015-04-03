@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
 #ifndef RepatchBuffer_h
@@ -45,18 +45,25 @@ class RepatchBuffer {
 
 public:
     RepatchBuffer(CodeBlock* codeBlock)
+        : m_codeBlock(codeBlock)
     {
-        JITCode& code = codeBlock->getJITCode();
-        m_start = code.start();
-        m_size = code.size();
+#if ENABLE(ASSEMBLER_WX_EXCLUSIVE)
+        RefPtr<JITCode> code = codeBlock->jitCode();
+        m_start = code->start();
+        m_size = code->size();
 
         ExecutableAllocator::makeWritable(m_start, m_size);
+#endif
     }
 
     ~RepatchBuffer()
     {
+#if ENABLE(ASSEMBLER_WX_EXCLUSIVE)
         ExecutableAllocator::makeExecutable(m_start, m_size);
+#endif
     }
+    
+    CodeBlock* codeBlock() const { return m_codeBlock; }
 
     void relink(CodeLocationJump jump, CodeLocationLabel destination)
     {
@@ -102,7 +109,7 @@ public:
     {
         relink(CodeLocationCall(CodePtr(returnAddress)), label);
     }
-
+    
     void relinkCallerToTrampoline(ReturnAddressPtr returnAddress, CodePtr newCalleeFunction)
     {
         relinkCallerToTrampoline(returnAddress, CodeLocationLabel(newCalleeFunction));
@@ -112,12 +119,12 @@ public:
     {
         relink(CodeLocationCall(CodePtr(returnAddress)), function);
     }
-
+    
     void relinkNearCallerToTrampoline(ReturnAddressPtr returnAddress, CodeLocationLabel label)
     {
         relink(CodeLocationNearCall(CodePtr(returnAddress)), label);
     }
-
+    
     void relinkNearCallerToTrampoline(ReturnAddressPtr returnAddress, CodePtr newCalleeFunction)
     {
         relinkNearCallerToTrampoline(returnAddress, CodeLocationLabel(newCalleeFunction));
@@ -170,8 +177,11 @@ public:
     }
 
 private:
+    CodeBlock* m_codeBlock;
+#if ENABLE(ASSEMBLER_WX_EXCLUSIVE)
     void* m_start;
     size_t m_size;
+#endif
 };
 
 } // namespace JSC

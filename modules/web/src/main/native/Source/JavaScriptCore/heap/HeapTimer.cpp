@@ -29,15 +29,12 @@
 #include "APIShims.h"
 #include "JSObject.h"
 #include "JSString.h"
-
+#include "JSCInlines.h"
 #include <wtf/MainThread.h>
 #include <wtf/Threading.h>
 
-#if PLATFORM(QT)
-#include <QCoreApplication>
-#include <QMutexLocker>
-#include <QThread>
-#include <QTimerEvent>
+#if PLATFORM(EFL)
+#include <Ecore.h>
 #endif
 
 namespace JSC {
@@ -85,86 +82,61 @@ void HeapTimer::timerDidFire(CFRunLoopTimerRef timer, void* context)
     if (!vm) {
         apiLock->unlock();
         return;
-}
+    }
 
     HeapTimer* heapTimer = 0;
-    if (vm->heap.activityCallback()->m_timer.get() == timer)
+    if (vm->heap.activityCallback() && vm->heap.activityCallback()->m_timer.get() == timer)
         heapTimer = vm->heap.activityCallback();
     else if (vm->heap.sweeper()->m_timer.get() == timer)
         heapTimer = vm->heap.sweeper();
     else
         RELEASE_ASSERT_NOT_REACHED();
 
-{
+    {
         APIEntryShim shim(vm);
         heapTimer->doWork();
-}
+    }
 
     apiLock->unlock();
 }
 
-#elif PLATFORM(BLACKBERRY)
+#elif PLATFORM(EFL)
 
 HeapTimer::HeapTimer(VM* vm)
     : m_vm(vm)
-    , m_timer(this, &HeapTimer::timerDidFire)
+    , m_timer(0)
 {
-    // FIXME: Implement HeapTimer for other threads.
-    if (WTF::isMainThread() && !m_timer.tryCreateClient())
-        CRASH();
 }
 
 HeapTimer::~HeapTimer()
 {
+    stop();
 }
 
-void HeapTimer::timerDidFire()
+Ecore_Timer* HeapTimer::add(double delay, void* agent)
 {
-    doWork();
+    return ecore_timer_add(delay, reinterpret_cast<Ecore_Task_Cb>(timerEvent), agent);
 }
-
-void HeapTimer::invalidate()
+    
+void HeapTimer::stop()
 {
-}
-
-#elif PLATFORM(QT)
-
-HeapTimer::HeapTimer(VM* vm)
-    : m_vm(vm)
-    , m_newThread(0)
-    , m_mutex(QMutex::NonRecursive)
-{
-    // The HeapTimer might be created before the runLoop is started,
-    // but we need to ensure the thread has an eventDispatcher already.
-    QEventLoop fakeLoop(this);
-}
-
-HeapTimer::~HeapTimer()
-{
-    QMutexLocker lock(&m_mutex);
-    m_timer.stop();
-}
-
-void HeapTimer::timerEvent(QTimerEvent*)
-{
-    QMutexLocker lock(&m_mutex);
-    if (m_newThread) {
-        // We need to wait with processing until we are on the right thread.
+    if (!m_timer)
         return;
-    }
 
-    APIEntryShim shim(m_vm);
-    doWork();
+    ecore_timer_del(m_timer);
+    m_timer = 0;
 }
 
-void HeapTimer::customEvent(QEvent*)
+bool HeapTimer::timerEvent(void* info)
 {
-    ASSERT(m_newThread);
-    QMutexLocker lock(&m_mutex);
-    moveToThread(m_newThread);
-    m_newThread = 0;
+    HeapTimer* agent = static_cast<HeapTimer*>(info);
+    
+    APIEntryShim shim(agent->m_vm);
+    agent->doWork();
+    agent->m_timer = 0;
+    
+    return ECORE_CALLBACK_CANCEL;
 }
-
 #else
 HeapTimer::HeapTimer(VM* vm)
     : m_vm(vm)

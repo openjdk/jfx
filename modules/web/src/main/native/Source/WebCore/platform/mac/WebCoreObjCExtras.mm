@@ -56,7 +56,7 @@ void WebCoreObjCFinalizeOnMainThread(Class cls)
 static void deallocCallback(Class cls, id object)
 {
     Method method = class_getInstanceMethod(cls, @selector(dealloc));
-    
+
     IMP imp = method_getImplementation(method);
     wtfCallIMP<void>(imp, object, @selector(dealloc));
 }
@@ -67,7 +67,7 @@ bool WebCoreObjCScheduleDeallocateOnMainThread(Class cls, id object)
 
     if (isMainThread())
         return false;
-    
+
     callOnMainThread(bind(deallocCallback, cls, object));
     return true;
 }

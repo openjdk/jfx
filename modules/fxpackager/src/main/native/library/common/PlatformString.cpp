@@ -75,7 +75,7 @@ FileSystemStringToString::FileSystemStringToString(const TCHAR* value) {
     Platform& platform = Platform::GetInstance();
     TCHAR* buffer = platform.ConvertFileSystemStringToString(lvalue, release);
     FData = buffer;
-    
+
     if (buffer != NULL && release == true) {
         delete[] buffer;
     }
@@ -116,7 +116,7 @@ void PlatformString::CopyString(wchar_t *Destination, size_t NumberOfElements, c
 #ifdef POSIX
     wcsncpy(Destination, Source, NumberOfElements);
 #endif //POSIX
-    
+
     if (NumberOfElements > 0) {
         Destination[NumberOfElements - 1] = '\0';
     }
@@ -205,17 +205,17 @@ PlatformString::PlatformString(const char* value) {
 
 PlatformString::PlatformString(size_t Value) {
     initialize();
-    
+
     std::stringstream ss;
     std::string s;
     ss << Value;
     s = ss.str();
-    
+
     FLength = strlen(s.c_str());
     FData = new char[FLength + 1];
     PlatformString::CopyString(FData, FLength + 1, s.c_str());
 }
-    
+
 PlatformString::PlatformString(const wchar_t* value) {
     initialize();
     MultibyteString temp = WideStringToMultibyteString(value);
@@ -268,26 +268,27 @@ PlatformString::PlatformString(JNIEnv *env, jstring value) {
     }
 }
 
-std::string PlatformString::Format(std::string value, ...) {
-    std::string result = value;
+TString PlatformString::Format(const TString value, ...) {
+//std::string PlatformString::Format(std::string value, ...) {
+    TString result = value;
 
     va_list arglist;
     va_start(arglist, value);
 
     while (1) {
-        size_t pos = result.find("%s", 0);
+        size_t pos = result.find(_T("%s"), 0);
 
         if (pos == TString::npos) {
             break;
         }
         else {
-            char* arg = va_arg(arglist, char*);
+            TCHAR* arg = va_arg(arglist, TCHAR*);
 
             if (arg == NULL) {
                 break;
             }
             else {
-                result.replace(pos, strlen("%s"), arg);
+                result.replace(pos, StringLength(_T("%s")), arg);
             }
         }
     }

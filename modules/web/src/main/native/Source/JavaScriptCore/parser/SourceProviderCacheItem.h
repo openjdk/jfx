@@ -34,14 +34,15 @@
 namespace JSC {
 
 struct SourceProviderCacheItemCreationParameters {
-    unsigned functionStart;
+    unsigned functionNameStart;
     unsigned closeBraceLine;
-    unsigned closeBracePos;
+    unsigned closeBraceOffset;
+    unsigned closeBraceLineStartOffset;
     bool needsFullActivation;
     bool usesEval;
     bool strictMode;
-    Vector<RefPtr<StringImpl> > usedVariables;
-    Vector<RefPtr<StringImpl> > writtenVariables;
+    Vector<RefPtr<StringImpl>> usedVariables;
+    Vector<RefPtr<StringImpl>> writtenVariables;
 };
 
 #if COMPILER(MSVC)
@@ -52,29 +53,33 @@ struct SourceProviderCacheItemCreationParameters {
 class SourceProviderCacheItem {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static PassOwnPtr<SourceProviderCacheItem> create(const SourceProviderCacheItemCreationParameters&);
+    static std::unique_ptr<SourceProviderCacheItem> create(const SourceProviderCacheItemCreationParameters&);
     ~SourceProviderCacheItem();
 
-    JSToken closeBraceToken() const
+    JSToken closeBraceToken() const 
     {
         JSToken token;
         token.m_type = CLOSEBRACE;
-        token.m_data.intValue = closeBracePos;
-        token.m_location.startOffset = closeBracePos;
-        token.m_location.endOffset = closeBracePos + 1;
+        token.m_data.offset = closeBraceOffset;
+        token.m_location.startOffset = closeBraceOffset;
+        token.m_location.endOffset = closeBraceOffset + 1;
         token.m_location.line = closeBraceLine;
+        token.m_location.lineStartOffset = closeBraceLineStartOffset;
+        // token.m_location.sourceOffset is initialized once by the client. So,
+        // we do not need to set it here.
         return token;
     }
 
-    unsigned functionStart : 31;
+    unsigned functionNameStart : 31;
     bool needsFullActivation : 1;
     
     unsigned closeBraceLine : 31;
     bool usesEval : 1;
 
-    unsigned closeBracePos : 31;
+    unsigned closeBraceOffset : 31;
     bool strictMode : 1;
 
+    unsigned closeBraceLineStartOffset;
     unsigned usedVariablesCount;
     unsigned writtenVariablesCount;
 
@@ -93,21 +98,22 @@ inline SourceProviderCacheItem::~SourceProviderCacheItem()
         m_variables[i]->deref();
 }
 
-inline PassOwnPtr<SourceProviderCacheItem> SourceProviderCacheItem::create(const SourceProviderCacheItemCreationParameters& parameters)
+inline std::unique_ptr<SourceProviderCacheItem> SourceProviderCacheItem::create(const SourceProviderCacheItemCreationParameters& parameters)
 {
     size_t variableCount = parameters.writtenVariables.size() + parameters.usedVariables.size();
     size_t objectSize = sizeof(SourceProviderCacheItem) + sizeof(StringImpl*) * variableCount;
     void* slot = fastMalloc(objectSize);
-    return adoptPtr(new (slot) SourceProviderCacheItem(parameters));
+    return std::unique_ptr<SourceProviderCacheItem>(new (slot) SourceProviderCacheItem(parameters));
 }
 
 inline SourceProviderCacheItem::SourceProviderCacheItem(const SourceProviderCacheItemCreationParameters& parameters)
-    : functionStart(parameters.functionStart)
+    : functionNameStart(parameters.functionNameStart)
     , needsFullActivation(parameters.needsFullActivation)
     , closeBraceLine(parameters.closeBraceLine)
     , usesEval(parameters.usesEval)
-    , closeBracePos(parameters.closeBracePos)
+    , closeBraceOffset(parameters.closeBraceOffset)
     , strictMode(parameters.strictMode)
+    , closeBraceLineStartOffset(parameters.closeBraceLineStartOffset)
     , usedVariablesCount(parameters.usedVariables.size())
     , writtenVariablesCount(parameters.writtenVariables.size())
 {

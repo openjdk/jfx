@@ -22,9 +22,9 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SVG)
 #include "SVGPathBuilder.h"
+
+#include "Path.h"
 
 namespace WebCore {
 
@@ -68,5 +68,3 @@ void SVGPathBuilder::closePath()
 }
 
 }
-
-#endif // ENABLE(SVG)

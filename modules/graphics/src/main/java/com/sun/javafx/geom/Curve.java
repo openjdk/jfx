@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1998, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -281,23 +281,23 @@ public abstract class Curve {
         double s0 = this.TforY(y0);
         double ys0 = this.YforT(s0);
         if (ys0 < y0) {
-            s0 = refineTforY(s0, ys0, y0);
+            s0 = refineTforY(s0, y0);
             ys0 = this.YforT(s0);
         }
         double s1 = this.TforY(y1);
         if (this.YforT(s1) < y0) {
-            s1 = refineTforY(s1, this.YforT(s1), y0);
+            s1 = refineTforY(s1, y0);
             //System.out.println("s1 problem!");
         }
         double t0 = that.TforY(y0);
         double yt0 = that.YforT(t0);
         if (yt0 < y0) {
-            t0 = that.refineTforY(t0, yt0, y0);
+            t0 = that.refineTforY(t0, y0);
             yt0 = that.YforT(t0);
         }
         double t1 = that.TforY(y1);
         if (that.YforT(t1) < y0) {
-            t1 = that.refineTforY(t1, that.YforT(t1), y0);
+            t1 = that.refineTforY(t1, y0);
             //System.out.println("t1 problem!");
         }
         double xs0 = this.XforT(s0);
@@ -560,7 +560,7 @@ public abstract class Curve {
         return false;
     }
 
-    public double refineTforY(double t0, double yt0, double y0) {
+    public double refineTforY(double t0, double y0) {
         double t1 = 1;
         while (true) {
             double th = (t0 + t1) / 2;
@@ -570,7 +570,6 @@ public abstract class Curve {
             double y = YforT(th);
             if (y < y0) {
                 t0 = th;
-                yt0 = y;
             } else if (y > y0) {
                 t1 = th;
             } else {

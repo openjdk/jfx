@@ -53,7 +53,7 @@ namespace WebCore {
 
 JSValue JSInspectorFrontendHost::platform(ExecState* execState)
 {
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) || PLATFORM(IOS)
     DEFINE_STATIC_LOCAL(const String, platform, (ASCIILiteral("mac")));
 #elif PLATFORM(JAVA)
     DEFINE_STATIC_LOCAL(const String, platform, (ASCIILiteral("java")));
@@ -75,12 +75,10 @@ JSValue JSInspectorFrontendHost::platform(ExecState* execState)
 
 JSValue JSInspectorFrontendHost::port(ExecState* execState)
 {
-#if PLATFORM(QT)
-    DEFINE_STATIC_LOCAL(const String, port, (ASCIILiteral("qt")));
+#if PLATFORM(GTK)
+    DEFINE_STATIC_LOCAL(const String, port, (ASCIILiteral("gtk")));
 #elif PLATFORM(JAVA)
     DEFINE_STATIC_LOCAL(const String, port, (ASCIILiteral("java")));
-#elif PLATFORM(GTK)
-    DEFINE_STATIC_LOCAL(const String, port, (ASCIILiteral("gtk")));
 #elif PLATFORM(EFL)
     DEFINE_STATIC_LOCAL(const String, port, (ASCIILiteral("efl")));
 #else
@@ -109,7 +107,7 @@ static void populateContextMenuItems(ExecState* exec, JSArray* array, ContextMen
                                  ContextMenuItemCustomTagNoAction,
                                  String());
             menu.appendItem(item);
-        } else if (typeString == "subMenu" && subItems.inherits(&JSArray::s_info)) {
+        } else if (typeString == "subMenu" && subItems.inherits(JSArray::info())) {
             ContextMenu subMenu;
             JSArray* subItemsArray = asArray(subItems);
             populateContextMenuItems(exec, subItemsArray, subMenu);
@@ -147,7 +145,7 @@ JSValue JSInspectorFrontendHost::showContextMenu(ExecState* exec)
 #else
     Vector<ContextMenuItem> items = menu.items();
 #endif
-    impl()->showContextMenu(event, items);
+    impl().showContextMenu(event, items);
 #else
     UNUSED_PARAM(exec);
 #endif

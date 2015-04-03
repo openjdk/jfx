@@ -38,8 +38,6 @@
 #include <wtf/MathExtras.h>
 #include <wtf/Noncopyable.h>
 
-using namespace std;
-
 namespace WebCore {
 
 enum {
@@ -85,7 +83,7 @@ public:
         return m_imageBuffer.get();
     }
 
-    bool setCachedShadowValues(const FloatSize& radius, const Color& color, ColorSpace colorSpace, const FloatRect& shadowRect, const RoundedRect::Radii& radii, const FloatSize& layerSize)
+    bool setCachedShadowValues(const FloatSize& radius, const Color& color, ColorSpace colorSpace, const FloatRect& shadowRect, const FloatRoundedRect::Radii& radii, const FloatSize& layerSize)
     {
         if (!m_lastWasInset && m_lastRadius == radius && m_lastColor == color && m_lastColorSpace == colorSpace && m_lastShadowRect == shadowRect &&  m_lastRadii == radii && m_lastLayerSize == layerSize)
             return false;
@@ -101,7 +99,7 @@ public:
         return true;
     }
 
-    bool setCachedInsetShadowValues(const FloatSize& radius, const Color& color, ColorSpace colorSpace, const FloatRect& bounds, const FloatRect& shadowRect, const RoundedRect::Radii& radii)
+    bool setCachedInsetShadowValues(const FloatSize& radius, const Color& color, ColorSpace colorSpace, const FloatRect& bounds, const FloatRect& shadowRect, const FloatRoundedRect::Radii& radii)
     {
         if (m_lastWasInset && m_lastRadius == radius && m_lastColor == color && m_lastColorSpace == colorSpace && m_lastInsetBounds == bounds && shadowRect == m_lastShadowRect && radii == m_lastRadii)
             return false;
@@ -141,14 +139,15 @@ private:
     {
         m_imageBuffer = nullptr;
         m_lastRadius = FloatSize();
+        m_lastLayerSize = FloatSize();
     }
 
-    OwnPtr<ImageBuffer> m_imageBuffer;
+    std::unique_ptr<ImageBuffer> m_imageBuffer;
     Timer<ScratchBuffer> m_purgeTimer;
     
     FloatRect m_lastInsetBounds;
     FloatRect m_lastShadowRect;
-    RoundedRect::Radii m_lastRadii;
+    FloatRoundedRect::Radii m_lastRadii;
     Color m_lastColor;
     ColorSpace m_lastColorSpace;
     FloatSize m_lastRadius;
@@ -248,7 +247,7 @@ static void calculateLobes(int lobes[][2], float blurRadius, bool shadowsIgnoreT
 {
     int diameter;
     if (shadowsIgnoreTransforms)
-        diameter = max(2, static_cast<int>(floorf((2 / 3.f) * blurRadius))); // Canvas shadow. FIXME: we should adjust the blur radius higher up.
+        diameter = std::max(2, static_cast<int>(floorf((2 / 3.f) * blurRadius))); // Canvas shadow. FIXME: we should adjust the blur radius higher up.
     else {
         // http://dev.w3.org/csswg/css3-background/#box-shadow
         // Approximate a Gaussian blur with a standard deviation equal to half the blur radius,
@@ -258,7 +257,7 @@ static void calculateLobes(int lobes[][2], float blurRadius, bool shadowsIgnoreT
         float stdDev = blurRadius / 2;
         const float gaussianKernelFactor = 3 / 4.f * sqrtf(2 * piFloat);
         const float fudgeFactor = 0.88f;
-        diameter = max(2, static_cast<int>(floorf(stdDev * gaussianKernelFactor * fudgeFactor + 0.5f)));
+        diameter = std::max(2, static_cast<int>(floorf(stdDev * gaussianKernelFactor * fudgeFactor + 0.5f)));
     }
 
     if (diameter & 1) {
@@ -483,16 +482,16 @@ void ShadowBlur::drawShadowBuffer(GraphicsContext* graphicsContext)
     graphicsContext->fillRect(FloatRect(m_layerOrigin, m_sourceRect.size()));
 }
 
-static void computeSliceSizesFromRadii(const IntSize& twiceRadius, const RoundedRect::Radii& radii, int& leftSlice, int& rightSlice, int& topSlice, int& bottomSlice)
+static void computeSliceSizesFromRadii(const IntSize& twiceRadius, const FloatRoundedRect::Radii& radii, int& leftSlice, int& rightSlice, int& topSlice, int& bottomSlice)
 {
-    leftSlice = twiceRadius.width() + max(radii.topLeft().width(), radii.bottomLeft().width()); 
-    rightSlice = twiceRadius.width() + max(radii.topRight().width(), radii.bottomRight().width()); 
+    leftSlice = twiceRadius.width() + std::max(radii.topLeft().width(), radii.bottomLeft().width());
+    rightSlice = twiceRadius.width() + std::max(radii.topRight().width(), radii.bottomRight().width());
 
-    topSlice = twiceRadius.height() + max(radii.topLeft().height(), radii.topRight().height());
-    bottomSlice = twiceRadius.height() + max(radii.bottomLeft().height(), radii.bottomRight().height());
+    topSlice = twiceRadius.height() + std::max(radii.topLeft().height(), radii.topRight().height());
+    bottomSlice = twiceRadius.height() + std::max(radii.bottomLeft().height(), radii.bottomRight().height());
 }
 
-IntSize ShadowBlur::templateSize(const IntSize& radiusPadding, const RoundedRect::Radii& radii) const
+IntSize ShadowBlur::templateSize(const IntSize& radiusPadding, const FloatRoundedRect::Radii& radii) const
 {
     const int templateSideLength = 1;
 
@@ -510,7 +509,7 @@ IntSize ShadowBlur::templateSize(const IntSize& radiusPadding, const RoundedRect
                    templateSideLength + topSlice + bottomSlice);
 }
 
-void ShadowBlur::drawRectShadow(GraphicsContext* graphicsContext, const FloatRect& shadowedRect, const RoundedRect::Radii& radii)
+void ShadowBlur::drawRectShadow(GraphicsContext* graphicsContext, const FloatRect& shadowedRect, const FloatRoundedRect::Radii& radii)
 {
     IntRect layerRect = calculateLayerBoundingRect(graphicsContext, shadowedRect, graphicsContext->clipBounds());
     if (layerRect.isEmpty())
@@ -537,7 +536,7 @@ void ShadowBlur::drawRectShadow(GraphicsContext* graphicsContext, const FloatRec
     drawRectShadowWithTiling(graphicsContext, shadowedRect, radii, templateSize, edgeSize);
 }
 
-void ShadowBlur::drawInsetShadow(GraphicsContext* graphicsContext, const FloatRect& rect, const FloatRect& holeRect, const RoundedRect::Radii& holeRadii)
+void ShadowBlur::drawInsetShadow(GraphicsContext* graphicsContext, const FloatRect& rect, const FloatRect& holeRect, const FloatRoundedRect::Radii& holeRadii)
 {
     IntRect layerRect = calculateLayerBoundingRect(graphicsContext, rect, graphicsContext->clipBounds());
     if (layerRect.isEmpty())
@@ -564,7 +563,7 @@ void ShadowBlur::drawInsetShadow(GraphicsContext* graphicsContext, const FloatRe
     drawInsetShadowWithTiling(graphicsContext, rect, holeRect, holeRadii, templateSize, edgeSize);
 }
 
-void ShadowBlur::drawRectShadowWithoutTiling(GraphicsContext* graphicsContext, const FloatRect& shadowedRect, const RoundedRect::Radii& radii, const IntRect& layerRect)
+void ShadowBlur::drawRectShadowWithoutTiling(GraphicsContext* graphicsContext, const FloatRect& shadowedRect, const FloatRoundedRect::Radii& radii, const IntRect& layerRect)
 {
     m_layerImage = ScratchBuffer::shared().getScratchBuffer(layerRect.size());
     if (!m_layerImage)
@@ -599,7 +598,7 @@ void ShadowBlur::drawRectShadowWithoutTiling(GraphicsContext* graphicsContext, c
     ScratchBuffer::shared().scheduleScratchBufferPurge();
 }
 
-void ShadowBlur::drawInsetShadowWithoutTiling(GraphicsContext* graphicsContext, const FloatRect& rect, const FloatRect& holeRect, const RoundedRect::Radii& holeRadii, const IntRect& layerRect)
+void ShadowBlur::drawInsetShadowWithoutTiling(GraphicsContext* graphicsContext, const FloatRect& rect, const FloatRect& holeRect, const FloatRoundedRect::Radii& holeRadii, const IntRect& layerRect)
 {
     m_layerImage = ScratchBuffer::shared().getScratchBuffer(layerRect.size());
     if (!m_layerImage)
@@ -672,7 +671,7 @@ void ShadowBlur::drawInsetShadowWithoutTiling(GraphicsContext* graphicsContext, 
      the shadow.
  */
 
-void ShadowBlur::drawInsetShadowWithTiling(GraphicsContext* graphicsContext, const FloatRect& rect, const FloatRect& holeRect, const RoundedRect::Radii& radii, const IntSize& templateSize, const IntSize& edgeSize)
+void ShadowBlur::drawInsetShadowWithTiling(GraphicsContext* graphicsContext, const FloatRect& rect, const FloatRect& holeRect, const FloatRoundedRect::Radii& radii, const IntSize& templateSize, const IntSize& edgeSize)
 {
     m_layerImage = ScratchBuffer::shared().getScratchBuffer(templateSize);
     if (!m_layerImage)
@@ -737,7 +736,7 @@ void ShadowBlur::drawInsetShadowWithTiling(GraphicsContext* graphicsContext, con
     ScratchBuffer::shared().scheduleScratchBufferPurge();
 }
 
-void ShadowBlur::drawRectShadowWithTiling(GraphicsContext* graphicsContext, const FloatRect& shadowedRect, const RoundedRect::Radii& radii, const IntSize& templateSize, const IntSize& edgeSize)
+void ShadowBlur::drawRectShadowWithTiling(GraphicsContext* graphicsContext, const FloatRect& shadowedRect, const FloatRoundedRect::Radii& radii, const IntSize& templateSize, const IntSize& edgeSize)
 {
     m_layerImage = ScratchBuffer::shared().getScratchBuffer(templateSize);
     if (!m_layerImage)
@@ -782,7 +781,7 @@ void ShadowBlur::drawRectShadowWithTiling(GraphicsContext* graphicsContext, cons
     ScratchBuffer::shared().scheduleScratchBufferPurge();
 }
 
-void ShadowBlur::drawLayerPieces(GraphicsContext* graphicsContext, const FloatRect& shadowBounds, const RoundedRect::Radii& radii, const IntSize& bufferPadding, const IntSize& templateSize, ShadowDirection direction)
+void ShadowBlur::drawLayerPieces(GraphicsContext* graphicsContext, const FloatRect& shadowBounds, const FloatRoundedRect::Radii& radii, const IntSize& bufferPadding, const IntSize& templateSize, ShadowDirection direction)
 {
     const IntSize twiceRadius = IntSize(bufferPadding.width() * 2, bufferPadding.height() * 2);
 
@@ -894,7 +893,7 @@ GraphicsContext* ShadowBlur::beginShadowLayer(GraphicsContext *context, const Fl
 
     // We reset the scratch buffer values here, because the buffer will no longer contain
     // data from any previous rectangle or inset shadows drawn via the tiling path.
-    ScratchBuffer::shared().setCachedShadowValues(FloatSize(), Color::black, ColorSpaceDeviceRGB, IntRect(), RoundedRect::Radii(), m_layerSize);
+    ScratchBuffer::shared().setCachedShadowValues(FloatSize(), Color::black, ColorSpaceDeviceRGB, IntRect(), FloatRoundedRect::Radii(), m_layerSize);
     m_layerImage = ScratchBuffer::shared().getScratchBuffer(layerRect.size());
 
     GraphicsContext* shadowContext = m_layerImage->context();

@@ -24,11 +24,11 @@
  */
 
 [
-        Conditional=SCRIPTED_SPEECH,
+    Conditional=SCRIPTED_SPEECH,
     Constructor,
     ImplementationLacksVTable,
     InterfaceName=webkitSpeechGrammar
 ] interface SpeechGrammar {
     [URL,CallWith=ScriptExecutionContext] attribute DOMString src;
-        attribute float weight;
-    };
+    attribute float weight;
+};

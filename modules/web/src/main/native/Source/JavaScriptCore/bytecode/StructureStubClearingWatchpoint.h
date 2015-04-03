@@ -31,7 +31,7 @@
 
 #if ENABLE(JIT)
 
-#include <wtf/FastAllocBase.h>
+#include <wtf/FastMalloc.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/OwnPtr.h>
 #include <wtf/PassOwnPtr.h>
@@ -69,7 +69,7 @@ public:
         OwnPtr<StructureStubClearingWatchpoint>& head);
 
 protected:
-    void fireInternal();
+    virtual void fireInternal() override;
 
 private:
     WatchpointsOnStructureStubInfo& m_holder;

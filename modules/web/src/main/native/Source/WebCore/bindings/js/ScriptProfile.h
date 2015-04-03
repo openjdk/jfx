@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2010, 2014 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +27,6 @@
 #ifndef ScriptProfile_h
 #define ScriptProfile_h
 
-#if ENABLE(JAVASCRIPT_DEBUGGER)
 #include "ScriptProfileNode.h"
 #include <wtf/Forward.h>
 #include <wtf/PassRefPtr.h>
@@ -35,7 +34,7 @@
 #include <wtf/RefPtr.h>
 
 #if ENABLE(INSPECTOR)
-#include "InspectorTypeBuilder.h"
+#include "InspectorWebTypeBuilders.h"
 #endif
 
 namespace JSC {
@@ -43,8 +42,6 @@ class Profile;
 }
 
 namespace WebCore {
-
-class InspectorObject;
 
 class ScriptProfile : public RefCounted<ScriptProfile> {
 public:
@@ -57,8 +54,7 @@ public:
     double idleTime() const;
 
 #if ENABLE(INSPECTOR)
-    PassRefPtr<TypeBuilder::Profiler::CPUProfileNode> buildInspectorObjectForHead() const;
-    PassRefPtr<TypeBuilder::Profiler::CPUProfileNode> buildInspectorObjectForBottomUpHead() const;
+    PassRefPtr<Inspector::TypeBuilder::Profiler::CPUProfile> buildInspectorObject() const;
 #endif
 
 private:
@@ -67,9 +63,6 @@ private:
     RefPtr<JSC::Profile> m_profile;
 };
 
-
 } // namespace WebCore
-
-#endif // ENABLE(JAVASCRIPT_DEBUGGER)
 
 #endif // ScriptProfile_h

@@ -31,18 +31,19 @@
 #include "config.h"
 
 #if ENABLE(MHTML)
+
 #include "MHTMLArchive.h"
 
 #include "Document.h"
-#include "Frame.h"
 #include "MHTMLParser.h"
 #include "MIMETypeRegistry.h"
+#include "MainFrame.h"
 #include "Page.h"
 #include "PageSerializer.h"
 #include "QuotedPrintable.h"
 #include "SchemeRegistry.h"
 #include "SharedBuffer.h"
-
+#include <time.h>
 #include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/DateMath.h>
 #include <wtf/GregorianDateTime.h>
@@ -53,8 +54,6 @@
 #if HAVE(SYS_TIME_H)
 #include <sys/time.h>
 #endif
-#include <time.h>
-
 
 namespace WebCore {
 
@@ -108,7 +107,7 @@ PassRefPtr<MHTMLArchive> MHTMLArchive::create()
     return adoptRef(new MHTMLArchive);
 }
 
-PassRefPtr<MHTMLArchive> MHTMLArchive::create(const KURL& url, SharedBuffer* data)
+PassRefPtr<MHTMLArchive> MHTMLArchive::create(const URL& url, SharedBuffer* data)
 {
     // For security reasons we only load MHTML pages from local URLs.
     if (!SchemeRegistry::shouldTreatURLSchemeAsLocal(url.protocol()))
@@ -159,13 +158,13 @@ PassRefPtr<SharedBuffer> MHTMLArchive::generateMHTMLData(Page* page, bool useBin
     stringBuilder.append("From: <Saved by WebKit>\r\n");
     stringBuilder.append("Subject: ");
     // We replace non ASCII characters with '?' characters to match IE's behavior.
-    stringBuilder.append(replaceNonPrintableCharacters(page->mainFrame()->document()->title()));
+    stringBuilder.append(replaceNonPrintableCharacters(page->mainFrame().document()->title()));
     stringBuilder.append("\r\nDate: ");
     stringBuilder.append(dateString);
     stringBuilder.append("\r\nMIME-Version: 1.0\r\n");
     stringBuilder.append("Content-Type: multipart/related;\r\n");
     stringBuilder.append("\ttype=\"");
-    stringBuilder.append(page->mainFrame()->document()->suggestedMIMEType());
+    stringBuilder.append(page->mainFrame().document()->suggestedMIMEType());
     stringBuilder.append("\";\r\n");
     stringBuilder.append("\tboundary=\"");
     stringBuilder.append(boundary);
@@ -242,4 +241,5 @@ PassRefPtr<SharedBuffer> MHTMLArchive::generateMHTMLData(Page* page, bool useBin
 }
 
 }
+
 #endif

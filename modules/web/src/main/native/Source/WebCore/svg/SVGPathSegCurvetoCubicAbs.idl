@@ -24,14 +24,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */ 
 
-[
-        Conditional=SVG
-] interface SVGPathSegCurvetoCubicAbs : SVGPathSeg {
+interface SVGPathSegCurvetoCubicAbs : SVGPathSeg {
     [StrictTypeChecking] attribute float x;
     [StrictTypeChecking] attribute float y;
     [StrictTypeChecking] attribute float x1;
     [StrictTypeChecking] attribute float y1;
     [StrictTypeChecking] attribute float x2;
     [StrictTypeChecking] attribute float y2;
-    };
+};
 

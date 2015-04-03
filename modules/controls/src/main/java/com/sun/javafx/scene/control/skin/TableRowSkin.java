@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -144,7 +144,7 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, CellBehavi
                             /* This is the row-based case */
                             column = tableView.getVisibleLeafColumn(0);
                         }
-                        TableCell<T,?> cell = cellsMap.get(column);
+                        TableCell<T,?> cell = cellsMap.get(column).get();
                         if (cell != null) selection.add(cell);
                     }
                     return FXCollections.observableArrayList(selection);
@@ -153,7 +153,10 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, CellBehavi
             case CELL_AT_ROW_COLUMN: {
                 int colIndex = (Integer)parameters[1];
                 TableColumn<T,?> column = tableView.getVisibleLeafColumn(colIndex);
-                return cellsMap.get(column);
+                if (cellsMap.containsKey(column)) {
+                    return cellsMap.get(column).get();
+                }
+                return null;
             }
             case FOCUS_ITEM: {
                 TableViewFocusModel<T> fm = tableView.getFocusModel();
@@ -163,7 +166,10 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, CellBehavi
                     /* This is the row-based case */
                     column = tableView.getVisibleLeafColumn(0);
                 }
-                return cellsMap.get(column);
+                if (cellsMap.containsKey(column)) {
+                    return cellsMap.get(column).get();
+                }
+                return null;
             }
             default: return super.queryAccessibleAttribute(attribute, parameters);
         }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -97,7 +97,15 @@ public class MacPkgBundler extends MacBaseInstallerBundler {
             I18N.getString("param.signing-key-developer-id-installer.description"),
             "mac.signing-key-developer-id-installer",
             String.class,
-            params -> MacBaseInstallerBundler.findKey("Developer ID Installer: " + SIGNING_KEY_USER.fetchFrom(params), VERBOSE.fetchFrom(params)),
+            params -> MacBaseInstallerBundler.findKey("Developer ID Installer: " + SIGNING_KEY_USER.fetchFrom(params), SIGNING_KEYCHAIN.fetchFrom(params), VERBOSE.fetchFrom(params)),
+            (s, p) -> s);
+
+    public static final BundlerParamInfo<String> INSTALLER_SUFFIX = new StandardBundlerParam<> (
+            I18N.getString("param.installer-suffix.name"),
+            I18N.getString("param.installer-suffix.description"),
+            "mac.pkg.installerName.suffix",
+            String.class,
+            params -> "",
             (s, p) -> s);
 
     public MacPkgBundler() {
@@ -274,12 +282,29 @@ public class MacPkgBundler extends MacBaseInstallerBundler {
                 "/>");
 
         if (!LICENSE_FILE.fetchFrom(params).isEmpty()) {
-            File licFile = new File(APP_RESOURCES.fetchFrom(params).getBaseDirectory(),
-                    LICENSE_FILE.fetchFrom(params).get(0));
-            out.println("<license" +
-                    " file=\"" + licFile.getAbsolutePath() + "\"" +
-                    " mime-type=\"text/rtf\"" +
-                    "/>");
+            File licFile = null;
+
+            List<String> licFiles = LICENSE_FILE.fetchFrom(params);
+            if (licFiles.isEmpty()) {
+                return;
+            }
+            String licFileStr = licFiles.get(0);
+
+            for (RelativeFileSet rfs : APP_RESOURCES_LIST.fetchFrom(params)) {
+                if (rfs.contains(licFileStr)) {
+                    licFile = new File(rfs.getBaseDirectory(), licFileStr);
+                    break;
+                }
+            }
+
+            // this is NPE protection, validate should have caught it's absence
+            // so we don't complain or throw an error
+            if (licFile != null) {
+                out.println("<license" +
+                        " file=\"" + licFile.getAbsolutePath() + "\"" +
+                        " mime-type=\"text/rtf\"" +
+                        "/>");
+            }
         }
 
         /*
@@ -385,7 +410,9 @@ public class MacPkgBundler extends MacBaseInstallerBundler {
             }
 
             // build final package
-            File finalPKG = new File(outdir, INSTALLER_NAME.fetchFrom(params)+".pkg");
+            File finalPKG = new File(outdir, INSTALLER_NAME.fetchFrom(params)
+                    + INSTALLER_SUFFIX.fetchFrom(params)
+                    + ".pkg");
             outdir.mkdirs();
 
             List<String> commandLine = new ArrayList<>();
@@ -400,6 +427,12 @@ public class MacPkgBundler extends MacBaseInstallerBundler {
                 if (signingIdentity != null) {
                     commandLine.add("--sign");
                     commandLine.add(signingIdentity);
+                }
+
+                String keychainName = SIGNING_KEYCHAIN.fetchFrom(params);
+                if (keychainName != null && !keychainName.isEmpty()) {
+                    commandLine.add("--keychain");
+                    commandLine.add(keychainName);
                 }
             }
 
@@ -463,9 +496,10 @@ public class MacPkgBundler extends MacBaseInstallerBundler {
         results.addAll(Arrays.asList(
                 DEVELOPER_ID_INSTALLER_SIGNING_KEY,
                 //IDENTIFIER,
-                LICENSE_FILE
-                //SERVICE_HINT
-        ));
+                INSTALLER_SUFFIX,
+                LICENSE_FILE,
+                //SERVICE_HINT,
+                SIGNING_KEYCHAIN));
 
         return results;
     }
@@ -483,13 +517,17 @@ public class MacPkgBundler extends MacBaseInstallerBundler {
 
             // validate license file, if used, exists in the proper place
             if (params.containsKey(LICENSE_FILE.getID())) {
-                RelativeFileSet appResources = APP_RESOURCES.fetchFrom(params);
+                List<RelativeFileSet> appResourcesList = APP_RESOURCES_LIST.fetchFrom(params);
                 for (String license : LICENSE_FILE.fetchFrom(params)) {
-                    if (!appResources.contains(license)) {
+                    boolean found = false;
+                    for (RelativeFileSet appResources : appResourcesList) {
+                        found = found || appResources.contains(license);
+                    }
+                    if (!found) {
                         throw new ConfigException(
                                 I18N.getString("error.license-missing"),
                                 MessageFormat.format(I18N.getString("error.license-missing.advice"),
-                                        license, appResources.getBaseDirectory().toString()));
+                                        license));
                     }
                 }
             }

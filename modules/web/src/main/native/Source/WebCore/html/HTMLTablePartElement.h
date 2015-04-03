@@ -34,13 +34,13 @@ class HTMLTableElement;
 
 class HTMLTablePartElement : public HTMLElement {
 protected:
-    HTMLTablePartElement(const QualifiedName& tagName, Document* document)
+    HTMLTablePartElement(const QualifiedName& tagName, Document& document)
         : HTMLElement(tagName, document)
     {
     }
 
-    virtual bool isPresentationAttribute(const QualifiedName&) const OVERRIDE;
-    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStylePropertySet*) OVERRIDE;
+    virtual bool isPresentationAttribute(const QualifiedName&) const override;
+    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStyleProperties&) override;
 
     HTMLTableElement* findParentTable() const;
 };

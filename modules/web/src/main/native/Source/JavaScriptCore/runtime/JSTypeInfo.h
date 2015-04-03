@@ -21,14 +21,14 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
 #ifndef JSTypeInfo_h
 #define JSTypeInfo_h
 
 // This file would be called TypeInfo.h, but that conflicts with <typeinfo.h>
-// in the STL on systems without case-sensitive file systems.
+// in the STL on systems without case-sensitive file systems. 
 
 #include "JSType.h"
 
@@ -47,7 +47,8 @@ namespace JSC {
     static const unsigned OverridesGetPropertyNames = 1 << 8;
     static const unsigned ProhibitsPropertyCaching = 1 << 9;
     static const unsigned HasImpureGetOwnPropertySlot = 1 << 10;
-    static const unsigned StructureHasRareData = 1 << 11;
+    static const unsigned NewImpurePropertyFiresWatchpoints = 1 << 11;
+    static const unsigned StructureHasRareData = 1 << 12;
 
     class TypeInfo {
     public:
@@ -83,6 +84,7 @@ namespace JSC {
         bool overridesGetPropertyNames() const { return isSetOnFlags2(OverridesGetPropertyNames); }
         bool prohibitsPropertyCaching() const { return isSetOnFlags2(ProhibitsPropertyCaching); }
         bool hasImpureGetOwnPropertySlot() const { return isSetOnFlags2(HasImpureGetOwnPropertySlot); }
+        bool newImpurePropertyFiresWatchpoints() const { return isSetOnFlags2(NewImpurePropertyFiresWatchpoints); }
         bool structureHasRareData() const { return isSetOnFlags2(StructureHasRareData); }
 
         static ptrdiff_t flagsOffset()

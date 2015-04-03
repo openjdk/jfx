@@ -19,43 +19,43 @@
  * Boston, MA 02110-1301, USA.
  */
 
-    interface HTMLTextAreaElement : HTMLElement {
+interface HTMLTextAreaElement : HTMLElement {
     [Reflect] attribute boolean autofocus;
-        attribute long cols;
+    attribute long cols;
     [Reflect] attribute DOMString dirName;
     [Reflect] attribute boolean disabled;
-        readonly attribute HTMLFormElement form;
-        attribute long maxLength setter raises(DOMException);
+    readonly attribute HTMLFormElement form;
+    [SetterRaisesException] attribute long maxLength;
     [Reflect] attribute DOMString name;
     [Reflect] attribute DOMString placeholder;
     [Reflect] attribute boolean readOnly;
     [Reflect] attribute boolean required;
-        attribute long rows;
+    attribute long rows;
     [Reflect] attribute DOMString wrap;
 
-        readonly attribute DOMString type;
+    readonly attribute DOMString type;
     [TreatNullAs=NullString] attribute DOMString defaultValue;
     [TreatNullAs=NullString] attribute DOMString value;
-        readonly attribute unsigned long textLength;
+    readonly attribute unsigned long textLength;
 
-        readonly attribute boolean willValidate;
-        readonly attribute ValidityState validity;
-        readonly attribute DOMString validationMessage;
-        boolean checkValidity();
+    readonly attribute boolean willValidate;
+    readonly attribute ValidityState validity;
+    readonly attribute DOMString validationMessage;
+    boolean checkValidity();
     void setCustomValidity([TreatNullAs=NullString, TreatUndefinedAs=NullString] DOMString error);
 
-        readonly attribute NodeList labels;
+    readonly attribute NodeList labels;
 
-        void select();
-        attribute long selectionStart;
-        attribute long selectionEnd;
-        attribute DOMString selectionDirection;
+    void select();
+    attribute long selectionStart;
+    attribute long selectionEnd;
+    attribute DOMString selectionDirection;
 
-    void setRangeText(DOMString replacement) raises(DOMException);
-    void setRangeText(DOMString replacement,
+    [RaisesException] void setRangeText(DOMString replacement);
+    [RaisesException] void setRangeText(DOMString replacement,
                         unsigned long start,
                         unsigned long end,
-                        [Default=NullString] optional DOMString selectionMode) raises(DOMException);
+                        [Default=NullString] optional DOMString selectionMode);
 
 #if defined(LANGUAGE_OBJECTIVE_C) && LANGUAGE_OBJECTIVE_C
     void setSelectionRange(long start, long end);
@@ -65,7 +65,10 @@
                            optional DOMString direction);
 #endif
 
+    [Conditional=IOS_AUTOCORRECT_AND_AUTOCAPITALIZE] attribute boolean autocorrect;
+    [Conditional=IOS_AUTOCORRECT_AND_AUTOCAPITALIZE, TreatNullAs=NullString] attribute DOMString autocapitalize;
+
 #if defined(LANGUAGE_OBJECTIVE_C) && LANGUAGE_OBJECTIVE_C
     [Reflect] attribute DOMString accessKey;
 #endif
-    };
+};

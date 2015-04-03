@@ -38,17 +38,19 @@
 #include <inttypes.h>
 #include <sqlite3.h>
 
+#if PLATFORM(IOS)
+#include <sqlite3_private.h>
+#endif
+
 namespace WebCore {
 
 SQLiteFileSystem::SQLiteFileSystem()
 {
 }
 
-int SQLiteFileSystem::openDatabase(const String& fileName, sqlite3** database, bool)
+int SQLiteFileSystem::openDatabase(const String& filename, sqlite3** database, bool)
 {
-    // SQLite expects a null terminator on its UTF-16 strings.
-    String path = fileName;
-    return sqlite3_open16(path.charactersWithNullTermination(), database);
+    return sqlite3_open(filename.utf8().data(), database);
 }
 
 String SQLiteFileSystem::getFileNameForNewDatabase(const String& dbDir, const String&,
@@ -112,10 +114,29 @@ bool SQLiteFileSystem::deleteDatabaseFile(const String& fileName)
     return deleteFile(fileName);
 }
 
+#if PLATFORM(IOS)
+bool SQLiteFileSystem::truncateDatabaseFile(sqlite3* database)
+{
+    return sqlite3_file_control(database, 0, SQLITE_TRUNCATE_DATABASE, 0) == SQLITE_OK;
+}
+#endif
+    
 long long SQLiteFileSystem::getDatabaseFileSize(const String& fileName)
 {        
     long long size;
     return getFileSize(fileName, size) ? size : 0;
+}
+
+double SQLiteFileSystem::databaseCreationTime(const String& fileName)
+{
+    time_t time;
+    return getFileCreationTime(fileName, time) ? time : 0;
+}
+
+double SQLiteFileSystem::databaseModificationTime(const String& fileName)
+{
+    time_t time;
+    return getFileModificationTime(fileName, time) ? time : 0;
 }
 
 } // namespace WebCore

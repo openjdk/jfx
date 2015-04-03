@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2004, 2013 Apple Computer, Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -88,7 +88,7 @@ ObjcValue convertValueToObjcValue(ExecState* exec, JSValue value, ObjcValueType 
         case ObjcObjectType: {
             JSLockHolder lock(exec);
             
-            JSGlobalObject *originGlobalObject = exec->dynamicGlobalObject();
+            JSGlobalObject *originGlobalObject = exec->vmEntryGlobalObject();
             RootObject* originRootObject = findRootObject(originGlobalObject);
 
             JSGlobalObject* globalObject = 0;
@@ -313,7 +313,7 @@ ObjcValueType objcValueTypeForType(const char *type)
 JSObject *throwError(ExecState *exec, NSString *message)
 {
     ASSERT(message);
-    JSObject *error = JSC::throwError(exec, JSC::createError(exec, String(message)));
+    JSObject *error = exec->vm().throwException(exec, JSC::createError(exec, String(message)));
     return error;
 }
 

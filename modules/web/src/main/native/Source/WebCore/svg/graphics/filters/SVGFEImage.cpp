@@ -22,18 +22,18 @@
 
 #include "config.h"
 
-#if ENABLE(SVG) && ENABLE(FILTERS)
+#if ENABLE(FILTERS)
 #include "SVGFEImage.h"
 
 #include "AffineTransform.h"
 #include "Filter.h"
 #include "GraphicsContext.h"
-#include "RenderObject.h"
+#include "RenderElement.h"
 #include "RenderTreeAsText.h"
+#include "SVGElement.h"
 #include "SVGFilter.h"
 #include "SVGPreserveAspectRatio.h"
 #include "SVGRenderingContext.h"
-#include "SVGStyledElement.h"
 #include "SVGURIReference.h"
 #include "TextStream.h"
 
@@ -47,9 +47,9 @@ FEImage::FEImage(Filter* filter, PassRefPtr<Image> image, const SVGPreserveAspec
 {
 }
 
-FEImage::FEImage(Filter* filter, Document* document, const String& href, const SVGPreserveAspectRatio& preserveAspectRatio)
+FEImage::FEImage(Filter* filter, Document& document, const String& href, const SVGPreserveAspectRatio& preserveAspectRatio)
     : FilterEffect(filter)
-    , m_document(document)
+    , m_document(&document)
     , m_href(href)
     , m_preserveAspectRatio(preserveAspectRatio)
 {
@@ -60,21 +60,21 @@ PassRefPtr<FEImage> FEImage::createWithImage(Filter* filter, PassRefPtr<Image> i
     return adoptRef(new FEImage(filter, image, preserveAspectRatio));
 }
 
-PassRefPtr<FEImage> FEImage::createWithIRIReference(Filter* filter, Document* document, const String& href, const SVGPreserveAspectRatio& preserveAspectRatio)
+PassRefPtr<FEImage> FEImage::createWithIRIReference(Filter* filter, Document& document, const String& href, const SVGPreserveAspectRatio& preserveAspectRatio)
 {
     return adoptRef(new FEImage(filter, document, href, preserveAspectRatio));
 }
 
 void FEImage::determineAbsolutePaintRect()
 {
-    SVGFilter* svgFilter = static_cast<SVGFilter*>(filter());
+    SVGFilter* svgFilter = toSVGFilter(filter());
 
     FloatRect paintRect = svgFilter->absoluteTransform().mapRect(filterPrimitiveSubregion());
     FloatRect srcRect;
     if (m_image) {
         srcRect.setSize(m_image->size());
         m_preserveAspectRatio.transformRect(paintRect, srcRect);
-    } else if (RenderObject* renderer = referencedRenderer())
+    } else if (RenderElement* renderer = referencedRenderer())
         srcRect = svgFilter->absoluteTransform().mapRect(renderer->repaintRectInLocalCoordinates());
 
     if (clipsToBounds())
@@ -84,11 +84,11 @@ void FEImage::determineAbsolutePaintRect()
     setAbsolutePaintRect(enclosingIntRect(paintRect));
 }
 
-RenderObject* FEImage::referencedRenderer() const
+RenderElement* FEImage::referencedRenderer() const
 {
     if (!m_document)
         return 0;
-    Element* hrefElement = SVGURIReference::targetElementFromIRIString(m_href, m_document);
+    Element* hrefElement = SVGURIReference::targetElementFromIRIString(m_href, *m_document);
     if (!hrefElement || !hrefElement->isSVGElement())
         return 0;
     return hrefElement->renderer();
@@ -96,7 +96,7 @@ RenderObject* FEImage::referencedRenderer() const
 
 void FEImage::platformApplySoftware()
 {
-    RenderObject* renderer = referencedRenderer();
+    RenderElement* renderer = referencedRenderer();
     if (!m_image && !renderer)
         return;
 
@@ -104,7 +104,7 @@ void FEImage::platformApplySoftware()
     if (!resultImage)
         return;
 
-    SVGFilter* svgFilter = static_cast<SVGFilter*>(filter());
+    SVGFilter* svgFilter = toSVGFilter(filter());
     FloatRect destRect = svgFilter->absoluteTransform().mapRect(filterPrimitiveSubregion());
 
     FloatRect srcRect;
@@ -125,20 +125,19 @@ void FEImage::platformApplySoftware()
         const AffineTransform& absoluteTransform = svgFilter->absoluteTransform();
         resultImage->context()->concatCTM(absoluteTransform);
 
-        SVGElement* contextNode = toSVGElement(renderer->node());
-        if (contextNode->isSVGStyledElement() && toSVGStyledElement(contextNode)->hasRelativeLengths()) {
+        SVGElement* contextNode = toSVGElement(renderer->element());
+        if (contextNode->hasRelativeLengths()) {
             SVGLengthContext lengthContext(contextNode);
-            float width = 0;
-            float height = 0;
+            FloatSize viewportSize;
 
             // If we're referencing an element with percentage units, eg. <rect with="30%"> those values were resolved against the viewport.
             // Build up a transformation that maps from the viewport space to the filter primitive subregion.
-            if (lengthContext.determineViewport(width, height))
-                resultImage->context()->concatCTM(makeMapBetweenRects(FloatRect(0, 0, width, height), destRect));
+            if (lengthContext.determineViewport(viewportSize))
+                resultImage->context()->concatCTM(makeMapBetweenRects(FloatRect(FloatPoint(), viewportSize), destRect));
         }
 
         AffineTransform contentTransformation;
-        SVGRenderingContext::renderSubtreeToImageBuffer(resultImage, renderer, contentTransformation);
+        SVGRenderingContext::renderSubtreeToImageBuffer(resultImage, *renderer, contentTransformation);
         return;
     }
 
@@ -166,4 +165,4 @@ TextStream& FEImage::externalRepresentation(TextStream& ts, int indent) const
 
 } // namespace WebCore
 
-#endif // ENABLE(SVG) && ENABLE(FILTERS)
+#endif // ENABLE(FILTERS)

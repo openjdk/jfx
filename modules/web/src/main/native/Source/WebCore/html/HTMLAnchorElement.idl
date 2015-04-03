@@ -18,7 +18,7 @@
  * Boston, MA 02110-1301, USA.
  */
 
-    interface HTMLAnchorElement : HTMLElement {
+interface HTMLAnchorElement : HTMLElement {
     [Reflect] attribute DOMString charset;
     [Reflect] attribute DOMString coords;
     [Conditional=DOWNLOAD_ATTRIBUTE, Reflect] attribute DOMString download;
@@ -37,13 +37,13 @@
 #endif
 
 #if defined(LANGUAGE_OBJECTIVE_C) && LANGUAGE_OBJECTIVE_C
-        readonly attribute DOMString hash;
-        readonly attribute DOMString host;
-        readonly attribute DOMString hostname;
-        readonly attribute DOMString pathname;
-        readonly attribute DOMString port;
-        readonly attribute DOMString protocol;
-        readonly attribute DOMString search;
+    readonly attribute DOMString hash;
+    readonly attribute DOMString host;
+    readonly attribute DOMString hostname;
+    readonly attribute DOMString pathname;
+    readonly attribute DOMString port;
+    readonly attribute DOMString protocol;
+    readonly attribute DOMString search;
 #else
     [TreatNullAs=NullString] attribute DOMString hash;
     [TreatNullAs=NullString] attribute DOMString host;
@@ -56,15 +56,15 @@
     [TreatNullAs=NullString] readonly attribute DOMString origin;
 #endif
 
-        readonly attribute DOMString text;
+    readonly attribute DOMString text;
 
 #if defined(LANGUAGE_JAVASCRIPT) && LANGUAGE_JAVASCRIPT
-        [NotEnumerable] DOMString toString();
+    [NotEnumerable] DOMString toString();
 #endif
 
 #if defined(LANGUAGE_OBJECTIVE_C) && LANGUAGE_OBJECTIVE_C
-        // Objective-C extension:
-        readonly attribute URL absoluteLinkURL;
+    // Objective-C extension:
+    readonly attribute URL absoluteLinkURL;
 #endif
-    };
+};
 

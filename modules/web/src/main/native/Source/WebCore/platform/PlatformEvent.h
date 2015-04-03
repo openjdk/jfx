@@ -48,21 +48,6 @@ public:
         // PlatformWheelEvent
         Wheel,
 
-        // PlatformGestureEvent
-        GestureScrollBegin,
-        GestureScrollEnd,
-        GestureScrollUpdate,
-        GestureScrollUpdateWithoutPropagation,
-        GestureTap,
-        GestureTapDown,
-        GestureTapDownCancel,
-        GestureTwoFingerTap,
-        GestureLongPress,
-        GestureLongTap,
-        GesturePinchBegin,
-        GesturePinchEnd,
-        GesturePinchUpdate,
-
 #if ENABLE(TOUCH_EVENTS)
         // PlatformTouchEvent
         TouchStart,

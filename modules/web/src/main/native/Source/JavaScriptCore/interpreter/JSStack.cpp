@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2008, 2013, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,14 +27,16 @@
  */
 
 #include "config.h"
-#include "JSStack.h"
 #include "JSStackInlines.h"
 
 #include "ConservativeRoots.h"
 #include "Interpreter.h"
+#include "JSCInlines.h"
+#include "Options.h"
 
 namespace JSC {
 
+#if ENABLE(LLINT_C_LOOP)
 static size_t committedBytesCount = 0;
 
 static Mutex& stackStatisticsMutex()
@@ -42,82 +44,105 @@ static Mutex& stackStatisticsMutex()
     DEFINE_STATIC_LOCAL(Mutex, staticMutex, ());
     return staticMutex;
 }    
+#endif // ENABLE(LLINT_C_LOOP)
 
-JSStack::JSStack(VM& vm, size_t capacity)
-    : m_end(0)
+JSStack::JSStack(VM& vm)
+    : m_vm(vm)
     , m_topCallFrame(vm.topCallFrame)
+#if ENABLE(LLINT_C_LOOP)
+    , m_end(0)
+    , m_reservedZoneSizeInRegisters(0)
+#endif
 {
+#if ENABLE(LLINT_C_LOOP)
+    size_t capacity = Options::maxPerThreadStackUsage();
     ASSERT(capacity && isPageAligned(capacity));
 
-    m_reservation = PageReservation::reserve(roundUpAllocationSize(capacity * sizeof(Register), commitSize), OSAllocator::JSVMStackPages);
-    m_end = static_cast<Register*>(m_reservation.base());
-    m_commitEnd = static_cast<Register*>(m_reservation.base());
-
-    disableErrorStackReserve();
+    m_reservation = PageReservation::reserve(WTF::roundUpToMultipleOf(commitSize, capacity), OSAllocator::JSVMStackPages);
+    setStackLimit(highAddress());
+    m_commitTop = highAddress();
+    
+    m_lastStackTop = baseOfStack();
+#endif // ENABLE(LLINT_C_LOOP)
 
     m_topCallFrame = 0;
 }
 
+#if ENABLE(LLINT_C_LOOP)
 JSStack::~JSStack()
 {
-    void* base = m_reservation.base();
-    m_reservation.decommit(base, reinterpret_cast<intptr_t>(m_commitEnd) - reinterpret_cast<intptr_t>(base));
-    addToCommittedByteCount(-(reinterpret_cast<intptr_t>(m_commitEnd) - reinterpret_cast<intptr_t>(base)));
+    ptrdiff_t sizeToDecommit = reinterpret_cast<char*>(highAddress()) - reinterpret_cast<char*>(m_commitTop);
+    m_reservation.decommit(reinterpret_cast<void*>(m_commitTop), sizeToDecommit);
+    addToCommittedByteCount(-sizeToDecommit);
     m_reservation.deallocate();
 }
 
-bool JSStack::growSlowCase(Register* newEnd)
+bool JSStack::growSlowCase(Register* newTopOfStack)
 {
+    Register* newTopOfStackWithReservedZone = newTopOfStack - m_reservedZoneSizeInRegisters;
+
     // If we have already committed enough memory to satisfy this request,
     // just update the end pointer and return.
-    if (newEnd <= m_commitEnd) {
-        m_end = newEnd;
+    if (newTopOfStackWithReservedZone >= m_commitTop) {
+        setStackLimit(newTopOfStack);
         return true;
     }
 
     // Compute the chunk size of additional memory to commit, and see if we
     // have it is still within our budget. If not, we'll fail to grow and
     // return false.
-    long delta = roundUpAllocationSize(reinterpret_cast<char*>(newEnd) - reinterpret_cast<char*>(m_commitEnd), commitSize);
-    if (reinterpret_cast<char*>(m_commitEnd) + delta > reinterpret_cast<char*>(m_useableEnd))
+    ptrdiff_t delta = reinterpret_cast<char*>(m_commitTop) - reinterpret_cast<char*>(newTopOfStackWithReservedZone);
+    delta = WTF::roundUpToMultipleOf(commitSize, delta);
+    Register* newCommitTop = m_commitTop - (delta / sizeof(Register));
+    if (newCommitTop < reservationTop())
         return false;
 
     // Otherwise, the growth is still within our budget. Go ahead and commit
     // it and return true.
-    m_reservation.commit(m_commitEnd, delta);
+    m_reservation.commit(newCommitTop, delta);
     addToCommittedByteCount(delta);
-    m_commitEnd = reinterpret_cast_ptr<Register*>(reinterpret_cast<char*>(m_commitEnd) + delta);
-    m_end = newEnd;
+    m_commitTop = newCommitTop;
+    setStackLimit(newTopOfStack);
     return true;
 }
 
 void JSStack::gatherConservativeRoots(ConservativeRoots& conservativeRoots)
 {
-    conservativeRoots.add(begin(), getTopOfStack());
+    conservativeRoots.add(topOfStack() + 1, highAddress());
 }
 
-void JSStack::gatherConservativeRoots(ConservativeRoots& conservativeRoots, JITStubRoutineSet& jitStubRoutines, DFGCodeBlocks& dfgCodeBlocks)
+void JSStack::gatherConservativeRoots(ConservativeRoots& conservativeRoots, JITStubRoutineSet& jitStubRoutines, CodeBlockSet& codeBlocks)
 {
-    conservativeRoots.add(begin(), getTopOfStack(), jitStubRoutines, dfgCodeBlocks);
+    conservativeRoots.add(topOfStack() + 1, highAddress(), jitStubRoutines, codeBlocks);
+}
+
+void JSStack::sanitizeStack()
+{
+#if !defined(ADDRESS_SANITIZER)
+    ASSERT(topOfStack() <= baseOfStack());
+    
+    if (m_lastStackTop < topOfStack()) {
+        char* begin = reinterpret_cast<char*>(m_lastStackTop + 1);
+        char* end = reinterpret_cast<char*>(topOfStack() + 1);
+        memset(begin, 0, end - begin);
+    }
+    
+    m_lastStackTop = topOfStack();
+#endif
 }
 
 void JSStack::releaseExcessCapacity()
 {
-    ptrdiff_t delta = reinterpret_cast<uintptr_t>(m_commitEnd) - reinterpret_cast<uintptr_t>(m_reservation.base());
-    m_reservation.decommit(m_reservation.base(), delta);
+    Register* highAddressWithReservedZone = highAddress() - m_reservedZoneSizeInRegisters;
+    ptrdiff_t delta = reinterpret_cast<char*>(highAddressWithReservedZone) - reinterpret_cast<char*>(m_commitTop);
+    m_reservation.decommit(m_commitTop, delta);
     addToCommittedByteCount(-delta);
-    m_commitEnd = static_cast<Register*>(m_reservation.base());
+    m_commitTop = highAddressWithReservedZone;
 }
 
 void JSStack::initializeThreading()
 {
     stackStatisticsMutex();
-}
-
-size_t JSStack::committedByteCount()
-{
-    MutexLocker locker(stackStatisticsMutex());
-    return committedBytesCount;
 }
 
 void JSStack::addToCommittedByteCount(long byteCount)
@@ -127,25 +152,41 @@ void JSStack::addToCommittedByteCount(long byteCount)
     committedBytesCount += byteCount;
 }
 
-void JSStack::enableErrorStackReserve()
+void JSStack::setReservedZoneSize(size_t reservedZoneSize)
 {
-    m_useableEnd = reservationEnd();
+    m_reservedZoneSizeInRegisters = reservedZoneSize / sizeof(Register);
+    if (m_commitTop >= (m_end + 1) - m_reservedZoneSizeInRegisters)
+        growSlowCase(m_end + 1);
+}
+#endif // ENABLE(LLINT_C_LOOP)
+
+#if !ENABLE(LLINT_C_LOOP)
+Register* JSStack::lowAddress() const
+{
+    ASSERT(wtfThreadData().stack().isGrowingDownward());
+    return reinterpret_cast<Register*>(m_vm.stackLimit());
 }
 
-void JSStack::disableErrorStackReserve()
+Register* JSStack::highAddress() const
 {
-    char* useableEnd = reinterpret_cast<char*>(reservationEnd()) - commitSize;
-    m_useableEnd = reinterpret_cast_ptr<Register*>(useableEnd);
+    ASSERT(wtfThreadData().stack().isGrowingDownward());
+    return reinterpret_cast<Register*>(wtfThreadData().stack().origin());
+}
+#endif // !ENABLE(LLINT_C_LOOP)
 
-    // By the time we get here, we are guaranteed to be destructing the last
-    // Interpreter::ErrorHandlingMode that enabled this reserve in the first
-    // place. That means the stack space beyond m_useableEnd before we
-    // enabled the reserve was not previously in use. Hence, it is safe to
-    // shrink back to that m_useableEnd.
-    if (m_end > m_useableEnd) {
-        ASSERT(m_topCallFrame->frameExtent() <= m_useableEnd);
-        shrink(m_useableEnd);
-    }
+size_t JSStack::committedByteCount()
+{
+#if ENABLE(LLINT_C_LOOP)
+    MutexLocker locker(stackStatisticsMutex());
+    return committedBytesCount;
+#else
+    // When using the C stack, we don't know how many stack pages are actually
+    // committed. So, we use the current stack usage as an estimate.
+    ASSERT(wtfThreadData().stack().isGrowingDownward());
+    int8_t* current = reinterpret_cast<int8_t*>(&current);
+    int8_t* high = reinterpret_cast<int8_t*>(wtfThreadData().stack().origin());
+    return high - current;
+#endif
 }
 
 } // namespace JSC

@@ -28,10 +28,8 @@
 
 #include "DeleteButtonController.h"
 #include "Document.h"
-#include "Editor.h"
 #include "Event.h"
 #include "EventNames.h"
-#include "Frame.h"
 #include "HTMLNames.h"
 
 namespace WebCore {
@@ -40,12 +38,12 @@ using namespace HTMLNames;
 
 #if ENABLE(DELETION_UI)
 
-inline DeleteButton::DeleteButton(Document* document)
+inline DeleteButton::DeleteButton(Document& document)
     : HTMLImageElement(imgTag, document)
 {
 }
 
-PassRefPtr<DeleteButton> DeleteButton::create(Document* document)
+PassRefPtr<DeleteButton> DeleteButton::create(Document& document)
 {
     return adoptRef(new DeleteButton(document));
 }
@@ -53,7 +51,7 @@ PassRefPtr<DeleteButton> DeleteButton::create(Document* document)
 void DeleteButton::defaultEventHandler(Event* event)
 {
     if (event->type() == eventNames().clickEvent) {
-        document()->frame()->editor().deleteButtonController()->deleteTarget();
+        document().frame()->editor().deleteButtonController().deleteTarget();
         event->setDefaultHandled();
         return;
     }

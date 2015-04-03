@@ -35,12 +35,9 @@
 #include "HTMLObjectElement.h"
 #include "HTMLParserIdioms.h"
 #include "RenderImage.h"
-#include "ScriptCallStack.h"
+#include "RenderSVGImage.h"
 #include "SecurityOrigin.h"
 
-#if ENABLE(SVG)
-#include "RenderSVGImage.h"
-#endif
 #if ENABLE(VIDEO)
 #include "RenderVideo.h"
 #endif
@@ -55,8 +52,7 @@ template<> struct ValueCheck<WebCore::ImageLoader*> {
     {
         if (!p)
             return;
-        ASSERT(p->element());
-        ValueCheck<WebCore::Element*>::checkConsistency(p->element());
+        ValueCheck<WebCore::Element*>::checkConsistency(&p->element());
     }
 };
 
@@ -83,13 +79,13 @@ static ImageEventSender& errorEventSender()
     return sender;
 }
 
-static inline bool pageIsBeingDismissed(Document* document)
+static inline bool pageIsBeingDismissed(Document& document)
 {
-    Frame* frame = document->frame();
-    return frame && frame->loader()->pageDismissalEventBeingDispatched() != FrameLoader::NoDismissal;
+    Frame* frame = document.frame();
+    return frame && frame->loader().pageDismissalEventBeingDispatched() != FrameLoader::NoDismissal;
 }
 
-ImageLoader::ImageLoader(Element* element)
+ImageLoader::ImageLoader(Element& element)
     : m_element(element)
     , m_image(0)
     , m_derefElementTimer(this, &ImageLoader::timerFired)
@@ -122,7 +118,7 @@ ImageLoader::~ImageLoader()
     // If the ImageLoader is being destroyed but it is still protecting its image-loading Element,
     // remove that protection here.
     if (m_elementIsProtected)
-        m_element->deref();
+        element().deref();
 }
 
 void ImageLoader::setImage(CachedImage* newImage)
@@ -167,11 +163,11 @@ void ImageLoader::updateFromElement()
 {
     // If we're not making renderers for the page, then don't load images.  We don't want to slow
     // down the raw HTML parsing case by loading images we don't intend to display.
-    Document* document = m_element->document();
-    if (!document->renderer())
+    Document& document = element().document();
+    if (!document.hasLivingRenderTree())
         return;
 
-    AtomicString attr = m_element->imageSourceURL();
+    AtomicString attr = element().imageSourceURL();
 
     if (attr == m_failedLoadURL)
         return;
@@ -180,25 +176,25 @@ void ImageLoader::updateFromElement()
     // an empty string.
     CachedResourceHandle<CachedImage> newImage = 0;
     if (!attr.isNull() && !stripLeadingAndTrailingHTMLSpaces(attr).isEmpty()) {
-        CachedResourceRequest request(ResourceRequest(document->completeURL(sourceURI(attr))));
-        request.setInitiator(element());
+        CachedResourceRequest request(ResourceRequest(document.completeURL(sourceURI(attr))));
+        request.setInitiator(&element());
 
-        String crossOriginMode = m_element->fastGetAttribute(HTMLNames::crossoriginAttr);
+        String crossOriginMode = element().fastGetAttribute(HTMLNames::crossoriginAttr);
         if (!crossOriginMode.isNull()) {
             StoredCredentials allowCredentials = equalIgnoringCase(crossOriginMode, "use-credentials") ? AllowStoredCredentials : DoNotAllowStoredCredentials;
-            updateRequestForAccessControl(request.mutableResourceRequest(), document->securityOrigin(), allowCredentials);
+            updateRequestForAccessControl(request.mutableResourceRequest(), document.securityOrigin(), allowCredentials);
         }
 
         if (m_loadManually) {
-            bool autoLoadOtherImages = document->cachedResourceLoader()->autoLoadImages();
-            document->cachedResourceLoader()->setAutoLoadImages(false);
+            bool autoLoadOtherImages = document.cachedResourceLoader()->autoLoadImages();
+            document.cachedResourceLoader()->setAutoLoadImages(false);
             newImage = new CachedImage(request.resourceRequest());
             newImage->setLoading(true);
-            newImage->setOwningCachedResourceLoader(document->cachedResourceLoader());
-            document->cachedResourceLoader()->m_documentResources.set(newImage->url(), newImage.get());
-            document->cachedResourceLoader()->setAutoLoadImages(autoLoadOtherImages);
+            newImage->setOwningCachedResourceLoader(document.cachedResourceLoader());
+            document.cachedResourceLoader()->m_documentResources.set(newImage->url(), newImage.get());
+            document.cachedResourceLoader()->setAutoLoadImages(autoLoadOtherImages);
         } else
-            newImage = document->cachedResourceLoader()->requestImage(request);
+            newImage = document.cachedResourceLoader()->requestImage(request);
 
         // If we do not have an image here, it means that a cross-site
         // violation occurred, or that the image was blocked via Content
@@ -238,13 +234,13 @@ void ImageLoader::updateFromElement()
         }
 
         m_image = newImage;
-        m_hasPendingBeforeLoadEvent = !m_element->document()->isImageDocument() && newImage;
+        m_hasPendingBeforeLoadEvent = !document.isImageDocument() && newImage;
         m_hasPendingLoadEvent = newImage;
         m_imageComplete = !newImage;
 
         if (newImage) {
-            if (!m_element->document()->isImageDocument()) {
-                if (!m_element->document()->hasListenerType(Document::BEFORELOAD_LISTENER))
+            if (!document.isImageDocument()) {
+                if (!document.hasListenerType(Document::BEFORELOAD_LISTENER))
                     dispatchPendingBeforeLoadEvent();
                 else
                     beforeLoadEventSender().dispatchEventSoon(this);
@@ -286,9 +282,9 @@ void ImageLoader::notifyFinished(CachedResource* resource)
     if (!m_hasPendingLoadEvent)
         return;
 
-    if (m_element->fastHasAttribute(HTMLNames::crossoriginAttr)
-        && !m_element->document()->securityOrigin()->canRequest(image()->response().url())
-        && !resource->passesAccessControlCheck(m_element->document()->securityOrigin())) {
+    if (element().fastHasAttribute(HTMLNames::crossoriginAttr)
+        && !element().document().securityOrigin()->canRequest(image()->response().url())
+        && !resource->passesAccessControlCheck(element().document().securityOrigin())) {
 
         setImageWithoutConsideringPendingLoadEvent(0);
 
@@ -296,7 +292,7 @@ void ImageLoader::notifyFinished(CachedResource* resource)
         errorEventSender().dispatchEventSoon(this);
 
         DEFINE_STATIC_LOCAL(String, consoleMessage, (ASCIILiteral("Cross-origin image load denied by Cross-Origin Resource Sharing policy.")));
-        m_element->document()->addConsoleMessage(SecurityMessageSource, ErrorMessageLevel, consoleMessage);
+        element().document().addConsoleMessage(MessageSource::Security, MessageLevel::Error, consoleMessage);
 
         ASSERT(!m_hasPendingLoadEvent);
 
@@ -319,27 +315,24 @@ void ImageLoader::notifyFinished(CachedResource* resource)
 
 RenderImageResource* ImageLoader::renderImageResource()
 {
-    RenderObject* renderer = m_element->renderer();
-
+    auto renderer = element().renderer();
     if (!renderer)
-        return 0;
+        return nullptr;
 
     // We don't return style generated image because it doesn't belong to the ImageLoader.
     // See <https://bugs.webkit.org/show_bug.cgi?id=42840>
-    if (renderer->isRenderImage() && !static_cast<RenderImage*>(renderer)->isGeneratedContent())
-        return toRenderImage(renderer)->imageResource();
+    if (renderer->isRenderImage() && !toRenderImage(*renderer).isGeneratedContent())
+        return &toRenderImage(*renderer).imageResource();
 
-#if ENABLE(SVG)
     if (renderer->isSVGImage())
-        return toRenderSVGImage(renderer)->imageResource();
-#endif
+        return &toRenderSVGImage(renderer)->imageResource();
 
 #if ENABLE(VIDEO)
     if (renderer->isVideo())
-        return toRenderVideo(renderer)->imageResource();
+        return &toRenderVideo(*renderer).imageResource();
 #endif
 
-    return 0;
+    return nullptr;
 }
 
 void ImageLoader::updateRenderer()
@@ -372,16 +365,16 @@ void ImageLoader::updatedHasPendingEvent()
         if (m_derefElementTimer.isActive())
             m_derefElementTimer.stop();
         else
-            m_element->ref();
+            element().ref();
     } else {
         ASSERT(!m_derefElementTimer.isActive());
         m_derefElementTimer.startOneShot(0);
     }   
 }
 
-void ImageLoader::timerFired(Timer<ImageLoader>*)
+void ImageLoader::timerFired(Timer<ImageLoader>&)
 {
-    m_element->deref();
+    element().deref();
 }
 
 void ImageLoader::dispatchPendingEvent(ImageEventSender* eventSender)
@@ -402,10 +395,10 @@ void ImageLoader::dispatchPendingBeforeLoadEvent()
         return;
     if (!m_image)
         return;
-    if (!m_element->document()->attached())
+    if (!element().document().hasLivingRenderTree())
         return;
     m_hasPendingBeforeLoadEvent = false;
-    if (m_element->dispatchBeforeLoadEvent(m_image->url())) {
+    if (element().dispatchBeforeLoadEvent(m_image->url())) {
         updateRenderer();
         return;
     }
@@ -416,9 +409,9 @@ void ImageLoader::dispatchPendingBeforeLoadEvent()
 
     loadEventSender().cancelEvent(this);
     m_hasPendingLoadEvent = false;
-
-    if (m_element->hasTagName(HTMLNames::objectTag))
-        static_cast<HTMLObjectElement*>(m_element)->renderFallbackContent();
+    
+    if (isHTMLObjectElement(element()))
+        toHTMLObjectElement(element()).renderFallbackContent();
 
     // Only consider updating the protection ref-count of the Element immediately before returning
     // from this function as doing so might result in the destruction of this ImageLoader.
@@ -432,8 +425,8 @@ void ImageLoader::dispatchPendingLoadEvent()
     if (!m_image)
         return;
     m_hasPendingLoadEvent = false;
-    if (element()->document()->attached())
-    dispatchLoadEvent();
+    if (element().document().hasLivingRenderTree())
+        dispatchLoadEvent();
 
     // Only consider updating the protection ref-count of the Element immediately before returning
     // from this function as doing so might result in the destruction of this ImageLoader.
@@ -445,8 +438,8 @@ void ImageLoader::dispatchPendingErrorEvent()
     if (!m_hasPendingErrorEvent)
         return;
     m_hasPendingErrorEvent = false;
-    if (element()->document()->attached())
-        element()->dispatchEvent(Event::create(eventNames().errorEvent, false, false));
+    if (element().document().hasLivingRenderTree())
+        element().dispatchEvent(Event::create(eventNames().errorEvent, false, false));
 
     // Only consider updating the protection ref-count of the Element immediately before returning
     // from this function as doing so might result in the destruction of this ImageLoader.

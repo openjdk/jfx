@@ -27,20 +27,22 @@
 #ifndef Widget_h
 #define Widget_h
 
+#if PLATFORM(IOS)
+#ifndef NSView
+#define NSView WAKView
+#endif
+#endif
+
 #include "IntRect.h"
+#include "PlatformScreen.h"
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
 
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
 #include <wtf/RetainPtr.h>
 #endif
 
-#if PLATFORM(QT)
-#include <QPointer>
-#include <qglobal.h>
-#endif
-
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
 OBJC_CLASS NSView;
 OBJC_CLASS NSWindow;
 typedef NSView *PlatformWidget;
@@ -57,43 +59,22 @@ typedef struct _GtkContainer GtkContainer;
 typedef GtkWidget* PlatformWidget;
 #endif
 
-#if PLATFORM(QT)
-QT_BEGIN_NAMESPACE
-class QObject;
-QT_END_NAMESPACE
-typedef QObject* PlatformWidget;
-#endif
-
-#if PLATFORM(BLACKBERRY)
-typedef void* PlatformWidget;
-#endif
-
 #if PLATFORM(JAVA)
 #include <jni.h>
+#include <JavaRef.h>
 typedef JGObject PlatformWidget;
 #endif
 
 #if PLATFORM(EFL)
 #if USE(EO)
-typedef struct _Eo Evas_Object;
+typedef struct _Eo_Opaque Evas_Object;
 #else
 typedef struct _Evas_Object Evas_Object;
 #endif
 typedef Evas_Object* PlatformWidget;
 #endif
 
-#if PLATFORM(QT)
-class QWebPageClient;
-typedef QWebPageClient* PlatformPageClient;
-#elif PLATFORM(BLACKBERRY)
-#include "PageClientBlackBerry.h"
-typedef PageClientBlackBerry* PlatformPageClient;
-#elif PLATFORM(EFL)
-class PageClientEfl;
-typedef PageClientEfl* PlatformPageClient;
-#else
 typedef PlatformWidget PlatformPageClient;
-#endif
 
 namespace WebCore {
 
@@ -196,10 +177,7 @@ public:
     IntPoint convertToContainingWindow(const IntPoint&) const;
     IntPoint convertFromContainingWindow(const IntPoint&) const;
 
-    virtual void frameRectsChanged();
-
-    // Notifies this widget that other widgets on the page have been repositioned.
-    virtual void widgetPositionsUpdated() {}
+    virtual void frameRectsChanged() { }
 
     // Notifies this widget that its clip rect changed.
     virtual void clipRectChanged() { }
@@ -208,20 +186,18 @@ public:
     // the frame rects be the same no matter what transforms are applied.
     virtual bool transformsAffectFrameRect() { return true; }
 
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
     NSView* getOuterView() const;
 
     void removeFromSuperview();
+#endif
+#if PLATFORM(IOS)
+    void addToSuperview(NSView*);
 #endif
 
 #if PLATFORM(EFL)
     void setEvasObject(Evas_Object*);
     Evas_Object* evasObject() { return m_evasObject; }
-#endif
-
-#if PLATFORM(QT)
-    QObject* bindingObject() const;
-    void setBindingObject(QObject*);
 #endif
 
     // Virtual methods to convert points to/from the containing ScrollView
@@ -246,7 +222,7 @@ private:
 
 private:
     ScrollView* m_parent;
-#if !PLATFORM(MAC)
+#if !PLATFORM(COCOA)
     PlatformWidget m_widget;
 #else
     RetainPtr<NSView> m_widget;
@@ -256,21 +232,19 @@ private:
 
     IntRect m_frame; // Not used when a native widget exists.
 
-#if PLATFORM(MAC) || PLATFORM(JAVA)
+#if PLATFORM(JAVA)
     WidgetPrivate* m_data;
 #endif
 
 #if PLATFORM(EFL)
     Evas_Object* m_evasObject;
 #endif
-
-#if PLATFORM(QT)
-    QPointer<QObject> m_bindingObject;
-#endif
-
 };
 
-#if !PLATFORM(MAC)
+#define WIDGET_TYPE_CASTS(ToValueTypeName, predicate) \
+    TYPE_CASTS_BASE(ToValueTypeName, Widget, object, object->predicate, object.predicate)
+
+#if !PLATFORM(COCOA)
 
 inline PlatformWidget Widget::platformWidget() const
 {

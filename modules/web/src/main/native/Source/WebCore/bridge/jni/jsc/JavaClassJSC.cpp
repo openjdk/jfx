@@ -112,13 +112,13 @@ JavaClass::~JavaClass()
 
     // FIXME: Should we acquire a JSLock here?
 
-    deleteAllValues(m_fields);
+//    deleteAllValues(m_fields);  todo tav
     m_fields.clear();
 
     MethodListMap::const_iterator end = m_methods.end();
     for (MethodListMap::const_iterator it = m_methods.begin(); it != end; ++it) {
         const MethodList* methodList = it->value;
-        deleteAllValues(*methodList);
+//        deleteAllValues(*methodList); todo tav
         delete methodList;
     }
     m_methods.clear();

@@ -114,15 +114,15 @@ class StringToFileSystemString {
 private:
     static void *operator new(size_t size);
     static void operator delete(void *ptr);
-    
+
 private:
     TCHAR* FData;
     bool FRelease;
-    
+
 public:
     StringToFileSystemString(const TString &value);
     ~StringToFileSystemString();
-    
+
     operator TCHAR* ();
 };
 
@@ -139,13 +139,13 @@ class FileSystemStringToString {
 private:
     static void *operator new(size_t size);
     static void operator delete(void *ptr);
-    
+
 private:
     TString FData;
-    
+
 public:
     FileSystemStringToString(const TCHAR* value);
-    
+
     operator TString ();
 };
 #endif //MAC
@@ -166,10 +166,10 @@ private:
 
     // Caller must free result using delete[].
     static void CopyString(char *Destination, size_t NumberOfElements, const char *Source);
-    
+
     // Caller must free result using delete[].
     static void CopyString(wchar_t *Destination, size_t NumberOfElements, const wchar_t *Source);
-    
+
     static WideString MultibyteStringToWideString(const char* value);
     static MultibyteString WideStringToMultibyteString(const wchar_t* value);
 
@@ -188,7 +188,7 @@ public:
     PlatformString(JNIEnv *env, jstring value);
     PlatformString(size_t Value);
 
-    static std::string Format(std::string value, ...);
+    static TString Format(const TString value, ...);
 
     ~PlatformString(void);
 
@@ -209,7 +209,7 @@ public:
 
     // Caller must free result using delete[].
     static char* duplicate(const char* Value);
-    
+
     // Caller must free result using delete[].
     static wchar_t* duplicate(const wchar_t* Value);
 };

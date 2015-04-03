@@ -29,28 +29,27 @@ namespace JSC {
     public:
         typedef NumberObject Base;
 
-        static NumberPrototype* create(ExecState* exec, JSGlobalObject* globalObject, Structure* structure)
+        static NumberPrototype* create(VM& vm, JSGlobalObject* globalObject, Structure* structure)
         {
-            NumberPrototype* prototype = new (NotNull, allocateCell<NumberPrototype>(*exec->heap())) NumberPrototype(exec, structure);
-            prototype->finishCreation(exec, globalObject);
+            NumberPrototype* prototype = new (NotNull, allocateCell<NumberPrototype>(vm.heap)) NumberPrototype(vm, structure);
+            prototype->finishCreation(vm, globalObject);
             return prototype;
         }
-
-        static const ClassInfo s_info;
+        
+        DECLARE_INFO;
 
         static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
         {
-            return Structure::create(vm, globalObject, prototype, TypeInfo(NumberObjectType, StructureFlags), &s_info);
+            return Structure::create(vm, globalObject, prototype, TypeInfo(NumberObjectType, StructureFlags), info());
         }
 
     protected:
-        void finishCreation(ExecState*, JSGlobalObject*);
+        void finishCreation(VM&, JSGlobalObject*);
         static const unsigned StructureFlags = OverridesGetOwnPropertySlot | NumberObject::StructureFlags;
 
     private:
-        NumberPrototype(ExecState*, Structure*);
-        static bool getOwnPropertySlot(JSCell*, ExecState*, PropertyName, PropertySlot&);
-        static bool getOwnPropertyDescriptor(JSObject*, ExecState*, PropertyName, PropertyDescriptor&);
+        NumberPrototype(VM&, Structure*);
+        static bool getOwnPropertySlot(JSObject*, ExecState*, PropertyName, PropertySlot&);
     };
 
 } // namespace JSC

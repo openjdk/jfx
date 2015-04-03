@@ -27,52 +27,49 @@
 #include "config.h"
 #include "TextControlInnerElements.h"
 
-#include "BeforeTextInsertedEvent.h"
 #include "Document.h"
 #include "EventHandler.h"
 #include "EventNames.h"
 #include "Frame.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
-#include "HTMLTextAreaElement.h"
 #include "MouseEvent.h"
-#include "Page.h"
 #include "RenderSearchField.h"
 #include "RenderTextControl.h"
 #include "RenderView.h"
 #include "ScriptController.h"
 #include "SpeechInput.h"
 #include "SpeechInputEvent.h"
-#include "StyleInheritedData.h"
 #include "TextEvent.h"
 #include "TextEventInputType.h"
+#include <wtf/Ref.h>
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-TextControlInnerContainer::TextControlInnerContainer(Document* document)
+TextControlInnerContainer::TextControlInnerContainer(Document& document)
     : HTMLDivElement(divTag, document)
 {
 }
 
-PassRefPtr<TextControlInnerContainer> TextControlInnerContainer::create(Document* document)
+PassRefPtr<TextControlInnerContainer> TextControlInnerContainer::create(Document& document)
 {
     return adoptRef(new TextControlInnerContainer(document));
 }
     
-RenderObject* TextControlInnerContainer::createRenderer(RenderArena* arena, RenderStyle*)
+RenderPtr<RenderElement> TextControlInnerContainer::createElementRenderer(PassRef<RenderStyle> style)
 {
-    return new (arena) RenderTextControlInnerContainer(this);
+    return createRenderer<RenderTextControlInnerContainer>(*this, std::move(style));
 }
 
-TextControlInnerElement::TextControlInnerElement(Document* document)
+TextControlInnerElement::TextControlInnerElement(Document& document)
     : HTMLDivElement(divTag, document)
 {
-    setHasCustomStyleCallbacks();
+    setHasCustomStyleResolveCallbacks();
 }
 
-PassRefPtr<TextControlInnerElement> TextControlInnerElement::create(Document* document)
+PassRefPtr<TextControlInnerElement> TextControlInnerElement::create(Document& document)
 {
     return adoptRef(new TextControlInnerElement(document));
 }
@@ -80,18 +77,18 @@ PassRefPtr<TextControlInnerElement> TextControlInnerElement::create(Document* do
 PassRefPtr<RenderStyle> TextControlInnerElement::customStyleForRenderer()
 {
     RenderTextControlSingleLine* parentRenderer = toRenderTextControlSingleLine(shadowHost()->renderer());
-    return parentRenderer->createInnerBlockStyle(parentRenderer->style());
+    return parentRenderer->createInnerBlockStyle(&parentRenderer->style());
 }
 
 // ---------------------------
 
-inline TextControlInnerTextElement::TextControlInnerTextElement(Document* document)
+inline TextControlInnerTextElement::TextControlInnerTextElement(Document& document)
     : HTMLDivElement(divTag, document)
 {
-    setHasCustomStyleCallbacks();
+    setHasCustomStyleResolveCallbacks();
 }
 
-PassRefPtr<TextControlInnerTextElement> TextControlInnerTextElement::create(Document* document)
+PassRefPtr<TextControlInnerTextElement> TextControlInnerTextElement::create(Document& document)
 {
     return adoptRef(new TextControlInnerTextElement(document));
 }
@@ -115,25 +112,30 @@ void TextControlInnerTextElement::defaultEventHandler(Event* event)
         HTMLDivElement::defaultEventHandler(event);
 }
 
-RenderObject* TextControlInnerTextElement::createRenderer(RenderArena* arena, RenderStyle*)
+RenderPtr<RenderElement> TextControlInnerTextElement::createElementRenderer(PassRef<RenderStyle> style)
 {
-    return new (arena) RenderTextControlInnerBlock(this);
+    return createRenderer<RenderTextControlInnerBlock>(*this, std::move(style));
+}
+
+RenderTextControlInnerBlock* TextControlInnerTextElement::renderer() const
+{
+    return toRenderTextControlInnerBlock(HTMLDivElement::renderer());
 }
 
 PassRefPtr<RenderStyle> TextControlInnerTextElement::customStyleForRenderer()
 {
     RenderTextControl* parentRenderer = toRenderTextControl(shadowHost()->renderer());
-    return parentRenderer->createInnerTextStyle(parentRenderer->style());
+    return parentRenderer->createInnerTextStyle(&parentRenderer->style());
 }
 
 // ----------------------------
 
-inline SearchFieldResultsButtonElement::SearchFieldResultsButtonElement(Document* document)
+inline SearchFieldResultsButtonElement::SearchFieldResultsButtonElement(Document& document)
     : HTMLDivElement(divTag, document)
 {
 }
 
-PassRefPtr<SearchFieldResultsButtonElement> SearchFieldResultsButtonElement::create(Document* document)
+PassRefPtr<SearchFieldResultsButtonElement> SearchFieldResultsButtonElement::create(Document& document)
 {
     return adoptRef(new SearchFieldResultsButtonElement(document));
 }
@@ -159,15 +161,17 @@ const AtomicString& SearchFieldResultsButtonElement::shadowPseudoId() const
 void SearchFieldResultsButtonElement::defaultEventHandler(Event* event)
 {
     // On mousedown, bring up a menu, if needed
-    HTMLInputElement* input = static_cast<HTMLInputElement*>(shadowHost());
-    if (input && event->type() == eventNames().mousedownEvent && event->isMouseEvent() && static_cast<MouseEvent*>(event)->button() == LeftButton) {
+    HTMLInputElement* input = toHTMLInputElement(shadowHost());
+    if (input && event->type() == eventNames().mousedownEvent && event->isMouseEvent() && toMouseEvent(event)->button() == LeftButton) {
         input->focus();
         input->select();
+#if !PLATFORM(IOS)
         RenderSearchField* renderer = toRenderSearchField(input->renderer());
         if (renderer->popupIsVisible())
             renderer->hidePopup();
         else if (input->maxResults() > 0)
             renderer->showPopup();
+#endif
         event->setDefaultHandled();
     }
 
@@ -175,20 +179,23 @@ void SearchFieldResultsButtonElement::defaultEventHandler(Event* event)
         HTMLDivElement::defaultEventHandler(event);
 }
 
+#if !PLATFORM(IOS)
 bool SearchFieldResultsButtonElement::willRespondToMouseClickEvents()
 {
     return true;
 }
+#endif
 
 // ----------------------------
 
-inline SearchFieldCancelButtonElement::SearchFieldCancelButtonElement(Document* document)
+inline SearchFieldCancelButtonElement::SearchFieldCancelButtonElement(Document& document)
     : HTMLDivElement(divTag, document)
     , m_capturing(false)
 {
+    setHasCustomStyleResolveCallbacks();
 }
 
-PassRefPtr<SearchFieldCancelButtonElement> SearchFieldCancelButtonElement::create(Document* document)
+PassRefPtr<SearchFieldCancelButtonElement> SearchFieldCancelButtonElement::create(Document& document)
 {
     return adoptRef(new SearchFieldCancelButtonElement(document));
 }
@@ -199,30 +206,28 @@ const AtomicString& SearchFieldCancelButtonElement::shadowPseudoId() const
     return pseudoId;
 }
 
-void SearchFieldCancelButtonElement::detach()
+void SearchFieldCancelButtonElement::willDetachRenderers()
 {
     if (m_capturing) {
-        if (Frame* frame = document()->frame())
-            frame->eventHandler()->setCapturingMouseEventsNode(0);
+        if (Frame* frame = document().frame())
+            frame->eventHandler().setCapturingMouseEventsElement(nullptr);
     }
-    HTMLDivElement::detach();
 }
-
 
 void SearchFieldCancelButtonElement::defaultEventHandler(Event* event)
 {
     // If the element is visible, on mouseup, clear the value, and set selection
-    RefPtr<HTMLInputElement> input(static_cast<HTMLInputElement*>(shadowHost()));
+    RefPtr<HTMLInputElement> input(toHTMLInputElement(shadowHost()));
     if (!input || input->isDisabledOrReadOnly()) {
         if (!event->defaultHandled())
             HTMLDivElement::defaultEventHandler(event);
         return;
     }
 
-    if (event->type() == eventNames().mousedownEvent && event->isMouseEvent() && static_cast<MouseEvent*>(event)->button() == LeftButton) {
+    if (event->type() == eventNames().mousedownEvent && event->isMouseEvent() && toMouseEvent(event)->button() == LeftButton) {
         if (renderer() && renderer()->visibleToHitTesting()) {
-            if (Frame* frame = document()->frame()) {
-                frame->eventHandler()->setCapturingMouseEventsNode(this);
+            if (Frame* frame = document().frame()) {
+                frame->eventHandler().setCapturingMouseEventsElement(this);
                 m_capturing = true;
             }
         }
@@ -230,10 +235,10 @@ void SearchFieldCancelButtonElement::defaultEventHandler(Event* event)
         input->select();
         event->setDefaultHandled();
     }
-    if (event->type() == eventNames().mouseupEvent && event->isMouseEvent() && static_cast<MouseEvent*>(event)->button() == LeftButton) {
+    if (event->type() == eventNames().mouseupEvent && event->isMouseEvent() && toMouseEvent(event)->button() == LeftButton) {
         if (m_capturing) {
-            if (Frame* frame = document()->frame()) {
-                frame->eventHandler()->setCapturingMouseEventsNode(0);
+            if (Frame* frame = document().frame()) {
+                frame->eventHandler().setCapturingMouseEventsElement(nullptr);
                 m_capturing = false;
             }
             if (hovered()) {
@@ -249,25 +254,28 @@ void SearchFieldCancelButtonElement::defaultEventHandler(Event* event)
         HTMLDivElement::defaultEventHandler(event);
 }
 
+#if !PLATFORM(IOS)
 bool SearchFieldCancelButtonElement::willRespondToMouseClickEvents()
 {
-    const HTMLInputElement* input = static_cast<HTMLInputElement*>(shadowHost());
+    const HTMLInputElement* input = toHTMLInputElement(shadowHost());
     if (input && !input->isDisabledOrReadOnly())
         return true;
 
     return HTMLDivElement::willRespondToMouseClickEvents();
 }
+#endif
 
 // ----------------------------
 
 #if ENABLE(INPUT_SPEECH)
 
-inline InputFieldSpeechButtonElement::InputFieldSpeechButtonElement(Document* document)
+inline InputFieldSpeechButtonElement::InputFieldSpeechButtonElement(Document& document)
     : HTMLDivElement(divTag, document)
     , m_capturing(false)
     , m_state(Idle)
     , m_listenerId(0)
 {
+    setHasCustomStyleResolveCallbacks();
 }
 
 InputFieldSpeechButtonElement::~InputFieldSpeechButtonElement()
@@ -280,7 +288,7 @@ InputFieldSpeechButtonElement::~InputFieldSpeechButtonElement()
     }
 }
 
-PassRefPtr<InputFieldSpeechButtonElement> InputFieldSpeechButtonElement::create(Document* document)
+PassRefPtr<InputFieldSpeechButtonElement> InputFieldSpeechButtonElement::create(Document& document)
 {
     return adoptRef(new InputFieldSpeechButtonElement(document));
 }
@@ -296,7 +304,7 @@ void InputFieldSpeechButtonElement::defaultEventHandler(Event* event)
     // The call to focus() below dispatches a focus event, and an event handler in the page might
     // remove the input element from DOM. To make sure it remains valid until we finish our work
     // here, we take a temporary reference.
-    RefPtr<HTMLInputElement> input(static_cast<HTMLInputElement*>(shadowHost()));
+    RefPtr<HTMLInputElement> input(toHTMLInputElement(shadowHost()));
 
     if (!input || input->isDisabledOrReadOnly()) {
         if (!event->defaultHandled())
@@ -305,23 +313,23 @@ void InputFieldSpeechButtonElement::defaultEventHandler(Event* event)
     }
 
     // On mouse down, select the text and set focus.
-    if (event->type() == eventNames().mousedownEvent && event->isMouseEvent() && static_cast<MouseEvent*>(event)->button() == LeftButton) {
+    if (event->type() == eventNames().mousedownEvent && event->isMouseEvent() && toMouseEvent(event)->button() == LeftButton) {
         if (renderer() && renderer()->visibleToHitTesting()) {
-            if (Frame* frame = document()->frame()) {
-                frame->eventHandler()->setCapturingMouseEventsNode(this);
+            if (Frame* frame = document().frame()) {
+                frame->eventHandler().setCapturingMouseEventsElement(this);
                 m_capturing = true;
             }
         }
-        RefPtr<InputFieldSpeechButtonElement> holdRefButton(this);
+        Ref<InputFieldSpeechButtonElement> protect(*this);
         input->focus();
         input->select();
         event->setDefaultHandled();
     }
     // On mouse up, release capture cleanly.
-    if (event->type() == eventNames().mouseupEvent && event->isMouseEvent() && static_cast<MouseEvent*>(event)->button() == LeftButton) {
+    if (event->type() == eventNames().mouseupEvent && event->isMouseEvent() && toMouseEvent(event)->button() == LeftButton) {
         if (m_capturing && renderer() && renderer()->visibleToHitTesting()) {
-            if (Frame* frame = document()->frame()) {
-                frame->eventHandler()->setCapturingMouseEventsNode(0);
+            if (Frame* frame = document().frame()) {
+                frame->eventHandler().setCapturingMouseEventsElement(nullptr);
                 m_capturing = false;
             }
         }
@@ -346,14 +354,16 @@ void InputFieldSpeechButtonElement::defaultEventHandler(Event* event)
         HTMLDivElement::defaultEventHandler(event);
 }
 
+#if !PLATFORM(IOS)
 bool InputFieldSpeechButtonElement::willRespondToMouseClickEvents()
 {
-    const HTMLInputElement* input = static_cast<HTMLInputElement*>(shadowHost());
+    const HTMLInputElement* input = toHTMLInputElement(shadowHost());
     if (input && !input->isDisabledOrReadOnly())
         return true;
 
     return HTMLDivElement::willRespondToMouseClickEvents();
 }
+#endif
 
 void InputFieldSpeechButtonElement::setState(SpeechInputState state)
 {
@@ -365,7 +375,7 @@ void InputFieldSpeechButtonElement::setState(SpeechInputState state)
 
 SpeechInput* InputFieldSpeechButtonElement::speechInput()
 {
-    return SpeechInput::from(document()->page());
+    return SpeechInput::from(document().page());
 }
 
 void InputFieldSpeechButtonElement::didCompleteRecording(int)
@@ -385,17 +395,17 @@ void InputFieldSpeechButtonElement::setRecognitionResult(int, const SpeechInputR
     // The call to setValue() below dispatches an event, and an event handler in the page might
     // remove the input element from DOM. To make sure it remains valid until we finish our work
     // here, we take a temporary reference.
-    RefPtr<HTMLInputElement> input(static_cast<HTMLInputElement*>(shadowHost()));
+    RefPtr<HTMLInputElement> input(toHTMLInputElement(shadowHost()));
     if (!input || input->isDisabledOrReadOnly())
         return;
 
-    RefPtr<InputFieldSpeechButtonElement> holdRefButton(this);
-    if (document() && document()->domWindow()) {
+    Ref<InputFieldSpeechButtonElement> protect(*this);
+    if (document().domWindow()) {
         // Call selectionChanged, causing the element to cache the selection,
         // so that the text event inserts the text in this element even if
         // focus has moved away from it.
         input->selectionChanged(false);
-        input->dispatchEvent(TextEvent::create(document()->domWindow(), results.isEmpty() ? "" : results[0]->utterance(), TextEventInputOther));
+        input->dispatchEvent(TextEvent::create(document().domWindow(), results.isEmpty() ? "" : results[0]->utterance(), TextEventInputOther));
     }
 
     // This event is sent after the text event so the website can perform actions using the input field content immediately.
@@ -408,19 +418,18 @@ void InputFieldSpeechButtonElement::setRecognitionResult(int, const SpeechInputR
         renderer()->repaint();
 }
 
-void InputFieldSpeechButtonElement::attach()
+void InputFieldSpeechButtonElement::willAttachRenderers()
 {
     ASSERT(!m_listenerId);
-    if (SpeechInput* input = SpeechInput::from(document()->page()))
+    if (SpeechInput* input = SpeechInput::from(document().page()))
         m_listenerId = input->registerListener(this);
-    HTMLDivElement::attach();
 }
 
-void InputFieldSpeechButtonElement::detach()
+void InputFieldSpeechButtonElement::willDetachRenderers()
 {
     if (m_capturing) {
-        if (Frame* frame = document()->frame())
-            frame->eventHandler()->setCapturingMouseEventsNode(0);
+        if (Frame* frame = document().frame())
+            frame->eventHandler().setCapturingMouseEventsElement(nullptr);
     }
 
     if (m_listenerId) {
@@ -429,8 +438,6 @@ void InputFieldSpeechButtonElement::detach()
         speechInput()->unregisterListener(m_listenerId);
         m_listenerId = 0;
     }
-
-    HTMLDivElement::detach();
 }
 
 void InputFieldSpeechButtonElement::startSpeechInput()
@@ -438,11 +445,11 @@ void InputFieldSpeechButtonElement::startSpeechInput()
     if (m_state != Idle)
         return;
 
-    RefPtr<HTMLInputElement> input = static_cast<HTMLInputElement*>(shadowHost());
+    RefPtr<HTMLInputElement> input = toHTMLInputElement(shadowHost());
     AtomicString language = input->computeInheritedLanguage();
     String grammar = input->getAttribute(webkitgrammarAttr);
-    IntRect rect = document()->view()->contentsToRootView(pixelSnappedBoundingBox());
-    if (speechInput()->startRecognition(m_listenerId, rect, language, grammar, document()->securityOrigin()))
+    IntRect rect = document().view()->contentsToRootView(pixelSnappedBoundingBox());
+    if (speechInput()->startRecognition(m_listenerId, rect, language, grammar, document().securityOrigin()))
         setState(Recording);
 }
 

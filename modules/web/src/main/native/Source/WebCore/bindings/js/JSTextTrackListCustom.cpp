@@ -38,14 +38,14 @@ namespace WebCore {
 void JSTextTrackList::visitChildren(JSCell* cell, SlotVisitor& visitor)
 {
     JSTextTrackList* jsTextTrackList = jsCast<JSTextTrackList*>(cell);
-    ASSERT_GC_OBJECT_INHERITS(jsTextTrackList, &s_info);
+    ASSERT_GC_OBJECT_INHERITS(jsTextTrackList, info());
     COMPILE_ASSERT(StructureFlags & OverridesVisitChildren, OverridesVisitChildrenWithoutSettingFlag);
     ASSERT(jsTextTrackList->structure()->typeInfo().overridesVisitChildren());
     Base::visitChildren(jsTextTrackList, visitor);
     
-    TextTrackList* textTrackList = static_cast<TextTrackList*>(jsTextTrackList->impl());
-    visitor.addOpaqueRoot(root(textTrackList->element()));
-    textTrackList->visitJSEventListeners(visitor);
+    TextTrackList& textTrackList = jsTextTrackList->impl();
+    visitor.addOpaqueRoot(root(textTrackList.element()));
+    textTrackList.visitJSEventListeners(visitor);
 }
     
 } // namespace WebCore

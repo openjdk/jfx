@@ -32,8 +32,7 @@ class CSSValue;
 class JSDOMWrapper;
 class ScriptController;
 
-typedef HashMap<void*, JSC::Weak<JSDOMWrapper> > DOMObjectWrapperMap;
-typedef JSC::WeakGCMap<StringImpl*, JSC::JSString, PtrHash<StringImpl*> > JSStringCache;
+typedef HashMap<void*, JSC::Weak<JSC::JSObject>> DOMObjectWrapperMap;
 
 class DOMWrapperWorld : public RefCounted<DOMWrapperWorld> {
 public:
@@ -51,7 +50,6 @@ public:
 
     // FIXME: can we make this private?
     DOMObjectWrapperMap m_wrappers;
-    JSStringCache m_stringCache;
     HashMap<CSSValue*, void*> m_cssValueRoots;
 
     bool isNormal() const { return m_isNormal; }
@@ -67,12 +65,12 @@ private:
     bool m_isNormal;
 };
 
-DOMWrapperWorld* normalWorld(JSC::VM&);
-DOMWrapperWorld* mainThreadNormalWorld();
-inline DOMWrapperWorld* debuggerWorld() { return mainThreadNormalWorld(); }
-inline DOMWrapperWorld* pluginWorld() { return mainThreadNormalWorld(); }
+DOMWrapperWorld& normalWorld(JSC::VM&);
+DOMWrapperWorld& mainThreadNormalWorld();
+inline DOMWrapperWorld& debuggerWorld() { return mainThreadNormalWorld(); }
+inline DOMWrapperWorld& pluginWorld() { return mainThreadNormalWorld(); }
 
-inline DOMWrapperWorld* currentWorld(JSC::ExecState* exec)
+inline DOMWrapperWorld& currentWorld(JSC::ExecState* exec)
 {
     return JSC::jsCast<JSDOMGlobalObject*>(exec->lexicalGlobalObject())->world();
 }

@@ -27,21 +27,20 @@
  */
 
 [
-    NoInterfaceObject,
-        Conditional=WORKERS,
+    GlobalContext=WorkerGlobalScope,
     GenerateIsReachable=Impl,
     JSNoStaticTables,
-    ImplementationLacksVTable
+    ImplementationLacksVTable,
 ] interface WorkerLocation {
-        readonly attribute DOMString href;
-        readonly attribute DOMString protocol;
-        readonly attribute DOMString host;
-        readonly attribute DOMString hostname;
-        readonly attribute DOMString port;
-        readonly attribute DOMString pathname;
-        readonly attribute DOMString search;
-        readonly attribute DOMString hash;
+    readonly attribute DOMString href;
+    readonly attribute DOMString protocol;
+    readonly attribute DOMString host;
+    readonly attribute DOMString hostname;
+    readonly attribute DOMString port;
+    readonly attribute DOMString pathname;
+    readonly attribute DOMString search;
+    readonly attribute DOMString hash;
 
-        [NotEnumerable] DOMString toString();
-    };
+    [NotEnumerable] DOMString toString();
+};
 

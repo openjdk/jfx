@@ -34,6 +34,7 @@
 #include <runtime/JSGlobalObject.h>
 #include <wtf/HashCountedSet.h>
 #include <wtf/HashSet.h>
+#include <wtf/Ref.h>
 #include <wtf/StdLibExtras.h>
 
 namespace JSC { namespace Bindings {
@@ -104,8 +105,8 @@ void RootObject::invalidate()
         return;
 
     {
-        HashMap<RuntimeObject*, JSC::Weak<RuntimeObject> >::iterator end = m_runtimeObjects.end();
-        for (HashMap<RuntimeObject*, JSC::Weak<RuntimeObject> >::iterator it = m_runtimeObjects.begin(); it != end; ++it) {
+        HashMap<RuntimeObject*, JSC::Weak<RuntimeObject>>::iterator end = m_runtimeObjects.end();
+        for (HashMap<RuntimeObject*, JSC::Weak<RuntimeObject>>::iterator it = m_runtimeObjects.begin(); it != end; ++it) {
             RuntimeObject* runtimeObject = it->value.get();
             if (!runtimeObject) // Skip zombies.
                 continue;
@@ -187,7 +188,7 @@ void RootObject::updateGlobalObject(JSGlobalObject* globalObject)
 void RootObject::addRuntimeObject(VM&, RuntimeObject* object)
 {
     ASSERT(m_isValid);
-    weakAdd(m_runtimeObjects, object, JSC::PassWeak<RuntimeObject>(object, this));
+    weakAdd(m_runtimeObjects, object, JSC::Weak<RuntimeObject>(object, this));
 }
 
 void RootObject::removeRuntimeObject(RuntimeObject* object)
@@ -201,7 +202,7 @@ void RootObject::finalize(JSC::Handle<JSC::Unknown> handle, void*)
 {
     RuntimeObject* object = static_cast<RuntimeObject*>(handle.get().asCell());
 
-    RefPtr<RootObject> protect(this);
+    Ref<RootObject> protect(*this);
     object->invalidate();
     weakRemove(m_runtimeObjects, object, object);
 }

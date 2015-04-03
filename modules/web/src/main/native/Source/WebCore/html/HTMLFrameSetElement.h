@@ -24,14 +24,14 @@
 #ifndef HTMLFrameSetElement_h
 #define HTMLFrameSetElement_h
 
-#include <wtf/OwnArrayPtr.h>
 #include "HTMLElement.h"
+#include <memory>
 
 namespace WebCore {
 
-class HTMLFrameSetElement FINAL : public HTMLElement {
+class HTMLFrameSetElement final : public HTMLElement {
 public:
-    static PassRefPtr<HTMLFrameSetElement> create(const QualifiedName&, Document*);
+    static PassRefPtr<HTMLFrameSetElement> create(const QualifiedName&, Document&);
 
     bool hasFrameBorder() const { return m_frameborder; }
     bool noResize() const { return m_noresize; }
@@ -44,6 +44,8 @@ public:
 
     const Length* rowLengths() const { return m_rowLengths.get(); }
     const Length* colLengths() const { return m_colLengths.get(); }
+
+    static HTMLFrameSetElement* findContaining(Element* descendant);
 
     // Declared virtual in Element
     DEFINE_WINDOW_ATTRIBUTE_EVENT_LISTENER(blur);
@@ -65,25 +67,25 @@ public:
 #endif
 
 private:
-    HTMLFrameSetElement(const QualifiedName&, Document*);
+    HTMLFrameSetElement(const QualifiedName&, Document&);
 
-    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
-    virtual bool isPresentationAttribute(const QualifiedName&) const OVERRIDE;
-    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStylePropertySet*) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
+    virtual bool isPresentationAttribute(const QualifiedName&) const override;
+    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStyleProperties&) override;
 
-    virtual void attach();
-    virtual bool rendererIsNeeded(const NodeRenderingContext&);
-    virtual RenderObject* createRenderer(RenderArena*, RenderStyle*);
+    virtual void willAttachRenderers() override;
+    virtual bool rendererIsNeeded(const RenderStyle&) override;
+    virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) override;
     
-    virtual void defaultEventHandler(Event*);
+    virtual void defaultEventHandler(Event*) override;
 
-    virtual bool willRecalcStyle(StyleChange);
+    virtual bool willRecalcStyle(Style::Change) override;
 
-    virtual InsertionNotificationRequest insertedInto(ContainerNode*) OVERRIDE;
-    virtual void removedFrom(ContainerNode*) OVERRIDE;
+    virtual InsertionNotificationRequest insertedInto(ContainerNode&) override;
+    virtual void removedFrom(ContainerNode&) override;
 
-    OwnArrayPtr<Length> m_rowLengths;
-    OwnArrayPtr<Length> m_colLengths;
+    std::unique_ptr<Length[]> m_rowLengths;
+    std::unique_ptr<Length[]> m_colLengths;
 
     int m_totalRows;
     int m_totalCols;
@@ -97,6 +99,8 @@ private:
     bool m_frameborderSet;
     bool m_noresize;
 };
+
+NODE_TYPE_CASTS(HTMLFrameSetElement)
 
 } // namespace WebCore
 

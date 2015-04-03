@@ -1,12 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project default="jar" basedir=".">
-
-    <target name="jar">
-        <ant dir="Hello" target="jar" inheritAll="true"/>
+<project name="toys" basedir="." default="jar">
+    <target name="swingJar" unless="JFX_CORE_ONLY">
+         <!-- 
+          these toys have dependencies on Swing which is not part of the 
+          JFX_CORE, so we should not try to build them
+          -->
+        <ant dir="ColorCube" target="jar" inheritAll="true"/>
     </target>
 
-    <target name="clean">
+    <target description="Build the toys" name="jar" depends="swingJar">
+        <ant dir="Hello" target="jar" inheritAll="true"/>
+        <ant dir="FX8-3DFeatures" target="jar" inheritAll="true"/>
+        <ant dir="PickTest3D" target="jar" inheritAll="true"/>
+        <ant dir="Shape3DToy" target="jar" inheritAll="true"/>
+    </target>
+
+    <target description="Clean the toys" name="clean">
         <ant dir="Hello" target="clean" inheritAll="true"/>
+        <ant dir="ColorCube" target="clean" inheritAll="true"/>
+        <ant dir="FX8-3DFeatures" target="clean" inheritAll="true"/>
+        <ant dir="PickTest3D" target="clean" inheritAll="true"/>
+        <ant dir="Shape3DToy" target="clean" inheritAll="true"/>
     </target>
 
 </project>

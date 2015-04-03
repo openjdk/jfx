@@ -19,8 +19,6 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SVG)
 #include "SVGDefsElement.h"
 
 #include "RenderSVGHiddenContainer.h"
@@ -33,18 +31,17 @@ DEFINE_ANIMATED_BOOLEAN(SVGDefsElement, SVGNames::externalResourcesRequiredAttr,
 
 BEGIN_REGISTER_ANIMATED_PROPERTIES(SVGDefsElement)
     REGISTER_LOCAL_ANIMATED_PROPERTY(externalResourcesRequired)
-    REGISTER_PARENT_ANIMATED_PROPERTIES(SVGStyledTransformableElement)
-    REGISTER_PARENT_ANIMATED_PROPERTIES(SVGTests)
+    REGISTER_PARENT_ANIMATED_PROPERTIES(SVGGraphicsElement)
 END_REGISTER_ANIMATED_PROPERTIES
 
-inline SVGDefsElement::SVGDefsElement(const QualifiedName& tagName, Document* document)
-    : SVGStyledTransformableElement(tagName, document)
+inline SVGDefsElement::SVGDefsElement(const QualifiedName& tagName, Document& document)
+    : SVGGraphicsElement(tagName, document)
 {
     ASSERT(hasTagName(SVGNames::defsTag));
     registerAnimatedPropertiesForSVGDefsElement();
 }
 
-PassRefPtr<SVGDefsElement> SVGDefsElement::create(const QualifiedName& tagName, Document* document)
+PassRefPtr<SVGDefsElement> SVGDefsElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(new SVGDefsElement(tagName, document));
 }
@@ -54,11 +51,9 @@ bool SVGDefsElement::isValid() const
     return SVGTests::isValid();
 }
 
-RenderObject* SVGDefsElement::createRenderer(RenderArena* arena, RenderStyle*)
+RenderPtr<RenderElement> SVGDefsElement::createElementRenderer(PassRef<RenderStyle> style)
 {
-    return new (arena) RenderSVGHiddenContainer(this);
+    return createRenderer<RenderSVGHiddenContainer>(*this, std::move(style));
 }
 
 }
-
-#endif // ENABLE(SVG)

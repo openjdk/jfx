@@ -32,6 +32,7 @@ import javafx.collections.ObservableList;
 
 public class SourceAdapterChange<E> extends ListChangeListener.Change<E> {
     private final Change<? extends E> change;
+    private int[] perm;
 
     public SourceAdapterChange(ObservableList<E> list, Change<? extends E> change) {
         super(list);
@@ -40,6 +41,7 @@ public class SourceAdapterChange<E> extends ListChangeListener.Change<E> {
 
     @Override
     public boolean next() {
+        perm = null;
         return change.next();
     }
 
@@ -64,18 +66,25 @@ public class SourceAdapterChange<E> extends ListChangeListener.Change<E> {
     }
 
     @Override
-    public int getPermutation(int i) {
-        return change.getPermutation(i);
+    public boolean wasUpdated() {
+        return change.wasUpdated();
     }
 
     @Override
     protected int[] getPermutation() {
-        return null; // Not used
-    }
-
-    @Override
-    public boolean wasPermutated() {
-        return change.wasPermutated();
+        if (perm == null) {
+            if (change.wasPermutated()) {
+                final int from = change.getFrom();
+                final int n = change.getTo() - from;
+                perm = new int[n];
+                for (int i=0; i<n; i++) {
+                    perm[i] = change.getPermutation(from + i);
+                }
+            } else {
+                perm = new int[0];
+            }
+        }
+        return perm;
     }
 
     @Override

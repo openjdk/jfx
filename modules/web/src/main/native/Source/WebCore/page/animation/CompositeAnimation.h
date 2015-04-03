@@ -39,11 +39,11 @@ namespace WebCore {
 
 class AnimationControllerPrivate;
 class AnimationController;
-class RenderObject;
+class RenderElement;
 class RenderStyle;
 
 // A CompositeAnimation represents a collection of animations that are running
-// on a single RenderObject, such as a number of properties transitioning at once.
+// on a single RenderElement, such as a number of properties transitioning at once.
 class CompositeAnimation : public RefCounted<CompositeAnimation> {
 public:
     static PassRefPtr<CompositeAnimation> create(AnimationControllerPrivate* animationController)
@@ -55,7 +55,7 @@ public:
     
     void clearRenderer();
 
-    PassRefPtr<RenderStyle> animate(RenderObject*, RenderStyle* currentStyle, RenderStyle* targetStyle);
+    PassRef<RenderStyle> animate(RenderElement&, RenderStyle* currentStyle, RenderStyle& targetStyle);
     PassRefPtr<RenderStyle> getAnimatedStyle() const;
 
     double timeToNextService() const;
@@ -82,11 +82,11 @@ public:
 private:
     CompositeAnimation(AnimationControllerPrivate*);
 
-    void updateTransitions(RenderObject*, RenderStyle* currentStyle, RenderStyle* targetStyle);
-    void updateKeyframeAnimations(RenderObject*, RenderStyle* currentStyle, RenderStyle* targetStyle);
+    void updateTransitions(RenderElement*, RenderStyle* currentStyle, RenderStyle* targetStyle);
+    void updateKeyframeAnimations(RenderElement*, RenderStyle* currentStyle, RenderStyle* targetStyle);
     
-    typedef HashMap<int, RefPtr<ImplicitAnimation> > CSSPropertyTransitionsMap;
-    typedef HashMap<AtomicStringImpl*, RefPtr<KeyframeAnimation> >  AnimationNameMap;
+    typedef HashMap<int, RefPtr<ImplicitAnimation>> CSSPropertyTransitionsMap;
+    typedef HashMap<AtomicStringImpl*, RefPtr<KeyframeAnimation>>  AnimationNameMap;
 
     AnimationControllerPrivate* m_animationController;
     CSSPropertyTransitionsMap m_transitions;

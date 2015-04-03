@@ -44,11 +44,6 @@ static inline bool bytesEqual(const char* p, char b0, char b1)
     return p[0] == b0 && p[1] == b1;
 }
 
-static inline bool bytesEqual(const char* p, char b0, char b1, char b2)
-{
-    return p[0] == b0 && p[1] == b1 && p[2] == b2;
-}
-
 static inline bool bytesEqual(const char* p, char b0, char b1, char b2, char b3, char b4)
 {
     return p[0] == b0 && p[1] == b1 && p[2] == b2 && p[3] == b3 && p[4] == b4;
@@ -404,14 +399,6 @@ static int findXMLEncoding(const char* str, int len, int& encodingLength)
     return pos;
 }
 
-// true if there is more to parse
-static inline bool skipWhitespace(const char*& pos, const char* dataEnd)
-{
-    while (pos < dataEnd && (*pos == '\t' || *pos == ' '))
-        ++pos;
-    return pos != dataEnd;
-}
-
 size_t TextResourceDecoder::checkForBOM(const char* data, size_t len)
 {
     // Check for UTF-16/32 or UTF-8 BOM mark at the beginning, which is a sure sign of a Unicode encoding.
@@ -481,17 +468,17 @@ bool TextResourceDecoder::checkForCSSCharset(const char* data, size_t len, bool&
         const char* pos = dataStart;
 
         while (pos < dataEnd && *pos != '"')
-                ++pos;
-            if (pos == dataEnd)
-                return false;
-
-            int encodingNameLength = pos - dataStart;
-            
             ++pos;
+        if (pos == dataEnd)
+            return false;
 
-            if (*pos == ';')
-                setEncoding(findTextEncoding(dataStart, encodingNameLength), EncodingFromCSSCharset);
-        }
+        int encodingNameLength = pos - dataStart;
+        
+        ++pos;
+
+        if (*pos == ';')
+            setEncoding(findTextEncoding(dataStart, encodingNameLength), EncodingFromCSSCharset);
+    }
 
     m_checkedForCSSCharset = true;
     return true;
@@ -556,7 +543,7 @@ bool TextResourceDecoder::checkForHeadCharset(const char* data, size_t len, bool
     if (m_contentType == XML)
         return true;
 
-    m_charsetParser = HTMLMetaCharsetParser::create();
+    m_charsetParser = std::make_unique<HTMLMetaCharsetParser>();
     return checkForMetaCharset(data, len);
 }
 
@@ -566,7 +553,7 @@ bool TextResourceDecoder::checkForMetaCharset(const char* data, size_t length)
         return false;
 
     setEncoding(m_charsetParser->encoding(), EncodingFromMetaTag);
-    m_charsetParser.clear();
+    m_charsetParser = nullptr;
     m_checkedForHeadCharset = true;
     return true;
 }

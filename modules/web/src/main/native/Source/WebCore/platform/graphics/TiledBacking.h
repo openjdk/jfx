@@ -26,18 +26,20 @@
 #ifndef TiledBacking_h
 #define TiledBacking_h
 
-#if PLATFORM(MAC)
-OBJC_CLASS CALayer;
-#endif
-
 namespace WebCore {
 
+static const int defaultTileWidth = 512;
+static const int defaultTileHeight = 512;
+
 class IntRect;
+#if PLATFORM(COCOA)
+class PlatformCALayer;
+#endif
 
 enum ScrollingModeIndication {
-    MainThreadScrollingBecauseOfStyleIndication,
-    MainThreadScrollingBecauseOfEventHandlersIndication,
-    ThreadedScrollingIndication
+    SynchronousScrollingBecauseOfStyleIndication,
+    SynchronousScrollingBecauseOfEventHandlersIndication,
+    AsyncScrollingIndication
 };
 
 class TiledBacking {
@@ -49,8 +51,6 @@ public:
     virtual bool tilesWouldChangeForVisibleRect(const FloatRect&) const = 0;
 
     virtual void setExposedRect(const FloatRect&) = 0;
-    virtual void setClipsToExposedRect(bool) = 0;
-    virtual bool clipsToExposedRect() = 0;
 
     virtual void prepopulateRect(const FloatRect&) = 0;
 
@@ -60,7 +60,6 @@ public:
         CoverageForVisibleArea = 0,
         CoverageForVerticalScrolling = 1 << 0,
         CoverageForHorizontalScrolling = 1 << 1,
-        CoverageForSlowScrolling = 1 << 2, // Indicates that we expect to paint a lot on scrolling.
         CoverageForScrolling = CoverageForVerticalScrolling | CoverageForHorizontalScrolling
     };
     typedef unsigned TileCoverage;
@@ -70,6 +69,7 @@ public:
 
     virtual IntSize tileSize() const = 0;
 
+    virtual void revalidateTiles() = 0;
     virtual void forceRepaint() = 0;
 
     virtual void setScrollingPerformanceLoggingEnabled(bool) = 0;
@@ -83,13 +83,24 @@ public:
     
     virtual double retainedTileBackingStoreMemory() const = 0;
 
+    virtual void setTileMargins(int marginTop, int marginBottom, int marginLeft, int marginRight) = 0;
+    virtual bool hasMargins() const = 0;
+
+    virtual int topMarginHeight() const = 0;
+    virtual int bottomMarginHeight() const = 0;
+    virtual int leftMarginWidth() const = 0;
+    virtual int rightMarginWidth() const = 0;
+
+    // Includes margins.
+    virtual IntRect bounds() const = 0;
+
     // Exposed for testing
     virtual IntRect tileCoverageRect() const = 0;
     virtual IntRect tileGridExtent() const = 0;
     virtual void setScrollingModeIndication(ScrollingModeIndication) = 0;
 
-#if PLATFORM(MAC)
-    virtual CALayer *tiledScrollingIndicatorLayer() = 0;
+#if PLATFORM(COCOA)
+    virtual PlatformCALayer* tiledScrollingIndicatorLayer() = 0;
 #endif
 };
 

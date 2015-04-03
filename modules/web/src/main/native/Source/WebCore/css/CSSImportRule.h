@@ -37,14 +37,14 @@ public:
     
     virtual ~CSSImportRule();
 
-    virtual CSSRule::Type type() const OVERRIDE { return IMPORT_RULE; }
-    virtual String cssText() const OVERRIDE;
-    virtual void reattach(StyleRuleBase*) OVERRIDE;
+    virtual CSSRule::Type type() const override { return IMPORT_RULE; }
+    virtual String cssText() const override;
+    virtual void reattach(StyleRuleBase*) override;
 
     String href() const;
     MediaList* media() const;
     CSSStyleSheet* styleSheet() const;
-    
+
 private:
     CSSImportRule(StyleRuleImport*, CSSStyleSheet*);
 

@@ -29,8 +29,8 @@
 #include "Document.h"
 #include "DOMWindow.h"
 #include "EventNames.h"
-#include "Frame.h"
 #include "InspectorInstrumentation.h"
+#include "MainFrame.h"
 #include "Page.h"
 #include "PageGroup.h"
 #include "SecurityOrigin.h"
@@ -44,16 +44,16 @@ void StorageEventDispatcher::dispatchSessionStorageEvents(const String& key, con
     if (!page)
         return;
 
-    Vector<RefPtr<Frame> > frames;
+    Vector<RefPtr<Frame>> frames;
 
-        // Send events only to our page.
-        for (Frame* frame = page->mainFrame(); frame; frame = frame->tree()->traverseNext()) {
-            if (sourceFrame != frame && frame->document()->securityOrigin()->equal(securityOrigin))
-                frames.append(frame);
-        }
+    // Send events only to our page.
+    for (Frame* frame = &page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
+        if (sourceFrame != frame && frame->document()->securityOrigin()->equal(securityOrigin))
+            frames.append(frame);
+    }
 
     dispatchSessionStorageEventsToFrames(*page, frames, key, oldValue, newValue, sourceFrame->document()->url(), securityOrigin);
-        }
+}
 
 void StorageEventDispatcher::dispatchLocalStorageEvents(const String& key, const String& oldValue, const String& newValue, SecurityOrigin* securityOrigin, Frame* sourceFrame)
 {
@@ -61,33 +61,33 @@ void StorageEventDispatcher::dispatchLocalStorageEvents(const String& key, const
     if (!page)
         return;
 
-    Vector<RefPtr<Frame> > frames;
+    Vector<RefPtr<Frame>> frames;
 
-        // Send events to every page.
-        const HashSet<Page*>& pages = page->group().pages();
+    // Send events to every page.
+    const HashSet<Page*>& pages = page->group().pages();
     for (HashSet<Page*>::const_iterator it = pages.begin(), end = pages.end(); it != end; ++it) {
-            for (Frame* frame = (*it)->mainFrame(); frame; frame = frame->tree()->traverseNext()) {
-                if (sourceFrame != frame && frame->document()->securityOrigin()->equal(securityOrigin))
-                    frames.append(frame);
-            }
+        for (Frame* frame = &(*it)->mainFrame(); frame; frame = frame->tree().traverseNext()) {
+            if (sourceFrame != frame && frame->document()->securityOrigin()->equal(securityOrigin))
+                frames.append(frame);
         }
+    }
 
     dispatchLocalStorageEventsToFrames(page->group(), frames, key, oldValue, newValue, sourceFrame->document()->url(), securityOrigin);
 }
 
-void StorageEventDispatcher::dispatchSessionStorageEventsToFrames(Page& page, const Vector<RefPtr<Frame> >& frames, const String& key, const String& oldValue, const String& newValue, const String& url, SecurityOrigin* securityOrigin)
+void StorageEventDispatcher::dispatchSessionStorageEventsToFrames(Page& page, const Vector<RefPtr<Frame>>& frames, const String& key, const String& oldValue, const String& newValue, const String& url, SecurityOrigin* securityOrigin)
 {
     InspectorInstrumentation::didDispatchDOMStorageEvent(key, oldValue, newValue, SessionStorage, securityOrigin, &page);
 
-        for (unsigned i = 0; i < frames.size(); ++i) {
-            ExceptionCode ec = 0;
+    for (unsigned i = 0; i < frames.size(); ++i) {
+        ExceptionCode ec = 0;
         Storage* storage = frames[i]->document()->domWindow()->sessionStorage(ec);
-            if (!ec)
+        if (!ec)
             frames[i]->document()->enqueueWindowEvent(StorageEvent::create(eventNames().storageEvent, key, oldValue, newValue, url, storage));
     }
 }
 
-void StorageEventDispatcher::dispatchLocalStorageEventsToFrames(PageGroup& pageGroup, const Vector<RefPtr<Frame> >& frames, const String& key, const String& oldValue, const String& newValue, const String& url, SecurityOrigin* securityOrigin)
+void StorageEventDispatcher::dispatchLocalStorageEventsToFrames(PageGroup& pageGroup, const Vector<RefPtr<Frame>>& frames, const String& key, const String& oldValue, const String& newValue, const String& url, SecurityOrigin* securityOrigin)
 {
     const HashSet<Page*>& pages = pageGroup.pages();
     for (HashSet<Page*>::const_iterator it = pages.begin(), end = pages.end(); it != end; ++it)
@@ -98,7 +98,7 @@ void StorageEventDispatcher::dispatchLocalStorageEventsToFrames(PageGroup& pageG
         Storage* storage = frames[i]->document()->domWindow()->localStorage(ec);
         if (!ec)
             frames[i]->document()->enqueueWindowEvent(StorageEvent::create(eventNames().storageEvent, key, oldValue, newValue, url, storage));
-}
+    }
 }
 
 } // namespace WebCore

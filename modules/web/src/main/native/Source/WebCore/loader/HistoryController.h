@@ -48,7 +48,7 @@ class HistoryController {
 public:
     enum HistoryUpdateType { UpdateAll, UpdateAllExceptBackForwardList };
 
-    explicit HistoryController(Frame*);
+    explicit HistoryController(Frame&);
     ~HistoryController();
 
     void saveScrollPositionAndViewStateToItem(HistoryItem*);
@@ -76,6 +76,7 @@ public:
     void setCurrentItem(HistoryItem*);
     void setCurrentItemTitle(const StringWithDirection&);
     bool currentItemShouldBeReplaced() const;
+    void replaceCurrentItem(HistoryItem*);
 
     HistoryItem* previousItem() const { return m_previousItem.get(); }
 
@@ -94,7 +95,7 @@ private:
 
     void initializeItem(HistoryItem*);
     PassRefPtr<HistoryItem> createItem();
-    PassRefPtr<HistoryItem> createItemTree(Frame* targetFrame, bool clipAtTarget);
+    PassRefPtr<HistoryItem> createItemTree(Frame& targetFrame, bool clipAtTarget);
 
     void recursiveSetProvisionalItem(HistoryItem*, HistoryItem*, FrameLoadType);
     void recursiveGoToItem(HistoryItem*, HistoryItem*, FrameLoadType);
@@ -107,7 +108,7 @@ private:
     void updateBackForwardListClippedAtTarget(bool doClip);
     void updateCurrentItem();
 
-    Frame* m_frame;
+    Frame& m_frame;
 
     RefPtr<HistoryItem> m_currentItem;
     RefPtr<HistoryItem> m_previousItem;

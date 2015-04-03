@@ -46,15 +46,13 @@ public:
 
     virtual void load(const String& url) = 0;
 #if ENABLE(MEDIA_SOURCE)
-    virtual void load(const String& url, PassRefPtr<MediaSource>) = 0;
+    virtual void load(const String& url, MediaSourcePrivateClient*) = 0;
 #endif
     virtual void cancelLoad() = 0;
     
     virtual void prepareToPlay() { }
     virtual PlatformMedia platformMedia() const { return NoPlatformMedia; }
-#if USE(ACCELERATED_COMPOSITING)
     virtual PlatformLayer* platformLayer() const { return 0; }
-#endif
 
     virtual void play() = 0;
     virtual void pause() = 0;    
@@ -62,6 +60,7 @@ public:
     virtual bool supportsFullscreen() const { return false; }
     virtual bool supportsSave() const { return false; }
     virtual bool supportsScanning() const { return false; }
+    virtual bool requiresImmediateCompositing() const { return false; }
 
     virtual IntSize naturalSize() const = 0;
 
@@ -78,6 +77,7 @@ public:
 
     virtual void seek(float) { }
     virtual void seekDouble(double time) { seek(time); }
+    virtual void seekWithTolerance(double time, double, double) { seekDouble(time); }
 
     virtual bool seeking() const = 0;
 
@@ -95,6 +95,9 @@ public:
 
     virtual void setVolume(float) { }
     virtual void setVolumeDouble(double volume) { return setVolume(volume); }
+#if PLATFORM(IOS)
+    virtual float volume() const { return 1; }
+#endif
 
     virtual bool supportsMuting() const { return false; }
     virtual void setMuted(bool) { }
@@ -119,6 +122,7 @@ public:
 
     virtual void paintCurrentFrameInContext(GraphicsContext* c, const IntRect& r) { paint(c, r); }
     virtual bool copyVideoTextureToPlatformTexture(GraphicsContext3D*, Platform3DObject, GC3Dint, GC3Denum, GC3Denum, bool, bool) { return false; }
+    virtual PassNativeImagePtr nativeImageForCurrentTime() { return nullptr; }
 
     virtual void setPreload(MediaPlayer::Preload) { }
 
@@ -128,8 +132,8 @@ public:
     virtual void setPoster(const String&) { }
 
 #if ENABLE(PLUGIN_PROXY_FOR_VIDEO)
-    virtual void deliverNotification(MediaPlayerProxyNotificationType) = 0;
-    virtual void setMediaPlayerProxy(WebMediaPlayerProxy*) = 0;
+    virtual void deliverNotification(MediaPlayerProxyNotificationType) { }
+    virtual void setMediaPlayerProxy(WebMediaPlayerProxy*) { }
     virtual void setControls(bool) { }
 #endif
 
@@ -138,16 +142,29 @@ public:
     virtual void exitFullscreen() { }
 #endif
 
+#if ENABLE(IOS_AIRPLAY)
+    virtual bool isCurrentPlaybackTargetWireless() const { return false; }
+    virtual void showPlaybackTargetPicker() { }
+
+    virtual bool hasWirelessPlaybackTargets() const { return false; }
+
+    virtual bool wirelessVideoPlaybackDisabled() const { return false; }
+    virtual void setWirelessVideoPlaybackDisabled(bool) { }
+
+    virtual void setHasPlaybackTargetAvailabilityListeners(bool) { }
+#endif
+
 #if USE(NATIVE_FULLSCREEN_VIDEO)
     virtual bool canEnterFullscreen() const { return false; }
 #endif
 
-#if USE(ACCELERATED_COMPOSITING)
     // whether accelerated rendering is supported by the media engine for the current media.
     virtual bool supportsAcceleratedRendering() const { return false; }
     // called when the rendering system flips the into or out of accelerated rendering mode.
     virtual void acceleratedRenderingStateChanged() { }
-#endif
+
+    virtual bool shouldMaintainAspectRatio() const { return true; }
+    virtual void setShouldMaintainAspectRatio(bool) { }
 
     virtual bool hasSingleSecurityOrigin() const { return false; }
 
@@ -190,6 +207,12 @@ public:
     virtual MediaPlayer::MediaKeyException cancelKeyRequest(const String&, const String&) { return MediaPlayer::KeySystemNotSupported; }
 #endif
 
+#if ENABLE(ENCRYPTED_MEDIA_V2)
+    virtual PassRefPtr<Uint8Array> generateKeyRequest(const String&, const String&, Uint8Array*, String&, MediaPlayer::MediaKeyException&, unsigned long&) { return nullptr; }
+    virtual void releaseKeys(const String&) { }
+    virtual bool update(const String&, Uint8Array*, RefPtr<Uint8Array>&, MediaPlayer::MediaKeyException&, unsigned long&) { return false; }
+#endif
+
 #if ENABLE(VIDEO_TRACK)
     virtual bool requiresTextTrackRepresentation() const { return false; }
     virtual void setTextTrackRepresentation(TextTrackRepresentation*) { }
@@ -203,8 +226,24 @@ public:
 #if USE(GSTREAMER)
     virtual void simulateAudioInterruption() { }
 #endif
-    
+
+#if PLATFORM(IOS)
+    virtual void attributeChanged(const String&, const String&) { }
+    virtual bool readyForPlayback() const { return true; }
+#endif
+
     virtual String languageOfPrimaryAudioTrack() const { return emptyString(); }
+
+    virtual size_t extraMemoryCost() const { return 0; }
+    
+    virtual unsigned long long fileSize() const { return 0; }
+
+#if ENABLE(MEDIA_SOURCE)
+    virtual unsigned long totalVideoFrames() { return 0; }
+    virtual unsigned long droppedVideoFrames() { return 0; }
+    virtual unsigned long corruptedVideoFrames() { return 0; }
+    virtual double totalFrameDelay() { return 0; }
+#endif
 };
 
 }

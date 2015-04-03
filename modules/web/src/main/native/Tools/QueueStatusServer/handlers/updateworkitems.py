@@ -43,8 +43,8 @@ class UpdateWorkItems(UpdateBase):
 
     def _parse_work_items_string(self, items_string):
         try:
-        item_strings = items_string.split(" ") if items_string else []
-        return map(int, item_strings)
+            item_strings = items_string.split(" ") if items_string else []
+            return map(int, item_strings)
         except ValueError:
             return None
 

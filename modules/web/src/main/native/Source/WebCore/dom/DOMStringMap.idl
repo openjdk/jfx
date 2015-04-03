@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2010, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,12 +24,12 @@
  */
 
 [
-        GenerateIsReachable=ImplElementRoot,
-        NamedGetter,
-        CustomDeleteProperty,
-        CustomEnumerateProperty,
+    GenerateIsReachable=ImplElementRoot,
+    CustomDeleteProperty,
+    CustomEnumerateProperty,
     CustomNamedSetter,
-    SkipVTableValidation
+    JSCustomGetOwnPropertySlotAndDescriptor,
+    SkipVTableValidation,
 ] interface DOMStringMap {
-    };
+};
 

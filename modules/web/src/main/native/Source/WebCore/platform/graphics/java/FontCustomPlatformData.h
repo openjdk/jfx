@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  */
 #ifndef FontCustomPlatformData_h
 #define FontCustomPlatformData_h
@@ -10,6 +10,8 @@
 #include "RenderStyleConstants.h"
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
+
+#include <JavaRef.h> // todo tav remove when building w/ pch
 
 namespace WebCore {
 
@@ -36,7 +38,7 @@ private:
     JGObject m_data;
 };
 
-FontCustomPlatformData* createFontCustomPlatformData(SharedBuffer*);
+std::unique_ptr<FontCustomPlatformData> createFontCustomPlatformData(SharedBuffer&);
 
 }
 #endif

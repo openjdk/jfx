@@ -24,15 +24,15 @@
  */
 
 [
-        Conditional=TOUCH_EVENTS
+    Conditional=TOUCH_EVENTS,
 ] interface TouchEvent : UIEvent {
-        readonly attribute TouchList touches;
-        readonly attribute TouchList targetTouches;
-        readonly attribute TouchList changedTouches;
-        readonly attribute boolean ctrlKey;
-        readonly attribute boolean shiftKey;
-        readonly attribute boolean altKey;
-        readonly attribute boolean metaKey;
+    readonly attribute TouchList touches;
+    readonly attribute TouchList targetTouches;
+    readonly attribute TouchList changedTouches;
+    readonly attribute boolean ctrlKey;
+    readonly attribute boolean shiftKey;
+    readonly attribute boolean altKey;
+    readonly attribute boolean metaKey;
 
     void initTouchEvent([Default=Undefined] optional TouchList touches,
                         [Default=Undefined] optional TouchList targetTouches,
@@ -47,4 +47,4 @@
                         [Default=Undefined] optional boolean altKey,
                         [Default=Undefined] optional boolean shiftKey,
                         [Default=Undefined] optional boolean metaKey);
-    };
+};
