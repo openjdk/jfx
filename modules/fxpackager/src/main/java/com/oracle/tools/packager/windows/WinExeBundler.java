@@ -492,7 +492,10 @@ public class WinExeBundler extends AbstractBundler {
         validateValueAndPut(data, "APPLICATION_DESCRIPTION", DESCRIPTION, params);
         data.put("APPLICATION_SERVICE", SERVICE_HINT.fetchFrom(params) ? "returnTrue" : "returnFalse");
         data.put("APPLICATION_NOT_SERVICE", SERVICE_HINT.fetchFrom(params) ? "returnFalse" : "returnTrue");
-        data.put("APPLICATION_APP_CDS", (UNLOCK_COMMERCIAL_FEATURES.fetchFrom(params) && ENABLE_APP_CDS.fetchFrom(params))
+        data.put("APPLICATION_APP_CDS_INSTALL", 
+                (UNLOCK_COMMERCIAL_FEATURES.fetchFrom(params) && ENABLE_APP_CDS.fetchFrom(params) 
+                        && ("install".equals(APP_CDS_CACHE_MODE.fetchFrom(params))
+                            || "auto+install".equals(APP_CDS_CACHE_MODE.fetchFrom(params))))
                 ? "returnTrue"
                 : "returnFalse");
         data.put("START_ON_INSTALL", START_ON_INSTALL.fetchFrom(params) ? "-startOnInstall" : "");

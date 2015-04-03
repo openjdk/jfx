@@ -422,6 +422,6 @@ public class LinuxAppBundler extends AbstractImageBundler {
 
     @Override
     protected String getCacheLocation(Map<String, ? super Object> params) {
-        return "$APPDIR/";
+        return "$CACHEDIR/";
     }
 }

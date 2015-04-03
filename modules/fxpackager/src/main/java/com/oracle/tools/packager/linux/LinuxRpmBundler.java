@@ -440,7 +440,10 @@ public class LinuxRpmBundler extends AbstractBundler {
         data.put("SECONDARY_LAUNCHERS_REMOVE", removeScripts.toString());
 
         StringBuilder cdsScript = new StringBuilder();
-        if (UNLOCK_COMMERCIAL_FEATURES.fetchFrom(params) && ENABLE_APP_CDS.fetchFrom(params)) {
+        if (UNLOCK_COMMERCIAL_FEATURES.fetchFrom(params) && ENABLE_APP_CDS.fetchFrom(params)
+                && ("install".equals(APP_CDS_CACHE_MODE.fetchFrom(params))
+                || "auto+install".equals(APP_CDS_CACHE_MODE.fetchFrom(params))))
+        {
             cdsScript.append("/opt/");
             cdsScript.append(data.get("APPLICATION_FS_NAME"));
             cdsScript.append("/");

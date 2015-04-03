@@ -79,6 +79,9 @@ public abstract class AbstractImageBundler extends AbstractBundler {
     public void writeCfgFile(Map<String, ? super Object> params, File cfgFileName, String runtimeLocation) throws IOException {
         cfgFileName.delete();
 
+        boolean appCDEnabled = UNLOCK_COMMERCIAL_FEATURES.fetchFrom(params) && ENABLE_APP_CDS.fetchFrom(params);
+        String appCDSCacheMode = APP_CDS_CACHE_MODE.fetchFrom(params);
+        
         PrintStream out = new PrintStream(cfgFileName);
         
         out.println("[Application]");
@@ -92,6 +95,9 @@ public abstract class AbstractImageBundler extends AbstractBundler {
                 String.join(File.pathSeparator, CLASSPATH.fetchFrom(params).split("[ :;]")));
         out.println("app.runtime=" + runtimeLocation);
         out.println("app.identifier=" + IDENTIFIER.fetchFrom(params));
+        if (appCDEnabled) {
+            out.println("app.appcds.cache=" + appCDSCacheMode.split("\\+")[0]);
+        }
 
 
         out.println();
@@ -121,8 +127,7 @@ public abstract class AbstractImageBundler extends AbstractBundler {
             }
         }
 
-        
-        if (UNLOCK_COMMERCIAL_FEATURES.fetchFrom(params) && ENABLE_APP_CDS.fetchFrom(params)) {
+        if (appCDEnabled) {
             prepareAppCDS(params, out);
         }
         
@@ -162,7 +167,7 @@ public abstract class AbstractImageBundler extends AbstractBundler {
         out.print(getCacheLocation(params));
         out.print(APP_FS_NAME.fetchFrom(params));
         out.println(".jpa");
-        out.println("-Xshare:on");
+        out.println("-Xshare:auto");
         out.println("-XX:+UseAppCDS");
         if (Log.isDebug()) {
             out.println("-verbose:class");
