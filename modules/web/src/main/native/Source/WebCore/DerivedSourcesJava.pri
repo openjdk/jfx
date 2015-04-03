@@ -131,12 +131,21 @@ FEATURE_DEFINES += \
     ENABLE_XHR_TIMEOUT=1 \
     ENABLE_XML=1 \
     ENABLE_XSLT=1 \
+    ENABLE_NETSCAPE_PLUGIN_API=1 \
+    ENABLE_PROMISES=1
 
 DEFINES += \
     BUILDING_WebCore \
     BUILD_WEBKIT \
     WTF_USE_LIBXML2=1 \
+    WTF_USE_ACCELERATED_COMPOSITING=1 \
+    ICU_UNICODE=1 \
     $$FEATURE_DEFINES \
+
+mac* {
+    DEFINES += \
+        WTF_USE_CF=1
+}
 
 ## Derived source generators
 MATHML_NAMES = $$PWD/mathml/mathtags.in
@@ -180,13 +189,15 @@ WALDOCSSPROPS = $$PWD/css/CSSPropertyNames.in
 
 WALDOCSSVALUES = $$PWD/css/CSSValueKeywords.in
 
-INSPECTOR_JSON = $$PWD/inspector/Inspector.json
+INSPECTOR_SCRIPTS = $$PWD/../JavaScriptCore/inspector/scripts
 
 # INSPECTOR_BACKEND_STUB_QRC = $$PWD/inspector/front-end/InspectorBackendCommands.qrc
 
 INSPECTOR_OVERLAY_PAGE = $$PWD/inspector/InspectorOverlayPage.html
 
-INJECTED_SCRIPT_SOURCE = $$PWD/inspector/InjectedScriptSource.js
+CMD_LINE_API_MODULE_SRC = $$PWD/inspector/CommandLineAPIModuleSource.js
+
+INJECTED_SCRIPT_SOURCE = $$INSPECTOR_SCRIPTS/../InjectedScriptSource.js
 
 INJECTED_SCRIPT_CANVAS_MODULE_SOURCE = $$PWD/inspector/InjectedScriptCanvasModuleSource.js
 
@@ -204,7 +215,6 @@ STYLESHEETS_EMBED = \
     $$PWD/css/quirks.css \
     $$PWD/css/mathml.css \
     $$PWD/css/svg.css \
-    $$PWD/css/view-source.css \
     $$PWD/css/fullscreen.css \
     $$PWD/css/mediaControls.css \
     $$PWD/css/mediaControlsJava.css \
@@ -323,29 +333,6 @@ IDL_BINDINGS_JAVA = \
     $$PWD/xml/XPathResult.idl
 
 IDL_BINDINGS += \
-    $$PWD/Modules/filesystem/DOMFileSystem.idl \
-    $$PWD/Modules/filesystem/DOMFileSystemSync.idl \
-    $$PWD/Modules/filesystem/DOMWindowFileSystem.idl \
-    $$PWD/Modules/filesystem/DirectoryEntry.idl \
-    $$PWD/Modules/filesystem/DirectoryEntrySync.idl \
-    $$PWD/Modules/filesystem/DirectoryReader.idl \
-    $$PWD/Modules/filesystem/DirectoryReaderSync.idl \
-    $$PWD/Modules/filesystem/EntriesCallback.idl \
-    $$PWD/Modules/filesystem/Entry.idl \
-    $$PWD/Modules/filesystem/EntryArray.idl \
-    $$PWD/Modules/filesystem/EntryArraySync.idl \
-    $$PWD/Modules/filesystem/EntryCallback.idl \
-    $$PWD/Modules/filesystem/EntrySync.idl \
-    $$PWD/Modules/filesystem/ErrorCallback.idl \
-    $$PWD/Modules/filesystem/FileCallback.idl \
-    $$PWD/Modules/filesystem/FileEntry.idl \
-    $$PWD/Modules/filesystem/FileEntrySync.idl \
-    $$PWD/Modules/filesystem/FileSystemCallback.idl \
-    $$PWD/Modules/filesystem/FileWriter.idl \
-    $$PWD/Modules/filesystem/FileWriterCallback.idl \
-    $$PWD/Modules/filesystem/Metadata.idl \
-    $$PWD/Modules/filesystem/MetadataCallback.idl \
-    $$PWD/Modules/filesystem/WorkerContextFileSystem.idl \
     $$PWD/Modules/geolocation/Coordinates.idl \
     $$PWD/Modules/geolocation/Geolocation.idl \
     $$PWD/Modules/geolocation/Geoposition.idl \
@@ -356,19 +343,22 @@ IDL_BINDINGS += \
     $$PWD/Modules/indexeddb/DOMWindowIndexedDatabase.idl \
     $$PWD/Modules/indexeddb/IDBAny.idl \
     $$PWD/Modules/indexeddb/IDBCursor.idl \
+    $$PWD/Modules/indexeddb/IDBCursorWithValue.idl \
     $$PWD/Modules/indexeddb/IDBDatabase.idl \
     $$PWD/Modules/indexeddb/IDBFactory.idl \
     $$PWD/Modules/indexeddb/IDBIndex.idl \
     $$PWD/Modules/indexeddb/IDBKeyRange.idl \
     $$PWD/Modules/indexeddb/IDBObjectStore.idl \
+    $$PWD/Modules/indexeddb/IDBOpenDBRequest.idl \
     $$PWD/Modules/indexeddb/IDBRequest.idl \
     $$PWD/Modules/indexeddb/IDBTransaction.idl \
-    $$PWD/Modules/indexeddb/WorkerContextIndexedDatabase.idl \
+    $$PWD/Modules/indexeddb/IDBVersionChangeEvent.idl \
+    $$PWD/Modules/indexeddb/WorkerGlobalScopeIndexedDatabase.idl \
     $$PWD/Modules/notifications/DOMWindowNotifications.idl \
     $$PWD/Modules/notifications/Notification.idl \
     $$PWD/Modules/notifications/NotificationCenter.idl \
     $$PWD/Modules/notifications/NotificationPermissionCallback.idl \
-    $$PWD/Modules/notifications/WorkerContextNotifications.idl \
+    $$PWD/Modules/notifications/WorkerGlobalScopeNotifications.idl \
     $$PWD/Modules/quota/DOMWindowQuota.idl \
     $$PWD/Modules/quota/NavigatorStorageQuota.idl \
     $$PWD/Modules/quota/StorageInfo.idl \
@@ -390,20 +380,20 @@ IDL_BINDINGS += \
     $$PWD/Modules/webaudio/PannerNode.idl \
     $$PWD/Modules/webaudio/AudioParam.idl \
     $$PWD/Modules/webaudio/AudioProcessingEvent.idl \
-    $$PWD/Modules/webaudio/AudioSourceNode.idl \
     $$PWD/Modules/webaudio/BiquadFilterNode.idl \
     $$PWD/Modules/webaudio/ConvolverNode.idl \
     $$PWD/Modules/webaudio/DelayNode.idl \
     $$PWD/Modules/webaudio/DynamicsCompressorNode.idl \
     $$PWD/Modules/webaudio/ScriptProcessorNode.idl \
     $$PWD/Modules/webaudio/MediaElementAudioSourceNode.idl \
+    $$PWD/Modules/webaudio/MediaStreamAudioDestinationNode.idl \
     $$PWD/Modules/webaudio/MediaStreamAudioSourceNode.idl \
+    $$PWD/Modules/webaudio/OscillatorNode.idl \
     $$PWD/Modules/webaudio/OfflineAudioContext.idl \
     $$PWD/Modules/webaudio/OfflineAudioCompletionEvent.idl \
-    $$PWD/Modules/webaudio/OscillatorNode.idl \
     $$PWD/Modules/webaudio/AnalyserNode.idl \
     $$PWD/Modules/webaudio/WaveShaperNode.idl \
-    $$PWD/Modules/webaudio/WaveTable.idl \
+    $$PWD/Modules/webaudio/PeriodicWave.idl \
     $$PWD/Modules/webdatabase/DOMWindowWebDatabase.idl \
     $$PWD/Modules/webdatabase/Database.idl \
     $$PWD/Modules/webdatabase/DatabaseCallback.idl \
@@ -419,15 +409,12 @@ IDL_BINDINGS += \
     $$PWD/Modules/webdatabase/SQLTransactionErrorCallback.idl \
     $$PWD/Modules/webdatabase/SQLTransactionSync.idl \
     $$PWD/Modules/webdatabase/SQLTransactionSyncCallback.idl \
-    $$PWD/Modules/webdatabase/WorkerContextWebDatabase.idl \
+    $$PWD/Modules/webdatabase/WorkerGlobalScopeWebDatabase.idl \
     $$PWD/Modules/websockets/CloseEvent.idl \
     $$PWD/Modules/websockets/WebSocket.idl \
-    $$PWD/Modules/websockets/WorkerContextWebSocket.idl \
-    $$PWD/css/Counter.idl \
     $$PWD/css/CSSCharsetRule.idl \
     $$PWD/css/CSSFontFaceLoadEvent.idl \
     $$PWD/css/CSSFontFaceRule.idl \
-    $$PWD/css/CSSHostRule.idl \
     $$PWD/css/CSSImportRule.idl \
     $$PWD/css/CSSMediaRule.idl \
     $$PWD/css/CSSPageRule.idl \
@@ -438,48 +425,51 @@ IDL_BINDINGS += \
     $$PWD/css/CSSStyleRule.idl \
     $$PWD/css/CSSStyleSheet.idl \
     $$PWD/css/CSSSupportsRule.idl \
+    $$PWD/css/CSSUnknownRule.idl \
     $$PWD/css/CSSValue.idl \
     $$PWD/css/CSSValueList.idl \
+    $$PWD/css/Counter.idl \
     $$PWD/css/DOMWindowCSS.idl \
     $$PWD/css/FontLoader.idl \
     $$PWD/css/MediaList.idl \
     $$PWD/css/MediaQueryList.idl \
-    $$PWD/css/Rect.idl \
+    $$PWD/css/MediaQueryListListener.idl \
     $$PWD/css/RGBColor.idl \
+    $$PWD/css/Rect.idl \
     $$PWD/css/StyleMedia.idl \
     $$PWD/css/StyleSheet.idl \
     $$PWD/css/StyleSheetList.idl \
-    $$PWD/css/WebKitCSSFilterRule.idl \
     $$PWD/css/WebKitCSSFilterValue.idl \
     $$PWD/css/WebKitCSSKeyframeRule.idl \
     $$PWD/css/WebKitCSSKeyframesRule.idl \
     $$PWD/css/WebKitCSSMatrix.idl \
-    $$PWD/css/WebKitCSSMixFunctionValue.idl \
     $$PWD/css/WebKitCSSRegionRule.idl \
     $$PWD/css/WebKitCSSTransformValue.idl \
     $$PWD/css/WebKitCSSViewportRule.idl \
     $$PWD/dom/Attr.idl \
     $$PWD/dom/BeforeLoadEvent.idl \
+    $$PWD/dom/BeforeUnloadEvent.idl \
+    $$PWD/dom/CDATASection.idl \
     $$PWD/dom/CharacterData.idl \
+    $$PWD/dom/ChildNode.idl \
     $$PWD/dom/ClientRect.idl \
     $$PWD/dom/ClientRectList.idl \
     $$PWD/dom/Clipboard.idl \
-    $$PWD/dom/CDATASection.idl \
     $$PWD/dom/Comment.idl \
     $$PWD/dom/CompositionEvent.idl \
     $$PWD/dom/CustomEvent.idl \
-    $$PWD/dom/DataTransferItem.idl \
-    $$PWD/dom/DataTransferItemList.idl \
-    $$PWD/dom/DeviceMotionEvent.idl \
-    $$PWD/dom/DeviceOrientationEvent.idl \
-    $$PWD/dom/DocumentFragment.idl \
-    $$PWD/dom/Document.idl \
-    $$PWD/dom/DocumentType.idl \
     $$PWD/dom/DOMCoreException.idl \
     $$PWD/dom/DOMError.idl \
     $$PWD/dom/DOMImplementation.idl \
     $$PWD/dom/DOMStringList.idl \
     $$PWD/dom/DOMStringMap.idl \
+    $$PWD/dom/DataTransferItem.idl \
+    $$PWD/dom/DataTransferItemList.idl \
+    $$PWD/dom/DeviceMotionEvent.idl \
+    $$PWD/dom/DeviceOrientationEvent.idl \
+    $$PWD/dom/Document.idl \
+    $$PWD/dom/DocumentFragment.idl \
+    $$PWD/dom/DocumentType.idl \
     $$PWD/dom/Element.idl \
     $$PWD/dom/Entity.idl \
     $$PWD/dom/EntityReference.idl \
@@ -491,13 +481,14 @@ IDL_BINDINGS += \
     $$PWD/dom/FocusEvent.idl \
     $$PWD/dom/HashChangeEvent.idl \
     $$PWD/dom/KeyboardEvent.idl \
-    $$PWD/dom/MouseEvent.idl \
     $$PWD/dom/MessageChannel.idl \
     $$PWD/dom/MessageEvent.idl \
     $$PWD/dom/MessagePort.idl \
+    $$PWD/dom/MouseEvent.idl \
     $$PWD/dom/MutationEvent.idl \
     $$PWD/dom/MutationObserver.idl \
     $$PWD/dom/MutationRecord.idl \
+    $$PWD/dom/DOMNamedFlowCollection.idl \
     $$PWD/dom/NamedNodeMap.idl \
     $$PWD/dom/Node.idl \
     $$PWD/dom/NodeFilter.idl \
@@ -509,23 +500,17 @@ IDL_BINDINGS += \
     $$PWD/dom/PopStateEvent.idl \
     $$PWD/dom/ProcessingInstruction.idl \
     $$PWD/dom/ProgressEvent.idl \
-    $$PWD/dom/PropertyNodeList.idl \
-    $$PWD/dom/RangeException.idl \
     $$PWD/dom/Range.idl \
+    $$PWD/dom/RangeException.idl \
     $$PWD/dom/RequestAnimationFrameCallback.idl \
-    $$PWD/dom/ShadowRoot.idl \
     $$PWD/dom/StringCallback.idl \
     $$PWD/dom/Text.idl \
     $$PWD/dom/TextEvent.idl \
-    $$PWD/dom/Touch.idl \
-    $$PWD/dom/TouchEvent.idl \
-    $$PWD/dom/TouchList.idl \
     $$PWD/dom/TransitionEvent.idl \
     $$PWD/dom/TreeWalker.idl \
     $$PWD/dom/UIEvent.idl \
     $$PWD/dom/WebKitAnimationEvent.idl \
     $$PWD/dom/WebKitNamedFlow.idl \
-    $$PWD/dom/DOMNamedFlowCollection.idl \
     $$PWD/dom/WebKitTransitionEvent.idl \
     $$PWD/dom/WheelEvent.idl \
     $$PWD/fileapi/Blob.idl \
@@ -535,14 +520,97 @@ IDL_BINDINGS += \
     $$PWD/fileapi/FileList.idl \
     $$PWD/fileapi/FileReader.idl \
     $$PWD/fileapi/FileReaderSync.idl \
-    $$PWD/html/canvas/ArrayBufferView.idl \
-    $$PWD/html/canvas/ArrayBuffer.idl \
-    $$PWD/html/canvas/DataView.idl \
-    $$PWD/html/canvas/Int8Array.idl \
-    $$PWD/html/canvas/Float32Array.idl \
-    $$PWD/html/canvas/Float64Array.idl \
+    $$PWD/html/DOMFormData.idl \
+    $$PWD/html/DOMSettableTokenList.idl \
+    $$PWD/html/DOMTokenList.idl \
+    $$PWD/html/DOMURL.idl \
+    $$PWD/html/HTMLAllCollection.idl \
+    $$PWD/html/HTMLAnchorElement.idl \
+    $$PWD/html/HTMLAppletElement.idl \
+    $$PWD/html/HTMLAreaElement.idl \
+    $$PWD/html/HTMLAudioElement.idl \
+    $$PWD/html/HTMLBRElement.idl \
+    $$PWD/html/HTMLBaseElement.idl \
+    $$PWD/html/HTMLBaseFontElement.idl \
+    $$PWD/html/HTMLBodyElement.idl \
+    $$PWD/html/HTMLButtonElement.idl \
+    $$PWD/html/HTMLCanvasElement.idl \
+    $$PWD/html/HTMLCollection.idl \
+    $$PWD/html/HTMLDListElement.idl \
+    $$PWD/html/HTMLDataListElement.idl \
+    $$PWD/html/HTMLDetailsElement.idl \
+    $$PWD/html/HTMLDirectoryElement.idl \
+    $$PWD/html/HTMLDivElement.idl \
+    $$PWD/html/HTMLDocument.idl \
+    $$PWD/html/HTMLElement.idl \
+    $$PWD/html/HTMLEmbedElement.idl \
+    $$PWD/html/HTMLFieldSetElement.idl \
+    $$PWD/html/HTMLFontElement.idl \
+    $$PWD/html/HTMLFormControlsCollection.idl \
+    $$PWD/html/HTMLFormElement.idl \
+    $$PWD/html/HTMLFrameElement.idl \
+    $$PWD/html/HTMLFrameSetElement.idl \
+    $$PWD/html/HTMLHRElement.idl \
+    $$PWD/html/HTMLHeadElement.idl \
+    $$PWD/html/HTMLHeadingElement.idl \
+    $$PWD/html/HTMLHtmlElement.idl \
+    $$PWD/html/HTMLIFrameElement.idl \
+    $$PWD/html/HTMLImageElement.idl \
+    $$PWD/html/HTMLInputElement.idl \
+    $$PWD/html/HTMLKeygenElement.idl \
+    $$PWD/html/HTMLLIElement.idl \
+    $$PWD/html/HTMLLabelElement.idl \
+    $$PWD/html/HTMLLegendElement.idl \
+    $$PWD/html/HTMLLinkElement.idl \
+    $$PWD/html/HTMLMapElement.idl \
+    $$PWD/html/HTMLMarqueeElement.idl \
+    $$PWD/html/HTMLMediaElement.idl \
+    $$PWD/html/HTMLMenuElement.idl \
+    $$PWD/html/HTMLMetaElement.idl \
+    $$PWD/html/HTMLMeterElement.idl \
+    $$PWD/html/HTMLModElement.idl \
+    $$PWD/html/HTMLOListElement.idl \
+    $$PWD/html/HTMLObjectElement.idl \
+    $$PWD/html/HTMLOptGroupElement.idl \
+    $$PWD/html/HTMLOptionElement.idl \
+    $$PWD/html/HTMLOptionsCollection.idl \
+    $$PWD/html/HTMLOutputElement.idl \
+    $$PWD/html/HTMLParagraphElement.idl \
+    $$PWD/html/HTMLParamElement.idl \
+    $$PWD/html/HTMLPreElement.idl \
+    $$PWD/html/HTMLProgressElement.idl \
+    $$PWD/html/HTMLQuoteElement.idl \
+    $$PWD/html/HTMLScriptElement.idl \
+    $$PWD/html/HTMLSelectElement.idl \
+    $$PWD/html/HTMLSourceElement.idl \
+    $$PWD/html/HTMLSpanElement.idl \
+    $$PWD/html/HTMLStyleElement.idl \
+    $$PWD/html/HTMLTableCaptionElement.idl \
+    $$PWD/html/HTMLTableCellElement.idl \
+    $$PWD/html/HTMLTableColElement.idl \
+    $$PWD/html/HTMLTableElement.idl \
+    $$PWD/html/HTMLTableRowElement.idl \
+    $$PWD/html/HTMLTableSectionElement.idl \
+    $$PWD/html/HTMLTemplateElement.idl \
+    $$PWD/html/HTMLTextAreaElement.idl \
+    $$PWD/html/HTMLTitleElement.idl \
+    $$PWD/html/HTMLTrackElement.idl \
+    $$PWD/html/HTMLUListElement.idl \
+    $$PWD/html/HTMLUnknownElement.idl \
+    $$PWD/html/HTMLVideoElement.idl \
+    $$PWD/html/ImageData.idl \
+    $$PWD/html/MediaController.idl \
+    $$PWD/html/MediaError.idl \
+    $$PWD/html/MediaKeyError.idl \
+    $$PWD/html/MediaKeyEvent.idl \
+    $$PWD/html/RadioNodeList.idl \
+    $$PWD/html/TextMetrics.idl \
+    $$PWD/html/TimeRanges.idl \
+    $$PWD/html/URLUtils.idl \
+    $$PWD/html/ValidityState.idl \
+    $$PWD/html/VoidCallback.idl \
+    $$PWD/html/canvas/ANGLEInstancedArrays.idl \
     $$PWD/html/canvas/CanvasGradient.idl \
-    $$PWD/html/canvas/Int32Array.idl \
     $$PWD/html/canvas/CanvasPattern.idl \
     $$PWD/html/canvas/CanvasProxy.idl \
     $$PWD/html/canvas/CanvasRenderingContext.idl \
@@ -550,11 +618,13 @@ IDL_BINDINGS += \
     $$PWD/html/canvas/DOMPath.idl \
     $$PWD/html/canvas/EXTDrawBuffers.idl \
     $$PWD/html/canvas/EXTTextureFilterAnisotropic.idl \
+    $$PWD/html/canvas/OESElementIndexUint.idl \
     $$PWD/html/canvas/OESStandardDerivatives.idl \
     $$PWD/html/canvas/OESTextureFloat.idl \
+    $$PWD/html/canvas/OESTextureFloatLinear.idl \
     $$PWD/html/canvas/OESTextureHalfFloat.idl \
+    $$PWD/html/canvas/OESTextureHalfFloatLinear.idl \
     $$PWD/html/canvas/OESVertexArrayObject.idl \
-    $$PWD/html/canvas/OESElementIndexUint.idl \
     $$PWD/html/canvas/WebGLActiveInfo.idl \
     $$PWD/html/canvas/WebGLBuffer.idl \
     $$PWD/html/canvas/WebGLCompressedTextureATC.idl \
@@ -572,109 +642,15 @@ IDL_BINDINGS += \
     $$PWD/html/canvas/WebGLRenderingContext.idl \
     $$PWD/html/canvas/WebGLShader.idl \
     $$PWD/html/canvas/WebGLShaderPrecisionFormat.idl \
-    $$PWD/html/canvas/Int16Array.idl \
     $$PWD/html/canvas/WebGLTexture.idl \
     $$PWD/html/canvas/WebGLUniformLocation.idl \
     $$PWD/html/canvas/WebGLVertexArrayObjectOES.idl \
-    $$PWD/html/canvas/Uint8Array.idl \
-    $$PWD/html/canvas/Uint8ClampedArray.idl \
-    $$PWD/html/canvas/Uint32Array.idl \
-    $$PWD/html/canvas/Uint16Array.idl \
-    $$PWD/html/DOMFormData.idl \
-    $$PWD/html/DOMSettableTokenList.idl \
-    $$PWD/html/DOMTokenList.idl \
-    $$PWD/html/DOMURL.idl \
-    $$PWD/html/HTMLAllCollection.idl \
-    $$PWD/html/HTMLAudioElement.idl \
-    $$PWD/html/HTMLAnchorElement.idl \
-    $$PWD/html/HTMLAppletElement.idl \
-    $$PWD/html/HTMLAreaElement.idl \
-    $$PWD/html/HTMLBaseElement.idl \
-    $$PWD/html/HTMLBaseFontElement.idl \
-    $$PWD/html/HTMLBodyElement.idl \
-    $$PWD/html/HTMLBRElement.idl \
-    $$PWD/html/HTMLButtonElement.idl \
-    $$PWD/html/HTMLCanvasElement.idl \
-    $$PWD/html/HTMLCollection.idl \
-    $$PWD/html/HTMLDataListElement.idl \
-    $$PWD/html/HTMLDetailsElement.idl \
-    $$PWD/html/HTMLDialogElement.idl \
-    $$PWD/html/HTMLDirectoryElement.idl \
-    $$PWD/html/HTMLDivElement.idl \
-    $$PWD/html/HTMLDListElement.idl \
-    $$PWD/html/HTMLDocument.idl \
-    $$PWD/html/HTMLElement.idl \
-    $$PWD/html/HTMLEmbedElement.idl \
-    $$PWD/html/HTMLFieldSetElement.idl \
-    $$PWD/html/HTMLFontElement.idl \
-    $$PWD/html/HTMLFormControlsCollection.idl \
-    $$PWD/html/HTMLFormElement.idl \
-    $$PWD/html/HTMLFrameElement.idl \
-    $$PWD/html/HTMLFrameSetElement.idl \
-    $$PWD/html/HTMLHeadElement.idl \
-    $$PWD/html/HTMLHeadingElement.idl \
-    $$PWD/html/HTMLHRElement.idl \
-    $$PWD/html/HTMLHtmlElement.idl \
-    $$PWD/html/HTMLIFrameElement.idl \
-    $$PWD/html/HTMLImageElement.idl \
-    $$PWD/html/HTMLInputElement.idl \
-    $$PWD/html/HTMLKeygenElement.idl \
-    $$PWD/html/HTMLLabelElement.idl \
-    $$PWD/html/HTMLLegendElement.idl \
-    $$PWD/html/HTMLLIElement.idl \
-    $$PWD/html/HTMLLinkElement.idl \
-    $$PWD/html/HTMLMapElement.idl \
-    $$PWD/html/HTMLMarqueeElement.idl \
-    $$PWD/html/HTMLMediaElement.idl \
-    $$PWD/html/HTMLMenuElement.idl \
-    $$PWD/html/HTMLMetaElement.idl \
-    $$PWD/html/HTMLMeterElement.idl \
-    $$PWD/html/HTMLModElement.idl \
-    $$PWD/html/HTMLObjectElement.idl \
-    $$PWD/html/HTMLOListElement.idl \
-    $$PWD/html/HTMLOptGroupElement.idl \
-    $$PWD/html/HTMLOptionElement.idl \
-    $$PWD/html/HTMLOptionsCollection.idl \
-    $$PWD/html/HTMLOutputElement.idl \
-    $$PWD/html/HTMLParagraphElement.idl \
-    $$PWD/html/HTMLParamElement.idl \
-    $$PWD/html/HTMLPreElement.idl \
-    $$PWD/html/HTMLProgressElement.idl \
-    $$PWD/html/HTMLPropertiesCollection.idl \
-    $$PWD/html/HTMLQuoteElement.idl \
-    $$PWD/html/HTMLScriptElement.idl \
-    $$PWD/html/HTMLSelectElement.idl \
-    $$PWD/html/HTMLSourceElement.idl \
-    $$PWD/html/HTMLSpanElement.idl \
-    $$PWD/html/HTMLStyleElement.idl \
-    $$PWD/html/HTMLTableCaptionElement.idl \
-    $$PWD/html/HTMLTableCellElement.idl \
-    $$PWD/html/HTMLTableColElement.idl \
-    $$PWD/html/HTMLTableElement.idl \
-    $$PWD/html/HTMLTableRowElement.idl \
-    $$PWD/html/HTMLTableSectionElement.idl \
-    $$PWD/html/HTMLTextAreaElement.idl \
-    $$PWD/html/HTMLTitleElement.idl \
-    $$PWD/html/HTMLTrackElement.idl \
-    $$PWD/html/HTMLUListElement.idl \
-    $$PWD/html/HTMLUnknownElement.idl \
-    $$PWD/html/HTMLVideoElement.idl \
-    $$PWD/html/ImageData.idl \
-    $$PWD/html/MediaController.idl \
-    $$PWD/html/MediaError.idl \
-    $$PWD/html/MicroDataItemValue.idl \
-    $$PWD/html/RadioNodeList.idl \
-    $$PWD/html/TextMetrics.idl \
-    $$PWD/html/TimeRanges.idl \
-    $$PWD/html/ValidityState.idl \
-    $$PWD/html/VoidCallback.idl \
-    $$PWD/html/shadow/HTMLContentElement.idl \
-    $$PWD/inspector/InjectedScriptHost.idl \
+    $$PWD/inspector/CommandLineAPIHost.idl \
     $$PWD/inspector/InspectorFrontendHost.idl \
-    $$PWD/inspector/JavaScriptCallFrame.idl \
     $$PWD/inspector/ScriptProfile.idl \
     $$PWD/inspector/ScriptProfileNode.idl \
     $$PWD/loader/appcache/DOMApplicationCache.idl \
+#    $$PWD/page/AbstractView.idl \
     $$PWD/page/BarProp.idl \
     $$PWD/page/Console.idl \
     $$PWD/page/Crypto.idl \
@@ -684,19 +660,17 @@ IDL_BINDINGS += \
     $$PWD/page/EventSource.idl \
     $$PWD/page/History.idl \
     $$PWD/page/Location.idl \
-    $$PWD/page/MemoryInfo.idl \
     $$PWD/page/Navigator.idl \
     $$PWD/page/Performance.idl \
-    $$PWD/page/PerformanceEntry.idl \
-    $$PWD/page/PerformanceEntryList.idl \
     $$PWD/page/PerformanceNavigation.idl \
-    $$PWD/page/PerformanceResourceTiming.idl \
     $$PWD/page/PerformanceTiming.idl \
     $$PWD/page/Screen.idl \
     $$PWD/page/SpeechInputEvent.idl \
     $$PWD/page/SpeechInputResult.idl \
     $$PWD/page/SpeechInputResultList.idl \
     $$PWD/page/WebKitPoint.idl \
+    $$PWD/page/WindowBase64.idl \
+    $$PWD/page/WindowTimers.idl \
     $$PWD/page/WorkerNavigator.idl \
     $$PWD/plugins/DOMPlugin.idl \
     $$PWD/plugins/DOMMimeType.idl \
@@ -707,13 +681,14 @@ IDL_BINDINGS += \
     $$PWD/testing/Internals.idl \
     $$PWD/testing/InternalSettings.idl \
     $$PWD/testing/MallocStatistics.idl \
+    $$PWD/testing/MemoryInfo.idl \
     $$PWD/testing/TypeConversions.idl \
     $$PWD/workers/AbstractWorker.idl \
-    $$PWD/workers/DedicatedWorkerContext.idl \
+    $$PWD/workers/DedicatedWorkerGlobalScope.idl \
     $$PWD/workers/SharedWorker.idl \
-    $$PWD/workers/SharedWorkerContext.idl \
+    $$PWD/workers/SharedWorkerGlobalScope.idl \
     $$PWD/workers/Worker.idl \
-    $$PWD/workers/WorkerContext.idl \
+    $$PWD/workers/WorkerGlobalScope.idl \
     $$PWD/workers/WorkerLocation.idl \
     $$PWD/xml/DOMParser.idl \
     $$PWD/xml/XMLHttpRequest.idl \
@@ -721,11 +696,11 @@ IDL_BINDINGS += \
     $$PWD/xml/XMLHttpRequestProgressEvent.idl \
     $$PWD/xml/XMLHttpRequestUpload.idl \
     $$PWD/xml/XMLSerializer.idl \
-    $$PWD/xml/XPathNSResolver.idl \
+    $$PWD/xml/XPathEvaluator.idl \
     $$PWD/xml/XPathException.idl \
     $$PWD/xml/XPathExpression.idl \
+    $$PWD/xml/XPathNSResolver.idl \
     $$PWD/xml/XPathResult.idl \
-    $$PWD/xml/XPathEvaluator.idl \
     $$PWD/xml/XSLTProcessor.idl
 
 contains(DEFINES, ENABLE_SVG=1) {
@@ -736,7 +711,9 @@ contains(DEFINES, ENABLE_SVG=1) {
     $$PWD/svg/SVGAltGlyphItemElement.idl \
     $$PWD/svg/SVGAngle.idl \
     $$PWD/svg/SVGAnimateColorElement.idl \
+    $$PWD/svg/SVGAnimateElement.idl \
     $$PWD/svg/SVGAnimateMotionElement.idl \
+    $$PWD/svg/SVGAnimateTransformElement.idl \
     $$PWD/svg/SVGAnimatedAngle.idl \
     $$PWD/svg/SVGAnimatedBoolean.idl \
     $$PWD/svg/SVGAnimatedEnumeration.idl \
@@ -749,8 +726,6 @@ contains(DEFINES, ENABLE_SVG=1) {
     $$PWD/svg/SVGAnimatedRect.idl \
     $$PWD/svg/SVGAnimatedString.idl \
     $$PWD/svg/SVGAnimatedTransformList.idl \
-    $$PWD/svg/SVGAnimateElement.idl \
-    $$PWD/svg/SVGAnimateTransformElement.idl \
     $$PWD/svg/SVGAnimationElement.idl \
     $$PWD/svg/SVGCircleElement.idl \
     $$PWD/svg/SVGClipPathElement.idl \
@@ -765,6 +740,7 @@ contains(DEFINES, ENABLE_SVG=1) {
     $$PWD/svg/SVGElementInstanceList.idl \
     $$PWD/svg/SVGEllipseElement.idl \
     $$PWD/svg/SVGException.idl \
+    $$PWD/svg/SVGExternalResourcesRequired.idl \
     $$PWD/svg/SVGFEBlendElement.idl \
     $$PWD/svg/SVGFEColorMatrixElement.idl \
     $$PWD/svg/SVGFEComponentTransferElement.idl \
@@ -791,6 +767,8 @@ contains(DEFINES, ENABLE_SVG=1) {
     $$PWD/svg/SVGFETileElement.idl \
     $$PWD/svg/SVGFETurbulenceElement.idl \
     $$PWD/svg/SVGFilterElement.idl \
+    $$PWD/svg/SVGFilterPrimitiveStandardAttributes.idl \
+    $$PWD/svg/SVGFitToViewBox.idl \
     $$PWD/svg/SVGFontElement.idl \
     $$PWD/svg/SVGFontFaceElement.idl \
     $$PWD/svg/SVGFontFaceFormatElement.idl \
@@ -802,22 +780,24 @@ contains(DEFINES, ENABLE_SVG=1) {
     $$PWD/svg/SVGGlyphElement.idl \
     $$PWD/svg/SVGGlyphRefElement.idl \
     $$PWD/svg/SVGGradientElement.idl \
+    $$PWD/svg/SVGGraphicsElement.idl \
     $$PWD/svg/SVGHKernElement.idl \
     $$PWD/svg/SVGImageElement.idl \
     $$PWD/svg/SVGLength.idl \
     $$PWD/svg/SVGLengthList.idl \
-    $$PWD/svg/SVGLinearGradientElement.idl \
     $$PWD/svg/SVGLineElement.idl \
+    $$PWD/svg/SVGLinearGradientElement.idl \
+    $$PWD/svg/SVGMPathElement.idl \
     $$PWD/svg/SVGMarkerElement.idl \
     $$PWD/svg/SVGMaskElement.idl \
     $$PWD/svg/SVGMatrix.idl \
     $$PWD/svg/SVGMetadataElement.idl \
     $$PWD/svg/SVGMissingGlyphElement.idl \
-    $$PWD/svg/SVGMPathElement.idl \
     $$PWD/svg/SVGNumber.idl \
     $$PWD/svg/SVGNumberList.idl \
     $$PWD/svg/SVGPaint.idl \
     $$PWD/svg/SVGPathElement.idl \
+    $$PWD/svg/SVGPathSeg.idl \
     $$PWD/svg/SVGPathSegArcAbs.idl \
     $$PWD/svg/SVGPathSegArcRel.idl \
     $$PWD/svg/SVGPathSegClosePath.idl \
@@ -829,7 +809,6 @@ contains(DEFINES, ENABLE_SVG=1) {
     $$PWD/svg/SVGPathSegCurvetoQuadraticRel.idl \
     $$PWD/svg/SVGPathSegCurvetoQuadraticSmoothAbs.idl \
     $$PWD/svg/SVGPathSegCurvetoQuadraticSmoothRel.idl \
-    $$PWD/svg/SVGPathSeg.idl \
     $$PWD/svg/SVGPathSegLinetoAbs.idl \
     $$PWD/svg/SVGPathSegLinetoHorizontalAbs.idl \
     $$PWD/svg/SVGPathSegLinetoHorizontalRel.idl \
@@ -846,18 +825,20 @@ contains(DEFINES, ENABLE_SVG=1) {
     $$PWD/svg/SVGPolylineElement.idl \
     $$PWD/svg/SVGPreserveAspectRatio.idl \
     $$PWD/svg/SVGRadialGradientElement.idl \
-    $$PWD/svg/SVGRectElement.idl \
     $$PWD/svg/SVGRect.idl \
+    $$PWD/svg/SVGRectElement.idl \
     $$PWD/svg/SVGRenderingIntent.idl \
+    $$PWD/svg/SVGSVGElement.idl \
     $$PWD/svg/SVGScriptElement.idl \
     $$PWD/svg/SVGSetElement.idl \
     $$PWD/svg/SVGStopElement.idl \
     $$PWD/svg/SVGStringList.idl \
     $$PWD/svg/SVGStyleElement.idl \
-    $$PWD/svg/SVGStyledElement.idl \
-    $$PWD/svg/SVGSVGElement.idl \
     $$PWD/svg/SVGSwitchElement.idl \
     $$PWD/svg/SVGSymbolElement.idl \
+    $$PWD/svg/SVGTRefElement.idl \
+    $$PWD/svg/SVGTSpanElement.idl \
+    $$PWD/svg/SVGTests.idl \
     $$PWD/svg/SVGTextContentElement.idl \
     $$PWD/svg/SVGTextElement.idl \
     $$PWD/svg/SVGTextPathElement.idl \
@@ -865,16 +846,14 @@ contains(DEFINES, ENABLE_SVG=1) {
     $$PWD/svg/SVGTitleElement.idl \
     $$PWD/svg/SVGTransform.idl \
     $$PWD/svg/SVGTransformList.idl \
-    $$PWD/svg/SVGTRefElement.idl \
-    $$PWD/svg/SVGTSpanElement.idl \
+    $$PWD/svg/SVGURIReference.idl \
     $$PWD/svg/SVGUnitTypes.idl \
     $$PWD/svg/SVGUseElement.idl \
-    $$PWD/svg/SVGViewElement.idl \
     $$PWD/svg/SVGVKernElement.idl \
+    $$PWD/svg/SVGViewElement.idl \
     $$PWD/svg/SVGViewSpec.idl \
     $$PWD/svg/SVGZoomAndPan.idl \
     $$PWD/svg/SVGZoomEvent.idl
-
 }
 
 contains(DEFINES, ENABLE_TOUCH_EVENTS=1) {
@@ -896,20 +875,19 @@ contains(DEFINES, ENABLE_VIDEO_TRACK=1) {
   IDL_BINDINGS += \
     $$PWD/html/track/AudioTrack.idl \
     $$PWD/html/track/AudioTrackList.idl \
+    $$PWD/html/track/DataCue.idl \
     $$PWD/html/track/TextTrack.idl \
     $$PWD/html/track/TextTrackCue.idl \
     $$PWD/html/track/TextTrackCueList.idl \
     $$PWD/html/track/TextTrackList.idl \
     $$PWD/html/track/TrackEvent.idl \
     $$PWD/html/track/VideoTrack.idl \
-    $$PWD/html/track/VideoTrackList.idl
+    $$PWD/html/track/VideoTrackList.idl \
+    $$PWD/html/track/VTTCue.idl
 }
 
 contains(DEFINES, ENABLE_MEDIA_SOURCE=1) {
   IDL_BINDINGS += \
-    $$PWD/Modules/mediasource/MediaSource.idl \
-    $$PWD/Modules/mediasource/SourceBuffer.idl \
-    $$PWD/Modules/mediasource/SourceBufferList.idl
 }
 
 wrapperFactoryArg = --wrapperFactory
@@ -979,6 +957,9 @@ IDL_BINDINGS += generated/$$INTERNAL_SETTINGS_GENERATED_IDL
 # GENERATOR 0: Resolve [Supplemental] dependency in IDLs
 SUPPLEMENTAL_DEPENDENCY_FILE = $${GENERATED_SOURCES_DIR}/supplemental_dependency.tmp
 WINDOW_CONSTRUCTORS_FILE = $${GENERATED_SOURCES_DIR}/DOMWindowConstructors.idl
+WORKERGLOBALSCOPE_CONSTRUCTORS_FILE = $${GENERATED_SOURCES_DIR}/WorkerGlobalScopeConstructors.idl
+SHAREDWORKERGLOBALSCOPE_CONSTRUCTORS_FILE = $${GENERATED_SOURCES_DIR}/SharedWorkerGlobalScopeConstructors.idl
+DEDICATEDWORKERGLOBALSCOPE_CONSTRUCTORS_FILE = $${GENERATED_SOURCES_DIR}/DedicatedWorkerGlobalScopeConstructors.idl
 IDL_FILES_TMP = $${GENERATED_SOURCES_DIR}/idl_files.tmp
 PREPROCESS_IDLS_SCRIPT = $$PWD/bindings/scripts/preprocess-idls.pl
 IDL_ATTRIBUTES_FILE = $$PWD/bindings/scripts/IDLAttributes.txt
@@ -994,11 +975,15 @@ for(binding, IDL_BINDINGS) {
     # A space is omitted between "$$IDL_FILES_TMP" and "$$EOC" to also avoid writing trailing whitespace. (http://wkb.ug/95730)
     preprocessIdls.commands += echo $$binding>> $$IDL_FILES_TMP $$EOC
 }
+win32-*: preprocessIdls.commands += dos2unix $$IDL_FILES_TMP $$EOC
 preprocessIdls.commands += perl -I$$PWD/bindings/scripts $$preprocessIdls.script \
                                --defines \"LANGUAGE_JAVASCRIPT=1 $${FEATURE_DEFINES}\" \
                                --idlFilesList $$IDL_FILES_TMP \
                                --supplementalDependencyFile $$SUPPLEMENTAL_DEPENDENCY_FILE \
                                --windowConstructorsFile $$WINDOW_CONSTRUCTORS_FILE \
+			       --workerGlobalScopeConstructorsFile $$WORKERGLOBALSCOPE_CONSTRUCTORS_FILE \
+                               --sharedWorkerGlobalScopeConstructorsFile $$SHAREDWORKERGLOBALSCOPE_CONSTRUCTORS_FILE \
+                               --dedicatedWorkerGlobalScopeConstructorsFile $$DEDICATEDWORKERGLOBALSCOPE_CONSTRUCTORS_FILE
 
 preprocessIdls.output = $$SUPPLEMENTAL_DEPENDENCY_FILE $$WINDOW_CONSTRUCTORS_FILE
 preprocessIdls.add_output_to_sources = false
@@ -1013,7 +998,6 @@ generator = JS
 generateBindings.commands = perl -I$$PWD/bindings/scripts $$generateBindings.script \
                --defines \"LANGUAGE_JAVASCRIPT=1 $${FEATURE_DEFINES}\" \
                --generator $$generator \
-               --include $$PWD/Modules/filesystem \
                --include $$PWD/Modules/geolocation \
                --include $$PWD/Modules/indexeddb \
 #              --include $$PWD/Modules/mediasource \
@@ -1059,7 +1043,6 @@ generator = Java
 idljava.commands = perl -I$$PWD/bindings/scripts $$idljava.script \
                --defines \"LANGUAGE_JAVA=1 $${FEATURE_DEFINES}\" \
                --generator $$generator \
-               --include $$PWD/Modules/filesystem \
                --include $$PWD/Modules/geolocation \
                --include $$PWD/Modules/indexeddb \
 #              --include $$PWD/Modules/mediasource \
@@ -1108,11 +1091,21 @@ GENERATORS += idljava
 #inspectorValidate.add_output_to_sources = false
 #GENERATORS += inspectorValidate
 
-inspectorJSON.output = InspectorFrontend.cpp InspectorBackendDispatcher.cpp InspectorTypeBuilder.cpp
+INSPECTOR_WEBJSON_INPUT = $$PWD/inspector/protocol
+
+inspectorWebJSON.output = InspectorWeb.json
+inspectorWebJSON.input = INSPECTOR_WEBJSON_INPUT
+inspectorWebJSON.script = $$INSPECTOR_SCRIPTS/generate-combined-inspector-json.py
+inspectorWebJSON.commands = python $$inspectorWebJSON.script $$PWD/inspector/protocol > ${QMAKE_FILE_OUT}
+inspectorWebJSON.add_output_to_sources = false
+GENERATORS += inspectorWebJSON
+
+INSPECTOR_JSON = $${GENERATED_SOURCES_DIR}/InspectorWeb.json
+
+inspectorJSON.output = InspectorWebFrontendDispatchers.cpp InspectorWebBackendDispatchers.cpp InspectorWebTypeBuilders.cpp
 inspectorJSON.input = INSPECTOR_JSON
-inspectorJSON.script = $$PWD/inspector/CodeGeneratorInspector.py
-inspectorJSON.commands = python $$inspectorJSON.script $$PWD/inspector/Inspector.json --output_h_dir $${GENERATED_SOURCES_DIR} --output_cpp_dir $${GENERATED_SOURCES_DIR}
-inspectorJSON.depends = $$inspectorJSON.script
+inspectorJSON.script = $$INSPECTOR_SCRIPTS/CodeGeneratorInspector.py
+inspectorJSON.commands = python $$inspectorJSON.script $${GENERATED_SOURCES_DIR}/InspectorWeb.json $${GENERATED_SOURCES_DIR}/../../JavaScriptCore/generated/InspectorJS.json --output_h_dir $${GENERATED_SOURCES_DIR} --output_cpp_dir $${GENERATED_SOURCES_DIR} --output_js_dir $${GENERATED_SOURCES_DIR} --output_type Web
 GENERATORS += inspectorJSON
 
 #inspectorBackendCommands.output = InspectorBackendCommands.qrc
@@ -1123,21 +1116,27 @@ GENERATORS += inspectorJSON
 
 inspectorOverlayPage.output = InspectorOverlayPage.h
 inspectorOverlayPage.input = INSPECTOR_OVERLAY_PAGE
-inspectorOverlayPage.commands = perl $$PWD/inspector/xxd.pl InspectorOverlayPage_html ${QMAKE_FILE_IN} ${QMAKE_FILE_OUT}
+inspectorOverlayPage.commands = perl $$INSPECTOR_SCRIPTS/xxd.pl InspectorOverlayPage_html ${QMAKE_FILE_IN} ${QMAKE_FILE_OUT}
 inspectorOverlayPage.add_output_to_sources = false
 GENERATORS += inspectorOverlayPage
+
+cmdLineModuleSrc.output = CommandLineAPIModuleSource.h
+cmdLineModuleSrc.input = CMD_LINE_API_MODULE_SRC
+cmdLineModuleSrc.commands = python $$INSPECTOR_SCRIPTS/jsmin.py < ${QMAKE_FILE_IN} > $$GENERATED_SOURCES_DIR/CommandLineAPIModuleSource.min.js && perl $$INSPECTOR_SCRIPTS/xxd.pl CommandLineAPIModuleSource_js $$GENERATED_SOURCES_DIR/CommandLineAPIModuleSource.min.js ${QMAKE_FILE_OUT} && rm -f $$GENERATED_SOURCES_DIR/CommandLineAPIModuleSource.min.js
+inspectorOverlayPage.add_output_to_sources = false
+GENERATORS += cmdLineModuleSrc
 
 # GENERATOR 2: inspector injected script source compiler
 injectedScriptSource.output = InjectedScriptSource.h
 injectedScriptSource.input = INJECTED_SCRIPT_SOURCE
-injectedScriptSource.commands = perl $$PWD/inspector/xxd.pl InjectedScriptSource_js ${QMAKE_FILE_IN} ${QMAKE_FILE_OUT}
+injectedScriptSource.commands = perl $$INSPECTOR_SCRIPTS/xxd.pl InjectedScriptSource_js ${QMAKE_FILE_IN} ${QMAKE_FILE_OUT}
 injectedScriptSource.add_output_to_sources = false
 GENERATORS += injectedScriptSource
 
 # GENERATOR 3: inspector canvas injected script source compiler
 InjectedScriptCanvasModuleSource.output = InjectedScriptCanvasModuleSource.h
 InjectedScriptCanvasModuleSource.input = INJECTED_SCRIPT_CANVAS_MODULE_SOURCE
-InjectedScriptCanvasModuleSource.commands = perl $$PWD/inspector/xxd.pl InjectedScriptCanvasModuleSource_js ${QMAKE_FILE_IN} ${QMAKE_FILE_OUT}
+InjectedScriptCanvasModuleSource.commands = perl $$INSPECTOR_SCRIPTS/xxd.pl InjectedScriptCanvasModuleSource_js ${QMAKE_FILE_IN} ${QMAKE_FILE_OUT}
 InjectedScriptCanvasModuleSource.add_output_to_sources = false
 GENERATORS += InjectedScriptCanvasModuleSource
 
@@ -1249,20 +1248,20 @@ contains(DEFINES, ENABLE_XSLT=1) {
     # GENERATOR 8-C:
     xmlviewercss.output = XMLViewerCSS.h
     xmlviewercss.input = XMLVIEWER_CSS
-    xmlviewercss.script = $$PWD/inspector/xxd.pl
+    xmlviewercss.script = $$INSPECTOR_SCRIPTS/xxd.pl
     xmlviewercss.commands = perl $$xmlviewercss.script XMLViewer_css $$XMLVIEWER_CSS ${QMAKE_FILE_OUT}
     xmlviewercss.clean = ${QMAKE_FILE_OUT}
-    xmlviewercss.depends = $$PWD/inspector/xxd.pl
+    xmlviewercss.depends = $$INSPECTOR_SCRIPTS/xxd.pl
     xmlviewercss.add_output_to_sources = false
     GENERATORS += xmlviewercss
 
     # GENERATOR 8-D:
     xmlviewerjs.output = XMLViewerJS.h
     xmlviewerjs.input = XMLVIEWER_JS
-    xmlviewerjs.script = $$PWD/inspector/xxd.pl
+    xmlviewerjs.script = $$INSPECTOR_SCRIPTS/xxd.pl
     xmlviewerjs.commands = perl $$xmlviewerjs.script XMLViewer_js $$XMLVIEWER_JS ${QMAKE_FILE_OUT}
     xmlviewerjs.clean = ${QMAKE_FILE_OUT}
-    xmlviewerjs.depends = $$PWD/inspector/xxd.pl
+    xmlviewerjs.depends = $$INSPECTOR_SCRIPTS/xxd.pl
     xmlviewerjs.add_output_to_sources = false
     GENERATORS += xmlviewerjs
 }
@@ -1271,7 +1270,7 @@ contains(DEFINES, ENABLE_XSLT=1) {
 stylesheets.script = $$PWD/css/make-css-file-arrays.pl
 stylesheets.output = UserAgentStyleSheetsData.cpp
 stylesheets.input = stylesheets.script
-stylesheets.commands = perl $$stylesheets.script $${GENERATED_SOURCES_DIR}/UserAgentStyleSheets.h ${QMAKE_FILE_OUT} $$STYLESHEETS_EMBED
+stylesheets.commands = perl $$stylesheets.script --defines \"$${FEATURE_DEFINES}\" $${GENERATED_SOURCES_DIR}/UserAgentStyleSheets.h ${QMAKE_FILE_OUT} $$STYLESHEETS_EMBED
 stylesheets.depends = $$STYLESHEETS_EMBED
 stylesheets.clean = ${QMAKE_FILE_OUT} $${GENERATED_SOURCES_DIR}/UserAgentStyleSheets.h
 GENERATORS += stylesheets
@@ -1280,7 +1279,7 @@ GENERATORS += stylesheets
 pluginsresources.script = $$PWD/css/make-css-file-arrays.pl
 pluginsresources.output = PlugInsResourcesData.cpp
 pluginsresources.input = pluginsresources.script
-pluginsresources.commands = perl $$pluginsresources.script $${GENERATED_SOURCES_DIR}/PlugInsResources.h ${QMAKE_FILE_OUT} $$PLUGINS_EMBED
+pluginsresources.commands = perl $$pluginsresources.script --defines \"$${FEATURE_DEFINES}\" $${GENERATED_SOURCES_DIR}/PlugInsResources.h ${QMAKE_FILE_OUT} $$PLUGINS_EMBED
 pluginsresources.depends = $$PLUGINS_EMBED
 pluginsresources.clean = ${QMAKE_FILE_OUT} $${GENERATED_SOURCES_DIR}/PlugInsResources.h
 GENERATORS += pluginsresources
@@ -1369,7 +1368,6 @@ defineTest(prependEach) {
             output_file = $$replace(output, \\$\\{QMAKE_FILE_BASE\\}, $$base)
             SOURCES += $$output_file
         }
-
     }
-        }
+}
 

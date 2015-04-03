@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2014, 2015, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -34,6 +34,7 @@
 #ifndef PLATFORM_H
 #define PLATFORM_H
 
+#include "OrderedMap.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,12 +42,12 @@
 #include <string>
 #include <map>
 #include <list>
+#include <vector>
 
 
 #ifdef WIN32
 #define WINDOWS
 #endif //WIN32
-//TODO Win64?
 
 #ifdef __APPLE__
 #define MAC
@@ -77,12 +78,15 @@
 #include <malloc.h>
 
 typedef std::wstring TString;
+#define StringLength wcslen
 
-#define TRAILING_SLASH '\\'
+#define TRAILING_PATHSEPARATOR '\\'
+#define BAD_TRAILING_PATHSEPARATOR '/'
 #define PATH_SEPARATOR ';'
 #define BAD_PATH_SEPARATOR ':'
 
 typedef ULONGLONG TPlatformNumber;
+typedef DWORD TProcessID;
 
 #if defined _DEBUG && !defined DEBUG
     #define DEBUG
@@ -102,18 +106,34 @@ typedef ULONGLONG TPlatformNumber;
 
 typedef char TCHAR;
 typedef std::string TString;
+#define StringLength strlen
 
-#define TRAILING_SLASH '/'
+typedef unsigned long DWORD;
+
+#define TRAILING_PATHSEPARATOR '/'
+#define BAD_TRAILING_PATHSEPARATOR '\\'
 #define PATH_SEPARATOR ':'
 #define BAD_PATH_SEPARATOR ';'
 #define MAX_PATH 1000
 
 typedef long TPlatformNumber;
+typedef pid_t TProcessID;
 
 #define HMODULE void*
 #endif //POSIX
 
 
+// Config file sections
+#define CONFIG_SECTION_APPLICATION            _T("CONFIG_SECTION_APPLICATION")
+#define CONFIG_SECTION_JVMOPTIONS             _T("CONFIG_SECTION_JVMOPTIONS")
+#define CONFIG_SECTION_JVMUSEROPTIONS         _T("CONFIG_SECTION_JVMUSEROPTIONS")
+#define CONFIG_SECTION_JVMUSEROVERRIDESOPTIONS         _T("CONFIG_SECTION_JVMUSEROVERRIDESOPTIONS")
+#define CONFIG_SECTION_APPCDSJVMOPTIONS       _T("CONFIG_SECTION_APPCDSJVMOPTIONS")
+#define CONFIG_SECTION_APPCDSGENERATECACHEJVMOPTIONS _T("CONFIG_SECTION_APPCDSGENERATECACHEJVMOPTIONS")
+#define CONFIG_SECTION_ARGOPTIONS             _T("CONFIG_SECTION_ARGOPTIONS")
+
+// Config file keys.
+#define CONFIG_VERSION            _T("CONFIG_VERSION")
 #define CONFIG_MAINJAR_KEY        _T("CONFIG_MAINJAR_KEY")
 #define CONFIG_MAINCLASSNAME_KEY  _T("CONFIG_MAINCLASSNAME_KEY")
 #define CONFIG_CLASSPATH_KEY      _T("CONFIG_CLASSPATH_KEY")
@@ -122,78 +142,145 @@ typedef long TPlatformNumber;
 #define CONFIG_APP_ID_KEY         _T("CONFIG_APP_ID_KEY")
 #define CONFIG_APP_MEMORY         _T("CONFIG_APP_MEMORY")
 
-#if defined(WINDOWS) || defined(LINUX)
 #define JVM_RUNTIME_KEY           _T("JVM_RUNTIME_KEY")
-#define PACKAGER_APP_DATA_DIR     _T("CONFIG_APP_ID_KEY")
-#endif //WINDOWS || LINUX
+#define PACKAGER_APP_DATA_DIR     _T("CONFIG_APP_IDENTIFIER")
 
-#ifdef MAC
-#define JVM_RUNTIME_KEY           _T("JVMRuntime")
-#define PACKAGER_APP_DATA_DIR     _T("CFBundleIdentifier")
-#endif //MAC
 
 
 typedef void* Module;
 typedef void* Procedure;
 
-struct TValueIndex {
-    TString value;
-    size_t index;
+
+class Process {
+public:
+    Process() {}
+    virtual ~Process() {}
+
+    virtual bool IsRunning() = 0;
+    virtual bool Terminate() = 0;
+    virtual bool Execute(const TString Application, const std::vector<TString> Arguments,
+        bool AWait = false) = 0;
+    virtual bool Wait() = 0;
+    virtual TProcessID GetProcessID() = 0;
 };
 
-typedef std::map<TString, TValueIndex> TOrderedMap;
 
+template <typename T>
+class AutoFreePtr {
+private:
+    T* FObject;
 
-class PropertyContainer {
 public:
-    PropertyContainer(void) {}
-    virtual ~PropertyContainer(void) {}
+    AutoFreePtr() {
+        FObject = NULL;
+    }
+
+    AutoFreePtr(T* Value) {
+        FObject = Value;
+    }
+
+    ~AutoFreePtr() {
+        if (FObject != NULL) {
+            delete FObject;
+        }
+    }
+
+    operator T* () const {
+        return FObject;
+    }
+
+    T& operator* () const {
+        return *FObject;
+    }
+
+    T* operator->() const {
+        return FObject;
+    }
+
+    T** operator&() {
+        return &FObject;
+    }
+
+    T* operator=(const T * rhs) {
+        FObject = rhs;
+        return FObject;
+    }
+};
+
+
+class IPropertyContainer {
+public:
+    IPropertyContainer(void) {}
+    virtual ~IPropertyContainer(void) {}
 
     virtual bool GetValue(const TString Key, TString& Value) = 0;
     virtual size_t GetCount() = 0;
 };
 
+class ISectionalPropertyContainer {
+public:
+    ISectionalPropertyContainer(void) {}
+    virtual ~ISectionalPropertyContainer(void) {}
+
+    virtual bool GetValue(const TString SectionName, const TString Key, TString& Value) = 0;
+    virtual bool ContainsSection(const TString SectionName) = 0;
+    virtual bool GetSection(const TString SectionName, OrderedMap<TString, TString> &Data) = 0;
+};
+
+
+enum DebugState {dsNone, dsNative, dsJava};
+enum MessageResponse {mrOK, mrCancel};
+enum AppCDSState {cdsNone, cdsOn, cdsGenCache, cdsAuto, cdsInteractive};
 
 class Platform {
+private:
+    AppCDSState FAppCDSState;
+
 protected:
-    Platform(void) {}
+    Platform(void) {
+        FAppCDSState = cdsNone;
+    }
 
 public:
+    AppCDSState GetAppCDSState() { return FAppCDSState; }
+    void SetAppCDSState(AppCDSState Value) { FAppCDSState = Value; }
+
     static Platform& GetInstance();
 
     virtual ~Platform(void) {}
 
-    enum DebugState {dsNone, dsNative, dsJava};
-
 public:
-    virtual void ShowError(TString title, TString description) = 0;
-    virtual void ShowError(TString description) = 0;
+    virtual void ShowMessage(TString title, TString description) = 0;
+    virtual void ShowMessage(TString description) = 0;
+    virtual MessageResponse ShowResponseMessage(TString title, TString description) = 0;
+//    virtual MessageResponse ShowResponseMessage(TString description) = 0;
 
     virtual void SetCurrentDirectory(TString Value) = 0;
-    
+
     // Caller must free result using delete[].
     virtual TCHAR* ConvertStringToFileSystemString(TCHAR* Source, bool &release) = 0;
-    
+
     // Caller must free result using delete[].
     virtual TCHAR* ConvertFileSystemStringToString(TCHAR* Source, bool &release) = 0;
 
     // Returns:
-    // Windows=C:\Users\<username>\AppData\Local\<app.preferences.id>\packager\jvmuserargs.cfg
-    // Linux=~/.local/<app.preferences.id>/packager/jvmuserargs.cfg
-    // Mac=~/Library/Application Support/<app.preferences.id>/packager/jvmuserargs.cfg
+    // Windows=C:\Users\<username>\AppData\Local\<app.identifier>\packager\jvmuserargs.cfg
+    // Linux=~/.local/<app.identifier>/packager/jvmuserargs.cfg
+    // Mac=~/Library/Application Support/<app.identifier>/packager/jvmuserargs.cfg
     virtual TString GetAppDataDirectory() = 0;
 
     virtual TString GetPackageAppDirectory() = 0;
     virtual TString GetPackageLauncherDirectory() = 0;
     virtual TString GetAppName() = 0;
-    
+
     virtual TString GetConfigFileName() = 0;
 
     virtual TString GetBundledJVMLibraryFileName(TString RuntimePath) = 0;
     virtual TString GetSystemJVMLibraryFileName() = 0;
     virtual TString GetSystemJRE() = 0;
 
-    virtual PropertyContainer* GetConfigFile(TString FileName) = 0;
+    // Caller must free result.
+    virtual ISectionalPropertyContainer* GetConfigFile(TString FileName) = 0;
 
     virtual TString GetModuleFileName() = 0;
     virtual TString GetPackageRootDirectory() = 0;
@@ -201,19 +288,24 @@ public:
     virtual Module LoadLibrary(TString FileName) = 0;
     virtual void FreeLibrary(Module Module) = 0;
     virtual Procedure GetProcAddress(Module Module, std::string MethodName) = 0;
-    
+    virtual std::vector<TString> GetLibraryImports(const TString FileName) = 0;
+    virtual std::vector<TString> FilterOutRuntimeDependenciesForPlatform(std::vector<TString> Imports) = 0;
+
+    // Caller must free result.
+    virtual Process* CreateProcess() = 0;
+
     virtual bool IsMainThread() = 0;
 
     // Returns megabytes.
     virtual TPlatformNumber GetMemorySize() = 0;
-    
+
     virtual std::map<TString, TString> GetKeys() = 0;
 
     virtual std::list<TString> LoadFromFile(TString FileName) = 0;
     virtual void SaveToFile(TString FileName, std::list<TString> Contents, bool ownerOnly) = 0;
 
 #ifdef DEBUG
-    virtual Platform::DebugState GetDebugState() = 0;
+    virtual DebugState GetDebugState() = 0;
     virtual int GetProcessID() = 0;
     virtual bool IsNativeDebuggerPresent() = 0;
 #endif //DEBUG
@@ -222,14 +314,53 @@ public:
 
 class Library {
 private:
+    std::vector<TString> *FDependentLibraryNames;
+    std::vector<Library*> *FDependenciesLibraries;
     Module FModule;
+
+    void Initialize();
+    void InitializeDependencies();
+    void LoadDependencies();
+    void UnloadDependencies();
 
 protected:
     void* GetProcAddress(std::string MethodName);
 
 public:
-    Library(TString FileName);
+    Library();
+    Library(const TString &FileName);
     ~Library();
+
+    bool Load(const TString &FileName);
+    bool Unload();
+
+    void AddDependency(const TString &FileName);
+    void AddDependencies(const std::vector<TString> &Dependencies);
+};
+
+
+class Exception: public std::exception {
+private:
+    TString FMessage;
+
+protected:
+    void SetMessage(const TString Message) {
+        FMessage = Message;
+    }
+
+public:
+    explicit Exception() : exception() {}
+    explicit Exception(const TString Message) : exception() {
+        SetMessage(Message);
+    }
+    virtual ~Exception() throw() {}
+
+    TString GetMessage() { return FMessage; }
+};
+
+class FileNotFoundException: public Exception {
+public:
+    explicit FileNotFoundException(const TString Message) : Exception(Message) {}
 };
 
 #endif //PLATFORM_H

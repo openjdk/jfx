@@ -31,21 +31,21 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-inline HTMLQuoteElement::HTMLQuoteElement(const QualifiedName& tagName, Document* document)
+inline HTMLQuoteElement::HTMLQuoteElement(const QualifiedName& tagName, Document& document)
     : HTMLElement(tagName, document)
 {
     ASSERT(hasTagName(qTag) || hasTagName(blockquoteTag));
 }
 
-PassRefPtr<HTMLQuoteElement> HTMLQuoteElement::create(const QualifiedName& tagName, Document* document)
+PassRefPtr<HTMLQuoteElement> HTMLQuoteElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(new HTMLQuoteElement(tagName, document));
 }
 
-Node::InsertionNotificationRequest HTMLQuoteElement::insertedInto(ContainerNode* insertionPoint)
+Node::InsertionNotificationRequest HTMLQuoteElement::insertedInto(ContainerNode& insertionPoint)
 {
     if (hasTagName(qTag))
-        document()->styleSheetCollection()->setUsesBeforeAfterRulesOverride(true);
+        document().styleSheetCollection().setUsesBeforeAfterRulesOverride(true);
 
     return HTMLElement::insertedInto(insertionPoint);
 }

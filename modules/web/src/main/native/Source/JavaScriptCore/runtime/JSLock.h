@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2008, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2005, 2008, 2009, 2014 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -24,7 +24,6 @@
 #include <wtf/Assertions.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RefPtr.h>
-#include <wtf/TCSpinLock.h>
 #include <wtf/Threading.h>
 
 namespace JSC {
@@ -95,25 +94,36 @@ namespace JSC {
 
         JS_EXPORT_PRIVATE bool currentThreadIsHoldingLock();
 
-        unsigned dropAllLocks();
-        unsigned dropAllLocksUnconditionally();
-        void grabAllLocks(unsigned lockCount);
-
         void willDestroyVM(VM*);
+
         class DropAllLocks {
             WTF_MAKE_NONCOPYABLE(DropAllLocks);
         public:
-            JS_EXPORT_PRIVATE DropAllLocks(ExecState* exec);
+            JS_EXPORT_PRIVATE DropAllLocks(ExecState*);
             JS_EXPORT_PRIVATE DropAllLocks(VM*);
             JS_EXPORT_PRIVATE ~DropAllLocks();
             
+#if ENABLE(LLINT_C_LOOP)
+            void setDropDepth(unsigned depth) { m_dropDepth = depth; }
+            unsigned dropDepth() const { return m_dropDepth; }
+#endif
+
         private:
-            intptr_t m_lockCount;
+            intptr_t m_droppedLockCount;
             RefPtr<VM> m_vm;
+#if ENABLE(LLINT_C_LOOP)
+            unsigned m_dropDepth;
+#endif
         };
 
     private:
-        SpinLock m_spinLock;
+        void lock(intptr_t lockCount);
+        void unlock(intptr_t unlockCount);
+        void setOwnerThread(ThreadIdentifier owner) { m_ownerThread = owner; }
+
+        unsigned dropAllLocks(DropAllLocks*);
+        void grabAllLocks(DropAllLocks*, unsigned lockCount);
+
         Mutex m_lock;
         ThreadIdentifier m_ownerThread;
         intptr_t m_lockCount;

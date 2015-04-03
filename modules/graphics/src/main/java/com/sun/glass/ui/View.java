@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -746,6 +746,16 @@ public abstract class View {
         _end(this.ptr);
     }
 
+    protected abstract int _getNativeFrameBuffer(long ptr);
+
+    /**
+     * Called on the renderer thread and must be between lock and unlock
+     */
+    public int getNativeFrameBuffer() {
+        return _getNativeFrameBuffer(this.ptr);
+    }
+    
+    
     protected abstract void _uploadPixels(long ptr, Pixels pixels);
     /**
      * This method dumps the pixels on to the view.

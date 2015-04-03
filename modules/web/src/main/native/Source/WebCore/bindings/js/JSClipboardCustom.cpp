@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2008, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,67 +30,15 @@
 #include "JSClipboard.h"
 
 #include "Clipboard.h"
-#include "Element.h"
-#include "HTMLImageElement.h"
-#include "HTMLNames.h"
-#include "IntPoint.h"
-#include "JSNode.h"
-#include "Node.h"
-#include <runtime/ArrayPrototype.h>
-#include <runtime/Error.h>
-#include <wtf/text/StringHash.h>
-#include <wtf/text/WTFString.h>
 
 using namespace JSC;
 
 namespace WebCore {
 
-using namespace HTMLNames;
-
 JSValue JSClipboard::types(ExecState* exec) const
 {
-    Clipboard* clipboard = impl();
-
-    ListHashSet<String> types = clipboard->types();
-    if (types.isEmpty())
-        return jsNull();
-
-    MarkedArgumentBuffer list;
-    ListHashSet<String>::const_iterator end = types.end();
-    for (ListHashSet<String>::const_iterator it = types.begin(); it != end; ++it)
-        list.append(jsStringWithCache(exec, *it));
-    return constructArray(exec, 0, globalObject(), list);
-}
-
-JSValue JSClipboard::setDragImage(ExecState* exec)
-{
-    Clipboard* clipboard = impl();
-
-    if (!clipboard->isForDragAndDrop())
-        return jsUndefined();
-
-    // FIXME: It does not match the rest of the JS bindings to throw on invalid number of arguments. 
-    if (exec->argumentCount() != 3)
-        return throwError(exec, createSyntaxError(exec, "setDragImage: Invalid number of arguments"));
-
-    int x = exec->argument(1).toInt32(exec);
-    int y = exec->argument(2).toInt32(exec);
-
-    // See if they passed us a node
-    Node* node = toNode(exec->argument(0));
-    if (!node)
-        return throwTypeError(exec);
-
-    // FIXME: This should probably be a TypeError. 
-    if (!node->isElementNode())
-        return throwError(exec, createSyntaxError(exec, "setDragImageFromElement: Invalid first argument"));
-
-    if (toElement(node)->hasLocalName(imgTag) && !node->inDocument())
-        clipboard->setDragImage(static_cast<HTMLImageElement*>(node)->cachedImage(), IntPoint(x, y));
-    else
-        clipboard->setDragImageElement(node, IntPoint(x, y));
-
-    return jsUndefined();
+    Vector<String> types = impl().types();
+    return types.isEmpty() ? jsNull() : jsArray(exec, globalObject(), types);
 }
 
 } // namespace WebCore

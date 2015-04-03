@@ -1,13 +1,13 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  */
 #ifndef JSC_UNICODE_JAVA_H
 #define JSC_UNICODE_JAVA_H
 
 #include <wtf/Assertions.h>
 #include <wtf/ASCIICType.h>
-#include <wtf/unicode/ScriptCodesFromICU.h>
-#include <wtf/unicode/UnicodeMacrosFromICU.h>
+//#include <wtf/unicode/ScriptCodesFromICU.h>
+//#include <wtf/unicode/UnicodeMacrosFromICU.h>
 
 #include <stdint.h>
 
@@ -21,7 +21,9 @@ typedef wchar_t UChar;
 typedef uint16_t UChar;
 #endif
 
+#ifndef __UMACHINE_H__
 typedef uint32_t UChar32;
+#endif
 
 #define U_MASK(x) ((uint32_t)1<<(x))
 #define USE_FAST_PATH(c, fast, slow) ((c) <= 0x7F ? fast((char)c) : slow(c))

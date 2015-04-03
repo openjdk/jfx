@@ -21,14 +21,14 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
 #include "config.h"
 #include "JSCallbackObject.h"
 
 #include "Heap.h"
-#include "Operations.h"
+#include "JSCInlines.h"
 #include <wtf/text/StringHash.h>
 
 namespace JSC {
@@ -40,36 +40,36 @@ template <> const ClassInfo JSCallbackObject<JSGlobalObject>::s_info = { "Callba
 template<> const bool JSCallbackObject<JSDestructibleObject>::needsDestruction = true;
 template<> const bool JSCallbackObject<JSGlobalObject>::needsDestruction = false;
 
-template <>
+template<>
 JSCallbackObject<JSGlobalObject>* JSCallbackObject<JSGlobalObject>::create(VM& vm, JSClassRef classRef, Structure* structure)
-{ 
-    JSCallbackObject<JSGlobalObject>* callbackObject = new (NotNull, allocateCell<JSCallbackObject<JSGlobalObject> >(vm.heap)) JSCallbackObject(vm, classRef, structure);
+{
+    JSCallbackObject<JSGlobalObject>* callbackObject = new (NotNull, allocateCell<JSCallbackObject<JSGlobalObject>>(vm.heap)) JSCallbackObject(vm, classRef, structure);
     callbackObject->finishCreation(vm);
     vm.heap.addFinalizer(callbackObject, destroy);
     return callbackObject;
 }
-    
+
 template <>
 Structure* JSCallbackObject<JSDestructibleObject>::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto)
 { 
-    return Structure::create(vm, globalObject, proto, TypeInfo(ObjectType, StructureFlags), &s_info); 
+    return Structure::create(vm, globalObject, proto, TypeInfo(ObjectType, StructureFlags), info()); 
 }
-
+    
 template <>
 Structure* JSCallbackObject<JSGlobalObject>::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto)
-{
-    return Structure::create(vm, globalObject, proto, TypeInfo(GlobalObjectType, StructureFlags), &s_info); 
+{ 
+    return Structure::create(vm, globalObject, proto, TypeInfo(GlobalObjectType, StructureFlags), info()); 
 }
 
 void JSCallbackObjectData::finalize(Handle<Unknown> handle, void* context)
 {
     JSClassRef jsClass = static_cast<JSClassRef>(context);
     JSObjectRef thisRef = toRef(static_cast<JSObject*>(handle.get().asCell()));
-
+    
     for (; jsClass; jsClass = jsClass->parentClass)
         if (JSObjectFinalizeCallback finalize = jsClass->finalize)
             finalize(thisRef);
     WeakSet::deallocate(WeakImpl::asWeakImpl(handle.slot()));
 }
-
+    
 } // namespace JSC

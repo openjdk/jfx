@@ -31,6 +31,10 @@
 #include "JSDOMBinding.h"
 #include "runtime_object.h"
 
+namespace WebCore {
+    class JSDOMGlobalObject;
+}
+
 namespace JSC {
 namespace Bindings {
 
@@ -40,28 +44,25 @@ class CRuntimeObject : public RuntimeObject {
 public:
     typedef RuntimeObject Base;
 
-    static CRuntimeObject* create(ExecState* exec, JSGlobalObject* globalObject, PassRefPtr<CInstance> instance)
+    static CRuntimeObject* create(VM& vm, Structure* structure, PassRefPtr<CInstance> instance)
     {
-        // FIXME: deprecatedGetDOMStructure uses the prototype off of the wrong global object
-        // We need to pass in the right global object for "i".
-        Structure* domStructure = WebCore::deprecatedGetDOMStructure<CRuntimeObject>(exec);
-        CRuntimeObject* object = new (NotNull, allocateCell<CRuntimeObject>(*exec->heap())) CRuntimeObject(exec, globalObject, domStructure, instance);
-        object->finishCreation(globalObject);
+        CRuntimeObject* object = new (NotNull, allocateCell<CRuntimeObject>(vm.heap)) CRuntimeObject(vm, structure, instance);
+        object->finishCreation(vm);
         return object;
     }
 
     CInstance* getInternalCInstance() const;
 
-    static const ClassInfo s_info;
+    DECLARE_INFO;
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), &s_info);
+        return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
     }
 
 private:
-    CRuntimeObject(ExecState*, JSGlobalObject*, Structure*, PassRefPtr<CInstance>);
-    void finishCreation(JSGlobalObject*);
+    CRuntimeObject(VM&, Structure*, PassRefPtr<CInstance>);
+    void finishCreation(VM&);
 };
 
 }

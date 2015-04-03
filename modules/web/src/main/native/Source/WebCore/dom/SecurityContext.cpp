@@ -35,8 +35,7 @@
 namespace WebCore {
 
 SecurityContext::SecurityContext()
-    : m_mayDisplaySeamlesslyWithParent(false)
-    , m_haveInitializedSecurityOrigin(false)
+    : m_haveInitializedSecurityOrigin(false)
     , m_sandboxFlags(SandboxNone)
 {
 }
@@ -56,7 +55,7 @@ void SecurityContext::setContentSecurityPolicy(PassOwnPtr<ContentSecurityPolicy>
     m_contentSecurityPolicy = contentSecurityPolicy;
 }
 
-bool SecurityContext::isSecureTransitionTo(const KURL& url) const
+bool SecurityContext::isSecureTransitionTo(const URL& url) const
 {
     // If we haven't initialized our security origin by now, this is probably
     // a new window created via the API (i.e., that lacks an origin and lacks
@@ -82,18 +81,17 @@ SandboxFlags SecurityContext::parseSandboxPolicy(const String& policy, String& i
     // http://www.w3.org/TR/html5/the-iframe-element.html#attr-iframe-sandbox
     // Parse the unordered set of unique space-separated tokens.
     SandboxFlags flags = SandboxAll;
-    const UChar* characters = policy.characters();
     unsigned length = policy.length();
     unsigned start = 0;
     unsigned numberOfTokenErrors = 0;
     StringBuilder tokenErrors;
     while (true) {
-        while (start < length && isHTMLSpace(characters[start]))
+        while (start < length && isHTMLSpace(policy[start]))
             ++start;
         if (start >= length)
             break;
         unsigned end = start + 1;
-        while (end < length && !isHTMLSpace(characters[end]))
+        while (end < length && !isHTMLSpace(policy[end]))
             ++end;
 
         // Turn off the corresponding sandbox flag if it's set as "allowed".

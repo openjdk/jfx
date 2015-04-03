@@ -26,13 +26,14 @@
 #ifndef HTMLTableSectionElement_h
 #define HTMLTableSectionElement_h
 
+#include "HTMLNames.h"
 #include "HTMLTablePartElement.h"
 
 namespace WebCore {
 
-class HTMLTableSectionElement FINAL : public HTMLTablePartElement {
+class HTMLTableSectionElement final : public HTMLTablePartElement {
 public:
-    static PassRefPtr<HTMLTableSectionElement> create(const QualifiedName&, Document*);
+    static PassRefPtr<HTMLTableSectionElement> create(const QualifiedName&, Document&);
 
     PassRefPtr<HTMLElement> insertRow(int index, ExceptionCode&);
     void deleteRow(int index, ExceptionCode&);
@@ -54,10 +55,17 @@ public:
     PassRefPtr<HTMLCollection> rows();
 
 private:
-    HTMLTableSectionElement(const QualifiedName& tagName, Document*);
+    HTMLTableSectionElement(const QualifiedName& tagName, Document&);
 
-    virtual const StylePropertySet* additionalPresentationAttributeStyle() OVERRIDE;
+    virtual const StyleProperties* additionalPresentationAttributeStyle() override;
 };
+
+inline bool isHTMLTableSectionElement(const Node& node)
+{
+    return node.hasTagName(HTMLNames::theadTag) || node.hasTagName(HTMLNames::tfootTag) || node.hasTagName(HTMLNames::tbodyTag);
+}
+
+NODE_TYPE_CASTS(HTMLTableSectionElement)
 
 } //namespace
 

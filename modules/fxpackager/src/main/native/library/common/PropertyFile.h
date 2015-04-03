@@ -35,39 +35,42 @@
 #define PROPERTYFILE_H
 
 #include "Platform.h"
+#include "Helpers.h"
 
-#include <map>
 
-
-class PropertyFile : public PropertyContainer {
+class PropertyFile : public IPropertyContainer {
 private:
-    std::map<TString, TString> FData;
     bool FReadOnly;
     bool FModified;
+    OrderedMap<TString, TString> FData;
 
     void SetModified(bool Value);
 
 public:
     PropertyFile(void);
     PropertyFile(const TString FileName);
-    PropertyFile(std::map<TString, TString> Value);
+    PropertyFile(OrderedMap<TString, TString> Value);
+    PropertyFile(const PropertyFile &Value);
     virtual ~PropertyFile(void);
 
     bool IsModified();
     bool GetReadOnly();
     void SetReadOnly(bool Value);
 
-    void Assign(std::map<TString, TString> Value);
+    //void Assign(std::map<TString, TString> Value);
 
     bool LoadFromFile(const TString FileName);
-    bool SaveToFile(const TString FileName, bool ownerOnly);
+    bool SaveToFile(const TString FileName, bool ownerOnly = true);
 
-    virtual bool GetValue(const TString Key, TString& Value);
     bool SetValue(const TString Key, TString Value);
     bool RemoveKey(const TString Key);
 
+    OrderedMap<TString, TString> GetData();
+
+    // IPropertyContainer
+    virtual bool GetValue(const TString Key, TString& Value);
     virtual size_t GetCount();
-    std::map<TString, TString> GetData();
+    //virtual std::vector<TString> GetKeys();
 };
 
 #endif //PROPERTYFILE_H

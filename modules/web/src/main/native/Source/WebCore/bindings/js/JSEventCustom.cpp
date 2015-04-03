@@ -45,11 +45,11 @@ namespace WebCore {
 
 JSValue JSEvent::clipboardData(ExecState* exec) const
 {
-    return impl()->isClipboardEvent() ? toJS(exec, globalObject(), impl()->clipboardData()) : jsUndefined();
+    return impl().isClipboardEvent() ? toJS(exec, globalObject(), impl().clipboardData()) : jsUndefined();
 }
 
 #define TRY_TO_WRAP_WITH_INTERFACE(interfaceName) \
-    if (eventNames().interfaceFor##interfaceName == desiredInterface) \
+    case interfaceName##InterfaceType: \
         return CREATE_DOM_WRAPPER(exec, globalObject, interfaceName, event);
 
 JSValue toJS(ExecState* exec, JSDOMGlobalObject* globalObject, Event* event)
@@ -59,12 +59,13 @@ JSValue toJS(ExecState* exec, JSDOMGlobalObject* globalObject, Event* event)
     if (!event)
         return jsNull();
 
-    JSDOMWrapper* wrapper = getCachedWrapper(currentWorld(exec), event);
+    JSObject* wrapper = getCachedWrapper(currentWorld(exec), event);
     if (wrapper)
         return wrapper;
 
-    String desiredInterface = event->interfaceName();
-    DOM_EVENT_INTERFACES_FOR_EACH(TRY_TO_WRAP_WITH_INTERFACE)
+    switch (event->eventInterface()) {
+        DOM_EVENT_INTERFACES_FOR_EACH(TRY_TO_WRAP_WITH_INTERFACE)
+    }
 
     return CREATE_DOM_WRAPPER(exec, globalObject, Event, event);
 }

@@ -37,41 +37,44 @@ class ScrollView;
 class AccessibilityScrollView : public AccessibilityObject {
 public:
     static PassRefPtr<AccessibilityScrollView> create(ScrollView*);    
-    virtual AccessibilityRole roleValue() const { return ScrollAreaRole; }
+    virtual AccessibilityRole roleValue() const override { return ScrollAreaRole; }
     ScrollView* scrollView() const { return m_scrollView; }
 
     virtual ~AccessibilityScrollView();
-    virtual void detach();
+    virtual void detach(AccessibilityDetachmentType, AXObjectCache*) override;
 
 protected:
-    virtual ScrollableArea* getScrollableAreaIfScrollable() const;
-    virtual void scrollTo(const IntPoint&) const;
+    virtual ScrollableArea* getScrollableAreaIfScrollable() const override;
+    virtual void scrollTo(const IntPoint&) const override;
     
 private:
     explicit AccessibilityScrollView(ScrollView*);
     
-    virtual bool computeAccessibilityIsIgnored() const;
-    virtual bool isAccessibilityScrollView() const { return true; }
-    virtual bool isEnabled() const { return true; }
+    virtual bool computeAccessibilityIsIgnored() const override;
+    virtual bool isAccessibilityScrollView() const override { return true; }
+    virtual bool isEnabled() const override { return true; }
     
-    virtual bool isAttachment() const;
-    virtual Widget* widgetForAttachmentView() const;
+    virtual bool isAttachment() const override;
+    virtual Widget* widgetForAttachmentView() const override;
     
-    virtual AccessibilityObject* scrollBar(AccessibilityOrientation);
-    virtual void addChildren();
-    virtual void clearChildren();
-    virtual AccessibilityObject* accessibilityHitTest(const IntPoint&) const;
-    virtual void updateChildrenIfNecessary();
-    virtual void setNeedsToUpdateChildren() { m_childrenDirty = true; }
+    virtual AccessibilityObject* scrollBar(AccessibilityOrientation) override;
+    virtual void addChildren() override;
+    virtual void clearChildren() override;
+    virtual AccessibilityObject* accessibilityHitTest(const IntPoint&) const override;
+    virtual void updateChildrenIfNecessary() override;
+    virtual void setNeedsToUpdateChildren() override { m_childrenDirty = true; }
     void updateScrollbars();
+    virtual void setFocused(bool) override;
+    virtual bool canSetFocusAttribute() const override;
+    virtual bool isFocused() const override;
     
-    virtual FrameView* documentFrameView() const;
-    virtual LayoutRect elementRect() const;
-    virtual AccessibilityObject* parentObject() const;
-    virtual AccessibilityObject* parentObjectIfExists() const;
+    virtual FrameView* documentFrameView() const override;
+    virtual LayoutRect elementRect() const override;
+    virtual AccessibilityObject* parentObject() const override;
+    virtual AccessibilityObject* parentObjectIfExists() const override;
     
     AccessibilityObject* webAreaObject() const;
-    virtual AccessibilityObject* firstChild() const { return webAreaObject(); }
+    virtual AccessibilityObject* firstChild() const override { return webAreaObject(); }
     AccessibilityScrollbar* addChildScrollbar(Scrollbar*);
     void removeChildScrollbar(AccessibilityObject*);
     
@@ -81,14 +84,7 @@ private:
     bool m_childrenDirty;
 };
 
-inline AccessibilityScrollView* toAccessibilityScrollView(AccessibilityObject* object)
-{
-    ASSERT(!object || object->isAccessibilityScrollView());
-    if (!object->isAccessibilityScrollView())
-        return 0;
-    
-    return static_cast<AccessibilityScrollView*>(object);
-}
+ACCESSIBILITY_OBJECT_TYPE_CASTS(AccessibilityScrollView, isAccessibilityScrollView())
     
 } // namespace WebCore
 

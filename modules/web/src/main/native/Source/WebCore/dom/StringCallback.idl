@@ -30,4 +30,4 @@
 
 callback interface StringCallback {
     boolean handleEvent(DOMString data);
-    };
+};

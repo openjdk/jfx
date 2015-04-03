@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -75,6 +75,7 @@ public class IosImageLoader extends ImageLoaderImpl {
     private boolean isDisposed = false;
 
     private int delayTime; // applicable to animated images only
+    private int loopCount; // applicable to animated images only
 
     /***************************** Native Loader methods ******************************************/
 
@@ -132,11 +133,13 @@ public class IosImageLoader extends ImageLoaderImpl {
     private void setInputParameters(
             int width,
             int height,
-            int imageCount) {
+            int imageCount,
+            int loopCount) {
 
         inWidth = width;
         inHeight = height;
         nImages = imageCount;
+        this.loopCount = loopCount;
     }
 
     private void updateProgress(float progressPercentage) {
@@ -236,6 +239,7 @@ public class IosImageLoader extends ImageLoaderImpl {
                 null, // background color
                 null, // a palette index to be used as transparency
                 delayTime == 0 ? null : delayTime, // the amount of time to pause at the current image (milliseconds).
+                nImages > 1 ? loopCount : null, // number of loops
                 inWidth, // source width
                 inHeight, // source height
                 null, // image left offset

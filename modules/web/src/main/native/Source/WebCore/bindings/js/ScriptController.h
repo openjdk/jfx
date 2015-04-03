@@ -24,20 +24,23 @@
 
 #include "FrameLoaderTypes.h"
 #include "JSDOMWindowShell.h"
-#include "ScriptControllerBase.h"
 #include <JavaScriptCore/JSBase.h>
 #include <heap/Strong.h>
 #include <wtf/Forward.h>
 #include <wtf/RefPtr.h>
 #include <wtf/text/TextPosition.h>
 
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
 #include <wtf/RetainPtr.h>
 OBJC_CLASS WebScriptObject;
 OBJC_CLASS JSContext;
 #endif
 
 struct NPObject;
+
+namespace Deprecated {
+class ScriptValue;
+}
 
 namespace JSC {
     class JSGlobalObject;
@@ -54,55 +57,59 @@ namespace WebCore {
 class HTMLPlugInElement;
 class Frame;
 class ScriptSourceCode;
-class ScriptValue;
 class SecurityOrigin;
 class Widget;
 
-typedef HashMap<void*, RefPtr<JSC::Bindings::RootObject> > RootObjectMap;
+typedef HashMap<void*, RefPtr<JSC::Bindings::RootObject>> RootObjectMap;
+
+enum ReasonForCallingCanExecuteScripts {
+    AboutToExecuteScript,
+    NotAboutToExecuteScript
+};
 
 class ScriptController {
     friend class ScriptCachedFrameData;
-    typedef WTF::HashMap< RefPtr<DOMWrapperWorld>, JSC::Strong<JSDOMWindowShell> > ShellMap;
+    typedef HashMap<RefPtr<DOMWrapperWorld>, JSC::Strong<JSDOMWindowShell>> ShellMap;
 
 public:
-    ScriptController(Frame*);
+    explicit ScriptController(Frame&);
     ~ScriptController();
 
     static PassRefPtr<DOMWrapperWorld> createWorld();
 
-    JSDOMWindowShell* createWindowShell(DOMWrapperWorld*);
-    void destroyWindowShell(DOMWrapperWorld*);
+    JSDOMWindowShell* createWindowShell(DOMWrapperWorld&);
+    void destroyWindowShell(DOMWrapperWorld&);
 
-    JSDOMWindowShell* windowShell(DOMWrapperWorld* world)
+    JSDOMWindowShell* windowShell(DOMWrapperWorld& world)
     {
-        ShellMap::iterator iter = m_windowShells.find(world);
+        ShellMap::iterator iter = m_windowShells.find(&world);
         return (iter != m_windowShells.end()) ? iter->value.get() : initScript(world);
     }
-    JSDOMWindowShell* existingWindowShell(DOMWrapperWorld* world) const
+    JSDOMWindowShell* existingWindowShell(DOMWrapperWorld& world) const
     {
-        ShellMap::const_iterator iter = m_windowShells.find(world);
+        ShellMap::const_iterator iter = m_windowShells.find(&world);
         return (iter != m_windowShells.end()) ? iter->value.get() : 0;
     }
-    JSDOMWindow* globalObject(DOMWrapperWorld* world)
+    JSDOMWindow* globalObject(DOMWrapperWorld& world)
     {
         return windowShell(world)->window();
     }
 
-    static void getAllWorlds(Vector<RefPtr<DOMWrapperWorld> >&);
+    static void getAllWorlds(Vector<Ref<DOMWrapperWorld>>&);
 
-    ScriptValue executeScript(const ScriptSourceCode&);
-    ScriptValue executeScript(const String& script, bool forceUserGesture = false);
-    ScriptValue executeScriptInWorld(DOMWrapperWorld*, const String& script, bool forceUserGesture = false);
+    Deprecated::ScriptValue executeScript(const ScriptSourceCode&);
+    Deprecated::ScriptValue executeScript(const String& script, bool forceUserGesture = false);
+    Deprecated::ScriptValue executeScriptInWorld(DOMWrapperWorld&, const String& script, bool forceUserGesture = false);
 
     // Returns true if argument is a JavaScript URL.
-    bool executeIfJavaScriptURL(const KURL&, ShouldReplaceDocumentIfJavaScriptURL shouldReplaceDocumentIfJavaScriptURL = ReplaceDocumentIfJavaScriptURL);
+    bool executeIfJavaScriptURL(const URL&, ShouldReplaceDocumentIfJavaScriptURL shouldReplaceDocumentIfJavaScriptURL = ReplaceDocumentIfJavaScriptURL);
 
     // This function must be called from the main thread. It is safe to call it repeatedly.
     // Darwin is an exception to this rule: it is OK to call this function from any thread, even reentrantly.
     static void initializeThreading();
 
-    ScriptValue evaluate(const ScriptSourceCode&);
-    ScriptValue evaluateInWorld(const ScriptSourceCode&, DOMWrapperWorld*);
+    Deprecated::ScriptValue evaluate(const ScriptSourceCode&);
+    Deprecated::ScriptValue evaluateInWorld(const ScriptSourceCode&, DOMWrapperWorld&);
 
     WTF::TextPosition eventHandlerPosition() const;
 
@@ -141,11 +148,10 @@ public:
     PassRefPtr<JSC::Bindings::RootObject> createRootObject(void* nativeHandle);
 
 #if ENABLE(INSPECTOR)
-    static void setCaptureCallStackForUncaughtExceptions(bool);
-    void collectIsolatedContexts(Vector<std::pair<JSC::ExecState*, SecurityOrigin*> >&);
+    void collectIsolatedContexts(Vector<std::pair<JSC::ExecState*, SecurityOrigin*>>&);
 #endif
 
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
     WebScriptObject* windowScriptObject();
     JSContext *javaScriptContext();
 #endif
@@ -160,12 +166,12 @@ public:
     bool shouldBypassMainWorldContentSecurityPolicy();
 
 private:
-    JSDOMWindowShell* initScript(DOMWrapperWorld* world);
+    JSDOMWindowShell* initScript(DOMWrapperWorld&);
 
     void disconnectPlatformScriptObjects();
 
     ShellMap m_windowShells;
-    Frame* m_frame;
+    Frame& m_frame;
     const String* m_sourceURL;
 
     bool m_paused;
@@ -181,7 +187,7 @@ private:
 #if ENABLE(NETSCAPE_PLUGIN_API)
     NPObject* m_windowScriptNPObject;
 #endif
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
     RetainPtr<WebScriptObject> m_windowScriptObject;
 #endif
 };

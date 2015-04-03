@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -198,6 +198,11 @@ static int CALLBACK EnumFontFacesInFamilyProcW(
 
     fullname = (*env)->NewString(env, lpelfe->elfFullName,
                                  wcslen((LPWSTR)lpelfe->elfFullName));
+    if (fullname == NULL) {
+        (*env)->ExceptionClear(env);
+        return 1;
+    }
+
     fullnameLC = (*env)->CallObjectMethod(env, fullname,
                                           fmi->toLowerCaseMID, fmi->locale);
     (*env)->CallBooleanMethod(env, fmi->list, fmi->addMID, fullname);
@@ -250,6 +255,10 @@ static int CALLBACK EnumFamilyNamesW(
     }
     slen = wcslen(lpelfe->elfLogFont.lfFaceName);
     fmi->family = (*env)->NewString(env,lpelfe->elfLogFont.lfFaceName, slen);
+    if (fmi->family == NULL) {
+        (*env)->ExceptionClear(env);
+        return 1;
+    }
     familyLC = (*env)->CallObjectMethod(env, fmi->family,
                                         fmi->toLowerCaseMID, fmi->locale);
     /* check if already seen this family with a different charset */
@@ -259,7 +268,10 @@ static int CALLBACK EnumFamilyNamesW(
     }
     fmi->list = (*env)->NewObject(env,
                                   fmi->arrayListClass, fmi->arrayListCtr, 4);
-
+    if (fmi->list == NULL) {
+        (*env)->ExceptionClear(env);
+        return 1;
+    }
     (*env)->CallObjectMethod(env, fmi->familyToFontListMap,
                              fmi->putMID, familyLC, fmi->list);
 
@@ -329,6 +341,10 @@ static void registerFontW(GdiFontMapInfo *fmi, jobject fontToFileMap,
     JNIEnv *env = fmi->env;
     int dslen = wcslen(data);
     jstring fileStr = (*env)->NewString(env, data, dslen);
+    if (fileStr == NULL) {
+        (*env)->ExceptionClear(env);
+        return;
+    }
 
     /* TTC or ttc means it may be a collection. Need to parse out
      * multiple font face names separated by " & "
@@ -350,6 +366,10 @@ static void registerFontW(GdiFontMapInfo *fmi, jobject fontToFileMap,
                 ptr1 = ptr2+3;
             }
             fontStr = (*env)->NewString(env, ptr1, wcslen(ptr1));
+            if (fontStr == NULL) {
+                (*env)->ExceptionClear(env);
+                return;
+            }
             fontStr = (*env)->CallObjectMethod(env, fontStr,
                                                fmi->toLowerCaseMID,
                                                fmi->locale);
@@ -364,6 +384,10 @@ static void registerFontW(GdiFontMapInfo *fmi, jobject fontToFileMap,
         }
     } else {
         fontStr = (*env)->NewString(env, name, wcslen(name));
+        if (fontStr == NULL) {
+            (*env)->ExceptionClear(env);
+            return;
+        }
         fontStr = (*env)->CallObjectMethod(env, fontStr,
                                            fmi->toLowerCaseMID, fmi->locale);
         (*env)->CallObjectMethod(env, fontToFileMap, fmi->putMID,
@@ -599,7 +623,7 @@ Java_com_sun_javafx_font_PrismFontFactory_getEUDCFontFile(JNIEnv *env, jclass cl
     WCHAR  tmpPath[MAX_PATH + 1];
     LPWSTR fontPath = fontPathBuf;
     LPWSTR eudcKey = NULL;
-                
+
     LANGID langID = GetSystemDefaultLangID();
 
     //lookup for encoding ID, EUDC only supported in

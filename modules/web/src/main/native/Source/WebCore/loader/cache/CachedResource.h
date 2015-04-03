@@ -67,10 +67,8 @@ public:
         CSSStyleSheet,
         Script,
         FontResource,
-        RawResource
-#if ENABLE(SVG)
-        , SVGDocumentResource
-#endif
+        RawResource,
+        SVGDocumentResource
 #if ENABLE(XSLT)
         , XSLStyleSheet
 #endif
@@ -80,9 +78,6 @@ public:
 #endif
 #if ENABLE(VIDEO_TRACK)
         , TextTrackResource
-#endif
-#if ENABLE(CSS_SHADERS)
-        , ShaderResource
 #endif
     };
 
@@ -101,7 +96,9 @@ public:
 
     virtual void setEncoding(const String&) { }
     virtual String encoding() const { return String(); }
-    virtual void data(PassRefPtr<ResourceBuffer> data, bool allDataReceived);
+    virtual void addDataBuffer(ResourceBuffer*);
+    virtual void addData(const char* data, unsigned length);
+    virtual void finishLoading(ResourceBuffer*);
     virtual void error(CachedResource::Status);
 
     void setResourceError(const ResourceError& error) { m_error = error; }
@@ -110,7 +107,7 @@ public:
     virtual bool shouldIgnoreHTTPStatusCodeErrors() const { return false; }
 
     ResourceRequest& resourceRequest() { return m_resourceRequest; }
-    const KURL& url() const { return m_resourceRequest.url();}
+    const URL& url() const { return m_resourceRequest.url();}
 #if ENABLE(CACHE_PARTITIONING)
     const String& cachePartition() const { return m_resourceRequest.cachePartition(); }
 #endif
@@ -156,7 +153,9 @@ public:
 
     SubresourceLoader* loader() { return m_loader.get(); }
 
-    virtual bool isImage() const { return false; }
+    bool isImage() const { return type() == ImageResource; }
+    // FIXME: CachedRawResource could be either a main resource or a raw XHR resource.
+    bool isMainOrRawResource() const { return type() == MainResource || type() == RawResource; }
     bool ignoreForRequestCount() const
     {
         return type() == MainResource
@@ -185,7 +184,7 @@ public:
     
     bool inLiveDecodedResourcesList() { return m_inLiveDecodedResourcesList; }
     
-    void stopLoading();
+    void clearLoader();
 
     ResourceBuffer* resourceBuffer() const { ASSERT(!m_purgeableData); return m_data.get(); }
 
@@ -204,6 +203,7 @@ public:
     String accept() const { return m_accept; }
     void setAccept(const String& accept) { m_accept = accept; }
 
+    void cancelLoad();
     bool wasCanceled() const { return m_error.isCancellation(); }
     bool errorOccurred() const { return m_status == LoadError || m_status == DecodeError; }
     bool loadFailedOrCanceled() { return !m_error.isNull(); }
@@ -223,7 +223,9 @@ public:
     void unregisterHandle(CachedResourceHandleBase* h);
     
     bool canUseCacheValidator() const;
-    bool mustRevalidateDueToCacheHeaders(CachePolicy) const;
+
+    virtual bool mustRevalidateDueToCacheHeaders(CachePolicy) const;
+
     bool isCacheValidator() const { return m_resourceToRevalidate; }
     CachedResource* resourceToRevalidate() const { return m_resourceToRevalidate; }
     
@@ -246,10 +248,20 @@ public:
     void setLoadFinishTime(double finishTime) { m_loadFinishTime = finishTime; }
     double loadFinishTime() const { return m_loadFinishTime; }
 
+#if ENABLE(DISK_IMAGE_CACHE)
+    bool isUsingDiskImageCache() const;
+    virtual bool canUseDiskImageCache() const { return false; }
+    virtual void useDiskImageCache() { ASSERT(canUseDiskImageCache()); }
+#endif
+
     virtual bool canReuse(const ResourceRequest&) const { return true; }
 
-#if PLATFORM(MAC)
+#if USE(FOUNDATION)
     void tryReplaceEncodedData(PassRefPtr<SharedBuffer>);
+#endif
+
+#if USE(SOUP)
+    virtual char* getOrCreateReadBuffer(size_t /* requestedSize */, size_t& /* actualSize */) { return 0; }
 #endif
 
 protected:
@@ -269,13 +281,13 @@ protected:
         void cancel();
     private:
         CachedResourceCallback(CachedResource*, CachedResourceClient*);
-        void timerFired(Timer<CachedResourceCallback>*);
+        void timerFired(Timer<CachedResourceCallback>&);
 
         CachedResource* m_resource;
         CachedResourceClient* m_client;
         Timer<CachedResourceCallback> m_callbackTimer;
     };
-    HashMap<CachedResourceClient*, OwnPtr<CachedResourceCallback> > m_clientsAwaitingCallback;
+    HashMap<CachedResourceClient*, OwnPtr<CachedResourceCallback>> m_clientsAwaitingCallback;
 
     ResourceRequest m_resourceRequest;
     String m_accept;
@@ -288,11 +300,12 @@ protected:
 
     RefPtr<ResourceBuffer> m_data;
     OwnPtr<PurgeableBuffer> m_purgeableData;
-    Timer<CachedResource> m_decodedDataDeletionTimer;
+    DeferrableOneShotTimer<CachedResource> m_decodedDataDeletionTimer;
 
 private:
     bool addClientToSet(CachedResourceClient*);
-    void decodedDataDeletionTimerFired(Timer<CachedResource>*);
+
+    void decodedDataDeletionTimerFired(DeferrableOneShotTimer<CachedResource>&);
 
     virtual PurgePriority purgePriority() const { return PurgeDefault; }
     virtual bool mayTryReplaceEncodedData() const { return false; }
@@ -354,6 +367,9 @@ private:
     // These handles will need to be updated to point to the m_resourceToRevalidate in case we get 304 response.
     HashSet<CachedResourceHandleBase*> m_handlesToRevalidate;
 };
+
+#define CACHED_RESOURCE_TYPE_CASTS(ToClassName, FromClassName, CachedResourceType) \
+    TYPE_CASTS_BASE(ToClassName, FromClassName, resource, resource->type() == CachedResourceType, resource.type() == CachedResourceType)
 
 }
 

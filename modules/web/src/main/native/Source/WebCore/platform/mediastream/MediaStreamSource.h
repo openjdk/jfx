@@ -1,6 +1,8 @@
 /*
  * Copyright (C) 2011 Ericsson AB. All rights reserved.
  * Copyright (C) 2012 Google Inc. All rights reserved.
+ * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013 Nokia Corporation and/or its subsidiary(-ies).
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,79 +36,91 @@
 
 #if ENABLE(MEDIA_STREAM)
 
-#include "AudioDestinationConsumer.h"
+#include "MediaConstraints.h"
+#include "MediaStreamSourceCapabilities.h"
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
+class AudioBus;
+class MediaConstraints;
+class MediaStreamPrivate;
+class MediaStreamSourceStates;
+
 class MediaStreamSource : public RefCounted<MediaStreamSource> {
 public:
     class Observer {
     public:
         virtual ~Observer() { }
-        virtual void sourceChangedState() = 0;
+        
+        // Source state changes.
+        virtual void sourceReadyStateChanged() = 0;
+        virtual void sourceMutedChanged() = 0;
+        virtual void sourceEnabledChanged() = 0;
+
+        // Observer state queries.
+        virtual bool observerIsEnabled() = 0;
     };
 
-    class ExtraData : public RefCounted<ExtraData> {
-    public:
-        virtual ~ExtraData() { }
-    };
+    virtual ~MediaStreamSource() { }
 
-    enum Type {
-        TypeAudio,
-        TypeVideo
-    };
-
-    enum ReadyState {
-        ReadyStateLive = 0,
-        ReadyStateMuted = 1,
-        ReadyStateEnded = 2
-    };
-
-    static PassRefPtr<MediaStreamSource> create(const String& id, Type, const String& name, ReadyState = ReadyStateLive, bool requiresConsumer = false);
+    bool isAudioStreamSource() const { return type() == Audio; }
+    virtual bool useIDForTrackID() const { return false; }
 
     const String& id() const { return m_id; }
-    Type type() const { return m_type; }
-    const String& name() const { return m_name; }
 
-    void setReadyState(ReadyState);
-    ReadyState readyState() const { return m_readyState; }
+    enum Type { None, Audio, Video };
+    Type type() const { return m_type; }
+
+    virtual const String& name() const { return m_name; }
+    virtual void setName(const String& name) { m_name = name; }
+
+    virtual RefPtr<MediaStreamSourceCapabilities> capabilities() const = 0;
+    virtual const MediaStreamSourceStates& states() = 0;
+    
+    enum ReadyState { New = 0, Live = 1, Ended = 2 };
+    virtual ReadyState readyState() const { return m_readyState; }
+    virtual void setReadyState(ReadyState);
+
+    virtual bool enabled() const { return m_enabled; }
+    virtual void setEnabled(bool);
+
+    virtual bool muted() const { return m_muted; }
+    virtual void setMuted(bool);
+
+    virtual bool readonly() const;
+    virtual void setReadonly(bool readonly) { m_readonly = readonly; }
+
+    virtual bool remote() const { return m_remote; }
+    virtual void setRemote(bool remote) { m_remote = remote; }
 
     void addObserver(Observer*);
     void removeObserver(Observer*);
+    
+    virtual void startProducingData() { }
+    virtual void stopProducingData() { }
 
-    PassRefPtr<ExtraData> extraData() const { return m_extraData; }
-    void setExtraData(PassRefPtr<ExtraData> extraData) { m_extraData = extraData; }
+    void stop();
 
-    const String& deviceId() { return m_deviceId; }
-    void setDeviceId(const String& deviceId) { m_deviceId = deviceId; }
+    void reset();
 
-    void setAudioFormat(size_t numberOfChannels, float sampleRate);
-    void consumeAudio(AudioBus*, size_t numberOfFrames);
-
-    bool requiresAudioConsumer() const { return m_requiresConsumer; }
-    void addAudioConsumer(PassRefPtr<AudioDestinationConsumer>);
-    bool removeAudioConsumer(AudioDestinationConsumer*);
-    const Vector<RefPtr<AudioDestinationConsumer> >& audioConsumers() { return m_audioConsumers; }
+protected:
+    MediaStreamSource(const String& id, Type, const String& name);
 
 private:
-    MediaStreamSource(const String& id, Type, const String& name, ReadyState, bool requiresConsumer);
-
     String m_id;
     Type m_type;
     String m_name;
     ReadyState m_readyState;
-    String m_deviceId;
-    bool m_requiresConsumer;
     Vector<Observer*> m_observers;
-    Mutex m_audioConsumersLock;
-    Vector<RefPtr<AudioDestinationConsumer> > m_audioConsumers;
-    RefPtr<ExtraData> m_extraData;
-};
 
-typedef Vector<RefPtr<MediaStreamSource> > MediaStreamSourceVector;
+    bool m_enabled;
+    bool m_muted;
+    bool m_readonly;
+    bool m_remote;
+};
 
 } // namespace WebCore
 

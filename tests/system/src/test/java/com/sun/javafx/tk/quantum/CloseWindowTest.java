@@ -57,7 +57,8 @@ public class CloseWindowTest {
             t.show();
 
             Thread.currentThread().setUncaughtExceptionHandler((t2, e) -> {
-                System.out.println("e = " + e);
+                System.err.println("Exception caught in thread: " + t2);
+                e.printStackTrace();
                 exception = e;
             });
 

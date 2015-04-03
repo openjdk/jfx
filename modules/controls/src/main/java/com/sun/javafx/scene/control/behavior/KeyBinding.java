@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,7 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import com.sun.javafx.Utils;
+import com.sun.javafx.util.Utils;
 import static com.sun.javafx.scene.control.behavior.OptionalBoolean.ANY;
 import static com.sun.javafx.scene.control.behavior.OptionalBoolean.FALSE;
 import static com.sun.javafx.scene.control.behavior.OptionalBoolean.TRUE;
@@ -145,9 +145,9 @@ public class KeyBinding {
         int s = 0;
         if (code != null && code != event.getCode()) return 0; else s = 1;
         if (!shift.equals(event.isShiftDown())) return 0; else if (shift != ANY) s++;
-        if (!ctrl.equals(event.isControlDown())) return 0; else if (shift != ANY) s++;
-        if (!alt.equals(event.isAltDown())) return 0; else if (shift != ANY) s++;
-        if (!meta.equals(event.isMetaDown())) return 0; else if (shift != ANY) s++;
+        if (!ctrl.equals(event.isControlDown())) return 0; else if (ctrl != ANY) s++;
+        if (!alt.equals(event.isAltDown())) return 0; else if (alt != ANY) s++;
+        if (!meta.equals(event.isMetaDown())) return 0; else if (meta != ANY) s++;
         if (eventType != null && eventType != event.getEventType()) return 0; else s++;
         // We can now trivially accept it
         return s;

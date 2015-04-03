@@ -23,12 +23,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-    // Introduced in DOM Level 2:
+// Introduced in DOM Level 2:
 [
-    IndexedGetter,
-    ImplementationLacksVTable
+    ImplementationLacksVTable,
 ] interface CSSValueList : CSSValue {
-        readonly attribute unsigned long    length;
-    CSSValue           item([Default=Undefined] optional unsigned long index);
-    };
+    readonly attribute unsigned long    length;
+    getter CSSValue           item([Default=Undefined] optional unsigned long index);
+};
 

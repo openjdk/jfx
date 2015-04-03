@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -55,6 +55,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import javafx.scene.control.ColorPicker;
+import javafx.scene.control.TextField;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.value.WritableValue;
 import javafx.css.Styleable;
@@ -658,4 +659,14 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
         return getClassCssMetaData();
     }
 
+    @Override protected javafx.util.StringConverter<Color> getConverter() {
+        return null;
+    }
+
+    /**
+     * ColorPicker does not use a main text field.
+     */
+    @Override protected TextField getEditor() {
+        return null;
+    }
 }

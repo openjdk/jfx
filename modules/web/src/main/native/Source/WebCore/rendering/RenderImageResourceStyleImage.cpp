@@ -29,27 +29,26 @@
 #include "RenderImageResourceStyleImage.h"
 
 #include "CachedImage.h"
-#include "RenderObject.h"
+#include "RenderElement.h"
 #include "StyleCachedImage.h"
 
 namespace WebCore {
 
-RenderImageResourceStyleImage::RenderImageResourceStyleImage(StyleImage* styleImage)
+RenderImageResourceStyleImage::RenderImageResourceStyleImage(StyleImage& styleImage)
     : m_styleImage(styleImage)
 {
-    ASSERT(m_styleImage);
 }
 
 RenderImageResourceStyleImage::~RenderImageResourceStyleImage()
 {
 }
 
-void RenderImageResourceStyleImage::initialize(RenderObject* renderer)
+void RenderImageResourceStyleImage::initialize(RenderElement* renderer)
 {
     RenderImageResource::initialize(renderer);
 
     if (m_styleImage->isCachedImage())
-        m_cachedImage = static_cast<StyleCachedImage*>(m_styleImage.get())->cachedImage();
+        m_cachedImage = m_styleImage.get().cachedImage();
 
     m_styleImage->addClient(m_renderer);
 }
@@ -72,7 +71,7 @@ PassRefPtr<Image> RenderImageResourceStyleImage::image(int width, int height) co
 void RenderImageResourceStyleImage::setContainerSizeForRenderer(const IntSize& size)
 {
     ASSERT(m_renderer);
-    m_styleImage->setContainerSizeForRenderer(m_renderer, size, m_renderer->style()->effectiveZoom());
+    m_styleImage->setContainerSizeForRenderer(m_renderer, size, m_renderer->style().effectiveZoom());
 }
 
 } // namespace WebCore

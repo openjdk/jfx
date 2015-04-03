@@ -26,121 +26,154 @@
 #include "config.h"
 #include "ContainerNodeAlgorithms.h"
 
-#include "Element.h"
-#include "ElementShadow.h"
-#include "HTMLFrameOwnerElement.h"
 
 namespace WebCore {
 
-void ChildNodeInsertionNotifier::notifyDescendantInsertedIntoDocument(ContainerNode* node)
+void ChildNodeInsertionNotifier::notifyDescendantInsertedIntoDocument(ContainerNode& node)
 {
     ChildNodesLazySnapshot snapshot(node);
     while (RefPtr<Node> child = snapshot.nextNode()) {
         // If we have been removed from the document during this loop, then
         // we don't want to tell the rest of our children that they've been
         // inserted into the document because they haven't.
-        if (node->inDocument() && child->parentNode() == node)
-            notifyNodeInsertedIntoDocument(child.get());
+        if (node.inDocument() && child->parentNode() == &node)
+            notifyNodeInsertedIntoDocument(*child.get());
     }
-        
-    if (!node->isElementNode())
+
+    if (!node.isElementNode())
         return;
 
-    if (ElementShadow* shadow = toElement(node)->shadow()) {
-        if (RefPtr<ShadowRoot> root = shadow->shadowRoot()) {
-            if (node->inDocument() && root->host() == node)
-                notifyNodeInsertedIntoDocument(root.get());
-        }
+    if (RefPtr<ShadowRoot> root = toElement(node).shadowRoot()) {
+        if (node.inDocument() && root->hostElement() == &node)
+            notifyNodeInsertedIntoDocument(*root.get());
     }
 }
 
-void ChildNodeInsertionNotifier::notifyDescendantInsertedIntoTree(ContainerNode* node)
+void ChildNodeInsertionNotifier::notifyDescendantInsertedIntoTree(ContainerNode& node)
 {
-    for (Node* child = node->firstChild(); child; child = child->nextSibling()) {
+    for (Node* child = node.firstChild(); child; child = child->nextSibling()) {
         if (child->isContainerNode())
-            notifyNodeInsertedIntoTree(toContainerNode(child));
+            notifyNodeInsertedIntoTree(*toContainerNode(child));
     }
 
-    if (ShadowRoot* root = node->shadowRoot())
-        notifyNodeInsertedIntoTree(root);
+    if (ShadowRoot* root = node.shadowRoot())
+        notifyNodeInsertedIntoTree(*root);
 }
 
-void ChildNodeRemovalNotifier::notifyDescendantRemovedFromDocument(ContainerNode* node)
+void ChildNodeRemovalNotifier::notifyDescendantRemovedFromDocument(ContainerNode& node)
 {
     ChildNodesLazySnapshot snapshot(node);
     while (RefPtr<Node> child = snapshot.nextNode()) {
         // If we have been added to the document during this loop, then we
         // don't want to tell the rest of our children that they've been
         // removed from the document because they haven't.
-        if (!node->inDocument() && child->parentNode() == node)
-            notifyNodeRemovedFromDocument(child.get());
+        if (!node.inDocument() && child->parentNode() == &node)
+            notifyNodeRemovedFromDocument(*child.get());
     }
 
-    if (!node->isElementNode())
+    if (!node.isElementNode())
         return;
 
-    if (node->document()->cssTarget() == node)
-        node->document()->setCSSTarget(0);
+    if (node.document().cssTarget() == &node)
+        node.document().setCSSTarget(0);
 
-    if (ElementShadow* shadow = toElement(node)->shadow()) {
-        if (RefPtr<ShadowRoot> root = shadow->shadowRoot()) {
-            if (!node->inDocument() && root->host() == node)
-                notifyNodeRemovedFromDocument(root.get());
-        }
+    if (RefPtr<ShadowRoot> root = toElement(node).shadowRoot()) {
+        if (!node.inDocument() && root->hostElement() == &node)
+            notifyNodeRemovedFromDocument(*root.get());
     }
 }
 
-void ChildNodeRemovalNotifier::notifyDescendantRemovedFromTree(ContainerNode* node)
+void ChildNodeRemovalNotifier::notifyDescendantRemovedFromTree(ContainerNode& node)
 {
-    for (Node* child = node->firstChild(); child; child = child->nextSibling()) {
+    for (Node* child = node.firstChild(); child; child = child->nextSibling()) {
         if (child->isContainerNode())
-            notifyNodeRemovedFromTree(toContainerNode(child));
+            notifyNodeRemovedFromTree(*toContainerNode(child));
     }
 
-    if (!node->isElementNode())
+    if (!node.isElementNode())
         return;
 
-    if (ElementShadow* shadow = toElement(node)->shadow()) {
-        if (RefPtr<ShadowRoot> root = shadow->shadowRoot())
-            notifyNodeRemovedFromTree(root.get());
-    }
-}
-
-void ChildFrameDisconnector::collectFrameOwners(ElementShadow* shadow)
-{
-    if (ShadowRoot* root = shadow->shadowRoot())
-        collectFrameOwners(root);
+    if (RefPtr<ShadowRoot> root = toElement(node).shadowRoot())
+        notifyNodeRemovedFromTree(*root.get());
 }
 
 #ifndef NDEBUG
-unsigned assertConnectedSubrameCountIsConsistent(Node* node)
+static unsigned assertConnectedSubrameCountIsConsistent(ContainerNode& node)
 {
     unsigned count = 0;
 
-    if (node->isElementNode()) {
-        if (node->isFrameOwnerElement() && toFrameOwnerElement(node)->contentFrame())
+    if (node.isElementNode()) {
+        if (node.isFrameOwnerElement() && toHTMLFrameOwnerElement(node).contentFrame())
             count++;
 
-        if (ElementShadow* shadow = toElement(node)->shadow()) {
-            if (ShadowRoot* root = shadow->shadowRoot())
-                count += assertConnectedSubrameCountIsConsistent(root);
-        }
-}
+        if (ShadowRoot* root = toElement(node).shadowRoot())
+            count += assertConnectedSubrameCountIsConsistent(*root);
+    }
 
-    for (Node* child = node->firstChild(); child; child = child->nextSibling())
+    for (auto& child : childrenOfType<Element>(node))
         count += assertConnectedSubrameCountIsConsistent(child);
 
     // If we undercount there's possibly a security bug since we'd leave frames
     // in subtrees outside the document.
-    ASSERT(node->connectedSubframeCount() >= count);
+    ASSERT(node.connectedSubframeCount() >= count);
 
     // If we overcount it's safe, but not optimal because it means we'll traverse
-    // through the document in ChildFrameDisconnector looking for frames that have
+    // through the document in disconnectSubframes looking for frames that have
     // already been disconnected.
-    ASSERT(node->connectedSubframeCount() == count);
+    ASSERT(node.connectedSubframeCount() == count);
 
     return count;
 }
 #endif
+
+static void collectFrameOwners(Vector<Ref<HTMLFrameOwnerElement>>& frameOwners, ContainerNode& root)
+{
+    auto elementDescendants = descendantsOfType<Element>(root);
+    auto it = elementDescendants.begin();
+    auto end = elementDescendants.end();
+    while (it != end) {
+        Element& element = *it;
+        if (!element.connectedSubframeCount()) {
+            it.traverseNextSkippingChildren();
+            continue;
+        }
+
+        if (element.isHTMLElement() && element.isFrameOwnerElement())
+            frameOwners.append(toHTMLFrameOwnerElement(element));
+
+        if (ShadowRoot* shadowRoot = element.shadowRoot())
+            collectFrameOwners(frameOwners, *shadowRoot);
+        ++it;
+    }
+}
+
+void disconnectSubframes(ContainerNode& root, SubframeDisconnectPolicy policy)
+{
+#ifndef NDEBUG
+    assertConnectedSubrameCountIsConsistent(root);
+#endif
+    ASSERT(root.connectedSubframeCount());
+
+    Vector<Ref<HTMLFrameOwnerElement>> frameOwners;
+
+    if (policy == RootAndDescendants) {
+        if (root.isHTMLElement() && root.isFrameOwnerElement())
+            frameOwners.append(toHTMLFrameOwnerElement(root));
+    }
+
+    collectFrameOwners(frameOwners, root);
+
+    // Must disable frame loading in the subtree so an unload handler cannot
+    // insert more frames and create loaded frames in detached subtrees.
+    SubframeLoadingDisabler disabler(root);
+
+    for (unsigned i = 0; i < frameOwners.size(); ++i) {
+        auto& owner = frameOwners[i].get();
+        // Don't need to traverse up the tree for the first owner since no
+        // script could have moved it.
+        if (!i || root.containsIncludingShadowDOM(&owner))
+            owner.disconnectContentFrame();
+    }
+}
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,6 +54,7 @@ public class Preferences extends DataType {
     private Boolean shortcutRequested = null;
     private Boolean menuRequested = null;
     private Boolean systemWide = null;
+    private Boolean installdirChooserRequested = null;
 
     Boolean getSystemInstall() {
         return systemWide;
@@ -95,6 +96,16 @@ public class Preferences extends DataType {
         menuRequested = b;
     }
 
+    /**
+     * If true then installer adds a dialog to let the user choose a directory
+     * where the product will be installed.
+     * 
+     * @ant.not-required    Default is null.
+     */
+    public void setInstalldirChooser(Boolean b) {
+        installdirChooserRequested = b;
+    }
+
     private Preferences get() {
         if (isReference()) {
             return (Preferences) getRefid().getReferencedObject();
@@ -112,5 +123,9 @@ public class Preferences extends DataType {
 
     boolean getInstall() {
         return get().installRequested;
+    }
+    
+    Boolean getInstalldirChooser() {
+        return get().installdirChooserRequested;
     }
 }

@@ -29,32 +29,36 @@
 
 #if ENABLE(MATHML)
 
+#include "MathMLInlineContainerElement.h"
 #include "RenderMathMLBlock.h"
 
 namespace WebCore {
 
-class RenderMathMLFraction : public RenderMathMLBlock {
+class RenderMathMLFraction final : public RenderMathMLBlock {
 public:
-    RenderMathMLFraction(Element*);
-    virtual void addChild(RenderObject* child, RenderObject* beforeChild = 0);
-    virtual void updateFromElement();
-    
-    virtual RenderMathMLOperator* unembellishedOperator();
-    
-    virtual int firstLineBoxBaseline() const OVERRIDE;
-    virtual void paint(PaintInfo&, const LayoutPoint&);
-protected:
-    virtual void layout();
-    
-private:
-    virtual bool isRenderMathMLFraction() const { return true; }
-    void fixChildStyle(RenderObject* child);
-    virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) OVERRIDE;
+    RenderMathMLFraction(MathMLInlineContainerElement&, PassRef<RenderStyle>);
 
-    virtual const char* renderName() const { return "RenderMathMLFraction"; }
+    MathMLInlineContainerElement& element() { return static_cast<MathMLInlineContainerElement&>(nodeForNonAnonymous()); }
+    float lineThickness() const { return m_lineThickness; }
+
+private:
+    virtual bool isRenderMathMLFraction() const override { return true; }
+    virtual const char* renderName() const override { return "RenderMathMLFraction"; }
+
+    virtual void addChild(RenderObject* child, RenderObject* beforeChild) override;
+    virtual void updateFromElement() override;
+    virtual int firstLineBaseline() const override;
+    virtual void paint(PaintInfo&, const LayoutPoint&) override;
+    virtual RenderMathMLOperator* unembellishedOperator() override;
+    virtual void layout() override;
+    virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
+
+    void fixChildStyle(RenderObject*);
     
-    float m_lineThickness;
+    LayoutUnit m_lineThickness;
 };
+
+RENDER_OBJECT_TYPE_CASTS(RenderMathMLFraction, isRenderMathMLFraction())
 
 }
 

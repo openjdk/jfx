@@ -62,20 +62,20 @@ public:
         ASSERT(character);
         m_data.append(character);
     }
-    
+
     Type::Type type() const { return m_type; }
 
     const DataVector& name() const
     {
         return m_data;
     }
-    
+
     const DataVector& characters() const
     {
         ASSERT(m_type == Type::Character || m_type == Type::TimestampTag);
         return m_data;
     }
-    
+
     // Starting a character token works slightly differently than starting
     // other types of tokens because we want to save a per-character branch.
     void ensureIsCharacterToken()
@@ -175,7 +175,7 @@ public:
     {
         return m_annotation;
     }
-    
+
     void makeEndOfFile()
     {
         ASSERT(m_type == Type::Uninitialized);

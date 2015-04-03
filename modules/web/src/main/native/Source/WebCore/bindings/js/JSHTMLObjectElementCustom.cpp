@@ -24,7 +24,7 @@
  */
 
 #include "config.h"
-#include "JSHTMLObjectElementCustom.h"
+#include "JSHTMLObjectElement.h"
 
 #include "HTMLObjectElement.h"
 #include "JSPluginElementFunctions.h"
@@ -38,19 +38,14 @@ bool JSHTMLObjectElement::getOwnPropertySlotDelegate(ExecState* exec, PropertyNa
     return pluginElementCustomGetOwnPropertySlot<JSHTMLObjectElement, Base>(exec, propertyName, slot, this);
 }
 
-bool JSHTMLObjectElement::getOwnPropertyDescriptorDelegate(ExecState* exec, PropertyName propertyName, PropertyDescriptor& descriptor)
-{
-    return pluginElementCustomGetOwnPropertyDescriptor<JSHTMLObjectElement, Base>(exec, propertyName, descriptor, this);
-}
-
 bool JSHTMLObjectElement::putDelegate(ExecState* exec, PropertyName propertyName, JSValue value, PutPropertySlot& slot)
 {
-    return runtimeObjectCustomPut(exec, propertyName, value, this, slot);
+    return pluginElementCustomPut(exec, propertyName, value, this, slot);
 }
 
 CallType JSHTMLObjectElement::getCallData(JSCell* cell, CallData& callData)
 {
-    return runtimeObjectGetCallData(jsCast<JSHTMLObjectElement*>(cell), callData);
+    return pluginElementGetCallData(jsCast<JSHTMLObjectElement*>(cell), callData);
 }
 
 } // namespace WebCore

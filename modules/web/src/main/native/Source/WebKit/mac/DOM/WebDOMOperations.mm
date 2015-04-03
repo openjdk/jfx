@@ -47,6 +47,7 @@
 #import <WebCore/JSElement.h>
 #import <WebCore/LegacyWebArchive.h>
 #import <WebCore/markup.h>
+#import <WebCore/RenderElement.h>
 #import <WebCore/RenderTreeAsText.h>
 #import <WebCore/ShadowRoot.h>
 #import <WebKit/DOMExtensions.h>
@@ -75,34 +76,6 @@ using namespace JSC;
 
 @end
 
-class WebFrameFilter : public WebCore::FrameFilter {
-public:
-    WebFrameFilter(WebArchiveSubframeFilter filterBlock);
-    ~WebFrameFilter();
-private:
-    virtual bool shouldIncludeSubframe(Frame*) const OVERRIDE;
-
-    WebArchiveSubframeFilter m_filterBlock;
-};
-
-WebFrameFilter::WebFrameFilter(WebArchiveSubframeFilter filterBlock)
-    : m_filterBlock(Block_copy(filterBlock))
-{
-}
-
-WebFrameFilter::~WebFrameFilter()
-{
-    Block_release(m_filterBlock);
-}
-
-bool WebFrameFilter::shouldIncludeSubframe(Frame* frame) const
-{
-    if (!m_filterBlock)
-        return true;
-        
-    return m_filterBlock(kit(frame));
-}
-
 @implementation DOMNode (WebDOMNodeOperations)
 
 - (WebArchive *)webArchive
@@ -112,9 +85,48 @@ bool WebFrameFilter::shouldIncludeSubframe(Frame* frame) const
 
 - (WebArchive *)webArchiveByFilteringSubframes:(WebArchiveSubframeFilter)webArchiveSubframeFilter
 {
-    WebFrameFilter filter(webArchiveSubframeFilter);
-    return [[[WebArchive alloc] _initWithCoreLegacyWebArchive:LegacyWebArchive::create(core(self), &filter)] autorelease];
+    WebArchive *webArchive = [[WebArchive alloc] _initWithCoreLegacyWebArchive:LegacyWebArchive::create(core(self), [webArchiveSubframeFilter](Frame& subframe) -> bool {
+        return webArchiveSubframeFilter(kit(&subframe));
+    })];
+
+    return [webArchive autorelease];
 }
+
+#if PLATFORM(IOS)
+- (BOOL)isHorizontalWritingMode
+{
+    Node* node = core(self);
+    if (!node)
+        return YES;
+    
+    RenderObject* renderer = node->renderer();
+    if (!renderer)
+        return YES;
+    
+    return renderer->style().isHorizontalWritingMode();
+}
+
+- (void)hidePlaceholder
+{
+    if (![self isKindOfClass:[DOMHTMLInputElement class]]
+        && ![self isKindOfClass:[DOMHTMLTextAreaElement class]])
+        return;
+    
+    Node *node = core(self);
+    HTMLTextFormControlElement *formControl = static_cast<HTMLTextFormControlElement *>(node);
+    formControl->hidePlaceholder();
+}
+
+- (void)showPlaceholderIfNecessary
+{
+    if (![self isKindOfClass:[DOMHTMLInputElement class]]
+        && ![self isKindOfClass:[DOMHTMLTextAreaElement class]])
+        return;
+    
+    HTMLTextFormControlElement *formControl = static_cast<HTMLTextFormControlElement *>(core(self));
+    formControl->showPlaceholderIfNecessary();
+}
+#endif
 
 @end
 
@@ -122,32 +134,12 @@ bool WebFrameFilter::shouldIncludeSubframe(Frame* frame) const
 
 - (NSString *)markupString
 {
-    return createFullMarkup(core(self));
+    return createFullMarkup(*core(self));
 }
 
 - (NSRect)_renderRect:(bool *)isReplaced
 {
     return NSRect(core(self)->pixelSnappedRenderRect(isReplaced));
-}
-
-@end
-
-/* This doesn't appear to be used by anyone.  We should consider removing this. */
-@implementation DOMNode (WebDOMNodeOperationsInternal)
-
-- (NSArray *)_subresourceURLs
-{
-    ListHashSet<KURL> urls;
-    core(self)->getSubresourceURLs(urls);
-    if (!urls.size())
-        return nil;
-
-    NSMutableArray *array = [NSMutableArray arrayWithCapacity:urls.size()];
-    ListHashSet<KURL>::iterator end = urls.end();
-    for (ListHashSet<KURL>::iterator it = urls.begin(); it != end; ++it)
-        [array addObject:(NSURL *)*it];
-
-    return array;
 }
 
 @end
@@ -192,7 +184,7 @@ bool WebFrameFilter::shouldIncludeSubframe(Frame* frame) const
 
 - (NSString *)markupString
 {
-    return createFullMarkup(core(self));
+    return createFullMarkup(*core(self));
 }
 
 @end
@@ -219,7 +211,7 @@ bool WebFrameFilter::shouldIncludeSubframe(Frame* frame) const
 
 - (void)_setAutofilled:(BOOL)autofilled
 {
-    static_cast<HTMLInputElement*>(core((DOMElement *)self))->setAutofilled(autofilled);
+    toHTMLInputElement(core((DOMElement *)self))->setAutofilled(autofilled);
 }
 
 @end

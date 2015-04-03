@@ -42,25 +42,27 @@ public:
 private:
     AccessibilityMenuListOption();
 
-    virtual bool isMenuListOption() const { return true; }
+    virtual bool isMenuListOption() const override { return true; }
 
-    virtual AccessibilityRole roleValue() const { return MenuListOptionRole; }
-    virtual bool canHaveChildren() const { return false; }
+    virtual AccessibilityRole roleValue() const override { return MenuListOptionRole; }
+    virtual bool canHaveChildren() const override { return false; }
 
-    virtual Element* actionElement() const;
-    virtual bool isEnabled() const;
-    virtual bool isVisible() const;
-    virtual bool isOffScreen() const;
-    virtual bool isSelected() const;
-    virtual String nameForMSAA() const;
-    virtual void setSelected(bool);
-    virtual bool canSetSelectedAttribute() const;
-    virtual LayoutRect elementRect() const;
-    virtual String stringValue() const;
-    virtual bool computeAccessibilityIsIgnored() const;
+    virtual Element* actionElement() const override;
+    virtual bool isEnabled() const override;
+    virtual bool isVisible() const override;
+    virtual bool isOffScreen() const override;
+    virtual bool isSelected() const override;
+    virtual String nameForMSAA() const override;
+    virtual void setSelected(bool) override;
+    virtual bool canSetSelectedAttribute() const override;
+    virtual LayoutRect elementRect() const override;
+    virtual String stringValue() const override;
+    virtual bool computeAccessibilityIsIgnored() const override;
 
     RefPtr<HTMLElement> m_element;
 };
+
+ACCESSIBILITY_OBJECT_TYPE_CASTS(AccessibilityMenuListOption, isMenuListOption())
 
 } // namespace WebCore
 

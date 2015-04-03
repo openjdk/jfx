@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,21 +26,29 @@
 #include "config.h"
 #include "LLIntThunks.h"
 
-#if ENABLE(LLINT)
-
+#include "CallData.h"
+#include "ExceptionHelpers.h"
+#include "Interpreter.h"
+#include "JSCJSValueInlines.h"
 #include "JSInterfaceJIT.h"
 #include "JSObject.h"
+#include "JSStackInlines.h"
+#include "LLIntCLoop.h"
 #include "LinkBuffer.h"
 #include "LowLevelInterpreter.h"
+#include "ProtoCallFrame.h"
+#include "VM.h"
 
+namespace JSC {
 
-namespace JSC { namespace LLInt {
+#if ENABLE(JIT)
+#if ENABLE(LLINT)
 
-#if !ENABLE(LLINT_C_LOOP)
+namespace LLInt {
 
 static MacroAssemblerCodeRef generateThunkWithJumpTo(VM* vm, void (*target)(), const char *thunkKind)
 {
-    JSInterfaceJIT jit;
+    JSInterfaceJIT jit(vm);
     
     // FIXME: there's probably a better way to do it on X86, but I'm not sure I care.
     jit.move(JSInterfaceJIT::TrustedImmPtr(bitwise_cast<void*>(target)), JSInterfaceJIT::regT0);
@@ -80,8 +88,25 @@ MacroAssemblerCodeRef programEntryThunkGenerator(VM* vm)
     return generateThunkWithJumpTo(vm, llint_program_prologue, "program");
 }
 
-#endif // !ENABLE(LLINT_C_LOOP)
-
-} } // namespace JSC::LLInt
+} // namespace LLInt
 
 #endif // ENABLE(LLINT)
+#else // ENABLE(JIT)
+
+// Non-JIT (i.e. C Loop LLINT) case:
+
+EncodedJSValue callToJavaScript(void* executableAddress, VM* vm, ProtoCallFrame* protoCallFrame)
+{
+    JSValue result = CLoop::execute(llint_call_to_javascript, executableAddress, vm, protoCallFrame);
+    return JSValue::encode(result);
+}
+
+EncodedJSValue callToNativeFunction(void* executableAddress, VM* vm, ProtoCallFrame* protoCallFrame)
+{
+    JSValue result = CLoop::execute(llint_call_to_native_function, executableAddress, vm, protoCallFrame);
+    return JSValue::encode(result);
+}
+
+#endif // ENABLE(JIT)
+
+} // namespace JSC

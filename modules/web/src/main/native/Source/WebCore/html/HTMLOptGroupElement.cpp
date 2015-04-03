@@ -30,7 +30,6 @@
 #include "HTMLSelectElement.h"
 #include "RenderMenuList.h"
 #include "NodeRenderStyle.h"
-#include "NodeRenderingContext.h"
 #include "StyleResolver.h"
 #include <wtf/StdLibExtras.h>
 
@@ -38,14 +37,14 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-inline HTMLOptGroupElement::HTMLOptGroupElement(const QualifiedName& tagName, Document* document)
+inline HTMLOptGroupElement::HTMLOptGroupElement(const QualifiedName& tagName, Document& document)
     : HTMLElement(tagName, document)
 {
     ASSERT(hasTagName(optgroupTag));
-    setHasCustomStyleCallbacks();
+    setHasCustomStyleResolveCallbacks();
 }
 
-PassRefPtr<HTMLOptGroupElement> HTMLOptGroupElement::create(const QualifiedName& tagName, Document* document)
+PassRefPtr<HTMLOptGroupElement> HTMLOptGroupElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(new HTMLOptGroupElement(tagName, document));
 }
@@ -53,11 +52,6 @@ PassRefPtr<HTMLOptGroupElement> HTMLOptGroupElement::create(const QualifiedName&
 bool HTMLOptGroupElement::isDisabledFormControl() const
 {
     return fastHasAttribute(disabledAttr);
-}
-
-bool HTMLOptGroupElement::supportsFocus() const
-{
-    return HTMLElement::supportsFocus();
 }
 
 bool HTMLOptGroupElement::isFocusable() const
@@ -72,10 +66,10 @@ const AtomicString& HTMLOptGroupElement::formControlType() const
     return optgroup;
 }
 
-void HTMLOptGroupElement::childrenChanged(bool changedByParser, Node* beforeChange, Node* afterChange, int childCountDelta)
+void HTMLOptGroupElement::childrenChanged(const ChildChange& change)
 {
     recalcSelectOptions();
-    HTMLElement::childrenChanged(changedByParser, beforeChange, afterChange, childCountDelta);
+    HTMLElement::childrenChanged(change);
 }
 
 void HTMLOptGroupElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
@@ -96,9 +90,8 @@ void HTMLOptGroupElement::recalcSelectOptions()
         toHTMLSelectElement(select)->setRecalcListItems();
 }
 
-void HTMLOptGroupElement::attach()
+void HTMLOptGroupElement::didAttachRenderers()
 {
-    HTMLElement::attach();
     // If after attaching nothing called styleForRenderer() on this node we
     // manually cache the value. This happens if our parent doesn't have a
     // renderer like <optgroup> or if it doesn't allow children like <select>.
@@ -106,20 +99,19 @@ void HTMLOptGroupElement::attach()
         updateNonRenderStyle();
 }
 
-void HTMLOptGroupElement::detach()
+void HTMLOptGroupElement::willDetachRenderers()
 {
     m_style.clear();
-    HTMLElement::detach();
 }
 
 void HTMLOptGroupElement::updateNonRenderStyle()
 {
-    m_style = document()->ensureStyleResolver()->styleForElement(this);
+    m_style = document().ensureStyleResolver().styleForElement(this);
 }
-    
+
 RenderStyle* HTMLOptGroupElement::nonRendererStyle() const
-{ 
-    return m_style.get(); 
+{
+    return m_style.get();
 }
 
 PassRefPtr<RenderStyle> HTMLOptGroupElement::customStyleForRenderer()
@@ -132,7 +124,7 @@ PassRefPtr<RenderStyle> HTMLOptGroupElement::customStyleForRenderer()
 
 String HTMLOptGroupElement::groupLabelText() const
 {
-    String itemText = document()->displayStringModifiedByEncoding(getAttribute(labelAttr));
+    String itemText = document().displayStringModifiedByEncoding(getAttribute(labelAttr));
     
     // In WinIE, leading and trailing whitespace is ignored in options and optgroups. We match this behavior.
     itemText = itemText.stripWhiteSpace();

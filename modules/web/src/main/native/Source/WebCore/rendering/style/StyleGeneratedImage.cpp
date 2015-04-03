@@ -25,13 +25,13 @@
 #include "StyleGeneratedImage.h"
 
 #include "CSSImageGeneratorValue.h"
-#include "RenderObject.h"
+#include "RenderElement.h"
 #include "StyleResolver.h"
 
 namespace WebCore {
     
-StyleGeneratedImage::StyleGeneratedImage(PassRefPtr<CSSImageGeneratorValue> value)
-    : m_imageGeneratorValue(value)  
+StyleGeneratedImage::StyleGeneratedImage(PassRef<CSSImageGeneratorValue> value)
+    : m_imageGeneratorValue(std::move(value))
     , m_fixedSize(m_imageGeneratorValue->isFixedSize())
 {
     m_isGeneratedImage = true;
@@ -39,13 +39,13 @@ StyleGeneratedImage::StyleGeneratedImage(PassRefPtr<CSSImageGeneratorValue> valu
 
 PassRefPtr<CSSValue> StyleGeneratedImage::cssValue() const
 {
-    return m_imageGeneratorValue;
+    return &const_cast<CSSImageGeneratorValue&>(m_imageGeneratorValue.get());
 }
 
-LayoutSize StyleGeneratedImage::imageSize(const RenderObject* renderer, float multiplier) const
+LayoutSize StyleGeneratedImage::imageSize(const RenderElement* renderer, float multiplier) const
 {
     if (m_fixedSize) {
-        IntSize fixedSize = m_imageGeneratorValue->fixedSize(renderer);
+        IntSize fixedSize = const_cast<CSSImageGeneratorValue&>(m_imageGeneratorValue.get()).fixedSize(renderer);
         if (multiplier == 1.0f)
             return fixedSize;
 
@@ -54,10 +54,10 @@ LayoutSize StyleGeneratedImage::imageSize(const RenderObject* renderer, float mu
 
         // Don't let images that have a width/height >= 1 shrink below 1 when zoomed.
         if (fixedSize.width() > 0)
-            width = max<LayoutUnit>(1, width);
+            width = std::max<LayoutUnit>(1, width);
 
         if (fixedSize.height() > 0)
-            height = max<LayoutUnit>(1, height);
+            height = std::max<LayoutUnit>(1, height);
 
         return LayoutSize(width, height);
     }
@@ -65,7 +65,7 @@ LayoutSize StyleGeneratedImage::imageSize(const RenderObject* renderer, float mu
     return m_containerSize;
 }
 
-void StyleGeneratedImage::computeIntrinsicDimensions(const RenderObject* renderer, Length& intrinsicWidth, Length& intrinsicHeight, FloatSize& intrinsicRatio)
+void StyleGeneratedImage::computeIntrinsicDimensions(const RenderElement* renderer, Length& intrinsicWidth, Length& intrinsicHeight, FloatSize& intrinsicRatio)
 {
     // At a zoom level of 1 the image is guaranteed to have an integer size.
     IntSize size = flooredIntSize(imageSize(renderer, 1));
@@ -74,22 +74,22 @@ void StyleGeneratedImage::computeIntrinsicDimensions(const RenderObject* rendere
     intrinsicRatio = size;
 }
 
-void StyleGeneratedImage::addClient(RenderObject* renderer)
+void StyleGeneratedImage::addClient(RenderElement* renderer)
 {
     m_imageGeneratorValue->addClient(renderer);
 }
 
-void StyleGeneratedImage::removeClient(RenderObject* renderer)
+void StyleGeneratedImage::removeClient(RenderElement* renderer)
 {
     m_imageGeneratorValue->removeClient(renderer);
 }
 
-PassRefPtr<Image> StyleGeneratedImage::image(RenderObject* renderer, const IntSize& size) const
+PassRefPtr<Image> StyleGeneratedImage::image(RenderElement* renderer, const IntSize& size) const
 {
-    return m_imageGeneratorValue->image(renderer, size);
+    return const_cast<CSSImageGeneratorValue&>(m_imageGeneratorValue.get()).image(renderer, size);
 }
 
-bool StyleGeneratedImage::knownToBeOpaque(const RenderObject* renderer) const
+bool StyleGeneratedImage::knownToBeOpaque(const RenderElement* renderer) const
 {
     return m_imageGeneratorValue->knownToBeOpaque(renderer);
 }

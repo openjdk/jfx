@@ -33,20 +33,35 @@ namespace WebCore {
 StyleGridData::StyleGridData()
     : m_gridColumns(RenderStyle::initialGridColumns())
     , m_gridRows(RenderStyle::initialGridRows())
+    , m_namedGridColumnLines(RenderStyle::initialNamedGridColumnLines())
+    , m_namedGridRowLines(RenderStyle::initialNamedGridRowLines())
     , m_gridAutoFlow(RenderStyle::initialGridAutoFlow())
     , m_gridAutoRows(RenderStyle::initialGridAutoRows())
     , m_gridAutoColumns(RenderStyle::initialGridAutoColumns())
+    , m_namedGridArea(RenderStyle::initialNamedGridArea())
+    , m_namedGridAreaRowCount(RenderStyle::initialNamedGridAreaCount())
+    , m_namedGridAreaColumnCount(RenderStyle::initialNamedGridAreaCount())
 {
 }
 
-StyleGridData::StyleGridData(const StyleGridData& o)
+inline StyleGridData::StyleGridData(const StyleGridData& o)
     : RefCounted<StyleGridData>()
     , m_gridColumns(o.m_gridColumns)
     , m_gridRows(o.m_gridRows)
+    , m_namedGridColumnLines(o.m_namedGridColumnLines)
+    , m_namedGridRowLines(o.m_namedGridRowLines)
     , m_gridAutoFlow(o.m_gridAutoFlow)
     , m_gridAutoRows(o.m_gridAutoRows)
     , m_gridAutoColumns(o.m_gridAutoColumns)
+    , m_namedGridArea(o.m_namedGridArea)
+    , m_namedGridAreaRowCount(o.m_namedGridAreaRowCount)
+    , m_namedGridAreaColumnCount(o.m_namedGridAreaColumnCount)
 {
+}
+
+PassRef<StyleGridData> StyleGridData::copy() const
+{
+    return adoptRef(*new StyleGridData(*this));
 }
 
 } // namespace WebCore

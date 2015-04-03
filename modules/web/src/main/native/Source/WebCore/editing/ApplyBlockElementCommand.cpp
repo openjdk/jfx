@@ -29,11 +29,9 @@
 
 #include "HTMLElement.h"
 #include "HTMLNames.h"
-#include "RenderObject.h"
+#include "RenderElement.h"
 #include "RenderStyle.h"
 #include "Text.h"
-#include "TextIterator.h"
-#include "VisiblePosition.h"
 #include "VisibleUnits.h"
 #include "htmlediting.h"
 
@@ -41,14 +39,14 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-ApplyBlockElementCommand::ApplyBlockElementCommand(Document* document, const QualifiedName& tagName, const AtomicString& inlineStyle)
+ApplyBlockElementCommand::ApplyBlockElementCommand(Document& document, const QualifiedName& tagName, const AtomicString& inlineStyle)
     : CompositeEditCommand(document)
     , m_tagName(tagName)
     , m_inlineStyle(inlineStyle)
 {
 }
 
-ApplyBlockElementCommand::ApplyBlockElementCommand(Document* document, const QualifiedName& tagName)
+ApplyBlockElementCommand::ApplyBlockElementCommand(Document& document, const QualifiedName& tagName)
     : CompositeEditCommand(document)
     , m_tagName(tagName)
 {
@@ -87,7 +85,7 @@ void ApplyBlockElementCommand::doApply()
 
     formatSelection(startOfSelection, endOfSelection);
 
-    document()->updateLayoutIgnorePendingStylesheets();
+    document().updateLayoutIgnorePendingStylesheets();
 
     ASSERT(startScope == endScope);
     ASSERT(startIndex >= 0);
@@ -169,14 +167,20 @@ static bool isNewLineAtPosition(const Position& position)
     return textAtPosition[0] == '\n';
 }
 
-static RenderStyle* renderStyleOfEnclosingTextNode(const Position& position)
+RenderStyle* ApplyBlockElementCommand::renderStyleOfEnclosingTextNode(const Position& position)
 {
     if (position.anchorType() != Position::PositionIsOffsetInAnchor
         || !position.containerNode()
-        || !position.containerNode()->isTextNode()
-        || !position.containerNode()->renderer())
+        || !position.containerNode()->isTextNode())
         return 0;
-    return position.containerNode()->renderer()->style();
+
+    document().updateStyleIfNeeded();
+
+    RenderObject* renderer = position.containerNode()->renderer();
+    if (!renderer)
+        return 0;
+
+    return &renderer->style();
 }
 
 void ApplyBlockElementCommand::rangeForParagraphSplittingTextNodesIfNeeded(const VisiblePosition& endOfCurrentParagraph, Position& start, Position& end)
@@ -276,7 +280,7 @@ VisiblePosition ApplyBlockElementCommand::endOfNextParagrahSplittingTextNodesIfN
     return Position(text.get(), position.offsetInContainerNode() - 1);
 }
 
-PassRefPtr<Element> ApplyBlockElementCommand::createBlockElement() const
+PassRefPtr<Element> ApplyBlockElementCommand::createBlockElement()
 {
     RefPtr<Element> element = createHTMLElement(document(), m_tagName);
     if (m_inlineStyle.length())

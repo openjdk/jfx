@@ -20,7 +20,6 @@
 #ifndef SVGAnimatedTransformListPropertyTearOff_h
 #define SVGAnimatedTransformListPropertyTearOff_h
 
-#if ENABLE(SVG)
 #include "SVGAnimatedListPropertyTearOff.h"
 #include "SVGTransformList.h"
 #include "SVGTransformListPropertyTearOff.h"
@@ -29,14 +28,14 @@ namespace WebCore {
 
 class SVGAnimatedTransformListPropertyTearOff : public SVGAnimatedListPropertyTearOff<SVGTransformList> {
 public:
-    virtual SVGListPropertyTearOff<SVGTransformList>* baseVal()
+    virtual SVGListPropertyTearOff<SVGTransformList>* baseVal() override
     {
         if (!m_baseVal)
             m_baseVal = SVGTransformListPropertyTearOff::create(this, BaseValRole, m_values, m_wrappers);
         return static_cast<SVGListPropertyTearOff<SVGTransformList>*>(m_baseVal.get());
     }
 
-    virtual SVGListPropertyTearOff<SVGTransformList>* animVal()
+    virtual SVGListPropertyTearOff<SVGTransformList>* animVal() override
     {
         if (!m_animVal)
             m_animVal = SVGTransformListPropertyTearOff::create(this, AnimValRole, m_values, m_wrappers);
@@ -58,5 +57,4 @@ private:
 
 }
 
-#endif // ENABLE(SVG)
 #endif // SVGAnimatedTransformListPropertyTearOff_h

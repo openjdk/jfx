@@ -24,10 +24,10 @@
  */
 
 [
-        JSNoStaticTables
-    // We should also inherit from LSProgressEvent when the idl is added.
+    JSNoStaticTables
+// We should also inherit from LSProgressEvent when the idl is added.
 ] interface XMLHttpRequestProgressEvent : ProgressEvent {
-         readonly attribute unsigned long long position;
-         readonly attribute unsigned long long totalSize;
-    };
+     readonly attribute unsigned long long position;
+     readonly attribute unsigned long long totalSize;
+};
 

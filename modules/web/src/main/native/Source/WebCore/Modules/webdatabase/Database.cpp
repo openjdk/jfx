@@ -53,23 +53,26 @@
 #include "ScriptExecutionContext.h"
 #include "SecurityOrigin.h"
 #include "VoidCallback.h"
-#include <wtf/OwnPtr.h>
 #include <wtf/PassOwnPtr.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefPtr.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/CString.h>
 
+#if PLATFORM(IOS)
+#include "SQLiteDatabaseTracker.h"
+#endif
+
 namespace WebCore {
 
 PassRefPtr<Database> Database::create(ScriptExecutionContext*, PassRefPtr<DatabaseBackendBase> backend)
-    {
+{
     // FIXME: Currently, we're only simulating the backend by return the
     // frontend database as its own the backend. When we split the 2 apart,
     // this create() function should be changed to be a factory method for
     // instantiating the backend.
     return static_cast<Database*>(backend.get());
-    }
+}
 
 Database::Database(PassRefPtr<DatabaseBackendContext> databaseContext,
     const String& name, const String& expectedVersion, const String& displayName, unsigned long estimatedSize)
@@ -151,8 +154,8 @@ void Database::markAsDeletedAndClose()
         return;
     }
 
-    OwnPtr<DatabaseCloseTask> task = DatabaseCloseTask::create(this, &synchronizer);
-    databaseContext()->databaseThread()->scheduleImmediateTask(task.release());
+    auto task = DatabaseCloseTask::create(this, &synchronizer);
+    databaseContext()->databaseThread()->scheduleImmediateTask(std::move(task));
     synchronizer.waitForTaskCompletion();
 }
 
@@ -198,9 +201,9 @@ void Database::runTransaction(PassRefPtr<SQLTransactionCallback> callback, PassR
     RefPtr<SQLTransactionBackend> transactionBackend;
     transactionBackend = backend()->runTransaction(transaction.release(), readOnly, changeVersionData);
     if (!transactionBackend && anotherRefToErrorCallback) {
-            RefPtr<SQLError> error = SQLError::create(SQLError::UNKNOWN_ERR, "database has been closed");
+        RefPtr<SQLError> error = SQLError::create(SQLError::UNKNOWN_ERR, "database has been closed");
         scriptExecutionContext()->postTask(createCallbackTask(&callTransactionErrorCallback, anotherRefToErrorCallback, error.release()));
-        }
+    }
 }
 
 class DeliverPendingCallbackTask : public ScriptExecutionContext::Task {
@@ -267,8 +270,8 @@ Vector<String> Database::tableNames()
     if (!databaseContext()->databaseThread() || databaseContext()->databaseThread()->terminationRequested(&synchronizer))
         return result;
 
-    OwnPtr<DatabaseTableNamesTask> task = DatabaseTableNamesTask::create(this, &synchronizer, result);
-    databaseContext()->databaseThread()->scheduleImmediateTask(task.release());
+    auto task = DatabaseTableNamesTask::create(this, &synchronizer, result);
+    databaseContext()->databaseThread()->scheduleImmediateTask(std::move(task));
     synchronizer.waitForTaskCompletion();
 
     return result;

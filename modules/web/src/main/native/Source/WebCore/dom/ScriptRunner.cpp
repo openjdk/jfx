@@ -27,28 +27,26 @@
 #include "ScriptRunner.h"
 
 #include "CachedScript.h"
-#include "Document.h"
 #include "Element.h"
 #include "PendingScript.h"
 #include "ScriptElement.h"
 
 namespace WebCore {
 
-ScriptRunner::ScriptRunner(Document* document)
+ScriptRunner::ScriptRunner(Document& document)
     : m_document(document)
     , m_timer(this, &ScriptRunner::timerFired)
 {
-    ASSERT(document);
 }
 
 ScriptRunner::~ScriptRunner()
 {
     for (size_t i = 0; i < m_scriptsToExecuteSoon.size(); ++i)
-        m_document->decrementLoadEventDelayCount();
+        m_document.decrementLoadEventDelayCount();
     for (size_t i = 0; i < m_scriptsToExecuteInOrder.size(); ++i)
-        m_document->decrementLoadEventDelayCount();
+        m_document.decrementLoadEventDelayCount();
     for (int i = 0; i < m_pendingAsyncScripts.size(); ++i)
-        m_document->decrementLoadEventDelayCount();
+        m_document.decrementLoadEventDelayCount();
 }
 
 void ScriptRunner::queueScriptForExecution(ScriptElement* scriptElement, CachedResourceHandle<CachedScript> cachedScript, ExecutionType executionType)
@@ -60,7 +58,7 @@ void ScriptRunner::queueScriptForExecution(ScriptElement* scriptElement, CachedR
     ASSERT(element);
     ASSERT(element->inDocument());
 
-    m_document->incrementLoadEventDelayCount();
+    m_document.incrementLoadEventDelayCount();
 
     switch (executionType) {
     case ASYNC_EXECUTION:
@@ -99,11 +97,11 @@ void ScriptRunner::notifyScriptReady(ScriptElement* scriptElement, ExecutionType
     m_timer.startOneShot(0);
 }
 
-void ScriptRunner::timerFired(Timer<ScriptRunner>* timer)
+void ScriptRunner::timerFired(Timer<ScriptRunner>& timer)
 {
-    ASSERT_UNUSED(timer, timer == &m_timer);
+    ASSERT_UNUSED(timer, &timer == &m_timer);
 
-    RefPtr<Document> protect(m_document);
+    Ref<Document> protect(m_document);
 
     Vector<PendingScript> scripts;
     scripts.swap(m_scriptsToExecuteSoon);
@@ -119,7 +117,7 @@ void ScriptRunner::timerFired(Timer<ScriptRunner>* timer)
         CachedScript* cachedScript = scripts[i].cachedScript();
         RefPtr<Element> element = scripts[i].releaseElementAndClear();
         toScriptElementIfPossible(element.get())->execute(cachedScript);
-        m_document->decrementLoadEventDelayCount();
+        m_document.decrementLoadEventDelayCount();
     }
 }
 

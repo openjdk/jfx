@@ -19,8 +19,6 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SVG)
 #include "SVGTransformList.h"
 
 #include "AffineTransform.h"
@@ -76,11 +74,9 @@ String SVGTransformList::valueAsString() const
 
 void SVGTransformList::parse(const String& transform)
 {
-    const UChar* start = transform.characters();
+    const UChar* start = transform.deprecatedCharacters();
     if (!SVGTransformable::parseTransformAttribute(*this, start, start + transform.length()))
         clear();
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(SVG)

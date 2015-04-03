@@ -28,18 +28,9 @@
 #include "config.h"
 #include "UserActionElementSet.h"
 
-#include "Document.h"
 #include "Element.h"
 
 namespace WebCore {
-
-UserActionElementSet::UserActionElementSet()
-{
-}
-
-UserActionElementSet::~UserActionElementSet()
-{
-}
 
 void UserActionElementSet::didDetach(Element* element)
 {

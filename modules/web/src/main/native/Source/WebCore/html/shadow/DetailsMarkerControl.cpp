@@ -40,19 +40,19 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-DetailsMarkerControl::DetailsMarkerControl(Document* document) 
+DetailsMarkerControl::DetailsMarkerControl(Document& document)
     : HTMLDivElement(divTag, document)
 {
 }
 
-RenderObject* DetailsMarkerControl::createRenderer(RenderArena* arena, RenderStyle*)
+RenderPtr<RenderElement> DetailsMarkerControl::createElementRenderer(PassRef<RenderStyle> style)
 {
-    return new (arena) RenderDetailsMarker(this);
+    return createRenderer<RenderDetailsMarker>(*this, std::move(style));
 }
 
-bool DetailsMarkerControl::rendererIsNeeded(const NodeRenderingContext& context)
+bool DetailsMarkerControl::rendererIsNeeded(const RenderStyle& style)
 {
-    return summaryElement()->isMainSummary() && HTMLDivElement::rendererIsNeeded(context);
+    return summaryElement()->isMainSummary() && HTMLDivElement::rendererIsNeeded(style);
 }
 
 const AtomicString& DetailsMarkerControl::shadowPseudoId() const
@@ -63,9 +63,7 @@ const AtomicString& DetailsMarkerControl::shadowPseudoId() const
 
 HTMLSummaryElement* DetailsMarkerControl::summaryElement()
 {
-    Element* element = shadowHost();
-    ASSERT_WITH_SECURITY_IMPLICATION(!element || element->hasTagName(summaryTag));
-    return static_cast<HTMLSummaryElement*>(element);
+    return toHTMLSummaryElement(shadowHost());
 }
 
 }

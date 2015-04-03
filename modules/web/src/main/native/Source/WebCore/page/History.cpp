@@ -53,7 +53,7 @@ unsigned History::length() const
         return 0;
     if (!m_frame->page())
         return 0;
-    return m_frame->page()->backForward()->count();
+    return m_frame->page()->backForward().count();
 }
 
 PassRefPtr<SerializedScriptValue> History::state()
@@ -67,7 +67,7 @@ PassRefPtr<SerializedScriptValue> History::stateInternal() const
     if (!m_frame)
         return 0;
 
-    if (HistoryItem* historyItem = m_frame->loader()->history()->currentItem())
+    if (HistoryItem* historyItem = m_frame->loader().history().currentItem())
         return historyItem->stateObject();
 
     return 0;
@@ -108,7 +108,7 @@ void History::go(int distance)
     if (!m_frame)
         return;
 
-    m_frame->navigationScheduler()->scheduleHistoryNavigation(distance);
+    m_frame->navigationScheduler().scheduleHistoryNavigation(distance);
 }
 
 void History::go(ScriptExecutionContext* context, int distance)
@@ -124,16 +124,16 @@ void History::go(ScriptExecutionContext* context, int distance)
     if (!activeDocument->canNavigate(m_frame))
         return;
 
-    m_frame->navigationScheduler()->scheduleHistoryNavigation(distance);
+    m_frame->navigationScheduler().scheduleHistoryNavigation(distance);
 }
 
-KURL History::urlForState(const String& urlString)
+URL History::urlForState(const String& urlString)
 {
-    KURL baseURL = m_frame->document()->baseURL();
+    URL baseURL = m_frame->document()->baseURL();
     if (urlString.isEmpty())
         return baseURL;
 
-    return KURL(baseURL, urlString);
+    return URL(baseURL, urlString);
 }
 
 void History::stateObjectAdded(PassRefPtr<SerializedScriptValue> data, const String& title, const String& urlString, StateObjectType stateObjectType, ExceptionCode& ec)
@@ -141,24 +141,24 @@ void History::stateObjectAdded(PassRefPtr<SerializedScriptValue> data, const Str
     if (!m_frame || !m_frame->page())
         return;
     
-    KURL fullURL = urlForState(urlString);
+    URL fullURL = urlForState(urlString);
     if (!fullURL.isValid() || !m_frame->document()->securityOrigin()->canRequest(fullURL)) {
         ec = SECURITY_ERR;
         return;
     }
 
-    if (stateObjectType == StateObjectPush)
-        m_frame->loader()->history()->pushState(data, title, fullURL.string());
-    else if (stateObjectType == StateObjectReplace)
-        m_frame->loader()->history()->replaceState(data, title, fullURL.string());
+    if (stateObjectType == StateObjectType::Push)
+        m_frame->loader().history().pushState(data, title, fullURL.string());
+    else if (stateObjectType == StateObjectType::Replace)
+        m_frame->loader().history().replaceState(data, title, fullURL.string());
             
     if (!urlString.isEmpty())
         m_frame->document()->updateURLForPushOrReplaceState(fullURL);
 
-    if (stateObjectType == StateObjectPush)
-        m_frame->loader()->client()->dispatchDidPushStateWithinPage();
-    else if (stateObjectType == StateObjectReplace)
-        m_frame->loader()->client()->dispatchDidReplaceStateWithinPage();
+    if (stateObjectType == StateObjectType::Push)
+        m_frame->loader().client().dispatchDidPushStateWithinPage();
+    else if (stateObjectType == StateObjectType::Replace)
+        m_frame->loader().client().dispatchDidReplaceStateWithinPage();
 }
 
 } // namespace WebCore

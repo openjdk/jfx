@@ -31,22 +31,24 @@
 
 #include "Chrome.h"
 #include "ChromeClient.h"
-#include "ConsoleAPITypes.h"
-#include "ConsoleTypes.h"
 #include "Document.h"
 #include "Frame.h"
 #include "InspectorConsoleInstrumentation.h"
 #include "InspectorController.h"
+#include "JSMainThreadExecState.h"
 #include "Page.h"
-#include "ScriptArguments.h"
-#include "ScriptCallStack.h"
-#include "ScriptCallStackFactory.h"
-#include "ScriptValue.h"
 #include "ScriptableDocumentParser.h"
 #include "Settings.h"
+#include <bindings/ScriptValue.h>
+#include <inspector/ConsoleTypes.h>
+#include <inspector/ScriptArguments.h>
+#include <inspector/ScriptCallStack.h>
+#include <inspector/ScriptCallStackFactory.h>
 #include <stdio.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
+
+using namespace Inspector;
 
 namespace WebCore {
 
@@ -54,52 +56,59 @@ namespace {
     int muteCount = 0;
 }
 
-PageConsole::PageConsole(Page* page) : m_page(page) { }
+PageConsole::PageConsole(Page& page)
+    : m_page(page)
+{
+}
 
-PageConsole::~PageConsole() { }
+PageConsole::~PageConsole()
+{
+}
 
-void PageConsole::printSourceURLAndLine(const String& sourceURL, unsigned lineNumber)
+void PageConsole::printSourceURLAndPosition(const String& sourceURL, unsigned lineNumber, unsigned columnNumber)
 {
     if (!sourceURL.isEmpty()) {
-        if (lineNumber > 0)
-            printf("%s:%d: ", sourceURL.utf8().data(), lineNumber);
+        if (lineNumber > 0 && columnNumber > 0)
+            printf("%s:%u:%u", sourceURL.utf8().data(), lineNumber, columnNumber);
+        else if (lineNumber > 0)
+            printf("%s:%u", sourceURL.utf8().data(), lineNumber);
         else
-            printf("%s: ", sourceURL.utf8().data());
+            printf("%s", sourceURL.utf8().data());
     }
 }
 
-void PageConsole::printMessageSourceAndLevelPrefix(MessageSource source, MessageLevel level)
+void PageConsole::printMessageSourceAndLevelPrefix(MessageSource source, MessageLevel level, bool showAsTrace)
 {
     const char* sourceString;
     switch (source) {
-    case XMLMessageSource:
+    case MessageSource::XML:
         sourceString = "XML";
         break;
-    case JSMessageSource:
+    case MessageSource::JS:
         sourceString = "JS";
         break;
-    case NetworkMessageSource:
+    case MessageSource::Network:
         sourceString = "NETWORK";
         break;
-    case ConsoleAPIMessageSource:
-        sourceString = "CONSOLEAPI";
+    case MessageSource::ConsoleAPI:
+        sourceString = "CONSOLE";
         break;
-    case StorageMessageSource:
+    case MessageSource::Storage:
         sourceString = "STORAGE";
         break;
-    case AppCacheMessageSource:
+    case MessageSource::AppCache:
         sourceString = "APPCACHE";
         break;
-    case RenderingMessageSource:
+    case MessageSource::Rendering:
         sourceString = "RENDERING";
         break;
-    case CSSMessageSource:
+    case MessageSource::CSS:
         sourceString = "CSS";
         break;
-    case SecurityMessageSource:
+    case MessageSource::Security:
         sourceString = "SECURITY";
         break;
-    case OtherMessageSource:
+    case MessageSource::Other:
         sourceString = "OTHER";
         break;
     default:
@@ -110,16 +119,16 @@ void PageConsole::printMessageSourceAndLevelPrefix(MessageSource source, Message
 
     const char* levelString;
     switch (level) {
-    case DebugMessageLevel:
+    case MessageLevel::Debug:
         levelString = "DEBUG";
         break;
-    case LogMessageLevel:
+    case MessageLevel::Log:
         levelString = "LOG";
         break;
-    case WarningMessageLevel:
+    case MessageLevel::Warning:
         levelString = "WARN";
         break;
-    case ErrorMessageLevel:
+    case MessageLevel::Error:
         levelString = "ERROR";
         break;
     default:
@@ -127,6 +136,9 @@ void PageConsole::printMessageSourceAndLevelPrefix(MessageSource source, Message
         levelString = "UNKNOWN";
         break;
     }
+
+    if (showAsTrace)
+        levelString = "TRACE";
 
     printf("%s %s:", sourceString, levelString);
 }
@@ -136,14 +148,23 @@ void PageConsole::addMessage(MessageSource source, MessageLevel level, const Str
     String url;
     if (document)
         url = document->url().string();
-    // FIXME: <http://webkit.org/b/114319> PageConsole::addMessage should automatically determine column number alongside line number
+
+    // FIXME: The below code attempts to determine line numbers for parser generated errors, but this is not the only reason why we can get here.
+    // For example, if we are still parsing and get a WebSocket network error, it will be erroneously attributed to a line where parsing was paused.
+    // Also, we should determine line numbers for script generated messages (e.g. calling getImageData on a canvas).
+    // We probably need to split this function into multiple ones, as appropriate for different call sites. Or maybe decide based on MessageSource.
+    // https://bugs.webkit.org/show_bug.cgi?id=125340
     unsigned line = 0;
+    unsigned column = 0;
     if (document && document->parsing() && !document->isInDocumentWrite() && document->scriptableDocumentParser()) {
         ScriptableDocumentParser* parser = document->scriptableDocumentParser();
-        if (!parser->isWaitingForScripts() && !parser->isExecutingScript())
-            line = parser->lineNumber().oneBasedInt();
+        if (!parser->isWaitingForScripts() && !JSMainThreadExecState::currentState()) {
+            TextPosition position = parser->textPosition();
+            line = position.m_line.oneBasedInt();
+            column = position.m_column.oneBasedInt();
+        }
     }
-    addMessage(source, level, message, url, line, 0, 0, 0, requestIdentifier);
+    addMessage(source, level, message, url, line, column, 0, JSMainThreadExecState::currentState(), requestIdentifier);
 }
 
 void PageConsole::addMessage(MessageSource source, MessageLevel level, const String& message, PassRefPtr<ScriptCallStack> callStack)
@@ -151,32 +172,31 @@ void PageConsole::addMessage(MessageSource source, MessageLevel level, const Str
     addMessage(source, level, message, String(), 0, 0, callStack, 0);
 }
 
-void PageConsole::addMessage(MessageSource source, MessageLevel level, const String& message, const String& url, unsigned lineNumber, unsigned columnNumber, PassRefPtr<ScriptCallStack> callStack, ScriptState* state, unsigned long requestIdentifier)
+void PageConsole::addMessage(MessageSource source, MessageLevel level, const String& message, const String& url, unsigned lineNumber, unsigned columnNumber, PassRefPtr<ScriptCallStack> callStack, JSC::ExecState* state, unsigned long requestIdentifier)
 {
-    if (muteCount && source != ConsoleAPIMessageSource)
-        return;
-
-    Page* page = this->page();
-    if (!page)
+    if (muteCount && source != MessageSource::ConsoleAPI)
         return;
 
     if (callStack)
-        InspectorInstrumentation::addMessageToConsole(page, source, LogMessageType, level, message, callStack, requestIdentifier);
+        InspectorInstrumentation::addMessageToConsole(&m_page, source, MessageType::Log, level, message, callStack, requestIdentifier);
     else
-        InspectorInstrumentation::addMessageToConsole(page, source, LogMessageType, level, message, url, lineNumber, columnNumber, state, requestIdentifier);
+        InspectorInstrumentation::addMessageToConsole(&m_page, source, MessageType::Log, level, message, url, lineNumber, columnNumber, state, requestIdentifier);
 
-    if (source == CSSMessageSource)
+    if (source == MessageSource::CSS)
         return;
 
-    if (page->settings()->privateBrowsingEnabled())
+    if (m_page.settings().privateBrowsingEnabled())
         return;
 
-    page->chrome().client()->addMessageToConsole(source, level, message, lineNumber, columnNumber, url);
+    m_page.chrome().client().addMessageToConsole(source, level, message, lineNumber, columnNumber, url);
 
-    if (!page->settings()->logsPageMessagesToSystemConsoleEnabled() && !shouldPrintExceptions())
+    if (!m_page.settings().logsPageMessagesToSystemConsoleEnabled() && !shouldPrintExceptions())
         return;
 
-    printSourceURLAndLine(url, lineNumber);
+    printSourceURLAndPosition(url, lineNumber, columnNumber);
+
+    printf(": ");
+
     printMessageSourceAndLevelPrefix(source, level);
 
     printf(" %s\n", message.utf8().data());

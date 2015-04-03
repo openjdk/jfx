@@ -92,7 +92,7 @@ PassRefPtr<JSC::Bindings::Instance> ScriptController::createScriptInstanceForWid
 #endif
     }
 
-        return 0;
+    return 0;
 }
 
 WebScriptObject* ScriptController::windowScriptObject()

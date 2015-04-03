@@ -31,10 +31,11 @@
 #define GlyphPage_h
 
 #include "Glyph.h"
+#include <string.h>
+#include <unicode/utypes.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
-#include <wtf/unicode/Unicode.h>
 
 namespace WebCore {
 
@@ -151,7 +152,7 @@ public:
     {
         setGlyphDataForIndex(index, glyphData.glyph, glyphData.fontData);
     }
-    
+
     void removeFontDataFromSystemFallbackPage(const SimpleFontData* fontData)
     {
         // This method should only be called on the system fallback page, which is never single-font.
@@ -168,7 +169,7 @@ public:
 
     // Implemented by the platform.
     bool fill(unsigned offset, unsigned length, UChar* characterBuffer, unsigned bufferLength, const SimpleFontData*);
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
     static bool mayUseMixedFontDataWhenFilling(const UChar* characterBuffer, unsigned bufferLength, const SimpleFontData*);
 #else
     static bool mayUseMixedFontDataWhenFilling(const UChar*, unsigned, const SimpleFontData*) { return false; }

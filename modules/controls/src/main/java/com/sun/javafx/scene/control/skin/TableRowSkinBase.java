@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,9 +26,11 @@
 package com.sun.javafx.scene.control.skin;
 
 
+import java.lang.ref.Reference;
+import java.lang.ref.WeakReference;
 import java.util.*;
 
-import com.sun.javafx.*;
+import com.sun.javafx.PlatformUtil;
 import javafx.animation.FadeTransition;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -107,7 +109,7 @@ public abstract class TableRowSkinBase<T,
      * a large number of tableColumns. This is mitigated in the recreateCells()
      * function below - refer to that to learn more.
      */
-    protected WeakHashMap<TableColumnBase, R> cellsMap;
+    protected WeakHashMap<TableColumnBase, Reference<R>> cellsMap;
 
     // This observableArrayList contains the currently visible table cells for this row.
     protected final List<R> cells = new ArrayList<R>();
@@ -119,8 +121,6 @@ public abstract class TableRowSkinBase<T,
 
     private double fixedCellSize;
     private boolean fixedCellSizeEnabled;
-
-    private int columnCount = 0;
 
 
 
@@ -153,7 +153,10 @@ public abstract class TableRowSkinBase<T,
         getVisibleLeafColumns().addListener(weakVisibleLeafColumnsListener);
         // --- end init bindings
 
-        registerChangeListener(control.itemProperty(), "ITEM");
+
+        // use invalidation listener here to update even when item equality is true
+        // (e.g. see RT-22463)
+        control.itemProperty().addListener(o -> requestCellUpdate());
         registerChangeListener(control.indexProperty(), "INDEX");
 
         if (fixedCellSizeProperty() != null) {
@@ -230,8 +233,6 @@ public abstract class TableRowSkinBase<T,
             if (getSkinnable().isEmpty()) {
                 requestCellUpdate();
             }
-        } else if ("ITEM".equals(p)) {
-            requestCellUpdate();
         } else if ("FIXED_CELL_SIZE".equals(p)) {
             fixedCellSize = fixedCellSizeProperty().get();
             fixedCellSizeEnabled = fixedCellSize > 0;
@@ -512,7 +513,16 @@ public abstract class TableRowSkinBase<T,
         for (int i = 0, max = visibleLeafColumns.size(); i < max; i++) {
             TableColumnBase<T,?> col = visibleLeafColumns.get(i);
 
-            R cell = cellsMap.get(col);
+            R cell = null;
+            if (cellsMap.containsKey(col)) {
+                cell = cellsMap.get(col).get();
+
+                // the reference has been gc'd, remove key entry from map
+                if (cell == null) {
+                    cellsMap.remove(col);
+                }
+            }
+
             if (cell == null) {
                 // if the cell is null it means we don't have it in cache and
                 // need to create it
@@ -652,24 +662,25 @@ public abstract class TableRowSkinBase<T,
 
     private void recreateCells() {
         if (cellsMap != null) {
-            Collection<R> cells = cellsMap.values();
-            Iterator<R> cellsIter = cells.iterator();
+            Collection<Reference<R>> cells = cellsMap.values();
+            Iterator<Reference<R>> cellsIter = cells.iterator();
             while (cellsIter.hasNext()) {
-                R cell = cellsIter.next();
-                cell.updateIndex(-1);
-                cell.getSkin().dispose();
-                cell.setSkin(null);
+                Reference<R> cellRef = cellsIter.next();
+                R cell = cellRef.get();
+                if (cell != null) {
+                    cell.updateIndex(-1);
+                    cell.getSkin().dispose();
+                    cell.setSkin(null);
+                }
             }
             cellsMap.clear();
         }
 
         ObservableList<? extends TableColumnBase/*<T,?>*/> columns = getVisibleLeafColumns();
 
-        cellsMap = new WeakHashMap<TableColumnBase, R>(columns.size());
+        cellsMap = new WeakHashMap<TableColumnBase, Reference<R>>(columns.size());
         fullRefreshCounter = DEFAULT_FULL_REFRESH_COUNTER;
         getChildren().clear();
-
-        columnCount = columns.size();
 
         for (TableColumnBase col : columns) {
             if (cellsMap.containsKey(col)) {
@@ -687,7 +698,7 @@ public abstract class TableRowSkinBase<T,
         R cell = getCell(col);
 
         // and store this in our HashMap until needed
-        cellsMap.put(col, cell);
+        cellsMap.put(col, new WeakReference<R>(cell));
 
         return cell;
     }

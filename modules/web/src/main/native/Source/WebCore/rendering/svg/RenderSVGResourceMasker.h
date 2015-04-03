@@ -20,8 +20,6 @@
 #ifndef RenderSVGResourceMasker_h
 #define RenderSVGResourceMasker_h
 
-#if ENABLE(SVG)
-#include "FloatRect.h"
 #include "GraphicsContext.h"
 #include "ImageBuffer.h"
 #include "IntSize.h"
@@ -30,41 +28,43 @@
 #include "SVGUnitTypes.h"
 
 #include <wtf/HashMap.h>
-#include <wtf/OwnPtr.h>
 
 namespace WebCore {
 
 struct MaskerData {
-    OwnPtr<ImageBuffer> maskImage;
+    std::unique_ptr<ImageBuffer> maskImage;
 };
 
-class RenderSVGResourceMasker : public RenderSVGResourceContainer {
+class RenderSVGResourceMasker final : public RenderSVGResourceContainer {
 public:
-    RenderSVGResourceMasker(SVGMaskElement*);
+    RenderSVGResourceMasker(SVGMaskElement&, PassRef<RenderStyle>);
     virtual ~RenderSVGResourceMasker();
 
-    virtual const char* renderName() const { return "RenderSVGResourceMasker"; }
+    SVGMaskElement& maskElement() const { return toSVGMaskElement(RenderSVGResourceContainer::element()); }
 
-    virtual void removeAllClientsFromCache(bool markForInvalidation = true);
-    virtual void removeClientFromCache(RenderObject*, bool markForInvalidation = true);
-    virtual bool applyResource(RenderObject*, RenderStyle*, GraphicsContext*&, unsigned short resourceMode);
-    virtual FloatRect resourceBoundingBox(RenderObject*);
+    virtual void removeAllClientsFromCache(bool markForInvalidation = true) override;
+    virtual void removeClientFromCache(RenderElement&, bool markForInvalidation = true) override;
+    virtual bool applyResource(RenderElement&, const RenderStyle&, GraphicsContext*&, unsigned short resourceMode) override;
+    virtual FloatRect resourceBoundingBox(const RenderObject&) override;
 
-    SVGUnitTypes::SVGUnitType maskUnits() const { return static_cast<SVGMaskElement*>(node())->maskUnits(); }
-    SVGUnitTypes::SVGUnitType maskContentUnits() const { return static_cast<SVGMaskElement*>(node())->maskContentUnits(); }
+    SVGUnitTypes::SVGUnitType maskUnits() const { return maskElement().maskUnits(); }
+    SVGUnitTypes::SVGUnitType maskContentUnits() const { return maskElement().maskContentUnits(); }
 
     virtual RenderSVGResourceType resourceType() const { return s_resourceType; }
     static RenderSVGResourceType s_resourceType;
 
 private:
-    bool drawContentIntoMaskImage(MaskerData*, ColorSpace, const SVGMaskElement*, RenderObject*);
+    void element() const = delete;
+
+    virtual const char* renderName() const override { return "RenderSVGResourceMasker"; }
+
+    bool drawContentIntoMaskImage(MaskerData*, ColorSpace, RenderObject*);
     void calculateMaskContentRepaintRect();
 
     FloatRect m_maskContentBoundaries;
-    HashMap<RenderObject*, MaskerData*> m_masker;
+    HashMap<RenderObject*, std::unique_ptr<MaskerData>> m_masker;
 };
 
 }
 
-#endif
 #endif

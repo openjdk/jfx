@@ -32,8 +32,6 @@
 #include <algorithm>
 #include <wtf/MathExtras.h>
 
-using namespace std;
- 
 namespace WebCore {
 
 const double AudioResampler::MaxRate = 8.0;
@@ -41,7 +39,7 @@ const double AudioResampler::MaxRate = 8.0;
 AudioResampler::AudioResampler()
     : m_rate(1.0)
 {
-    m_kernels.append(adoptPtr(new AudioResamplerKernel(this)));
+    m_kernels.append(std::make_unique<AudioResamplerKernel>(this));
     m_sourceBus = AudioBus::create(1, 0, false);
 }
 
@@ -49,7 +47,7 @@ AudioResampler::AudioResampler(unsigned numberOfChannels)
     : m_rate(1.0)
 {
     for (unsigned i = 0; i < numberOfChannels; ++i)
-        m_kernels.append(adoptPtr(new AudioResamplerKernel(this)));
+        m_kernels.append(std::make_unique<AudioResamplerKernel>(this));
 
     m_sourceBus = AudioBus::create(numberOfChannels, 0, false);
 }
@@ -63,7 +61,7 @@ void AudioResampler::configureChannels(unsigned numberOfChannels)
     // First deal with adding or removing kernels.
     if (numberOfChannels > currentSize) {
         for (unsigned i = currentSize; i < numberOfChannels; ++i)
-            m_kernels.append(adoptPtr(new AudioResamplerKernel(this)));
+            m_kernels.append(std::make_unique<AudioResamplerKernel>(this));
     } else
         m_kernels.resize(numberOfChannels);
 
@@ -113,7 +111,7 @@ void AudioResampler::setRate(double rate)
     if (std::isnan(rate) || std::isinf(rate) || rate <= 0.0)
         return;
     
-    m_rate = min(AudioResampler::MaxRate, rate);
+    m_rate = std::min(AudioResampler::MaxRate, rate);
 }
 
 void AudioResampler::reset()

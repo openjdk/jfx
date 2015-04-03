@@ -34,14 +34,20 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/TriState.h>
 
+#if PLATFORM(JAVA) // tav todo temp
+#include <JSExportMacros.h>
+#endif
+
 namespace JSC {
 
 // This is used a lot throughout JavaScriptCore for everything from value boxing to marking
 // values as being missing, so it is useful to have it abbreviated.
 #define QNaN (std::numeric_limits<double>::quiet_NaN())
 
+class AssemblyHelpers;
 class ExecState;
 class JSCell;
+class JSValueSource;
 class VM;
 class JSGlobalObject;
 class JSObject;
@@ -51,10 +57,7 @@ class PropertySlot;
 class PutPropertySlot;
 #if ENABLE(DFG_JIT)
 namespace DFG {
-class AssemblyHelpers;
 class JITCompiler;
-class JITCodeGenerator;
-class JSValueSource;
 class OSRExitCompiler;
 class SpeculativeJIT;
 }
@@ -66,13 +69,14 @@ class CLoop;
 #endif
 
 struct ClassInfo;
+struct DumpContext;
 struct Instruction;
 struct MethodTable;
 
 template <class T> class WriteBarrierBase;
 
 enum PreferredPrimitiveType { NoPreference, PreferNumber, PreferString };
-
+enum ECMAMode { StrictMode, NotStrictMode };
 
 typedef int64_t EncodedJSValue;
     
@@ -97,6 +101,14 @@ union EncodedValueDescriptor {
 #endif
 };
 
+#define TagOffset (OBJECT_OFFSETOF(EncodedValueDescriptor, asBits.tag))
+#define PayloadOffset (OBJECT_OFFSETOF(EncodedValueDescriptor, asBits.payload))
+
+enum WhichValueWord {
+    TagWord,
+    PayloadWord
+};
+
 // This implements ToInt32, defined in ECMA-262 9.5.
 JS_EXPORT_PRIVATE int32_t toInt32(double);
 
@@ -110,16 +122,16 @@ inline uint32_t toUInt32(double number)
 
 class JSValue {
     friend struct EncodedJSValueHashTraits;
+    friend class AssemblyHelpers;
     friend class JIT;
+    friend class JITSlowPathCall;
     friend class JITStubs;
     friend class JITStubCall;
     friend class JSInterfaceJIT;
+    friend class JSValueSource;
     friend class SpecializedThunkJIT;
 #if ENABLE(DFG_JIT)
-    friend class DFG::AssemblyHelpers;
     friend class DFG::JITCompiler;
-    friend class DFG::JITCodeGenerator;
-    friend class DFG::JSValueSource;
     friend class DFG::OSRExitCompiler;
     friend class DFG::SpeculativeJIT;
 #endif
@@ -171,7 +183,8 @@ public:
     explicit JSValue(long long);
     explicit JSValue(unsigned long long);
 
-    operator bool() const;
+    typedef void* (JSValue::*UnspecifiedBoolType);
+    operator UnspecifiedBoolType*() const;
     bool operator==(const JSValue& other) const;
     bool operator!=(const JSValue& other) const;
 
@@ -183,6 +196,7 @@ public:
 
     int32_t asInt32() const;
     uint32_t asUInt32() const;
+    int64_t asMachineInt() const;
     double asDouble() const;
     bool asBoolean() const;
     double asNumber() const;
@@ -194,6 +208,7 @@ public:
     bool isNull() const;
     bool isUndefinedOrNull() const;
     bool isBoolean() const;
+    bool isMachineInt() const;
     bool isNumber() const;
     bool isString() const;
     bool isPrimitive() const;
@@ -245,7 +260,7 @@ public:
     void putToPrimitiveByIndex(ExecState*, unsigned propertyName, JSValue, bool shouldThrow);
     void putByIndex(ExecState*, unsigned propertyName, JSValue, bool shouldThrow);
 
-    JSObject* toThisObject(ExecState*) const;
+    JSValue toThis(ExecState*, ECMAMode) const;
 
     static bool equal(ExecState*, JSValue v1, JSValue v2);
     static bool equalSlowCase(ExecState*, JSValue v1, JSValue v2);
@@ -253,6 +268,7 @@ public:
     static bool strictEqual(ExecState*, JSValue v1, JSValue v2);
     static bool strictEqualSlowCase(ExecState*, JSValue v1, JSValue v2);
     static bool strictEqualSlowCaseInline(ExecState*, JSValue v1, JSValue v2);
+    static TriState pureStrictEqual(JSValue v1, JSValue v2);
 
     bool isCell() const;
     JSCell* asCell() const;
@@ -261,8 +277,17 @@ public:
     JSValue structureOrUndefined() const;
 
     JS_EXPORT_PRIVATE void dump(PrintStream&) const;
+    void dumpInContext(PrintStream&, DumpContext*) const;
 
     JS_EXPORT_PRIVATE JSObject* synthesizePrototype(ExecState*) const;
+
+    // Constants used for Int52. Int52 isn't part of JSValue right now, but JSValues may be
+    // converted to Int52s and back again.
+    static const unsigned numberOfInt52Bits = 52;
+    static const unsigned int52ShiftAmount = 12;
+    
+    static ptrdiff_t offsetOfPayload() { return OBJECT_OFFSETOF(JSValue, u.asBits.payload); }
+    static ptrdiff_t offsetOfTag() { return OBJECT_OFFSETOF(JSValue, u.asBits.tag); }
 
 private:
     template <class T> JSValue(WriteBarrierBase<T>);
@@ -275,7 +300,7 @@ private:
     JS_EXPORT_PRIVATE JSString* toStringSlowCase(ExecState*) const;
     JS_EXPORT_PRIVATE WTF::String toWTFStringSlowCase(ExecState*) const;
     JS_EXPORT_PRIVATE JSObject* toObjectSlowCase(ExecState*, JSGlobalObject*) const;
-    JS_EXPORT_PRIVATE JSObject* toThisObjectSlowCase(ExecState*) const;
+    JS_EXPORT_PRIVATE JSValue toThisSlowCase(ExecState*, ECMAMode) const;
 
 #if USE(JSVALUE32_64)
     /*

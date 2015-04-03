@@ -40,18 +40,18 @@
 //--------------------------------------------------------------------------------------------------
 
 #ifdef DEBUG
-std::string JavaException::CreateExceptionMessage(JNIEnv* Env, jthrowable Exception,
+TString JavaException::CreateExceptionMessage(JNIEnv* Env, jthrowable Exception,
     jmethodID GetCauseMethod, jmethodID GetStackTraceMethod, jmethodID ThrowableToTStringMethod,
     jmethodID FrameToTStringMethod) {
 
-    std::string result;
+    TString result;
     jobjectArray frames = (jobjectArray)Env->CallObjectMethod(Exception, GetStackTraceMethod);
 
     // Append Throwable.toTString().
     if (0 != frames) {
         jstring jstr = (jstring)Env->CallObjectMethod(Exception, ThrowableToTStringMethod);
         const char* str = Env->GetStringUTFChars(jstr, 0);
-        result += str;
+        result += PlatformString(str).toPlatformString();
         Env->ReleaseStringUTFChars(jstr, str);
         Env->DeleteLocalRef(jstr);
     }
@@ -66,8 +66,8 @@ std::string JavaException::CreateExceptionMessage(JNIEnv* Env, jthrowable Except
             jobject frame = Env->GetObjectArrayElement(frames, i);
             jstring obj = (jstring)Env->CallObjectMethod(frame, FrameToTStringMethod);
             const char* str = Env->GetStringUTFChars(obj, 0);
-            result += "\n  ";
-            result += str;
+            result += _T("\n  ");
+            result += PlatformString(str).toPlatformString();
             Env->ReleaseStringUTFChars(obj, str);
             Env->DeleteLocalRef(obj);
             Env->DeleteLocalRef(frame);
@@ -89,32 +89,23 @@ std::string JavaException::CreateExceptionMessage(JNIEnv* Env, jthrowable Except
 }
 #endif //DEBUG
 
-JavaException::JavaException() : std::exception() {}
+JavaException::JavaException() : Exception() {}
 
-//TODO Fix JavaException for all platforms.
-#ifdef WINDOWS
-JavaException::JavaException(const char* const message) : std::exception(message) {}
-#endif //WINDOWS
-#ifdef MAC
-JavaException::JavaException(const char* const message) {}
-#endif //MAC
-
-#ifdef WINDOWS
-JavaException::JavaException(JNIEnv *Env, const char* const message) : std::exception(message) {
-#endif //WINDOWS
-#ifdef POSIX
-JavaException::JavaException(JNIEnv *Env, const char* const message) {
-#endif //POSIX
+//#ifdef WINDOWS
+JavaException::JavaException(JNIEnv *Env, const TString Message) : Exception(Message) {
+//#endif //WINDOWS
+//#ifdef POSIX
+//JavaException::JavaException(JNIEnv *Env, TString message) {
+//#endif //POSIX
 
     FEnv = Env;
     FException = Env->ExceptionOccurred();
     Env->ExceptionClear();
-    FMessage = message;
 
 #ifdef DEBUG
     Platform& platform = Platform::GetInstance();
 
-    if (platform.GetDebugState() == Platform::dsNone) {
+    if (platform.GetDebugState() == dsNone) {
         jclass ThrowableClass = Env->FindClass("java/lang/Throwable");
 
         if (FEnv->ExceptionCheck() == JNI_TRUE) {
@@ -165,20 +156,11 @@ JavaException::JavaException(JNIEnv *Env, const char* const message) {
             return;
         }
 
-        std::string lmessage = CreateExceptionMessage(Env, FException, GetCauseMethod,
+        TString lmessage = CreateExceptionMessage(Env, FException, GetCauseMethod,
             GetStackTraceMethod, ThrowableToTStringMethod, FrameToTStringMethod);
-        FMessage = lmessage.c_str();
+        SetMessage(lmessage);
     }
 #endif //DEBUG
-}
-
-const char* JavaException::what() {
-    if (FMessage.empty() == true) {
-        return std::exception::what();
-    }
-    else {
-        return FMessage.c_str();
-    }
 }
 
 void JavaException::Rethrow() {
@@ -201,8 +183,7 @@ void JavaStaticMethod::CallVoidMethod(int Count, ...) {
 
     if (FEnv->ExceptionCheck() == JNI_TRUE) {
         Messages& messages = Messages::GetInstance();
-        std::string message = PlatformString(messages.GetMessage(ERROR_INVOKING_METHOD)).toStdString();
-        throw JavaException(FEnv, message.c_str());
+        throw JavaException(FEnv, messages.GetMessage(ERROR_INVOKING_METHOD));
     }
 }
 
@@ -226,8 +207,7 @@ void JavaMethod::CallVoidMethod(int Count, ...) {
 
     if (FEnv->ExceptionCheck() == JNI_TRUE) {
         Messages& messages = Messages::GetInstance();
-        std::string message = PlatformString(messages.GetMessage(ERROR_INVOKING_METHOD)).toStdString();
-        throw JavaException(FEnv, message.c_str());
+        throw JavaException(FEnv, messages.GetMessage(ERROR_INVOKING_METHOD));
     }
 }
 
@@ -244,10 +224,9 @@ JavaClass::JavaClass(JNIEnv *Env, TString Name) {
 
     if (FClass == NULL || FEnv->ExceptionCheck() == JNI_TRUE) {
         Messages& messages = Messages::GetInstance();
-        std::string message = PlatformString(messages.GetMessage(CLASS_NOT_FOUND)).toStdString();
-        message = PlatformString::Format(message,
-            PlatformString(FClassName).c_str());
-        throw JavaException(FEnv, message.c_str());
+        TString message = messages.GetMessage(CLASS_NOT_FOUND);
+        message = PlatformString::Format(message, FClassName.data());
+        throw JavaException(FEnv, message);
     }
 }
 
@@ -255,7 +234,7 @@ JavaClass::~JavaClass() {
     FEnv->DeleteLocalRef(FClass);
 
     if (FEnv->ExceptionCheck() == JNI_TRUE) {
-        throw JavaException(FEnv, "Error");
+        throw JavaException(FEnv, _T("Error"));
     }
 }
 
@@ -264,11 +243,9 @@ JavaStaticMethod JavaClass::GetStaticMethod(TString Name, TString Signature) {
 
     if (method == NULL || FEnv->ExceptionCheck() == JNI_TRUE) {
         Messages& messages = Messages::GetInstance();
-        std::string message = PlatformString(messages.GetMessage(METHOD_NOT_FOUND)).toStdString();
-        message = PlatformString::Format(message,
-            PlatformString(Name).c_str(),
-            PlatformString(FClassName).c_str());
-        throw JavaException(FEnv, message.c_str());
+        TString message = messages.GetMessage(METHOD_NOT_FOUND);
+        message = PlatformString::Format(message, Name.data(), FClassName.data());
+        throw JavaException(FEnv, message);
     }
 
     return JavaStaticMethod(FEnv, FClass, method);
@@ -285,16 +262,16 @@ void JavaStringArray::Initialize(size_t Size) {
 
     if (FEnv->ExceptionCheck() == JNI_TRUE) {
         Messages& messages = Messages::GetInstance();
-        std::string message = PlatformString(messages.GetMessage(CLASS_NOT_FOUND)).toStdString();
-        message = PlatformString::Format(message, "String");
-        throw JavaException(FEnv, message.c_str());
+        TString message = messages.GetMessage(CLASS_NOT_FOUND);
+        message = PlatformString::Format(message, _T("String"));
+        throw JavaException(FEnv, message.data());
     }
 
     jstring str = PlatformString("").toJString(FEnv);
     FData = (jobjectArray)FEnv->NewObjectArray((jsize)Size, jstringClass, str);
 
     if (FEnv->ExceptionCheck() == JNI_TRUE) {
-        throw JavaException(FEnv, "Error");
+        throw JavaException(FEnv, _T("Error"));
     }
 }
 
@@ -328,7 +305,7 @@ void JavaStringArray::SetValue(jsize Index, jstring Item) {
     FEnv->SetObjectArrayElement(FData, Index, Item);
 
     if (FEnv->ExceptionCheck() == JNI_TRUE) {
-        throw JavaException(FEnv, "Error");
+        throw JavaException(FEnv, _T("Error"));
     }
 }
 
@@ -336,7 +313,7 @@ jstring JavaStringArray::GetValue(jsize Index) {
     jstring result = (jstring)FEnv->GetObjectArrayElement(FData, Index);
 
     if (FEnv->ExceptionCheck() == JNI_TRUE) {
-        throw JavaException(FEnv, "Error");
+        throw JavaException(FEnv, _T("Error"));
     }
 
     return result;
@@ -346,7 +323,7 @@ unsigned int JavaStringArray::Count() {
     unsigned int result = FEnv->GetArrayLength(FData);
 
     if (FEnv->ExceptionCheck() == JNI_TRUE) {
-        throw JavaException(FEnv, "Error");
+        throw JavaException(FEnv, _T("Error"));
     }
 
     return result;

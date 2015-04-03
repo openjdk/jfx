@@ -21,12 +21,12 @@
 #ifndef SVGFilterPrimitiveStandardAttributes_h
 #define SVGFilterPrimitiveStandardAttributes_h
 
-#if ENABLE(SVG) && ENABLE(FILTERS)
+#if ENABLE(FILTERS)
 #include "RenderSVGResourceFilter.h"
 #include "RenderSVGResourceFilterPrimitive.h"
 #include "SVGAnimatedLength.h"
 #include "SVGAnimatedString.h"
-#include "SVGStyledElement.h"
+#include "SVGElement.h"
 
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefPtr.h>
@@ -37,7 +37,7 @@ class Filter;
 class FilterEffect;
 class SVGFilterBuilder;
 
-class SVGFilterPrimitiveStandardAttributes : public SVGStyledElement {
+class SVGFilterPrimitiveStandardAttributes : public SVGElement {
 public:
     void setStandardAttributes(FilterEffect*) const;
 
@@ -46,31 +46,31 @@ public:
     virtual bool setFilterEffectAttribute(FilterEffect*, const QualifiedName&);
 
 protected:
-    SVGFilterPrimitiveStandardAttributes(const QualifiedName&, Document*);
+    SVGFilterPrimitiveStandardAttributes(const QualifiedName&, Document&);
 
     bool isSupportedAttribute(const QualifiedName&);
-    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
-    virtual void svgAttributeChanged(const QualifiedName&);
-    virtual void childrenChanged(bool changedByParser = false, Node* beforeChange = 0, Node* afterChange = 0, int childCountDelta = 0);
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
+    virtual void svgAttributeChanged(const QualifiedName&) override;
+    virtual void childrenChanged(const ChildChange&) override;
 
     inline void invalidate()
     {
-        if (RenderObject* primitiveRenderer = renderer())
-            RenderSVGResource::markForLayoutAndParentResourceInvalidation(primitiveRenderer);
+        if (RenderElement* primitiveRenderer = renderer())
+            RenderSVGResource::markForLayoutAndParentResourceInvalidation(*primitiveRenderer);
     }
 
     inline void primitiveAttributeChanged(const QualifiedName& attribute)
     {
-        if (RenderObject* primitiveRenderer = renderer())
+        if (RenderElement* primitiveRenderer = renderer())
             static_cast<RenderSVGResourceFilterPrimitive*>(primitiveRenderer)->primitiveAttributeChanged(attribute);
     }
 
 private:
-    virtual bool isFilterEffect() const { return true; }
+    virtual bool isFilterEffect() const override { return true; }
 
-    virtual RenderObject* createRenderer(RenderArena*, RenderStyle*) OVERRIDE;
-    virtual bool rendererIsNeeded(const NodeRenderingContext&) OVERRIDE;
-    virtual bool childShouldCreateRenderer(const NodeRenderingContext&) const OVERRIDE { return false; }
+    virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) override;
+    virtual bool rendererIsNeeded(const RenderStyle&) override;
+    virtual bool childShouldCreateRenderer(const Node&) const override { return false; }
 
     BEGIN_DECLARE_ANIMATED_PROPERTIES(SVGFilterPrimitiveStandardAttributes)
         DECLARE_ANIMATED_LENGTH(X, x)
@@ -83,7 +83,15 @@ private:
 
 void invalidateFilterPrimitiveParent(SVGElement*);
 
+void isSVGFilterPrimitiveStandardAttributes(const SVGFilterPrimitiveStandardAttributes&); // Catch unnecessary runtime check of type known at compile time.
+inline bool isSVGFilterPrimitiveStandardAttributes(const SVGElement& element) { return element.isFilterEffect(); }
+inline bool isSVGFilterPrimitiveStandardAttributes(const Node& node) { return node.isSVGElement() && toSVGElement(node).isFilterEffect(); }
+template <> inline bool isElementOfType<const SVGFilterPrimitiveStandardAttributes>(const Element& element) { return isSVGFilterPrimitiveStandardAttributes(element); }
+
+NODE_TYPE_CASTS(SVGFilterPrimitiveStandardAttributes)
+
+
 } // namespace WebCore
 
-#endif // ENABLE(SVG)
+#endif // ENABLE(FILTERS)
 #endif

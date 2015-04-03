@@ -21,40 +21,39 @@
 #ifndef SVGViewElement_h
 #define SVGViewElement_h
 
-#if ENABLE(SVG)
 #include "SVGAnimatedBoolean.h"
 #include "SVGAnimatedPreserveAspectRatio.h"
 #include "SVGAnimatedRect.h"
+#include "SVGElement.h"
 #include "SVGExternalResourcesRequired.h"
 #include "SVGFitToViewBox.h"
 #include "SVGStringList.h"
-#include "SVGStyledElement.h"
 #include "SVGZoomAndPan.h"
 
 namespace WebCore {
 
-class SVGViewElement FINAL : public SVGStyledElement,
-                       public SVGExternalResourcesRequired,
-                       public SVGFitToViewBox,
-                       public SVGZoomAndPan {
+class SVGViewElement final : public SVGElement,
+                             public SVGExternalResourcesRequired,
+                             public SVGFitToViewBox,
+                             public SVGZoomAndPan {
 public:
-    static PassRefPtr<SVGViewElement> create(const QualifiedName&, Document*);
+    static PassRefPtr<SVGViewElement> create(const QualifiedName&, Document&);
 
-    using SVGStyledElement::ref;
-    using SVGStyledElement::deref;
+    using SVGElement::ref;
+    using SVGElement::deref;
 
     SVGStringList& viewTarget() { return m_viewTarget; }
     SVGZoomAndPanType zoomAndPan() const { return m_zoomAndPan; }
     void setZoomAndPan(unsigned short zoomAndPan) { m_zoomAndPan = SVGZoomAndPan::parseFromNumber(zoomAndPan); }
 
 private:
-    SVGViewElement(const QualifiedName&, Document*);
+    SVGViewElement(const QualifiedName&, Document&);
 
     // FIXME: svgAttributeChanged missing.
     bool isSupportedAttribute(const QualifiedName&);
-    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
 
-    virtual bool rendererIsNeeded(const NodeRenderingContext&) { return false; }
+    virtual bool rendererIsNeeded(const RenderStyle&) override { return false; }
 
     BEGIN_DECLARE_ANIMATED_PROPERTIES(SVGViewElement)
         DECLARE_ANIMATED_BOOLEAN(ExternalResourcesRequired, externalResourcesRequired)
@@ -66,7 +65,8 @@ private:
     SVGStringList m_viewTarget;
 };
 
+NODE_TYPE_CASTS(SVGViewElement)
+
 } // namespace WebCore
 
-#endif // ENABLE(SVG)
 #endif

@@ -22,41 +22,38 @@
  * the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  * Boston, MA 02110-1301, USA.
  */
+
 #include "config.h"
 #include "TreeScopeAdopter.h"
 
 #include "Attr.h"
-#include "Document.h"
 #include "ElementRareData.h"
-#include "ElementShadow.h"
-#include "NodeRareData.h"
 #include "NodeTraversal.h"
-#include "RenderStyle.h"
-#include "ShadowRoot.h"
 
 namespace WebCore {
 
+// FIXME: Do we ever change tree scopes except between documents?
 void TreeScopeAdopter::moveTreeToNewScope(Node* root) const
 {
     ASSERT(needsScopeChange());
-
-    m_oldScope->guardRef();
 
     // If an element is moved from a document and then eventually back again the collection cache for
     // that element may contain stale data as changes made to it will have updated the DOMTreeVersion
     // of the document it was moved to. By increasing the DOMTreeVersion of the donating document here
     // we ensure that the collection cache will be invalidated as needed when the element is moved back.
-    Document* oldDocument = m_oldScope->documentScope();
-    Document* newDocument = m_newScope->documentScope();
-    bool willMoveToNewDocument = oldDocument != newDocument;
-    if (oldDocument && willMoveToNewDocument)
-        oldDocument->incDOMTreeVersion();
+    Document& oldDocument = m_oldScope.documentScope();
+    Document& newDocument = m_newScope.documentScope();
+    bool willMoveToNewDocument = &oldDocument != &newDocument;
+    if (willMoveToNewDocument) {
+        oldDocument.incrementReferencingNodeCount();
+        oldDocument.incDOMTreeVersion();
+    }
 
     for (Node* node = root; node; node = NodeTraversal::next(node, root)) {
         updateTreeScope(node);
 
         if (willMoveToNewDocument)
-            moveNodeToNewDocument(node, oldDocument, newDocument);
+            moveNodeToNewDocument(node, &oldDocument, &newDocument);
         else if (node->hasRareData()) {
             NodeRareData* rareData = node->rareData();
             if (rareData->nodeLists())
@@ -67,27 +64,28 @@ void TreeScopeAdopter::moveTreeToNewScope(Node* root) const
             continue;
 
         if (node->hasSyntheticAttrChildNodes()) {
-            const Vector<RefPtr<Attr> >& attrs = toElement(node)->attrNodeList();
+            const Vector<RefPtr<Attr>>& attrs = toElement(node)->attrNodeList();
             for (unsigned i = 0; i < attrs.size(); ++i)
                 moveTreeToNewScope(attrs[i].get());
         }
 
         if (ShadowRoot* shadow = node->shadowRoot()) {
-            shadow->setParentTreeScope(m_newScope);
+            shadow->setParentTreeScope(&m_newScope);
             if (willMoveToNewDocument)
-                moveTreeToNewDocument(shadow, oldDocument, newDocument);
+                moveShadowTreeToNewDocument(shadow, &oldDocument, &newDocument);
         }
     }
 
-    m_oldScope->guardDeref();
+    if (willMoveToNewDocument)
+        oldDocument.decrementReferencingNodeCount();
 }
 
-void TreeScopeAdopter::moveTreeToNewDocument(Node* root, Document* oldDocument, Document* newDocument) const
+void TreeScopeAdopter::moveShadowTreeToNewDocument(ShadowRoot* shadowRoot, Document* oldDocument, Document* newDocument) const
 {
-    for (Node* node = root; node; node = NodeTraversal::next(node, root)) {
+    for (Node* node = shadowRoot; node; node = NodeTraversal::next(node, shadowRoot)) {
         moveNodeToNewDocument(node, oldDocument, newDocument);
         if (ShadowRoot* shadow = node->shadowRoot())
-            moveTreeToNewDocument(shadow, oldDocument, newDocument);
+            moveShadowTreeToNewDocument(shadow, oldDocument, newDocument);
     }
 }
 
@@ -106,15 +104,16 @@ void TreeScopeAdopter::ensureDidMoveToNewDocumentWasCalled(Document* oldDocument
 inline void TreeScopeAdopter::updateTreeScope(Node* node) const
 {
     ASSERT(!node->isTreeScope());
-    ASSERT(node->treeScope() == m_oldScope);
-    m_newScope->guardRef();
-    m_oldScope->guardDeref();
+    ASSERT(&node->treeScope() == &m_oldScope);
     node->setTreeScope(m_newScope);
 }
 
 inline void TreeScopeAdopter::moveNodeToNewDocument(Node* node, Document* oldDocument, Document* newDocument) const
 {
     ASSERT(!node->inDocument() || oldDocument != newDocument);
+
+    newDocument->incrementReferencingNodeCount();
+    oldDocument->decrementReferencingNodeCount();
 
     if (node->hasRareData()) {
         NodeRareData* rareData = node->rareData();

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
 
@@ -105,6 +105,16 @@ String contextMenuItemTagOpenImageInNewWindow()
 String contextMenuItemTagDownloadImageToDisk()
 {  
     return String(); // UNSUPPORTED: getLocalizedProperty("contextMenuItemTagDownloadImageToDisk");
+}
+
+String contextMenuItemTagDownloadAudioToDisk()
+{
+    return String(); // UNSUPPORTED
+}
+
+String contextMenuItemTagDownloadVideoToDisk()
+{
+    return String(); // UNSUPPORTED
 }
 
 String contextMenuItemTagCopyImageToClipboard()

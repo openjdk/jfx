@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2010, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +27,6 @@
 #include "JSDOMStringMap.h"
 
 #include "DOMStringMap.h"
-#include "Element.h"
 #include "JSNode.h"
 #include <wtf/text/AtomicString.h>
 
@@ -35,15 +34,15 @@ using namespace JSC;
 
 namespace WebCore {
 
-bool JSDOMStringMap::canGetItemsForName(ExecState*, DOMStringMap* impl, PropertyName propertyName)
+bool JSDOMStringMap::getOwnPropertySlotDelegate(ExecState* exec, PropertyName propertyName, PropertySlot& slot)
 {
-    return impl->contains(propertyNameToAtomicString(propertyName));
-}
-
-JSValue JSDOMStringMap::nameGetter(ExecState* exec, JSValue slotBase, PropertyName propertyName)
-{
-    JSDOMStringMap* thisObj = jsCast<JSDOMStringMap*>(asObject(slotBase));
-    return jsStringWithCache(exec, thisObj->impl()->item(propertyNameToAtomicString(propertyName)));
+    bool nameIsValid;
+    const AtomicString& item = impl().item(propertyNameToString(propertyName), nameIsValid);
+    if (nameIsValid) {
+        slot.setValue(this, ReadOnly | DontDelete | DontEnum, toJS(exec, globalObject(), item));
+        return true;
+    }
+    return false;
 }
 
 void JSDOMStringMap::getOwnPropertyNames(JSObject* object, ExecState* exec, PropertyNameArray& propertyNames, EnumerationMode mode)
@@ -58,16 +57,10 @@ void JSDOMStringMap::getOwnPropertyNames(JSObject* object, ExecState* exec, Prop
     Base::getOwnPropertyNames(thisObject, exec, propertyNames, mode);
 }
 
-bool JSDOMStringMap::deleteProperty(JSCell* cell, ExecState* exec, PropertyName propertyName)
+bool JSDOMStringMap::deleteProperty(JSCell* cell, ExecState*, PropertyName propertyName)
 {
     JSDOMStringMap* thisObject = jsCast<JSDOMStringMap*>(cell);
-    AtomicString stringName = propertyNameToAtomicString(propertyName);
-    if (!thisObject->m_impl->contains(stringName))
-        return false;
-    ExceptionCode ec = 0;
-    thisObject->m_impl->deleteItem(stringName, ec);
-    setDOMException(exec, ec);
-    return !ec;
+    return thisObject->m_impl->deleteItem(propertyNameToString(propertyName));
 }
 
 bool JSDOMStringMap::deletePropertyByIndex(JSCell* cell, ExecState* exec, unsigned index)
@@ -81,7 +74,7 @@ bool JSDOMStringMap::putDelegate(ExecState* exec, PropertyName propertyName, JSV
     if (exec->hadException())
         return false;
     ExceptionCode ec = 0;
-    impl()->setItem(propertyNameToString(propertyName), stringValue, ec);
+    impl().setItem(propertyNameToString(propertyName), stringValue, ec);
     setDOMException(exec, ec);
     return !ec;
 }

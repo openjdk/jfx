@@ -29,20 +29,16 @@
 
 #import "DOMTestTypedefs.h"
 
-#import "DOMBlobInternal.h"
-#import "DOMCSSRuleInternal.h"
-#import "DOMCSSValueInternal.h"
-#import "DOMEventInternal.h"
 #import "DOMNodeInternal.h"
 #import "DOMSVGPointInternal.h"
-#import "DOMStyleSheetInternal.h"
 #import "DOMTestTypedefsInternal.h"
 #import "ExceptionHandlers.h"
 #import "JSMainThreadExecState.h"
-#import "KURL.h"
+#import "SVGPoint.h"
 #import "SerializedScriptValue.h"
 #import "TestTypedefs.h"
 #import "ThreadCheck.h"
+#import "URL.h"
 #import "WebCoreObjCExtras.h"
 #import "WebScriptObjectPrivate.h"
 #import <wtf/GetPtr.h>
@@ -161,7 +157,7 @@
 - (DOMSVGPoint *)immutablePointFunction
 {
     WebCore::JSMainThreadNullState state;
-    return kit(WTF::getPtr(WebCore::SVGPropertyTearOff<WebCore::FloatPoint>::create(IMPL->immutablePointFunction())));
+    return kit(WTF::getPtr(WebCore::SVGPropertyTearOff<WebCore::SVGPoint>::create(IMPL->immutablePointFunction())));
 }
 
 - (void)methodWithException

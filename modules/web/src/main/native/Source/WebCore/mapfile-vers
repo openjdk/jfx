@@ -4,6 +4,10 @@ SUNWprivate_1.0 {
                JNI_OnUnload;
                WTFReportBacktrace;
                WTFReportAssertionFailure;
+               _ZN3WTF10fastMallocEj;
+               _ZN3WTF10fastMallocEm;
+               _ZN3WTF8fastFreeEPv;	       
+               _ZN3WTF11currentTimeEv;
                JSCheckScriptSyntax;
                JSClassCreate;
                JSClassRelease;
@@ -94,6 +98,10 @@ SUNWprivate_1.0 {
                JSValueToObject;
                JSValueToStringCopy;
                JSValueUnprotect;
+               _ZN3JSC16slowValidateCellEPNS_6JSCellE;
+               _ZN3JSC14setNeverInlineEPK15OpaqueJSContextPK13OpaqueJSValue;
+               _ZN3JSC19numberOfDFGCompilesEPK15OpaqueJSContextPK13OpaqueJSValue;
+               _ZN3JSC17JSArrayBufferView6s_infoE;
                Java_com_sun_webkit_dom_AttrImpl_getNameImpl;
                Java_com_sun_webkit_dom_AttrImpl_getOwnerElementImpl;
                Java_com_sun_webkit_dom_AttrImpl_getSpecifiedImpl;
@@ -454,7 +462,6 @@ SUNWprivate_1.0 {
                Java_com_sun_webkit_dom_DocumentImpl_getImagesImpl;
                Java_com_sun_webkit_dom_DocumentImpl_getImplementationImpl;
                Java_com_sun_webkit_dom_DocumentImpl_getInputEncodingImpl;
-               Java_com_sun_webkit_dom_DocumentImpl_getItemsImpl;
                Java_com_sun_webkit_dom_DocumentImpl_getLastModifiedImpl;
                Java_com_sun_webkit_dom_DocumentImpl_getLinksImpl;
                Java_com_sun_webkit_dom_DocumentImpl_getOnabortImpl;
@@ -957,12 +964,9 @@ SUNWprivate_1.0 {
                Java_com_sun_webkit_dom_HTMLElementImpl_getDirImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_getDraggableImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_getHiddenImpl;
-               Java_com_sun_webkit_dom_HTMLElementImpl_getIdImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_getInnerHTMLImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_getInnerTextImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_getIsContentEditableImpl;
-               Java_com_sun_webkit_dom_HTMLElementImpl_getItemIdImpl;
-               Java_com_sun_webkit_dom_HTMLElementImpl_getItemScopeImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_getLangImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_getOuterHTMLImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_getOuterTextImpl;
@@ -979,11 +983,9 @@ SUNWprivate_1.0 {
                Java_com_sun_webkit_dom_HTMLElementImpl_setDirImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_setDraggableImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_setHiddenImpl;
-               Java_com_sun_webkit_dom_HTMLElementImpl_setIdImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_setInnerHTMLImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_setInnerTextImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_setItemIdImpl;
-               Java_com_sun_webkit_dom_HTMLElementImpl_setItemScopeImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_setLangImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_setOuterHTMLImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_setOuterTextImpl;
@@ -1111,7 +1113,6 @@ SUNWprivate_1.0 {
                Java_com_sun_webkit_dom_HTMLIFrameElementImpl_getNameImpl;
                Java_com_sun_webkit_dom_HTMLIFrameElementImpl_getSandboxImpl;
                Java_com_sun_webkit_dom_HTMLIFrameElementImpl_getScrollingImpl;
-               Java_com_sun_webkit_dom_HTMLIFrameElementImpl_getSeamlessImpl;
                Java_com_sun_webkit_dom_HTMLIFrameElementImpl_getSrcImpl;
                Java_com_sun_webkit_dom_HTMLIFrameElementImpl_getSrcdocImpl;
                Java_com_sun_webkit_dom_HTMLIFrameElementImpl_getWidthImpl;
@@ -1695,10 +1696,8 @@ SUNWprivate_1.0 {
                Java_com_sun_webkit_dom_NodeListImpl_itemImpl;
                Java_com_sun_webkit_dom_NotationImpl_getPublicIdImpl;
                Java_com_sun_webkit_dom_NotationImpl_getSystemIdImpl;
-               Java_com_sun_webkit_dom_ProcessingInstructionImpl_getDataImpl;
                Java_com_sun_webkit_dom_ProcessingInstructionImpl_getSheetImpl;
                Java_com_sun_webkit_dom_ProcessingInstructionImpl_getTargetImpl;
-               Java_com_sun_webkit_dom_ProcessingInstructionImpl_setDataImpl;
                Java_com_sun_webkit_dom_RGBColorImpl_dispose;
                Java_com_sun_webkit_dom_RGBColorImpl_getAlphaImpl;
                Java_com_sun_webkit_dom_RGBColorImpl_getBlueImpl;

@@ -34,12 +34,12 @@
 #include "GraphicsContext.h"
 #include "IntRect.h"
 #include "StrokeStyleApplier.h"
-#include <ApplicationServices/ApplicationServices.h>
+#include <CoreGraphics/CoreGraphics.h>
 #include <wtf/MathExtras.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/text/WTFString.h>
 
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
 #include "WebCoreSystemInterface.h"
 #endif
 
@@ -81,7 +81,7 @@ Path::Path()
 Path::~Path()
 {
     if (m_path)
-    CGPathRelease(m_path);
+        CGPathRelease(m_path);
 }
 
 PlatformPathPtr Path::ensurePlatformPath()
@@ -100,7 +100,7 @@ Path& Path::operator=(const Path& other)
 {
     CGMutablePathRef path = other.m_path ? CGPathCreateMutableCopy(other.m_path) : 0;
     if (m_path)
-    CGPathRelease(m_path);
+        CGPathRelease(m_path);
     m_path = path;
     return *this;
 }
@@ -255,7 +255,7 @@ void Path::addArcTo(const FloatPoint& p1, const FloatPoint& p2, float radius)
 
 void Path::platformAddPathForRoundedRect(const FloatRect& rect, const FloatSize& topLeftRadius, const FloatSize& topRightRadius, const FloatSize& bottomLeftRadius, const FloatSize& bottomRightRadius)
 {
-#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
+#if PLATFORM(COCOA)
     bool equalWidths = (topLeftRadius.width() == topRightRadius.width() && topRightRadius.width() == bottomLeftRadius.width() && bottomLeftRadius.width() == bottomRightRadius.width());
     bool equalHeights = (topLeftRadius.height() == bottomLeftRadius.height() && bottomLeftRadius.height() == topRightRadius.height() && topRightRadius.height() == bottomRightRadius.height());
 
@@ -319,9 +319,6 @@ FloatPoint Path::currentPoint() const
         return FloatPoint();
     return CGPathGetCurrentPoint(m_path);
 }
-
-// MARK: -
-// MARK: Path Management
 
 struct PathApplierInfo {
     void* info;

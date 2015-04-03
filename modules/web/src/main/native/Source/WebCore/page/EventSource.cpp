@@ -46,7 +46,6 @@
 #include "ResourceError.h"
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
-#include "ScriptCallStack.h"
 #include "ScriptController.h"
 #include "ScriptExecutionContext.h"
 #include "SecurityOrigin.h"
@@ -59,8 +58,8 @@ namespace WebCore {
 
 const unsigned long long EventSource::defaultReconnectDelay = 3000;
 
-inline EventSource::EventSource(ScriptExecutionContext* context, const KURL& url, const Dictionary& eventSourceInit)
-    : ActiveDOMObject(context)
+inline EventSource::EventSource(ScriptExecutionContext& context, const URL& url, const Dictionary& eventSourceInit)
+    : ActiveDOMObject(&context)
     , m_url(url)
     , m_withCredentials(false)
     , m_state(CONNECTING)
@@ -73,14 +72,14 @@ inline EventSource::EventSource(ScriptExecutionContext* context, const KURL& url
     eventSourceInit.get("withCredentials", m_withCredentials);
 }
 
-PassRefPtr<EventSource> EventSource::create(ScriptExecutionContext* context, const String& url, const Dictionary& eventSourceInit, ExceptionCode& ec)
+PassRefPtr<EventSource> EventSource::create(ScriptExecutionContext& context, const String& url, const Dictionary& eventSourceInit, ExceptionCode& ec)
 {
     if (url.isEmpty()) {
         ec = SYNTAX_ERR;
         return 0;
     }
 
-    KURL fullURL = context->completeURL(url);
+    URL fullURL = context.completeURL(url);
     if (!fullURL.isValid()) {
         ec = SYNTAX_ERR;
         return 0;
@@ -88,11 +87,11 @@ PassRefPtr<EventSource> EventSource::create(ScriptExecutionContext* context, con
 
     // FIXME: Convert this to check the isolated world's Content Security Policy once webkit.org/b/104520 is solved.
     bool shouldBypassMainWorldContentSecurityPolicy = false;
-    if (context->isDocument()) {
-        Document* document = toDocument(context);
-        shouldBypassMainWorldContentSecurityPolicy = document->frame()->script()->shouldBypassMainWorldContentSecurityPolicy();
+    if (context.isDocument()) {
+        Document& document = toDocument(context);
+        shouldBypassMainWorldContentSecurityPolicy = document.frame()->script().shouldBypassMainWorldContentSecurityPolicy();
     }
-    if (!shouldBypassMainWorldContentSecurityPolicy && !context->contentSecurityPolicy()->allowConnectToSource(fullURL)) {
+    if (!shouldBypassMainWorldContentSecurityPolicy && !context.contentSecurityPolicy()->allowConnectToSource(fullURL)) {
         // FIXME: Should this be throwing an exception?
         ec = SECURITY_ERR;
         return 0;
@@ -170,7 +169,7 @@ void EventSource::scheduleReconnect()
     dispatchEvent(Event::create(eventNames().errorEvent, false, false));
 }
 
-void EventSource::connectTimerFired(Timer<EventSource>*)
+void EventSource::connectTimerFired(Timer<EventSource>&)
 {
     connect();
 }
@@ -204,19 +203,9 @@ void EventSource::close()
     if (m_requestInFlight)
         m_loader->cancel();
     else {
-    m_state = CLOSED;
+        m_state = CLOSED;
         unsetPendingActivity(this);
     }
-}
-
-const AtomicString& EventSource::interfaceName() const
-{
-    return eventNames().interfaceForEventSource;
-}
-
-ScriptExecutionContext* EventSource::scriptExecutionContext() const
-{
-    return ActiveDOMObject::scriptExecutionContext();
 }
 
 void EventSource::didReceiveResponse(unsigned long, const ResourceResponse& response)
@@ -238,7 +227,7 @@ void EventSource::didReceiveResponse(unsigned long, const ResourceResponse& resp
             message.append(charset);
             message.appendLiteral("\") that is not UTF-8. Aborting the connection.");
             // FIXME: We are missing the source line.
-            scriptExecutionContext()->addConsoleMessage(JSMessageSource, ErrorMessageLevel, message.toString());
+            scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Error, message.toString());
         }
     } else {
         // To keep the signal-to-noise ratio low, we only log 200-response with an invalid MIME type.
@@ -248,7 +237,7 @@ void EventSource::didReceiveResponse(unsigned long, const ResourceResponse& resp
             message.append(response.mimeType());
             message.appendLiteral("\") that is not \"text/event-stream\". Aborting the connection.");
             // FIXME: We are missing the source line.
-            scriptExecutionContext()->addConsoleMessage(JSMessageSource, ErrorMessageLevel, message.toString());
+            scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Error, message.toString());
         }
     }
 
@@ -300,7 +289,7 @@ void EventSource::didFail(const ResourceError& error)
 void EventSource::didFailAccessControlCheck(const ResourceError& error)
 {
     String message = makeString("EventSource cannot load ", error.failingURL(), ". ", error.localizedDescription());
-    scriptExecutionContext()->addConsoleMessage(JSMessageSource, ErrorMessageLevel, message);
+    scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Error, message);
 
     abortConnectionAttempt();
 }
@@ -315,7 +304,7 @@ void EventSource::abortConnectionAttempt()
     ASSERT(m_state == CONNECTING);
 
     if (m_requestInFlight)
-    m_loader->cancel();
+        m_loader->cancel();
     else {
         m_state = CLOSED;
         unsetPendingActivity(this);
@@ -346,6 +335,7 @@ void EventSource::parseEventStream()
                 break;
             case '\r':
                 m_discardTrailingNewline = true;
+                FALLTHROUGH;
             case '\n':
                 lineLength = i - bufPos;
                 break;
@@ -429,16 +419,6 @@ PassRefPtr<MessageEvent> EventSource::createMessageEvent()
     RefPtr<MessageEvent> event = MessageEvent::create();
     event->initMessageEvent(m_eventName.isEmpty() ? eventNames().messageEvent : AtomicString(m_eventName), false, false, SerializedScriptValue::create(String::adopt(m_data)), m_eventStreamOrigin, m_lastEventId, 0, 0);
     return event.release();
-}
-
-EventTargetData* EventSource::eventTargetData()
-{
-    return &m_eventTargetData;
-}
-
-EventTargetData* EventSource::ensureEventTargetData()
-{
-    return &m_eventTargetData;
 }
 
 } // namespace WebCore

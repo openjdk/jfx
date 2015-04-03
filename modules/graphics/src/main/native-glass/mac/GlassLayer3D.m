@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -68,6 +68,7 @@ static NSArray *allModes = nil;
 - (id)initWithSharedContext:(CGLContextObj)ctx
            andClientContext:(CGLContextObj)clCtx
              withHiDPIAware:(BOOL)HiDPIAware
+             withIsSwPipe:(BOOL)isSwPipe
 {
     LOG("GlassLayer3D initWithSharedContext]");
     self = [super init];
@@ -77,8 +78,8 @@ static NSArray *allModes = nil;
         self->_remoteLayer = nil;
         self->_remoteLayerID = 0;
 
-        self->_painterOffscreen = [[GlassOffscreen alloc] initWithContext:clCtx];
-        self->_glassOffscreen = [[GlassOffscreen alloc] initWithContext:ctx];
+        self->_painterOffscreen = [[GlassOffscreen alloc] initWithContext:clCtx andIsSwPipe:isSwPipe];
+        self->_glassOffscreen = [[GlassOffscreen alloc] initWithContext:ctx andIsSwPipe:isSwPipe];
         [self->_glassOffscreen setLayer:self];
         LOG("   GlassLayer3D context: %p", ctx);
 

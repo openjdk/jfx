@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -644,7 +644,7 @@ public class HelloListView extends Application implements InvalidationListener {
         // initially we match everything in the filter list
 
         final SortedList<String> sortedList = new SortedList<String>(names);
-        final FilteredList<String> filteredList = new FilteredList<String>(names, e -> true);
+        final FilteredList<String> filteredList = new FilteredList<String>(sortedList, e -> true);
 
         GridPane grid = new GridPane();
         grid.setPadding(new Insets(5, 5, 5, 5));
@@ -724,8 +724,7 @@ public class HelloListView extends Application implements InvalidationListener {
         toggleGroup.selectedToggleProperty().addListener(new InvalidationListener() {
             public void invalidated(Observable ov) {
                 if (toggleGroup.getSelectedToggle() == null) return;
-//                sortedList.setComparator((Comparator<String>)toggleGroup.getSelectedToggle().getUserData());
-                System.out.println("Disabled in HelloListView due to FilteredList bug");
+                sortedList.setComparator((Comparator<String>)toggleGroup.getSelectedToggle().getUserData());
             }
         });
         final RadioButton sortAscBtn = new RadioButton("Sort Ascending");

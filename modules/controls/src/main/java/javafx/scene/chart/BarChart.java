@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -226,6 +226,11 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
 
     @Override protected void dataItemRemoved(final Data<X,Y> item, final Series<X,Y> series) {
         final Node bar = item.getNode();
+
+        if (bar != null) {
+            bar.focusTraversableProperty().unbind();
+        }
+
         if (shouldAnimate()) {
             XYValueMap.clear();
             dataRemoveTimeline = createDataRemoveTimeline(item, bar, series);

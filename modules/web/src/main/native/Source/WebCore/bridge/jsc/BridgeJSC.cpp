@@ -33,11 +33,6 @@
 #include "runtime/JSLock.h"
 #include "runtime/ObjectPrototype.h"
 
-
-#if PLATFORM(QT)
-#include "qt_instance.h"
-#endif
-
 namespace JSC {
 
 namespace Bindings {
@@ -82,7 +77,7 @@ JSObject* Instance::createRuntimeObject(ExecState* exec)
 
     JSLockHolder lock(exec);
     RuntimeObject* newObject = newRuntimeObject(exec);
-    m_runtimeObject = PassWeak<RuntimeObject>(newObject);
+    m_runtimeObject = JSC::Weak<RuntimeObject>(newObject);
     m_rootObject->addRuntimeObject(exec->vm(), newObject);
     return newObject;
 }
@@ -91,9 +86,8 @@ RuntimeObject* Instance::newRuntimeObject(ExecState* exec)
 {
     JSLockHolder lock(exec);
 
-    // FIXME: deprecatedGetDOMStructure uses the prototype off of the wrong global object
-    // We need to pass in the right global object for "i".
-    return RuntimeObject::create(exec, exec->lexicalGlobalObject(), WebCore::deprecatedGetDOMStructure<RuntimeObject>(exec), this);
+    // FIXME: deprecatedGetDOMStructure uses the prototype off of the wrong global object.
+    return RuntimeObject::create(exec->vm(), WebCore::deprecatedGetDOMStructure<RuntimeObject>(exec), this);
 }
 
 void Instance::willInvalidateRuntimeObject()

@@ -33,11 +33,9 @@
 #include <wtf/MathExtras.h>
 #include <wtf/StdLibExtras.h>
 
-using namespace std;
-
 namespace WebCore {
 
-static void parseCacheHeader(const String& header, Vector<pair<String, String> >& result);
+static void parseCacheHeader(const String& header, Vector<std::pair<String, String>>& result);
 
 inline const ResourceResponse& ResourceResponseBase::asResourceResponse() const
 {
@@ -47,9 +45,13 @@ inline const ResourceResponse& ResourceResponseBase::asResourceResponse() const
 ResourceResponseBase::ResourceResponseBase()  
     : m_expectedContentLength(0)
     , m_httpStatusCode(0)
-    , m_lastModifiedDate(0)
-    , m_wasCached(false)
     , m_connectionID(0)
+    , m_cacheControlMaxAge(0)
+    , m_age(0)
+    , m_date(0)
+    , m_expires(0)
+    , m_lastModified(0)
+    , m_wasCached(false)
     , m_connectionReused(false)
     , m_isNull(true)
     , m_haveParsedCacheControlHeader(false)
@@ -60,24 +62,23 @@ ResourceResponseBase::ResourceResponseBase()
     , m_cacheControlContainsNoCache(false)
     , m_cacheControlContainsNoStore(false)
     , m_cacheControlContainsMustRevalidate(false)
-    , m_cacheControlMaxAge(0.0)
-    , m_age(0.0)
-    , m_date(0.0)
-    , m_expires(0.0)
-    , m_lastModified(0.0)
 {
 }
 
-ResourceResponseBase::ResourceResponseBase(const KURL& url, const String& mimeType, long long expectedLength, const String& textEncodingName, const String& filename)
+ResourceResponseBase::ResourceResponseBase(const URL& url, const String& mimeType, long long expectedLength, const String& textEncodingName, const String& filename)
     : m_url(url)
     , m_mimeType(mimeType)
     , m_expectedContentLength(expectedLength)
     , m_textEncodingName(textEncodingName)
     , m_suggestedFilename(filename)
     , m_httpStatusCode(0)
-    , m_lastModifiedDate(0)
-    , m_wasCached(false)
     , m_connectionID(0)
+    , m_cacheControlMaxAge(0)
+    , m_age(0)
+    , m_date(0)
+    , m_expires(0)
+    , m_lastModified(0)
+    , m_wasCached(false)
     , m_connectionReused(false)
     , m_isNull(false)
     , m_haveParsedCacheControlHeader(false)
@@ -88,11 +89,6 @@ ResourceResponseBase::ResourceResponseBase(const KURL& url, const String& mimeTy
     , m_cacheControlContainsNoCache(false)
     , m_cacheControlContainsNoStore(false)
     , m_cacheControlContainsMustRevalidate(false)
-    , m_cacheControlMaxAge(0.0)
-    , m_age(0.0)
-    , m_date(0.0)
-    , m_expires(0.0)
-    , m_lastModified(0.0)
 {
 }
 
@@ -110,7 +106,6 @@ PassOwnPtr<ResourceResponse> ResourceResponseBase::adopt(PassOwnPtr<CrossThreadR
 
     response->lazyInit(CommonAndUncommonFields);
     response->m_httpHeaderFields.adopt(data->m_httpHeaders.release());
-    response->setLastModifiedDate(data->m_lastModifiedDate);
     response->setResourceLoadTiming(data->m_resourceLoadTiming.release());
     response->doPlatformAdopt(data);
     return response.release();
@@ -127,7 +122,6 @@ PassOwnPtr<CrossThreadResourceResponseData> ResourceResponseBase::copyData() con
     data->m_httpStatusCode = httpStatusCode();
     data->m_httpStatusText = httpStatusText().isolatedCopy();
     data->m_httpHeaders = httpHeaderFields().copyData();
-    data->m_lastModifiedDate = lastModifiedDate();
     if (m_resourceLoadTiming)
         data->m_resourceLoadTiming = m_resourceLoadTiming->deepCopy();
     return asResourceResponse().doPlatformCopyData(data.release());
@@ -142,19 +136,19 @@ bool ResourceResponseBase::isHTTP() const
     return equalIgnoringCase(protocol, "http")  || equalIgnoringCase(protocol, "https");
 }
 
-const KURL& ResourceResponseBase::url() const
+const URL& ResourceResponseBase::url() const
 {
     lazyInit(CommonFieldsOnly);
 
     return m_url; 
 }
 
-void ResourceResponseBase::setURL(const KURL& url)
+void ResourceResponseBase::setURL(const URL& url)
 {
     lazyInit(CommonFieldsOnly);
     m_isNull = false;
 
-    m_url = url; 
+    m_url = url;
 
     // FIXME: Should invalidate or update platform response if present.
 }
@@ -172,7 +166,7 @@ void ResourceResponseBase::setMimeType(const String& mimeType)
     m_isNull = false;
 
     // FIXME: MIME type is determined by HTTP Content-Type header. We should update the header, so that it doesn't disagree with m_mimeType.
-    m_mimeType = mimeType; 
+    m_mimeType = mimeType;
 
     // FIXME: Should invalidate or update platform response if present.
 }
@@ -208,7 +202,7 @@ void ResourceResponseBase::setTextEncodingName(const String& encodingName)
     m_isNull = false;
 
     // FIXME: Text encoding is determined by HTTP Content-Type header. We should update the header, so that it doesn't disagree with m_textEncodingName.
-    m_textEncodingName = encodingName; 
+    m_textEncodingName = encodingName;
 
     // FIXME: Should invalidate or update platform response if present.
 }
@@ -352,7 +346,7 @@ void ResourceResponseBase::parseCacheControlDirectives() const
 
     m_cacheControlContainsMustRevalidate = false;
     m_cacheControlContainsNoCache = false;
-    m_cacheControlMaxAge = numeric_limits<double>::quiet_NaN();
+    m_cacheControlMaxAge = std::numeric_limits<double>::quiet_NaN();
 
     DEFINE_STATIC_LOCAL(const AtomicString, cacheControlString, ("cache-control", AtomicString::ConstructFromLiteral));
     DEFINE_STATIC_LOCAL(const AtomicString, noCacheDirective, ("no-cache", AtomicString::ConstructFromLiteral));
@@ -362,7 +356,7 @@ void ResourceResponseBase::parseCacheControlDirectives() const
 
     String cacheControlValue = m_httpHeaderFields.get(cacheControlString);
     if (!cacheControlValue.isEmpty()) {
-        Vector<pair<String, String> > directives;
+        Vector<std::pair<String, String>> directives;
         parseCacheHeader(cacheControlValue, directives);
 
         size_t directivesSize = directives.size();
@@ -517,22 +511,6 @@ bool ResourceResponseBase::isAttachment() const
     return equalIgnoringCase(value, attachmentString);
 }
   
-void ResourceResponseBase::setLastModifiedDate(time_t lastModifiedDate)
-{
-    lazyInit(CommonAndUncommonFields);
-
-    m_lastModifiedDate = lastModifiedDate;
-
-    // FIXME: Should invalidate or update platform response if present.
-}
-
-time_t ResourceResponseBase::lastModifiedDate() const
-{
-    lazyInit(CommonAndUncommonFields);
-
-    return m_lastModifiedDate;
-}
-
 bool ResourceResponseBase::wasCached() const
 {
     lazyInit(CommonAndUncommonFields);
@@ -591,7 +569,7 @@ void ResourceResponseBase::lazyInit(InitLevel initLevel) const
 {
     const_cast<ResourceResponse*>(static_cast<const ResourceResponse*>(this))->platformLazyInit(initLevel);
 }
-    
+
 bool ResourceResponseBase::compare(const ResourceResponse& a, const ResourceResponse& b)
 {
     if (a.isNull() != b.isNull())
@@ -658,7 +636,7 @@ static inline String trimToNextSeparator(const String& str)
     return str.substring(0, str.find(isCacheHeaderSeparator));
 }
 
-static void parseCacheHeader(const String& header, Vector<pair<String, String> >& result)
+static void parseCacheHeader(const String& header, Vector<std::pair<String, String>>& result)
 {
     const String safeHeader = header.removeCharacters(isControlCharacter);
     unsigned max = safeHeader.length();
@@ -676,7 +654,7 @@ static void parseCacheHeader(const String& header, Vector<pair<String, String> >
                 size_t nextDoubleQuotePosition = value.find('"', 1);
                 if (nextDoubleQuotePosition != notFound) {
                     // Store the value as a quoted string without quotes
-                    result.append(pair<String, String>(directive, value.substring(1, nextDoubleQuotePosition - 1).stripWhiteSpace()));
+                    result.append(std::pair<String, String>(directive, value.substring(1, nextDoubleQuotePosition - 1).stripWhiteSpace()));
                     pos += (safeHeader.find('"', pos) - pos) + nextDoubleQuotePosition + 1;
                     // Move past next comma, if there is one
                     size_t nextCommaPosition2 = safeHeader.find(',', pos);
@@ -686,7 +664,7 @@ static void parseCacheHeader(const String& header, Vector<pair<String, String> >
                         return; // Parse error if there is anything left with no comma
                 } else {
                     // Parse error; just use the rest as the value
-                    result.append(pair<String, String>(directive, trimToNextSeparator(value.substring(1, value.length() - 1).stripWhiteSpace())));
+                    result.append(std::pair<String, String>(directive, trimToNextSeparator(value.substring(1, value.length() - 1).stripWhiteSpace())));
                     return;
                 }
             } else {
@@ -694,21 +672,21 @@ static void parseCacheHeader(const String& header, Vector<pair<String, String> >
                 size_t nextCommaPosition2 = value.find(',');
                 if (nextCommaPosition2 != notFound) {
                     // The value is delimited by the next comma
-                    result.append(pair<String, String>(directive, trimToNextSeparator(value.substring(0, nextCommaPosition2).stripWhiteSpace())));
+                    result.append(std::pair<String, String>(directive, trimToNextSeparator(value.substring(0, nextCommaPosition2).stripWhiteSpace())));
                     pos += (safeHeader.find(',', pos) - pos) + 1;
                 } else {
                     // The rest is the value; no change to value needed
-                    result.append(pair<String, String>(directive, trimToNextSeparator(value)));
+                    result.append(std::pair<String, String>(directive, trimToNextSeparator(value)));
                     return;
                 }
             }
         } else if (nextCommaPosition != notFound && (nextCommaPosition < nextEqualSignPosition || nextEqualSignPosition == notFound)) {
             // Add directive to map with empty string as value
-            result.append(pair<String, String>(trimToNextSeparator(safeHeader.substring(pos, nextCommaPosition - pos).stripWhiteSpace()), ""));
+            result.append(std::pair<String, String>(trimToNextSeparator(safeHeader.substring(pos, nextCommaPosition - pos).stripWhiteSpace()), ""));
             pos += nextCommaPosition - pos + 1;
         } else {
             // Add last directive to map with empty string as value
-            result.append(pair<String, String>(trimToNextSeparator(safeHeader.substring(pos, max - pos).stripWhiteSpace()), ""));
+            result.append(std::pair<String, String>(trimToNextSeparator(safeHeader.substring(pos, max - pos).stripWhiteSpace()), ""));
             return;
         }
     }

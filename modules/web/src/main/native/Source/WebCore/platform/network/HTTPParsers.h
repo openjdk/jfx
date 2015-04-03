@@ -40,12 +40,12 @@ namespace WebCore {
 class HTTPHeaderMap;
 class ResourceResponseBase;
 
-typedef enum {
+enum ContentDispositionType {
     ContentDispositionNone,
     ContentDispositionInline,
     ContentDispositionAttachment,
     ContentDispositionOther
-} ContentDispositionType;
+};
 
 #if ENABLE(NOSNIFF)
 enum ContentTypeOptionsDisposition {
@@ -86,7 +86,7 @@ ContentTypeOptionsDisposition parseContentTypeOptionsHeader(const String& header
 // Parsing Complete HTTP Messages.
 enum HTTPVersion { Unknown, HTTP_1_0, HTTP_1_1 };
 size_t parseHTTPRequestLine(const char* data, size_t length, String& failureReason, String& method, String& url, HTTPVersion&);
-size_t parseHTTPHeader(const char* data, size_t length, String& failureReason, AtomicString& nameStr, String& valueStr);
+size_t parseHTTPHeader(const char* data, size_t length, String& failureReason, AtomicString& nameStr, String& valueStr, bool strict = true);
 size_t parseHTTPRequestBody(const char* data, size_t length, Vector<unsigned char>& body);
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -384,6 +384,26 @@ public class DatePickerTest {
      * Tests for bug reports                                             *
      ********************************************************************/
 
+    @Test public void test_rt21186() {
+        final DatePicker datePicker = new DatePicker();
+
+        StageLoader sl = new StageLoader(datePicker);
+
+        assertNull(datePicker.getTooltip());
+        assertNull(datePicker.getEditor().getTooltip());
+
+        Tooltip tooltip = new Tooltip("Tooltip");
+        datePicker.setTooltip(tooltip);
+        assertEquals(tooltip, datePicker.getTooltip());
+        assertEquals(tooltip, datePicker.getEditor().getTooltip());
+
+        datePicker.setTooltip(null);
+        assertNull(datePicker.getTooltip());
+        assertNull(datePicker.getEditor().getTooltip());
+
+        sl.dispose();
+    }
+
     @Test public void test_rt30549() {
         // Set a MinguoDate from a String
         datePicker.setChronology(MinguoChronology.INSTANCE);
@@ -400,7 +420,132 @@ public class DatePickerTest {
         assertEquals("5/22/2013", datePicker.getEditor().getText());
     }
 
-    @Ignore("fix not yet developed")
+    private int test_rt35586_count = 0;
+    @Test public void test_rt35586() {
+        assertEquals(0, test_rt35586_count);
+
+        final DatePicker dp = new DatePicker();
+        dp.setOnAction(event -> {
+            test_rt35586_count++;
+            assertEquals("1/2/2015", dp.getEditor().getText());
+        });
+
+        StageLoader sl = new StageLoader(dp);
+
+        dp.getEditor().requestFocus();
+        dp.getEditor().setText("1/2/2015");
+        KeyEventFirer keyboard = new KeyEventFirer(dp.getEditor());
+        keyboard.doKeyPress(KeyCode.ENTER);
+
+        assertEquals(1, test_rt35586_count);
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt35840() {
+        final DatePicker dp = new DatePicker();
+        dp.setEditable(true);
+        StageLoader sl = new StageLoader(dp);
+        dp.requestFocus();
+
+        KeyEventFirer keyboard = new KeyEventFirer(dp);
+        keyboard.doKeyTyped(KeyCode.DIGIT1);
+        keyboard.doKeyTyped(KeyCode.SLASH);
+        keyboard.doKeyTyped(KeyCode.DIGIT2);
+        keyboard.doKeyTyped(KeyCode.SLASH);
+        keyboard.doKeyTyped(KeyCode.DIGIT2);
+        keyboard.doKeyTyped(KeyCode.DIGIT0);
+        keyboard.doKeyTyped(KeyCode.DIGIT1);
+        keyboard.doKeyTyped(KeyCode.DIGIT5);
+        assertEquals("1/2/2015", dp.getEditor().getText());
+
+        assertNull(dp.getValue());
+        keyboard.doKeyPress(KeyCode.ENTER);
+        assertEquals("2015-01-02", dp.getValue().toString());
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt36280_F4ShowsPopup() {
+        final DatePicker dp = new DatePicker();
+        StageLoader sl = new StageLoader(dp);
+        KeyEventFirer dpKeyboard = new KeyEventFirer(dp);
+
+        assertFalse(dp.isShowing());
+        dpKeyboard.doKeyPress(KeyCode.F4);  // show the popup
+        assertTrue(dp.isShowing());
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt36280_altUpShowsPopup() {
+        final DatePicker dp = new DatePicker();
+        StageLoader sl = new StageLoader(dp);
+        KeyEventFirer dpKeyboard = new KeyEventFirer(dp);
+
+        assertFalse(dp.isShowing());
+        dpKeyboard.doKeyPress(KeyCode.UP, KeyModifier.ALT);  // show the popup
+        assertTrue(dp.isShowing());
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt36280_altDownShowsPopup_onComboBox() {
+        final DatePicker dp = new DatePicker();
+        StageLoader sl = new StageLoader(dp);
+        KeyEventFirer dpKeyboard = new KeyEventFirer(dp);
+
+        assertFalse(dp.isShowing());
+        assertTrue(dp.getEditor().getText().isEmpty());
+        dpKeyboard.doKeyPress(KeyCode.DOWN, KeyModifier.ALT);  // show the popup
+        assertTrue(dp.isShowing());
+        assertTrue(dp.getEditor().getText().isEmpty());
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt36280_altDownShowsPopup_onTextField() {
+        final DatePicker dp = new DatePicker();
+        StageLoader sl = new StageLoader(dp);
+
+        KeyEventFirer tfKeyboard = new KeyEventFirer(dp.getEditor());
+        assertFalse(dp.isShowing());
+        assertTrue(dp.getEditor().getText().isEmpty());
+        tfKeyboard.doKeyPress(KeyCode.DOWN, KeyModifier.ALT);  // show the popup
+        assertTrue(dp.isShowing());
+        assertTrue(dp.getEditor().getText().isEmpty());
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt36280_F4HidesShowingPopup() {
+        final DatePicker dp = new DatePicker();
+        StageLoader sl = new StageLoader(dp);
+        KeyEventFirer dpKeyboard = new KeyEventFirer(dp);
+
+        assertFalse(dp.isShowing());
+        dpKeyboard.doKeyPress(KeyCode.F4);  // show the popup
+        assertTrue(dp.isShowing());
+        dpKeyboard.doKeyPress(KeyCode.F4);  // hide the popup
+        assertFalse(dp.isShowing());
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt36717() {
+        final DatePicker dp = new DatePicker();
+        StageLoader sl = new StageLoader(dp);
+
+        // the stack overflow only occurs when a ComboBox changes from non-editable to editable
+        dp.setEditable(false);
+        dp.setEditable(true);
+        assertNotNull(dp.getEditor());
+        KeyEventFirer tfKeyboard = new KeyEventFirer(dp.getEditor());
+        tfKeyboard.doKeyPress(KeyCode.ENTER);   // Stack overflow here
+
+        sl.dispose();
+    }
+
     @Test public void test_rt36902() {
         final DatePicker dp1 = new DatePicker() {
             @Override public String toString() {

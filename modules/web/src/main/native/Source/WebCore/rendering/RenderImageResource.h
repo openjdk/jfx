@@ -26,26 +26,23 @@
 #ifndef RenderImageResource_h
 #define RenderImageResource_h
 
+#include "CachedImage.h"
 #include "CachedResourceHandle.h"
-#include "Image.h"
-#include "LayoutSize.h"
 #include "StyleImage.h"
+#include <wtf/PassOwnPtr.h>
 
 namespace WebCore {
 
-class RenderObject;
+class CachedImage;
+class RenderElement;
 
 class RenderImageResource {
     WTF_MAKE_NONCOPYABLE(RenderImageResource); WTF_MAKE_FAST_ALLOCATED;
 public:
+    RenderImageResource();
     virtual ~RenderImageResource();
 
-    static PassOwnPtr<RenderImageResource> create()
-    {
-        return adoptPtr(new RenderImageResource);
-    }
-
-    virtual void initialize(RenderObject*);
+    virtual void initialize(RenderElement*);
     virtual void shutdown();
 
     void setCachedImage(CachedImage*);
@@ -58,21 +55,20 @@ public:
     virtual bool errorOccurred() const;
 
     virtual void setContainerSizeForRenderer(const IntSize&);
-    virtual bool usesImageContainerSize() const;
     virtual bool imageHasRelativeWidth() const;
     virtual bool imageHasRelativeHeight() const;
 
     virtual LayoutSize imageSize(float multiplier) const;
+    virtual LayoutSize intrinsicSize(float multiplier) const;
 
     virtual WrappedImagePtr imagePtr() const { return m_cachedImage.get(); }
 
 protected:
-    RenderImageResource();
-    RenderObject* m_renderer;
+    RenderElement* m_renderer;
     CachedResourceHandle<CachedImage> m_cachedImage;
 
 private:
-    static Image* nullImage();
+    LayoutSize getImageSize(float multiplier, CachedImage::SizeType) const;
 };
 
 } // namespace WebCore

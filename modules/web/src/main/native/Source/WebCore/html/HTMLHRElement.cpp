@@ -28,24 +28,24 @@
 #include "CSSValueKeywords.h"
 #include "CSSValuePool.h"
 #include "HTMLNames.h"
-#include "StylePropertySet.h"
+#include "StyleProperties.h"
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-HTMLHRElement::HTMLHRElement(const QualifiedName& tagName, Document* document)
+HTMLHRElement::HTMLHRElement(const QualifiedName& tagName, Document& document)
     : HTMLElement(tagName, document)
 {
     ASSERT(hasTagName(hrTag));
 }
 
-PassRefPtr<HTMLHRElement> HTMLHRElement::create(Document* document)
+PassRefPtr<HTMLHRElement> HTMLHRElement::create(Document& document)
 {
     return adoptRef(new HTMLHRElement(hrTag, document));
 }
 
-PassRefPtr<HTMLHRElement> HTMLHRElement::create(const QualifiedName& tagName, Document* document)
+PassRefPtr<HTMLHRElement> HTMLHRElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(new HTMLHRElement(tagName, document));
 }
@@ -57,7 +57,7 @@ bool HTMLHRElement::isPresentationAttribute(const QualifiedName& name) const
     return HTMLElement::isPresentationAttribute(name);
 }
 
-void HTMLHRElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStylePropertySet* style)
+void HTMLHRElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStyleProperties& style)
 {
     if (name == alignAttr) {
         if (equalIgnoringCase(value, "left")) {
@@ -82,11 +82,13 @@ void HTMLHRElement::collectStyleForPresentationAttribute(const QualifiedName& na
         addHTMLColorToStyle(style, CSSPropertyBorderColor, value);
         addHTMLColorToStyle(style, CSSPropertyBackgroundColor, value);
     } else if (name == noshadeAttr) {
-        addPropertyToPresentationAttributeStyle(style, CSSPropertyBorderStyle, CSSValueSolid);
+        if (!hasAttribute(colorAttr)) {
+            addPropertyToPresentationAttributeStyle(style, CSSPropertyBorderStyle, CSSValueSolid);
 
-        RefPtr<CSSPrimitiveValue> darkGrayValue = cssValuePool().createColorValue(Color::darkGray);
-        style->setProperty(CSSPropertyBorderColor, darkGrayValue);
-        style->setProperty(CSSPropertyBackgroundColor, darkGrayValue);
+            RefPtr<CSSPrimitiveValue> darkGrayValue = cssValuePool().createColorValue(Color::darkGray);
+            style.setProperty(CSSPropertyBorderColor, darkGrayValue);
+            style.setProperty(CSSPropertyBackgroundColor, darkGrayValue);
+        }
     } else if (name == sizeAttr) {
         StringImpl* si = value.impl();
         int size = si->toInt();

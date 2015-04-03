@@ -47,7 +47,7 @@ public:
     
     bool isNull() const;
     void nullify();
-
+    
     static bool compare(const AuthenticationChallenge& a, const AuthenticationChallenge& b);
 
 protected:

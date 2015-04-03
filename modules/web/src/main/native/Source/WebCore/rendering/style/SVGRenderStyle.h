@@ -23,7 +23,6 @@
 #ifndef SVGRenderStyle_h
 #define SVGRenderStyle_h
 
-#if ENABLE(SVG)
 #include "CSSValueList.h"
 #include "DataRef.h"
 #include "ExceptionCodePlaceholder.h"
@@ -41,8 +40,9 @@ class RenderObject;
 
 class SVGRenderStyle : public RefCounted<SVGRenderStyle> {    
 public:
-    static PassRefPtr<SVGRenderStyle> create() { return adoptRef(new SVGRenderStyle); }
-    PassRefPtr<SVGRenderStyle> copy() const { return adoptRef(new SVGRenderStyle(*this));}
+    static PassRef<SVGRenderStyle> createDefaultStyle();
+    static PassRef<SVGRenderStyle> create() { return adoptRef(*new SVGRenderStyle); }
+    PassRef<SVGRenderStyle> copy() const;
     ~SVGRenderStyle();
 
     bool inheritedNotEqual(const SVGRenderStyle*) const;
@@ -143,7 +143,7 @@ public:
     void setGlyphOrientationHorizontal(EGlyphOrientation val) { svg_inherited_flags._glyphOrientationHorizontal = val; }
     void setGlyphOrientationVertical(EGlyphOrientation val) { svg_inherited_flags._glyphOrientationVertical = val; }
     void setMaskType(EMaskType val) { svg_noninherited_flags.f.maskType = val; }
-    
+
     void setFillOpacity(float obj)
     {
         if (!(fill->opacity == obj))
@@ -262,7 +262,7 @@ public:
             misc.access()->baselineShiftValue = obj;
     }
 
-    void setShadow(PassOwnPtr<ShadowData> obj) { shadowSVG.access()->shadow = obj; }
+    void setShadow(std::unique_ptr<ShadowData> obj) { shadowSVG.access()->shadow = std::move(obj); }
 
     // Setters for non-inherited resources
     void setClipperResource(const String& obj)
@@ -347,7 +347,7 @@ public:
     String markerMidResource() const { return inheritedResources->markerMid; }
     String markerEndResource() const { return inheritedResources->markerEnd; }
     EMaskType maskType() const { return (EMaskType) svg_noninherited_flags.f.maskType; }
-    
+
     const SVGPaint::SVGPaintType& visitedLinkFillPaintType() const { return fill->visitedLinkPaintType; }
     const Color& visitedLinkFillPaintColor() const { return fill->visitedLinkPaintColor; }
     const String& visitedLinkFillPaintUri() const { return fill->visitedLinkPaintUri; }
@@ -364,6 +364,7 @@ public:
     bool hasVisibleStroke() const { return hasStroke() && !strokeWidth().isZero(); }
     bool hasFill() const { return fillPaintType() != SVGPaint::SVG_PAINTTYPE_NONE; }
     bool isVerticalWritingMode() const { return writingMode() == WM_TBRL || writingMode() == WM_TB; }
+    bool isolatesBlending() const { return hasMasker() || hasFilter() || shadow(); }
 
 protected:
     // inherit
@@ -469,5 +470,4 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(SVG)
 #endif // SVGRenderStyle_h

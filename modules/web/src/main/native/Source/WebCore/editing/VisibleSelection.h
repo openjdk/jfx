@@ -99,11 +99,13 @@ public:
     
     Element* rootEditableElement() const;
     bool isContentEditable() const;
-    bool rendererIsEditable() const;
+    bool hasEditableStyle() const;
     bool isContentRichlyEditable() const;
     // Returns a shadow tree node for legacy shadow trees, a child of the
     // ShadowRoot node for new shadow trees, or 0 for non-shadow trees.
     Node* nonBoundaryShadowTreeRootNode() const;
+
+    bool isInPasswordField() const;
 
 #ifndef NDEBUG
     void debugPosition() const;

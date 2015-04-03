@@ -33,8 +33,6 @@
 
 #include <utility>
 
-using namespace std;
-
 namespace WebCore {
 
 HTTPHeaderMap::HTTPHeaderMap()
@@ -50,9 +48,8 @@ PassOwnPtr<CrossThreadHTTPHeaderMapData> HTTPHeaderMap::copyData() const
     OwnPtr<CrossThreadHTTPHeaderMapData> data = adoptPtr(new CrossThreadHTTPHeaderMapData());
     data->reserveInitialCapacity(size());
 
-    HTTPHeaderMap::const_iterator end_it = end();
-    for (HTTPHeaderMap::const_iterator it = begin(); it != end_it; ++it)
-        data->uncheckedAppend(make_pair(it->key.string().isolatedCopy(), it->value.isolatedCopy()));
+    for (const auto& header : *this)
+        data->uncheckedAppend(std::make_pair(header.key.string().isolatedCopy(), header.value.isolatedCopy()));
 
     return data.release();
 }
@@ -62,7 +59,7 @@ void HTTPHeaderMap::adopt(PassOwnPtr<CrossThreadHTTPHeaderMapData> data)
     clear();
     size_t dataSize = data->size();
     for (size_t index = 0; index < dataSize; ++index) {
-        pair<String, String>& header = (*data)[index];
+        std::pair<String, String>& header = (*data)[index];
         set(header.first, header.second);
     }
 }
@@ -97,7 +94,7 @@ struct CaseFoldingCStringTranslator {
 
 String HTTPHeaderMap::get(const char* name) const
 {
-    const_iterator i = find<const char*, CaseFoldingCStringTranslator>(name);
+    const_iterator i = find<CaseFoldingCStringTranslator>(name);
     if (i == end())
         return String();
     return i->value;
@@ -105,12 +102,12 @@ String HTTPHeaderMap::get(const char* name) const
     
 bool HTTPHeaderMap::contains(const char* name) const
 {
-    return find<const char*, CaseFoldingCStringTranslator>(name) != end();
+    return find<CaseFoldingCStringTranslator>(name) != end();
 }
 
 HTTPHeaderMap::AddResult HTTPHeaderMap::add(const char* name, const String& value)
 {
-    return HashMap<AtomicString, String, CaseFoldingHash>::add<const char*, CaseFoldingCStringTranslator>(name, value);
+    return HashMap<AtomicString, String, CaseFoldingHash>::add<CaseFoldingCStringTranslator>(name, value);
 }
 
 } // namespace WebCore

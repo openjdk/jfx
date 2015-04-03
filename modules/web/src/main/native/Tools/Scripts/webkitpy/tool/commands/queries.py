@@ -1,6 +1,7 @@
 # Copyright (c) 2009 Google Inc. All rights reserved.
 # Copyright (c) 2009 Apple Inc. All rights reserved.
 # Copyright (c) 2012 Intel Corporation. All rights reserved.
+# Copyright (c) 2013 University of Szeged. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -41,6 +42,7 @@ from webkitpy.common.checkout.commitinfo import CommitInfo
 from webkitpy.common.config.committers import CommitterList
 import webkitpy.common.config.urls as config_urls
 from webkitpy.common.net.buildbot import BuildBot
+from webkitpy.common.net.bugzilla import Bugzilla
 from webkitpy.common.net.regressionwindow import RegressionWindow
 from webkitpy.common.system.crashlogs import CrashLogs
 from webkitpy.common.system.user import User
@@ -245,6 +247,7 @@ class ResultsFor(Command):
 class FailureReason(Command):
     name = "failure-reason"
     help_text = "Lists revisions where individual test failures started at %s" % config_urls.buildbot_url
+    arguments_names = "[LAYOUT_TESTS]"
 
     def _blame_line_for_revision(self, revision):
         try:
@@ -275,7 +278,7 @@ class FailureReason(Command):
         results_to_explain = set(layout_test_results.failing_tests())
         last_build_with_results = build
         print "Starting at %s" % revision_to_test
-        while results_to_explain:
+        while results_to_explain and not self._done_explaining():
             revision_to_test -= 1
             new_build = builder.build_for_revision(revision_to_test, allow_failed_lookups=True)
             if not new_build:
@@ -287,9 +290,9 @@ class FailureReason(Command):
                 print "No results build %s (r%s)" % (build._number, build.revision())
                 continue
             failures = set(latest_results.failing_tests())
-            if len(failures) >= 20:
+            if len(failures) >= 500:
                 # FIXME: We may need to move this logic into the LayoutTestResults class.
-                # The buildbot stops runs after 20 failures so we don't have full results to work with here.
+                # The buildbot stops runs after 500 failures so we don't have full results to work with here.
                 print "Too many failures in build %s (r%s), ignoring." % (build._number, build.revision())
                 continue
             fixed_results = results_to_explain - failures
@@ -297,6 +300,7 @@ class FailureReason(Command):
                 print "No change in build %s (r%s), %s unexplained failures (%s in this build)" % (build._number, build.revision(), len(results_to_explain), len(failures))
                 last_build_with_results = build
                 continue
+            self.explained_failures.update(fixed_results)
             regression_window = RegressionWindow(build, last_build_with_results)
             self._print_blame_information_for_transition(regression_window, fixed_results)
             last_build_with_results = build
@@ -319,9 +323,17 @@ class FailureReason(Command):
             if status["name"] == chosen_name:
                 return (self._tool.buildbot.builder_with_name(chosen_name), status["built_revision"])
 
+    def _done_explaining(self):
+        if not self.failures_to_explain:
+            return False
+
+        return self.explained_failures.issuperset(self.failures_to_explain)
+
     def execute(self, options, args, tool):
         (builder, latest_revision) = self._builder_to_explain()
         start_revision = self._tool.user.prompt("Revision to walk backwards from? [%s] " % latest_revision) or latest_revision
+        self.failures_to_explain = args
+        self.explained_failures = set()
         if not start_revision:
             print "Revision required."
             return 1
@@ -512,7 +524,9 @@ class PrintExpectations(Command):
 
     def _model(self, options, port_name, tests):
         port = self._tool.port_factory.get(port_name, options)
-        return TestExpectations(port, tests).model()
+        expectations = TestExpectations(port, tests)
+        expectations.parse_all_expectations()
+        return expectations.model()
 
 
 class PrintBaselines(Command):
@@ -574,3 +588,36 @@ class PrintBaselines(Command):
         if platform_matchobj:
             return platform_matchobj.group(1)
         return None
+
+
+class FindResolvedBugs(Command):
+    name = "find-resolved-bugs"
+    help_text = "Collect the RESOLVED bugs in the given TestExpectations file"
+    argument_names = "TEST_EXPECTATIONS_FILE"
+
+    def execute(self, options, args, tool):
+        filename = args[0]
+        if not tool.filesystem.isfile(filename):
+            print "The given path is not a file, please pass a valid path."
+            return
+
+        ids = set()
+        inputfile = tool.filesystem.open_text_file_for_reading(filename)
+        for line in inputfile:
+            result = re.search("(https://bugs\.webkit\.org/show_bug\.cgi\?id=|webkit\.org/b/)([0-9]+)", line)
+            if result:
+                ids.add(result.group(2))
+        inputfile.close()
+
+        resolved_ids = set()
+        num_of_bugs = len(ids)
+        bugzilla = Bugzilla()
+        for i, bugid in enumerate(ids, start=1):
+            bug = bugzilla.fetch_bug(bugid)
+            print "Checking bug %s \t [%d/%d]" % (bugid, i, num_of_bugs)
+            if not bug.is_open():
+                resolved_ids.add(bugid)
+
+        print "Resolved bugs in %s :" % (filename)
+        for bugid in resolved_ids:
+            print "https://bugs.webkit.org/show_bug.cgi?id=%s" % (bugid)

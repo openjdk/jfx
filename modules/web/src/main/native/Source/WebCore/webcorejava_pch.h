@@ -13,6 +13,12 @@
 #define min min
 #endif
 
+#ifndef _WINSOCKAPI_
+#define _WINSOCKAPI_ // Prevent inclusion of winsock.h in windows.h
+#else
+#error ERROR: winsock.h is already included
+#endif
+
 #include <windows.h>
 
 #if defined(DEBUG) || defined(_DEBUG)
@@ -57,7 +63,6 @@
 #include <wtf/DateMath.h>
 #include <wtf/Deque.h>
 #include <wtf/DisallowCType.h>
-#include <wtf/FastAllocBase.h>
 #include <wtf/FastMalloc.h>
 #include <wtf/Forward.h>
 #include <wtf/GetPtr.h>
@@ -70,8 +75,6 @@
 #include <wtf/ListHashSet.h>
 #include <wtf/MathExtras.h>
 #include <wtf/Noncopyable.h>
-#include <wtf/NullPtr.h>
-#include <wtf/OwnArrayPtr.h>
 #include <wtf/OwnPtr.h>
 #include <wtf/OwnPtrCommon.h>
 #include <wtf/PassOwnPtr.h>
@@ -84,7 +87,6 @@
 #include <wtf/Vector.h>
 #include <wtf/VectorTraits.h>
 
-#include <wtf/unicode/Unicode.h>
 #include <wtf/unicode/UTF8.h>
 
 #include <wtf/text/CString.h>
@@ -100,11 +102,10 @@
 #include <JavaScriptCore/JSStringRef.h>
 #include <JavaScriptCore/JSValueRef.h>
 #include <JavaScriptCore/OpaqueJSString.h>
+#include <JavaScriptCore/inspector/InspectorAgentBase.h>
 
 #if USE(JAVA_UNICODE)
 #include <wtf/unicode/java/UnicodeJava.h>
-#elif USE(ICU_UNICODE)
-#include <wtf/unicode/icu/UnicodeIcu.h>
 #endif
 
 #endif

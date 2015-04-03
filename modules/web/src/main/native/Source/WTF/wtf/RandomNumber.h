@@ -28,9 +28,9 @@
 
 namespace WTF {
 
-    // Returns a pseudo-random number in the range [0, 1), attempts to be
-    // cryptographically secure if possible on the target platform
-    WTF_EXPORT_PRIVATE double randomNumber();
+// Returns a pseudo-random number in the range [0, 1), attempts to be
+// cryptographically secure if possible on the target platform
+WTF_EXPORT_PRIVATE double randomNumber();
 
 }
 

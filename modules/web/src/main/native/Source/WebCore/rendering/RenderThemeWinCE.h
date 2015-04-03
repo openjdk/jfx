@@ -62,8 +62,8 @@ namespace WebCore {
         virtual Color platformInactiveSelectionForegroundColor() const;
 
         // System fonts.
-        virtual void systemFont(int propId, FontDescription&) const;
-        virtual Color systemColor(int cssValueId) const;
+        virtual void systemFont(CSSValueID, FontDescription&) const;
+        virtual Color systemColor(CSSValueID) const;
 
         virtual bool paintCheckbox(RenderObject* o, const PaintInfo& i, const IntRect& r)
         { return paintButton(o, i, r); }
@@ -85,7 +85,7 @@ namespace WebCore {
         virtual bool paintMenuList(RenderObject*, const PaintInfo&, const IntRect&);
         virtual void adjustMenuListButtonStyle(StyleResolver*, RenderStyle*, Element*) const;
 
-        virtual bool paintMenuListButton(RenderObject*, const PaintInfo&, const IntRect&);
+        virtual bool paintMenuListButtonDecorations(RenderObject*, const PaintInfo&, const IntRect&);
 
         virtual bool paintSliderTrack(RenderObject* o, const PaintInfo& i, const IntRect& r);
         virtual bool paintSliderThumb(RenderObject* o, const PaintInfo& i, const IntRect& r);
@@ -99,11 +99,11 @@ namespace WebCore {
         virtual void adjustSearchFieldCancelButtonStyle(StyleResolver*, RenderStyle*, Element*) const;
         virtual bool paintSearchFieldCancelButton(RenderObject*, const PaintInfo&, const IntRect&);
 
-        virtual void adjustSearchFieldDecorationStyle(StyleResolver*, RenderStyle*, Element*) const;
-        virtual bool paintSearchFieldDecoration(RenderObject*, const PaintInfo&, const IntRect&) { return false; }
+        virtual void adjustSearchFieldDecorationPartStyle(StyleResolver*, RenderStyle*, Element*) const;
+        virtual bool paintSearchFieldDecorationPart(RenderObject*, const PaintInfo&, const IntRect&) { return false; }
 
-        virtual void adjustSearchFieldResultsDecorationStyle(StyleResolver*, RenderStyle*, Element*) const;
-        virtual bool paintSearchFieldResultsDecoration(RenderObject*, const PaintInfo&, const IntRect&);
+        virtual void adjustSearchFieldResultsDecorationPartStyle(StyleResolver*, RenderStyle*, Element*) const;
+        virtual bool paintSearchFieldResultsDecorationPart(RenderObject*, const PaintInfo&, const IntRect&);
 
         virtual void adjustSearchFieldResultsButtonStyle(StyleResolver*, RenderStyle*, Element*) const;
         virtual bool paintSearchFieldResultsButton(RenderObject*, const PaintInfo&, const IntRect&);
@@ -113,6 +113,9 @@ namespace WebCore {
         virtual void adjustButtonStyle(StyleResolver*, RenderStyle* style, Element*) const { }
         virtual void adjustTextFieldStyle(StyleResolver*, RenderStyle* style, Element*) const { }
         virtual void adjustTextAreaStyle(StyleResolver*, RenderStyle* style, Element*) const { }
+
+        virtual void adjustInnerSpinButtonStyle(StyleResolver*, RenderStyle*, Element*) const;
+        virtual bool paintInnerSpinButton(RenderObject*, const PaintInfo&, const IntRect&);
 
         static void setWebKitIsBeingUnloaded();
 

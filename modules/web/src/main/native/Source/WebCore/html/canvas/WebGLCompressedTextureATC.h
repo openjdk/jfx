@@ -26,7 +26,6 @@
 #ifndef WebGLCompressedTextureATC_h
 #define WebGLCompressedTextureATC_h
 
-#include "ExceptionCode.h"
 #include "WebGLExtension.h"
 #include <wtf/PassOwnPtr.h>
 
@@ -36,12 +35,12 @@ class WebGLTexture;
 
 class WebGLCompressedTextureATC : public WebGLExtension {
 public:
-    static PassOwnPtr<WebGLCompressedTextureATC> create(WebGLRenderingContext*);
+    static OwnPtr<WebGLCompressedTextureATC> create(WebGLRenderingContext*);
 
     static bool supported(WebGLRenderingContext*);
 
     virtual ~WebGLCompressedTextureATC();
-    virtual ExtensionName getName() const;
+    virtual ExtensionName getName() const override;
 
 private:
     WebGLCompressedTextureATC(WebGLRenderingContext*);

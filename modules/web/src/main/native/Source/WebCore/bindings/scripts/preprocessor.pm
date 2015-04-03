@@ -49,10 +49,18 @@ sub applyPreprocessor
             $preprocessor = $ENV{CC};
         } elsif (($Config::Config{'osname'}) =~ /solaris/i) {
             $preprocessor = "/usr/sfw/bin/gcc";
+        } elsif (-x "/usr/bin/clang") {
+            $preprocessor = "/usr/bin/clang";
         } else {
             $preprocessor = "/usr/bin/gcc";
         }
         push(@args, qw(-E -P -x c++));
+    }
+
+    if ($Config::Config{"osname"} eq "darwin") {
+        push(@args, "-I" . $ENV{BUILT_PRODUCTS_DIR} . "/usr/local/include") if $ENV{BUILT_PRODUCTS_DIR};
+        push(@args, "-isysroot", $ENV{SDKROOT}) if $ENV{SDKROOT};
+        $defines .= " WTF_PLATFORM_IOS" if defined $ENV{PLATFORM_NAME} && $ENV{PLATFORM_NAME} =~ /iphone(os|simulator)/;
     }
 
     # Remove double quotations from $defines and extract macros.
@@ -63,7 +71,9 @@ sub applyPreprocessor
     @macros = map { "-D$_" } @macros;
 
     my $pid = 0;
-    if ($Config{osname} eq "cygwin" || $Config{osname} eq 'MSWin32') {
+    # todo tav open3 doesn't produce output, but open2
+#    if ($Config{osname} eq "cygwin" || $Config{osname} eq 'MSWin32') {
+    if (0) {
         # This call can fail if Windows rebases cygwin, so retry a few times until it succeeds.
         for (my $tries = 0; !$pid && ($tries < 20); $tries++) {
             eval {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007 Apple Inc. All rights reserved.
+ * Copyright (C) 2006, 2007, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
 #include "config.h"
@@ -28,15 +28,15 @@
 #include "JSContextRefPrivate.h"
 
 #include "APICast.h"
+#include "CallFrame.h"
 #include "InitializeThreading.h"
-#include <interpreter/CallFrame.h>
-#include <interpreter/Interpreter.h>
 #include "JSCallbackObject.h"
 #include "JSClassRef.h"
 #include "JSGlobalObject.h"
 #include "JSObject.h"
-#include "Operations.h"
+#include "JSCInlines.h"
 #include "SourceProvider.h"
+#include "StackVisitor.h"
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringHash.h>
 
@@ -135,6 +135,7 @@ JSGlobalContextRef JSGlobalContextCreateInGroup(JSContextGroupRef group, JSClass
 
     if (!globalObjectClass) {
         JSGlobalObject* globalObject = JSGlobalObject::create(*vm, JSGlobalObject::createStructure(*vm, jsNull()));
+        globalObject->setGlobalThis(*vm, JSProxy::create(*vm, JSProxy::createStructure(*vm, globalObject, globalObject->prototype()), globalObject));
         return JSGlobalContextRetain(toGlobalRef(globalObject->globalExec()));
     }
 
@@ -153,7 +154,7 @@ JSGlobalContextRef JSGlobalContextRetain(JSGlobalContextRef ctx)
     APIEntryShim entryShim(exec);
 
     VM& vm = exec->vm();
-    gcProtect(exec->dynamicGlobalObject());
+    gcProtect(exec->vmEntryGlobalObject());
     vm.ref();
     return ctx;
 }
@@ -168,7 +169,7 @@ void JSGlobalContextRelease(JSGlobalContextRef ctx)
         VM& vm = exec->vm();
         savedIdentifierTable = wtfThreadData().setCurrentIdentifierTable(vm.identifierTable);
 
-        bool protectCountIsZero = Heap::heap(exec->dynamicGlobalObject())->unprotect(exec->dynamicGlobalObject());
+        bool protectCountIsZero = Heap::heap(exec->vmEntryGlobalObject())->unprotect(exec->vmEntryGlobalObject());
         if (protectCountIsZero)
             vm.heap.reportAbandonedObjectGraph();
         vm.deref();
@@ -186,8 +187,7 @@ JSObjectRef JSContextGetGlobalObject(JSContextRef ctx)
     ExecState* exec = toJS(ctx);
     APIEntryShim entryShim(exec);
 
-    // It is necessary to call toThisObject to get the wrapper object when used with WebCore.
-    return toRef(exec->lexicalGlobalObject()->methodTable()->toThisObject(exec->lexicalGlobalObject(), exec));
+    return toRef(jsCast<JSObject*>(exec->lexicalGlobalObject()->methodTable()->toThis(exec->lexicalGlobalObject(), exec, NotStrictMode)));
 }
 
 JSContextGroupRef JSContextGetGroup(JSContextRef ctx)
@@ -212,6 +212,85 @@ JSGlobalContextRef JSContextGetGlobalContext(JSContextRef ctx)
     return toGlobalRef(exec->lexicalGlobalObject()->globalExec());
 }
 
+JSStringRef JSGlobalContextCopyName(JSGlobalContextRef ctx)
+{
+    if (!ctx) {
+        ASSERT_NOT_REACHED();
+        return 0;
+    }
+
+    ExecState* exec = toJS(ctx);
+    APIEntryShim entryShim(exec);
+
+    String name = exec->vmEntryGlobalObject()->name();
+    if (name.isNull())
+        return 0;
+
+    return OpaqueJSString::create(name).leakRef();
+}
+
+void JSGlobalContextSetName(JSGlobalContextRef ctx, JSStringRef name)
+{
+    if (!ctx) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
+    ExecState* exec = toJS(ctx);
+    APIEntryShim entryShim(exec);
+
+    exec->vmEntryGlobalObject()->setName(name ? name->string() : String());
+}
+
+
+class BacktraceFunctor {
+public:
+    BacktraceFunctor(StringBuilder& builder, unsigned remainingCapacityForFrameCapture)
+        : m_builder(builder)
+        , m_remainingCapacityForFrameCapture(remainingCapacityForFrameCapture)
+    {
+    }
+
+    StackVisitor::Status operator()(StackVisitor& visitor)
+    {
+        if (m_remainingCapacityForFrameCapture) {
+            // If callee is unknown, but we've not added any frame yet, we should
+            // still add the frame, because something called us, and gave us arguments.
+            JSObject* callee = visitor->callee();
+            if (!callee && visitor->index())
+                return StackVisitor::Done;
+
+            StringBuilder& builder = m_builder;
+            if (!builder.isEmpty())
+                builder.append('\n');
+            builder.append('#');
+            builder.appendNumber(visitor->index());
+            builder.append(' ');
+            builder.append(visitor->functionName());
+            builder.appendLiteral("() at ");
+            builder.append(visitor->sourceURL());
+            if (visitor->isJSFrame()) {
+                builder.append(':');
+                unsigned lineNumber;
+                unsigned unusedColumn;
+                visitor->computeLineAndColumn(lineNumber, unusedColumn);
+                builder.appendNumber(lineNumber);
+            }
+
+            if (!callee)
+                return StackVisitor::Done;
+
+            m_remainingCapacityForFrameCapture--;
+            return StackVisitor::Continue;
+        }
+        return StackVisitor::Done;
+    }
+
+private:
+    StringBuilder& m_builder;
+    unsigned m_remainingCapacityForFrameCapture;
+};
+
 JSStringRef JSContextCreateBacktrace(JSContextRef ctx, unsigned maxStackSize)
 {
     if (!ctx) {
@@ -221,38 +300,12 @@ JSStringRef JSContextCreateBacktrace(JSContextRef ctx, unsigned maxStackSize)
     ExecState* exec = toJS(ctx);
     JSLockHolder lock(exec);
     StringBuilder builder;
-    Vector<StackFrame> stackTrace;
-    Interpreter::getStackTrace(&exec->vm(), stackTrace, maxStackSize);
+    CallFrame* frame = exec->vm().topCallFrame;
 
-    for (size_t i = 0; i < stackTrace.size(); i++) {
-        String urlString;
-        String functionName;
-        StackFrame& frame = stackTrace[i];
-        JSValue function = frame.callee.get();
-        if (frame.callee)
-            functionName = frame.friendlyFunctionName(exec);
-        else {
-            // Caller is unknown, but if frame is empty we should still add the frame, because
-            // something called us, and gave us arguments.
-            if (i)
-                break;
-        }
-        unsigned lineNumber = frame.line();
-        if (!builder.isEmpty())
-            builder.append('\n');
-        builder.append('#');
-        builder.appendNumber(i);
-        builder.append(' ');
-        builder.append(functionName);
-        builder.appendLiteral("() at ");
-        builder.append(urlString);
-        if (frame.codeType != StackFrameNativeCode) {
-            builder.append(':');
-            builder.appendNumber(lineNumber);
-        }
-        if (!function)
-            break;
-    }
+    ASSERT(maxStackSize);
+    BacktraceFunctor functor(builder, maxStackSize);
+    frame->iterate(functor);
+
     return OpaqueJSString::create(builder.toString()).leakRef();
 }
 

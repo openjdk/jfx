@@ -33,13 +33,13 @@
 #include "config.h"
 #include "EventSenderProxy.h"
 
+#include "NotImplemented.h"
 #include "PlatformWebView.h"
 #include "TestController.h"
-#include <wtf/OwnArrayPtr.h>
-#include <wtf/PassOwnArrayPtr.h>
 #include <gdk/gdkkeysyms.h>
 #include <gtk/gtk.h>
-#include <wtf/gobject/GOwnPtr.h>
+#include <wtf/StdLibExtras.h>
+#include <wtf/gobject/GUniquePtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WTR {
@@ -110,6 +110,22 @@ static unsigned eventSenderButtonToGDKButton(unsigned button)
     return mouseButton;
 }
 
+static guint webkitModifiersToGDKModifiers(WKEventModifiers wkModifiers)
+{
+    guint modifiers = 0;
+
+    if (wkModifiers & kWKEventModifiersControlKey)
+        modifiers |= GDK_CONTROL_MASK;
+    if (wkModifiers & kWKEventModifiersShiftKey)
+        modifiers |= GDK_SHIFT_MASK;
+    if (wkModifiers & kWKEventModifiersAltKey)
+        modifiers |= GDK_MOD1_MASK;
+    if (wkModifiers & kWKEventModifiersMetaKey)
+        modifiers |= GDK_META_MASK;
+
+    return modifiers;
+}
+
 GdkEvent* EventSenderProxy::createMouseButtonEvent(GdkEventType eventType, unsigned button, WKEventModifiers modifiers)
 {
     GdkEvent* mouseEvent = gdk_event_new(eventType);
@@ -120,7 +136,7 @@ GdkEvent* EventSenderProxy::createMouseButtonEvent(GdkEventType eventType, unsig
     mouseEvent->button.window = gtk_widget_get_window(GTK_WIDGET(m_testController->mainWebView()->platformView()));
     g_object_ref(mouseEvent->button.window);
     gdk_event_set_device(mouseEvent, gdk_device_manager_get_client_pointer(gdk_display_get_device_manager(gdk_window_get_display(mouseEvent->button.window))));
-    mouseEvent->button.state = modifiers | getMouseButtonModifiers(mouseEvent->button.button);
+    mouseEvent->button.state = webkitModifiersToGDKModifiers(modifiers) | getMouseButtonModifiers(mouseEvent->button.button);
     mouseEvent->button.time = GDK_CURRENT_TIME;
     mouseEvent->button.axes = 0;
 
@@ -155,12 +171,11 @@ static void dispatchEvent(GdkEvent* event)
 void EventSenderProxy::replaySavedEvents()
 {
     while (!m_eventQueue.isEmpty()) {
-        WTREventQueueItem item = m_eventQueue.first();
+        WTREventQueueItem item = m_eventQueue.takeFirst();
         if (item.delay)
             g_usleep(item.delay * 1000);
 
         dispatchEvent(item.event);
-        m_eventQueue.remove(0);
     }
 }
 
@@ -173,22 +188,6 @@ void EventSenderProxy::sendOrQueueEvent(GdkEvent* event)
 
     m_eventQueue.last().event = event;
     replaySavedEvents();
-}
-
-static guint webkitModifiersToGDKModifiers(WKEventModifiers wkModifiers)
-{
-    guint modifiers = 0;
-
-    if (wkModifiers & kWKEventModifiersControlKey)
-        modifiers |= GDK_CONTROL_MASK;
-    if (wkModifiers & kWKEventModifiersShiftKey)
-        modifiers |= GDK_SHIFT_MASK;
-    if (wkModifiers & kWKEventModifiersAltKey)
-        modifiers |= GDK_MOD1_MASK;
-    if (wkModifiers & kWKEventModifiersMetaKey)
-        modifiers |= GDK_META_MASK;
-
-    return modifiers;
 }
 
 int getGDKKeySymForKeyRef(WKStringRef keyRef, unsigned location, guint* modifiers)
@@ -268,7 +267,7 @@ int getGDKKeySymForKeyRef(WKStringRef keyRef, unsigned location, guint* modifier
         return GDK_KEY_F12;
 
     size_t bufferSize = WKStringGetMaximumUTF8CStringSize(keyRef);
-    OwnArrayPtr<char> buffer = adoptArrayPtr(new char[bufferSize]);
+    auto buffer = std::make_unique<char[]>(bufferSize);
     WKStringGetUTF8CString(keyRef, buffer.get(), bufferSize);
     char charCode = buffer.get()[0];
 
@@ -297,7 +296,7 @@ void EventSenderProxy::keyDown(WKStringRef keyRef, WKEventModifiers wkModifiers,
     g_object_ref(pressEvent->key.window);
     gdk_event_set_device(pressEvent, gdk_device_manager_get_client_pointer(gdk_display_get_device_manager(gdk_window_get_display(pressEvent->key.window))));
 
-    GOwnPtr<GdkKeymapKey> keys;
+    GUniqueOutPtr<GdkKeymapKey> keys;
     gint nKeys;
     if (gdk_keymap_get_entries_for_keyval(gdk_keymap_get_default(), gdkKeySym, &keys.outPtr(), &nKeys))
         pressEvent->key.hardware_keycode = keys.get()[0].keycode;
@@ -378,6 +377,10 @@ void EventSenderProxy::mouseMoveTo(double x, double y)
 
 void EventSenderProxy::mouseScrollBy(int horizontal, int vertical)
 {
+    // Copy behaviour of Qt and EFL - just return in case of (0,0) mouse scroll
+    if (!horizontal && !vertical)
+        return;
+
     GdkEvent* event = gdk_event_new(GDK_SCROLL);
     event->scroll.x = m_position.x;
     event->scroll.y = m_position.y;
@@ -430,6 +433,13 @@ void EventSenderProxy::continuousMouseScrollBy(int horizontal, int vertical, boo
     sendOrQueueEvent(event);
 }
 
+void EventSenderProxy::mouseScrollByWithWheelAndMomentumPhases(int x, int y, int /*phase*/, int /*momentum*/)
+{
+    // Gtk+ does not have the concept of wheel gesture phases or momentum. Just relay to
+    // the mouse wheel handler.
+    mouseScrollBy(x, y);
+}
+
 void EventSenderProxy::leapForward(int milliseconds)
 {
     if (m_eventQueue.isEmpty())
@@ -438,5 +448,121 @@ void EventSenderProxy::leapForward(int milliseconds)
     m_eventQueue.last().delay = milliseconds;
     m_time += milliseconds / 1000.0;
 }
+
+void updateEventCoordinates(GdkEvent* touchEvent, int x, int y)
+{
+    touchEvent->touch.x = x;
+    touchEvent->touch.y = y;
+
+    int xRoot, yRoot;
+    gdk_window_get_root_coords(touchEvent->touch.window, x, y, &xRoot, &yRoot);
+    touchEvent->touch.x_root = xRoot;
+    touchEvent->touch.y_root = yRoot;
+}
+
+GUniquePtr<GdkEvent> EventSenderProxy::createTouchEvent(GdkEventType eventType, int id)
+{
+    GUniquePtr<GdkEvent> touchEvent(gdk_event_new(eventType));
+
+    touchEvent->touch.sequence = static_cast<GdkEventSequence*>(GINT_TO_POINTER(id));
+    touchEvent->touch.window = gtk_widget_get_window(GTK_WIDGET(m_testController->mainWebView()->platformView()));
+    g_object_ref(touchEvent->touch.window);
+    gdk_event_set_device(touchEvent.get(), gdk_device_manager_get_client_pointer(gdk_display_get_device_manager(gdk_window_get_display(touchEvent->button.window))));
+    touchEvent->touch.time = GDK_CURRENT_TIME;
+
+    return touchEvent;
+}
+
+void EventSenderProxy::addTouchPoint(int x, int y)
+{
+    // Touch ID is array index plus one, so 0 is skipped.
+    GUniquePtr<GdkEvent> event = createTouchEvent(static_cast<GdkEventType>(GDK_TOUCH_BEGIN), m_touchEvents.size() + 1);
+    updateEventCoordinates(event.get(), x, y);
+    m_updatedTouchEvents.add(GPOINTER_TO_INT(event->touch.sequence));
+    m_touchEvents.append(std::move(event));
+}
+
+void EventSenderProxy::updateTouchPoint(int index, int x, int y)
+{
+    ASSERT(index >= 0 && index < m_touchEvents.size());
+
+    const auto& event = m_touchEvents[index];
+    ASSERT(event);
+
+    event->type = GDK_TOUCH_UPDATE;
+    updateEventCoordinates(event.get(), x, y);
+    m_updatedTouchEvents.add(GPOINTER_TO_INT(event->touch.sequence));
+}
+
+void EventSenderProxy::sendUpdatedTouchEvents()
+{
+    for (auto id : m_updatedTouchEvents)
+        sendOrQueueEvent(gdk_event_copy(m_touchEvents[id - 1].get()));
+
+    m_updatedTouchEvents.clear();
+}
+
+void EventSenderProxy::touchStart()
+{
+    sendUpdatedTouchEvents();
+}
+
+void EventSenderProxy::touchMove()
+{
+    sendUpdatedTouchEvents();
+}
+
+void EventSenderProxy::touchEnd()
+{
+    sendUpdatedTouchEvents();
+}
+
+void EventSenderProxy::touchCancel()
+{
+    notImplemented();
+}
+
+void EventSenderProxy::clearTouchPoints()
+{
+    m_updatedTouchEvents.clear();
+    m_touchEvents.clear();
+}
+
+void EventSenderProxy::releaseTouchPoint(int index)
+{
+    ASSERT(index >= 0 && index < m_touchEvents.size());
+
+    const auto& event = m_touchEvents[index];
+    event->type = GDK_TOUCH_END;
+    m_updatedTouchEvents.add(GPOINTER_TO_INT(event->touch.sequence));
+}
+
+void EventSenderProxy::cancelTouchPoint(int index)
+{
+    notImplemented();
+}
+
+void EventSenderProxy::setTouchPointRadius(int radiusX, int radiusY)
+{
+    notImplemented();
+}
+
+void EventSenderProxy::setTouchModifier(WKEventModifiers modifier, bool enable)
+{
+    guint state = webkitModifiersToGDKModifiers(modifier);
+
+    for (const auto& event : m_touchEvents) {
+        if (event->type == GDK_TOUCH_END)
+            continue;
+
+        if (enable)
+            event->touch.state |= state;
+        else
+            event->touch.state &= ~(state);
+
+        m_updatedTouchEvents.add(GPOINTER_TO_INT(event->touch.sequence));
+    }
+}
+
 
 } // namespace WTR

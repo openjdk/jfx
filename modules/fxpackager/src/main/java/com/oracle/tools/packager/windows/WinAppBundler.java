@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,7 @@
 
 package com.oracle.tools.packager.windows;
 
-import com.oracle.tools.packager.AbstractBundler;
+import com.oracle.tools.packager.AbstractImageBundler;
 import com.oracle.tools.packager.BundlerParamInfo;
 import com.oracle.tools.packager.StandardBundlerParam;
 import com.oracle.tools.packager.Log;
@@ -40,15 +40,18 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.file.Files;
 import java.text.MessageFormat;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Pattern;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
 import static com.oracle.tools.packager.windows.WindowsBundlerParam.BIT_ARCH_64;
 import static com.oracle.tools.packager.windows.WindowsBundlerParam.BIT_ARCH_64_RUNTIME;
 import static com.oracle.tools.packager.windows.WindowsBundlerParam.WIN_RUNTIME;
 
-public class WinAppBundler extends AbstractBundler {
+public class WinAppBundler extends AbstractImageBundler {
 
     private static final ResourceBundle I18N = 
             ResourceBundle.getBundle(WinAppBundler.class.getName());
@@ -223,9 +226,7 @@ public class WinAppBundler extends AbstractBundler {
 
     //remove
     protected void cleanupConfigFiles(Map<String, ? super Object> params) {
-        if (getConfig_AppIcon(params) != null) {
-            getConfig_AppIcon(params).delete();
-        }
+        getConfig_AppIcon(params).delete();
     }
 
     private void prepareConfigFiles(Map<String, ? super Object> params) throws IOException {
@@ -273,17 +274,23 @@ public class WinAppBundler extends AbstractBundler {
 
             File appDirectory = new File(rootDirectory, "app");
             appDirectory.mkdirs();
-            copyApplication(p, appDirectory);
 
             // create the .exe launchers
             createLauncherForEntryPoint(p, rootDirectory);
+
+            // copy the jars
+            copyApplication(p, appDirectory);
+
+            // Copy runtime 
+            File runtimeDirectory = new File(rootDirectory, "runtime");
+            copyRuntime(p, runtimeDirectory);
 
             // copy in the needed libraries
             IOUtils.copyFromURL(
                     WinResources.class.getResource(LIBRARY_NAME),
                     new File(rootDirectory, LIBRARY_NAME));
 
-            copyMSVCDLLs(rootDirectory);
+            copyMSVCDLLs(rootDirectory, runtimeDirectory);
 
             // create the secondary launchers, if any
             List<Map<String, ? super Object>> entryPoints = StandardBundlerParam.SECONDARY_LAUNCHERS.fetchFrom(p);
@@ -292,10 +299,6 @@ public class WinAppBundler extends AbstractBundler {
                 tmp.putAll(entryPoint);
                 createLauncherForEntryPoint(tmp, rootDirectory);
             }
-
-            // Copy runtime to PlugIns folder
-            File runtimeDirectory = new File(rootDirectory, "runtime");
-            copyRuntime(p, runtimeDirectory);
 
             if (!dependentTask) {
                 Log.info(MessageFormat.format(I18N.getString("message.result-dir"), outputDirectory.getAbsolutePath()));
@@ -316,13 +319,37 @@ public class WinAppBundler extends AbstractBundler {
 
     }
 
-    private void copyMSVCDLLs(File rootDirectory) throws IOException {
-        for (String VS_VER : VS_VERS) {
-             if (copyMSVCDLLs(rootDirectory, VS_VER))
-                 return; // found and copied
+    private void copyMSVCDLLs(File rootDirectory, File jreDir) throws IOException {
+        String vsVer = null;
+
+        // first copy the ones needed for the launcher
+        for (String thisVer : VS_VERS) {
+            if (copyMSVCDLLs(rootDirectory, thisVer)) {
+                vsVer = thisVer;
+                break;
+            }
+        }
+        if (vsVer == null) {
+            throw new RuntimeException("Not found MSVC dlls");
         }
 
-        throw new RuntimeException("Not found MSVC dlls");
+        AtomicReference<IOException> ioe = new AtomicReference<>();
+        final String finalVsVer = vsVer;
+        Files.list(jreDir.toPath().resolve("bin"))
+                .filter(p -> Pattern.matches("msvc(r|p)\\d\\d\\d.dll", p.toFile().getName().toLowerCase()))
+                .filter(p -> !p.toString().toLowerCase().endsWith(finalVsVer + ".dll"))
+                .forEach(p -> {
+                    try {
+                        IOUtils.copyFile(p.toFile(), new File(rootDirectory, p.toFile().getName()));
+                    } catch (IOException e) {
+                        ioe.set(e);
+                    }
+                });
+
+        IOException e = ioe.get();
+        if (e != null) {
+            throw e;
+        }
     }
 
     private boolean copyMSVCDLLs(File rootDirectory, String VS_VER) throws IOException {
@@ -347,7 +374,12 @@ public class WinAppBundler extends AbstractBundler {
     private void createLauncherForEntryPoint(Map<String, ? super Object> p, File rootDirectory) throws IOException {
         prepareConfigFiles(p);
 
-        writePkgInfo(p, rootDirectory);
+        // Generate launcher .cfg file
+        if (LAUNCHER_CFG_FORMAT.fetchFrom(p).equals(CFG_FORMAT_PROPERTIES)) {
+            writeCfgFile(p, rootDirectory);
+        } else {
+            writeCfgFile(p, new File(rootDirectory, getLauncherCfgName(p)), "$APPDIR\\runtime");
+        }
 
         // Copy executable root folder
         File executableFile = new File(rootDirectory, getLauncherName(p));
@@ -383,23 +415,28 @@ public class WinAppBundler extends AbstractBundler {
     }
 
     private void copyApplication(Map<String, ? super Object> params, File appDirectory) throws IOException {
-        RelativeFileSet appResource = APP_RESOURCES.fetchFrom(params);
-        if (appResource == null) {
+        List<RelativeFileSet> appResourcesList = APP_RESOURCES_LIST.fetchFrom(params);
+        if (appResourcesList == null) {
             throw new RuntimeException("Null app resources?");
         }
-        File srcdir = appResource.getBaseDirectory();
-        for (String fname : appResource.getIncludedFiles()) {
-            IOUtils.copyFile(
-                    new File(srcdir, fname), new File(appDirectory, fname));
+        for (RelativeFileSet appResources : appResourcesList) {
+            if (appResources == null) {
+                throw new RuntimeException("Null app resources?");
+            }
+            File srcdir = appResources.getBaseDirectory();
+            for (String fname : appResources.getIncludedFiles()) {
+                IOUtils.copyFile(
+                        new File(srcdir, fname), new File(appDirectory, fname));
+            }
         }
     }
 
-    private void writePkgInfo(Map<String, ? super Object> params, File rootDir) throws FileNotFoundException {
-        File pkgInfoFile = new File(rootDir, getLauncherCfgName(params));
+    private void writeCfgFile(Map<String, ? super Object> params, File rootDir) throws FileNotFoundException {
+        File cfgFile = new File(rootDir, getLauncherCfgName(params));
 
-        pkgInfoFile.delete();
+        cfgFile.delete();
 
-        PrintStream out = new PrintStream(pkgInfoFile);
+        PrintStream out = new PrintStream(cfgFile);
         if (WIN_RUNTIME.fetchFrom(params) == null) {
             out.println("app.runtime=");
         } else {
@@ -410,6 +447,7 @@ public class WinAppBundler extends AbstractBundler {
         //for future AU support (to be able to find app in the registry)
         out.println("app.id=" + IDENTIFIER.fetchFrom(params));
         out.println("app.preferences.id=" + PREFERENCES_ID.fetchFrom(params));
+        out.println("app.identifier=" + IDENTIFIER.fetchFrom(params));
 
         out.println("app.mainclass=" +
                 MAIN_CLASS.fetchFrom(params).replaceAll("\\.", "/"));
@@ -501,6 +539,7 @@ public class WinAppBundler extends AbstractBundler {
         return Arrays.asList(
                 APP_NAME,
                 APP_RESOURCES,
+                // APP_RESOURCES_LIST, // ??
                 ARGUMENTS,
                 CLASSPATH,
                 ICON_ICO,
@@ -519,5 +558,10 @@ public class WinAppBundler extends AbstractBundler {
     @Override
     public File execute(Map<String, ? super Object> params, File outputParentDir) {
         return doBundle(params, outputParentDir, false);
+    }
+
+    @Override
+    protected String getCacheLocation(Map<String, ? super Object> params) {
+        return "$APPDIR/";
     }
 }

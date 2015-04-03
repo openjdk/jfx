@@ -39,7 +39,8 @@
             </Component>
         </DirectoryRef>        
         <?include bundle.wxi ?>
-        <UI/>
+UI_BLOCK
+APP_CDS_BLOCK
         <Icon Id="DesktopIcon.exe" SourceFile="APPLICATION_ICON" />
         <Icon Id="StartMenuIcon.exe" SourceFile="APPLICATION_ICON" />
 SECONDARY_LAUNCHER_ICONS

@@ -18,7 +18,7 @@
 #include "PlatformCookieJar.h"
 
 #include "Cookie.h"
-#include "KURL.h"
+#include "URL.h"
 #include "ResourceHandleManager.h"
 
 #include <wtf/DateMath.h>
@@ -76,7 +76,7 @@ static void addMatchingCurlCookie(const char* cookie, const String& domain, cons
             cookieDomain.remove(0, 10);
         else
             return;
-}
+    }
 
 
     if (cookieDomain[0] == '.') {
@@ -87,7 +87,7 @@ static void addMatchingCurlCookie(const char* cookie, const String& domain, cons
         int index = domain.find(cookieDomain);
         if (index == lenDiff)
             subDomain = true;
-}
+    }
 
     if (!subDomain && cookieDomain != domain)
         return;
@@ -135,7 +135,7 @@ static void addMatchingCurlCookie(const char* cookie, const String& domain, cons
 
 }
 
-static String getNetscapeCookieFormat(const KURL& url, const String& value)
+static String getNetscapeCookieFormat(const URL& url, const String& value)
 {
     // Constructs a cookie string in Netscape Cookie file format.
 
@@ -219,7 +219,7 @@ static String getNetscapeCookieFormat(const KURL& url, const String& value)
     return cookieStr.toString();
 }
 
-void setCookiesFromDOM(const NetworkStorageSession&, const KURL&, const KURL& url, const String& value)
+void setCookiesFromDOM(const NetworkStorageSession&, const URL&, const URL& url, const String& value)
 {
     CURL* curl = curl_easy_init();
 
@@ -238,6 +238,9 @@ void setCookiesFromDOM(const NetworkStorageSession&, const KURL&, const KURL& ur
     // required behavior if the domain field is not explicity specified.
     String cookie = getNetscapeCookieFormat(url, value);
 
+    if (!cookie.is8Bit())
+        cookie = String::make8BitFrom16BitSource(cookie.characters16(), cookie.length());
+
     CString strCookie(reinterpret_cast<const char*>(cookie.characters8()), cookie.length());
 
     curl_easy_setopt(curl, CURLOPT_COOKIELIST, strCookie.data());
@@ -245,7 +248,7 @@ void setCookiesFromDOM(const NetworkStorageSession&, const KURL&, const KURL& ur
     curl_easy_cleanup(curl);
 }
 
-static String cookiesForSession(const NetworkStorageSession&, const KURL&, const KURL& url, bool httponly)
+static String cookiesForSession(const NetworkStorageSession&, const URL&, const URL& url, bool httponly)
 {
     String cookies;
     CURL* curl = curl_easy_init();
@@ -281,29 +284,29 @@ static String cookiesForSession(const NetworkStorageSession&, const KURL&, const
     return cookies;
 }
 
-String cookiesForDOM(const NetworkStorageSession& session, const KURL& firstParty, const KURL& url)
+String cookiesForDOM(const NetworkStorageSession& session, const URL& firstParty, const URL& url)
 {
     return cookiesForSession(session, firstParty, url, false);
 }
 
-String cookieRequestHeaderFieldValue(const NetworkStorageSession& session, const KURL& firstParty, const KURL& url)
+String cookieRequestHeaderFieldValue(const NetworkStorageSession& session, const URL& firstParty, const URL& url)
 {
     return cookiesForSession(session, firstParty, url, true);
 }
 
-bool cookiesEnabled(const NetworkStorageSession&, const KURL& /*firstParty*/, const KURL& /*url*/)
+bool cookiesEnabled(const NetworkStorageSession&, const URL& /*firstParty*/, const URL& /*url*/)
 {
     return true;
 }
 
-bool getRawCookies(const NetworkStorageSession&, const KURL& /*firstParty*/, const KURL& /*url*/, Vector<Cookie>& rawCookies)
+bool getRawCookies(const NetworkStorageSession&, const URL& /*firstParty*/, const URL& /*url*/, Vector<Cookie>& rawCookies)
 {
     // FIXME: Not yet implemented
     rawCookies.clear();
     return false; // return true when implemented
 }
 
-void deleteCookie(const NetworkStorageSession&, const KURL&, const String&)
+void deleteCookie(const NetworkStorageSession&, const URL&, const String&)
 {
     // FIXME: Not yet implemented
 }
@@ -319,6 +322,11 @@ void deleteCookiesForHostname(const NetworkStorageSession&, const String& hostna
 }
 
 void deleteAllCookies(const NetworkStorageSession&)
+{
+    // FIXME: Not yet implemented
+}
+
+void deleteAllCookiesModifiedAfterDate(const NetworkStorageSession&, double)
 {
     // FIXME: Not yet implemented
 }

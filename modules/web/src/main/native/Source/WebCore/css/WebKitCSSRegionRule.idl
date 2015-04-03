@@ -28,8 +28,8 @@
  */
 
 [
-        Conditional=CSS_REGIONS,
+    Conditional=CSS_REGIONS,
 ] interface WebKitCSSRegionRule : CSSRule {
-        readonly attribute CSSRuleList cssRules;
-    };
+    readonly attribute CSSRuleList cssRules;
+};
 

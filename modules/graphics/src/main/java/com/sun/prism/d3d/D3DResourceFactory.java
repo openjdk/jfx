@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,6 +40,7 @@ import java.util.ListIterator;
 import java.util.Map;
 
 import com.sun.glass.ui.Screen;
+import com.sun.prism.Image;
 import com.sun.prism.MediaFrame;
 import com.sun.prism.Mesh;
 import com.sun.prism.MeshView;
@@ -58,8 +59,12 @@ import com.sun.prism.impl.ps.BaseShaderFactory;
 import com.sun.prism.impl.TextureResourcePool;
 import com.sun.prism.ps.Shader;
 import com.sun.prism.ps.ShaderFactory;
+import java.util.WeakHashMap;
 
 class D3DResourceFactory extends BaseShaderFactory {
+    private static final Map<Image,Texture> clampTexCache = new WeakHashMap<>();
+    private static final Map<Image,Texture> repeatTexCache = new WeakHashMap<>();
+    private static final Map<Image,Texture> mipmapTexCache = new WeakHashMap<>();
 
     private final D3DContext context;
     private final int maxTextureSize;
@@ -72,6 +77,7 @@ class D3DResourceFactory extends BaseShaderFactory {
         new LinkedList<D3DResource.D3DRecord>();
 
     D3DResourceFactory(long pContext, Screen screen) {
+        super(clampTexCache, repeatTexCache, mipmapTexCache);
         context = new D3DContext(pContext, screen, this);
         context.initState();
         maxTextureSize = computeMaxTextureSize();

@@ -20,8 +20,8 @@
 #ifndef SVGTextQuery_h
 #define SVGTextQuery_h
 
-#if ENABLE(SVG)
 #include "FloatRect.h"
+#include "SVGPoint.h"
 #include "SVGTextFragment.h"
 #include <wtf/Vector.h>
 
@@ -38,11 +38,11 @@ public:
     unsigned numberOfCharacters() const;
     float textLength() const;
     float subStringLength(unsigned startPosition, unsigned length) const;
-    FloatPoint startPositionOfCharacter(unsigned position) const;
-    FloatPoint endPositionOfCharacter(unsigned position) const;
+    SVGPoint startPositionOfCharacter(unsigned position) const;
+    SVGPoint endPositionOfCharacter(unsigned position) const;
     float rotationOfCharacter(unsigned position) const;
     FloatRect extentOfCharacter(unsigned position) const;
-    int characterNumberAtPosition(const FloatPoint&) const;
+    int characterNumberAtPosition(const SVGPoint&) const;
 
     // Public helper struct. Private classes in SVGTextQuery inherit from it.
     struct Data;
@@ -71,5 +71,4 @@ private:
 
 }
 
-#endif
 #endif

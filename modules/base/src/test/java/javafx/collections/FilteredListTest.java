@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,18 +25,16 @@
 
 package javafx.collections;
 
+import com.sun.javafx.collections.ObservableListWrapper;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
+import java.util.List;
 import java.util.function.Predicate;
-import javafx.beans.Observable;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.transformation.FilteredList;
-import javafx.collections.transformation.TransformationList;
 import static org.junit.Assert.*;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class FilteredListTest {
@@ -111,28 +109,124 @@ public class FilteredListTest {
 
     @Test
     public void testLiveMode_mutableElement() {
-        ObservableList<Person> list = FXCollections.observableArrayList(
-                (Person p) -> new Observable[] { p.name });
+        ObservableList<Person> list = Person.createPersonsList("A", "BB", "C");
 
-        list.addAll(createPerson("A"), createPerson("BB"), createPerson("C"));
-
-        FilteredList<Person> filtered = new FilteredList<Person>(list,
+        FilteredList<Person> filtered = new FilteredList<>(list,
                 (Person p) -> p.name.get().length() > 1);
-        MockListObserver<Person> lo = new MockListObserver<Person>();
-        assertEquals(Arrays.asList(createPerson("BB")), filtered);
-
+        MockListObserver<Person> lo = new MockListObserver<>();
         filtered.addListener(lo);
+
+        assertEquals(Arrays.asList(new Person("BB")), filtered);
 
         list.get(0).name.set("AA");
         lo.check1AddRemove(filtered, Collections.EMPTY_LIST, 0, 1);
-        assertEquals(Arrays.asList(createPerson("AA"),createPerson("BB")), filtered);
+        assertEquals(Person.createPersonsList("AA", "BB"), filtered);
+
+        lo.clear();
+        list.get(1).name.set("BBB");
+        lo.check1Update(filtered, 1, 2);
+        assertEquals(Person.createPersonsList("AA", "BBB"), filtered);
 
         lo.clear();
         list.get(1).name.set("B");
-        assertEquals(1, lo.calls.size());
-        lo.checkAddRemove(0, filtered, Arrays.asList(createPerson("B")), 1, 1);
+        lo.check1AddRemove(filtered, Person.createPersonsList("B"), 1, 1);
+        assertEquals(Person.createPersonsList("AA"), filtered);
+    }
 
-        assertEquals(Arrays.asList(createPerson("AA")), filtered);
+    @Test
+    public void testLiveMode_mutableElementEmptyList() {
+        ObservableList<Person> list = Person.createPersonsList("A", "B", "C");
+
+        FilteredList<Person> filtered = new FilteredList<>(list,
+                (Person p) -> p.name.get().length() > 1);
+        MockListObserver<Person> lo = new MockListObserver<>();
+        filtered.addListener(lo);
+
+        assertEquals(Collections.EMPTY_LIST, filtered);
+
+        list.get(0).name.set("AA");
+        lo.check1AddRemove(filtered, Collections.EMPTY_LIST, 0, 1);
+        assertEquals(Person.createPersonsList("AA"), filtered);
+    }
+
+    @Test
+    public void testLiveMode_mutableElements() {
+        Person p1 = new Person("A");
+        ObservableList<Person> list = Person.createPersonsList(
+                p1, p1, new Person("BB"), new Person("B"), p1, p1, new Person("BC"), p1, new Person("C"));
+
+        FilteredList<Person> filtered = new FilteredList<>(list,
+                (Person p) -> p.name.get().length() > 1);
+        MockListObserver<Person> lo = new MockListObserver<>();
+        filtered.addListener(lo);
+
+        assertEquals(Person.createPersonsList("BB", "BC"), filtered);
+
+        p1.name.set("AA");
+        lo.checkAddRemove(0, filtered, Collections.EMPTY_LIST, 0, 2);
+        lo.checkAddRemove(1, filtered, Collections.EMPTY_LIST, 3, 5);
+        lo.checkAddRemove(2, filtered, Collections.EMPTY_LIST, 6, 7);
+        assertEquals(Person.createPersonsList("AA", "AA", "BB", "AA", "AA", "BC", "AA"), filtered);
+
+        lo.clear();
+        p1.name.set("AAA");
+        lo.checkUpdate(0, filtered, 0, 2);
+        lo.checkUpdate(1, filtered, 3, 5);
+        lo.checkUpdate(2, filtered, 6, 7);
+        assertEquals(Person.createPersonsList("AAA", "AAA", "BB", "AAA", "AAA", "BC", "AAA"), filtered);
+
+        lo.clear();
+        p1.name.set("A");
+        lo.checkAddRemove(0, filtered, Person.createPersonsList("A", "A"), 0, 0);
+        lo.checkAddRemove(1, filtered, Person.createPersonsList("A", "A"), 1, 1);
+        lo.checkAddRemove(2, filtered, Person.createPersonsList("A"), 2, 2);
+        assertEquals(Person.createPersonsList( "BB", "BC"), filtered);
+    }
+
+    private static class Updater<E> extends ObservableListWrapper<E> {
+        public Updater(List<E> list) {
+            super(list);
+        }
+
+        public void update(int from, int to) {
+            beginChange();
+            for (int i = from; i < to; ++i) {
+                nextUpdate(i);
+            }
+            endChange();
+        }
+
+        public void updateAll() {
+            update(0, size());
+        }
+    }
+
+    @Test
+    public void testCustomMutableElements() {
+        Updater<Person> list = new Updater<>(Person.createPersonsFromNames(
+                "A0", "A1", "BB2", "B3", "A4", "A5", "BC6", "A7", "C8"));
+
+        FilteredList<Person> filtered = new FilteredList<>(list,
+                (Person p) -> p.name.get().length() > 2);
+        MockListObserver<Person> lo = new MockListObserver<>();
+        filtered.addListener(lo);
+
+        assertEquals(Person.createPersonsList("BB2", "BC6"), filtered);
+
+        list.updateAll();
+        lo.checkUpdate(0, filtered, 0, filtered.size());
+
+        lo.clear();
+        list.get(0).name.set("AA0");
+        list.get(3).name.set("BB3");
+        list.get(5).name.set("AA5");
+        list.get(6).name.set("B6");
+        list.get(7).name.set("AA7");
+        list.updateAll();
+        assertEquals(Person.createPersonsList("AA0", "BB2", "BB3", "AA5", "AA7"), filtered);
+        lo.checkAddRemove(0, filtered, Collections.EMPTY_LIST, 0, 1);
+        lo.checkAddRemove(1, filtered, Person.createPersonsList("B6"), 2, 5);
+        lo.checkUpdate(2, filtered, 1, 2);
     }
 
     @Test
@@ -149,11 +243,4 @@ public class FilteredListTest {
         assertEquals(list.size(), filteredList.size());
         assertEquals(list, filteredList);
     }
-
-    private Person createPerson(String name) {
-        Person p =  new Person();
-        p.name.set(name);
-        return p;
-    }
-
 }

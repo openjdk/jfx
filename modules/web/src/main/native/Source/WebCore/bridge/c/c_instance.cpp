@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -72,7 +72,7 @@ void CInstance::moveGlobalExceptionToExecState(ExecState* exec)
 
     {
         JSLockHolder lock(exec);
-        throwError(exec, createError(exec, globalExceptionString()));
+        exec->vm().throwException(exec, createError(exec, globalExceptionString()));
     }
 
     globalExceptionString() = String();
@@ -85,14 +85,15 @@ CInstance::CInstance(NPObject* o, PassRefPtr<RootObject> rootObject)
     _class = 0;
 }
 
-CInstance::~CInstance() 
+CInstance::~CInstance()
 {
     _NPN_ReleaseObject(_object);
 }
 
 RuntimeObject* CInstance::newRuntimeObject(ExecState* exec)
 {
-    return CRuntimeObject::create(exec, exec->lexicalGlobalObject(), this);
+    // FIXME: deprecatedGetDOMStructure uses the prototype off of the wrong global object.
+    return CRuntimeObject::create(exec->vm(), WebCore::deprecatedGetDOMStructure<CRuntimeObject>(exec), this);
 }
 
 Class *CInstance::getClass() const
@@ -123,10 +124,10 @@ public:
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), &s_info);
+        return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
     }
 
-    static const ClassInfo s_info;
+    DECLARE_INFO;
 
 private:
     CRuntimeMethod(JSGlobalObject* globalObject, Structure* structure, Bindings::Method* method)
@@ -137,7 +138,7 @@ private:
     void finishCreation(VM& vm, const String& name)
     {
         Base::finishCreation(vm, name);
-        ASSERT(inherits(&s_info));
+        ASSERT(inherits(info()));
     }
 
 };
@@ -152,8 +153,8 @@ JSValue CInstance::getMethod(ExecState* exec, PropertyName propertyName)
 
 JSValue CInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod)
 {
-    if (!asObject(runtimeMethod)->inherits(&CRuntimeMethod::s_info))
-        return throwError(exec, createTypeError(exec, "Attempt to invoke non-plug-in method on plug-in object."));
+    if (!asObject(runtimeMethod)->inherits(CRuntimeMethod::info()))
+        return exec->vm().throwException(exec, createTypeError(exec, "Attempt to invoke non-plug-in method on plug-in object."));
 
     CMethod* method = static_cast<CMethod*>(runtimeMethod->method());
     ASSERT(method);
@@ -167,7 +168,7 @@ JSValue CInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod)
 
     unsigned i;
     for (i = 0; i < count; i++)
-        convertValueToNPVariant(exec, exec->argument(i), &cArgs[i]);
+        convertValueToNPVariant(exec, exec->uncheckedArgument(i), &cArgs[i]);
 
     // Invoke the 'C' method.
     bool retval = true;
@@ -180,9 +181,9 @@ JSValue CInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod)
         retval = _object->_class->invoke(_object, ident, cArgs.data(), count, &resultVariant);
         moveGlobalExceptionToExecState(exec);
     }
-    
+
     if (!retval)
-        throwError(exec, createError(exec, ASCIILiteral("Error calling method on NPObject.")));
+        exec->vm().throwException(exec, createError(exec, ASCIILiteral("Error calling method on NPObject.")));
 
     for (i = 0; i < count; i++)
         _NPN_ReleaseVariantValue(&cArgs[i]);
@@ -203,7 +204,7 @@ JSValue CInstance::invokeDefaultMethod(ExecState* exec)
 
     unsigned i;
     for (i = 0; i < count; i++)
-        convertValueToNPVariant(exec, exec->argument(i), &cArgs[i]);
+        convertValueToNPVariant(exec, exec->uncheckedArgument(i), &cArgs[i]);
 
     // Invoke the 'C' method.
     bool retval = true;
@@ -215,9 +216,9 @@ JSValue CInstance::invokeDefaultMethod(ExecState* exec)
         retval = _object->_class->invokeDefault(_object, cArgs.data(), count, &resultVariant);
         moveGlobalExceptionToExecState(exec);
     }
-    
+
     if (!retval)
-        throwError(exec, createError(exec, ASCIILiteral("Error calling method on NPObject.")));
+        exec->vm().throwException(exec, createError(exec, ASCIILiteral("Error calling method on NPObject.")));
 
     for (i = 0; i < count; i++)
         _NPN_ReleaseVariantValue(&cArgs[i]);
@@ -231,7 +232,7 @@ bool CInstance::supportsConstruct() const
 {
     return _object->_class->construct;
 }
-    
+
 JSValue CInstance::invokeConstruct(ExecState* exec, const ArgList& args)
 {
     if (!_object->_class->construct)
@@ -254,9 +255,9 @@ JSValue CInstance::invokeConstruct(ExecState* exec, const ArgList& args)
         retval = _object->_class->construct(_object, cArgs.data(), count, &resultVariant);
         moveGlobalExceptionToExecState(exec);
     }
-    
+
     if (!retval)
-        throwError(exec, createError(exec, ASCIILiteral("Error calling method on NPObject.")));
+        exec->vm().throwException(exec, createError(exec, ASCIILiteral("Error calling method on NPObject.")));
 
     for (i = 0; i < count; i++)
         _NPN_ReleaseVariantValue(&cArgs[i]);
@@ -282,7 +283,7 @@ JSValue CInstance::stringValue(ExecState* exec) const
         return value;
 
     // Fallback to default implementation.
-    return jsString(exec, "NPObject");
+    return jsNontrivialString(exec, ASCIILiteral("NPObject"));
 }
 
 JSValue CInstance::numberValue(ExecState*) const
@@ -297,7 +298,7 @@ JSValue CInstance::booleanValue() const
     return jsBoolean(getObject());
 }
 
-JSValue CInstance::valueOf(ExecState* exec) const 
+JSValue CInstance::valueOf(ExecState* exec) const
 {
     JSValue value;
     if (toJSPrimitive(exec, "valueOf", value))
@@ -326,7 +327,7 @@ bool CInstance::toJSPrimitive(ExecState* exec, const char* name, JSValue& result
     }
 
     if (!retval)
-        throwError(exec, createError(exec, ASCIILiteral("Error calling method on NPObject.")));
+        exec->vm().throwException(exec, createError(exec, ASCIILiteral("Error calling method on NPObject.")));
 
     resultValue = convertNPVariantToValue(exec, &resultVariant, m_rootObject.get());
     _NPN_ReleaseVariantValue(&resultVariant);

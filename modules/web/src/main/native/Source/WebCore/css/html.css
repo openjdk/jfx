@@ -59,12 +59,6 @@ body {
     margin: 8px
 }
 
-#if defined(ENABLE_IFRAME_SEAMLESS) && ENABLE_IFRAME_SEAMLESS
-body:-webkit-seamless-document {
-    margin: 0px;
-}
-#endif
-
 p {
     display: block;
     -webkit-margin-before: 1__qem;
@@ -146,18 +140,9 @@ map {
     display: inline
 }
 
-#if defined(ENABLE_DIALOG_ELEMENT) && ENABLE_DIALOG_ELEMENT
-dialog:not([open]) { display: none; }
-dialog {
-    position: absolute;
-    left: 0; right: 0;
-    margin: auto;
-    border: solid;
-    padding: 1em;
-    background: white;
-    color: black;
+video {
+    object-fit: contain;
 }
-#endif
 
 /* heading elements */
 
@@ -408,7 +393,9 @@ input, textarea, keygen, select, button, isindex, meter, progress {
 
 input, textarea, keygen, select, button, isindex {
     margin: 0__qem;
+#if !(defined(WTF_PLATFORM_IOS) && WTF_PLATFORM_IOS)
     font: -webkit-small-control;
+#endif
     color: initial;
     letter-spacing: normal;
     word-spacing: normal;
@@ -420,15 +407,33 @@ input, textarea, keygen, select, button, isindex {
     text-align: start;
 }
 
+input {
+    line-height: normal !important;
+}
+
 input[type="hidden"] {
     display: none
 }
 
-input, input[type="password"], input[type="search"], isindex {
+input,
+input[type="password"],
+input[type="search"],
+#if defined(WTF_PLATFORM_IOS) && WTF_PLATFORM_IOS
+textarea,
+input[type="range"],
+#endif
+isindex {
     -webkit-appearance: textfield;
-    padding: 1px;
     background-color: white;
+#if defined(WTF_PLATFORM_IOS) && WTF_PLATFORM_IOS
+    border-radius: 5px;
+    font: 11px Helvetica, -webkit-pictograph;
+    border: 1px solid #4c4c4c;
+    padding: 0.2em 0.5em 0.3em 0.5em;
+#else
     border: 2px inset;
+    padding: 1px;
+#endif
     -webkit-rtl-ordering: logical;
     -webkit-user-select: text;
     cursor: auto;
@@ -498,155 +503,15 @@ datalist {
 }
 #endif
 
-#if defined(ENABLE_INPUT_MULTIPLE_FIELDS_UI) && ENABLE_INPUT_MULTIPLE_FIELDS_UI
-#if defined(ENABLE_INPUT_TYPE_DATE) && ENABLE_INPUT_TYPE_DATE
-input[type="date"] {
-    -webkit-align-items: center;
-    display: -webkit-inline-flex;
-    font-family: monospace;
-    overflow: hidden;
-    padding: 0;
-    -webkit-padding-start: 1px;
-}
-#endif
-#if defined(ENABLE_INPUT_TYPE_DATETIME_INCOMPLETE) && ENABLE_INPUT_TYPE_DATETIME_INCOMPLETE
-input[type="datetime"] {
-    -webkit-align-items: center;
-    display: -webkit-inline-flex;
-    font-family: monospace;
-    overflow: hidden;
-    padding: 0;
-    -webkit-padding-start: 1px;
-}
-#endif
-#if defined(ENABLE_INPUT_TYPE_DATETIMELOCAL) && ENABLE_INPUT_TYPE_DATETIMELOCAL
-input[type="datetime-local"] {
-    -webkit-align-items: center;
-    display: -webkit-inline-flex;
-    font-family: monospace;
-    overflow: hidden;
-    padding: 0;
-    -webkit-padding-start: 1px;
-}
-#endif
-#if defined(ENABLE_INPUT_TYPE_MONTH) && ENABLE_INPUT_TYPE_MONTH
-input[type="month"] {
-    -webkit-align-items: center;
-    display: -webkit-inline-flex;
-    font-family: monospace;
-    overflow: hidden;
-    padding: 0;
-    -webkit-padding-start: 1px;
-}
-#endif
-#if defined(ENABLE_INPUT_TYPE_TIME) && ENABLE_INPUT_TYPE_TIME
-input[type="time"] {
-    -webkit-align-items: center;
-    display: -webkit-inline-flex;
-    font-family: monospace;
-    overflow: hidden;
-    padding: 0;
-    -webkit-padding-start: 1px;
-}
-#endif
-#if defined(ENABLE_INPUT_TYPE_WEEK) && ENABLE_INPUT_TYPE_WEEK
-input[type="week"] {
-    -webkit-align-items: center;
-    display: -webkit-inline-flex;
-    font-family: monospace;
-    overflow: hidden;
-    padding: 0;
-    -webkit-padding-start: 1px;
-}
-#endif
-
-input::-webkit-datetime-edit {
-    -webkit-flex: 1;
-    -webkit-user-modify: read-only !important;
-    display: inline-block;
-    overflow: hidden;
-}
-
-input::-webkit-datetime-edit-fields-wrapper {
-    -webkit-user-modify: read-only !important;
-    display: inline-block;
-    padding: 1px 0;
-    white-space: pre;
-}
-
-/* If you update padding, border, or margin in the following ruleset, update
-   DateTimeFieldElement::maximumWidth too. */
-input::-webkit-datetime-edit-ampm-field,
-input::-webkit-datetime-edit-day-field,
-input::-webkit-datetime-edit-hour-field,
-input::-webkit-datetime-edit-millisecond-field,
-input::-webkit-datetime-edit-minute-field,
-input::-webkit-datetime-edit-month-field,
-input::-webkit-datetime-edit-second-field,
-input::-webkit-datetime-edit-week-field,
-input::-webkit-datetime-edit-year-field {
-    -webkit-user-modify: read-only !important;
-    border: none;
-    display: inline;
-    font: inherit !important;
-    padding: 1px;
-}
-
-/* Remove focus ring from fields and use highlight color */
-input::-webkit-datetime-edit-ampm-field:focus,
-input::-webkit-datetime-edit-day-field:focus,
-input::-webkit-datetime-edit-hour-field:focus,
-input::-webkit-datetime-edit-millisecond-field:focus,
-input::-webkit-datetime-edit-minute-field:focus,
-input::-webkit-datetime-edit-month-field:focus,
-input::-webkit-datetime-edit-second-field:focus,
-input::-webkit-datetime-edit-week-field:focus,
-input::-webkit-datetime-edit-year-field:focus {
-    background-color: highlight;
-    color: highlighttext;
-    outline: none;
-}
-
-input::-webkit-datetime-edit-year-field[disabled],
-input::-webkit-datetime-edit-month-field[disabled],
-input::-webkit-datetime-edit-week-field[disabled],
-input::-webkit-datetime-edit-day-field[disabled],
-input::-webkit-datetime-edit-ampm-field[disabled],
-input::-webkit-datetime-edit-hour-field[disabled],
-input::-webkit-datetime-edit-millisecond-field[disabled],
-input::-webkit-datetime-edit-minute-field[disabled],
-input::-webkit-datetime-edit-second-field[disabled] {
-    color: GrayText;
-}
-
-/* If you update padding, border, or margin in the following ruleset, update
-   DateTimeEditElement::customStyelForRenderer too. */
-input::-webkit-datetime-edit-text {
-    -webkit-user-modify: read-only !important;
-    display: inline;
-    font: inherit !important;
-}
-
-input[type="date"]::-webkit-inner-spin-button,
-input[type="datetime"]::-webkit-inner-spin-button,
-input[type="datetime-local"]::-webkit-inner-spin-button,
-input[type="month"]::-webkit-inner-spin-button,
-input[type="time"]::-webkit-inner-spin-button,
-input[type="week"]::-webkit-inner-spin-button {
-    display: inline-block;
-    position: static;
-    -webkit-margin-start: 2px;
-}
-
-#else
-
 #if defined(ENABLE_INPUT_TYPE_DATE) && ENABLE_INPUT_TYPE_DATE
 input[type="date"] {
     -webkit-align-items: center;
     -webkit-appearance: menulist-button;
     display: -webkit-inline-flex;
     overflow: hidden;
+#if !(defined(WTF_PLATFORM_IOS) && WTF_PLATFORM_IOS)
     width: 10em;
+#endif
 }
 #endif
 #if defined(ENABLE_INPUT_TYPE_DATETIME_INCOMPLETE) && ENABLE_INPUT_TYPE_DATETIME_INCOMPLETE
@@ -655,7 +520,9 @@ input[type="datetime"] {
     -webkit-appearance: menulist-button;
     display: -webkit-inline-flex;
     overflow: hidden;
+#if !(defined(WTF_PLATFORM_IOS) && WTF_PLATFORM_IOS)
     width: 10em;
+#endif
 }
 #endif
 #if defined(ENABLE_INPUT_TYPE_DATETIMELOCAL) && ENABLE_INPUT_TYPE_DATETIMELOCAL
@@ -664,7 +531,9 @@ input[type="datetime-local"] {
     -webkit-appearance: menulist-button;
     display: -webkit-inline-flex;
     overflow: hidden;
+#if !(defined(WTF_PLATFORM_IOS) && WTF_PLATFORM_IOS)
     width: 10em;
+#endif
 }
 #endif
 #if defined(ENABLE_INPUT_TYPE_MONTH) && ENABLE_INPUT_TYPE_MONTH
@@ -673,7 +542,9 @@ input[type="month"] {
     -webkit-appearance: menulist-button;
     display: -webkit-inline-flex;
     overflow: hidden;
+#if !(defined(WTF_PLATFORM_IOS) && WTF_PLATFORM_IOS)
     width: 10em;
+#endif
 }
 #endif
 #if defined(ENABLE_INPUT_TYPE_TIME) && ENABLE_INPUT_TYPE_TIME
@@ -682,10 +553,13 @@ input[type="time"] {
     -webkit-appearance: menulist-button;
     display: -webkit-inline-flex;
     overflow: hidden;
+#if !(defined(WTF_PLATFORM_IOS) && WTF_PLATFORM_IOS)
     width: 10em;
+#endif
 }
 #endif
 #if defined(ENABLE_INPUT_TYPE_WEEK) && ENABLE_INPUT_TYPE_WEEK
+#if !(defined(WTF_PLATFORM_IOS) && WTF_PLATFORM_IOS)
 input[type="week"] {
     -webkit-align-items: center;
     -webkit-appearance: menulist-button;
@@ -694,7 +568,9 @@ input[type="week"] {
     width: 10em;
 }
 #endif
+#endif
 
+#if !(defined(WTF_PLATFORM_IOS) && WTF_PLATFORM_IOS)
 input::-webkit-date-and-time-value {
     margin: 1px 24px 1px 4px;
     white-space: pre;
@@ -738,10 +614,15 @@ keygen::-webkit-keygen-select {
 
 textarea {
     -webkit-appearance: textarea;
+#if !(defined(WTF_PLATFORM_IOS) && WTF_PLATFORM_IOS)
     background-color: white;
     border: 1px solid;
     -webkit-rtl-ordering: logical;
     -webkit-user-select: text;
+#else
+    -webkit-nbsp-mode: space;
+    -webkit-line-break: after-white-space;
+#endif
     -webkit-flex-direction: column;
     resize: auto;
     cursor: auto;
@@ -782,16 +663,25 @@ input[type="file"] {
 }
 
 input:-webkit-autofill {
+#if defined(WTF_PLATFORM_IOS) && WTF_PLATFORM_IOS
+    background-color: #F7EC87 !important;
+#else
     background-color: #FAFFBD !important;
+#endif
     background-image:none !important;
     color: #000000 !important;
 }
 
 input[type="radio"], input[type="checkbox"] {
-    margin: 3px 0.5ex;
+    margin: 3px 2px;
+#if defined(WTF_PLATFORM_IOS) && WTF_PLATFORM_IOS
+    border: 1px solid #4c4c4c;
+    box-sizing: border-box;
+#else
     padding: initial;
     background-color: initial;
     border: initial;
+#endif
 }
 
 input[type="button"], input[type="submit"], input[type="reset"] {
@@ -812,9 +702,17 @@ input[type="button"], input[type="submit"], input[type="reset"], input[type="fil
     text-align: center;
     cursor: default;
     color: ButtonText;
+#if !(defined(WTF_PLATFORM_IOS) && WTF_PLATFORM_IOS)
     padding: 2px 6px 3px 6px;
     border: 2px outset ButtonFace;
     background-color: ButtonFace;
+#else
+    padding: 0 1.0em;
+    border: 1px solid #4c4c4c;
+    /* We want to be as close to background-color:transparent as possible without actually being transparent. */
+    background-color: rgba(255, 255, 255, 0.01);
+    font: 11px Helvetica;
+#endif
     box-sizing: border-box
 }
 
@@ -848,7 +746,30 @@ input[type="range"]::-webkit-slider-thumb, input[type="range"]::-webkit-media-sl
     box-sizing: border-box;
     -webkit-user-modify: read-only !important;
     display: block;
+#if defined(WTF_PLATFORM_IOS) && WTF_PLATFORM_IOS
+    background-color: white;
+    border: 1px solid rgb(66, 66, 66);
+    padding: 0px;
+#endif
 }
+
+#if defined(WTF_PLATFORM_IOS) && WTF_PLATFORM_IOS
+input[type="range"]::-webkit-slider-thumb:active {
+    background-color: black;
+}
+
+input:disabled, textarea:disabled {
+    opacity: 0.4;
+}
+
+input[readonly], textarea[readonly] {
+    border-color: rgb(188, 188, 188);
+}
+
+textarea::-webkit-input-placeholder {
+    text-indent: 2px;
+}
+#endif
 
 input[type="button"]:disabled, input[type="submit"]:disabled, input[type="reset"]:disabled,
 input[type="file"]:disabled::-webkit-file-upload-button, button:disabled,
@@ -857,6 +778,7 @@ select[disabled]>option {
     color: GrayText
 }
 
+#if !(defined(WTF_PLATFORM_IOS) && WTF_PLATFORM_IOS)
 input[type="button"]:active, input[type="submit"]:active, input[type="reset"]:active, input[type="file"]:active::-webkit-file-upload-button, button:active {
     border-style: inset
 }
@@ -864,6 +786,7 @@ input[type="button"]:active, input[type="submit"]:active, input[type="reset"]:ac
 input[type="button"]:active:disabled, input[type="submit"]:active:disabled, input[type="reset"]:active:disabled, input[type="file"]:active:disabled::-webkit-file-upload-button, button:active:disabled {
     border-style: outset
 }
+#endif
 
 area, param {
     display: none
@@ -871,13 +794,52 @@ area, param {
 
 input[type="checkbox"] {
     -webkit-appearance: checkbox;
+#if !(defined(WTF_PLATFORM_IOS) && WTF_PLATFORM_IOS)
     box-sizing: border-box;
+#else
+    border-radius: 5px;
+    width: 16px;
+    height: 16px;
+    padding: 0px;
+    /* We want to be as close to background:transparent as possible without actually being transparent */
+    background-color: rgba(255, 255, 255, 0.01);
+#endif
 }
 
+#if defined(WTF_PLATFORM_IOS) && WTF_PLATFORM_IOS
+input[type="radio"] {
+    -webkit-appearance: radio;
+    border-radius: 8px;
+    width: 16px;
+    height: 16px;
+    padding: 0px;
+    /* We want to be as close to background:transparent as possible without actually being transparent */
+    background-color: rgba(255, 255, 255, 0.01);
+}
+
+input[type="checkbox"]:checked, input[type="radio"]:checked {
+    background:rgba(0, 0, 0, 0.8);
+    border-color:rgba(255, 255, 255, 0.0);
+}
+
+input[type="checkbox"]:checked:disabled, input[type="radio"]:checked:disabled {
+    opacity:0.4;
+    background:rgba(0, 0, 0, 0.8);
+}
+#endif
+
+#if !(defined(WTF_PLATFORM_IOS) && WTF_PLATFORM_IOS)
 input[type="radio"] {
     -webkit-appearance: radio;
     box-sizing: border-box;
 }
+#endif
+
+#if defined(WTF_PLATFORM_IOS) && WTF_PLATFORM_IOS
+select:focus {
+    border-color: rgb(17, 46, 135);
+}
+#endif
 
 #if defined(ENABLE_INPUT_TYPE_COLOR) && ENABLE_INPUT_TYPE_COLOR
 
@@ -925,17 +887,30 @@ input[type="color"][list]::-webkit-color-swatch {
 #endif // defined(ENABLE_INPUT_TYPE_COLOR) && ENABLE_INPUT_TYPE_COLOR
 
 select {
-    -webkit-appearance: menulist;
     box-sizing: border-box;
-    -webkit-align-items: center;
+#if defined(WTF_PLATFORM_IOS) && WTF_PLATFORM_IOS
+    -webkit-appearance: menulist-button;
+    letter-spacing: normal;
+    word-spacing: normal;
+    line-height: normal;
+    border: 1px solid #4c4c4c;
+    /* We want to be as close to background:transparent as possible without actually being transparent */
+    background-color: rgba(255, 255, 255, 0.01);
+    font: 11px Helvetica;
+    padding: 0 0.5em 0 0.5em;
+#else
+    -webkit-appearance: menulist;
     border: 1px solid;
-    white-space: pre;
-    -webkit-rtl-ordering: logical;
     color: black;
     background-color: white;
+#endif
+    -webkit-align-items: center;
+    white-space: pre;
+    -webkit-rtl-ordering: logical;
     cursor: default;
 }
 
+#if !(defined(WTF_PLATFORM_IOS) && WTF_PLATFORM_IOS)
 select[size],
 select[multiple],
 select[size][multiple] {
@@ -954,6 +929,7 @@ select[size="1"] {
     border-radius: 5px;
     white-space: pre;
 }
+#endif
 
 optgroup {
     font-weight: bolder;
@@ -1256,12 +1232,8 @@ frameset {
     border-color: inherit
 }
 
-iframe:not([seamless]) {
+iframe {
     border: 2px inset
-}
-
-iframe[seamless] {
-    display: block
 }
 
 details {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,18 +28,15 @@ package com.sun.javafx.webkit.prism;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.Base64;
 import java.util.Iterator;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageWriter;
 
-import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.webkit.UIClientImpl;
 import com.sun.prism.Image;
 import com.sun.prism.Graphics;
-
 import com.sun.webkit.graphics.WCImage;
-
-import sun.misc.BASE64Encoder;
 
 /**
  * @author Alexey.Ushakov
@@ -85,7 +82,7 @@ abstract class PrismImage extends WCImage {
                 }
                 StringBuilder sb = new StringBuilder();
                 sb.append("data:").append(mimeType).append(";base64,");
-                sb.append(new BASE64Encoder().encode(output.toByteArray()));
+                sb.append(Base64.getMimeEncoder().encodeToString(output.toByteArray()));
                 return sb.toString();
             }
         }

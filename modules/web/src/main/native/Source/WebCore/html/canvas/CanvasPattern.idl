@@ -25,5 +25,5 @@
 [
     ImplementationLacksVTable
 ] interface CanvasPattern {
-    };
+};
 

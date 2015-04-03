@@ -49,7 +49,7 @@
 defined(__ARMEL__) || \
 defined(_MIPS_ARCH_MIPS32R2)
 #define DOUBLE_CONVERSION_CORRECT_DOUBLE_OPERATIONS 1
-#elif CPU(MIPS) || CPU(PPC) || CPU(PPC64) || OS(WINCE) || CPU(SH4) || CPU(S390) || CPU(S390X) || CPU(IA64) || CPU(SPARC) || CPU(ALPHA)
+#elif CPU(MIPS) || CPU(PPC) || CPU(PPC64) || OS(WINCE) || CPU(SH4) || CPU(S390) || CPU(S390X) || CPU(IA64) || CPU(ALPHA) || CPU(ARM64) || CPU(HPPA)
 #define DOUBLE_CONVERSION_CORRECT_DOUBLE_OPERATIONS 1
 #elif defined(_M_IX86) || defined(__i386__)
 #if defined(_WIN32)
@@ -58,6 +58,8 @@ defined(_MIPS_ARCH_MIPS32R2)
 #else
 #undef DOUBLE_CONVERSION_CORRECT_DOUBLE_OPERATIONS
 #endif  // _WIN32
+#elif defined(WINCE) || defined(_WIN32_WCE)
+#define DOUBLE_CONVERSION_CORRECT_DOUBLE_OPERATIONS 1
 #else
 #error Target architecture was not detected as supported by Double-Conversion.
 #endif
@@ -136,7 +138,7 @@ namespace double_conversion {
         ASSERT(length == static_cast<size_t>(static_cast<int>(length)));
         return static_cast<int>(length);
     }
-    
+
     // BufferReference abstract a memory buffer. It provides a pointer
     // to the beginning of the buffer, and the available length. 
     template <typename T>
@@ -151,7 +153,7 @@ namespace double_conversion {
         // spanning from and including 'from', to but not including 'to'.
         BufferReference<T> SubBufferReference(int from, int to) {
             ASSERT(to <= length_);
-            ASSERT(from < to);
+            ASSERT_WITH_SECURITY_IMPLICATION(from < to);
             ASSERT(0 <= from);
             return BufferReference<T>(start() + from, to - from);
         }

@@ -29,15 +29,19 @@
 #define ScriptExecutionContext_h
 
 #include "ActiveDOMObject.h"
-#include "ConsoleTypes.h"
-#include "KURL.h"
 #include "SecurityContext.h"
 #include "Supplementable.h"
+#include "URL.h"
+#include <inspector/ConsoleTypes.h>
 #include <wtf/HashSet.h>
 
 namespace JSC {
 class ExecState;
 class VM;
+}
+
+namespace Inspector {
+class ScriptCallStack;
 }
 
 namespace WebCore {
@@ -49,9 +53,6 @@ class EventListener;
 class EventQueue;
 class EventTarget;
 class MessagePort;
-class ScriptCallStack;
-
-typedef JSC::ExecState ScriptState;
 
 #if ENABLE(BLOB)
 class PublicURLManager;
@@ -63,23 +64,23 @@ public:
     virtual ~ScriptExecutionContext();
 
     virtual bool isDocument() const { return false; }
-    virtual bool isWorkerContext() const { return false; }
+    virtual bool isWorkerGlobalScope() const { return false; }
 
     virtual bool isContextThread() const { return true; }
     virtual bool isJSExecutionForbidden() const = 0;
 
-    const KURL& url() const { return virtualURL(); }
-    KURL completeURL(const String& url) const { return virtualCompleteURL(url); }
+    virtual const URL& url() const = 0;
+    virtual URL completeURL(const String& url) const = 0;
 
-    virtual String userAgent(const KURL&) const = 0;
+    virtual String userAgent(const URL&) const = 0;
 
     virtual void disableEval(const String& errorMessage) = 0;
 
-    bool sanitizeScriptError(String& errorMessage, int& lineNumber, String& sourceURL, CachedScript* = 0);
+    bool sanitizeScriptError(String& errorMessage, int& lineNumber, int& columnNumber, String& sourceURL, CachedScript* = 0);
     // FIXME: <http://webkit.org/b/114315> ScriptExecutionContext log exception should include a column number
-    void reportException(const String& errorMessage, int lineNumber, int columnNumber, const String& sourceURL, PassRefPtr<ScriptCallStack>, CachedScript* = 0);
+    void reportException(const String& errorMessage, int lineNumber, int columnNumber, const String& sourceURL, PassRefPtr<Inspector::ScriptCallStack>, CachedScript* = 0);
 
-    void addConsoleMessage(MessageSource, MessageLevel, const String& message, const String& sourceURL, unsigned lineNumber, unsigned columnNumber, ScriptState* = 0, unsigned long requestIdentifier = 0);
+    void addConsoleMessage(MessageSource, MessageLevel, const String& message, const String& sourceURL, unsigned lineNumber, unsigned columnNumber, JSC::ExecState* = 0, unsigned long requestIdentifier = 0);
     virtual void addConsoleMessage(MessageSource, MessageLevel, const String& message, unsigned long requestIdentifier = 0) = 0;
 
     virtual SecurityOrigin* topOrigin() const = 0;
@@ -87,6 +88,7 @@ public:
 #if ENABLE(BLOB)
     PublicURLManager& publicURLManager();
 #endif
+
     // Active objects are not garbage collected even if inaccessible, e.g. because their activity may result in callbacks being invoked.
     bool canSuspendActiveDOMObjects();
     // Active objects can be asked to suspend even if canSuspendActiveDOMObjects() returns 'false' -
@@ -150,10 +152,15 @@ public:
     void didChangeTimerAlignmentInterval();
     virtual double timerAlignmentInterval() const;
 
-    virtual EventQueue* eventQueue() const = 0;
+    virtual EventQueue& eventQueue() const = 0;
 
 #if ENABLE(SQL_DATABASE)
     void setDatabaseContext(DatabaseContext*);
+#endif
+
+#if ENABLE(SUBTLE_CRYPTO)
+    virtual bool wrapCryptoKey(const Vector<uint8_t>& key, Vector<uint8_t>& wrappedKey) = 0;
+    virtual bool unwrapCryptoKey(const Vector<uint8_t>& wrappedKey, Vector<uint8_t>& key) = 0;
 #endif
 
 protected:
@@ -163,7 +170,7 @@ protected:
         {
             return adoptPtr(new AddConsoleMessageTask(source, level, message));
         }
-        virtual void performTask(ScriptExecutionContext*);
+        virtual void performTask(ScriptExecutionContext*) override;
     private:
         AddConsoleMessageTask(MessageSource source, MessageLevel level, const String& message)
             : m_source(source)
@@ -179,13 +186,10 @@ protected:
     ActiveDOMObject::ReasonForSuspension reasonForSuspendingActiveDOMObjects() const { return m_reasonForSuspendingActiveDOMObjects; }
 
 private:
-    virtual const KURL& virtualURL() const = 0;
-    virtual KURL virtualCompleteURL(const String&) const = 0;
-
-    virtual void addMessage(MessageSource, MessageLevel, const String& message, const String& sourceURL, unsigned lineNumber, unsigned columnNumber, PassRefPtr<ScriptCallStack>, ScriptState* = 0, unsigned long requestIdentifier = 0) = 0;
+    virtual void addMessage(MessageSource, MessageLevel, const String& message, const String& sourceURL, unsigned lineNumber, unsigned columnNumber, PassRefPtr<Inspector::ScriptCallStack>, JSC::ExecState* = 0, unsigned long requestIdentifier = 0) = 0;
     virtual EventTarget* errorEventTarget() = 0;
-    virtual void logExceptionToConsole(const String& errorMessage, const String& sourceURL, int lineNumber, int columnNumber, PassRefPtr<ScriptCallStack>) = 0;
-    bool dispatchErrorEvent(const String& errorMessage, int lineNumber, const String& sourceURL, CachedScript*);
+    virtual void logExceptionToConsole(const String& errorMessage, const String& sourceURL, int lineNumber, int columnNumber, PassRefPtr<Inspector::ScriptCallStack>) = 0;
+    bool dispatchErrorEvent(const String& errorMessage, int lineNumber, int columnNumber, const String& sourceURL, CachedScript*);
 
     void closeMessagePorts();
 
@@ -204,20 +208,23 @@ private:
 
     bool m_inDispatchErrorEvent;
     class PendingException;
-    OwnPtr<Vector<OwnPtr<PendingException> > > m_pendingExceptions;
+    OwnPtr<Vector<OwnPtr<PendingException>>> m_pendingExceptions;
 
     bool m_activeDOMObjectsAreSuspended;
     ActiveDOMObject::ReasonForSuspension m_reasonForSuspendingActiveDOMObjects;
     bool m_activeDOMObjectsAreStopped;
 
 #if ENABLE(BLOB)
-    OwnPtr<PublicURLManager> m_publicURLManager;
+    std::unique_ptr<PublicURLManager> m_publicURLManager;
 #endif
 
 #if ENABLE(SQL_DATABASE)
     RefPtr<DatabaseContext> m_databaseContext;
 #endif
 };
+
+#define SCRIPT_EXECUTION_CONTEXT_TYPE_CASTS(ToValueTypeName) \
+    TYPE_CASTS_BASE(ToValueTypeName, ScriptExecutionContext, context, context->is##ToValueTypeName(), context.is##ToValueTypeName())
 
 } // namespace WebCore
 

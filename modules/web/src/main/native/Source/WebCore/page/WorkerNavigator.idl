@@ -28,16 +28,14 @@
 
 [
     NoInterfaceObject,
-        Conditional=WORKERS,
     GenerateIsReachable=Impl,
-        JSNoStaticTables,
-        OmitConstructor
+    JSNoStaticTables,
 ] interface WorkerNavigator {
-        readonly attribute DOMString appName;
-        readonly attribute DOMString appVersion;
-        readonly attribute DOMString platform;
-        readonly attribute DOMString userAgent;
+    readonly attribute DOMString appName;
+    readonly attribute DOMString appVersion;
+    readonly attribute DOMString platform;
+    readonly attribute DOMString userAgent;
 
-        readonly attribute boolean onLine;
-    };
+    readonly attribute boolean onLine;
+};
 

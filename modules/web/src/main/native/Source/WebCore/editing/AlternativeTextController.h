@@ -93,7 +93,7 @@ class AlternativeTextController {
     WTF_MAKE_NONCOPYABLE(AlternativeTextController);
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    explicit AlternativeTextController(Frame*) UNLESS_ENABLED({ })
+    explicit AlternativeTextController(Frame& frame) UNLESS_ENABLED( : m_frame(frame) { })
     ~AlternativeTextController() UNLESS_ENABLED({ })
 
     void startAlternativeTextUITimer(AlternativeTextType) UNLESS_ENABLED({ })
@@ -138,7 +138,7 @@ private:
 #if USE(AUTOCORRECTION_PANEL)
     String dismissSoon(ReasonForDismissingAlternativeText);
     void applyAlternativeTextToRange(const Range*, const String& alternative, AlternativeTextType, const Vector<DocumentMarker::MarkerType>&);
-    void timerFired(Timer<AlternativeTextController>*);
+    void timerFired(Timer<AlternativeTextController>&);
     void recordAutocorrectionResponseReversed(const String& replacedString, const String& replacementString);
     void recordSpellcheckerResponseForModifiedCorrection(Range* rangeOfCorrection, const String& corrected, const String& correction);
     String markerDescriptionForAppliedAlternativeText(AlternativeTextType, DocumentMarker::MarkerType);
@@ -161,7 +161,7 @@ private:
     Position m_positionForLastDeletedAutocorrection;
 #endif
 
-    Frame* m_frame;
+    Frame& m_frame;
 };
 
 #undef UNLESS_ENABLED

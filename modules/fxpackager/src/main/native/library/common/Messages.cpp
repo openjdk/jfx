@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2014, 2015, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -41,7 +41,7 @@
 
 Messages::Messages(void) {
     FMessages.SetReadOnly(false);
-    FMessages.SetValue(LIBRARY_NOT_FOUND, _T("Failed to find library"));
+    FMessages.SetValue(LIBRARY_NOT_FOUND, _T("Failed to find library."));
     FMessages.SetValue(FAILED_CREATING_JVM, _T("Failed to create JVM"));
     FMessages.SetValue(FAILED_LOCATING_JVM_ENTRY_POINT, _T("Failed to locate JNI_CreateJavaVM"));
     FMessages.SetValue(NO_MAIN_CLASS_SPECIFIED, _T("No main class specified"));
@@ -50,10 +50,11 @@ Messages::Messages(void) {
     FMessages.SetValue(ERROR_INVOKING_METHOD, _T("Error invoking method."));
     //FMessages.SetValue(CONFIG_FILE_NOT_FOUND, _T("Configuration file %s is not found."));
     //FMessages.SetValue(BUNDLED_JVM_NOT_FOUND, _T("$JAVAVMLIBRARYNAME is not found in the bundled runtime."));
+    FMessages.SetValue(APPCDS_CACHE_FILE_NOT_FOUND, _T("Error: AppCDS cache does not exists:\n\n%s"));
 }
 
 Messages& Messages::GetInstance() {
-    Lock lock;
+    //Lock lock;
     static Messages instance; // Guaranteed to be destroyed. Instantiated on first use.
     return instance;
 }

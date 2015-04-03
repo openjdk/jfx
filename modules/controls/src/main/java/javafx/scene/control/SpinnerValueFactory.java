@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -86,7 +86,6 @@ import java.util.List;
  *     <li>{@link SpinnerValueFactory.IntegerSpinnerValueFactory}</li>
  *     <li>{@link SpinnerValueFactory.DoubleSpinnerValueFactory}</li>
  *     <li>{@link SpinnerValueFactory.ListSpinnerValueFactory}</li>
- *     <li>{@link SpinnerValueFactory.LocalDateSpinnerValueFactory}</li>
  * </ul>
  *
  * @param <T> The type of the data this value factory deals with, which must
@@ -95,7 +94,6 @@ import java.util.List;
  * @see SpinnerValueFactory.IntegerSpinnerValueFactory
  * @see SpinnerValueFactory.DoubleSpinnerValueFactory
  * @see SpinnerValueFactory.ListSpinnerValueFactory
- * @see SpinnerValueFactory.LocalDateSpinnerValueFactory
  * @since JavaFX 8u40
  */
 public abstract class SpinnerValueFactory<T> {

@@ -29,19 +29,12 @@
 
 #include "FloatConversion.h"
 #include "IntSize.h"
-#include "LayoutSize.h"
 #include <limits>
 #include <math.h>
-
-using namespace std;
 
 namespace WebCore {
 
 FloatSize::FloatSize(const IntSize& size) : m_width(size.width()), m_height(size.height())
-{
-}
-
-FloatSize::FloatSize(const LayoutSize& size) : m_width(size.width()), m_height(size.height())
 {
 }
 
@@ -52,7 +45,7 @@ float FloatSize::diagonalLength() const
 
 bool FloatSize::isZero() const
 {
-    return fabs(m_width) < numeric_limits<float>::epsilon() && fabs(m_height) < numeric_limits<float>::epsilon();
+    return fabs(m_width) < std::numeric_limits<float>::epsilon() && fabs(m_height) < std::numeric_limits<float>::epsilon();
 }
 
 bool FloatSize::isExpressibleAsIntSize() const
@@ -63,6 +56,11 @@ bool FloatSize::isExpressibleAsIntSize() const
 FloatSize FloatSize::narrowPrecision(double width, double height)
 {
     return FloatSize(narrowPrecisionToFloat(width), narrowPrecisionToFloat(height));
+}
+
+void FloatSize::dump(PrintStream& out) const
+{
+    out.printf("(%f x %f)", width(), height());
 }
 
 }

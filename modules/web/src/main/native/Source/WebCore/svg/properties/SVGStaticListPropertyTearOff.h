@@ -20,7 +20,6 @@
 #ifndef SVGStaticListPropertyTearOff_h
 #define SVGStaticListPropertyTearOff_h
 
-#if ENABLE(SVG)
 #include "SVGListProperty.h"
 
 namespace WebCore {
@@ -36,10 +35,9 @@ public:
     using Base::m_role;
     using Base::m_values;
 
-    static PassRefPtr<SVGStaticListPropertyTearOff<PropertyType> > create(SVGElement* contextElement, PropertyType& values)
+    static PassRefPtr<SVGStaticListPropertyTearOff<PropertyType>> create(SVGElement& contextElement, PropertyType& values)
     {
-        ASSERT(contextElement);
-        return adoptRef(new SVGStaticListPropertyTearOff<PropertyType>(contextElement, values));
+        return adoptRef(new SVGStaticListPropertyTearOff<PropertyType>(&contextElement, values));
     }
 
     // SVGList API
@@ -114,5 +112,4 @@ private:
 
 }
 
-#endif // ENABLE(SVG)
 #endif // SVGStaticListPropertyTearOff_h

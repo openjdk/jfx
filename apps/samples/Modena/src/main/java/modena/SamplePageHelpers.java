@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2015, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -42,29 +42,27 @@ import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
-import javafx.scene.GroupBuilder;
+import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.Button;
-import javafx.scene.control.ButtonBuilder;
 import javafx.scene.control.CheckMenuItem;
-import javafx.scene.control.CheckMenuItemBuilder;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.Pagination;
-import javafx.scene.control.RadioMenuItemBuilder;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.Separator;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.SplitPane;
-import javafx.scene.control.TabBuilder;
 import javafx.scene.control.TabPane;
+import javafx.scene.control.Tab;
+import javafx.scene.control.TitledPane;
 import javafx.scene.control.TextField;
-import javafx.scene.control.TitledPaneBuilder;
 import javafx.scene.control.ToolBar;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -72,10 +70,9 @@ import javafx.scene.input.KeyCharacterCombination;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
-import javafx.scene.layout.StackPaneBuilder;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.LineBuilder;
-import javafx.scene.shape.RectangleBuilder;
+import javafx.scene.shape.Line;
+import javafx.scene.shape.Rectangle;
 
 /**
  * Helper static methods for Sample Page
@@ -123,11 +120,16 @@ public class SamplePageHelpers {
     }
     
     static Node scrollPaneContent() {
-        return GroupBuilder.create().children(
-                RectangleBuilder.create().width(200).height(200).fill(Color.PALETURQUOISE).build(),
-                LineBuilder.create().endX(200).endY(200).stroke(Color.DODGERBLUE).build(),
-                LineBuilder.create().startX(200).endX(0).endY(200).stroke(Color.DODGERBLUE).build()
-            ).build();
+        Line l1 = new Line();
+        l1.setEndX(200);
+        l1.setEndY(200);
+        l1.setStroke(Color.DODGERBLUE);
+        Line l2 = new Line();
+        l2.setStartX(200);
+        l2.setStartY(0);
+        l2.setEndY(200);
+        l2.setStroke(Color.DODGERBLUE);
+        return new Group(new Rectangle(200, 200, Color.PALETURQUOISE), l1, l2);
     }
     
     static Node createTabPane(int numOfTabs, int prefWidth, int prefHeight, String firstTabText, boolean floating, boolean disableFirst, Side side) {
@@ -135,13 +137,10 @@ public class SamplePageHelpers {
         tabPane.setSide(side);
         if (floating) tabPane.getStyleClass().add("floating");
         for (int i=1; i<=numOfTabs; i++) {
-            tabPane.getTabs().add(
-                TabBuilder.create()
-                    .text("Tab "+i)
-                    .disable(i==1 && disableFirst)
-                    .content(new Label((i==1 && firstTabText!=null)? firstTabText :"Tab "+i+" Content"))
-                    .build()
-            );
+            Tab tab = new Tab("Tab "+i);
+            tab.setDisable(i==1 && disableFirst);
+            tab.setContent(new Label((i==1 && firstTabText!=null)? firstTabText :"Tab "+i+" Content"));
+            tabPane.getTabs().add(tab);
         }
         if (disableFirst) tabPane.getSelectionModel().select(1);
         tabPane.setPrefWidth(prefWidth);
@@ -150,8 +149,9 @@ public class SamplePageHelpers {
     }
     
     static Node wrapBdr(Node node) {
-        return StackPaneBuilder.create().children(node)
-                .style("-fx-border-color: black; -fx-border-width: 3;").build();
+        StackPane sp = new StackPane(node);
+        sp.setStyle("-fx-border-color: black; -fx-border-width: 3;");
+        return sp;
     }
     
     static ToolBar createToolBar(Side side, boolean overFlow, boolean disabled) {
@@ -190,9 +190,9 @@ public class SamplePageHelpers {
     static Accordion createAccordion() {
         Accordion accordian = new Accordion();
         accordian.getPanes().addAll(
-            TitledPaneBuilder.create().text("Title 1").content(new Label("Content\nLine2.")).build(),
-            TitledPaneBuilder.create().text("Title 2").content(new Label("Content\nLine2.")).build(),
-            TitledPaneBuilder.create().text("Title 3").content(new Label("Content\nLine2.")).build()
+                new TitledPane("Title 1", new Label("Content\nLine2.")),
+                new TitledPane("Title 2", new Label("Content\nLine2.")),
+                new TitledPane("Title 3", new Label("Content\nLine2."))
         );
         return accordian;
     }
@@ -321,11 +321,16 @@ public class SamplePageHelpers {
         menuItems.add(menu13);
         menuItems.add(menu16);
         menuItems.add(new SeparatorMenuItem());
-        menuItems.add(CheckMenuItemBuilder.create().text("Check").build());
-        menuItems.add(CheckMenuItemBuilder.create().text("Check Selected").selected(true).build());
+
+        menuItems.add(new CheckMenuItem("Check"));
+        CheckMenuItem checkMenuItem = new CheckMenuItem("Check Selected");
+        checkMenuItem.setSelected(true);
+        menuItems.add(checkMenuItem);
         menuItems.add(new SeparatorMenuItem());
-        menuItems.add(RadioMenuItemBuilder.create().text("Radio").build());
-        menuItems.add(RadioMenuItemBuilder.create().text("Radio Selected").selected(true).build());
+        menuItems.add(new RadioMenuItem("Radio"));
+        RadioMenuItem radioMenuItem = new RadioMenuItem("Radio Selected");
+        radioMenuItem.setSelected(true);
+        menuItems.add(radioMenuItem);
         menuItems.add(new SeparatorMenuItem());
         menuItems.add(menu15);
 
@@ -360,7 +365,7 @@ public class SamplePageHelpers {
         StackPane sp = new StackPane();
         sp.setStyle("-fx-base: rgba("+grey+","+grey+","+grey+",1); -fx-background-color: -fx-background;");
         sp.setPadding(new Insets(8));
-        sp.getChildren().add(ButtonBuilder.create().text(percentage+"%").build());
+        sp.getChildren().add(new Button(percentage+"%"));
         return sp;
     }
 }

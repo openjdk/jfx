@@ -26,17 +26,16 @@
 
 #include "config.h"
 
-#if ENABLE(JAVASCRIPT_DEBUGGER)
-
 #include "ScriptProfiler.h"
 
-#include "Frame.h"
 #include "GCController.h"
 #include "JSDOMBinding.h"
 #include "JSDOMWindow.h"
+#include "MainFrame.h"
 #include "Page.h"
-#include "ScriptObject.h"
 #include "ScriptState.h"
+#include <bindings/ScriptObject.h>
+#include <bindings/ScriptValue.h>
 #include <profiler/LegacyProfiler.h>
 #include <wtf/Forward.h>
 
@@ -47,35 +46,33 @@ void ScriptProfiler::collectGarbage()
     gcController().garbageCollectSoon();
 }
 
-ScriptObject ScriptProfiler::objectByHeapObjectId(unsigned)
+Deprecated::ScriptObject ScriptProfiler::objectByHeapObjectId(unsigned)
 {
-    return ScriptObject();
+    return Deprecated::ScriptObject();
 }
 
-unsigned ScriptProfiler::getHeapObjectId(const ScriptValue&)
+unsigned ScriptProfiler::getHeapObjectId(const Deprecated::ScriptValue&)
 {
     return 0;
 }
 
-void ScriptProfiler::start(ScriptState* state, const String& title)
+void ScriptProfiler::start(JSC::ExecState* state, const String& title)
 {
     JSC::LegacyProfiler::profiler()->startProfiling(state, title);
 }
 
 void ScriptProfiler::startForPage(Page* inspectedPage, const String& title)
 {
-    JSC::ExecState* scriptState = toJSDOMWindow(inspectedPage->mainFrame(), debuggerWorld())->globalExec();
+    JSC::ExecState* scriptState = toJSDOMWindow(&inspectedPage->mainFrame(), debuggerWorld())->globalExec();
     start(scriptState, title);
 }
 
-#if ENABLE(WORKERS)
-void ScriptProfiler::startForWorkerContext(WorkerContext* context, const String& title)
+void ScriptProfiler::startForWorkerGlobalScope(WorkerGlobalScope* context, const String& title)
 {
-    start(scriptStateFromWorkerContext(context), title);
+    start(execStateFromWorkerGlobalScope(context), title);
 }
-#endif
 
-PassRefPtr<ScriptProfile> ScriptProfiler::stop(ScriptState* state, const String& title)
+PassRefPtr<ScriptProfile> ScriptProfiler::stop(JSC::ExecState* state, const String& title)
 {
     RefPtr<JSC::Profile> profile = JSC::LegacyProfiler::profiler()->stopProfiling(state, title);
     return ScriptProfile::create(profile);
@@ -83,17 +80,13 @@ PassRefPtr<ScriptProfile> ScriptProfiler::stop(ScriptState* state, const String&
 
 PassRefPtr<ScriptProfile> ScriptProfiler::stopForPage(Page* inspectedPage, const String& title)
 {
-    JSC::ExecState* scriptState = toJSDOMWindow(inspectedPage->mainFrame(), debuggerWorld())->globalExec();
+    JSC::ExecState* scriptState = toJSDOMWindow(&inspectedPage->mainFrame(), debuggerWorld())->globalExec();
     return stop(scriptState, title);
 }
 
-#if ENABLE(WORKERS)
-PassRefPtr<ScriptProfile> ScriptProfiler::stopForWorkerContext(WorkerContext* context, const String& title)
+PassRefPtr<ScriptProfile> ScriptProfiler::stopForWorkerGlobalScope(WorkerGlobalScope* context, const String& title)
 {
-    return stop(scriptStateFromWorkerContext(context), title);
+    return stop(execStateFromWorkerGlobalScope(context), title);
 }
-#endif
 
 } // namespace WebCore
-
-#endif // ENABLE(JAVASCRIPT_DEBUGGER)

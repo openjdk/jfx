@@ -28,6 +28,7 @@
 
 #include "HTMLNames.h"
 #include "HTMLTableColElement.h"
+#include "RenderIterator.h"
 #include "RenderTable.h"
 #include "RenderTableCell.h"
 
@@ -35,8 +36,8 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-RenderTableCol::RenderTableCol(Element* element)
-    : RenderBox(element)
+RenderTableCol::RenderTableCol(Element& element, PassRef<RenderStyle> style)
+    : RenderBox(element, std::move(style), 0)
     , m_span(1)
 {
     // init RenderObject attributes
@@ -51,21 +52,34 @@ void RenderTableCol::styleDidChange(StyleDifference diff, const RenderStyle* old
     // If border was changed, notify table.
     if (parent()) {
         RenderTable* table = this->table();
-        if (table && !table->selfNeedsLayout() && !table->normalChildNeedsLayout() && oldStyle && oldStyle->border() != style()->border())
+        if (table && !table->selfNeedsLayout() && !table->normalChildNeedsLayout() && oldStyle && oldStyle->border() != style().border())
             table->invalidateCollapsedBorders();
+        else if (oldStyle->width() != style().width()) {
+            for (auto& section : childrenOfType<RenderTableSection>(*table)) {
+                unsigned nEffCols = table->numEffCols();
+                for (unsigned j = 0; j < nEffCols; j++) {
+                    unsigned rowCount = section.numRows();
+                    for (unsigned i = 0; i < rowCount; i++) {
+                        RenderTableCell* cell = section.primaryCellAt(i, j);
+                        if (!cell)
+                            continue;
+                        cell->setPreferredLogicalWidthsDirty(true);
+                    }
+                }
+            }
+        }
     }
 }
 
 void RenderTableCol::updateFromElement()
 {
     unsigned oldSpan = m_span;
-    Node* n = node();
-    if (n && (n->hasTagName(colTag) || n->hasTagName(colgroupTag))) {
-        HTMLTableColElement* tc = static_cast<HTMLTableColElement*>(n);
-        m_span = tc->span();
+    if (element().hasTagName(colTag) || element().hasTagName(colgroupTag)) {
+        HTMLTableColElement& tc = static_cast<HTMLTableColElement&>(element());
+        m_span = tc.span();
     } else
-        m_span = !(style() && style()->display() == TABLE_COLUMN_GROUP);
-    if (m_span != oldSpan && style() && parent())
+        m_span = !(hasInitializedStyle() && style().display() == TABLE_COLUMN_GROUP);
+    if (m_span != oldSpan && hasInitializedStyle() && parent())
         setNeedsLayoutAndPrefWidthsRecalc();
 }
 
@@ -81,10 +95,10 @@ void RenderTableCol::willBeRemovedFromTree()
     table()->removeColumn(this);
 }
 
-bool RenderTableCol::isChildAllowed(RenderObject* child, RenderStyle* style) const
+bool RenderTableCol::isChildAllowed(const RenderObject& child, const RenderStyle& style) const
 {
     // We cannot use isTableColumn here as style() may return 0.
-    return child->isRenderTableCol() && style->display() == TABLE_COLUMN;
+    return style.display() == TABLE_COLUMN && child.isRenderTableCol();
 }
 
 bool RenderTableCol::canHaveChildren() const
@@ -123,7 +137,7 @@ void RenderTableCol::clearPreferredLogicalWidthsDirtyBits()
 
 RenderTable* RenderTableCol::table() const
 {
-    RenderObject* table = parent();
+    auto table = parent();
     if (table && !table->isTable())
         table = table->parent();
     return table && table->isTable() ? toRenderTable(table) : 0;
@@ -166,24 +180,24 @@ RenderTableCol* RenderTableCol::nextColumn() const
 
 const BorderValue& RenderTableCol::borderAdjoiningCellStartBorder(const RenderTableCell*) const
 {
-    return style()->borderStart();
+    return style().borderStart();
 }
 
 const BorderValue& RenderTableCol::borderAdjoiningCellEndBorder(const RenderTableCell*) const
 {
-    return style()->borderEnd();
+    return style().borderEnd();
 }
 
 const BorderValue& RenderTableCol::borderAdjoiningCellBefore(const RenderTableCell* cell) const
 {
     ASSERT_UNUSED(cell, table()->colElement(cell->col() + cell->colSpan()) == this);
-    return style()->borderStart();
+    return style().borderStart();
 }
 
 const BorderValue& RenderTableCol::borderAdjoiningCellAfter(const RenderTableCell* cell) const
 {
     ASSERT_UNUSED(cell, table()->colElement(cell->col() - 1) == this);
-    return style()->borderEnd();
+    return style().borderEnd();
 }
 
 }
