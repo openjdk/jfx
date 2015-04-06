@@ -689,7 +689,10 @@ public class WinMsiBundler  extends AbstractBundler {
     
     private String getAppCDSBlock(Map<String, ? super Object> params) {
         String cdsBlock = "";
-        if (UNLOCK_COMMERCIAL_FEATURES.fetchFrom(params) && ENABLE_APP_CDS.fetchFrom(params)) {
+        if (UNLOCK_COMMERCIAL_FEATURES.fetchFrom(params) && ENABLE_APP_CDS.fetchFrom(params)
+                        && ("install".equals(APP_CDS_CACHE_MODE.fetchFrom(params))
+                        || "auto+install".equals(APP_CDS_CACHE_MODE.fetchFrom(params))))
+        {
             cdsBlock = 
                     "     <CustomAction Id=\"CACHE_CDS\"\n" +
                     "          Directory=\"APPLICATIONFOLDER\"\n" +

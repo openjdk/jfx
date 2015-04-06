@@ -590,6 +590,16 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     (s, p) -> Boolean.parseBoolean(s)
             );
 
+    public static final StandardBundlerParam<String> APP_CDS_CACHE_MODE =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.com-app-cds-cache-mode.name"),
+                    I18N.getString("param.com-app-cds-cache-mode.description"),
+                    "commercial.AppCDS.cache",
+                    String.class,
+                    p -> "auto",
+                    (s, p) -> s
+            );
+
     @SuppressWarnings("unchecked")
     public static final StandardBundlerParam<List<String>> APP_CDS_CLASS_ROOTS =
             new StandardBundlerParam<>(

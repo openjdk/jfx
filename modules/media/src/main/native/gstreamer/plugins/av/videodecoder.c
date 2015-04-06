@@ -288,12 +288,19 @@ static gboolean videodecoder_configure_sourcepad(VideoDecoder *decoder)
 {
     BaseDecoder *base = BASEDECODER(decoder);
 
+#if NEW_CODEC_ID
+    int width = base->frame->width;
+    int height = base->frame->height;
+#else
+    int width = base->context->width;
+    int height = base->context->height;
+#endif // NEW_CODEC_ID 
+    
     if (GST_PAD_CAPS(base->srcpad) == NULL ||
-        decoder->width != base->context->width ||
-        decoder->height != base->context->height)
+        decoder->width != width || decoder->height != height)
     {
-        decoder->width = base->context->width;
-        decoder->height = base->context->height;
+        decoder->width = width;
+        decoder->height = height;
 
         decoder->discont = (GST_PAD_CAPS(base->srcpad) != NULL);
 

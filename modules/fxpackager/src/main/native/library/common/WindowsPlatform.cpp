@@ -758,7 +758,7 @@ bool WindowsProcess::Execute(const TString Application, const std::vector<TStrin
         }
 
         if (::CreateProcess(Application.data(), (wchar_t*)command.data(), NULL,
-            NULL, FALSE, 0, NULL, NULL, &startupInfo, &FProcessInfo) == TRUE) {
+            NULL, FALSE, 0, NULL, NULL, &startupInfo, &FProcessInfo) == FALSE) {
             TString message = PlatformString::Format(_T("Error: Unable to create process %s"), Application.data());
             throw Exception(message);
         }
