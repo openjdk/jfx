@@ -3209,7 +3209,7 @@ public class
                      Border.getClassCssMetaData()) {
 
                  @Override public boolean isSettable(Region node) {
-                     return !node.background.isBound();
+                     return !node.border.isBound();
                  }
 
                  @Override public StyleableProperty<Border> getStyleableProperty(Region node) {
