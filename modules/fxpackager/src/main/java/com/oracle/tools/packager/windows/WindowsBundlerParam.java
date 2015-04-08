@@ -28,21 +28,13 @@ package com.oracle.tools.packager.windows;
 import com.oracle.tools.packager.BundlerParamInfo;
 import com.oracle.tools.packager.JreUtils;
 import com.oracle.tools.packager.StandardBundlerParam;
-import com.oracle.tools.packager.Log;
-import com.oracle.tools.packager.IOUtils;
 import com.oracle.tools.packager.RelativeFileSet;
 import com.sun.javafx.tools.packager.bundlers.BundleParams;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.PrintStream;
 import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import static com.oracle.tools.packager.JreUtils.extractJreAsRelativeFileSet;
 
@@ -116,7 +108,7 @@ public class WindowsBundlerParam<T> extends StandardBundlerParam<T> {
                     I18N.getString("param.runtime-64-bit.description"),
                     "win.64BitJreRuntime",
                     Boolean.class,
-                    params -> {extractFlagsFromRuntime(params); return "64".equals(params.get(".runtime.bit-arch"));},
+                    params -> {WinAppBundler.extractFlagsFromRuntime(params); return "64".equals(params.get(".runtime.bit-arch"));},
                     (s, p) -> Boolean.valueOf(s)
             );
 
@@ -166,63 +158,6 @@ public class WindowsBundlerParam<T> extends StandardBundlerParam<T> {
                     WIN_JRE_RULES.fetchFrom(p))
     );
 
-    public static void extractFlagsFromRuntime(Map<String, ? super Object> params) {
-        if (params.containsKey(".runtime.autodetect")) return;
-        
-        params.put(".runtime.autodetect", "attempted");
-        RelativeFileSet runtime = WIN_RUNTIME.fetchFrom(params);
-        String commandline;
-        if (runtime == null) {
-            //its ok, request to use system JRE
-            //TODO extract from system properties
-            commandline = "java version \"" + System.getProperty("java.version") + "\"\n"
-                    + System.getProperty("java.vm.name") + " (" + System.getProperty("java.vm.version") + ", " + System.getProperty("java.vm.info") + ")\n";  
-        } else {
-            File runtimePath = runtime.getBaseDirectory();
-            File launcherPath = new File(runtimePath, "bin\\java");
-    
-            ProcessBuilder pb = new ProcessBuilder(launcherPath.getAbsolutePath(), "-version");
-            try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-                try (PrintStream pout = new PrintStream(baos)) {
-                    IOUtils.exec(pb, Log.isDebug(), true, pout);                    
-                }
-                
-                commandline = baos.toString();
-            } catch (IOException e) {
-                e.printStackTrace();
-                params.put(".runtime.autodetect", "failed");
-                return;
-            }
-        }
-        extractFlagsFromVersion(params, commandline);
-        params.put(".runtime.autodetect", "succeeded");
-    }
-
-    public static void extractFlagsFromVersion(Map<String, ? super Object> params, String versionOutput) {
-        Pattern bitArchPattern = Pattern.compile("(\\d*)[- ]?[bB]it");
-        Matcher matcher = bitArchPattern.matcher(versionOutput);
-        if (matcher.find()) {
-            params.put(".runtime.bit-arch", matcher.group(1));
-        } else {
-            // presume 32 bit on no match
-            params.put(".runtime.bit-arch", "32");
-        }
-
-        Pattern versionMatcher = Pattern.compile("java version \"((\\d+.\\d+.\\d+)_(\\d+))(-(.*))?\"");
-        matcher = versionMatcher.matcher(versionOutput);
-        if (matcher.find()) {
-            params.put(".runtime.version", matcher.group(1));
-            params.put(".runtime.version.release", matcher.group(2));
-            params.put(".runtime.version.update", matcher.group(3));
-            params.put(".runtime.version.modifiers", matcher.group(5));
-        } else {
-            params.put(".runtime.version", "");
-            params.put(".runtime.version.release", "");
-            params.put(".runtime.version.update", "");
-            params.put(".runtime.version.modifiers", "");
-        }
-    }
-    
     public static final BundlerParamInfo<Boolean> INSTALLDIR_CHOOSER = new StandardBundlerParam<> (
         I18N.getString("param.installdir-chooser.name"),
         I18N.getString("param.installdir-chooser.description"),

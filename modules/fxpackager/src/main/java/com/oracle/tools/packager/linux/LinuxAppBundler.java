@@ -37,6 +37,7 @@ import com.oracle.tools.packager.RelativeFileSet;
 import com.oracle.tools.packager.UnsupportedPlatformException;
 import com.sun.javafx.tools.packager.bundlers.BundleParams;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -142,29 +143,12 @@ public class LinuxAppBundler extends AbstractImageBundler {
             throw new UnsupportedPlatformException();
         }
 
-        StandardBundlerParam.validateMainClassInfoFromAppResources(p);
-
-        Map<String, String> userJvmOptions = USER_JVM_OPTIONS.fetchFrom(p);
-        if (userJvmOptions != null) {
-            for (Map.Entry<String, String> entry : userJvmOptions.entrySet()) {
-                if (entry.getValue() == null || entry.getValue().isEmpty()) {
-                    throw new ConfigException(
-                            MessageFormat.format(I18N.getString("error.empty-user-jvm-option-value"), entry.getKey()),
-                            I18N.getString("error.empty-user-jvm-option-value.advice"));
-                }
-            }
-        }
+        imageBundleValidation(p);
 
         if (RAW_EXECUTABLE_URL.fetchFrom(p) == null) {
             throw new ConfigException(
                     I18N.getString("error.no-linux-resources"),
                     I18N.getString("error.no-linux-resources.advice"));
-        }
-
-        if (MAIN_JAR.fetchFrom(p) == null) {
-            throw new ConfigException(
-                    I18N.getString("error.no-application-jar"),
-                    I18N.getString("error.no-application-jar.advice"));
         }
 
         //validate required inputs
@@ -423,5 +407,36 @@ public class LinuxAppBundler extends AbstractImageBundler {
     @Override
     protected String getCacheLocation(Map<String, ? super Object> params) {
         return "$CACHEDIR/";
+    }
+
+    @Override
+    public void extractRuntimeFlags(Map<String, ? super Object> params) {
+        if (params.containsKey(".runtime.autodetect")) return;
+
+        params.put(".runtime.autodetect", "attempted");
+        RelativeFileSet runtime = LINUX_RUNTIME.fetchFrom(params);
+        String commandline;
+        if (runtime == null) {
+            //System JRE, report nothing useful
+            params.put(".runtime.autodetect", "systemjre");
+        } else {
+            File runtimePath = runtime.getBaseDirectory();
+            File launcherPath = new File(runtimePath, "bin/java");
+
+            ProcessBuilder pb = new ProcessBuilder(launcherPath.getAbsolutePath(), "-version");
+            try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                try (PrintStream pout = new PrintStream(baos)) {
+                    IOUtils.exec(pb, Log.isDebug(), true, pout);
+                }
+
+                commandline = baos.toString();
+            } catch (IOException e) {
+                e.printStackTrace();
+                params.put(".runtime.autodetect", "failed");
+                return;
+            }
+            AbstractImageBundler.extractFlagsFromVersion(params, commandline);
+            params.put(".runtime.autodetect", "succeeded");
+        }
     }
 }

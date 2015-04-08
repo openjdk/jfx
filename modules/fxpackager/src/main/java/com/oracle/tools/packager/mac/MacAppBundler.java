@@ -41,8 +41,12 @@ import java.io.*;
 import java.math.BigInteger;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.text.MessageFormat;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
 import static com.oracle.tools.packager.mac.MacBaseInstallerBundler.SIGNING_KEYCHAIN;
@@ -362,28 +366,11 @@ public class MacAppBundler extends AbstractImageBundler {
         if (!System.getProperty("os.name").toLowerCase().contains("os x")) {
             throw new UnsupportedPlatformException();
         }
-
-        StandardBundlerParam.validateMainClassInfoFromAppResources(p);
-
-        Map<String, String> userJvmOptions = USER_JVM_OPTIONS.fetchFrom(p);
-        if (userJvmOptions != null) {
-            for (Map.Entry<String, String> entry : userJvmOptions.entrySet()) {
-                if (entry.getValue() == null || entry.getValue().isEmpty()) {
-                    throw new ConfigException(
-                            MessageFormat.format(I18N.getString("error.empty-user-jvm-option-value"), entry.getKey()),
-                            I18N.getString("error.empty-user-jvm-option-value.advice"));
-                }
-            }
-        }
-
+        
+        imageBundleValidation(p);
+        
         if (getPredefinedImage(p) != null) {
             return true;
-        }
-
-        if (MAIN_JAR.fetchFrom(p) == null) {
-            throw new ConfigException(
-                    I18N.getString("error.no-application-jar"),
-                    I18N.getString("error.no-application-jar.advice"));
         }
 
         //validate required inputs
@@ -1172,5 +1159,45 @@ public class MacAppBundler extends AbstractImageBundler {
 
         out.close();
     }
-    
+    @Override
+    public void extractRuntimeFlags(Map<String, ? super Object> params) {
+        if (params.containsKey(".runtime.autodetect")) return;
+
+        params.put(".runtime.autodetect", "attempted");
+        RelativeFileSet runtime = MAC_RUNTIME.fetchFrom(params);
+        String commandline;
+        if (runtime == null) {
+            //System JRE, report nothing useful
+            params.put(".runtime.autodetect", "systemjre");
+        } else {
+            File workingBase = runtime.getBaseDirectory();
+            if (workingBase.getName().equals("jre")) {
+                workingBase = workingBase.getParentFile();
+            }
+            if (workingBase.getName().equals("Home")) {
+                workingBase = workingBase.getParentFile();
+            }
+            if (workingBase.getName().equals("Contents")) {
+                workingBase = workingBase.getParentFile();
+            }
+
+
+            try {
+                byte[] infoPlistBytes = Files.readAllBytes(workingBase.toPath().resolve(Paths.get("Contents", "Info.plist")));
+                String infoPlist = new String(infoPlistBytes);
+
+                Pattern cfBundleVersionMatcher = Pattern.compile("<key>CFBundleVersion</key>\\s*<string>([^<]+)</string>");
+                Matcher m = cfBundleVersionMatcher.matcher(infoPlist);
+                if (m.find()) {
+                    AbstractImageBundler.extractFlagsFromVersion(params, "java version \"" + m.group(1) + "\"\n");
+                    params.put(".runtime.autodetect", "succeeded");
+                } else {
+                    params.put(".runtime.autodetect", "failed");
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+                params.put(".runtime.autodetect", "failed");
+            }
+        }
+    }
 }

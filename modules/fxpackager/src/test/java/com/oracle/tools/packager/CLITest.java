@@ -186,7 +186,7 @@ public class CLITest {
                     "-name", "UserJvmArgNoValue",
                     "-BuserJvmOptions=-Xmx1g",
                     "-BuserJvmOptions=-Xms512m");
-            ResourceBundle I18N = ResourceBundle.getBundle(LinuxAppBundler.class.getName());
+            ResourceBundle I18N = ResourceBundle.getBundle(AbstractImageBundler.class.getName());
             
             outStr.flush();
             oldOut.println(baos);
