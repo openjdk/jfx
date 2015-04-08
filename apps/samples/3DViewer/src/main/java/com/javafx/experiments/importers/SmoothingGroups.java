@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -40,7 +40,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
-import com.sun.javafx.geom.Vec3f;
+import com.javafx.experiments.utils3d.geom.Vec3f;
 import javafx.scene.shape.TriangleMesh;
 
 /** Util for converting Normals to Smoothing Groups */

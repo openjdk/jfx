@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -35,10 +35,8 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -58,12 +56,9 @@ import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Scale;
 import javafx.scene.transform.Transform;
 import javafx.scene.transform.Translate;
-import javafx.util.Duration;
-import com.javafx.experiments.importers.Optimizer;
-import com.javafx.experiments.importers.maya.MayaImporter;
-import com.sun.javafx.animation.TickCalculation;
-import com.sun.scenario.animation.NumberTangentInterpolator;
-import com.sun.scenario.animation.SplineInterpolator;
+import com.javafx.experiments.utils3d.animation.TickCalculation;
+import com.javafx.experiments.utils3d.animation.NumberTangentInterpolator;
+import com.javafx.experiments.utils3d.animation.SplineInterpolator;
 
 /**
  * A exporter for 3D Models and animations that creates a Java Source file.
