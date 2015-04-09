@@ -762,7 +762,7 @@ public class MacAppBundlerTest {
     /**
      * Turn on AppCDS
      */
-    @Test
+    @Ignore@Test
     public void testAppCDS() throws IOException, ConfigException, UnsupportedPlatformException {
         Bundler bundler = new MacAppBundler();
 
