@@ -926,8 +926,10 @@ public class JFXPanel extends JComponent {
             scenePeer = embeddedScene;
             if (scenePeer == null) {
                 invokeOnClientEDT(() -> {
-                    dnd.removeNotify();
-                    dnd = null;
+                    if (dnd != null) {
+                        dnd.removeNotify();
+                        dnd = null;
+                    }
                 });
                 return;
             }
