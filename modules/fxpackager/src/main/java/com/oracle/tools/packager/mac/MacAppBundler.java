@@ -289,12 +289,7 @@ public class MacAppBundler extends AbstractImageBundler {
 
     @Override
     protected String getCacheLocation(Map<String, ? super Object> params) {
-        Boolean systemWide = SYSTEM_WIDE.fetchFrom(params);
-        if (systemWide == null || systemWide) {
-            return "/Library/Application Support/" + IDENTIFIER.fetchFrom(params) + "/cache/";
-        } else {
-            return "$CACHEDIR/";
-        }
+        return "$CACHEDIR/";
     }
 
 
