@@ -327,7 +327,9 @@ public class JarSignature {
     }
 
     public CodeSigner[] getCodeSigners() {
-        return codeSigners;
+        CodeSigner[] result = new CodeSigner[codeSigners.length];
+        System.arraycopy(codeSigners, 0, result, 0, result.length);
+        return result;
     }
 
     /*

@@ -31,7 +31,6 @@
  */
 package modena;
 
-import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
@@ -85,6 +84,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.transform.Scale;
+import javafx.scene.control.Control;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
@@ -103,24 +103,31 @@ public class Modena extends Application {
     private static String CASPIAN_STYLESHEET_BASE;
     static {
         try {
+            final String controlPath = "javafx/scene/control/Control.class";
+            String path = Control.class.getResource("Control.class").toExternalForm();
+            String jfxrtRoot = path.substring(0, path.lastIndexOf(controlPath));
             // these are not supported ways to find the platform themes and may 
             // change release to release. Just used here for testing.
             File caspianCssFile = new File("../../../modules/controls/src/main/resources/com/sun/javafx/scene/control/skin/caspian/caspian.css");
             if (!caspianCssFile.exists()) {
                 caspianCssFile = new File("rt/modules/controls/src/main/resources/com/sun/javafx/scene/control/skin/caspian/caspian.css");
             }
-            CASPIAN_STYLESHEET_URL = caspianCssFile.exists() ? 
-                    caspianCssFile.toURI().toURL().toExternalForm() :
-                    com.sun.javafx.scene.control.skin.ButtonSkin.class.getResource("caspian/caspian.css").toExternalForm();
+            if (caspianCssFile.exists()) {
+                CASPIAN_STYLESHEET_URL = caspianCssFile.toURI().toURL().toExternalForm();
+            } else {
+                CASPIAN_STYLESHEET_URL = jfxrtRoot + "com/sun/javafx/scene/control/skin/caspian/caspian.css";
+            }
             File modenaCssFile = new File("../../../modules/controls/src/main/resources/com/sun/javafx/scene/control/skin/modena/modena.css");
             if (!modenaCssFile.exists()) {
                 modenaCssFile = new File("rt/modules/controls/src/main/resources/com/sun/javafx/scene/control/skin/modena/modena.css");
                 System.out.println("modenaCssFile = " + modenaCssFile);
                 System.out.println("modenaCssFile = " + modenaCssFile.getAbsolutePath());
             }
-            MODENA_STYLESHEET_URL = modenaCssFile.exists() ? 
-                    modenaCssFile.toURI().toURL().toExternalForm() : 
-                    com.sun.javafx.scene.control.skin.ButtonSkin.class.getResource("modena/modena.css").toExternalForm();
+            if (modenaCssFile.exists()) {
+                MODENA_STYLESHEET_URL = modenaCssFile.toURI().toURL().toExternalForm();
+            } else {
+                MODENA_STYLESHEET_URL = jfxrtRoot + "com/sun/javafx/scene/control/skin/modena/modena.css";
+            }
             MODENA_STYLESHEET_BASE = MODENA_STYLESHEET_URL.substring(0,MODENA_STYLESHEET_URL.lastIndexOf('/')+1);
             CASPIAN_STYLESHEET_BASE = CASPIAN_STYLESHEET_URL.substring(0,CASPIAN_STYLESHEET_URL.lastIndexOf('/')+1);
             MODENA_EMBEDDED_STYLESHEET_URL = MODENA_STYLESHEET_BASE + "modena-embedded-performance.css";

@@ -50,6 +50,7 @@ import java.security.AccessControlException;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.logging.Level;
@@ -282,7 +283,14 @@ final class URLLoader implements Runnable {
         // the causes for RT-11880.
         c.setUseCaches(false);
 
-        c.setRequestProperty("Accept-Language", "en-us,en;q=0.5");
+        Locale loc = Locale.getDefault();
+        String lang = "";
+        if (!loc.equals(Locale.US) && !loc.equals(Locale.ENGLISH)) {
+            lang = loc.getCountry().isEmpty() ?
+                loc.getLanguage() + ",":
+                loc.getLanguage() + "-" + loc.getCountry() + ",";
+        }
+        c.setRequestProperty("Accept-Language", lang.toLowerCase() + "en-us;q=0.8,en;q=0.7");
         c.setRequestProperty("Accept-Encoding", "gzip");
         c.setRequestProperty("Accept-Charset", "ISO-8859-1,utf-8;q=0.7,*;q=0.7");
 

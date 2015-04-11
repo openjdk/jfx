@@ -530,7 +530,7 @@ void RenderThemeJava::adjustMenuListButtonStyle(StyleResolver* selector, RenderS
     adjustMenuListStyle(selector, style, e);
 }
 
-bool RenderThemeJava::paintMenuListButton(RenderObject* o, const PaintInfo& i, const IntRect& r)
+bool RenderThemeJava::paintMenuListButtonDecorations(RenderObject* o, const PaintInfo& i, const IntRect& r)
 {
     IntRect rect(r.x() + r.width(), r.y(), r.height(), r.height());
 

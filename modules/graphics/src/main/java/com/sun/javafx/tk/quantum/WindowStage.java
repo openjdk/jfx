@@ -808,7 +808,7 @@ class WindowStage extends GlassStage {
          *            any further access to the Glass layer 
          *            will throw an exception
          */
-        if (enabled && platformWindow.isClosed()) {
+        if (enabled && (platformWindow == null || platformWindow.isClosed())) {
             return;
         }
         setPlatformEnabled(enabled);
@@ -821,8 +821,10 @@ class WindowStage extends GlassStage {
 
     // Note: This method is required to workaround a glass issue mentioned in RT-12607
     protected void requestToFront() {
-        platformWindow.toFront();
-        platformWindow.requestFocus();
+        if (platformWindow != null) {
+            platformWindow.toFront();
+            platformWindow.requestFocus();
+        }
     }
 
     public void setInEventHandler(boolean inEventHandler) {

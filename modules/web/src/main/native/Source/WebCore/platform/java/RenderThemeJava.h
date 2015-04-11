@@ -54,7 +54,7 @@ protected:
     virtual bool paintMenuList(RenderObject*, const PaintInfo&, const IntRect&);
 
     virtual void adjustMenuListButtonStyle(StyleResolver*, RenderStyle*, Element*) const;
-    virtual bool paintMenuListButton(RenderObject*, const PaintInfo&, const IntRect&);
+    virtual bool paintMenuListButtonDecorations(RenderObject*, const PaintInfo&, const IntRect&);
 
     virtual void adjustTextAreaStyle(StyleResolver*, RenderStyle*, Element* e) const;
     virtual bool paintTextArea(RenderObject*, const PaintInfo&, const IntRect&);
