@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -257,7 +257,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
     public void setPosition(double newPosition) {
         boolean needsUpdate = this.position != newPosition;
-        this.position = com.sun.javafx.Utils.clamp(0, newPosition, 1);;
+        this.position = com.sun.javafx.util.Utils.clamp(0, newPosition, 1);;
         if (needsUpdate) {
             requestLayout();
         }
@@ -1428,15 +1428,16 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
         VirtualScrollBar breadthBar = isVertical ? hbar : vbar;
         VirtualScrollBar lengthBar = isVertical ? vbar : hbar;
-        double breadthBarLength = snapSize(isVertical ? hbar.prefHeight(-1) : vbar.prefWidth(-1));
-        double lengthBarBreadth = snapSize(isVertical ? vbar.prefWidth(-1) : hbar.prefHeight(-1));
 
         final double viewportBreadth = getViewportBreadth();
 
         final int cellsSize = cells.size();
         for (int i = 0; i < 2; i++) {
-            final boolean lengthBarVisible = getPosition() > 0 || cellCount > cellsSize ||
-                    (cellCount == cellsSize && (getCellPosition(cells.getLast()) + getCellLength(cells.getLast())) > getViewportLength());
+            final boolean lengthBarVisible = getPosition() > 0
+                    || cellCount > cellsSize
+                    || (cellCount == cellsSize && (getCellPosition(cells.getLast()) + getCellLength(cells.getLast())) > getViewportLength())
+                    || (cellCount == cellsSize - 1 && barVisibilityChanged && needBreadthBar);
+
             if (lengthBarVisible ^ needLengthBar) {
                 needLengthBar = lengthBarVisible;
                 barVisibilityChanged = true;
@@ -1456,9 +1457,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         // bars actually is needed, then we will perform a cleanup pass
 
         if (!BehaviorSkinBase.IS_TOUCH_SUPPORTED) {
-            setViewportLength((isVertical ? getHeight() : getWidth()) - (needBreadthBar ? breadthBarLength : 0));
-            setViewportBreadth((isVertical ? getWidth() : getHeight()) - (needLengthBar ? lengthBarBreadth : 0));
-
+            updateViewportDimensions();
             breadthBar.setVisible(needBreadthBar);
             lengthBar.setVisible(needLengthBar);
         } else {
@@ -1469,14 +1468,21 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         return barVisibilityChanged;
     }
 
+    private void updateViewportDimensions() {
+        final boolean isVertical = isVertical();
+        final double breadthBarLength = snapSize(isVertical ? hbar.prefHeight(-1) : vbar.prefWidth(-1));
+        final double lengthBarBreadth = snapSize(isVertical ? vbar.prefWidth(-1) : hbar.prefHeight(-1));
+
+        setViewportBreadth((isVertical ? getWidth() : getHeight()) - (needLengthBar ? lengthBarBreadth : 0));
+        setViewportLength((isVertical ? getHeight() : getWidth()) - (needBreadthBar ? breadthBarLength : 0));
+    }
+
     private void initViewport() {
         // Initialize the viewportLength and viewportBreadth to match the
         // width/height of the flow
         final boolean isVertical = isVertical();
-        double width = getWidth();
-        double height = getHeight();
-        setViewportLength(snapSize(isVertical ? height : width));
-        setViewportBreadth(snapSize(isVertical ? width : height));
+
+        updateViewportDimensions();
 
         VirtualScrollBar breadthBar = isVertical ? hbar : vbar;
         VirtualScrollBar lengthBar = isVertical ? vbar : hbar;
@@ -1769,6 +1775,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             Callback<VirtualFlow,T> createCell = getCreateCell();
             if (createCell != null) {
                 accumCell = createCell.call(this);
+                accumCell.getProperties().put(NEW_CELL, null);
                 accumCellParent.getChildren().setAll(accumCell);
 
                 // Note the screen reader will attempt to find all
@@ -1953,8 +1960,9 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         // general layout of cells in a VirtualFlow, but also in cases such as
         // RT-34333, where the sizes were being reported incorrectly to the
         // ComboBox popup.
-        if (cell.isNeedsLayout() && cell.getScene() != null) {
+        if ((cell.isNeedsLayout() && cell.getScene() != null) || cell.getProperties().containsKey(NEW_CELL)) {
             cell.applyCss();
+            cell.getProperties().remove(NEW_CELL);
         }
     }
 
@@ -1963,6 +1971,14 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      *                 Helper functions for cell management                    *
      *                                                                         *
      **************************************************************************/
+
+
+    /**
+     * Indicates that this is a newly created cell and we need call impl_processCSS for it.
+     *
+     * See RT-23616 for more details.
+     */
+    private static final String NEW_CELL = "newcell";
 
     /**
      * Get a cell which can be used in the layout. This function will reuse
@@ -2013,6 +2029,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 }
             } else {
                 cell = getCreateCell().call(this);
+                cell.getProperties().put(NEW_CELL, null);
             }
         }
 
@@ -2504,7 +2521,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * item would end up positioned correctly.
      */
     private double computeViewportOffset(double position) {
-        double p = com.sun.javafx.Utils.clamp(0, position, 1);
+        double p = com.sun.javafx.util.Utils.clamp(0, position, 1);
         double fractionalPosition = p * getCellCount();
         int cellIndex = (int) fractionalPosition;
         double fraction = fractionalPosition - cellIndex;
@@ -2614,7 +2631,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      */
     private double computeOffsetForCell(int itemIndex) {
         double cellCount = getCellCount();
-        double p = com.sun.javafx.Utils.clamp(0, itemIndex, cellCount) / cellCount;
+        double p = com.sun.javafx.util.Utils.clamp(0, itemIndex, cellCount) / cellCount;
         return -(getViewportLength() * p);
     }
     

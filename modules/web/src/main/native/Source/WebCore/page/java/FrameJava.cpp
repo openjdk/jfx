@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
 
@@ -11,7 +11,7 @@ namespace WebCore {
 
 #if FRAME_LOADS_USER_STYLESHEET
 
-void Frame::setUserStyleSheetLocation(const KURL& url)
+void Frame::setUserStyleSheetLocation(const URL& url)
 {
     delete m_userStyleSheetLoader;
     m_userStyleSheetLoader = 0;

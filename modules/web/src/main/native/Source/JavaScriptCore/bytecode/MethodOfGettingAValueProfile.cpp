@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 #if ENABLE(DFG_JIT)
 
 #include "CodeBlock.h"
+#include "JSCInlines.h"
 
 namespace JSC {
 
@@ -39,7 +40,7 @@ MethodOfGettingAValueProfile MethodOfGettingAValueProfile::fromLazyOperand(
     result.m_kind = LazyOperand;
     result.u.lazyOperand.codeBlock = codeBlock;
     result.u.lazyOperand.bytecodeOffset = key.bytecodeOffset();
-    result.u.lazyOperand.operand = key.operand();
+    result.u.lazyOperand.operand = key.operand().offset();
     return result;
 }
 
@@ -52,10 +53,14 @@ EncodedJSValue* MethodOfGettingAValueProfile::getSpecFailBucket(unsigned index) 
     case Ready:
         return u.profile->specFailBucket(index);
         
-    case LazyOperand:
-        return u.lazyOperand.codeBlock->lazyOperandValueProfiles().add(
-            LazyOperandValueProfileKey(
-                u.lazyOperand.bytecodeOffset, u.lazyOperand.operand))->specFailBucket(index);
+    case LazyOperand: {
+        LazyOperandValueProfileKey key(u.lazyOperand.bytecodeOffset, VirtualRegister(u.lazyOperand.operand));
+        
+        ConcurrentJITLocker locker(u.lazyOperand.codeBlock->m_lock);
+        LazyOperandValueProfile* profile =
+            u.lazyOperand.codeBlock->lazyOperandValueProfiles().add(locker, key);
+        return profile->specFailBucket(index);
+    }
         
     default:
         RELEASE_ASSERT_NOT_REACHED();

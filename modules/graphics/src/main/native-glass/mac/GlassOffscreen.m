@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,6 +43,7 @@
 @implementation GlassOffscreen
 
 - (id)initWithContext:(CGLContextObj)ctx
+            andIsSwPipe:(BOOL)isSwPipe;
 {
     self = [super init];
     if (self != nil)
@@ -62,6 +63,7 @@
                 // TODO: implement PBuffer if needed
                 //self->_offscreen = [[GlassPBuffer alloc] init];
             }
+            [(GlassFrameBufferObject*)self->_offscreen setIsSwPipe:(BOOL)isSwPipe];
         }
         [self unsetContext];
     }
@@ -106,6 +108,11 @@
     return [self->_offscreen height];
 }
 
+- (GLuint)fbo
+{
+    return [self->_offscreen fbo];
+}
+
 - (CAOpenGLLayer*)getLayer
 {
     return _layer;
@@ -132,7 +139,7 @@
 
 - (void)bindForWidth:(GLuint)width andHeight:(GLuint)height
 {
-    [self setContext];       
+    [self setContext];
     [self->_offscreen bindForWidth:width andHeight:height];
 }
 

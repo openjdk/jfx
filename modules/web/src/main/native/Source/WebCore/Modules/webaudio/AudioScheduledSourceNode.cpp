@@ -30,20 +30,25 @@
 
 #include "AudioContext.h"
 #include "AudioUtilities.h"
+#include "Event.h"
+#include "ScriptController.h"
 #include <algorithm>
 #include <wtf/MathExtras.h>
 
-using namespace std;
+#if PLATFORM(IOS)
+#include "ScriptController.h"
+#endif
 
 namespace WebCore {
 
 const double AudioScheduledSourceNode::UnknownTime = -1;
 
 AudioScheduledSourceNode::AudioScheduledSourceNode(AudioContext* context, float sampleRate)
-    : AudioSourceNode(context, sampleRate)
+    : AudioNode(context, sampleRate)
     , m_playbackState(UNSCHEDULED_STATE)
     , m_startTime(0)
     , m_endTime(UnknownTime)
+    , m_hasEndedListener(false)
 {
 }
 
@@ -90,7 +95,7 @@ void AudioScheduledSourceNode::updateSchedulingInfo(size_t quantumFrameSize,
     }
 
     quantumFrameOffset = startFrame > quantumStartFrame ? startFrame - quantumStartFrame : 0;
-    quantumFrameOffset = min(quantumFrameOffset, quantumFrameSize); // clamp to valid range
+    quantumFrameOffset = std::min(quantumFrameOffset, quantumFrameSize); // clamp to valid range
     nonSilentFramesToProcess = quantumFrameSize - quantumFrameOffset;
 
     if (!nonSilentFramesToProcess) {
@@ -120,7 +125,7 @@ void AudioScheduledSourceNode::updateSchedulingInfo(size_t quantumFrameSize,
             if (framesToZero > nonSilentFramesToProcess)
                 nonSilentFramesToProcess = 0;
             else
-            nonSilentFramesToProcess -= framesToZero;
+                nonSilentFramesToProcess -= framesToZero;
 
             for (unsigned i = 0; i < outputBus->numberOfChannels(); ++i)
                 memset(outputBus->channel(i)->mutableData() + zeroStartFrame, 0, sizeof(float) * framesToZero);
@@ -132,37 +137,51 @@ void AudioScheduledSourceNode::updateSchedulingInfo(size_t quantumFrameSize,
     return;
 }
 
-void AudioScheduledSourceNode::start(double when)
+void AudioScheduledSourceNode::start(double when, ExceptionCode& ec)
 {
     ASSERT(isMainThread());
-    if (m_playbackState != UNSCHEDULED_STATE)
+
+    if (ScriptController::processingUserGesture())
+        context()->removeBehaviorRestriction(AudioContext::RequireUserGestureForAudioStartRestriction);
+
+    if (m_playbackState != UNSCHEDULED_STATE) {
+        ec = INVALID_STATE_ERR;
         return;
+    }
 
     m_startTime = when;
     m_playbackState = SCHEDULED_STATE;
 }
 
-void AudioScheduledSourceNode::stop(double when)
+void AudioScheduledSourceNode::stop(double when, ExceptionCode& ec)
 {
     ASSERT(isMainThread());
-    if (!(m_playbackState == SCHEDULED_STATE || m_playbackState == PLAYING_STATE))
+    if (!(m_playbackState == SCHEDULED_STATE || m_playbackState == PLAYING_STATE) || (m_endTime != UnknownTime)) {
+        ec = INVALID_STATE_ERR;
         return;
+    }
     
-    when = max(0.0, when);
+    when = std::max<double>(0, when);
     m_endTime = when;
 }
 
 #if ENABLE(LEGACY_WEB_AUDIO)
-void AudioScheduledSourceNode::noteOn(double when)
+void AudioScheduledSourceNode::noteOn(double when, ExceptionCode& ec)
 {
-    start(when);
+    start(when, ec);
 }
 
-void AudioScheduledSourceNode::noteOff(double when)
+void AudioScheduledSourceNode::noteOff(double when, ExceptionCode& ec)
 {
-    stop(when);
+    stop(when, ec);
 }
 #endif
+
+void AudioScheduledSourceNode::setOnended(PassRefPtr<EventListener> listener)
+{
+    m_hasEndedListener = listener;
+    setAttributeEventListener(eventNames().endedEvent, listener);
+}
 
 void AudioScheduledSourceNode::finish()
 {
@@ -172,6 +191,25 @@ void AudioScheduledSourceNode::finish()
         m_playbackState = FINISHED_STATE;
         context()->decrementActiveSourceCount();
     }
+
+    if (m_hasEndedListener)
+        callOnMainThread(&AudioScheduledSourceNode::notifyEndedDispatch, this);
+}
+
+void AudioScheduledSourceNode::notifyEndedDispatch(void* userData)
+{
+    static_cast<AudioScheduledSourceNode*>(userData)->notifyEnded();
+}
+
+void AudioScheduledSourceNode::notifyEnded()
+{
+    EventListener* listener = onended();
+    if (!listener)
+        return;
+
+    RefPtr<Event> event = Event::create(eventNames().endedEvent, FALSE, FALSE);
+    event->setTarget(this);
+    listener->handleEvent(context()->scriptExecutionContext(), event.get());
 }
 
 } // namespace WebCore

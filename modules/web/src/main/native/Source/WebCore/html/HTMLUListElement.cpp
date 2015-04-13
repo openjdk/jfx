@@ -31,18 +31,18 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-HTMLUListElement::HTMLUListElement(const QualifiedName& tagName, Document* document)
+HTMLUListElement::HTMLUListElement(const QualifiedName& tagName, Document& document)
     : HTMLElement(tagName, document)
 {
     ASSERT(hasTagName(ulTag));
 }
 
-PassRefPtr<HTMLUListElement> HTMLUListElement::create(Document* document)
+PassRefPtr<HTMLUListElement> HTMLUListElement::create(Document& document)
 {
     return adoptRef(new HTMLUListElement(ulTag, document));
 }
 
-PassRefPtr<HTMLUListElement> HTMLUListElement::create(const QualifiedName& tagName, Document* document)
+PassRefPtr<HTMLUListElement> HTMLUListElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(new HTMLUListElement(tagName, document));
 }
@@ -54,7 +54,7 @@ bool HTMLUListElement::isPresentationAttribute(const QualifiedName& name) const
     return HTMLElement::isPresentationAttribute(name);
 }
 
-void HTMLUListElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStylePropertySet* style)
+void HTMLUListElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStyleProperties& style)
 {
     if (name == typeAttr)
         addPropertyToPresentationAttributeStyle(style, CSSPropertyListStyleType, value);

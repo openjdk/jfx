@@ -24,25 +24,11 @@
 #include "PlatformTouchPoint.h"
 #include <wtf/Vector.h>
 
-#if ENABLE(TOUCH_EVENTS)
-
-#if PLATFORM(QT)
-QT_BEGIN_NAMESPACE
-class QTouchEvent;
-QT_END_NAMESPACE
-#endif
-
 #if PLATFORM(JAVA)
 #include <jni.h>
 #endif
 
-#if PLATFORM(BLACKBERRY)
-namespace BlackBerry {
-namespace Platform {
-class TouchEvent;
-};
-};
-#endif
+#if ENABLE(TOUCH_EVENTS)
 
 namespace WebCore {
 
@@ -51,39 +37,18 @@ class PlatformTouchEvent : public PlatformEvent {
 public:
     PlatformTouchEvent()
         : PlatformEvent(PlatformEvent::TouchStart)
-#if PLATFORM(BLACKBERRY)
-        , m_rotation(0)
-        , m_scale(1)
-        , m_doubleTap(false)
-        , m_touchHold(false)
-#endif
     {
     }
 
-#if PLATFORM(BLACKBERRY)
-    explicit PlatformTouchEvent(BlackBerry::Platform::TouchEvent*);
-#elif PLATFORM(JAVA)
+#if PLATFORM(JAVA)
     PlatformTouchEvent(JNIEnv* env, jint id, jobject touchData,
-            jboolean shift, jboolean ctrl, jboolean alt, jboolean meta, jfloat timestamp);
+		       jboolean shift, jboolean ctrl, jboolean alt, jboolean meta, jfloat timestamp);
 #endif
 
     const Vector<PlatformTouchPoint>& touchPoints() const { return m_touchPoints; }
 
-#if PLATFORM(BLACKBERRY)
-    float rotation() const { return m_rotation; }
-    float scale() const { return m_scale; }
-    bool doubleTap() const { return m_doubleTap; }
-    bool touchHold() const { return m_touchHold; }
-#endif
-
 protected:
     Vector<PlatformTouchPoint> m_touchPoints;
-#if PLATFORM(BLACKBERRY)
-    float m_rotation;
-    float m_scale;
-    bool m_doubleTap;
-    bool m_touchHold;
-#endif
 };
 
 }

@@ -34,8 +34,9 @@
 #include "Lexer.h"
 #include "LiteralParser.h"
 #include "Nodes.h"
-#include "Operations.h"
+#include "JSCInlines.h"
 #include "Parser.h"
+#include "StackVisitor.h"
 #include <wtf/dtoa.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -53,9 +54,9 @@ namespace JSC {
 
 static JSValue encode(ExecState* exec, const char* doNotEscape)
 {
-    CString cstr = exec->argument(0).toString(exec)->value(exec).utf8(String::StrictConversion);
+    CString cstr = exec->argument(0).toString(exec)->value(exec).utf8(StrictConversion);
     if (!cstr.data())
-        return throwError(exec, createURIError(exec, ASCIILiteral("String contained an illegal UTF-16 sequence.")));
+        return exec->vm().throwException(exec, createURIError(exec, ASCIILiteral("String contained an illegal UTF-16 sequence.")));
 
     JSStringBuilder builder;
     const char* p = cstr.data();
@@ -116,7 +117,7 @@ static JSValue decode(ExecState* exec, const CharType* characters, int length, c
             }
             if (charLen == 0) {
                 if (strict)
-                    return throwError(exec, createURIError(exec, ASCIILiteral("URI error")));
+                    return exec->vm().throwException(exec, createURIError(exec, ASCIILiteral("URI error")));
                 // The only case where we don't use "strict" mode is the "unescape" function.
                 // For that, it's good to support the wonky "%u" syntax for compatibility with WinIE.
                 if (k <= length - 6 && p[1] == 'u'
@@ -162,12 +163,13 @@ bool isStrWhiteSpace(UChar c)
         case 0x000D:
         case 0x0020:
         case 0x00A0:
+        case 0x180E: // This character used to be in Zs category before Unicode 6.3, and EcmaScript says that we should keep treating it as such.
         case 0x2028:
         case 0x2029:
         case 0xFEFF:
             return true;
         default:
-            return c > 0xff && isSeparatorSpace(c);
+            return c > 0xFF && u_charType(c) == U_SPACE_SEPARATOR;
     }
 }
 
@@ -306,7 +308,7 @@ static double parseInt(const String& s, const CharType* data, int radix)
     if (number >= mantissaOverflowLowerBound) {
         if (radix == 10) {
             size_t parsedLength;
-            number = parseDouble(s.characters() + firstDigitPosition, p - firstDigitPosition, parsedLength);
+            number = parseDouble(s.deprecatedCharacters() + firstDigitPosition, p - firstDigitPosition, parsedLength);
         } else if (radix == 2 || radix == 4 || radix == 8 || radix == 16 || radix == 32)
             number = parseIntOverflow(s.substringSharingImpl(firstDigitPosition, p - firstDigitPosition).utf8().data(), p - firstDigitPosition, radix);
     }
@@ -515,10 +517,9 @@ EncodedJSValue JSC_HOST_CALL globalFuncEval(ExecState* exec)
     }
 
     JSGlobalObject* calleeGlobalObject = exec->callee()->globalObject();
-    EvalExecutable* eval = EvalExecutable::create(exec, exec->vm().codeCache(), makeSource(s), false);
-    JSObject* error = eval->compile(exec, calleeGlobalObject);
-    if (error)
-        return throwVMError(exec, error);
+    EvalExecutable* eval = EvalExecutable::create(exec, makeSource(s), false);
+    if (!eval)
+        return JSValue::encode(jsUndefined());
 
     return JSValue::encode(exec->interpreter()->execute(eval, exec, calleeGlobalObject->globalThis(), calleeGlobalObject));
 }
@@ -705,28 +706,89 @@ EncodedJSValue JSC_HOST_CALL globalFuncThrowTypeError(ExecState* exec)
     return throwVMTypeError(exec);
 }
 
+class GlobalFuncProtoGetterFunctor {
+public:
+    GlobalFuncProtoGetterFunctor(JSObject* thisObject)
+        : m_hasSkippedFirstFrame(false)
+        , m_thisObject(thisObject)
+        , m_result(JSValue::encode(jsUndefined()))
+    {
+    }
+
+    EncodedJSValue result() { return m_result; }
+
+    StackVisitor::Status operator()(StackVisitor& visitor)
+    {
+        if (!m_hasSkippedFirstFrame) {
+            m_hasSkippedFirstFrame = true;
+            return StackVisitor::Continue;
+        }
+
+        if (m_thisObject->allowsAccessFrom(visitor->callFrame()))
+            m_result = JSValue::encode(m_thisObject->prototype());
+
+        return StackVisitor::Done;
+    }
+
+private:
+    bool m_hasSkippedFirstFrame;
+    JSObject* m_thisObject;
+    EncodedJSValue m_result;
+};
+
 EncodedJSValue JSC_HOST_CALL globalFuncProtoGetter(ExecState* exec)
 {
-    if (!exec->thisValue().isObject())
+    JSObject* thisObject = jsDynamicCast<JSObject*>(exec->thisValue().toThis(exec, NotStrictMode));
+
+    if (!thisObject)
         return JSValue::encode(exec->thisValue().synthesizePrototype(exec));
 
-    JSObject* thisObject = asObject(exec->thisValue());
-    if (!thisObject->allowsAccessFrom(exec->trueCallerFrame()))
-        return JSValue::encode(jsUndefined());
-
-    return JSValue::encode(thisObject->prototype());
+    GlobalFuncProtoGetterFunctor functor(thisObject);
+    exec->iterate(functor);
+    return functor.result();
 }
+
+class GlobalFuncProtoSetterFunctor {
+public:
+    GlobalFuncProtoSetterFunctor(JSObject* thisObject)
+        : m_hasSkippedFirstFrame(false)
+        , m_allowsAccess(false)
+        , m_thisObject(thisObject)
+    {
+    }
+
+    bool allowsAccess() const { return m_allowsAccess; }
+
+    StackVisitor::Status operator()(StackVisitor& visitor)
+    {
+        if (!m_hasSkippedFirstFrame) {
+            m_hasSkippedFirstFrame = true;
+            return StackVisitor::Continue;
+        }
+
+        m_allowsAccess = m_thisObject->allowsAccessFrom(visitor->callFrame());
+        return StackVisitor::Done;
+    }
+
+private:
+    bool m_hasSkippedFirstFrame;
+    bool m_allowsAccess;
+    JSObject* m_thisObject;
+};
 
 EncodedJSValue JSC_HOST_CALL globalFuncProtoSetter(ExecState* exec)
 {
     JSValue value = exec->argument(0);
 
+    JSObject* thisObject = jsDynamicCast<JSObject*>(exec->thisValue().toThis(exec, NotStrictMode));
+
     // Setting __proto__ of a primitive should have no effect.
-    if (!exec->thisValue().isObject())
+    if (!thisObject)
         return JSValue::encode(jsUndefined());
 
-    JSObject* thisObject = asObject(exec->thisValue());
-    if (!thisObject->allowsAccessFrom(exec->trueCallerFrame()))
+    GlobalFuncProtoSetterFunctor functor(thisObject);
+    exec->iterate(functor);
+    if (!functor.allowsAccess())
         return JSValue::encode(jsUndefined());
 
     // Setting __proto__ to a non-object, non-null value is silently ignored to match Mozilla.
@@ -736,8 +798,8 @@ EncodedJSValue JSC_HOST_CALL globalFuncProtoSetter(ExecState* exec)
     if (!thisObject->isExtensible())
         return throwVMError(exec, createTypeError(exec, StrictModeReadonlyPropertyWriteError));
 
-    if (!thisObject->setPrototypeWithCycleCheck(exec->vm(), value))
-        throwError(exec, createError(exec, "cyclic __proto__ value"));
+    if (!thisObject->setPrototypeWithCycleCheck(exec, value))
+        exec->vm().throwException(exec, createError(exec, "cyclic __proto__ value"));
     return JSValue::encode(jsUndefined());
 }
 

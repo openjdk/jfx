@@ -27,11 +27,8 @@
 #include "config.h"
 #include "ContentDistributor.h"
 
-#include "ElementShadow.h"
-#include "HTMLContentElement.h"
-#include "NodeTraversal.h"
-#include "ShadowRoot.h"
-
+#include "ElementIterator.h"
+#include "InsertionPoint.h"
 
 namespace WebCore {
 
@@ -51,7 +48,7 @@ void ContentDistributor::invalidateInsertionPointList()
     m_insertionPointList.clear();
 }
 
-const Vector<RefPtr<InsertionPoint> >& ContentDistributor::ensureInsertionPointList(ShadowRoot* shadowRoot)
+const Vector<RefPtr<InsertionPoint>>& ContentDistributor::ensureInsertionPointList(ShadowRoot* shadowRoot)
 {
     if (m_insertionPointListIsValid)
         return m_insertionPointList;
@@ -59,9 +56,9 @@ const Vector<RefPtr<InsertionPoint> >& ContentDistributor::ensureInsertionPointL
     m_insertionPointListIsValid = true;
     ASSERT(m_insertionPointList.isEmpty());
 
-    for (Element* element = ElementTraversal::firstWithin(shadowRoot); element; element = ElementTraversal::next(element, shadowRoot)) {
-        if (element->isInsertionPoint())
-            m_insertionPointList.append(toInsertionPoint(element));
+    for (auto& element : descendantsOfType<Element>(*shadowRoot)) {
+        if (element.isInsertionPoint())
+            m_insertionPointList.append(toInsertionPoint(&element));
     }
 
     return m_insertionPointList;
@@ -76,12 +73,12 @@ void ContentDistributor::distribute(Element* host)
 {
     ASSERT(needsDistribution());
     ASSERT(m_nodeToInsertionPoint.isEmpty());
-    ASSERT(!host->containingShadowRoot() || host->containingShadowRoot()->owner()->distributor().isValid());
+    ASSERT(!host->containingShadowRoot() || host->containingShadowRoot()->distributor().isValid());
 
     m_validity = Valid;
 
     if (ShadowRoot* root = host->shadowRoot()) {
-        const Vector<RefPtr<InsertionPoint> >& insertionPoints = ensureInsertionPointList(root);
+        const Vector<RefPtr<InsertionPoint>>& insertionPoints = ensureInsertionPointList(root);
         for (size_t i = 0; i < insertionPoints.size(); ++i) {
             InsertionPoint* point = insertionPoints[i].get();
             if (!point->isActive())
@@ -98,7 +95,7 @@ bool ContentDistributor::invalidate(Element* host)
     bool needsReattach = (m_validity == Undetermined) || !m_nodeToInsertionPoint.isEmpty();
 
     if (ShadowRoot* root = host->shadowRoot()) {
-        const Vector<RefPtr<InsertionPoint> >& insertionPoints = ensureInsertionPointList(root);
+        const Vector<RefPtr<InsertionPoint>>& insertionPoints = ensureInsertionPointList(root);
         for (size_t i = 0; i < insertionPoints.size(); ++i) {
             needsReattach = true;
             insertionPoints[i]->clearDistribution();
@@ -130,36 +127,31 @@ void ContentDistributor::ensureDistribution(ShadowRoot* shadowRoot)
 {
     ASSERT(shadowRoot);
 
-    Vector<ElementShadow*, 8> elementShadows;
-    for (Element* current = shadowRoot->host(); current; current = current->shadowHost()) {
-        ElementShadow* elementShadow = current->shadow();
-        if (!elementShadow->distributor().needsDistribution())
+    Vector<ShadowRoot*, 8> shadowRoots;
+    for (Element* current = shadowRoot->hostElement(); current; current = current->shadowHost()) {
+        ShadowRoot* currentRoot = current->shadowRoot();
+        if (!currentRoot->distributor().needsDistribution())
             break;
-
-        elementShadows.append(elementShadow);
+        shadowRoots.append(currentRoot);
     }
 
-    for (size_t i = elementShadows.size(); i > 0; --i)
-        elementShadows[i - 1]->distributor().distribute(elementShadows[i - 1]->host());
+    for (size_t i = shadowRoots.size(); i > 0; --i)
+        shadowRoots[i - 1]->distributor().distribute(shadowRoots[i - 1]->hostElement());
 }
-
 
 void ContentDistributor::invalidateDistribution(Element* host)
 {
     bool didNeedInvalidation = needsInvalidation();
     bool needsReattach = didNeedInvalidation ? invalidate(host) : false;
 
-    if (needsReattach && host->attached()) {
-        for (Node* n = host->firstChild(); n; n = n->nextSibling())
-            n->lazyReattach();
-        host->setNeedsStyleRecalc();
-    }
+    if (needsReattach)
+        host->setNeedsStyleRecalc(ReconstructRenderTree);
 
     if (didNeedInvalidation) {
-    ASSERT(m_validity == Invalidating);
-    m_validity = Invalidated;
-}
+        ASSERT(m_validity == Invalidating);
+        m_validity = Invalidated;
     }
+}
 
 void ContentDistributor::didShadowBoundaryChange(Element* host)
 {

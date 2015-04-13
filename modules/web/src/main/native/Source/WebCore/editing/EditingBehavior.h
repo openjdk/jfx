@@ -62,7 +62,7 @@ public:
 
     // On Mac, when processing a contextual click, the object being clicked upon should be selected.
     bool shouldSelectOnContextualMenuClick() const { return m_type == EditingMacBehavior; }
-    
+
     // On Linux, should be able to get and insert spelling suggestions without selecting the misspelled word.
     bool shouldAllowSpellingSuggestionsWithoutSelection() const
     {

@@ -43,14 +43,12 @@
 #include "TextResourceDecoder.h"
 #include "ThreadableBlobRegistry.h"
 #include "ThreadableLoader.h"
-#include <wtf/ArrayBuffer.h>
+#include <runtime/ArrayBuffer.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
 #include <wtf/text/Base64.h>
 #include <wtf/text/StringBuilder.h>
-
-using namespace std;
 
 namespace WebCore {
 
@@ -154,7 +152,7 @@ void FileReaderLoader::didReceiveResponse(unsigned long, const ResourceResponse&
     // Check that we can cast to unsigned since we have to do
     // so to call ArrayBuffer's create function.
     // FIXME: Support reading more than the current size limit of ArrayBuffer.
-    if (length > numeric_limits<unsigned>::max()) {
+    if (length > std::numeric_limits<unsigned>::max()) {
         failed(FileError::NOT_READABLE_ERR);
         return;
     }
@@ -186,14 +184,14 @@ void FileReaderLoader::didReceiveData(const char* data, int dataLength)
     unsigned remainingBufferSpace = m_totalBytes - m_bytesLoaded;
     if (length > static_cast<long long>(remainingBufferSpace)) {
         // If the buffer has hit maximum size, it can't be grown any more.
-        if (m_totalBytes >= numeric_limits<unsigned>::max()) {
+        if (m_totalBytes >= std::numeric_limits<unsigned>::max()) {
             failed(FileError::NOT_READABLE_ERR);
             return;
         }
         if (m_variableLength) {
             unsigned long long newLength = m_totalBytes * 2;
-            if (newLength > numeric_limits<unsigned>::max())
-                newLength = numeric_limits<unsigned>::max();
+            if (newLength > std::numeric_limits<unsigned>::max())
+                newLength = std::numeric_limits<unsigned>::max();
             RefPtr<ArrayBuffer> newData =
                 ArrayBuffer::create(static_cast<unsigned>(newLength), 1);
             memcpy(static_cast<char*>(newData->data()), static_cast<char*>(m_rawData->data()), m_bytesLoaded);
@@ -274,29 +272,6 @@ PassRefPtr<ArrayBuffer> FileReaderLoader::arrayBufferResult() const
     return ArrayBuffer::create(m_rawData.get());
 }
 
-#if ENABLE(STREAM)
-PassRefPtr<Blob> FileReaderLoader::blobResult()
-{
-    ASSERT(m_readType == ReadAsBlob);
-
-    // If the loading is not finished or an error occurs, return an empty result.
-    if (!m_rawData || m_errorCode || !isCompleted())
-        return 0;
-
-    if (!m_blobResult) {
-        OwnPtr<BlobData> blobData = BlobData::create();
-        size_t size = 0;
-        RefPtr<RawData> rawData = RawData::create();
-        size = m_rawData->byteLength();
-        rawData->mutableData()->append(static_cast<char*>(m_rawData->data()), size);
-        blobData->appendData(rawData, 0, size);
-        blobData->setContentType(m_dataType);
-        m_blobResult = Blob::create(blobData.release(), size);
-    }
-    return m_blobResult;
-}
-#endif // ENABLE(STREAM)
-
 String FileReaderLoader::stringResult()
 {
     ASSERT(m_readType != ReadAsArrayBuffer && m_readType != ReadAsBlob);
@@ -366,7 +341,7 @@ void FileReaderLoader::convertToDataURL()
     builder.append(";base64,");
 
     Vector<char> out;
-    base64Encode(static_cast<const char*>(m_rawData->data()), m_bytesLoaded, out);
+    base64Encode(m_rawData->data(), m_bytesLoaded, out);
     out.append('\0');
     builder.append(out.data());
 
@@ -383,16 +358,6 @@ void FileReaderLoader::setEncoding(const String& encoding)
     if (!encoding.isEmpty())
         m_encoding = TextEncoding(encoding);
 }
-
-#if ENABLE(STREAM)
-void FileReaderLoader::setRange(unsigned start, unsigned length)
-{
-    ASSERT(length > 0);
-    m_hasRange = true;
-    m_rangeStart = start;
-    m_rangeEnd = start + length - 1;
-}
-#endif // ENABLE(STREAM)
 
 } // namespace WebCore
  

@@ -34,6 +34,10 @@
 #include <wtf/text/TextPosition.h>
 #include <wtf/text/WTFString.h>
 
+#if PLATFORM(JAVA) // tav todo temp
+#include <JSExportMacros.h>
+#endif
+
 namespace JSC {
 
     class SourceProvider : public RefCounted<SourceProvider> {
@@ -65,8 +69,6 @@ namespace JSC {
         bool isValid() const { return m_validated; }
         void setValid() { m_validated = true; }
 
-        size_t charPositionToColumnNumber(size_t charPosition);
-
     private:
 
         JS_EXPORT_PRIVATE void getID();
@@ -76,8 +78,6 @@ namespace JSC {
         TextPosition m_startPosition;
         bool m_validated : 1;
         uintptr_t m_id : sizeof(uintptr_t) * 8 - 1;
-
-        OwnPtr<Vector<size_t> > m_lineStarts;
     };
 
     class StringSourceProvider : public SourceProvider {
@@ -87,7 +87,7 @@ namespace JSC {
             return adoptRef(new StringSourceProvider(source, url, startPosition));
         }
 
-        virtual const String& source() const OVERRIDE
+        virtual const String& source() const override
         {
             return m_source;
         }
@@ -101,7 +101,7 @@ namespace JSC {
 
         String m_source;
     };
-
+    
 } // namespace JSC
 
 #endif // SourceProvider_h

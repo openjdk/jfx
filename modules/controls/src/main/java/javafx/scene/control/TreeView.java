@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@ package javafx.scene.control;
 import com.sun.javafx.collections.NonIterableChange;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.behavior.TreeCellBehavior;
+import com.sun.javafx.scene.control.skin.ListViewSkin;
 import com.sun.javafx.scene.control.skin.TreeViewSkin;
 
 import javafx.application.Platform;
@@ -934,13 +935,17 @@ public class TreeView<T> extends Control {
     }
     
     /**
-     * Returns the index position of the given TreeItem, taking into account the
-     * current state of each TreeItem (i.e. whether or not it is expanded).
+     * Returns the index position of the given TreeItem, assuming that it is
+     * currently accessible through the tree hierarchy (most notably, that all
+     * parent tree items are expanded). If a parent tree item is collapsed,
+     * the result is that this method will return -1 to indicate that the
+     * given tree item is not accessible in the tree.
      * 
      * @param item The TreeItem for which the index is sought.
      * @return An integer representing the location in the current TreeView of the
      *      first instance of the given TreeItem, or -1 if it is null or can not 
-     *      be found.
+     *      be found (for example, if a parent (all the way up to the root) is
+     *      collapsed).
      */
     public int getRow(TreeItem<T> item) {
         return TreeUtil.getRow(item, getRoot(), expandedItemCountDirty, isShowRoot());
@@ -1011,6 +1016,21 @@ public class TreeView<T> extends Control {
     @Override protected Skin<?> createDefaultSkin() {
         return new TreeViewSkin<T>(this);
     }
+
+    /**
+     * Calling {@code refresh()} forces the TreeView control to recreate and
+     * repopulate the cells necessary to populate the visual bounds of the control.
+     * In other words, this forces the TreeView to update what it is showing to
+     * the user. This is useful in cases where the underlying data source has
+     * changed in a way that is not observed by the TreeView itself.
+     *
+     * @since JavaFX 8u60
+     */
+    public void refresh() {
+        getProperties().put(TreeViewSkin.RECREATE, Boolean.TRUE);
+    }
+
+
     
     /***************************************************************************
      *                                                                         *
@@ -1231,6 +1251,9 @@ public class TreeView<T> extends Control {
 
             this.treeView = treeView;
             this.treeView.rootProperty().addListener(weakRootPropertyListener);
+            this.treeView.showRootProperty().addListener(o -> {
+                shiftSelection(0, treeView.isShowRoot() ? 1 : -1, null);
+            });
                     
             updateTreeEventListener(null, treeView.getRoot());
 
@@ -1266,102 +1289,112 @@ public class TreeView<T> extends Control {
             int startRow = treeView.getRow(treeItem);
 
             int shift = 0;
-            if (e.wasExpanded()) {
-                // need to shuffle selection by the number of visible children
-                shift = treeItem.getExpandedDescendentCount(false) - 1;
-                startRow++;
-            } else if (e.wasCollapsed()) {
-                // remove selection from any child treeItem, and also determine
-                // if any child item was selected (in which case the parent
-                // takes the selection on collapse)
-                treeItem.getExpandedDescendentCount(false);
-                final int count = treeItem.previousExpandedDescendentCount;
+            ListChangeListener.Change<? extends TreeItem<?>> change = e.getChange();
+            if (change != null) {
+                change.next();
+            }
 
-                final int selectedIndex = getSelectedIndex();
-                final boolean wasPrimarySelectionInChild =
-                        selectedIndex >= (startRow + 1) &&
-                        selectedIndex < (startRow + count);
+            do {
+                final int addedSize = change == null ? 0 : change.getAddedSize();
+                final int removedSize = change == null ? 0 : change.getRemovedSize();
 
-                boolean wasAnyChildSelected = false;
+                if (e.wasExpanded()) {
+                    // need to shuffle selection by the number of visible children
+                    shift += treeItem.getExpandedDescendentCount(false) - 1;
+                    startRow++;
+                } else if (e.wasCollapsed()) {
+                    // remove selection from any child treeItem, and also determine
+                    // if any child item was selected (in which case the parent
+                    // takes the selection on collapse)
+                    treeItem.getExpandedDescendentCount(false);
+                    final int count = treeItem.previousExpandedDescendentCount;
 
-                startAtomic();
-                final int from = startRow + 1;
-                final int to = startRow + count;
-                final List<Integer> removed = new ArrayList<>();
-                for (int i = from; i < to; i++) {
-                    if (isSelected(i)) {
-                        wasAnyChildSelected = true;
-                        clearSelection(i);
-                        removed.add(i);
+                    final int selectedIndex = getSelectedIndex();
+                    final boolean wasPrimarySelectionInChild =
+                            selectedIndex >= (startRow + 1) &&
+                                    selectedIndex < (startRow + count);
+
+                    boolean wasAnyChildSelected = false;
+
+                    startAtomic();
+                    final int from = startRow + 1;
+                    final int to = startRow + count;
+                    final List<Integer> removed = new ArrayList<>();
+                    for (int i = from; i < to; i++) {
+                        if (isSelected(i)) {
+                            wasAnyChildSelected = true;
+                            clearSelection(i);
+                            removed.add(i);
+                        }
                     }
-                }
-                stopAtomic();
+                    stopAtomic();
 
-                // put selection onto the newly-collapsed tree item
-                if (wasPrimarySelectionInChild && wasAnyChildSelected) {
-                    select(startRow);
-                } else {
-                    // we pass in (index, index) here to represent that nothing was added
-                    // in this change.
-                    ListChangeListener.Change change = new NonIterableChange.GenericAddRemoveChange<>(from, from,
-                            removed, selectedIndicesSeq);
-                    selectedIndicesSeq.callObservers(change);
-                }
+                    // put selection onto the newly-collapsed tree item
+                    if (wasPrimarySelectionInChild && wasAnyChildSelected) {
+                        select(startRow);
+                    } else {
+                        // we pass in (index, index) here to represent that nothing was added
+                        // in this change.
+                        ListChangeListener.Change newChange = new NonIterableChange.GenericAddRemoveChange<>(from, from,
+                                removed, selectedIndicesSeq);
+                        selectedIndicesSeq.callObservers(newChange);
+                    }
 
-                shift = - count + 1;
-                startRow++;
-            } else if (e.wasPermutated()) {
-                // no-op
-            } else if (e.wasAdded()) {
-                // shuffle selection by the number of added items
-                shift = treeItem.isExpanded() ? e.getAddedSize() : 0;
+                    shift += -count + 1;
+                    startRow++;
+                } else if (e.wasPermutated()) {
+                    // no-op
+                } else if (e.wasAdded()) {
+                    // shuffle selection by the number of added items
+                    shift += treeItem.isExpanded() ? addedSize : 0;
 
-                // RT-32963: We were taking the startRow from the TreeItem
-                // in which the children were added, rather than from the
-                // actual position of the new child. This led to selection
-                // being moved off the parent TreeItem by mistake.
-                // The 'if (e.getAddedSize() == 1)' condition here was
-                // subsequently commented out due to RT-33894.
-                startRow = treeView.getRow(e.getAddedChildren().get(0));
-            } else if (e.wasRemoved()) {
-                // shuffle selection by the number of removed items
-                shift = treeItem.isExpanded() ? -e.getRemovedSize() : 0;
+                    // RT-32963: We were taking the startRow from the TreeItem
+                    // in which the children were added, rather than from the
+                    // actual position of the new child. This led to selection
+                    // being moved off the parent TreeItem by mistake.
+                    // The 'if (e.getAddedSize() == 1)' condition here was
+                    // subsequently commented out due to RT-33894.
+                    startRow = treeView.getRow(e.getChange().getAddedSubList().get(0));
+                } else if (e.wasRemoved()) {
+                    // shuffle selection by the number of removed items
+                    shift += treeItem.isExpanded() ? -removedSize : 0;
 
-                // the start row is incorrect - it is _not_ the index of the
-                // TreeItem in which the children were removed from (which is
-                // what it currently represents). We need to take the 'from'
-                // value out of the event and make use of that to understand
-                // what actually changed inside the children list.
-                startRow += e.getFrom() + 1;
+                    // the start row is incorrect - it is _not_ the index of the
+                    // TreeItem in which the children were removed from (which is
+                    // what it currently represents). We need to take the 'from'
+                    // value out of the event and make use of that to understand
+                    // what actually changed inside the children list.
+                    startRow += e.getFrom() + 1;
 
-                // whilst we are here, we should check if the removed items
-                // are part of the selectedItems list - and remove them
-                // from selection if they are (as per RT-15446)
-                final List<Integer> selectedIndices1 = getSelectedIndices();
-                final int selectedIndex = getSelectedIndex();
-                final List<TreeItem<T>> selectedItems = getSelectedItems();
-                final TreeItem<T> selectedItem = getSelectedItem();
-                final List<? extends TreeItem<T>> removedChildren = e.getRemovedChildren();
+                    // whilst we are here, we should check if the removed items
+                    // are part of the selectedItems list - and remove them
+                    // from selection if they are (as per RT-15446)
+                    final List<Integer> selectedIndices1 = getSelectedIndices();
+                    final int selectedIndex = getSelectedIndex();
+                    final List<TreeItem<T>> selectedItems = getSelectedItems();
+                    final TreeItem<T> selectedItem = getSelectedItem();
+                    final List<? extends TreeItem<T>> removedChildren = e.getChange().getRemoved();
 
-                for (int i = 0; i < selectedIndices1.size() && ! selectedItems.isEmpty(); i++) {
-                    int index = selectedIndices1.get(i);
-                    if (index > selectedItems.size()) break;
+                    for (int i = 0; i < selectedIndices1.size() && !selectedItems.isEmpty(); i++) {
+                        int index = selectedIndices1.get(i);
+                        if (index > selectedItems.size()) break;
 
-                    if (removedChildren.size() == 1 &&
-                            selectedItems.size() == 1 &&
-                            selectedItem != null &&
-                            selectedItem.equals(removedChildren.get(0))) {
-                        // Bug fix for RT-28637
-                        if (selectedIndex < getItemCount()) {
-                            final int previousRow = selectedIndex == 0 ? 0 : selectedIndex - 1;
-                            TreeItem<T> newSelectedItem = getModelItem(previousRow);
-                            if (! selectedItem.equals(newSelectedItem)) {
-                                select(newSelectedItem);
+                        if (removedChildren.size() == 1 &&
+                                selectedItems.size() == 1 &&
+                                selectedItem != null &&
+                                selectedItem.equals(removedChildren.get(0))) {
+                            // Bug fix for RT-28637
+                            if (selectedIndex < getItemCount()) {
+                                final int previousRow = selectedIndex == 0 ? 0 : selectedIndex - 1;
+                                TreeItem<T> newSelectedItem = getModelItem(previousRow);
+                                if (!selectedItem.equals(newSelectedItem)) {
+                                    select(newSelectedItem);
+                                }
                             }
                         }
                     }
                 }
-            }
+            } while (e.getChange() != null && e.getChange().next());
 
             shiftSelection(startRow, shift, null);
 
@@ -1548,56 +1581,63 @@ public class TreeView<T> extends Control {
                 // don't shift focus if the event occurred on a tree item after
                 // the focused row, or if there is no focus index at present
                 if (getFocusedIndex() == -1) return;
-                
-                int row = treeView.getRow(e.getTreeItem());
-                int shift = 0;
-                if (e.wasExpanded()) {
-                    if (row < getFocusedIndex()) {
-                        // need to shuffle selection by the number of visible children
-                        shift = e.getTreeItem().getExpandedDescendentCount(false) - 1;
-                    }
-                } else if (e.wasCollapsed()) {
-                    if (row < getFocusedIndex()) {
-                        // need to shuffle selection by the number of visible children
-                        // that were just hidden
-                        shift = - e.getTreeItem().previousExpandedDescendentCount + 1;
-                    }
-                } else if (e.wasAdded()) {
-                    // get the TreeItem the event occurred on - we only need to
-                    // shift if the tree item is expanded
-                    TreeItem<T> eventTreeItem = e.getTreeItem();
-                    if (eventTreeItem.isExpanded()) {
-                        for (int i = 0; i < e.getAddedChildren().size(); i++) {
-                            // get the added item and determine the row it is in
-                            TreeItem<T> item = e.getAddedChildren().get(i);
-                            row = treeView.getRow(item);
 
-                            if (item != null && row <= getFocusedIndex()) {
-                                shift += item.getExpandedDescendentCount(false);
+                int row = treeView.getRow(e.getTreeItem());
+
+                int shift = 0;
+                if (e.getChange() != null) {
+                    e.getChange().next();
+                }
+
+                do {
+                    if (e.wasExpanded()) {
+                        if (row < getFocusedIndex()) {
+                            // need to shuffle selection by the number of visible children
+                            shift += e.getTreeItem().getExpandedDescendentCount(false) - 1;
+                        }
+                    } else if (e.wasCollapsed()) {
+                        if (row < getFocusedIndex()) {
+                            // need to shuffle selection by the number of visible children
+                            // that were just hidden
+                            shift += -e.getTreeItem().previousExpandedDescendentCount + 1;
+                        }
+                    } else if (e.wasAdded()) {
+                        // get the TreeItem the event occurred on - we only need to
+                        // shift if the tree item is expanded
+                        TreeItem<T> eventTreeItem = e.getTreeItem();
+                        if (eventTreeItem.isExpanded()) {
+                            for (int i = 0; i < e.getAddedChildren().size(); i++) {
+                                // get the added item and determine the row it is in
+                                TreeItem<T> item = e.getAddedChildren().get(i);
+                                row = treeView.getRow(item);
+
+                                if (item != null && row <= getFocusedIndex()) {
+                                    shift += item.getExpandedDescendentCount(false);
+                                }
                             }
                         }
-                    }
-                } else if (e.wasRemoved()) {
-                    for (int i = 0; i < e.getRemovedChildren().size(); i++) {
-                        TreeItem<T> item = e.getRemovedChildren().get(i);
-                        if (item != null && item.equals(getFocusedItem())) {
-                            focus(-1);
-                            return;
+                    } else if (e.wasRemoved()) {
+                        row += e.getFrom() + 1;
+
+                        for (int i = 0; i < e.getRemovedChildren().size(); i++) {
+                            TreeItem<T> item = e.getRemovedChildren().get(i);
+                            if (item != null && item.equals(getFocusedItem())) {
+                                focus(Math.max(0, getFocusedIndex() - 1));
+                                return;
+                            }
+                        }
+
+                        if (row <= getFocusedIndex()) {
+                            // shuffle selection by the number of removed items
+                            shift += e.getTreeItem().isExpanded() ? -e.getRemovedSize() : 0;
                         }
                     }
-                    
-                    if (row <= getFocusedIndex()) {
-                        // shuffle selection by the number of removed items
-                        shift = e.getTreeItem().isExpanded() ? -e.getRemovedSize() : 0;
-                    }
-                }
+                } while (e.getChange() != null && e.getChange().next());
                 
                 if(shift != 0) {
                     final int newFocus = getFocusedIndex() + shift;
                     if (newFocus >= 0) {
-                        Platform.runLater(() -> {
-                            focus(newFocus);
-                        });
+                        Platform.runLater(() -> focus(newFocus));
                     }
                 } 
             }

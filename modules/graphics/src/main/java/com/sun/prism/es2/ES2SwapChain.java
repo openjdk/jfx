@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -191,8 +191,11 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
     public ES2Graphics createGraphics() {
         context.makeCurrent(drawable);
 
-        GLContext glContext = context.getGLContext();
-        nativeDestHandle = glContext.getBoundFBO();
+        nativeDestHandle = pState.getNativeFrameBuffer();
+        if (nativeDestHandle == 0) {
+            GLContext glContext = context.getGLContext();
+            nativeDestHandle = glContext.getBoundFBO();
+        }
 
         needsResize = (w != getPhysicalWidth() || h != getPhysicalHeight());
         // the stableBackbuffer will be used as the render target

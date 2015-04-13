@@ -27,12 +27,11 @@
 #ifndef WorkerMessagingProxy_h
 #define WorkerMessagingProxy_h
 
-#if ENABLE(WORKERS)
-
 #include "ScriptExecutionContext.h"
-#include "WorkerContextProxy.h"
+#include "WorkerGlobalScopeProxy.h"
 #include "WorkerLoaderProxy.h"
 #include "WorkerObjectProxy.h"
+#include <memory>
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/PassOwnPtr.h>
@@ -46,43 +45,43 @@ namespace WebCore {
     class ScriptExecutionContext;
     class Worker;
 
-    class WorkerMessagingProxy : public WorkerContextProxy, public WorkerObjectProxy, public WorkerLoaderProxy {
+    class WorkerMessagingProxy : public WorkerGlobalScopeProxy, public WorkerObjectProxy, public WorkerLoaderProxy {
         WTF_MAKE_NONCOPYABLE(WorkerMessagingProxy); WTF_MAKE_FAST_ALLOCATED;
     public:
         explicit WorkerMessagingProxy(Worker*);
 
-        // Implementations of WorkerContextProxy.
+        // Implementations of WorkerGlobalScopeProxy.
         // (Only use these methods in the worker object thread.)
-        virtual void startWorkerContext(const KURL& scriptURL, const String& userAgent, const String& sourceCode, WorkerThreadStartMode) OVERRIDE;
-        virtual void terminateWorkerContext() OVERRIDE;
-        virtual void postMessageToWorkerContext(PassRefPtr<SerializedScriptValue>, PassOwnPtr<MessagePortChannelArray>) OVERRIDE;
-        virtual bool hasPendingActivity() const OVERRIDE;
-        virtual void workerObjectDestroyed() OVERRIDE;
+        virtual void startWorkerGlobalScope(const URL& scriptURL, const String& userAgent, const String& sourceCode, WorkerThreadStartMode) override;
+        virtual void terminateWorkerGlobalScope() override;
+        virtual void postMessageToWorkerGlobalScope(PassRefPtr<SerializedScriptValue>, std::unique_ptr<MessagePortChannelArray>) override;
+        virtual bool hasPendingActivity() const override;
+        virtual void workerObjectDestroyed() override;
+        virtual void notifyNetworkStateChange(bool isOnline) override;
 #if ENABLE(INSPECTOR)
-        virtual void connectToInspector(WorkerContextProxy::PageInspector*) OVERRIDE;
-        virtual void disconnectFromInspector() OVERRIDE;
-        virtual void sendMessageToInspector(const String&) OVERRIDE;
+        virtual void connectToInspector(WorkerGlobalScopeProxy::PageInspector*) override;
+        virtual void disconnectFromInspector() override;
+        virtual void sendMessageToInspector(const String&) override;
 #endif
 
         // Implementations of WorkerObjectProxy.
         // (Only use these methods in the worker context thread.)
-        virtual void postMessageToWorkerObject(PassRefPtr<SerializedScriptValue>, PassOwnPtr<MessagePortChannelArray>) OVERRIDE;
-        virtual void postExceptionToWorkerObject(const String& errorMessage, int lineNumber, int columnNumber, const String& sourceURL) OVERRIDE;
-        virtual void postConsoleMessageToWorkerObject(MessageSource, MessageLevel, const String& message, int lineNumber, int columnNumber, const String& sourceURL) OVERRIDE;
+        virtual void postMessageToWorkerObject(PassRefPtr<SerializedScriptValue>, std::unique_ptr<MessagePortChannelArray>) override;
+        virtual void postExceptionToWorkerObject(const String& errorMessage, int lineNumber, int columnNumber, const String& sourceURL) override;
+        virtual void postConsoleMessageToWorkerObject(MessageSource, MessageLevel, const String& message, int lineNumber, int columnNumber, const String& sourceURL) override;
 #if ENABLE(INSPECTOR)
-        virtual void postMessageToPageInspector(const String&) OVERRIDE;
-        virtual void updateInspectorStateCookie(const String&) OVERRIDE;
+        virtual void postMessageToPageInspector(const String&) override;
 #endif
-        virtual void confirmMessageFromWorkerObject(bool hasPendingActivity) OVERRIDE;
-        virtual void reportPendingActivity(bool hasPendingActivity) OVERRIDE;
-        virtual void workerContextClosed() OVERRIDE;
-        virtual void workerContextDestroyed() OVERRIDE;
+        virtual void confirmMessageFromWorkerObject(bool hasPendingActivity) override;
+        virtual void reportPendingActivity(bool hasPendingActivity) override;
+        virtual void workerGlobalScopeClosed() override;
+        virtual void workerGlobalScopeDestroyed() override;
 
         // Implementation of WorkerLoaderProxy.
         // These methods are called on different threads to schedule loading
-        // requests and to send callbacks back to WorkerContext.
-        virtual void postTaskToLoader(PassOwnPtr<ScriptExecutionContext::Task>) OVERRIDE;
-        virtual bool postTaskForModeToWorkerContext(PassOwnPtr<ScriptExecutionContext::Task>, const String& mode) OVERRIDE;
+        // requests and to send callbacks back to WorkerGlobalScope.
+        virtual void postTaskToLoader(PassOwnPtr<ScriptExecutionContext::Task>) override;
+        virtual bool postTaskForModeToWorkerGlobalScope(PassOwnPtr<ScriptExecutionContext::Task>, const String& mode) override;
 
         void workerThreadCreated(PassRefPtr<DedicatedWorkerThread>);
 
@@ -95,11 +94,11 @@ namespace WebCore {
     private:
         friend class MessageWorkerTask;
         friend class PostMessageToPageInspectorTask;
-        friend class WorkerContextDestroyedTask;
+        friend class WorkerGlobalScopeDestroyedTask;
         friend class WorkerExceptionTask;
         friend class WorkerThreadActivityReportTask;
 
-        void workerContextDestroyedInternal();
+        void workerGlobalScopeDestroyedInternal();
         static void workerObjectDestroyedInternal(ScriptExecutionContext*, WorkerMessagingProxy*);
         void reportPendingActivityInternal(bool confirmingMessage, bool hasPendingActivity);
         Worker* workerObject() const { return m_workerObject; }
@@ -114,14 +113,12 @@ namespace WebCore {
 
         bool m_askedToTerminate;
 
-        Vector<OwnPtr<ScriptExecutionContext::Task> > m_queuedEarlyTasks; // Tasks are queued here until there's a thread object created.
+        Vector<OwnPtr<ScriptExecutionContext::Task>> m_queuedEarlyTasks; // Tasks are queued here until there's a thread object created.
 #if ENABLE(INSPECTOR)
-        WorkerContextProxy::PageInspector* m_pageInspector;
+        WorkerGlobalScopeProxy::PageInspector* m_pageInspector;
 #endif
     };
 
 } // namespace WebCore
-
-#endif // ENABLE(WORKERS)
 
 #endif // WorkerMessagingProxy_h

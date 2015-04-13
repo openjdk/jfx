@@ -31,7 +31,11 @@
 #include "TextRun.h"
 #include "WebCoreSystemInterface.h"
 
+#if PLATFORM(IOS)
+#include <CoreText/CoreText.h>
+#else
 #include <ApplicationServices/ApplicationServices.h>
+#endif
 
 @interface WebCascadeList : NSArray {
     @private
@@ -219,14 +223,8 @@ void ComplexTextController::collectComplexTextRunsForCharacters(const UChar* cp,
         static CFDictionaryRef ltrTypesetterOptions = CFDictionaryCreate(kCFAllocatorDefault, optionKeys, ltrOptionValues, WTF_ARRAY_LENGTH(optionKeys), &kCFCopyStringDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
         static CFDictionaryRef rtlTypesetterOptions = CFDictionaryCreate(kCFAllocatorDefault, optionKeys, rtlOptionValues, WTF_ARRAY_LENGTH(optionKeys), &kCFCopyStringDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
 
-#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
         ProviderInfo info = { cp, length, stringAttributes.get() };
         RetainPtr<CTTypesetterRef> typesetter = adoptCF(wkCreateCTTypesetterWithUniCharProviderAndOptions(&provideStringAndAttributes, 0, &info, m_run.ltr() ? ltrTypesetterOptions : rtlTypesetterOptions));
-#else
-        RetainPtr<CFStringRef> string = adoptCF(CFStringCreateWithCharactersNoCopy(kCFAllocatorDefault, cp, length, kCFAllocatorNull));
-        RetainPtr<CFAttributedStringRef> attributedString = adoptCF(CFAttributedStringCreate(kCFAllocatorDefault, string.get(), stringAttributes.get()));
-        RetainPtr<CTTypesetterRef> typesetter = adoptCF(CTTypesetterCreateWithAttributedStringAndOptions(attributedString.get(), m_run.ltr() ? ltrTypesetterOptions : rtlTypesetterOptions));
-#endif
 
         line = adoptCF(CTTypesetterCreateLine(typesetter.get(), CFRangeMake(0, 0)));
     } else {
@@ -272,12 +270,17 @@ void ComplexTextController::collectComplexTextRunsForCharacters(const UChar* cp,
                         continue;
                     }
                     runFontData = fontCache()->getCachedFontData(m_font.fontDescription(), fontName.get(), false, FontCache::DoNotRetain).get();
+#if !PLATFORM(IOS)
                     // Core Text may have used a font that is not known to NSFontManager. In that case, fall back on
                     // using the font as returned, even though it may not have the best NSFontRenderingMode.
                     if (!runFontData) {
                         FontPlatformData runFontPlatformData((NSFont *)runFont, CTFontGetSize(runFont), m_font.fontDescription().usePrinterFont());
                         runFontData = fontCache()->getCachedFontData(&runFontPlatformData, FontCache::DoNotRetain).get();
                     }
+#else
+                    // FIXME: Just assert for now, until we can devise a better fix that works with iOS.
+                    ASSERT(runFontData);
+#endif
                 }
                 if (m_fallbackFonts && runFontData != m_font.primaryFont())
                     m_fallbackFonts->add(runFontData);

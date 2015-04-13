@@ -20,14 +20,8 @@
 #ifndef TextureMapper_h
 #define TextureMapper_h
 
-#if USE(ACCELERATED_COMPOSITING) && USE(TEXTURE_MAPPER)
+#if USE(TEXTURE_MAPPER)
 
-#if PLATFORM(QT)
-#include <qglobal.h>
-    #if defined(QT_OPENGL_ES_2) && !defined(TEXMAP_OPENGL_ES_2)
-        #define TEXMAP_OPENGL_ES_2
-    #endif
-#endif
 #if (PLATFORM(GTK) || PLATFORM(EFL)) && USE(OPENGL_ES_2)
 #define TEXMAP_OPENGL_ES_2
 #endif
@@ -45,13 +39,12 @@
 namespace WebCore {
 
 class BitmapTexturePool;
-class CustomFilterProgram;
 class GraphicsLayer;
 class TextureMapper;
 class FilterOperations;
 
 // A 2D texture that can be the target of software or GL rendering.
-class BitmapTexture  : public RefCounted<BitmapTexture> {
+class BitmapTexture : public RefCounted<BitmapTexture> {
 public:
     enum Flag {
         SupportsAlpha = 0x01
@@ -164,10 +157,6 @@ public:
     virtual IntSize maxTextureSize() const = 0;
 
     virtual PassRefPtr<BitmapTexture> acquireTextureFromPool(const IntSize&);
-
-#if ENABLE(CSS_SHADERS)
-    virtual void removeCachedCustomFilterProgram(CustomFilterProgram*) { }
-#endif
 
     void setPatternTransform(const TransformationMatrix& p) { m_patternTransform = p; }
     void setWrapMode(WrapMode m) { m_wrapMode = m; }

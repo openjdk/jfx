@@ -39,13 +39,14 @@
 #include "FileStream.h"
 #include "FileSystem.h"
 #include "HTTPParsers.h"
-#include "KURL.h"
+#include "URL.h"
 #include "ResourceError.h"
 #include "ResourceHandleClient.h"
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
 #include "SharedBuffer.h"
 #include <wtf/MainThread.h>
+#include <wtf/Ref.h>
 
 namespace WebCore {
 
@@ -83,10 +84,10 @@ class BlobResourceSynchronousLoader : public ResourceHandleClient {
 public:
     BlobResourceSynchronousLoader(ResourceError&, ResourceResponse&, Vector<char>&);
 
-    virtual void didReceiveResponse(ResourceHandle*, const ResourceResponse&) OVERRIDE;
-    virtual void didReceiveData(ResourceHandle*, const char*, int, int /*encodedDataLength*/) OVERRIDE;
-    virtual void didFinishLoading(ResourceHandle*, double /*finishTime*/) OVERRIDE;
-    virtual void didFail(ResourceHandle*, const ResourceError&) OVERRIDE;
+    virtual void didReceiveResponse(ResourceHandle*, const ResourceResponse&) override;
+    virtual void didReceiveData(ResourceHandle*, const char*, unsigned, int /*encodedDataLength*/) override;
+    virtual void didFinishLoading(ResourceHandle*, double /*finishTime*/) override;
+    virtual void didFail(ResourceHandle*, const ResourceError&) override;
 
 private:
     ResourceError& m_error;
@@ -116,7 +117,7 @@ void BlobResourceSynchronousLoader::didReceiveResponse(ResourceHandle* handle, c
     static_cast<BlobResourceHandle*>(handle)->readSync(m_data.data(), static_cast<int>(m_data.size()));
 }
 
-void BlobResourceSynchronousLoader::didReceiveData(ResourceHandle*, const char*, int, int)
+void BlobResourceSynchronousLoader::didReceiveData(ResourceHandle*, const char*, unsigned, int)
 {
 }
 
@@ -169,7 +170,7 @@ BlobResourceHandle::BlobResourceHandle(PassRefPtr<BlobStorageData> blobData, con
     , m_sizeItemCount(0)
     , m_readItemCount(0)
     , m_fileOpened(false)
-{    
+{
     if (m_async)
         m_asyncStream = AsyncFileStream::create(this);
     else
@@ -245,7 +246,7 @@ void BlobResourceHandle::doStart()
     if (m_async)
         getSizeForNext();
     else {
-        RefPtr<BlobResourceHandle> protect(this); // getSizeForNext calls the client
+        Ref<BlobResourceHandle> protect(*this); // getSizeForNext calls the client
         for (size_t i = 0; i < m_blobData->items().size() && !m_aborted && !m_errorCode; ++i)
             getSizeForNext();
         notifyResponse();
@@ -260,7 +261,7 @@ void BlobResourceHandle::getSizeForNext()
 
         // Start reading if in asynchronous mode.
         if (m_async) {
-            RefPtr<BlobResourceHandle> protect(this);
+            Ref<BlobResourceHandle> protect(*this);
             notifyResponse();
             m_buffer.resize(bufferSize);
             readAsync();
@@ -345,7 +346,7 @@ void BlobResourceHandle::seek()
 int BlobResourceHandle::readSync(char* buf, int length)
 {
     ASSERT(!m_async);
-    RefPtr<BlobResourceHandle> protect(this);
+    Ref<BlobResourceHandle> protect(*this);
 
     int offset = 0;
     int remaining = length;
@@ -380,7 +381,7 @@ int BlobResourceHandle::readSync(char* buf, int length)
         result = length - remaining;
 
     if (result > 0)
-    notifyReceiveData(buf, result);
+        notifyReceiveData(buf, result);
 
     if (!result)
         notifyFinish();
@@ -467,7 +468,7 @@ void BlobResourceHandle::readAsync()
 void BlobResourceHandle::readDataAsync(const BlobDataItem& item)
 {
     ASSERT(m_async);
-    RefPtr<BlobResourceHandle> protect(this);
+    Ref<BlobResourceHandle> protect(*this);
 
     long long bytesToRead = item.length - m_currentItemReadSize;
     if (bytesToRead > m_totalRemainingSize)
@@ -519,7 +520,7 @@ void BlobResourceHandle::didRead(int bytesRead)
 void BlobResourceHandle::consumeData(const char* data, int bytesRead)
 {
     ASSERT(m_async);
-    RefPtr<BlobResourceHandle> protect(this);
+    Ref<BlobResourceHandle> protect(*this);
 
     m_totalRemainingSize -= bytesRead;
 
@@ -549,7 +550,7 @@ void BlobResourceHandle::consumeData(const char* data, int bytesRead)
 void BlobResourceHandle::failed(int errorCode)
 {
     ASSERT(m_async);
-    RefPtr<BlobResourceHandle> protect(this);
+    Ref<BlobResourceHandle> protect(*this);
 
     // Notify the client.
     notifyFail(errorCode);
@@ -567,7 +568,7 @@ void BlobResourceHandle::notifyResponse()
         return;
 
     if (m_errorCode) {
-        RefPtr<BlobResourceHandle> protect(this);
+        Ref<BlobResourceHandle> protect(*this);
         notifyResponseOnError();
         notifyFinish();
     } else
@@ -590,7 +591,7 @@ void BlobResourceHandle::notifyResponseOnSuccess()
     if (client()->usesAsyncCallbacks())
         client()->didReceiveResponseAsync(this, response);
     else
-    client()->didReceiveResponse(this, response);
+        client()->didReceiveResponse(this, response);
 }
 
 void BlobResourceHandle::notifyResponseOnError()
@@ -622,7 +623,7 @@ void BlobResourceHandle::notifyResponseOnError()
     if (client()->usesAsyncCallbacks())
         client()->didReceiveResponseAsync(this, response);
     else
-    client()->didReceiveResponse(this, response);
+        client()->didReceiveResponse(this, response);
 }
 
 void BlobResourceHandle::notifyReceiveData(const char* data, int bytesRead)

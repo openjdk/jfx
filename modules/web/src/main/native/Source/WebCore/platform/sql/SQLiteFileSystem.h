@@ -46,13 +46,13 @@ class SQLiteFileSystem {
 public:
     // Opens a database file.
     //
-    // fileName - The name of the database file.
+    // filemame - The name of the database file.
     // database - The SQLite structure that represents the database stored
     //            in the given file.
     // forWebSQLDatabase - True, if and only if we're opening a Web SQL Database file.
     //                     Used by Chromium to determine if the DB file needs to be opened
     //                     using a custom VFS.
-    static int openDatabase(const String& fileName, sqlite3** database, bool forWebSQLDatabase);
+    static int openDatabase(const String& filename, sqlite3** database, bool forWebSQLDatabase);
 
     // Returns the file name for a database.
     //
@@ -99,10 +99,16 @@ public:
     // fileName - The file name.
     static bool deleteDatabaseFile(const String& fileName);
 
-    // Returns the size of the database file.
-    //
-    // fileName - The file name.
+#if PLATFORM(IOS)
+    // Truncates a database file. Used when MobileSafariSettings deletes a database file,
+    // since deleting the file nukes the POSIX file locks which would potentially cause Safari
+    // to corrupt the new db if it's running in the background.
+    static bool truncateDatabaseFile(sqlite3* database);
+#endif
+    
     static long long getDatabaseFileSize(const String& fileName);
+    static double databaseCreationTime(const String& fileName);
+    static double databaseModificationTime(const String& fileName);
 
 private:
     // do not instantiate this class

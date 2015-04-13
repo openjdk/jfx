@@ -30,7 +30,6 @@
 #include "MediaKeyEvent.h"
 
 #include "EventNames.h"
-#include <wtf/Uint8Array.h>
 
 namespace WebCore {
 
@@ -59,9 +58,9 @@ MediaKeyEvent::~MediaKeyEvent()
 {
 }
 
-const AtomicString& MediaKeyEvent::interfaceName() const
+EventInterface MediaKeyEvent::eventInterface() const
 {
-    return eventNames().interfaceForMediaKeyEvent;
+    return MediaKeyEventInterfaceType;
 }
 
 } // namespace WebCore

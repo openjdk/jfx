@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
+ * Copyright (C) 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,48 +27,38 @@
 #define ClassList_h
 
 #include "DOMTokenList.h"
-#include "Element.h"
-#include "HTMLNames.h"
 #include "SpaceSplitString.h"
-#include <wtf/OwnPtr.h>
-#include <wtf/PassOwnPtr.h>
-#include <wtf/Vector.h>
 
 namespace WebCore {
 
 class Element;
 
-typedef int ExceptionCode;
-
-class ClassList : public DOMTokenList {
+class ClassList final : public DOMTokenList {
 public:
-    static PassOwnPtr<ClassList> create(Element* element)
+    ClassList(Element& element)
+        : m_element(element)
     {
-        return adoptPtr(new ClassList(element));
     }
 
-    virtual void ref() OVERRIDE;
-    virtual void deref() OVERRIDE;
+    virtual void ref() override;
+    virtual void deref() override;
 
-    virtual unsigned length() const OVERRIDE;
-    virtual const AtomicString item(unsigned index) const OVERRIDE;
+    virtual unsigned length() const override;
+    virtual const AtomicString item(unsigned index) const override;
 
-    virtual Element* element() OVERRIDE { return m_element; }
+    virtual Element* element() const override;
 
-    void clearValueForQuirksMode() { m_classNamesForQuirksMode = nullptr; }
+    void clearValueForQuirksMode() { m_classNamesForQuirksMode.clear(); }
 
 private:
-    ClassList(Element*);
-
-    virtual bool containsInternal(const AtomicString&) const OVERRIDE;
+    virtual bool containsInternal(const AtomicString&) const override;
+    virtual AtomicString value() const override;
+    virtual void setValue(const AtomicString&) override;
 
     const SpaceSplitString& classNames() const;
 
-    virtual AtomicString value() const OVERRIDE { return m_element->getAttribute(HTMLNames::classAttr); }
-    virtual void setValue(const AtomicString& value) OVERRIDE { m_element->setAttribute(HTMLNames::classAttr, value); }
-
-    Element* m_element;
-    mutable OwnPtr<SpaceSplitString> m_classNamesForQuirksMode;
+    Element& m_element;
+    mutable SpaceSplitString m_classNamesForQuirksMode;
 };
 
 } // namespace WebCore

@@ -55,12 +55,12 @@ enum {
 
 class HTMLAnchorElement : public HTMLElement {
 public:
-    static PassRefPtr<HTMLAnchorElement> create(Document*);
-    static PassRefPtr<HTMLAnchorElement> create(const QualifiedName&, Document*);
+    static PassRefPtr<HTMLAnchorElement> create(Document&);
+    static PassRefPtr<HTMLAnchorElement> create(const QualifiedName&, Document&);
 
     virtual ~HTMLAnchorElement();
 
-    KURL href() const;
+    URL href() const;
     void setHref(const AtomicString&);
 
     const AtomicString& name() const;
@@ -94,7 +94,7 @@ public:
 
     bool isLiveLink() const;
 
-    virtual bool willRespondToMouseClickEvents() OVERRIDE;
+    virtual bool willRespondToMouseClickEvents() override;
 
     bool hasRel(uint32_t relation) const;
     void setRel(const String&);
@@ -103,24 +103,24 @@ public:
     void invalidateCachedVisitedLinkHash() { m_cachedVisitedLinkHash = 0; }
 
 protected:
-    HTMLAnchorElement(const QualifiedName&, Document*);
+    HTMLAnchorElement(const QualifiedName&, Document&);
 
-    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
 
 private:
-    virtual bool supportsFocus() const OVERRIDE;
-    virtual bool isMouseFocusable() const OVERRIDE;
-    virtual bool isKeyboardFocusable(KeyboardEvent*) const OVERRIDE;
-    virtual void defaultEventHandler(Event*);
-    virtual void setActive(bool active = true, bool pause = false) OVERRIDE FINAL;
-    virtual void accessKeyAction(bool sendMouseEvents);
-    virtual bool isURLAttribute(const Attribute&) const OVERRIDE;
-    virtual bool canStartSelection() const;
-    virtual String target() const;
-    virtual short tabIndex() const OVERRIDE FINAL;
-    virtual bool draggable() const;
+    virtual bool supportsFocus() const override;
+    virtual bool isMouseFocusable() const override;
+    virtual bool isKeyboardFocusable(KeyboardEvent*) const override;
+    virtual void defaultEventHandler(Event*) override;
+    virtual void setActive(bool active = true, bool pause = false) override final;
+    virtual void accessKeyAction(bool sendMouseEvents) override;
+    virtual bool isURLAttribute(const Attribute&) const override;
+    virtual bool canStartSelection() const override;
+    virtual String target() const override;
+    virtual short tabIndex() const override final;
+    virtual bool draggable() const override;
 
-    void sendPings(const KURL& destinationURL);
+    void sendPings(const URL& destinationURL);
 
     void handleClick(Event*);
 
@@ -131,11 +131,6 @@ private:
     };
     static EventType eventType(Event*);
     bool treatLinkAsLiveForEventType(EventType) const;
-
-#if ENABLE(MICRODATA)
-    virtual String itemValueText() const OVERRIDE;
-    virtual void setItemValueText(const String&, ExceptionCode&) OVERRIDE;
-#endif
 
     Element* rootEditableElementForSelectionOnMouseDown() const;
     void setRootEditableElementForSelectionOnMouseDown(Element*);
@@ -150,7 +145,7 @@ private:
 inline LinkHash HTMLAnchorElement::visitedLinkHash() const
 {
     if (!m_cachedVisitedLinkHash)
-        m_cachedVisitedLinkHash = WebCore::visitedLinkHash(document()->baseURL(), fastGetAttribute(HTMLNames::hrefAttr));
+        m_cachedVisitedLinkHash = WebCore::visitedLinkHash(document().baseURL(), fastGetAttribute(HTMLNames::hrefAttr));
     return m_cachedVisitedLinkHash; 
 }
 
@@ -158,6 +153,9 @@ inline LinkHash HTMLAnchorElement::visitedLinkHash() const
 
 bool isEnterKeyKeydownEvent(Event*);
 bool isLinkClick(Event*);
+bool shouldProhibitLinks(Element*);
+
+NODE_TYPE_CASTS(HTMLAnchorElement)
 
 } // namespace WebCore
 

@@ -33,10 +33,10 @@ namespace WebCore {
 
 class EXTTextureFilterAnisotropic : public WebGLExtension {
 public:
-    static PassOwnPtr<EXTTextureFilterAnisotropic> create(WebGLRenderingContext*);
+    static OwnPtr<EXTTextureFilterAnisotropic> create(WebGLRenderingContext*);
 
     virtual ~EXTTextureFilterAnisotropic();
-    virtual ExtensionName getName() const;
+    virtual ExtensionName getName() const override;
 
 private:
     EXTTextureFilterAnisotropic(WebGLRenderingContext*);

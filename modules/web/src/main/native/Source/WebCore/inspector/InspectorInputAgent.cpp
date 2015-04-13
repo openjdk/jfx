@@ -36,11 +36,11 @@
 
 #include "Chrome.h"
 #include "EventHandler.h"
-#include "Frame.h"
 #include "FrameView.h"
 #include "IntPoint.h"
 #include "IntRect.h"
 #include "IntSize.h"
+#include "MainFrame.h"
 #include "Page.h"
 #include "PlatformEvent.h"
 #include "PlatformKeyboardEvent.h"
@@ -49,16 +49,28 @@
 #include <wtf/CurrentTime.h>
 #include <wtf/text/WTFString.h>
 
+using namespace Inspector;
+
 namespace WebCore {
 
-InspectorInputAgent::InspectorInputAgent(InstrumentingAgents* instrumentingAgents, InspectorCompositeState* inspectorState, Page* page)
-    : InspectorBaseAgent<InspectorInputAgent>("Input", instrumentingAgents, inspectorState)
+InspectorInputAgent::InspectorInputAgent(InstrumentingAgents* instrumentingAgents, Page* page)
+    : InspectorAgentBase(ASCIILiteral("Input"), instrumentingAgents)
     , m_page(page)
 {
 }
 
 InspectorInputAgent::~InspectorInputAgent()
 {
+}
+
+void InspectorInputAgent::didCreateFrontendAndBackend(Inspector::InspectorFrontendChannel*, InspectorBackendDispatcher* backendDispatcher)
+{
+    m_backendDispatcher = InspectorInputBackendDispatcher::create(backendDispatcher, this);
+}
+
+void InspectorInputAgent::willDestroyFrontendAndBackend(InspectorDisconnectReason)
+{
+    m_backendDispatcher.clear();
 }
 
 void InspectorInputAgent::dispatchKeyEvent(ErrorString* error, const String& type, const int* modifiers, const double* timestamp, const String* text, const String* unmodifiedText, const String* keyIdentifier, const int* windowsVirtualKeyCode, const int* nativeVirtualKeyCode, const int* macCharCode, const bool* autoRepeat, const bool* isKeypad, const bool* isSystemKey)
@@ -90,7 +102,7 @@ void InspectorInputAgent::dispatchKeyEvent(ErrorString* error, const String& typ
         isSystemKey ? *isSystemKey : false,
         static_cast<PlatformEvent::Modifiers>(modifiers ? *modifiers : 0),
         timestamp ? *timestamp : currentTime());
-    m_page->mainFrame()->eventHandler()->keyEvent(event);
+    m_page->mainFrame().eventHandler().keyEvent(event);
 }
 
 void InspectorInputAgent::dispatchMouseEvent(ErrorString* error, const String& type, int x, int y, const int* modifiers, const double* timestamp, const String* button, const int* clickCount)
@@ -125,7 +137,7 @@ void InspectorInputAgent::dispatchMouseEvent(ErrorString* error, const String& t
 
     // Some platforms may have flipped coordinate systems, but the given coordinates
     // assume the origin is in the top-left of the window. Convert.
-    IntPoint convertedPoint = m_page->mainFrame()->view()->convertToContainingWindow(IntPoint(x, y));
+    IntPoint convertedPoint = m_page->mainFrame().view()->convertToContainingWindow(IntPoint(x, y));
     IntPoint globalPoint = m_page->chrome().rootViewToScreen(IntRect(IntPoint(x, y), IntSize(0, 0))).location();
 
     PlatformMouseEvent event(
@@ -140,16 +152,16 @@ void InspectorInputAgent::dispatchMouseEvent(ErrorString* error, const String& t
         convertedModifiers & PlatformEvent::MetaKey,
         timestamp ? *timestamp : currentTime());
 
-    EventHandler* handler = m_page->mainFrame()->eventHandler();
+    EventHandler& eventHandler = m_page->mainFrame().eventHandler();
     switch (convertedType) {
     case PlatformEvent::MousePressed:
-        handler->handleMousePressEvent(event);
+        eventHandler.handleMousePressEvent(event);
         break;
     case PlatformEvent::MouseReleased:
-        handler->handleMouseReleaseEvent(event);
+        eventHandler.handleMouseReleaseEvent(event);
         break;
     case PlatformEvent::MouseMoved:
-        handler->handleMouseMoveEvent(event);
+        eventHandler.handleMouseMoveEvent(event);
         break;
     default:
         *error = "Unhandled type: " + type;

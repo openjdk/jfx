@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -90,7 +90,8 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 {
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
     {
-        GET_MAIN_JENV;
+        assert(pthread_main_np() == 1);
+        JNIEnv *env = jEnv;
         if (env != NULL)
         {
             (*env)->CallVoidMethod(env, self->jRunnable, jRunnableRun);
@@ -104,7 +105,8 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 
 - (void)dealloc
 {
-    GET_MAIN_JENV;
+    assert(pthread_main_np() == 1);
+    JNIEnv *env = jEnv;
     if (env != NULL)
     {
         (*env)->DeleteGlobalRef(env, self->jRunnable);
@@ -148,8 +150,12 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 {
     LOG("GlassApplicationDidChangeScreenParameters");
 
-    GET_MAIN_JENV;
-    GlassScreenDidChangeScreenParameters(env);
+    assert(pthread_main_np() == 1);
+    JNIEnv *env = jEnv;
+    if (env != NULL)
+    {
+        GlassScreenDidChangeScreenParameters(env);
+    }
 }
 
 - (void)applicationWillFinishLaunching:(NSNotification *)aNotification
@@ -185,7 +191,30 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
                 }
                 else
                 {
-                [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(GlassApplicationDidChangeScreenParameters) name:NSApplicationDidChangeScreenParametersNotification object:nil];
+                    [[NSNotificationCenter defaultCenter] addObserver:self
+                                                             selector:@selector(GlassApplicationDidChangeScreenParameters)
+                                                                 name:NSApplicationDidChangeScreenParametersNotification
+                                                               object:nil];
+
+                    // localMonitor = [NSEvent addLocalMonitorForEventsMatchingMask: NSRightMouseDownMask
+                    //                                                      handler:^(NSEvent *incomingEvent) {
+                    //                                                          NSEvent *result = incomingEvent;
+                    //                                                          NSWindow *targetWindowForEvent = [incomingEvent window];
+                    //                                                          LOG("NSRightMouseDownMask local");
+                    //                                                          return result;
+                    //                                                      }];
+                    //
+                    // globalMonitor = [NSEvent addGlobalMonitorForEventsMatchingMask: NSRightMouseDownMask
+                    //                                                      handler:^(NSEvent *incomingEvent) {
+                    //                                                          NSEvent *result = incomingEvent;
+                    //                                                          NSWindow *targetWindowForEvent = [incomingEvent window];
+                    //                                                          NSWindow *window = [[NSApplication sharedApplication]
+                    //                                                                       windowWithWindowNumber:[incomingEvent windowNumber]];
+                    //                                                          NSWindow *appWindow = [[NSApplication sharedApplication] mainWindow];
+                    //                                                          LOG("NSRightMouseDownMask global: %p num %d win %p appwin %p",
+                    //                                                              targetWindowForEvent, [incomingEvent windowNumber], window,
+                    //                                                              [[NSApplication sharedApplication] mainWindow]);
+                    //                                                     }];
                 }
             }
             else if (runnableClass == 0)

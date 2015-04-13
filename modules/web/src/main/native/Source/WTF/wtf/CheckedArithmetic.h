@@ -27,11 +27,10 @@
 #define CheckedArithmetic_h
 
 #include <wtf/Assertions.h>
-#include <wtf/EnumClass.h>
-#include <wtf/TypeTraits.h>
 
 #include <limits>
 #include <stdint.h>
+#include <type_traits>
 
 /* Checked<T>
  *
@@ -67,12 +66,11 @@
 
 namespace WTF {
 
-ENUM_CLASS(CheckedState)
-{
+enum class CheckedState {
     DidOverflow,
     DidNotOverflow
-} ENUM_CLASS_END(CheckedState);
-    
+};
+
 class CrashOnOverflow {
 public:
     static NO_RETURN_DUE_TO_CRASH void overflowed()
@@ -112,7 +110,7 @@ private:
 
 template <typename T, class OverflowHandler = CrashOnOverflow> class Checked;
 template <typename T> struct RemoveChecked;
-template <typename T> struct RemoveChecked<Checked<T> >;
+template <typename T> struct RemoveChecked<Checked<T>>;
 
 template <typename Target, typename Source, bool targetSigned = std::numeric_limits<Target>::is_signed, bool sourceSigned = std::numeric_limits<Source>::is_signed> struct BoundsChecker;
 template <typename Target, typename Source> struct BoundsChecker<Target, Source, false, false> {
@@ -161,7 +159,7 @@ template <typename Target, typename Source> struct BoundsChecker<Target, Source,
     }
 };
 
-template <typename Target, typename Source, bool CanElide = IsSameType<Target, Source>::value || (sizeof(Target) > sizeof(Source)) > struct BoundsCheckElider;
+template <typename Target, typename Source, bool CanElide = std::is_same<Target, Source>::value || (sizeof(Target) > sizeof(Source)) > struct BoundsCheckElider;
 template <typename Target, typename Source> struct BoundsCheckElider<Target, Source, true> {
     static bool inBounds(Source) { return true; }
 };
@@ -178,12 +176,12 @@ template <typename T> struct RemoveChecked {
     static const CleanType DefaultValue = 0;    
 };
 
-template <typename T> struct RemoveChecked<Checked<T, CrashOnOverflow> > {
+template <typename T> struct RemoveChecked<Checked<T, CrashOnOverflow>> {
     typedef typename RemoveChecked<T>::CleanType CleanType;
     static const CleanType DefaultValue = 0;
 };
 
-template <typename T> struct RemoveChecked<Checked<T, RecordOverflow> > {
+template <typename T> struct RemoveChecked<Checked<T, RecordOverflow>> {
     typedef typename RemoveChecked<T>::CleanType CleanType;
     static const CleanType DefaultValue = 0;
 };
@@ -419,9 +417,6 @@ template <typename U, typename V> static inline bool safeEquals(U lhs, V rhs)
 
 enum ResultOverflowedTag { ResultOverflowed };
     
-// FIXME: Needed to workaround http://llvm.org/bugs/show_bug.cgi?id=10801
-static inline bool workAroundClangBug() { return true; }
-
 template <typename T, class OverflowHandler> class Checked : public OverflowHandler {
 public:
     template <typename _T, class _OverflowHandler> friend class Checked;
@@ -433,9 +428,7 @@ public:
     Checked(ResultOverflowedTag)
         : m_value(0)
     {
-        // FIXME: Remove this when clang fixes http://llvm.org/bugs/show_bug.cgi?id=10801
-        if (workAroundClangBug())
-            this->overflowed();
+        this->overflowed();
     }
 
     template <typename U> Checked(U value)
@@ -712,10 +705,30 @@ template <typename U, typename V, typename OverflowHandler> static inline Checke
     return Checked<U, OverflowHandler>(lhs) * rhs;
 }
 
+// Convenience typedefs.
+typedef Checked<int8_t, RecordOverflow> CheckedInt8;
+typedef Checked<uint8_t, RecordOverflow> CheckedUint8;
+typedef Checked<int16_t, RecordOverflow> CheckedInt16;
+typedef Checked<uint16_t, RecordOverflow> CheckedUint16;
+typedef Checked<int32_t, RecordOverflow> CheckedInt32;
+typedef Checked<uint32_t, RecordOverflow> CheckedUint32;
+typedef Checked<int64_t, RecordOverflow> CheckedInt64;
+typedef Checked<uint64_t, RecordOverflow> CheckedUint64;
+typedef Checked<size_t, RecordOverflow> CheckedSize;
+
 }
 
 using WTF::Checked;
 using WTF::CheckedState;
 using WTF::RecordOverflow;
+using WTF::CheckedInt8;
+using WTF::CheckedUint8;
+using WTF::CheckedInt16;
+using WTF::CheckedUint16;
+using WTF::CheckedInt32;
+using WTF::CheckedUint32;
+using WTF::CheckedInt64;
+using WTF::CheckedUint64;
+using WTF::CheckedSize;
 
 #endif

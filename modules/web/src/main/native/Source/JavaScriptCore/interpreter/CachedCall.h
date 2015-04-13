@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2009, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,9 +27,12 @@
 #define CachedCall_h
 
 #include "CallFrameClosure.h"
+#include "ExceptionHelpers.h"
 #include "JSFunction.h"
 #include "JSGlobalObject.h"
 #include "Interpreter.h"
+#include "ProtoCallFrame.h"
+#include "VMEntryScope.h"
 
 namespace JSC {
     class CachedCall {
@@ -38,10 +41,14 @@ namespace JSC {
         CachedCall(CallFrame* callFrame, JSFunction* function, int argumentCount)
             : m_valid(false)
             , m_interpreter(callFrame->interpreter())
-            , m_globalObjectScope(callFrame->vm(), function->scope()->globalObject())
+            , m_entryScope(callFrame->vm(), function->scope()->globalObject())
         {
-            ASSERT(!function->isHostFunction());
-            m_closure = m_interpreter->prepareForRepeatCall(function->jsExecutable(), callFrame, function, argumentCount + 1, function->scope());
+            ASSERT(!function->isHostFunctionNonInline());
+            if (callFrame->vm().isSafeToRecurse()) {
+                m_arguments.resize(argumentCount);
+                m_closure = m_interpreter->prepareForRepeatCall(function->jsExecutable(), callFrame, &m_protoCallFrame, function, argumentCount + 1, function->scope(), m_arguments.data());
+            } else
+                throwStackOverflowError(callFrame);
             m_valid = !callFrame->hadException();
         }
         
@@ -50,26 +57,15 @@ namespace JSC {
             ASSERT(m_valid);
             return m_interpreter->execute(m_closure);
         }
-        void setThis(JSValue v) { m_closure.setThis(v); }
-        void setArgument(int n, JSValue v) { m_closure.setArgument(n, v); }
+        void setThis(JSValue v) { m_protoCallFrame.setThisValue(v); }
+        void setArgument(int n, JSValue v) { m_protoCallFrame.setArgument(n, v); }
 
-        CallFrame* newCallFrame(ExecState* exec)
-        {
-            CallFrame* callFrame = m_closure.newCallFrame;
-            callFrame->setScope(exec->scope());
-            return callFrame;
-        }
-
-        ~CachedCall()
-        {
-            if (m_valid)
-                m_interpreter->endRepeatCall(m_closure);
-        }
-        
     private:
         bool m_valid;
         Interpreter* m_interpreter;
-        DynamicGlobalObjectScope m_globalObjectScope;
+        VMEntryScope m_entryScope;
+        ProtoCallFrame m_protoCallFrame;
+        Vector<JSValue> m_arguments;
         CallFrameClosure m_closure;
     };
 }

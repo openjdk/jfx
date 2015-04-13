@@ -49,10 +49,14 @@ public:
     void pin();
     bool isPinned();
 
+    bool isOld();
     bool isOversize();
+    void didPromote();
 
     unsigned liveBytes();
-    void reportLiveBytes(JSCell*, unsigned);
+    bool shouldReportLiveBytes(SpinLockHolder&, JSCell* owner);
+    void reportLiveBytes(SpinLockHolder&, JSCell*, CopyToken, unsigned);
+    void reportLiveBytesDuringCopying(unsigned);
     void didSurviveGC();
     void didEvacuateBytes(unsigned);
     bool shouldEvacuate();
@@ -81,19 +85,24 @@ public:
 
     bool hasWorkList();
     CopyWorkList& workList();
+    SpinLock& workListLock() { return m_workListLock; }
 
 private:
     CopiedBlock(Region*);
     void zeroFillWilderness(); // Can be called at any time to zero-fill to the end of the block.
 
-#if ENABLE(PARALLEL_GC)
+    void checkConsistency();
+
     SpinLock m_workListLock;
-#endif
     OwnPtr<CopyWorkList> m_workList;
 
     size_t m_remaining;
-    uintptr_t m_isPinned;
+    bool m_isPinned : 1;
+    bool m_isOld : 1;
     unsigned m_liveBytes;
+#ifndef NDEBUG
+    unsigned m_liveObjects;
+#endif
 };
 
 inline CopiedBlock* CopiedBlock::createNoZeroFill(DeadBlock* block)
@@ -125,17 +134,23 @@ inline CopiedBlock::CopiedBlock(Region* region)
     : HeapBlock<CopiedBlock>(region)
     , m_remaining(payloadCapacity())
     , m_isPinned(false)
+    , m_isOld(false)
     , m_liveBytes(0)
-{
-#if ENABLE(PARALLEL_GC)
-    m_workListLock.Init();
+#ifndef NDEBUG
+    , m_liveObjects(0)
 #endif
+{
+    m_workListLock.Init();
     ASSERT(is8ByteAligned(reinterpret_cast<void*>(m_remaining)));
 }
 
 inline void CopiedBlock::didSurviveGC()
 {
+    checkConsistency();
     m_liveBytes = 0;
+#ifndef NDEBUG
+    m_liveObjects = 0;
+#endif
     m_isPinned = false;
     if (m_workList)
         m_workList.clear();
@@ -144,16 +159,24 @@ inline void CopiedBlock::didSurviveGC()
 inline void CopiedBlock::didEvacuateBytes(unsigned bytes)
 {
     ASSERT(m_liveBytes >= bytes);
+    ASSERT(m_liveObjects);
+    checkConsistency();
     m_liveBytes -= bytes;
+#ifndef NDEBUG
+    m_liveObjects--;
+#endif
+    checkConsistency();
 }
 
 inline bool CopiedBlock::canBeRecycled()
 {
+    checkConsistency();
     return !m_liveBytes;
 }
 
 inline bool CopiedBlock::shouldEvacuate()
 {
+    checkConsistency();
     return static_cast<double>(m_liveBytes) / static_cast<double>(payloadCapacity()) <= Options::minCopiedBlockUtilization();
 }
 
@@ -169,6 +192,16 @@ inline bool CopiedBlock::isPinned()
     return m_isPinned;
 }
 
+inline bool CopiedBlock::isOld()
+{
+    return m_isOld;
+}
+
+inline void CopiedBlock::didPromote()
+{
+    m_isOld = true;
+}
+
 inline bool CopiedBlock::isOversize()
 {
     return region()->isCustomSize();
@@ -176,6 +209,7 @@ inline bool CopiedBlock::isOversize()
 
 inline unsigned CopiedBlock::liveBytes()
 {
+    checkConsistency();
     return m_liveBytes;
 }
 
@@ -242,6 +276,11 @@ inline bool CopiedBlock::hasWorkList()
 inline CopyWorkList& CopiedBlock::workList()
 {
     return *m_workList;
+}
+
+inline void CopiedBlock::checkConsistency()
+{
+    ASSERT(!!m_liveBytes == !!m_liveObjects);
 }
 
 } // namespace JSC

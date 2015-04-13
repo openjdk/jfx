@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -106,8 +106,14 @@ class TreeUtil {
         
         TreeItem<T> sibling;
         List<TreeItem<T>> siblings;
+        boolean parentIsCollapsed = false;
         
         while (!i.equals(root) && p != null) {
+            if (!p.isExpanded()) {
+                parentIsCollapsed = true;
+                break;
+            }
+
             siblings = p.children;
             
             // work up each sibling, from the current item
@@ -134,6 +140,6 @@ class TreeUtil {
             row++;
         }
         
-        return p == null && row == 0 ? -1 : isShowRoot ? row : row - 1;
+        return (p == null && row == 0) || parentIsCollapsed ? -1 : isShowRoot ? row : row - 1;
     }
 }

@@ -48,7 +48,7 @@ static const ULONGLONG kSecondsFromFileTimeToTimet = 11644473600;
 
 static bool getFindData(String path, WIN32_FIND_DATAW& findData)
 {
-    HANDLE handle = FindFirstFileW(path.charactersWithNullTermination(), &findData);
+    HANDLE handle = FindFirstFileW(path.charactersWithNullTermination().data(), &findData);
     if (handle == INVALID_HANDLE_VALUE)
         return false;
     FindClose(handle);
@@ -67,6 +67,17 @@ static bool getFileSizeFromFindData(const WIN32_FIND_DATAW& findData, long long&
     size = fileSize.QuadPart;
     return true;
 }
+
+static void getFileCreationTimeFromFindData(const WIN32_FIND_DATAW& findData, time_t& time)
+{
+    ULARGE_INTEGER fileTime;
+    fileTime.HighPart = findData.ftCreationTime.dwHighDateTime;
+    fileTime.LowPart = findData.ftCreationTime.dwLowDateTime;
+
+    // Information about converting time_t to FileTime is available at http://msdn.microsoft.com/en-us/library/ms724228%28v=vs.85%29.aspx
+    time = fileTime.QuadPart / 10000000 - kSecondsFromFileTimeToTimet;
+}
+
 
 static void getFileModificationTimeFromFindData(const WIN32_FIND_DATAW& findData, time_t& time)
 {
@@ -97,6 +108,16 @@ bool getFileModificationTime(const String& path, time_t& time)
     return true;
 }
 
+bool getFileCreationTime(const String& path, time_t& time)
+{
+    WIN32_FIND_DATAW findData;
+    if (!getFindData(path, findData))
+        return false;
+
+    getFileCreationTimeFromFindData(findData, time);
+    return true;
+}
+
 bool getFileMetadata(const String& path, FileMetadata& metadata)
 {
     WIN32_FIND_DATAW findData;
@@ -124,13 +145,13 @@ bool fileExists(const String& path)
 bool deleteFile(const String& path)
 {
     String filename = path;
-    return !!DeleteFileW(filename.charactersWithNullTermination());
+    return !!DeleteFileW(filename.charactersWithNullTermination().data());
 }
 
 bool deleteEmptyDirectory(const String& path)
 {
     String filename = path;
-    return !!RemoveDirectoryW(filename.charactersWithNullTermination());
+    return !!RemoveDirectoryW(filename.charactersWithNullTermination().data());
 }
 
 String pathByAppendingComponent(const String& path, const String& component)
@@ -138,23 +159,23 @@ String pathByAppendingComponent(const String& path, const String& component)
     Vector<UChar> buffer(MAX_PATH);
 
 #if OS(WINCE)
-    buffer.append(path.characters(), path.length());
+    buffer.append(path.deprecatedCharacters(), path.length());
 
     UChar lastPathCharacter = path[path.length() - 1];
     if (lastPathCharacter != L'\\' && lastPathCharacter != L'/' && component[0] != L'\\' && component[0] != L'/')
         buffer.append(PlatformFilePathSeparator);
 
-    buffer.append(component.characters(), component.length());
+    buffer.append(component.deprecatedCharacters(), component.length());
     buffer.shrinkToFit();
 #else
     if (path.length() + 1 > buffer.size())
         return String();
 
-    memcpy(buffer.data(), path.characters(), path.length() * sizeof(UChar));
+    memcpy(buffer.data(), path.deprecatedCharacters(), path.length() * sizeof(UChar));
     buffer[path.length()] = '\0';
 
     String componentCopy = component;
-    if (!PathAppendW(buffer.data(), componentCopy.charactersWithNullTermination()))
+    if (!PathAppendW(buffer.data(), componentCopy.charactersWithNullTermination().data()))
         return String();
 
     buffer.resize(wcslen(buffer.data()));
@@ -167,7 +188,7 @@ String pathByAppendingComponent(const String& path, const String& component)
 
 CString fileSystemRepresentation(const String& path)
 {
-    const UChar* characters = path.characters();
+    const UChar* characters = path.deprecatedCharacters();
     int size = WideCharToMultiByte(CP_ACP, 0, characters, path.length(), 0, 0, 0, 0) - 1;
 
     char* buffer;
@@ -183,7 +204,7 @@ CString fileSystemRepresentation(const String& path)
 bool makeAllDirectories(const String& path)
 {
     String fullPath = path;
-    if (SHCreateDirectoryEx(0, fullPath.charactersWithNullTermination(), 0) != ERROR_SUCCESS) {
+    if (SHCreateDirectoryEx(0, fullPath.charactersWithNullTermination().data(), 0) != ERROR_SUCCESS) {
         DWORD error = GetLastError();
         if (error != ERROR_FILE_EXISTS && error != ERROR_ALREADY_EXISTS) {
             LOG_ERROR("Failed to create path %s", path.ascii().data());
@@ -217,7 +238,7 @@ String pathGetFileName(const String& path)
         return path;
     return path.substring(position + 1);
 #else
-    return String(::PathFindFileName(String(path).charactersWithNullTermination()));
+    return String(::PathFindFileName(String(path).charactersWithNullTermination().data()));
 #endif
 }
 
@@ -253,6 +274,9 @@ static String bundleName()
 
 static String storageDirectory(DWORD pathIdentifier)
 {
+#if OS(WINCE)
+    return String();
+#else
     Vector<UChar> buffer(MAX_PATH);
     if (FAILED(SHGetFolderPathW(0, pathIdentifier | CSIDL_FLAG_CREATE, 0, 0, buffer.data())))
         return String();
@@ -265,6 +289,7 @@ static String storageDirectory(DWORD pathIdentifier)
         return String();
 
     return directory;
+#endif
 }
 
 static String cachedStorageDirectory(DWORD pathIdentifier)
@@ -309,7 +334,7 @@ String openTemporaryFile(const String&, PlatformFileHandle& handle)
             break;
 
         // use CREATE_NEW to avoid overwriting an existing file with the same name
-        handle = ::CreateFileW(proposedPath.charactersWithNullTermination(), GENERIC_READ | GENERIC_WRITE, 0, 0, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, 0);
+        handle = ::CreateFileW(proposedPath.charactersWithNullTermination().data(), GENERIC_READ | GENERIC_WRITE, 0, 0, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, 0);
     } while (!isHandleValid(handle) && GetLastError() == ERROR_ALREADY_EXISTS);
 
     if (!isHandleValid(handle))
@@ -336,7 +361,7 @@ PlatformFileHandle openFile(const String& path, FileOpenMode mode)
     }
 
     String destination = path;
-    return CreateFile(destination.charactersWithNullTermination(), desiredAccess, 0, 0, creationDisposition, FILE_ATTRIBUTE_NORMAL, 0);
+    return CreateFile(destination.charactersWithNullTermination().data(), desiredAccess, 0, 0, creationDisposition, FILE_ATTRIBUTE_NORMAL, 0);
 }
 
 void closeFile(PlatformFileHandle& handle)
@@ -359,12 +384,12 @@ long long seekFile(PlatformFileHandle handle, long long offset, FileSeekOrigin o
     LARGE_INTEGER largeOffset;
     largeOffset.QuadPart = offset;
 
-    LARGE_INTEGER newOffset;
-    newOffset.QuadPart = 0;
+    largeOffset.LowPart = SetFilePointer(handle, largeOffset.LowPart, &largeOffset.HighPart, moveMethod);
 
-    SetFilePointerEx(handle, largeOffset, &newOffset, moveMethod);
+    if (largeOffset.LowPart == INVALID_SET_FILE_POINTER && GetLastError() != NO_ERROR)
+        return -1;
 
-    return newOffset.QuadPart;
+    return largeOffset.QuadPart;
 }
 
 int writeToFile(PlatformFileHandle handle, const char* data, int length)
@@ -378,6 +403,19 @@ int writeToFile(PlatformFileHandle handle, const char* data, int length)
     if (!success)
         return -1;
     return static_cast<int>(bytesWritten);
+}
+
+int readFromFile(PlatformFileHandle handle, char* data, int length)
+{
+    if (!isHandleValid(handle))
+        return -1;
+
+    DWORD bytesRead;
+    bool success = ::ReadFile(handle, data, length, &bytesRead, 0);
+
+    if (!success)
+        return -1;
+    return static_cast<int>(bytesRead);
 }
 
 bool unloadModule(PlatformModule module)

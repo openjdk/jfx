@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -154,14 +154,15 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_ios_IosView__1getNativeView
 
 /*
  * Class:     com_sun_glass_ui_ios_IosView
- * Method:    _getX
+ * Method:    _getNativeFrameBuffer
  * Signature: (J)I
  */
-JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_ios_IosView_getFrameBufferImpl
-(JNIEnv *env, jobject jview, jlong ptr) {
-    
-    jlong framebuffer = 0;
-    
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_ios_IosView__1getNativeFrameBuffer
+(JNIEnv *env, jobject jView, jlong ptr)
+{
+
+    jint framebuffer = 0;
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -173,9 +174,9 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_ios_IosView_getFrameBufferImpl
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
-    GLASS_LOG("Java_com_sun_glass_ui_ios_IosView_getFrameBufferImpl() returns %lld",framebuffer);
-    
+
+    GLASS_LOG("Java_com_sun_glass_ui_ios_IosView_1getNativeFrameBuffer() returns %d",framebuffer);
+
     return framebuffer;
 }
 

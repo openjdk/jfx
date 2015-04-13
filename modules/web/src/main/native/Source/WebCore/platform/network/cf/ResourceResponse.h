@@ -47,26 +47,26 @@ public:
 
 #if USE(CFNETWORK)
     ResourceResponse(CFURLResponseRef cfResponse)
-        : m_cfResponse(cfResponse)
-        , m_initLevel(Uninitialized)
+        : m_initLevel(Uninitialized)
         , m_platformResponseIsUpToDate(true)
+        , m_cfResponse(cfResponse)
     {
         m_isNull = !cfResponse;
     }
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
     ResourceResponse(NSURLResponse *);
 #endif
 #else
     ResourceResponse(NSURLResponse *nsResponse)
-        : m_nsResponse(nsResponse)
-        , m_initLevel(Uninitialized)
+        : m_initLevel(Uninitialized)
         , m_platformResponseIsUpToDate(true)
+        , m_nsResponse(nsResponse)
     {
         m_isNull = !nsResponse;
     }
 #endif
 
-    ResourceResponse(const KURL& url, const String& mimeType, long long expectedLength, const String& textEncodingName, const String& filename)
+    ResourceResponse(const URL& url, const String& mimeType, long long expectedLength, const String& textEncodingName, const String& filename)
         : ResourceResponseBase(url, mimeType, expectedLength, textEncodingName, filename)
         , m_initLevel(CommonAndUncommonFields)
         , m_platformResponseIsUpToDate(false)
@@ -88,11 +88,11 @@ public:
 #if USE(CFNETWORK)
     CFURLResponseRef cfURLResponse() const;
 #endif
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
     NSURLResponse *nsURLResponse() const;
 #endif
 
-#if PLATFORM(MAC) || USE(CFNETWORK)
+#if PLATFORM(COCOA) || USE(CFNETWORK)
     void setCertificateChain(CFArrayRef);
     RetainPtr<CFArrayRef> certificateChain() const;
 #endif
@@ -105,24 +105,25 @@ private:
     void platformLazyInit(InitLevel);
     PassOwnPtr<CrossThreadResourceResponseData> doPlatformCopyData(PassOwnPtr<CrossThreadResourceResponseData> data) const { return data; }
     void doPlatformAdopt(PassOwnPtr<CrossThreadResourceResponseData>) { }
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
     void initNSURLResponse() const;
 #endif
 
     static bool platformCompare(const ResourceResponse& a, const ResourceResponse& b);
 
+    InitLevel m_initLevel : 3;
+    bool m_platformResponseIsUpToDate : 1;
+
 #if USE(CFNETWORK)
     mutable RetainPtr<CFURLResponseRef> m_cfResponse;
 #endif
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
     mutable RetainPtr<NSURLResponse> m_nsResponse;
 #endif
-#if PLATFORM(MAC) || USE(CFNETWORK)
+#if PLATFORM(COCOA) || USE(CFNETWORK)
     // Certificate chain is normally part of NS/CFURLResponse, but there is no way to re-add it to a deserialized response after IPC.
     RetainPtr<CFArrayRef> m_externalCertificateChain;
 #endif
-    InitLevel m_initLevel;
-    bool m_platformResponseIsUpToDate;
 };
 
 struct CrossThreadResourceResponseData : public CrossThreadResourceResponseDataBase {

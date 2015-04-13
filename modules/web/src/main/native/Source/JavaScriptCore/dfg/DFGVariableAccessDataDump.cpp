@@ -30,6 +30,7 @@
 
 #include "DFGGraph.h"
 #include "DFGVariableAccessData.h"
+#include "JSCInlines.h"
 
 namespace JSC { namespace DFG {
 
@@ -68,7 +69,7 @@ void VariableAccessDataDump::dump(PrintStream& out) const
     else if (!m_data->shouldUnboxIfPossible())
         out.print("~");
 
-    out.print(AbbreviatedSpeculationDump(m_data->prediction()));
+    out.print(AbbreviatedSpeculationDump(m_data->prediction()), "/", m_data->flushFormat());
 }
 
 } } // namespace JSC::DFG

@@ -90,7 +90,7 @@ enum {
      * @stable ICU 3.2
      */
     USET_ADD_CASE_MAPPINGS = 4,
-
+    
     /**
      * Enough for any single-code point set
      * @internal
@@ -404,7 +404,7 @@ uset_set(USet* set,
  *                          of the parsed pattern.
  *                          If the status code indicates failure, then the return value 
  *                          is the index of the error in the source.
- *                                  
+ *
  * @stable ICU 2.8
  */
 U_STABLE int32_t U_EXPORT2 

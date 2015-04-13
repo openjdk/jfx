@@ -44,7 +44,7 @@ void init()
         AtomicString::init();
 #define INITIALIZE_GLOBAL(name, str) new (NotNull, (void*)&name##MediaFeature) AtomicString(str, AtomicString::ConstructFromLiteral);
         CSS_MEDIAQUERY_NAMES_FOR_EACH_MEDIAFEATURE(INITIALIZE_GLOBAL)
-        #undef INITIALIZE_GLOBAL
+#undef INITIALIZE_GLOBAL
         initialized = true;
     }
 }

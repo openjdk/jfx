@@ -21,7 +21,6 @@
 #ifndef SVGTransform_h
 #define SVGTransform_h
 
-#if ENABLE(SVG)
 #include "FloatPoint.h"
 #include "SVGMatrix.h"
 
@@ -54,7 +53,7 @@ public:
 
     SVGMatrix& svgMatrix() { return static_cast<SVGMatrix&>(m_matrix); }
     AffineTransform matrix() const { return m_matrix; }
-    void updateMatrix();
+    void updateSVGMatrix();
 
     float angle() const { return m_angle; }
     FloatPoint rotationCenter() const { return m_center; }
@@ -96,5 +95,4 @@ inline bool operator!=(const SVGTransform& a, const SVGTransform& b)
 
 } // namespace WebCore
 
-#endif // ENABLE(SVG)
 #endif

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2009, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,55 +26,54 @@
 #ifndef GraphicsContext3D_h
 #define GraphicsContext3D_h
 
+#include "ANGLEWebKitBridge.h"
 #include "GraphicsTypes3D.h"
 #include "Image.h"
 #include "IntRect.h"
-#include "KURL.h"
 #include "PlatformLayer.h"
+#include <memory>
 #include <wtf/HashMap.h>
 #include <wtf/ListHashSet.h>
 #include <wtf/Noncopyable.h>
-#include <wtf/OwnArrayPtr.h>
-#include <wtf/PassOwnArrayPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
 
+#if USE(CA)
+#include "PlatformCALayer.h"
+#endif
+
 // FIXME: Find a better way to avoid the name confliction for NO_ERROR.
-#if PLATFORM(WIN) || (PLATFORM(QT) && OS(WINDOWS))
+#if PLATFORM(WIN)
 #undef NO_ERROR
 #elif PLATFORM(GTK)
 // This define is from the X11 headers, but it's used below, so we must undefine it.
 #undef VERSION
 #endif
 
-#if PLATFORM(MAC) || PLATFORM(GTK) || PLATFORM(QT) || PLATFORM(EFL) || PLATFORM(BLACKBERRY)
-#include "ANGLEWebKitBridge.h"
-#endif
-
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
+#if PLATFORM(IOS)
+#include <OpenGLES/ES2/gl.h>
+#ifdef __OBJC__
+#import <OpenGLES/EAGL.h>
+#endif // __OBJC__
+#endif // PLATFORM(IOS)
 #include <wtf/RetainPtr.h>
 OBJC_CLASS CALayer;
 OBJC_CLASS WebGLLayer;
-#elif PLATFORM(QT)
-QT_BEGIN_NAMESPACE
-class QPainter;
-class QRect;
-class QGLWidget;
-class QGLContext;
-class QOpenGLContext;
-class QSurface;
-QT_END_NAMESPACE
 #elif PLATFORM(GTK) || PLATFORM(EFL)
 typedef unsigned int GLuint;
 #endif
 
-#if PLATFORM(MAC)
+#if PLATFORM(IOS)
+#ifdef __OBJC__
+typedef EAGLContext* PlatformGraphicsContext3D;
+#else
+typedef void* PlatformGraphicsContext3D;
+#endif // __OBJC__
+#elif PLATFORM(MAC)
 typedef struct _CGLContextObject *CGLContextObj;
 
 typedef CGLContextObj PlatformGraphicsContext3D;
-#elif PLATFORM(QT)
-typedef QOpenGLContext* PlatformGraphicsContext3D;
-typedef QSurface* PlatformGraphicsSurface3D;
 #else
 typedef void* PlatformGraphicsContext3D;
 typedef void* PlatformGraphicsSurface3D;
@@ -92,9 +91,6 @@ class Extensions3DOpenGLES;
 #else
 class Extensions3DOpenGL;
 #endif
-#if PLATFORM(QT)
-class Extensions3DQt;
-#endif
 class HostWindow;
 class Image;
 class ImageBuffer;
@@ -104,9 +100,9 @@ class IntRect;
 class IntSize;
 #if USE(CAIRO)
 class PlatformContextCairo;
-#elif PLATFORM(BLACKBERRY)
-class GraphicsContext;
 #endif
+
+typedef WTF::HashMap<CString, uint64_t> ShaderNameHash;
 
 struct ActiveInfo {
     String name;
@@ -429,7 +425,8 @@ public:
         UNPACK_PREMULTIPLY_ALPHA_WEBGL = 0x9241,
         CONTEXT_LOST_WEBGL = 0x9242,
         UNPACK_COLORSPACE_CONVERSION_WEBGL = 0x9243,
-        BROWSER_DEFAULT_WEBGL = 0x9244
+        BROWSER_DEFAULT_WEBGL = 0x9244,
+        VERTEX_ATTRIB_ARRAY_DIVISOR_ANGLE = 0x88FE
     };
 
     // Context creation attributes.
@@ -444,6 +441,8 @@ public:
             , noExtensions(false)
             , shareResources(true)
             , preferDiscreteGPU(false)
+            , multithreaded(false)
+            , forceSoftwareRenderer(false)
         {
         }
 
@@ -456,7 +455,8 @@ public:
         bool noExtensions;
         bool shareResources;
         bool preferDiscreteGPU;
-        KURL topDocumentURL;
+        bool multithreaded;
+        bool forceSoftwareRenderer;
     };
 
     enum RenderStyle {
@@ -484,24 +484,20 @@ public:
     static PassRefPtr<GraphicsContext3D> createForCurrentGLContext();
     ~GraphicsContext3D();
 
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
     PlatformGraphicsContext3D platformGraphicsContext3D() const { return m_contextObj; }
     Platform3DObject platformTexture() const { return m_compositorTexture; }
     CALayer* platformLayer() const { return reinterpret_cast<CALayer*>(m_webGLLayer.get()); }
 #else
     PlatformGraphicsContext3D platformGraphicsContext3D();
     Platform3DObject platformTexture() const;
-#if USE(ACCELERATED_COMPOSITING)
     PlatformLayer* platformLayer() const;
-#endif
 #endif
 
     bool makeContextCurrent();
 
-#if PLATFORM(MAC) || PLATFORM(GTK) || PLATFORM(QT) || PLATFORM(EFL) || PLATFORM(BLACKBERRY)
     // With multisampling on, blit from multisampleFBO to regular FBO.
     void prepareTexture();
-#endif
 
     // Equivalent to ::glTexImage2D(). Allows pixels==0 with no allocation.
     void texImage2DDirect(GC3Denum target, GC3Dint level, GC3Denum internalformat, GC3Dsizei width, GC3Dsizei height, GC3Dint border, GC3Denum format, GC3Denum type, const void* pixels);
@@ -570,10 +566,12 @@ public:
         DataFormatRGBA8 = 0,
         DataFormatRGBA16Little,
         DataFormatRGBA16Big,
+        DataFormatRGBA16F,
         DataFormatRGBA32F,
         DataFormatRGB8,
         DataFormatRGB16Little,
         DataFormatRGB16Big,
+        DataFormatRGB16F,
         DataFormatRGB32F,
         DataFormatBGR8,
         DataFormatBGRA8,
@@ -589,10 +587,12 @@ public:
         DataFormatR8,
         DataFormatR16Little,
         DataFormatR16Big,
+        DataFormatR16F,
         DataFormatR32F,
         DataFormatRA8,
         DataFormatRA16Little,
         DataFormatRA16Big,
+        DataFormatRA16F,
         DataFormatRA32F,
         DataFormatAR8,
         DataFormatAR16Little,
@@ -600,23 +600,70 @@ public:
         DataFormatA8,
         DataFormatA16Little,
         DataFormatA16Big,
+        DataFormatA16F,
         DataFormatA32F,
         DataFormatNumFormats
     };
 
+    ALWAYS_INLINE static bool hasAlpha(DataFormat format)
+    {
+        return format == GraphicsContext3D::DataFormatA8
+            || format == GraphicsContext3D::DataFormatA16F
+            || format == GraphicsContext3D::DataFormatA32F
+            || format == GraphicsContext3D::DataFormatRA8
+            || format == GraphicsContext3D::DataFormatAR8
+            || format == GraphicsContext3D::DataFormatRA16F
+            || format == GraphicsContext3D::DataFormatRA32F
+            || format == GraphicsContext3D::DataFormatRGBA8
+            || format == GraphicsContext3D::DataFormatBGRA8
+            || format == GraphicsContext3D::DataFormatARGB8
+            || format == GraphicsContext3D::DataFormatABGR8
+            || format == GraphicsContext3D::DataFormatRGBA16F
+            || format == GraphicsContext3D::DataFormatRGBA32F
+            || format == GraphicsContext3D::DataFormatRGBA4444
+            || format == GraphicsContext3D::DataFormatRGBA5551;
+    }
+
+    ALWAYS_INLINE static bool hasColor(DataFormat format)
+    {
+        return format == GraphicsContext3D::DataFormatRGBA8
+            || format == GraphicsContext3D::DataFormatRGBA16F
+            || format == GraphicsContext3D::DataFormatRGBA32F
+            || format == GraphicsContext3D::DataFormatRGB8
+            || format == GraphicsContext3D::DataFormatRGB16F
+            || format == GraphicsContext3D::DataFormatRGB32F
+            || format == GraphicsContext3D::DataFormatBGR8
+            || format == GraphicsContext3D::DataFormatBGRA8
+            || format == GraphicsContext3D::DataFormatARGB8
+            || format == GraphicsContext3D::DataFormatABGR8
+            || format == GraphicsContext3D::DataFormatRGBA5551
+            || format == GraphicsContext3D::DataFormatRGBA4444
+            || format == GraphicsContext3D::DataFormatRGB565
+            || format == GraphicsContext3D::DataFormatR8
+            || format == GraphicsContext3D::DataFormatR16F
+            || format == GraphicsContext3D::DataFormatR32F
+            || format == GraphicsContext3D::DataFormatRA8
+            || format == GraphicsContext3D::DataFormatRA16F
+            || format == GraphicsContext3D::DataFormatRA32F
+            || format == GraphicsContext3D::DataFormatAR8;
+    }
+
     // Check if the format is one of the formats from the ImageData or DOM elements.
     // The formats from ImageData is always RGBA8.
     // The formats from DOM elements vary with Graphics ports. It can only be RGBA8 or BGRA8 for non-CG port while a little more for CG port.
-    static ALWAYS_INLINE bool srcFormatComeFromDOMElementOrImageData(DataFormat SrcFormat)
+    static ALWAYS_INLINE bool srcFormatComesFromDOMElementOrImageData(DataFormat SrcFormat)
     {
 #if USE(CG)
 #if CPU(BIG_ENDIAN)
-    return SrcFormat == DataFormatRGBA8 || SrcFormat == DataFormatARGB8 || SrcFormat == DataFormatRGB8;
+    return SrcFormat == DataFormatRGBA8 || SrcFormat == DataFormatARGB8 || SrcFormat == DataFormatRGB8
+        || SrcFormat == DataFormatRA8 || SrcFormat == DataFormatAR8 || SrcFormat == DataFormatR8 || SrcFormat == DataFormatA8;
 #else
     // That LITTLE_ENDIAN case has more possible formats than BIG_ENDIAN case is because some decoded image data is actually big endian
     // even on little endian architectures.
     return SrcFormat == DataFormatBGRA8 || SrcFormat == DataFormatABGR8 || SrcFormat == DataFormatBGR8
-        || SrcFormat == DataFormatRGBA8 || SrcFormat == DataFormatARGB8 || SrcFormat == DataFormatRGB8;
+        || SrcFormat == DataFormatRGBA8 || SrcFormat == DataFormatARGB8 || SrcFormat == DataFormatRGB8
+        || SrcFormat == DataFormatR8 || SrcFormat == DataFormatA8
+        || SrcFormat == DataFormatRA8 || SrcFormat == DataFormatAR8;
 #endif
 #else
     return SrcFormat == DataFormatBGRA8 || SrcFormat == DataFormatRGBA8;
@@ -676,7 +723,9 @@ public:
     void generateMipmap(GC3Denum target);
 
     bool getActiveAttrib(Platform3DObject program, GC3Duint index, ActiveInfo&);
+    bool getActiveAttribImpl(Platform3DObject program, GC3Duint index, ActiveInfo&);
     bool getActiveUniform(Platform3DObject program, GC3Duint index, ActiveInfo&);
+    bool getActiveUniformImpl(Platform3DObject program, GC3Duint index, ActiveInfo&);
     void getAttachedShaders(Platform3DObject program, GC3Dsizei maxCount, GC3Dsizei* count, Platform3DObject* shaders);
     GC3Dint getAttribLocation(Platform3DObject, const String& name);
     void getBooleanv(GC3Denum pname, GC3Dboolean* value);
@@ -687,7 +736,9 @@ public:
     void getFramebufferAttachmentParameteriv(GC3Denum target, GC3Denum attachment, GC3Denum pname, GC3Dint* value);
     void getIntegerv(GC3Denum pname, GC3Dint* value);
     void getProgramiv(Platform3DObject program, GC3Denum pname, GC3Dint* value);
+    void getNonBuiltInActiveSymbolCount(Platform3DObject program, GC3Denum pname, GC3Dint* value);
     String getProgramInfoLog(Platform3DObject);
+    String getUnmangledInfoLog(Platform3DObject[2], GC3Dsizei, const String&);
     void getRenderbufferParameteriv(GC3Denum target, GC3Denum pname, GC3Dint* value);
     void getShaderiv(Platform3DObject, GC3Denum pname, GC3Dint* value);
     String getShaderInfoLog(Platform3DObject);
@@ -758,6 +809,7 @@ public:
 
     void useProgram(Platform3DObject);
     void validateProgram(Platform3DObject);
+    bool precisionsMatch(Platform3DObject vertexShader, Platform3DObject fragmentShader) const;
 
     void vertexAttrib1f(GC3Duint index, GC3Dfloat x);
     void vertexAttrib1fv(GC3Duint index, GC3Dfloat* values);
@@ -774,13 +826,14 @@ public:
 
     void reshape(int width, int height);
 
-#if PLATFORM(GTK) || PLATFORM(EFL)
+    void drawArraysInstanced(GC3Denum mode, GC3Dint first, GC3Dsizei count, GC3Dsizei primcount);
+    void drawElementsInstanced(GC3Denum mode, GC3Dsizei count, GC3Denum type, GC3Dintptr offset, GC3Dsizei primcount);
+    void vertexAttribDivisor(GC3Duint index, GC3Duint divisor);
+
+#if PLATFORM(GTK) || PLATFORM(EFL) || USE(CAIRO)
     void paintToCanvas(const unsigned char* imagePixels, int imageWidth, int imageHeight,
                        int canvasWidth, int canvasHeight, PlatformContextCairo* context);
-#elif PLATFORM(QT)
-    void paintToCanvas(const unsigned char* imagePixels, int imageWidth, int imageHeight,
-                       int canvasWidth, int canvasHeight, QPainter* context);
-#elif PLATFORM(BLACKBERRY) || USE(CG)
+#elif USE(CG)
     void paintToCanvas(const unsigned char* imagePixels, int imageWidth, int imageHeight,
                        int canvasWidth, int canvasHeight, GraphicsContext*);
 #endif
@@ -793,8 +846,8 @@ public:
     PassRefPtr<ImageData> paintRenderingResultsToImageData(DrawingBuffer*);
     bool paintCompositedResultsToCanvas(ImageBuffer*);
 
-#if PLATFORM(BLACKBERRY)
-    bool paintsIntoCanvasBuffer() const;
+#if PLATFORM(IOS)
+    void endPaint();
 #endif
 
     // Support for buffer creation and deletion
@@ -896,11 +949,7 @@ public:
         CGImageRef m_cgImage;
         RetainPtr<CGImageRef> m_decodedImage;
         RetainPtr<CFDataRef> m_pixelData;
-        OwnArrayPtr<uint8_t> m_formalizedRGBA8Data;
-#elif PLATFORM(QT)
-        QImage m_qtImage;
-#elif PLATFORM(BLACKBERRY)
-        Vector<unsigned> m_imageData;
+        std::unique_ptr<uint8_t[]> m_formalizedRGBA8Data;
 #endif
         Image* m_image;
         ImageHtmlDomSource m_imageHtmlDomSource;
@@ -923,7 +972,6 @@ private:
     // Destination data will have no gaps between rows.
     static bool packPixels(const uint8_t* sourceData, DataFormat sourceDataFormat, unsigned width, unsigned height, unsigned sourceUnpackAlignment, unsigned destinationFormat, unsigned destinationType, AlphaOp, void* destinationData, bool flipY);
 
-#if PLATFORM(MAC) || PLATFORM(GTK) || PLATFORM(QT) || PLATFORM(EFL) || PLATFORM(BLACKBERRY)
     // Take into account the user's requested context creation attributes,
     // in particular stencil and antialias, and determine which could or
     // could not be honored based on the capabilities of the OpenGL
@@ -935,44 +983,45 @@ private:
     // backbuffer.
     void readRenderingResults(unsigned char* pixels, int pixelsSize);
     void readPixelsAndConvertToBGRAIfNecessary(int x, int y, int width, int height, unsigned char* pixels);
-#endif
 
-#if PLATFORM(BLACKBERRY)
-    void logFrameBufferStatus(int line);
-    void readPixelsIMG(GC3Dint x, GC3Dint y, GC3Dsizei width, GC3Dsizei height, GC3Denum format, GC3Denum type, void* data);
+#if PLATFORM(IOS)
+    bool setRenderbufferStorageFromDrawable(GC3Dsizei width, GC3Dsizei height);
 #endif
 
     bool reshapeFBOs(const IntSize&);
     void resolveMultisamplingIfNecessary(const IntRect& = IntRect());
-#if (PLATFORM(QT) || PLATFORM(EFL)) && USE(GRAPHICS_SURFACE)
+#if PLATFORM(EFL) && USE(GRAPHICS_SURFACE)
     void createGraphicsSurfaces(const IntSize&);
 #endif
 
     int m_currentWidth, m_currentHeight;
     bool isResourceSafe();
 
-#if PLATFORM(MAC)
+#if PLATFORM(IOS)
+    PlatformGraphicsContext3D m_contextObj;
+    RetainPtr<PlatformLayer> m_webGLLayer;
+#elif PLATFORM(MAC)
     CGLContextObj m_contextObj;
     RetainPtr<WebGLLayer> m_webGLLayer;
-#elif PLATFORM(BLACKBERRY)
-#if USE(ACCELERATED_COMPOSITING)
-    RefPtr<PlatformLayer> m_compositingLayer;
-#endif
-    void* m_context;
+#elif PLATFORM(WIN) && USE(CA)
+    RefPtr<PlatformCALayer> m_webGLLayer;
 #endif
 
-#if PLATFORM(MAC) || PLATFORM(GTK) || PLATFORM(QT) || PLATFORM(EFL) || PLATFORM(BLACKBERRY)
     struct SymbolInfo {
         SymbolInfo()
             : type(0)
             , size(0)
+            , precision(SH_PRECISION_UNDEFINED)
+            , staticUse(0)
         {
         }
 
-        SymbolInfo(GC3Denum type, int size, const String& mappedName)
+        SymbolInfo(GC3Denum type, int size, const String& mappedName, ShPrecisionType precision, int staticUse)
             : type(type)
             , size(size)
             , mappedName(mappedName)
+            , precision(precision)
+            , staticUse(staticUse)
         {
         }
 
@@ -984,6 +1033,8 @@ private:
         GC3Denum type;
         int size;
         String mappedName;
+        ShPrecisionType precision;
+        int staticUse;
     };
 
     typedef HashMap<String, SymbolInfo> ShaderSymbolMap;
@@ -996,17 +1047,20 @@ private:
         bool isValid;
         ShaderSymbolMap attributeMap;
         ShaderSymbolMap uniformMap;
+        ShaderSymbolMap varyingMap;
         ShaderSourceEntry()
             : type(VERTEX_SHADER)
             , isValid(false)
         {
         }
         
-        ShaderSymbolMap& symbolMap(ANGLEShaderSymbolType symbolType)
+        ShaderSymbolMap& symbolMap(enum ANGLEShaderSymbolType symbolType)
         {
-            ASSERT(symbolType == SHADER_SYMBOL_TYPE_ATTRIBUTE || symbolType == SHADER_SYMBOL_TYPE_UNIFORM);
+            ASSERT(symbolType == SHADER_SYMBOL_TYPE_ATTRIBUTE || symbolType == SHADER_SYMBOL_TYPE_UNIFORM || symbolType == SHADER_SYMBOL_TYPE_VARYING);
             if (symbolType == SHADER_SYMBOL_TYPE_ATTRIBUTE)
                 return attributeMap;
+            if (symbolType == SHADER_SYMBOL_TYPE_VARYING)
+                return varyingMap;
             return uniformMap;
         }
     };
@@ -1014,13 +1068,34 @@ private:
     typedef HashMap<Platform3DObject, ShaderSourceEntry> ShaderSourceMap;
     ShaderSourceMap m_shaderSourceMap;
 
+    struct ActiveShaderSymbolCounts {
+        Vector<GC3Dint> filteredToActualAttributeIndexMap;
+        Vector<GC3Dint> filteredToActualUniformIndexMap;
+
+        ActiveShaderSymbolCounts()
+        {
+        }
+
+        GC3Dint countForType(GC3Denum activeType)
+        {
+            ASSERT(activeType == ACTIVE_ATTRIBUTES || activeType == ACTIVE_UNIFORMS);
+            if (activeType == ACTIVE_ATTRIBUTES)
+                return filteredToActualAttributeIndexMap.size();
+
+            return filteredToActualUniformIndexMap.size();
+        }
+    };
+    std::unique_ptr<ActiveShaderSymbolCounts> m_shaderSymbolCount;
+
     String mappedSymbolName(Platform3DObject program, ANGLEShaderSymbolType, const String& name);
+    String mappedSymbolName(Platform3DObject shaders[2], size_t count, const String& name);
     String originalSymbolName(Platform3DObject program, ANGLEShaderSymbolType, const String& name);
 
     ANGLEWebKitBridge m_compiler;
-#endif
 
-#if PLATFORM(BLACKBERRY) || (PLATFORM(QT) && defined(QT_OPENGL_ES_2)) || ((PLATFORM(GTK) || PLATFORM(EFL)) && USE(OPENGL_ES_2))
+    OwnPtr<ShaderNameHash> nameHashMapForShaders;
+
+#if ((PLATFORM(GTK) || PLATFORM(EFL) || PLATFORM(WIN)) && USE(OPENGL_ES_2))
     friend class Extensions3DOpenGLES;
     OwnPtr<Extensions3DOpenGLES> m_extensions;
 #else
@@ -1031,18 +1106,14 @@ private:
 
     Attributes m_attrs;
     RenderStyle m_renderStyle;
-    Vector<Vector<float> > m_vertexArray;
+    Vector<Vector<float>> m_vertexArray;
 
     GC3Duint m_texture;
-#if !PLATFORM(BLACKBERRY)
     GC3Duint m_compositorTexture;
-#endif
     GC3Duint m_fbo;
 
-#if !PLATFORM(BLACKBERRY)
     GC3Duint m_depthBuffer;
     GC3Duint m_stencilBuffer;
-#endif
     GC3Duint m_depthStencilBuffer;
 
     bool m_layerComposited;
@@ -1070,14 +1141,8 @@ private:
     // Errors raised by synthesizeGLError().
     ListHashSet<GC3Denum> m_syntheticErrors;
 
-#if PLATFORM(BLACKBERRY)
-    bool m_isImaginationHardware;
-#endif
-
-#if !PLATFORM(BLACKBERRY)
     friend class GraphicsContext3DPrivate;
     OwnPtr<GraphicsContext3DPrivate> m_private;
-#endif
 };
 
 } // namespace WebCore

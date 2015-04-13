@@ -26,39 +26,31 @@
 #include "HTMLLabelElement.h"
 
 #include "Document.h"
+#include "ElementIterator.h"
 #include "Event.h"
 #include "EventNames.h"
 #include "FormAssociatedElement.h"
 #include "HTMLNames.h"
-#include "NodeTraversal.h"
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-static LabelableElement* nodeAsLabelableElement(Node* node)
+static LabelableElement* nodeAsSupportedLabelableElement(Node* node)
 {
-    if (!node || !node->isHTMLElement())
-        return 0;
-    
-    HTMLElement* element = static_cast<HTMLElement*>(node);
-    if (!element->isLabelable())
-        return 0;
-
-    LabelableElement* labelableElement = static_cast<LabelableElement*>(element);
-    if (!labelableElement->supportLabels())
-        return 0;
-
-    return labelableElement;
+    if (!node || !isLabelableElement(*node))
+        return nullptr;
+    LabelableElement& element = toLabelableElement(*node);
+    return element.supportLabels() ? &element : nullptr;
 }
 
-inline HTMLLabelElement::HTMLLabelElement(const QualifiedName& tagName, Document* document)
+inline HTMLLabelElement::HTMLLabelElement(const QualifiedName& tagName, Document& document)
     : HTMLElement(tagName, document)
 {
     ASSERT(hasTagName(labelTag));
 }
 
-PassRefPtr<HTMLLabelElement> HTMLLabelElement::create(const QualifiedName& tagName, Document* document)
+PassRefPtr<HTMLLabelElement> HTMLLabelElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(new HTMLLabelElement(tagName, document));
 }
@@ -75,17 +67,16 @@ LabelableElement* HTMLLabelElement::control()
         // Search the children and descendants of the label element for a form element.
         // per http://dev.w3.org/html5/spec/Overview.html#the-label-element
         // the form element must be "labelable form-associated element".
-        Element* element = this;
-        while ((element = ElementTraversal::next(element, this))) {
-            if (LabelableElement* labelableElement = nodeAsLabelableElement(element))
-                return labelableElement;
+        for (auto& labelableElement : descendantsOfType<LabelableElement>(*this)) {
+            if (labelableElement.supportLabels())
+                return &labelableElement;
         }
-        return 0;
+        return nullptr;
     }
     
     // Find the first element whose id is controlId. If it is found and it is a labelable form control,
     // return it, otherwise return 0.
-    return nodeAsLabelableElement(treeScope()->getElementById(controlId));
+    return nodeAsSupportedLabelableElement(treeScope().getElementById(controlId));
 }
 
 HTMLFormElement* HTMLLabelElement::form() const
@@ -136,6 +127,7 @@ void HTMLLabelElement::defaultEventHandler(Event* evt)
         // Click the corresponding control.
         element->dispatchSimulatedClick(evt);
 
+        document().updateLayoutIgnorePendingStylesheets();
         if (element->isMouseFocusable())
             element->focus();
 
@@ -149,10 +141,7 @@ void HTMLLabelElement::defaultEventHandler(Event* evt)
 
 bool HTMLLabelElement::willRespondToMouseClickEvents()
 {
-    if (control() && control()->willRespondToMouseClickEvents())
-        return true;
-
-    return HTMLElement::willRespondToMouseClickEvents();
+    return (control() && control()->willRespondToMouseClickEvents()) || HTMLElement::willRespondToMouseClickEvents();
 }
 
 void HTMLLabelElement::focus(bool, FocusDirection direction)

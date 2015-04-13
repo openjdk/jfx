@@ -44,22 +44,16 @@
 #include "ResourceError.h"
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
+#include "SVGNames.h"
+#include "SVGStyleElement.h"
 #include "ScriptElement.h"
 #include "ScriptSourceCode.h"
-#include "ScriptValue.h"
 #include "TextResourceDecoder.h"
 #include "TreeDepthLimit.h"
-#include "XMLErrors.h"
+#include <wtf/Ref.h>
 #include <wtf/StringExtras.h>
 #include <wtf/Threading.h>
 #include <wtf/Vector.h>
-
-#if ENABLE(SVG)
-#include "SVGNames.h"
-#include "SVGStyleElement.h"
-#endif
-
-using namespace std;
 
 namespace WebCore {
 
@@ -133,7 +127,9 @@ void XMLDocumentParser::append(PassRefPtr<StringImpl> inputSource)
 
 void XMLDocumentParser::handleError(XMLErrors::ErrorType type, const char* m, TextPosition position)
 {
-    m_xmlErrors.handleError(type, m, position);
+    if (!m_xmlErrors)
+        m_xmlErrors = std::make_unique<XMLErrors>(document());
+    m_xmlErrors->handleError(type, m, position);
     if (type != XMLErrors::warning)
         m_sawError = true;
     if (type == XMLErrors::fatal)
@@ -142,20 +138,16 @@ void XMLDocumentParser::handleError(XMLErrors::ErrorType type, const char* m, Te
 
 void XMLDocumentParser::enterText()
 {
-#if !USE(QXMLSTREAM)
     ASSERT(m_bufferedText.size() == 0);
-#endif
     ASSERT(!m_leafTextNode);
     m_leafTextNode = Text::create(m_currentNode->document(), "");
     m_currentNode->parserAppendChild(m_leafTextNode.get());
 }
 
-#if !USE(QXMLSTREAM)
 static inline String toString(const xmlChar* string, size_t size) 
 { 
     return String::fromUTF8(reinterpret_cast<const char*>(string), size); 
 }
-#endif
 
 
 void XMLDocumentParser::exitText()
@@ -166,15 +158,9 @@ void XMLDocumentParser::exitText()
     if (!m_leafTextNode)
         return;
 
-#if !USE(QXMLSTREAM)
     m_leafTextNode->appendData(toString(m_bufferedText.data(), m_bufferedText.size()), IGNORE_EXCEPTION);
     Vector<xmlChar> empty;
     m_bufferedText.swap(empty);
-#endif
-
-    if (m_view && m_leafTextNode->parentNode() && m_leafTextNode->parentNode()->attached()
-        && !m_leafTextNode->attached())
-        m_leafTextNode->attach();
 
     m_leafTextNode = 0;
 }
@@ -230,12 +216,8 @@ void XMLDocumentParser::finish()
 
 void XMLDocumentParser::insertErrorMessageBlock()
 {
-#if USE(QXMLSTREAM)
-    if (m_parsingFragment)
-        return;
-#endif
-
-    m_xmlErrors.insertErrorMessageBlock();
+    ASSERT(m_xmlErrors);
+    m_xmlErrors->insertErrorMessageBlock();
 }
 
 void XMLDocumentParser::notifyFinished(CachedResource* unusedResource)
@@ -257,7 +239,7 @@ void XMLDocumentParser::notifyFinished(CachedResource* unusedResource)
     ASSERT(scriptElement);
 
     // JavaScript can detach this parser, make sure it's kept alive even if detached.
-    RefPtr<XMLDocumentParser> protect(this);
+    Ref<XMLDocumentParser> protect(*this);
     
     if (errorOccurred)
         scriptElement->dispatchErrorEvent();
@@ -285,7 +267,7 @@ void XMLDocumentParser::pauseParsing()
     m_parserPaused = true;
 }
 
-bool XMLDocumentParser::parseDocumentFragment(const String& chunk, DocumentFragment* fragment, Element* contextElement, ParserContentPolicy parserContentPolicy)
+bool XMLDocumentParser::parseDocumentFragment(const String& chunk, DocumentFragment& fragment, Element* contextElement, ParserContentPolicy parserContentPolicy)
 {
     if (!chunk.length())
         return true;
@@ -294,7 +276,7 @@ bool XMLDocumentParser::parseDocumentFragment(const String& chunk, DocumentFragm
     // http://www.whatwg.org/specs/web-apps/current-work/multipage/the-xhtml-syntax.html#xml-fragment-parsing-algorithm
     // For now we have a hack for script/style innerHTML support:
     if (contextElement && (contextElement->hasLocalName(HTMLNames::scriptTag) || contextElement->hasLocalName(HTMLNames::styleTag))) {
-        fragment->parserAppendChild(fragment->document()->createTextNode(chunk));
+        fragment.parserAppendChild(fragment.document().createTextNode(chunk));
         return true;
     }
 

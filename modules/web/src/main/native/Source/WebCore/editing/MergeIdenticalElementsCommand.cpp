@@ -42,12 +42,12 @@ MergeIdenticalElementsCommand::MergeIdenticalElementsCommand(PassRefPtr<Element>
 
 void MergeIdenticalElementsCommand::doApply()
 {
-    if (m_element1->nextSibling() != m_element2 || !m_element1->rendererIsEditable() || !m_element2->rendererIsEditable())
+    if (m_element1->nextSibling() != m_element2 || !m_element1->hasEditableStyle() || !m_element2->hasEditableStyle())
         return;
 
     m_atChild = m_element2->firstChild();
 
-    Vector<RefPtr<Node> > children;
+    Vector<RefPtr<Node>> children;
     for (Node* child = m_element1->firstChild(); child; child = child->nextSibling())
         children.append(child);
 
@@ -66,7 +66,7 @@ void MergeIdenticalElementsCommand::doUnapply()
     RefPtr<Node> atChild = m_atChild.release();
 
     ContainerNode* parent = m_element2->parentNode();
-    if (!parent || !parent->rendererIsEditable())
+    if (!parent || !parent->hasEditableStyle())
         return;
 
     ExceptionCode ec = 0;
@@ -75,7 +75,7 @@ void MergeIdenticalElementsCommand::doUnapply()
     if (ec)
         return;
 
-    Vector<RefPtr<Node> > children;
+    Vector<RefPtr<Node>> children;
     for (Node* child = m_element2->firstChild(); child && child != atChild; child = child->nextSibling())
         children.append(child);
 

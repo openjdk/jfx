@@ -30,8 +30,13 @@
 #include "ContextDestructionObserver.h"
 #include "EventTarget.h"
 #include "FrameDestructionObserver.h"
-#include "KURL.h"
+#include "URL.h"
 #include "Supplementable.h"
+#include <functional>
+
+namespace Inspector {
+class ScriptCallStack;
+}
 
 namespace WebCore {
 
@@ -64,7 +69,6 @@ namespace WebCore {
     class PostMessageTimer;
     class ScheduledAction;
     class Screen;
-    class ScriptCallStack;
     class SecurityOrigin;
     class SerializedScriptValue;
     class Storage;
@@ -85,11 +89,12 @@ namespace WebCore {
     enum SetLocationLocking { LockHistoryBasedOnGestureState, LockHistoryAndBackForwardList };
 
     // FIXME: DOMWindow shouldn't subclass FrameDestructionObserver and instead should get to Frame via its Document.
-    class DOMWindow : public RefCounted<DOMWindow>
-                    , public EventTarget
-                    , public ContextDestructionObserver
-                    , public FrameDestructionObserver
-                    , public Supplementable<DOMWindow> {
+    class DOMWindow final
+        : public RefCounted<DOMWindow>
+        , public EventTargetWithInlineData
+        , public ContextDestructionObserver
+        , public FrameDestructionObserver
+        , public Supplementable<DOMWindow> {
     public:
         static PassRefPtr<DOMWindow> create(Document* document) { return adoptRef(new DOMWindow(document)); }
         virtual ~DOMWindow();
@@ -103,10 +108,10 @@ namespace WebCore {
         // the network load. See also SecurityContext::isSecureTransitionTo.
         void didSecureTransitionTo(Document*);
 
-        virtual const AtomicString& interfaceName() const;
-        virtual ScriptExecutionContext* scriptExecutionContext() const;
+        virtual EventTargetInterface eventTargetInterface() const override { return DOMWindowEventTargetInterfaceType; }
+        virtual ScriptExecutionContext* scriptExecutionContext() const override { return ContextDestructionObserver::scriptExecutionContext(); }
 
-        virtual DOMWindow* toDOMWindow();
+        virtual DOMWindow* toDOMWindow() override;
 
         void registerProperty(DOMWindowProperty*);
         void unregisterProperty(DOMWindowProperty*);
@@ -144,7 +149,7 @@ namespace WebCore {
         Navigator* clientInformation() const { return navigator(); }
 
         Location* location() const;
-        void setLocation(const String& location, DOMWindow* activeWindow, DOMWindow* firstWindow,
+        void setLocation(const String& location, DOMWindow& activeWindow, DOMWindow& firstWindow,
             SetLocationLocking = LockHistoryBasedOnGestureState);
 
         DOMSelection* getSelection();
@@ -158,11 +163,9 @@ namespace WebCore {
         void stop();
 
         PassRefPtr<DOMWindow> open(const String& urlString, const AtomicString& frameName, const String& windowFeaturesString,
-            DOMWindow* activeWindow, DOMWindow* firstWindow);
+            DOMWindow& activeWindow, DOMWindow& firstWindow);
 
-        typedef void (*PrepareDialogFunction)(DOMWindow*, void* context);
-        void showModalDialog(const String& urlString, const String& dialogFeaturesString,
-            DOMWindow* activeWindow, DOMWindow* firstWindow, PrepareDialogFunction, void* functionContext);
+        void showModalDialog(const String& urlString, const String& dialogFeaturesString, DOMWindow& activeWindow, DOMWindow& firstWindow, std::function<void (DOMWindow&)> prepareDialogFunction);
 
         void alert(const String& message);
         bool confirm(const String& message);
@@ -199,10 +202,6 @@ namespace WebCore {
         String defaultStatus() const;
         void setDefaultStatus(const String&);
 
-        // This attribute is an alias of defaultStatus and is necessary for legacy uses.
-        String defaultstatus() const { return defaultStatus(); }
-        void setDefaultstatus(const String& status) { setDefaultStatus(status); }
-
         // Self-referential attributes
 
         DOMWindow* self() const;
@@ -237,13 +236,13 @@ namespace WebCore {
         PageConsole* pageConsole() const;
 
         void printErrorMessage(const String&);
-        String crossDomainAccessErrorMessage(DOMWindow* activeWindow);
+        String crossDomainAccessErrorMessage(const DOMWindow& activeWindow);
 
-        void postMessage(PassRefPtr<SerializedScriptValue> message, const MessagePortArray*, const String& targetOrigin, DOMWindow* source, ExceptionCode&);
+        void postMessage(PassRefPtr<SerializedScriptValue> message, const MessagePortArray*, const String& targetOrigin, DOMWindow& source, ExceptionCode&);
         // Needed for Objective-C bindings (see bug 28774).
-        void postMessage(PassRefPtr<SerializedScriptValue> message, MessagePort*, const String& targetOrigin, DOMWindow* source, ExceptionCode&);
+        void postMessage(PassRefPtr<SerializedScriptValue> message, MessagePort*, const String& targetOrigin, DOMWindow& source, ExceptionCode&);
         void postMessageTimerFired(PassOwnPtr<PostMessageTimer>);
-        void dispatchMessageEventWithOriginCheck(SecurityOrigin* intendedTargetOrigin, PassRefPtr<Event>, PassRefPtr<ScriptCallStack>);
+        void dispatchMessageEventWithOriginCheck(SecurityOrigin* intendedTargetOrigin, PassRefPtr<Event>, PassRefPtr<Inspector::ScriptCallStack>);
 
         void scrollBy(int x, int y) const;
         void scrollTo(int x, int y) const;
@@ -274,9 +273,9 @@ namespace WebCore {
 
         // Events
         // EventTarget API
-        virtual bool addEventListener(const AtomicString& eventType, PassRefPtr<EventListener>, bool useCapture);
-        virtual bool removeEventListener(const AtomicString& eventType, EventListener*, bool useCapture);
-        virtual void removeAllEventListeners();
+        virtual bool addEventListener(const AtomicString& eventType, PassRefPtr<EventListener>, bool useCapture) override;
+        virtual bool removeEventListener(const AtomicString& eventType, EventListener*, bool useCapture) override;
+        virtual void removeAllEventListeners() override;
 
         using EventTarget::dispatchEvent;
         bool dispatchEvent(PassRefPtr<Event> prpEvent, PassRefPtr<EventTarget> prpTarget);
@@ -350,6 +349,13 @@ namespace WebCore {
         DEFINE_ATTRIBUTE_EVENT_LISTENER(waiting);
         DEFINE_ATTRIBUTE_EVENT_LISTENER(webkitbeginfullscreen);
         DEFINE_ATTRIBUTE_EVENT_LISTENER(webkitendfullscreen);
+#if ENABLE(WILL_REVEAL_EDGE_EVENTS)
+        DEFINE_ATTRIBUTE_EVENT_LISTENER(webkitwillrevealbottom);
+        DEFINE_ATTRIBUTE_EVENT_LISTENER(webkitwillrevealleft);
+        DEFINE_ATTRIBUTE_EVENT_LISTENER(webkitwillrevealright);
+        DEFINE_ATTRIBUTE_EVENT_LISTENER(webkitwillrevealtop);
+#endif
+        DEFINE_ATTRIBUTE_EVENT_LISTENER(wheel);
 
         DEFINE_MAPPED_ATTRIBUTE_EVENT_LISTENER(webkitanimationstart, webkitAnimationStart);
         DEFINE_MAPPED_ATTRIBUTE_EVENT_LISTENER(webkitanimationiteration, webkitAnimationIteration);
@@ -399,8 +405,26 @@ namespace WebCore {
         DEFINE_ATTRIBUTE_EVENT_LISTENER(touchcancel);
 #endif
 
+#if ENABLE(IOS_GESTURE_EVENTS)
+        DEFINE_ATTRIBUTE_EVENT_LISTENER(gesturestart);
+        DEFINE_ATTRIBUTE_EVENT_LISTENER(gesturechange);
+        DEFINE_ATTRIBUTE_EVENT_LISTENER(gestureend);
+#endif
+
 #if ENABLE(WEB_TIMING)
         Performance* performance() const;
+#endif
+
+#if PLATFORM(IOS)
+        void incrementScrollEventListenersCount();
+        void decrementScrollEventListenersCount();
+        unsigned scrollEventListenerCount() const { return m_scrollEventListenerCount; }
+#endif
+
+        void resetAllGeolocationPermission();
+
+#if ENABLE(IOS_TOUCH_EVENTS) || ENABLE(IOS_GESTURE_EVENTS)
+        bool hasTouchEventListeners() const { return m_touchEventListenerCount > 0; }
 #endif
 
         // FIXME: When this DOMWindow is no longer the active DOMWindow (i.e.,
@@ -421,18 +445,14 @@ namespace WebCore {
         Page* page();
         bool allowedToChangeWindowGeometry() const;
 
-        virtual void frameDestroyed() OVERRIDE;
-        virtual void willDetachPage() OVERRIDE;
+        virtual void frameDestroyed() override;
+        virtual void willDetachPage() override;
 
-        virtual void refEventTarget() { ref(); }
-        virtual void derefEventTarget() { deref(); }
-        virtual EventTargetData* eventTargetData();
-        virtual EventTargetData* ensureEventTargetData();
+        virtual void refEventTarget() override { ref(); }
+        virtual void derefEventTarget() override { deref(); }
 
-        static PassRefPtr<Frame> createWindow(const String& urlString, const AtomicString& frameName, const WindowFeatures&,
-            DOMWindow* activeWindow, Frame* firstFrame, Frame* openerFrame,
-            PrepareDialogFunction = 0, void* functionContext = 0);
-        bool isInsecureScriptAccess(DOMWindow* activeWindow, const String& urlString);
+        static PassRefPtr<Frame> createWindow(const String& urlString, const AtomicString& frameName, const WindowFeatures&, DOMWindow& activeWindow, Frame* firstFrame, Frame* openerFrame, std::function<void (DOMWindow&)> prepareDialogFunction = nullptr);
+        bool isInsecureScriptAccess(DOMWindow& activeWindow, const String& urlString);
 
         void resetDOMWindowProperties();
         void disconnectDOMWindowProperties();
@@ -458,10 +478,19 @@ namespace WebCore {
         mutable RefPtr<Location> m_location;
         mutable RefPtr<StyleMedia> m_media;
 
-        EventTargetData m_eventTargetData;
-
         String m_status;
         String m_defaultStatus;
+
+        enum PageStatus { PageStatusNone, PageStatusShown, PageStatusHidden };
+        PageStatus m_lastPageStatus;
+
+#if PLATFORM(IOS)
+        unsigned m_scrollEventListenerCount;
+#endif
+
+#if ENABLE(IOS_TOUCH_EVENTS) || ENABLE(IOS_GESTURE_EVENTS)
+        unsigned m_touchEventListenerCount;
+#endif
 
         mutable RefPtr<Storage> m_sessionStorage;
         mutable RefPtr<Storage> m_localStorage;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 Apple Inc.  All rights reserved.
+ * Copyright (C) 2007, 2013 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +27,6 @@
 #include "LayoutState.h"
 
 #include "ColumnInfo.h"
-#include "RenderArena.h"
 #include "RenderFlowThread.h"
 #include "RenderInline.h"
 #include "RenderLayer.h"
@@ -35,12 +34,12 @@
 
 namespace WebCore {
 
-LayoutState::LayoutState(LayoutState* prev, RenderBox* renderer, const LayoutSize& offset, LayoutUnit pageLogicalHeight, bool pageLogicalHeightChanged, ColumnInfo* columnInfo)
+LayoutState::LayoutState(std::unique_ptr<LayoutState> next, RenderBox* renderer, const LayoutSize& offset, LayoutUnit pageLogicalHeight, bool pageLogicalHeightChanged, ColumnInfo* columnInfo)
     : m_columnInfo(columnInfo)
     , m_lineGrid(0)
-    , m_next(prev)
-#if ENABLE(CSS_EXCLUSIONS)
-    , m_exclusionShapeInsideInfo(0)
+    , m_next(std::move(next))
+#if ENABLE(CSS_SHAPES) && ENABLE(CSS_SHAPE_INSIDE)
+    , m_shapeInsideInfo(nullptr)
 #endif
 #ifndef NDEBUG
     , m_renderer(renderer)
@@ -48,16 +47,16 @@ LayoutState::LayoutState(LayoutState* prev, RenderBox* renderer, const LayoutSiz
 {
     ASSERT(m_next);
 
-    bool fixed = renderer->isOutOfFlowPositioned() && renderer->style()->position() == FixedPosition;
+    bool fixed = renderer->isOutOfFlowPositioned() && renderer->style().position() == FixedPosition;
     if (fixed) {
         // FIXME: This doesn't work correctly with transforms.
-        FloatPoint fixedOffset = renderer->view()->localToAbsolute(FloatPoint(), IsFixed);
+        FloatPoint fixedOffset = renderer->view().localToAbsolute(FloatPoint(), IsFixed);
         m_paintOffset = LayoutSize(fixedOffset.x(), fixedOffset.y()) + offset;
     } else
-        m_paintOffset = prev->m_paintOffset + offset;
+        m_paintOffset = m_next->m_paintOffset + offset;
 
     if (renderer->isOutOfFlowPositioned() && !fixed) {
-        if (RenderObject* container = renderer->container()) {
+        if (RenderElement* container = renderer->container()) {
             if (container->isInFlowPositioned() && container->isRenderInline())
                 m_paintOffset += toRenderInline(container)->offsetForInFlowPositionedInline(renderer);
         }
@@ -65,15 +64,15 @@ LayoutState::LayoutState(LayoutState* prev, RenderBox* renderer, const LayoutSiz
 
     m_layoutOffset = m_paintOffset;
 
-    if (renderer->hasPaintOffset() && renderer->hasLayer())
-        m_paintOffset += renderer->layer()->paintOffset();
+    if (renderer->isInFlowPositioned() && renderer->hasLayer())
+        m_paintOffset += renderer->layer()->offsetForInFlowPosition();
 
-    m_clipped = !fixed && prev->m_clipped;
+    m_clipped = !fixed && m_next->m_clipped;
     if (m_clipped)
-        m_clipRect = prev->m_clipRect;
+        m_clipRect = m_next->m_clipRect;
 
     if (renderer->hasOverflowClip()) {
-        LayoutRect clipRect(toPoint(m_paintOffset) + renderer->view()->layoutDelta(), renderer->cachedSizeForOverflowClip());
+        LayoutRect clipRect(toLayoutPoint(m_paintOffset) + renderer->view().layoutDelta(), renderer->cachedSizeForOverflowClip());
         if (m_clipped)
             m_clipRect.intersect(clipRect);
         else {
@@ -88,7 +87,7 @@ LayoutState::LayoutState(LayoutState* prev, RenderBox* renderer, const LayoutSiz
     // We can compare this later on to figure out what part of the page we're actually on,
     if (pageLogicalHeight || m_columnInfo || renderer->isRenderFlowThread()) {
         m_pageLogicalHeight = pageLogicalHeight;
-        bool isFlipped = renderer->style()->isFlippedBlocksWritingMode();
+        bool isFlipped = renderer->style().isFlippedBlocksWritingMode();
         m_pageOffset = LayoutSize(m_layoutOffset.width() + (!isFlipped ? renderer->borderLeft() + renderer->paddingLeft() : renderer->borderRight() + renderer->paddingRight()),
                                m_layoutOffset.height() + (!isFlipped ? renderer->borderTop() + renderer->paddingTop() : renderer->borderBottom() + renderer->paddingBottom()));
         m_pageLogicalHeightChanged = pageLogicalHeightChanged;
@@ -110,18 +109,12 @@ LayoutState::LayoutState(LayoutState* prev, RenderBox* renderer, const LayoutSiz
     if (!m_columnInfo)
         m_columnInfo = m_next->m_columnInfo;
 
-#if ENABLE(CSS_EXCLUSIONS)
+#if ENABLE(CSS_SHAPES) && ENABLE(CSS_SHAPE_INSIDE)
     if (renderer->isRenderBlock()) {
         const RenderBlock* renderBlock = toRenderBlock(renderer);
-        m_exclusionShapeInsideInfo = renderBlock->exclusionShapeInsideInfo(RenderBlock::ShapePresentOrRemoved);
-        if (m_next->m_exclusionShapeInsideInfo && renderBlock->allowsExclusionShapeInsideInfoSharing()) {
-            if (!m_exclusionShapeInsideInfo)
-                m_exclusionShapeInsideInfo = m_next->m_exclusionShapeInsideInfo;
-            else if (m_exclusionShapeInsideInfo->needsRemoval()) {
-                m_exclusionShapeInsideInfo = m_next->m_exclusionShapeInsideInfo;
-                m_exclusionShapeInsideInfo->setNeedsLayout(true);
-            }
-        }
+        m_shapeInsideInfo = renderBlock->shapeInsideInfo();
+        if (!m_shapeInsideInfo && m_next->m_shapeInsideInfo && renderBlock->allowsShapeInsideInfoSharing())
+            m_shapeInsideInfo = m_next->m_shapeInsideInfo;
     }
 #endif
 
@@ -133,17 +126,17 @@ LayoutState::LayoutState(LayoutState* prev, RenderBox* renderer, const LayoutSiz
     
     m_isPaginated = m_pageLogicalHeight || m_columnInfo || renderer->isRenderFlowThread();
 
-    if (lineGrid() && renderer->hasColumns() && renderer->style()->hasInlineColumnAxis())
-        computeLineGridPaginationOrigin(renderer);
+    if (lineGrid() && (lineGrid()->style().writingMode() == renderer->style().writingMode()) && renderer->isRenderBlock())
+        toRenderBlock(renderer)->computeLineGridPaginationOrigin(*this);
 
     // If we have a new grid to track, then add it to our set.
-    if (renderer->style()->lineGrid() != RenderStyle::initialLineGrid() && renderer->isBlockFlow())
-        establishLineGrid(toRenderBlock(renderer));
+    if (renderer->style().lineGrid() != RenderStyle::initialLineGrid() && renderer->isRenderBlockFlow())
+        establishLineGrid(toRenderBlockFlow(renderer));
 
     // FIXME: <http://bugs.webkit.org/show_bug.cgi?id=13443> Apply control clip if present.
 }
 
-LayoutState::LayoutState(RenderObject* root)
+LayoutState::LayoutState(RenderObject& root)
     : m_clipped(false)
     , m_isPaginated(false)
     , m_pageLogicalHeightChanged(false)
@@ -153,54 +146,25 @@ LayoutState::LayoutState(RenderObject* root)
 #endif    
     , m_columnInfo(0)
     , m_lineGrid(0)
-    , m_next(0)
-#if ENABLE(CSS_EXCLUSIONS)
-    , m_exclusionShapeInsideInfo(0)
+#if ENABLE(CSS_SHAPES) && ENABLE(CSS_SHAPE_INSIDE)
+    , m_shapeInsideInfo(nullptr)
 #endif
     , m_pageLogicalHeight(0)
 #ifndef NDEBUG
-    , m_renderer(root)
+    , m_renderer(&root)
 #endif
 {
-    RenderObject* container = root->container();
+    RenderElement* container = root.container();
     FloatPoint absContentPoint = container->localToAbsolute(FloatPoint(), UseTransforms);
     m_paintOffset = LayoutSize(absContentPoint.x(), absContentPoint.y());
 
     if (container->hasOverflowClip()) {
         m_clipped = true;
         RenderBox* containerBox = toRenderBox(container);
-        m_clipRect = LayoutRect(toPoint(m_paintOffset), containerBox->cachedSizeForOverflowClip());
+        m_clipRect = LayoutRect(toLayoutPoint(m_paintOffset), containerBox->cachedSizeForOverflowClip());
         m_paintOffset -= containerBox->scrolledContentOffset();
     }
 }
-
-#ifndef NDEBUG
-static bool inLayoutStateDestroy;
-#endif
-
-void LayoutState::destroy(RenderArena* renderArena)
-{
-#ifndef NDEBUG
-    inLayoutStateDestroy = true;
-#endif
-    delete this;
-#ifndef NDEBUG
-    inLayoutStateDestroy = false;
-#endif
-    renderArena->free(*(size_t*)this, this);
-}
-
-void* LayoutState::operator new(size_t sz, RenderArena* renderArena)
-{
-    return renderArena->allocate(sz);
-}
-
-void LayoutState::operator delete(void* ptr, size_t sz)
-{
-    ASSERT(inLayoutStateDestroy);
-    *(size_t*)ptr = sz;
-}
-
 void LayoutState::clearPaginationInformation()
 {
     m_pageLogicalHeight = m_next->m_pageLogicalHeight;
@@ -234,20 +198,20 @@ void LayoutState::propagateLineGridInfo(RenderBox* renderer)
     m_lineGridPaginationOrigin = m_next->m_lineGridPaginationOrigin;
 }
 
-void LayoutState::establishLineGrid(RenderBlock* block)
+void LayoutState::establishLineGrid(RenderBlockFlow* block)
 {
     // First check to see if this grid has been established already.
     if (m_lineGrid) {
-        if (m_lineGrid->style()->lineGrid() == block->style()->lineGrid())
+        if (m_lineGrid->style().lineGrid() == block->style().lineGrid())
             return;
-        RenderBlock* currentGrid = m_lineGrid;
-        for (LayoutState* currentState = m_next; currentState; currentState = currentState->m_next) {
+        RenderBlockFlow* currentGrid = m_lineGrid;
+        for (LayoutState* currentState = m_next.get(); currentState; currentState = currentState->m_next.get()) {
             if (currentState->m_lineGrid == currentGrid)
                 continue;
             currentGrid = currentState->m_lineGrid;
             if (!currentGrid)
                 break;
-            if (currentGrid->style()->lineGrid() == block->style()->lineGrid()) {
+            if (currentGrid->style().lineGrid() == block->style().lineGrid()) {
                 m_lineGrid = currentGrid;
                 m_lineGridOffset = currentState->m_lineGridOffset;
                 return;
@@ -258,48 +222,6 @@ void LayoutState::establishLineGrid(RenderBlock* block)
     // We didn't find an already-established grid with this identifier. Our render object establishes the grid.
     m_lineGrid = block;
     m_lineGridOffset = m_layoutOffset; 
-}
-
-void LayoutState::computeLineGridPaginationOrigin(RenderBox* renderer)
-{
-    // We need to cache a line grid pagination origin so that we understand how to reset the line grid
-    // at the top of each column.
-    // Get the current line grid and offset.
-    if (!lineGrid() || lineGrid()->style()->writingMode() != renderer->style()->writingMode())
-        return;
-
-    // Get the hypothetical line box used to establish the grid.
-    RootInlineBox* lineGridBox = lineGrid()->lineGridBox();
-    if (!lineGridBox)
-        return;
-    
-    bool isHorizontalWritingMode = lineGrid()->isHorizontalWritingMode();
-
-    LayoutUnit lineGridBlockOffset = isHorizontalWritingMode ? lineGridOffset().height() : lineGridOffset().width();
-
-    // Now determine our position on the grid. Our baseline needs to be adjusted to the nearest baseline multiple
-    // as established by the line box.
-    // FIXME: Need to handle crazy line-box-contain values that cause the root line box to not be considered. I assume
-    // the grid should honor line-box-contain.
-    LayoutUnit gridLineHeight = lineGridBox->lineBottomWithLeading() - lineGridBox->lineTopWithLeading();
-    if (!gridLineHeight)
-        return;
-
-    LayoutUnit firstLineTopWithLeading = lineGridBlockOffset + lineGridBox->lineTopWithLeading();
-    
-    if (isPaginated() && pageLogicalHeight()) {
-        LayoutUnit pageLogicalTop = renderer->isHorizontalWritingMode() ? m_pageOffset.height() : m_pageOffset.width();
-        if (pageLogicalTop > firstLineTopWithLeading) {
-            // Shift to the next highest line grid multiple past the page logical top. Cache the delta
-            // between this new value and the page logical top as the pagination origin.
-            LayoutUnit remainder = roundToInt(pageLogicalTop - firstLineTopWithLeading) % roundToInt(gridLineHeight);
-            LayoutUnit paginationDelta = gridLineHeight - remainder;
-            if (isHorizontalWritingMode)
-                m_lineGridPaginationOrigin.setHeight(paginationDelta);
-            else
-                m_lineGridPaginationOrigin.setWidth(paginationDelta);
-        }
-    }
 }
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1812,14 +1812,24 @@ public class GridPane extends Pane {
 
         // if there are percentage rows, give them their percentages first
         if (rowPercentTotal > 0) {
+            double remainder = 0;
             for (int i = 0; i < rowPercentHeight.length; i++) {
                 if (rowPercentHeight[i] >= 0) {
-                    final double size = (contentHeight - vgaps) * (rowPercentHeight[i]/100);
+                    double size = (contentHeight - vgaps) * (rowPercentHeight[i]/100);       
+                    double floor = Math.floor(size);
+                    remainder += size - floor;
+
+                    // snap size to integer boundary based on the computed remainder as we loop through the rows.
+                    size = floor;
+                    if (remainder >= 0.5) {
+                        size++;
+                        remainder = (-1.0) + remainder;
+                    }
                     heights.setSize(i, size);
                 }
             }
         }
-        double rowTotal = heights.computeTotal();
+        double rowTotal = heights.computeTotal();      
         if (rowPercentTotal < 100) {
             double heightAvailable = height - top - bottom - rowTotal;
             // now that both fixed and percentage rows have been computed, divy up any surplus or deficit
@@ -2043,9 +2053,19 @@ public class GridPane extends Pane {
 
         // if there are percentage rows, give them their percentages first
         if (columnPercentTotal > 0) {
+            double remainder = 0;
             for (int i = 0; i < columnPercentWidth.length; i++) {
                 if (columnPercentWidth[i] >= 0) {
-                    final double size = snapPortion((contentWidth - hgaps) * (columnPercentWidth[i]/100));
+                    double size = (contentWidth - hgaps) * (columnPercentWidth[i]/100);
+                    double floor = Math.floor(size);
+                    remainder += size - floor;
+
+                    // snap size to integer boundary based on the computed remainder as we loop through the columns.
+                    size = floor;
+                    if (remainder >= 0.5) {
+                        size++;
+                        remainder = (-1.0) + remainder;
+                    }
                     widths.setSize(i, size);
                 }
             }

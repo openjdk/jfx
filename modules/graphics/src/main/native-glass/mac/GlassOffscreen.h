@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,6 +40,7 @@
 
 - (GLuint)width;
 - (GLuint)height;
+- (GLuint)fbo;
 
 @end
 
@@ -47,9 +48,9 @@
 {
     CGLContextObj               _ctx;
     CGLContextObj               _ctxToRestore;
-    
+
     id<GlassOffscreenProtocol>  _offscreen;
-    
+
     GLboolean                   _dirty;
     
     GLfloat                     _backgroundR;
@@ -60,7 +61,8 @@
     CAOpenGLLayer*              _layer;
 }
 
-- (id)initWithContext:(CGLContextObj)ctx;
+- (id)initWithContext:(CGLContextObj)ctx
+            andIsSwPipe:(BOOL)isSwPipe;
 - (CGLContextObj)getContext;
 
 - (void)setBackgroundColor:(NSColor*)color;

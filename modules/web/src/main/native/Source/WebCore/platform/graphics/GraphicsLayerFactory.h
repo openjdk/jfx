@@ -26,8 +26,6 @@
 #ifndef GraphicsLayerFactory_h
 #define GraphicsLayerFactory_h
 
-#if USE(ACCELERATED_COMPOSITING)
-
 #include <wtf/Forward.h>
 
 namespace WebCore {
@@ -39,11 +37,9 @@ class GraphicsLayerFactory {
 public:
     virtual ~GraphicsLayerFactory() { }
 
-    virtual PassOwnPtr<GraphicsLayer> createGraphicsLayer(GraphicsLayerClient*) = 0;
+    virtual std::unique_ptr<GraphicsLayer> createGraphicsLayer(GraphicsLayerClient*) = 0;
 };
 
 } // namespace WebCore
-
-#endif // USE(ACCELERATED_COMPOSITING)
 
 #endif // GraphicsLayerFactory_h

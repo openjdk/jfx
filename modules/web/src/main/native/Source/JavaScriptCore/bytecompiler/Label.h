@@ -68,7 +68,7 @@ namespace JSC {
         int refCount() const { return m_refCount; }
 
         bool isForward() const { return m_location == invalidLocation; }
-
+        
         int bind()
         {
             ASSERT(!isForward());

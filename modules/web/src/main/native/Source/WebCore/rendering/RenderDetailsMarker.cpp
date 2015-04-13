@@ -19,11 +19,12 @@
  */
 
 #include "config.h"
-#if ENABLE(DETAILS_ELEMENT) || ENABLE(INPUT_MULTIPLE_FIELDS_UI)
+#if ENABLE(DETAILS_ELEMENT)
 #include "RenderDetailsMarker.h"
 
 #include "Element.h"
 #include "GraphicsContext.h"
+#include "HTMLInputElement.h"
 #include "HTMLNames.h"
 #include "PaintInfo.h"
 
@@ -31,8 +32,8 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-RenderDetailsMarker::RenderDetailsMarker(Element* element)
-    : RenderBlock(element)
+RenderDetailsMarker::RenderDetailsMarker(DetailsMarkerControl& element, PassRef<RenderStyle> style)
+    : RenderBlockFlow(element, std::move(style))
 {
 }
 
@@ -71,21 +72,21 @@ static Path createRightArrowPath()
 
 RenderDetailsMarker::Orientation RenderDetailsMarker::orientation() const
 {
-    switch (style()->writingMode()) {
+    switch (style().writingMode()) {
     case TopToBottomWritingMode:
-        if (style()->isLeftToRightDirection())
+        if (style().isLeftToRightDirection())
             return isOpen() ? Down : Right;
         return isOpen() ? Down : Left;
     case RightToLeftWritingMode:
-        if (style()->isLeftToRightDirection())
+        if (style().isLeftToRightDirection())
             return isOpen() ? Left : Down;
         return isOpen() ? Left : Up;
     case LeftToRightWritingMode:
-        if (style()->isLeftToRightDirection())
+        if (style().isLeftToRightDirection())
             return isOpen() ? Right : Down;
         return isOpen() ? Right : Up;
     case BottomToTopWritingMode:
-        if (style()->isLeftToRightDirection())
+        if (style().isLeftToRightDirection())
             return isOpen() ? Up : Right;
         return isOpen() ? Up : Left;
     }
@@ -114,8 +115,8 @@ Path RenderDetailsMarker::getPath(const LayoutPoint& origin) const
 
 void RenderDetailsMarker::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
-    if (paintInfo.phase != PaintPhaseForeground || style()->visibility() != VISIBLE) {
-        RenderBlock::paint(paintInfo, paintOffset);
+    if (paintInfo.phase != PaintPhaseForeground || style().visibility() != VISIBLE) {
+        RenderBlockFlow::paint(paintInfo, paintOffset);
         return;
     }
 
@@ -127,11 +128,11 @@ void RenderDetailsMarker::paint(PaintInfo& paintInfo, const LayoutPoint& paintOf
     if (!paintInfo.rect.intersects(pixelSnappedIntRect(overflowRect)))
         return;
 
-    const Color color(style()->visitedDependentColor(CSSPropertyColor));
-    paintInfo.context->setStrokeColor(color, style()->colorSpace());
+    const Color color(style().visitedDependentColor(CSSPropertyColor));
+    paintInfo.context->setStrokeColor(color, style().colorSpace());
     paintInfo.context->setStrokeStyle(SolidStroke);
     paintInfo.context->setStrokeThickness(1.0f);
-    paintInfo.context->setFillColor(color, style()->colorSpace());
+    paintInfo.context->setFillColor(color, style().colorSpace());
 
     boxOrigin.move(borderLeft() + paddingLeft(), borderTop() + paddingTop());
     paintInfo.context->fillPath(getPath(boxOrigin));
@@ -144,7 +145,7 @@ bool RenderDetailsMarker::isOpen() const
             continue;
         if (renderer->node()->hasTagName(detailsTag))
             return !toElement(renderer->node())->getAttribute(openAttr).isNull();
-        if (renderer->node()->hasTagName(inputTag))
+        if (isHTMLInputElement(renderer->node()))
             return true;
     }
 

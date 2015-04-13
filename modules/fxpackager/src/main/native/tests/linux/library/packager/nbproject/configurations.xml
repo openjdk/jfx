@@ -43,6 +43,8 @@
     <itemPath>../../../../library/common/GenericPlatform.h</itemPath>
     <itemPath>../../../../library/common/Helpers.cpp</itemPath>
     <itemPath>../../../../library/common/Helpers.h</itemPath>
+    <itemPath>../../../../library/common/IniFile.cpp</itemPath>
+    <itemPath>../../../../library/common/IniFile.h</itemPath>
     <itemPath>../../../../library/common/Java.cpp</itemPath>
     <itemPath>../../../../library/common/Java.h</itemPath>
     <itemPath>../../../../library/common/JavaUserPreferences.cpp</itemPath>
@@ -58,6 +60,7 @@
     <itemPath>../../../../library/common/Macros.h</itemPath>
     <itemPath>../../../../library/common/Messages.cpp</itemPath>
     <itemPath>../../../../library/common/Messages.h</itemPath>
+    <itemPath>../../../../library/common/OrderedMap.h</itemPath>
     <itemPath>../../../../library/common/Package.cpp</itemPath>
     <itemPath>../../../../library/common/Package.h</itemPath>
     <itemPath>../../../../library/common/Platform.cpp</itemPath>
@@ -145,6 +148,16 @@
             tool="3"
             flavor2="0">
       </item>
+      <item path="../../../../library/common/IniFile.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/IniFile.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
       <item path="../../../../library/common/Java.cpp"
             ex="false"
             tool="1"
@@ -210,6 +223,11 @@
             flavor2="0">
       </item>
       <item path="../../../../library/common/Messages.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/OrderedMap.h"
             ex="false"
             tool="3"
             flavor2="0">
@@ -350,6 +368,16 @@
             tool="3"
             flavor2="0">
       </item>
+      <item path="../../../../library/common/IniFile.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/IniFile.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
       <item path="../../../../library/common/Java.cpp"
             ex="false"
             tool="1"
@@ -415,6 +443,11 @@
             flavor2="0">
       </item>
       <item path="../../../../library/common/Messages.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/OrderedMap.h"
             ex="false"
             tool="3"
             flavor2="0">

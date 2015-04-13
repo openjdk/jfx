@@ -327,7 +327,7 @@
 
 #ifndef U_INLINE
 #   ifdef __cplusplus
-#define U_INLINE inline
+#       define U_INLINE inline
 #   else
 #       define U_INLINE __inline__
 #   endif

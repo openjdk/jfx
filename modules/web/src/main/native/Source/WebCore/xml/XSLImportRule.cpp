@@ -28,7 +28,6 @@
 #include "CachedResourceLoader.h"
 #include "CachedResourceRequest.h"
 #include "Document.h"
-#include "XSLStyleSheet.h"
 
 namespace WebCore {
 
@@ -49,7 +48,7 @@ XSLImportRule::~XSLImportRule()
         m_cachedSheet->removeClient(this);
 }
 
-void XSLImportRule::setXSLStyleSheet(const String& href, const KURL& baseURL, const String& sheet)
+void XSLImportRule::setXSLStyleSheet(const String& href, const URL& baseURL, const String& sheet)
 {
     if (m_styleSheet)
         m_styleSheet->setParentStyleSheet(0);
@@ -90,7 +89,7 @@ void XSLImportRule::loadSheet()
     XSLStyleSheet* parentSheet = parentStyleSheet();
     if (!parentSheet->baseURL().isNull())
         // use parent styleheet's URL as the base URL
-        absHref = KURL(parentSheet->baseURL(), m_strHref).string();
+        absHref = URL(parentSheet->baseURL(), m_strHref).string();
     
     // Check for a cycle in our import chain.  If we encounter a stylesheet
     // in our parent chain with the same URL, then just bail.
@@ -100,6 +99,8 @@ void XSLImportRule::loadSheet()
     }
     
     CachedResourceRequest request(ResourceRequest(cachedResourceLoader->document()->completeURL(absHref)));
+    if (m_cachedSheet)
+        m_cachedSheet->removeClient(this);
     m_cachedSheet = cachedResourceLoader->requestXSLStyleSheet(request);
     
     if (m_cachedSheet) {

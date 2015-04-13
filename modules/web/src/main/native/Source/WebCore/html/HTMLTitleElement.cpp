@@ -25,79 +25,75 @@
 
 #include "Document.h"
 #include "HTMLNames.h"
-#include "NodeRenderingContext.h"
 #include "RenderStyle.h"
 #include "StyleInheritedData.h"
 #include "Text.h"
+#include "TextNodeTraversal.h"
+#include <wtf/Ref.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-inline HTMLTitleElement::HTMLTitleElement(const QualifiedName& tagName, Document* document)
+inline HTMLTitleElement::HTMLTitleElement(const QualifiedName& tagName, Document& document)
     : HTMLElement(tagName, document)
 {
     ASSERT(hasTagName(titleTag));
 }
 
-PassRefPtr<HTMLTitleElement> HTMLTitleElement::create(const QualifiedName& tagName, Document* document)
+PassRefPtr<HTMLTitleElement> HTMLTitleElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(new HTMLTitleElement(tagName, document));
 }
 
-Node::InsertionNotificationRequest HTMLTitleElement::insertedInto(ContainerNode* insertionPoint)
+Node::InsertionNotificationRequest HTMLTitleElement::insertedInto(ContainerNode& insertionPoint)
 {
     HTMLElement::insertedInto(insertionPoint);
     if (inDocument() && !isInShadowTree())
-        document()->setTitleElement(m_title, this);
+        document().setTitleElement(m_title, this);
     return InsertionDone;
 }
 
-void HTMLTitleElement::removedFrom(ContainerNode* insertionPoint)
+void HTMLTitleElement::removedFrom(ContainerNode& insertionPoint)
 {
     HTMLElement::removedFrom(insertionPoint);
-    if (insertionPoint->inDocument() && !insertionPoint->isInShadowTree())
-        document()->removeTitle(this);
+    if (insertionPoint.inDocument() && !insertionPoint.isInShadowTree())
+        document().removeTitle(this);
 }
 
-void HTMLTitleElement::childrenChanged(bool changedByParser, Node* beforeChange, Node* afterChange, int childCountDelta)
+void HTMLTitleElement::childrenChanged(const ChildChange& change)
 {
-    HTMLElement::childrenChanged(changedByParser, beforeChange, afterChange, childCountDelta);
+    HTMLElement::childrenChanged(change);
     m_title = textWithDirection();
     if (inDocument()) {
         if (!isInShadowTree())
-        document()->setTitleElement(m_title, this);
+            document().setTitleElement(m_title, this);
         else
-            document()->removeTitle(this);
+            document().removeTitle(this);
     }
 }
 
 String HTMLTitleElement::text() const
 {
-    StringBuilder result;
-    
-    for (Node *n = firstChild(); n; n = n->nextSibling()) {
-        if (n->isTextNode())
-            result.append(toText(n)->data());
-    }
-
-    return result.toString();
+    return TextNodeTraversal::contentsAsString(this);
 }
 
 StringWithDirection HTMLTitleElement::textWithDirection()
 {
     TextDirection direction = LTR;
-    if (RenderStyle* style = computedStyle())
-        direction = style->direction();
-    else if (RefPtr<RenderStyle> style = styleForRenderer())
-        direction = style->direction();
+    if (RenderStyle* computedStyle = this->computedStyle())
+        direction = computedStyle->direction();
+    else {
+        Ref<RenderStyle> style(styleForRenderer());
+        direction = style.get().direction();
+    }
     return StringWithDirection(text(), direction);
 }
 
 void HTMLTitleElement::setText(const String &value)
 {
-    RefPtr<Node> protectFromMutationEvents(this);
+    Ref<HTMLTitleElement> protectFromMutationEvents(*this);
 
     int numChildren = childNodeCount();
     
@@ -112,7 +108,7 @@ void HTMLTitleElement::setText(const String &value)
         if (numChildren > 0)
             removeChildren();
 
-        appendChild(document()->createTextNode(valueCopy.impl()), IGNORE_EXCEPTION);
+        appendChild(document().createTextNode(valueCopy.impl()), IGNORE_EXCEPTION);
     }
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,6 +31,8 @@ import javafx.beans.property.ObjectPropertyBase;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
+import javafx.event.Event;
+import javafx.event.EventType;
 import javafx.geometry.Side;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleRole;
@@ -75,6 +77,43 @@ import javafx.beans.property.ReadOnlyBooleanWrapper;
  * @since JavaFX 2.0
  */
 public class MenuButton extends ButtonBase {
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Static properties and methods                                           *
+     *                                                                         *
+     **************************************************************************/
+
+    /**
+     * Called prior to the MenuButton showing its popup after the user
+     * has clicked or otherwise interacted with the MenuButton.
+     * @since JavaFX 8u60
+     */
+    public static final EventType<Event> ON_SHOWING =
+            new EventType<Event>(Event.ANY, "MENU_BUTTON_ON_SHOWING");
+
+    /**
+     * Called after the MenuButton has shown its popup.
+     * @since JavaFX 8u60
+     */
+    public static final EventType<Event> ON_SHOWN =
+            new EventType<Event>(Event.ANY, "MENU_BUTTON_ON_SHOWN");
+
+    /**
+     * Called when the MenuButton popup <b>will</b> be hidden.
+     * @since JavaFX 8u60
+     */
+    public static final EventType<Event> ON_HIDING =
+            new EventType<Event>(Event.ANY, "MENU_BUTTON_ON_HIDING");
+
+    /**
+     * Called when the MenuButton popup has been hidden.
+     * @since JavaFX 8u60
+     */
+    public static final EventType<Event> ON_HIDDEN =
+            new EventType<Event>(Event.ANY, "MENU_BUTTON_ON_HIDDEN");
+
 
     /***************************************************************************
      *                                                                         *
@@ -172,7 +211,14 @@ public class MenuButton extends ButtonBase {
             super.invalidated();
         }
     };
-    private void setShowing(boolean value) { showing.set(value); }
+    private void setShowing(boolean value) {
+        // these events will not fire if the showing property is bound
+        Event.fireEvent(this, value ? new Event(ComboBoxBase.ON_SHOWING) :
+                new Event(ComboBoxBase.ON_HIDING));
+        showing.set(value);
+        Event.fireEvent(this, value ? new Event(ComboBoxBase.ON_SHOWN) :
+                new Event(ComboBoxBase.ON_HIDDEN));
+    }
     public final boolean isShowing() { return showing.get(); }
     public final ReadOnlyBooleanProperty showingProperty() { return showing.getReadOnlyProperty(); }
     

@@ -30,7 +30,6 @@
 #include "MediaQuery.h"
 
 #include "MediaQueryExp.h"
-#include <wtf/NonCopyingSort.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -40,32 +39,32 @@ String MediaQuery::serialize() const
 {
     StringBuilder result;
     if (!m_ignored) {
-    switch (m_restrictor) {
-    case MediaQuery::Only:
-        result.append("only ");
-        break;
-    case MediaQuery::Not:
-        result.append("not ");
-        break;
-    case MediaQuery::None:
-        break;
-    }
+        switch (m_restrictor) {
+        case MediaQuery::Only:
+            result.append("only ");
+            break;
+        case MediaQuery::Not:
+            result.append("not ");
+            break;
+        case MediaQuery::None:
+            break;
+        }
 
-    if (m_expressions->isEmpty()) {
-        result.append(m_mediaType);
-        return result.toString();
-    }
+        if (m_expressions->isEmpty()) {
+            result.append(m_mediaType);
+            return result.toString();
+        }
 
-    if (m_mediaType != "all" || m_restrictor != None) {
-        result.append(m_mediaType);
-        result.append(" and ");
-    }
+        if (m_mediaType != "all" || m_restrictor != None) {
+            result.append(m_mediaType);
+            result.append(" and ");
+        }
 
-    result.append(m_expressions->at(0)->serialize());
-    for (size_t i = 1; i < m_expressions->size(); ++i) {
-        result.append(" and ");
-        result.append(m_expressions->at(i)->serialize());
-    }
+        result.append(m_expressions->at(0)->serialize());
+        for (size_t i = 1; i < m_expressions->size(); ++i) {
+            result.append(" and ");
+            result.append(m_expressions->at(i)->serialize());
+        }
     } else {
         // If query is invalid, serialized text should turn into "not all".
         result.append("not all");
@@ -73,24 +72,20 @@ String MediaQuery::serialize() const
     return result.toString();
 }
 
-static bool expressionCompare(const OwnPtr<MediaQueryExp>& a, const OwnPtr<MediaQueryExp>& b)
-{
-    return codePointCompare(a->serialize(), b->serialize()) < 0;
-}
-
-
-MediaQuery::MediaQuery(Restrictor r, const String& mediaType, PassOwnPtr<Vector<OwnPtr<MediaQueryExp> > > exprs)
+MediaQuery::MediaQuery(Restrictor r, const String& mediaType, std::unique_ptr<ExpressionVector> exprs)
     : m_restrictor(r)
     , m_mediaType(mediaType.lower())
-    , m_expressions(exprs)
+    , m_expressions(std::move(exprs))
     , m_ignored(false)
 {
     if (!m_expressions) {
-        m_expressions = adoptPtr(new Vector<OwnPtr<MediaQueryExp> >);
+        m_expressions = std::make_unique<ExpressionVector>();
         return;
     }
 
-    nonCopyingSort(m_expressions->begin(), m_expressions->end(), expressionCompare);
+    std::sort(m_expressions->begin(), m_expressions->end(), [](const std::unique_ptr<MediaQueryExp>& a, const std::unique_ptr<MediaQueryExp>& b) {
+        return codePointCompare(a->serialize(), b->serialize()) < 0;
+    });
 
     // remove all duplicated expressions
     String key;
@@ -110,12 +105,12 @@ MediaQuery::MediaQuery(Restrictor r, const String& mediaType, PassOwnPtr<Vector<
 MediaQuery::MediaQuery(const MediaQuery& o)
     : m_restrictor(o.m_restrictor)
     , m_mediaType(o.m_mediaType)
-    , m_expressions(adoptPtr(new Vector<OwnPtr<MediaQueryExp> >(o.m_expressions->size())))
+    , m_expressions(std::make_unique<ExpressionVector>(o.m_expressions->size()))
     , m_ignored(o.m_ignored)
     , m_serializationCache(o.m_serializationCache)
 {
     for (unsigned i = 0; i < m_expressions->size(); ++i)
-        (*m_expressions)[i] = o.m_expressions->at(i)->copy();
+        (*m_expressions)[i] = std::move(o.m_expressions->at(i)->copy());
 }
 
 MediaQuery::~MediaQuery()

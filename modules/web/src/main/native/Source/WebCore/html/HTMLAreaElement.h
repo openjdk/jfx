@@ -25,7 +25,7 @@
 
 #include "HTMLAnchorElement.h"
 #include "LayoutRect.h"
-#include <wtf/OwnArrayPtr.h>
+#include <memory>
 
 namespace WebCore {
 
@@ -33,14 +33,15 @@ class HitTestResult;
 class HTMLImageElement;
 class Path;
 
-class HTMLAreaElement FINAL : public HTMLAnchorElement {
+class HTMLAreaElement final : public HTMLAnchorElement {
 public:
-    static PassRefPtr<HTMLAreaElement> create(const QualifiedName&, Document*);
+    static PassRefPtr<HTMLAreaElement> create(const QualifiedName&, Document&);
 
     bool isDefault() const { return m_shape == Default; }
 
     bool mapMouseEvent(LayoutPoint location, const LayoutSize&, HitTestResult&);
 
+    // FIXME: Use RenderElement* instead of RenderObject* once we upstream iOS's DOMUIKitExtensions.{h, mm}.
     LayoutRect computeRect(RenderObject*) const;
     Path computePath(RenderObject*) const;
 
@@ -48,32 +49,29 @@ public:
     HTMLImageElement* imageElement() const;
     
 private:
-    HTMLAreaElement(const QualifiedName&, Document*);
+    HTMLAreaElement(const QualifiedName&, Document&);
 
-    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
-    virtual bool supportsFocus() const OVERRIDE;
-    virtual String target() const;
-    virtual bool isKeyboardFocusable(KeyboardEvent*) const OVERRIDE;
-    virtual bool isMouseFocusable() const OVERRIDE;
-    virtual bool isFocusable() const OVERRIDE;
-    virtual void updateFocusAppearance(bool /*restorePreviousSelection*/);
-    virtual void setFocus(bool) OVERRIDE;
-
-#if ENABLE(MICRODATA)
-    virtual String itemValueText() const OVERRIDE;
-    virtual void setItemValueText(const String&, ExceptionCode&) OVERRIDE;
-#endif
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
+    virtual bool supportsFocus() const override;
+    virtual String target() const override;
+    virtual bool isKeyboardFocusable(KeyboardEvent*) const override;
+    virtual bool isMouseFocusable() const override;
+    virtual bool isFocusable() const override;
+    virtual void updateFocusAppearance(bool /*restorePreviousSelection*/) override;
+    virtual void setFocus(bool) override;
 
     enum Shape { Default, Poly, Rect, Circle, Unknown };
     Path getRegion(const LayoutSize&) const;
     void invalidateCachedRegion();
 
     OwnPtr<Path> m_region;
-    OwnArrayPtr<Length> m_coords;
+    std::unique_ptr<Length[]> m_coords;
     int m_coordsLen;
     LayoutSize m_lastSize;
     Shape m_shape;
 };
+
+NODE_TYPE_CASTS(HTMLAreaElement)
 
 } //namespace
 

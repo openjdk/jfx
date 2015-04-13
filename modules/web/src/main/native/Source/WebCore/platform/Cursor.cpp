@@ -145,8 +145,7 @@ const Cursor& Cursor::fromType(Cursor::Type type)
     return pointerCursor();
 }
 
-#if USE(LAZY_NATIVE_CURSOR)
-
+#if !PLATFORM(JAVA)
 Cursor::Cursor(Image* image, const IntPoint& hotSpot)
     : m_type(Custom)
     , m_image(image)
@@ -157,6 +156,7 @@ Cursor::Cursor(Image* image, const IntPoint& hotSpot)
     , m_platformCursor(0)
 {
 }
+#endif
 
 #if ENABLE(MOUSE_CURSOR_SCALE)
 Cursor::Cursor(Image* image, const IntPoint& hotSpot, float scale)
@@ -178,7 +178,7 @@ Cursor::Cursor(Type type)
 {
 }
 
-#if !PLATFORM(MAC)
+#if !PLATFORM(COCOA)
 
 PlatformCursor Cursor::platformCursor() const
 {
@@ -187,6 +187,8 @@ PlatformCursor Cursor::platformCursor() const
 }
 
 #endif
+
+#if !PLATFORM(JAVA)
 
 const Cursor& pointerCursor()
 {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2008, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2006, 2007, 2008, 2009, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,19 +38,24 @@
 #include "FrameLoader.h"
 #include "FrameView.h"
 #include "KeyboardEvent.h"
+#include "MainFrame.h"
 #include "MouseEventWithHitTestResults.h"
 #include "NotImplemented.h"
 #include "Page.h"
 #include "Pasteboard.h"
 #include "PlatformEventFactoryMac.h"
+#include "RenderLayer.h"
+#include "RenderListBox.h"
 #include "RenderWidget.h"
 #include "RuntimeApplicationChecks.h"
+#include "ScrollableArea.h"
 #include "Scrollbar.h"
 #include "Settings.h"
+#include "ShadowRoot.h"
 #include "WebCoreSystemInterface.h"
 #include <wtf/MainThread.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/ObjcRuntimeExtras.h>
-#include <wtf/StdLibExtras.h>
 
 namespace WebCore {
 
@@ -60,7 +65,7 @@ const double EventHandler::TextDragDelay = 0.15;
 
 static RetainPtr<NSEvent>& currentNSEventSlot()
 {
-    DEFINE_STATIC_LOCAL(RetainPtr<NSEvent>, event, ());
+    static NeverDestroyed<RetainPtr<NSEvent>> event;
     return event;
 }
 
@@ -99,7 +104,7 @@ inline CurrentEventScope::~CurrentEventScope()
 
 bool EventHandler::wheelEvent(NSEvent *event)
 {
-    Page* page = m_frame->page();
+    Page* page = m_frame.page();
     if (!page)
         return false;
 
@@ -123,28 +128,28 @@ bool EventHandler::keyEvent(NSEvent *event)
 
 void EventHandler::focusDocumentView()
 {
-    Page* page = m_frame->page();
+    Page* page = m_frame.page();
     if (!page)
         return;
 
-    if (FrameView* frameView = m_frame->view()) {
+    if (FrameView* frameView = m_frame.view()) {
         if (NSView *documentView = frameView->documentView())
             page->chrome().focusNSView(documentView);
     }
 
-    page->focusController()->setFocusedFrame(m_frame);
+    page->focusController().setFocusedFrame(&m_frame);
 }
 
 bool EventHandler::passWidgetMouseDownEventToWidget(const MouseEventWithHitTestResults& event)
 {
     // Figure out which view to send the event to.
-    RenderObject* target = event.targetNode() ? event.targetNode()->renderer() : 0;
+    auto target = event.targetNode() ? event.targetNode()->renderer() : nullptr;
     if (!target || !target->isWidget())
         return false;
-    
-    // Double-click events don't exist in Cocoa. Since passWidgetMouseDownEventToWidget will
+
+    // Double-click events don't exist in Cocoa. Since passWidgetMouseDownEventToWidget() will
     // just pass currentEvent down to the widget, we don't want to call it for events that
-    // don't correspond to Cocoa events.  The mousedown/ups will have already been passed on as
+    // don't correspond to Cocoa events. The mousedown/ups will have already been passed on as
     // part of the pressed/released handling.
     return passMouseDownEventToWidget(toRenderWidget(target)->widget());
 }
@@ -176,7 +181,7 @@ bool EventHandler::passMouseDownEventToWidget(Widget* pWidget)
 {
     // FIXME: This function always returns true. It should be changed either to return
     // false in some cases or the return value should be removed.
-    
+
     RefPtr<Widget> widget = pWidget;
 
     if (!widget) {
@@ -184,13 +189,13 @@ bool EventHandler::passMouseDownEventToWidget(Widget* pWidget)
         return true;
     }
 
-    // In WebKit2 we will never have an NSView. Just return early and let the regular event handler machinery take care of
+    // In WebKit2 we will never have a native widget. Just return early and let the regular event handler machinery take care of
     // dispatching the event.
     if (!widget->platformWidget())
         return false;
 
     BEGIN_BLOCK_OBJC_EXCEPTIONS;
-    
+
     NSView *nodeView = widget->platformWidget();
     ASSERT([nodeView superview]);
     NSView *view = [nodeView hitTest:[[nodeView superview] convertPoint:[currentNSEvent() locationInWindow] fromView:nil]];
@@ -198,25 +203,25 @@ bool EventHandler::passMouseDownEventToWidget(Widget* pWidget)
         // We probably hit the border of a RenderWidget
         return true;
     }
-    
-    Page* page = m_frame->page();
+
+    Page* page = m_frame.page();
     if (!page)
         return true;
 
-    if (page->chrome().client()->firstResponder() != view) {
+    if (page->chrome().client().firstResponder() != view) {
         // Normally [NSWindow sendEvent:] handles setting the first responder.
         // But in our case, the event was sent to the view representing the entire web page.
         if ([currentNSEvent() clickCount] <= 1 && [view acceptsFirstResponder] && [view needsPanelToBecomeKey])
-            page->chrome().client()->makeFirstResponder(view);
+            page->chrome().client().makeFirstResponder(view);
     }
 
     // We need to "defer loading" while tracking the mouse, because tearing down the
     // page while an AppKit control is tracking the mouse can cause a crash.
-    
+
     // FIXME: In theory, WebCore now tolerates tear-down while tracking the
     // mouse. We should confirm that, and then remove the deferrsLoading
     // hack entirely.
-    
+
     bool wasDeferringLoading = page->defersLoading();
     if (!wasDeferringLoading)
         page->setDefersLoading(true);
@@ -226,7 +231,7 @@ bool EventHandler::passMouseDownEventToWidget(Widget* pWidget)
 
     {
         WidgetHierarchyUpdatesSuspensionScope suspendWidgetHierarchyUpdates;
-    [view mouseDown:currentNSEvent()];
+        [view mouseDown:currentNSEvent()];
     }
 
     m_sendingEventToSubview = false;
@@ -237,7 +242,7 @@ bool EventHandler::passMouseDownEventToWidget(Widget* pWidget)
     // Remember which view we sent the event to, so we can direct the release event properly.
     m_mouseDownView = view;
     m_mouseDownWasInSubframe = false;
-    
+
     // Many AppKit widgets run their own event loops and consume events while the mouse is down.
     // When they finish, currentEvent is the mouseUp that they exited on.  We need to update
     // the EventHandler state with this mouseUp, which we never saw.
@@ -250,7 +255,7 @@ bool EventHandler::passMouseDownEventToWidget(Widget* pWidget)
 
     return true;
 }
-    
+
 // Note that this does the same kind of check as [target isDescendantOf:superview].
 // There are two differences: This is a lot slower because it has to walk the whole
 // tree, and this works in cases where the target has already been deallocated.
@@ -265,7 +270,7 @@ static bool findViewInSubviews(NSView *superview, NSView *target)
         }
     }
     END_BLOCK_OBJC_EXCEPTIONS;
-    
+
     return false;
 }
 
@@ -278,7 +283,7 @@ NSView *EventHandler::mouseDownViewIfStillGood()
     if (!mouseDownView) {
         return nil;
     }
-    FrameView* topFrameView = m_frame->view();
+    FrameView* topFrameView = m_frame.view();
     NSView *topView = topFrameView ? topFrameView->platformWidget() : nil;
     if (!topView || !findViewInSubviews(topView, mouseDownView)) {
         m_mouseDownView = nil;
@@ -307,13 +312,13 @@ bool EventHandler::eventLoopHandleMouseDragged(const MouseEventWithHitTestResult
     return true;
 }
 #endif // ENABLE(DRAG_SUPPORT)
-    
+
 bool EventHandler::eventLoopHandleMouseUp(const MouseEventWithHitTestResults&)
 {
     NSView *view = mouseDownViewIfStillGood();
     if (!view)
         return false;
-    
+
     if (!m_mouseDownWasInSubframe) {
         ASSERT(!m_sendingEventToSubview);
         m_sendingEventToSubview = true;
@@ -339,7 +344,7 @@ bool EventHandler::passSubframeEventToSubframe(MouseEventWithHitTestResults& eve
             if (!m_mouseDownWasInSubframe)
                 return false;
 #if ENABLE(DRAG_SUPPORT)
-            if (subframe->page()->dragController()->didInitiateDrag())
+            if (subframe->page()->dragController().didInitiateDrag())
                 return false;
 #endif
         case NSMouseMoved:
@@ -348,7 +353,7 @@ bool EventHandler::passSubframeEventToSubframe(MouseEventWithHitTestResults& eve
             // currentNSEvent() that mouseMoved() does would have no effect.
             ASSERT(!m_sendingEventToSubview);
             m_sendingEventToSubview = true;
-            subframe->eventHandler()->handleMouseMoveEvent(currentPlatformMouseEvent(), hoveredNode);
+            subframe->eventHandler().handleMouseMoveEvent(currentPlatformMouseEvent(), hoveredNode);
             m_sendingEventToSubview = false;
             return true;
         
@@ -356,7 +361,7 @@ bool EventHandler::passSubframeEventToSubframe(MouseEventWithHitTestResults& eve
             Node* node = event.targetNode();
             if (!node)
                 return false;
-            RenderObject* renderer = node->renderer();
+            auto renderer = node->renderer();
             if (!renderer || !renderer->isWidget())
                 return false;
             Widget* widget = toRenderWidget(renderer)->widget();
@@ -372,7 +377,7 @@ bool EventHandler::passSubframeEventToSubframe(MouseEventWithHitTestResults& eve
                 return false;
             ASSERT(!m_sendingEventToSubview);
             m_sendingEventToSubview = true;
-            subframe->eventHandler()->handleMouseReleaseEvent(currentPlatformMouseEvent());
+            subframe->eventHandler().handleMouseReleaseEvent(currentPlatformMouseEvent());
             m_sendingEventToSubview = false;
             return true;
         }
@@ -431,7 +436,7 @@ bool EventHandler::passWheelEventToWidget(const PlatformWheelEvent& wheelEvent, 
         if (!widget->isFrameView())
             return false;
 
-        return toFrameView(widget)->frame()->eventHandler()->handleWheelEvent(wheelEvent);
+        return toFrameView(widget)->frame().eventHandler().handleWheelEvent(wheelEvent);
     }
 
     if ([currentNSEvent() type] != NSScrollWheel || m_sendingEventToSubview) 
@@ -440,9 +445,10 @@ bool EventHandler::passWheelEventToWidget(const PlatformWheelEvent& wheelEvent, 
     ASSERT(nodeView);
     ASSERT([nodeView superview]);
     NSView *view = [nodeView hitTest:[[nodeView superview] convertPoint:[currentNSEvent() locationInWindow] fromView:nil]];
-    if (!view)
+    if (!view) {
         // We probably hit the border of a RenderWidget
         return false;
+    }
 
     ASSERT(!m_sendingEventToSubview);
     m_sendingEventToSubview = true;
@@ -454,14 +460,14 @@ bool EventHandler::passWheelEventToWidget(const PlatformWheelEvent& wheelEvent, 
     setNSScrollViewScrollWheelShouldRetainSelf(false);
     m_sendingEventToSubview = false;
     return true;
-            
+
     END_BLOCK_OBJC_EXCEPTIONS;
     return false;
 }
 
 void EventHandler::mouseDown(NSEvent *event)
 {
-    FrameView* v = m_frame->view();
+    FrameView* v = m_frame.view();
     if (!v || m_sendingEventToSubview)
         return;
 
@@ -478,7 +484,7 @@ void EventHandler::mouseDown(NSEvent *event)
 
 void EventHandler::mouseDragged(NSEvent *event)
 {
-    FrameView* v = m_frame->view();
+    FrameView* v = m_frame.view();
     if (!v || m_sendingEventToSubview)
         return;
 
@@ -492,7 +498,7 @@ void EventHandler::mouseDragged(NSEvent *event)
 
 void EventHandler::mouseUp(NSEvent *event)
 {
-    FrameView* v = m_frame->view();
+    FrameView* v = m_frame.view();
     if (!v || m_sendingEventToSubview)
         return;
 
@@ -529,7 +535,7 @@ void EventHandler::mouseUp(NSEvent *event)
  */
 void EventHandler::sendFakeEventsAfterWidgetTracking(NSEvent *initiatingEvent)
 {
-    FrameView* view = m_frame->view();
+    FrameView* view = m_frame.view();
     if (!view)
         return;
 
@@ -567,6 +573,8 @@ void EventHandler::sendFakeEventsAfterWidgetTracking(NSEvent *initiatingEvent)
         // FIXME: We should really get the current modifierFlags here, but there's no way to poll
         // them in Cocoa, and because the event stream was stolen by the Carbon menu code we have
         // no up-to-date cache of them anywhere.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         fakeEvent = [NSEvent mouseEventWithType:NSMouseMoved
                                        location:[[view->platformWidget() window] convertScreenToBase:[NSEvent mouseLocation]]
                                   modifierFlags:[initiatingEvent modifierFlags]
@@ -576,6 +584,7 @@ void EventHandler::sendFakeEventsAfterWidgetTracking(NSEvent *initiatingEvent)
                                     eventNumber:0
                                      clickCount:0
                                        pressure:0];
+#pragma clang diagnostic pop
         [NSApp postEvent:fakeEvent atStart:YES];
     }
     
@@ -586,9 +595,9 @@ void EventHandler::mouseMoved(NSEvent *event)
 {
     // Reject a mouse moved if the button is down - screws up tracking during autoscroll
     // These happen because WebKit sometimes has to fake up moved events.
-    if (!m_frame->view() || m_mousePressed || m_sendingEventToSubview)
+    if (!m_frame.view() || m_mousePressed || m_sendingEventToSubview)
         return;
-    
+
     BEGIN_BLOCK_OBJC_EXCEPTIONS;
     CurrentEventScope scope(event);
     mouseMoved(currentPlatformMouseEvent());
@@ -599,7 +608,7 @@ void EventHandler::passMouseMovedEventToScrollbars(NSEvent *event)
 {
     // Reject a mouse moved if the button is down - screws up tracking during autoscroll
     // These happen because WebKit sometimes has to fake up moved events.
-    if (!m_frame->view() || m_mousePressed || m_sendingEventToSubview)
+    if (!m_frame.view() || m_mousePressed || m_sendingEventToSubview)
         return;
 
     BEGIN_BLOCK_OBJC_EXCEPTIONS;
@@ -608,9 +617,9 @@ void EventHandler::passMouseMovedEventToScrollbars(NSEvent *event)
     END_BLOCK_OBJC_EXCEPTIONS;
 }
 
-static bool frameHasPlatformWidget(Frame* frame)
+static bool frameHasPlatformWidget(const Frame& frame)
 {
-    if (FrameView* frameView = frame->view()) {
+    if (FrameView* frameView = frame.view()) {
         if (frameView->platformWidget())
             return true;
     }
@@ -625,7 +634,7 @@ bool EventHandler::passMousePressEventToSubframe(MouseEventWithHitTestResults& m
         return passSubframeEventToSubframe(mev, subframe);
 
     // WebKit2 code path.
-    subframe->eventHandler()->handleMousePressEvent(mev.event());
+    subframe->eventHandler().handleMousePressEvent(mev.event());
     return true;
 }
 
@@ -641,7 +650,7 @@ bool EventHandler::passMouseMoveEventToSubframe(MouseEventWithHitTestResults& me
         return false;
 #endif
 
-    subframe->eventHandler()->handleMouseMoveEvent(mev.event(), hoveredNode);
+    subframe->eventHandler().handleMouseMoveEvent(mev.event(), hoveredNode);
     return true;
 }
 
@@ -652,14 +661,14 @@ bool EventHandler::passMouseReleaseEventToSubframe(MouseEventWithHitTestResults&
         return passSubframeEventToSubframe(mev, subframe);
 
     // WebKit2 code path.
-    subframe->eventHandler()->handleMouseReleaseEvent(mev.event());
+    subframe->eventHandler().handleMouseReleaseEvent(mev.event());
     return true;
 }
 
 PlatformMouseEvent EventHandler::currentPlatformMouseEvent() const
 {
     NSView *windowView = nil;
-    if (Page* page = m_frame->page())
+    if (Page* page = m_frame.page())
         windowView = page->chrome().platformPageClient();
     return PlatformEventFactory::createPlatformMouseEvent(currentNSEvent(), windowView);
 }
@@ -684,11 +693,11 @@ PassRefPtr<Clipboard> EventHandler::createDraggingClipboard() const
 
 bool EventHandler::tabsToAllFormControls(KeyboardEvent* event) const
 {
-    Page* page = m_frame->page();
+    Page* page = m_frame.page();
     if (!page)
         return false;
 
-    KeyboardUIMode keyboardUIMode = page->chrome().client()->keyboardUIMode();
+    KeyboardUIMode keyboardUIMode = page->chrome().client().keyboardUIMode();
     bool handlingOptionTab = isKeyboardOptionTab(event);
 
     // If tab-to-links is off, option-tab always highlights all controls
@@ -708,16 +717,12 @@ bool EventHandler::tabsToAllFormControls(KeyboardEvent* event) const
 
 bool EventHandler::needsKeyboardEventDisambiguationQuirks() const
 {
-    Settings* settings = m_frame->settings();
-    if (!settings)
-        return false;
-
 #if ENABLE(DASHBOARD_SUPPORT)
-    if (settings->usesDashboardBackwardCompatibilityMode())
+    if (m_frame.settings().usesDashboardBackwardCompatibilityMode())
         return true;
 #endif
         
-    if (settings->needsKeyboardEventDisambiguationQuirks())
+    if (m_frame.settings().needsKeyboardEventDisambiguationQuirks())
         return true;
 
     return false;
@@ -732,6 +737,123 @@ unsigned EventHandler::accessKeyModifiers()
         return PlatformEvent::CtrlKey;
 
     return PlatformEvent::CtrlKey | PlatformEvent::AltKey;
+}
+
+static ContainerNode* findEnclosingScrollableContainer(ContainerNode& node)
+{
+    // Find the first node with a valid scrollable area starting with the current
+    // node and traversing its parents (or shadow hosts).
+    for (ContainerNode* candidate = &node; candidate; candidate = candidate->parentOrShadowHostNode()) {
+        RenderBox* box = candidate->renderBox();
+        if (box && box->canBeScrolledAndHasScrollableArea())
+            return candidate;
+    }
+    
+    return nullptr;
+}
+
+static bool scrolledToEdgeInDominantDirection(const ScrollableArea& area, DominantScrollGestureDirection direction, float deltaX, float deltaY)
+{
+    if (DominantScrollGestureDirection::Horizontal == direction && deltaX) {
+        if (deltaX < 0)
+            return area.scrolledToRight();
+        
+        return area.scrolledToLeft();
+    }
+    
+    if (deltaY < 0)
+        return area.scrolledToBottom();
+    
+    return area.scrolledToTop();
+}
+
+void EventHandler::platformPrepareForWheelEvents(const PlatformWheelEvent& wheelEvent, const HitTestResult& result, Element*& wheelEventTarget, ContainerNode*& scrollableContainer, ScrollableArea*& scrollableArea, bool& isOverWidget)
+{
+    FrameView* view = m_frame.view();
+
+    scrollableContainer = nullptr;
+    scrollableArea = nullptr;
+    if (!view || !view->frame().isMainFrame()) {
+        scrollableContainer = wheelEventTarget;
+        scrollableArea = view;
+    } else {
+        scrollableContainer = findEnclosingScrollableContainer(*wheelEventTarget);
+        if (scrollableContainer) {
+            if (RenderBox* box = scrollableContainer->renderBox()) {
+                if (box->isListBox())
+                    scrollableArea = toRenderListBox(box);
+                else
+                    scrollableArea = box->layer();
+            }
+        }
+    }
+    
+    if (wheelEvent.shouldConsiderLatching()) {
+        if (scrollableArea)
+            m_startedGestureAtScrollLimit = scrolledToEdgeInDominantDirection(*scrollableArea, m_recentWheelEventDeltaTracker->dominantScrollGestureDirection(), wheelEvent.deltaX(), wheelEvent.deltaY());
+        else
+            m_startedGestureAtScrollLimit = false;
+        m_latchedWheelEventElement = wheelEventTarget;
+        m_latchedScrollableContainer = scrollableContainer;
+        m_widgetIsLatched = result.isOverWidget();
+        isOverWidget = m_widgetIsLatched;
+        m_recentWheelEventDeltaTracker->beginTrackingDeltas();
+    } else if (wheelEvent.shouldResetLatching()) {
+        m_latchedWheelEventElement = nullptr;
+        m_latchedScrollableContainer = nullptr;
+        m_widgetIsLatched = false;
+        m_previousWheelScrolledElement = nullptr;
+        m_recentWheelEventDeltaTracker->endTrackingDeltas();
+    }
+    
+    if (!wheelEvent.shouldResetLatching() && m_latchedWheelEventElement) {
+        wheelEventTarget = m_latchedWheelEventElement.get();
+        isOverWidget = m_widgetIsLatched;
+    }
+}
+
+void EventHandler::platformRecordWheelEvent(const PlatformWheelEvent& wheelEvent)
+{
+    switch (wheelEvent.phase()) {
+        case PlatformWheelEventPhaseBegan:
+            m_recentWheelEventDeltaTracker->beginTrackingDeltas();
+            break;
+        case PlatformWheelEventPhaseEnded:
+            m_recentWheelEventDeltaTracker->endTrackingDeltas();
+            break;
+        default:
+            break;
+    }
+
+    m_recentWheelEventDeltaTracker->recordWheelEventDelta(wheelEvent);
+}
+
+bool EventHandler::platformCompleteWheelEvent(const PlatformWheelEvent& wheelEvent, ContainerNode* scrollableContainer, ScrollableArea* scrollableArea)
+{
+    // We do another check on the frame view because the event handler can run JS which results in the frame getting destroyed.
+    FrameView* view = m_frame.view();
+
+    if (wheelEvent.useLatchedEventElement() && m_latchedScrollableContainer) {
+        if (!view || !view->frame().isMainFrame()) {
+            bool didHandleWheelEvent = view && view->wheelEvent(wheelEvent);
+            if (!didHandleWheelEvent && scrollableContainer == m_latchedScrollableContainer) {
+                // If we are just starting a scroll event, and have nowhere left to scroll, allow
+                // the enclosing frame to handle the scroll.
+                didHandleWheelEvent = !m_startedGestureAtScrollLimit;
+            }
+            m_isHandlingWheelEvent = false;
+            return didHandleWheelEvent;
+        }
+        
+        if (scrollableArea && !m_startedGestureAtScrollLimit && scrollableContainer == m_latchedScrollableContainer) {
+            m_isHandlingWheelEvent = false;
+            return true;
+        }
+    }
+    
+    bool didHandleEvent = view ? view->wheelEvent(wheelEvent) : false;
+    m_isHandlingWheelEvent = false;
+    return didHandleEvent;
 }
 
 }

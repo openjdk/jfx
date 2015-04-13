@@ -31,6 +31,10 @@ typedef struct _GstTask GstTask;
 typedef struct _GstBus GstBus;
 typedef struct _GstElementFactory GstElementFactory;
 typedef struct _GstBuffer GstBuffer;
+typedef struct _GstSample GstSample;
+typedef struct _GstTagList GstTagList;
+typedef struct _GstEvent GstEvent;
+typedef struct _GstToc GstToc;
 
 namespace WTF {
 
@@ -65,6 +69,22 @@ template<> void derefGPtr<GstElementFactory>(GstElementFactory* ptr);
 template<> GRefPtr<GstBuffer> adoptGRef(GstBuffer* ptr);
 template<> GstBuffer* refGPtr<GstBuffer>(GstBuffer* ptr);
 template<> void derefGPtr<GstBuffer>(GstBuffer* ptr);
+
+template<> GRefPtr<GstSample> adoptGRef(GstSample* ptr);
+template<> GstSample* refGPtr<GstSample>(GstSample* ptr);
+template<> void derefGPtr<GstSample>(GstSample* ptr);
+
+template<> GRefPtr<GstTagList> adoptGRef(GstTagList* ptr);
+template<> GstTagList* refGPtr<GstTagList>(GstTagList* ptr);
+template<> void derefGPtr<GstTagList>(GstTagList* ptr);
+
+template<> GRefPtr<GstEvent> adoptGRef(GstEvent* ptr);
+template<> GstEvent* refGPtr<GstEvent>(GstEvent* ptr);
+template<> void derefGPtr<GstEvent>(GstEvent* ptr);
+
+template<> GRefPtr<GstToc> adoptGRef(GstToc* ptr);
+template<> GstToc* refGPtr<GstToc>(GstToc* ptr);
+template<> void derefGPtr<GstToc>(GstToc* ptr);
 }
 
 #endif // USE(GSTREAMER)

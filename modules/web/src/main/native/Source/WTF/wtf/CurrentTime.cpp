@@ -59,10 +59,6 @@
 #include <glib.h>
 #endif
 
-#if PLATFORM(QT)
-#include <QElapsedTimer>
-#endif
-
 #if PLATFORM(JAVA)
 #include <WebCore/platform/java/JavaEnv.h>
 #endif
@@ -247,16 +243,6 @@ double currentTime()
     return ecore_time_unix_get();
 }
 
-#elif OS(QNX)
-
-double currentTime()
-{
-    struct timespec time;
-    if (clock_gettime(CLOCK_REALTIME, &time))
-        CRASH();
-    return time.tv_sec + time.tv_nsec / 1.0e9;
-}
-
 #elif PLATFORM(JAVA) && 0
 // Attention! That can be called from non-Java thread. And very often, 
 // so back to native implementation.
@@ -291,7 +277,21 @@ double currentTime()
 
 #endif
 
-#if PLATFORM(MAC)
+#if PLATFORM(EFL)
+
+double monotonicallyIncreasingTime()
+{
+    return ecore_time_get();
+}
+
+#elif USE(GLIB)
+
+double monotonicallyIncreasingTime()
+{
+    return static_cast<double>(g_get_monotonic_time() / 1000000.0);
+}
+
+#elif OS(DARWIN)
 
 double monotonicallyIncreasingTime()
 {
@@ -302,39 +302,6 @@ double monotonicallyIncreasingTime()
         ASSERT_UNUSED(kr, kr == KERN_SUCCESS);
     }
     return (mach_absolute_time() * timebaseInfo.numer) / (1.0e9 * timebaseInfo.denom);
-}
-
-#elif PLATFORM(EFL)
-
-double monotonicallyIncreasingTime()
-{
-    return ecore_time_get();
-}
-
-#elif USE(GLIB) && !PLATFORM(EFL) && !PLATFORM(QT)
-
-double monotonicallyIncreasingTime()
-{
-    return static_cast<double>(g_get_monotonic_time() / 1000000.0);
-}
-
-#elif PLATFORM(QT)
-
-double monotonicallyIncreasingTime()
-{
-    ASSERT(QElapsedTimer::isMonotonic());
-    static QElapsedTimer timer;
-    return timer.nsecsElapsed() / 1.0e9;
-}
-
-#elif OS(QNX)
-
-double monotonicallyIncreasingTime()
-{
-    struct timespec time;
-    if (clock_gettime(CLOCK_MONOTONIC, &time))
-        CRASH();
-    return time.tv_sec + time.tv_nsec / 1.0e9;
 }
 
 #else
@@ -379,11 +346,6 @@ double currentCPUTime()
     GetThreadTimes(GetCurrentThread(), &creationTime, &exitTime, &kernelTime.fileTime, &userTime.fileTime);
     
     return userTime.fileTimeAsLong / 10000000. + kernelTime.fileTimeAsLong / 10000000.;
-#elif OS(QNX)
-    struct timespec time;
-    if (clock_gettime(CLOCK_THREAD_CPUTIME_ID, &time))
-        CRASH();
-    return time.tv_sec + time.tv_nsec / 1.0e9;
 #else
     // FIXME: We should return the time the current thread has spent executing.
 

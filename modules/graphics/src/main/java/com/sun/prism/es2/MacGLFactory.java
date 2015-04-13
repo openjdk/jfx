@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,7 +63,15 @@ class MacGLFactory extends GLFactory {
     @Override
     GLContext createGLContext(GLDrawable drawable, GLPixelFormat pixelFormat,
         GLContext shareCtx, boolean vSyncRequest) {
-        return new MacGLContext(drawable, pixelFormat, shareCtx, vSyncRequest);
+        GLContext glassCtx = new MacGLContext(drawable, pixelFormat, shareCtx, vSyncRequest);
+        GLContext prismCtx = new MacGLContext(drawable, pixelFormat, shareCtx, vSyncRequest);
+
+        // NOTE: glassCtx isn't the prism rendering context. This glassCtx is created
+        // and passed to Glass; prism never needs to switch or access it.
+        HashMap devDetails = (HashMap) ES2Pipeline.getInstance().getDeviceDetails();
+        devDetails.put("contextPtr", glassCtx.getNativeHandle());
+
+        return prismCtx;
     }
 
     @Override
@@ -120,13 +128,5 @@ class MacGLFactory extends GLFactory {
     @Override
     void updateDeviceDetails(HashMap deviceDetails) {
            deviceDetails.put("shareContextPtr", getShareContext().getNativeHandle());
-    }
-
-    // JIRA: RT-21739
-    // TODO: This is a temporary mechanism to work well with Glass on Mac due
-    // to the CALayer work. Need to be removed in the early future for 3.0
-    @Override
-    void updateDeviceDetails(HashMap deviceDetails, GLContext glContext) {
-           deviceDetails.put("contextPtr", glContext.getNativeHandle());
     }
 }

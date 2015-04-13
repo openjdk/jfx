@@ -62,15 +62,15 @@ LinuxPlatform::LinuxPlatform(void) : Platform(), GenericPlatform(), PosixPlatfor
 LinuxPlatform::~LinuxPlatform(void) {
 }
 
-void LinuxPlatform::ShowError(TString title, TString description) {
+void LinuxPlatform::ShowMessage(TString title, TString description) {
     printf("%s %s\n", PlatformString(title).toPlatformString(), PlatformString(description).toPlatformString());
     fflush(stdout);
 }
 
-void LinuxPlatform::ShowError(TString description) {
+void LinuxPlatform::ShowMessage(TString description) {
     TString appname = GetModuleFileName();
     appname = FilePath::ExtractFileName(appname);
-    ShowError(PlatformString(appname).toPlatformString(), PlatformString(description).toPlatformString());
+    ShowMessage(PlatformString(appname).toPlatformString(), PlatformString(description).toPlatformString());
 }
 
 TCHAR* LinuxPlatform::ConvertStringToFileSystemString(TCHAR* Source, bool &release) {
@@ -108,32 +108,39 @@ TString LinuxPlatform::GetAppDataDirectory() {
     TString home = GetEnv(_T("HOME"));
 
     if (home.empty() == false) {
-        result += FilePath::IncludeTrailingSlash(home) + _T(".local");
+        result += FilePath::IncludeTrailingSeparater(home) + _T(".local");
     }
 
     return result;
 }
 
-PropertyContainer* LinuxPlatform::GetConfigFile(TString FileName) {
-    return new PropertyFile(FileName);
+ISectionalPropertyContainer* LinuxPlatform::GetConfigFile(TString FileName) {
+    IniFile *result = new IniFile();
+
+    if (result->LoadFromFile(FileName) == false) {
+        // New property file format was not found, attempt to load old property file format.
+        Helpers::LoadOldConfigFile(FileName, result);
+    }
+
+    return result;
 }
 
 TString LinuxPlatform::GetBundledJVMLibraryFileName(TString RuntimePath) {
-    TString result = FilePath::IncludeTrailingSlash(RuntimePath) +
+    TString result = FilePath::IncludeTrailingSeparater(RuntimePath) +
         "jre/lib/"JAVAARCH"/client/libjvm.so";
 
     if (FilePath::FileExists(result) == false) {
-        result = FilePath::IncludeTrailingSlash(RuntimePath) +
+        result = FilePath::IncludeTrailingSeparater(RuntimePath) +
             "jre/lib/"JAVAARCH"/server/libjvm.so";
     }
 
     if (FilePath::FileExists(result) == false) {
-        result = FilePath::IncludeTrailingSlash(RuntimePath) +
+        result = FilePath::IncludeTrailingSeparater(RuntimePath) +
             "lib/"JAVAARCH"/server/libjvm.so";
     }
 
     if (FilePath::FileExists(result) == false) {
-        result = FilePath::IncludeTrailingSlash(RuntimePath) +
+        result = FilePath::IncludeTrailingSeparater(RuntimePath) +
             "lib/"JAVAARCH"/server/libjvm.so";
     }
 
@@ -141,14 +148,19 @@ TString LinuxPlatform::GetBundledJVMLibraryFileName(TString RuntimePath) {
 }
 
 TString LinuxPlatform::GetSystemJRE() {
+    if (GetAppCDSState() == cdsOn || GetAppCDSState() == cdsGenCache) {
+        //TODO throw exception
+        return _T("");
+    }
+
     TString result;
     TString jreHome = GetEnv("JRE_HOME");
 
     if (jreHome.empty() == false) {
-        result = FilePath::IncludeTrailingSlash(jreHome);
+        result = FilePath::IncludeTrailingSeparater(jreHome);
 
         if (FilePath::FileExists(result + _T("lib/rt.jar")) == false) {
-            result = FilePath::IncludeTrailingSlash(jreHome) + _T("jre");
+            result = FilePath::IncludeTrailingSeparater(jreHome) + _T("jre");
 
             if (FilePath::FileExists(result + _T("/lib/rt.jar")) == false) {
                 //check redhat location
@@ -173,11 +185,11 @@ TString LinuxPlatform::GetSystemJVMLibraryFileName() {
     TString jreHome = GetSystemJRE();
 
     if (jreHome.empty() == false && FilePath::DirectoryExists(jreHome) == true) {
-        result = FilePath::IncludeTrailingSlash(jreHome) +
+        result = FilePath::IncludeTrailingSeparater(jreHome) +
             _T("/lib/"JAVAARCH"/client/libjvm.so");
 
         if (FilePath::FileExists(result) == false) {
-            result = FilePath::IncludeTrailingSlash(jreHome) +
+            result = FilePath::IncludeTrailingSeparater(jreHome) +
                 _T("/lib/"JAVAARCH"/server/libjvm.so");
         }
     }
@@ -204,11 +216,11 @@ bool LinuxPlatform::IsNativeDebuggerPresent() {
     // a typical prog uses only stdin=0, stdout=1, stderr=2.
     bool result = false;
     FILE *fd = fopen("/tmp", "r");
-    
+
     if (fileno(fd) > 5) {
         result = true;
     }
-    
+
     fclose(fd);
     return result;
 }
@@ -1025,9 +1037,9 @@ TString LinuxJavaUserPreferences::GetUserPrefFileName(TString Appid) {
     TString result;
     struct passwd *pw = getpwuid(getuid());
     TString homedir = pw->pw_dir;
-    TString userOverrideFileName = FilePath::IncludeTrailingSlash(homedir) +
-        FilePath::IncludeTrailingSlash(_T(".java/.userPrefs")) +
-        FilePath::IncludeTrailingSlash(Appid) +
+    TString userOverrideFileName = FilePath::IncludeTrailingSeparater(homedir) +
+        FilePath::IncludeTrailingSeparater(_T(".java/.userPrefs")) +
+        FilePath::IncludeTrailingSeparater(Appid) +
         _T("JVMUserOptions/prefs.xml");
 
     if (FilePath::FileExists(userOverrideFileName) == true) {
@@ -1037,10 +1049,9 @@ TString LinuxJavaUserPreferences::GetUserPrefFileName(TString Appid) {
     return result;
 }
 
-TOrderedMap ReadNode(XMLNode* node) {
-    TOrderedMap result;
+OrderedMap<TString, TString> ReadNode(XMLNode* node) {
+    OrderedMap<TString, TString> result;
     XMLNode* keyNode = FindXMLChild(node->_sub, _T("entry"));
-    int index = 1;
 
     while (keyNode != NULL) {
         TString key = FindXMLAttribute(keyNode->_attributes, _T("key"));
@@ -1048,19 +1059,15 @@ TOrderedMap ReadNode(XMLNode* node) {
         keyNode = keyNode->_next;
 
         if (key.empty() == false) {
-            TValueIndex item;
-            item.value = value;
-            item.index = index;
-            result.insert(TOrderedMap::value_type(key, item));
-            index++;
+            result.Append(key, value);
         }
     }
 
     return result;
 }
 
-TOrderedMap GetJvmUserArgs(TString filename) {
-    TOrderedMap result;
+OrderedMap<TString, TString> GetJvmUserArgs(TString filename) {
+    OrderedMap<TString, TString> result;
 
     if (FilePath::FileExists(filename) == true) {
         //scan file for the key

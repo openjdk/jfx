@@ -19,23 +19,22 @@
  */
 
 [
-        CustomToJSObject,
+    CustomToJSObject,
     CustomIsReachable,
-        JSCustomFinalize,
-        ObjCPolymorphic,
+    JSCustomFinalize,
+    ObjCPolymorphic,
     ImplementationLacksVTable
 ] interface CSSValue {
 
-        // UnitTypes
-        const unsigned short CSS_INHERIT         = 0;
-        const unsigned short CSS_PRIMITIVE_VALUE = 1;
-        const unsigned short CSS_VALUE_LIST      = 2;
-        const unsigned short CSS_CUSTOM          = 3;
+    // UnitTypes
+    const unsigned short CSS_INHERIT         = 0;
+    const unsigned short CSS_PRIMITIVE_VALUE = 1;
+    const unsigned short CSS_VALUE_LIST      = 2;
+    const unsigned short CSS_CUSTOM          = 3;
 
-             [TreatReturnedNullStringAs=Null, TreatNullAs=NullString] attribute DOMString cssText
-                     setter raises(DOMException);
+    [TreatReturnedNullStringAs=Null, TreatNullAs=NullString, SetterRaisesException] attribute DOMString cssText;
 
-        readonly attribute unsigned short cssValueType;
+    readonly attribute unsigned short cssValueType;
 
-    };
+};
 

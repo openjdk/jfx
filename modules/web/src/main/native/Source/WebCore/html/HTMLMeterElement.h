@@ -29,9 +29,9 @@ namespace WebCore {
 class MeterValueElement;
 class RenderMeter;
 
-class HTMLMeterElement FINAL : public LabelableElement {
+class HTMLMeterElement final : public LabelableElement {
 public:
-    static PassRefPtr<HTMLMeterElement> create(const QualifiedName&, Document*);
+    static PassRefPtr<HTMLMeterElement> create(const QualifiedName&, Document&);
 
     enum GaugeRegion {
         GaugeRegionOptimum,
@@ -60,38 +60,28 @@ public:
     double valueRatio() const;
     GaugeRegion gaugeRegion() const;
 
-    bool canContainRangeEndPoint() const { return false; }
+    virtual bool canContainRangeEndPoint() const override { return false; }
 
 private:
-    HTMLMeterElement(const QualifiedName&, Document*);
+    HTMLMeterElement(const QualifiedName&, Document&);
     virtual ~HTMLMeterElement();
 
-    virtual bool areAuthorShadowsAllowed() const OVERRIDE { return false; }
     RenderMeter* renderMeter() const;
 
-    virtual bool supportLabels() const OVERRIDE { return true; }
+    virtual bool supportLabels() const override { return true; }
 
     virtual bool recalcWillValidate() const { return false; }
-    virtual RenderObject* createRenderer(RenderArena*, RenderStyle*);
-    virtual bool childShouldCreateRenderer(const NodeRenderingContext&) const OVERRIDE;
-    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
+    virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) override;
+    virtual bool childShouldCreateRenderer(const Node&) const override;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
 
     void didElementStateChange();
-    virtual void didAddUserAgentShadowRoot(ShadowRoot*) OVERRIDE;
+    virtual void didAddUserAgentShadowRoot(ShadowRoot*) override;
 
     RefPtr<MeterValueElement> m_value;
 };
 
-inline bool isHTMLMeterElement(Node* node)
-{
-    return node->hasTagName(HTMLNames::meterTag);
-}
-
-inline HTMLMeterElement* toHTMLMeterElement(Node* node)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!node || isHTMLMeterElement(node));
-    return static_cast<HTMLMeterElement*>(node);
-}
+NODE_TYPE_CASTS(HTMLMeterElement)
 
 } // namespace
 

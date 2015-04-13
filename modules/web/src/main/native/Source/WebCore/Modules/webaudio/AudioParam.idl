@@ -27,19 +27,19 @@
  */
 
 [
-        Conditional=WEB_AUDIO
+    Conditional=WEB_AUDIO,
 ] interface AudioParam {
-        attribute float value;
-        readonly attribute float minValue;
-        readonly attribute float maxValue;
-        readonly attribute float defaultValue;
+    attribute float value;
+    readonly attribute float minValue;
+    readonly attribute float maxValue;
+    readonly attribute float defaultValue;
 
-        readonly attribute DOMString name;
+    readonly attribute DOMString name;
 
-        // FIXME: Could define units constants here (seconds, decibels, cents, etc.)...
-        readonly attribute unsigned short units;
+    // FIXME: Could define units constants here (seconds, decibels, cents, etc.)...
+    readonly attribute unsigned short units;
 
-        // Parameter automation.
+    // Parameter automation.
     void setValueAtTime(float value, float time);
     void linearRampToValueAtTime(float value, float time);
     void exponentialRampToValueAtTime(float value, float time);
@@ -47,13 +47,13 @@
     // Exponentially approach the target with a rate having the given time constant.
     void setTargetAtTime(float target, float time, float timeConstant);
 
-        // Sets an array of arbitrary parameter values starting at time for the given duration.
-        // The number of values will be scaled to fit into the desired duration.
+    // Sets an array of arbitrary parameter values starting at time for the given duration.
+    // The number of values will be scaled to fit into the desired duration.
     void setValueCurveAtTime(Float32Array values, float time, float duration);
 
-        // Cancels all scheduled parameter changes with times greater than or equal to startTime.
+    // Cancels all scheduled parameter changes with times greater than or equal to startTime.
     void cancelScheduledValues(float startTime);
 
     [Conditional=LEGACY_WEB_AUDIO, ImplementedAs=setTargetAtTime] void setTargetValueAtTime(float targetValue, float time, float timeConstant);
 
-    };
+};

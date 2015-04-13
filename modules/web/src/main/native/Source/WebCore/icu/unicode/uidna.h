@@ -23,9 +23,9 @@
 
 #include "unicode/localpointer.h"
 #include "unicode/parseerr.h"
-  
+
 /**
- *\file
+ * \file
  * \brief C API: Internationalizing Domain Names in Applications (IDNA)
  *
  * IDNA2008 is implemented according to UTS #46, see the IDNA C++ class in idna.h.
@@ -492,12 +492,12 @@ enum {
  * that are obtained from resolver libraries are processed by the
  * ToUnicode operation before displaying the domain name to the user.
  * IDNA requires that implementations process input strings with Nameprep
- * (http://www.ietf.org/rfc/rfc3491.txt), 
- * which is a profile of Stringprep (http://www.ietf.org/rfc/rfc3454.txt), 
- * and then with Punycode (http://www.ietf.org/rfc/rfc3492.txt). 
- * Implementations of IDNA MUST fully implement Nameprep and Punycode; 
+ * (http://www.ietf.org/rfc/rfc3491.txt),
+ * which is a profile of Stringprep (http://www.ietf.org/rfc/rfc3454.txt),
+ * and then with Punycode (http://www.ietf.org/rfc/rfc3492.txt).
+ * Implementations of IDNA MUST fully implement Nameprep and Punycode;
  * neither Nameprep nor Punycode are optional.
- * The input and output of ToASCII and ToUnicode operations are Unicode 
+ * The input and output of ToASCII and ToUnicode operations are Unicode
  * and are designed to be chainable, i.e., applying ToASCII or ToUnicode operations
  * multiple times to an input string will yield the same result as applying the operation
  * once.
@@ -518,7 +518,7 @@ enum {
  *  - UIDNA_ALLOW_UNASSIGNED    Unassigned values can be converted to ASCII for query operations
  *                              If this option is set, the unassigned code points are in the input 
  *                              are treated as normal Unicode code points.
- *                          
+ *
  *  - UIDNA_USE_STD3_RULES      Use STD3 ASCII rules for host name syntax restrictions
  *                              If this option is set and the input does not satisfy STD3 rules,  
  *                              the operation will fail with U_IDNA_STD3_ASCII_RULES_ERROR
@@ -554,7 +554,7 @@ uidna_toASCII(const UChar* src, int32_t srcLength,
  * @param dest Output       Converted UChar array containing Unicode equivalent of label.
  * @param destCapacity      Size of dest.
  * @param options           A bit set of options:
- *  
+ *
  *  - UIDNA_DEFAULT             Use default options, i.e., do not process unassigned code points
  *                              and do not use STD3 ASCII rules
  *                              If unassigned code points are found the operation fails with 
@@ -597,7 +597,7 @@ uidna_toUnicode(const UChar* src, int32_t srcLength,
  * It is important to note that this operation can fail. If it fails, then the input 
  * domain name cannot be used as an Internationalized Domain Name and the application
  * should have methods defined to deal with the failure.
- * 
+ *
  * <b>Note:</b> IDNA RFC specifies that a conformant application should divide a domain name
  * into separate labels, decide whether to apply allowUnassigned and useSTD3ASCIIRules on each, 
  * and then convert. This function does not offer that level of granularity. The options once  
@@ -608,7 +608,7 @@ uidna_toUnicode(const UChar* src, int32_t srcLength,
  * @param dest              Output UChar array with ASCII (ACE encoded) IDN.
  * @param destCapacity      Size of dest.
  * @param options           A bit set of options:
- *  
+ *
  *  - UIDNA_DEFAULT             Use default options, i.e., do not process unassigned code points
  *                              and do not use STD3 ASCII rules
  *                              If unassigned code points are found the operation fails with 
@@ -617,11 +617,11 @@ uidna_toUnicode(const UChar* src, int32_t srcLength,
  *  - UIDNA_ALLOW_UNASSIGNED    Unassigned values can be converted to ASCII for query operations
  *                              If this option is set, the unassigned code points are in the input 
  *                              are treated as normal Unicode code points.
- *                          
+ *
  *  - UIDNA_USE_STD3_RULES      Use STD3 ASCII rules for host name syntax restrictions
  *                              If this option is set and the input does not satisfy STD3 rules,  
  *                              the operation will fail with U_IDNA_STD3_ASCII_RULES_ERROR
- * 
+ *
  * @param parseError        Pointer to UParseError struct to receive information on position 
  *                          of error if an error is encountered. Can be NULL.
  * @param status            ICU in/out error code parameter.
@@ -655,7 +655,7 @@ uidna_IDNToASCII(  const UChar* src, int32_t srcLength,
  * @param dest Output       UChar array containing Unicode equivalent of source IDN.
  * @param destCapacity      Size of dest.
  * @param options           A bit set of options:
- *  
+ *
  *  - UIDNA_DEFAULT             Use default options, i.e., do not process unassigned code points
  *                              and do not use STD3 ASCII rules
  *                              If unassigned code points are found the operation fails with 
@@ -664,7 +664,7 @@ uidna_IDNToASCII(  const UChar* src, int32_t srcLength,
  *  - UIDNA_ALLOW_UNASSIGNED    Unassigned values can be converted to ASCII for query operations
  *                              If this option is set, the unassigned code points are in the input 
  *                              are treated as normal Unicode code points.
- *                          
+ *
  *  - UIDNA_USE_STD3_RULES      Use STD3 ASCII rules for host name syntax restrictions
  *                              If this option is set and the input does not satisfy STD3 rules,  
  *                              the operation will fail with U_IDNA_STD3_ASCII_RULES_ERROR
@@ -703,7 +703,7 @@ uidna_IDNToUnicode(  const UChar* src, int32_t srcLength,
  * @param s2                Second source string.
  * @param length2           Length of second source string, or -1 if NUL-terminated.
  * @param options           A bit set of options:
- *  
+ *
  *  - UIDNA_DEFAULT             Use default options, i.e., do not process unassigned code points
  *                              and do not use STD3 ASCII rules
  *                              If unassigned code points are found the operation fails with 
@@ -712,7 +712,7 @@ uidna_IDNToUnicode(  const UChar* src, int32_t srcLength,
  *  - UIDNA_ALLOW_UNASSIGNED    Unassigned values can be converted to ASCII for query operations
  *                              If this option is set, the unassigned code points are in the input 
  *                              are treated as normal Unicode code points.
- *                          
+ *
  *  - UIDNA_USE_STD3_RULES      Use STD3 ASCII rules for host name syntax restrictions
  *                              If this option is set and the input does not satisfy STD3 rules,  
  *                              the operation will fail with U_IDNA_STD3_ASCII_RULES_ERROR

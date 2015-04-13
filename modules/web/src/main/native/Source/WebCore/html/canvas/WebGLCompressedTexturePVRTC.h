@@ -33,12 +33,12 @@ namespace WebCore {
 
 class WebGLCompressedTexturePVRTC : public WebGLExtension {
 public:
-    static PassOwnPtr<WebGLCompressedTexturePVRTC> create(WebGLRenderingContext*);
+    static OwnPtr<WebGLCompressedTexturePVRTC> create(WebGLRenderingContext*);
 
     static bool supported(WebGLRenderingContext*);
 
     virtual ~WebGLCompressedTexturePVRTC();
-    virtual ExtensionName getName() const;
+    virtual ExtensionName getName() const override;
 
 private:
     WebGLCompressedTexturePVRTC(WebGLRenderingContext*);

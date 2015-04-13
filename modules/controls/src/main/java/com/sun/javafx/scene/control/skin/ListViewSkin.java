@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,11 +25,18 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
+
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
+import javafx.beans.WeakInvalidationListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
+import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
+import javafx.collections.ObservableMap;
 import javafx.collections.WeakListChangeListener;
 import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
@@ -56,6 +63,8 @@ import com.sun.javafx.scene.control.skin.resources.ControlResources;
  *
  */
 public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewBehavior<T>, ListCell<T>> {
+
+    public static final String RECREATE = "listRecreateKey";
     
     /**
      * Region placed over the top of the flow (and possibly the header row) if
@@ -76,6 +85,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
             AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("com.sun.javafx.scene.control.skin.ListViewSkin.pannable"));
 
     private ObservableList<T> listViewItems;
+    private final InvalidationListener itemsChangeListener = observable -> updateListViewItems();
 
     public ListViewSkin(final ListView<T> listView) {
         super(listView, new ListViewBehavior<T>(listView));
@@ -111,6 +121,12 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         flow.getHbar().addEventFilter(MouseEvent.MOUSE_PRESSED, ml);
         
         updateRowCount();
+
+        listView.itemsProperty().addListener(new WeakInvalidationListener(itemsChangeListener));
+
+        final ObservableMap<Object, Object> properties = listView.getProperties();
+        properties.remove(RECREATE);
+        properties.addListener(propertiesMapListener);
 
         // init the behavior 'closures'
         getBehavior().setOnFocusPreviousRow(() -> { onFocusPreviousCell(); });
@@ -149,6 +165,15 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
             flow.setFixedCellSize(getSkinnable().getFixedCellSize());
         }
     }
+
+    private MapChangeListener<Object, Object> propertiesMapListener = c -> {
+        if (! c.wasAdded()) return;
+        if (RECREATE.equals(c.getKey())) {
+            needCellsRebuilt = true;
+            getSkinnable().requestLayout();
+            getSkinnable().getProperties().remove(RECREATE);
+        }
+    };
 
     private final ListChangeListener<T> listViewItemsListener = new ListChangeListener<T>() {
         @Override public void onChanged(Change<? extends T> c) {

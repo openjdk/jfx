@@ -30,13 +30,17 @@
 
 #include "CodeBlockWithJITType.h"
 #include "DFGGraph.h"
+#include "DFGJITCode.h"
+#include "JSCInlines.h"
+#include <wtf/StdLibExtras.h>
 
 namespace JSC { namespace DFG {
 
 Disassembler::Disassembler(Graph& graph)
     : m_graph(graph)
 {
-    m_labelForBlockIndex.resize(graph.m_blocks.size());
+    m_dumpContext.graph = &m_graph;
+    m_labelForBlockIndex.resize(graph.numBlocks());
 }
 
 void Disassembler::dump(PrintStream& out, LinkBuffer& linkBuffer)
@@ -69,8 +73,7 @@ void Disassembler::dumpHeader(PrintStream& out, LinkBuffer& linkBuffer)
 {
     out.print("Generated DFG JIT code for ", CodeBlockWithJITType(m_graph.m_codeBlock, JITCode::DFGJIT), ", instruction count = ", m_graph.m_codeBlock->instructionCount(), ":\n");
     out.print("    Optimized with execution counter = ", m_graph.m_profiledBlock->jitExecuteCounter(), "\n");
-    out.print("    Source: ", m_graph.m_codeBlock->sourceCodeOnOneLine(), "\n");
-    out.print("    Code at [", RawPointer(linkBuffer.debugAddress()), ", ", RawPointer(static_cast<char*>(linkBuffer.debugAddress()) + linkBuffer.debugSize()), "):\n");
+    out.print("    Code at [", RawPointer(linkBuffer.debugAddress()), ", ", RawPointer(static_cast<char*>(linkBuffer.debugAddress()) + linkBuffer.size()), "):\n");
 }
 
 void Disassembler::append(Vector<Disassembler::DumpedOp>& result, StringPrintStream& out, CodeOrigin& previousOrigin)
@@ -90,19 +93,20 @@ Vector<Disassembler::DumpedOp> Disassembler::createDumpList(LinkBuffer& linkBuff
     append(result, out, previousOrigin);
     
     m_graph.m_dominators.computeIfNecessary(m_graph);
+    m_graph.m_naturalLoops.computeIfNecessary(m_graph);
     
     const char* prefix = "    ";
     const char* disassemblyPrefix = "        ";
     
     Node* lastNode = 0;
     MacroAssembler::Label previousLabel = m_startOfCode;
-    for (size_t blockIndex = 0; blockIndex < m_graph.m_blocks.size(); ++blockIndex) {
-        BasicBlock* block = m_graph.m_blocks[blockIndex].get();
+    for (size_t blockIndex = 0; blockIndex < m_graph.numBlocks(); ++blockIndex) {
+        BasicBlock* block = m_graph.block(blockIndex);
         if (!block)
             continue;
         dumpDisassembly(out, disassemblyPrefix, linkBuffer, previousLabel, m_labelForBlockIndex[blockIndex], lastNode);
         append(result, out, previousOrigin);
-        m_graph.dumpBlockHeader(out, prefix, blockIndex, Graph::DumpLivePhisOnly);
+        m_graph.dumpBlockHeader(out, prefix, block, Graph::DumpLivePhisOnly, &m_dumpContext);
         append(result, out, previousOrigin);
         Node* lastNodeForDisassembly = block->at(0);
         for (size_t i = 0; i < block->size(); ++i) {
@@ -117,28 +121,30 @@ Vector<Disassembler::DumpedOp> Disassembler::createDumpList(LinkBuffer& linkBuff
                 // as the end point. This case is hit either during peephole compare
                 // optimizations (the Branch won't have its own label) or if we have a
                 // forced OSR exit.
-                if (blockIndex + 1 < m_graph.m_blocks.size())
+                if (blockIndex + 1 < m_graph.numBlocks())
                     currentLabel = m_labelForBlockIndex[blockIndex + 1];
                 else
                     currentLabel = m_endOfMainPath;
             }
             dumpDisassembly(out, disassemblyPrefix, linkBuffer, previousLabel, currentLabel, lastNodeForDisassembly);
             append(result, out, previousOrigin);
-            previousOrigin = block->at(i)->codeOrigin;
-            if (m_graph.dumpCodeOrigin(out, prefix, lastNode, block->at(i))) {
+            previousOrigin = block->at(i)->origin.semantic;
+            if (m_graph.dumpCodeOrigin(out, prefix, lastNode, block->at(i), &m_dumpContext)) {
                 append(result, out, previousOrigin);
-                previousOrigin = block->at(i)->codeOrigin;
-        }
-            m_graph.dump(out, prefix, block->at(i));
+                previousOrigin = block->at(i)->origin.semantic;
+            }
+            m_graph.dump(out, prefix, block->at(i), &m_dumpContext);
             lastNode = block->at(i);
             lastNodeForDisassembly = block->at(i);
-    }
+        }
     }
     dumpDisassembly(out, disassemblyPrefix, linkBuffer, previousLabel, m_endOfMainPath, lastNode);
     append(result, out, previousOrigin);
     out.print(prefix, "(End Of Main Path)\n");
     append(result, out, previousOrigin);
     dumpDisassembly(out, disassemblyPrefix, linkBuffer, previousLabel, m_endOfCode, 0);
+    append(result, out, previousOrigin);
+    m_dumpContext.dump(out, prefix);
     append(result, out, previousOrigin);
     
     return result;
@@ -152,7 +158,7 @@ void Disassembler::dumpDisassembly(PrintStream& out, const char* prefix, LinkBuf
         amountOfNodeWhiteSpace = 0;
     else
         amountOfNodeWhiteSpace = Graph::amountOfNodeWhiteSpace(context);
-    OwnArrayPtr<char> prefixBuffer = adoptArrayPtr(new char[prefixLength + amountOfNodeWhiteSpace + 1]);
+    auto prefixBuffer = std::make_unique<char[]>(prefixLength + amountOfNodeWhiteSpace + 1);
     strcpy(prefixBuffer.get(), prefix);
     for (int i = 0; i < amountOfNodeWhiteSpace; ++i)
         prefixBuffer[i + prefixLength] = ' ';

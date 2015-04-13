@@ -56,17 +56,26 @@
 
 - (void)highlight
 {
+#if !PLATFORM(IOS)
     // The scrollview's content view stays around between page navigations, so target it.
     NSView *view = [[[[[_inspectedWebView mainFrame] frameView] documentView] enclosingScrollView] contentView];
+#else
+    NSView *view = _inspectedWebView;
+#endif
     if (![view window])
         return; // Skip the highlight if we have no window (e.g. hidden tab).
     
     if (!_currentHighlight) {
-        _currentHighlight = [[WebNodeHighlight alloc] initWithTargetView:view inspectorController:[_inspectedWebView page]->inspectorController()];
+        _currentHighlight = [[WebNodeHighlight alloc] initWithTargetView:view inspectorController:&[_inspectedWebView page]->inspectorController()];
         [_currentHighlight setDelegate:self];
         [_currentHighlight attach];
-    } else
+    } else {
+#if !PLATFORM(IOS)
         [[_currentHighlight highlightView] setNeedsDisplay:YES];
+#else
+        [_currentHighlight setNeedsDisplay];
+#endif
+    }
 }
 
 - (void)hideHighlight

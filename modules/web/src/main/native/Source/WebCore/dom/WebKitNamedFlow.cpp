@@ -30,11 +30,10 @@
 #include "config.h"
 #include "WebKitNamedFlow.h"
 
-#include "EventNames.h"
 #include "NamedFlowCollection.h"
+#include "RenderNamedFlowFragment.h"
 #include "RenderNamedFlowThread.h"
 #include "RenderRegion.h"
-#include "ScriptExecutionContext.h"
 #include "StaticNodeList.h"
 #include "UIEvent.h"
 
@@ -98,21 +97,26 @@ int WebKitNamedFlow::firstEmptyRegionIndex() const
     const RenderRegionList& regionList = m_parentFlowThread->renderRegionList();
     if (regionList.isEmpty())
         return -1;
-    RenderRegionList::const_iterator iter = regionList.begin();
-    for (int index = 0; iter != regionList.end(); ++index, ++iter) {
-        const RenderRegion* renderRegion = *iter;
-        if (renderRegion->regionState() == RenderRegion::RegionEmpty)
-            return index;
+
+    int countNonPseudoRegions = -1;
+    for (const auto& renderRegion : regionList) {
+        const RenderNamedFlowFragment* namedFlowFragment = toRenderNamedFlowFragment(renderRegion);
+        // FIXME: Pseudo-elements are not included in the list.
+        // They will be included when we will properly support the Region interface
+        // http://dev.w3.org/csswg/css-regions/#the-region-interface
+        if (namedFlowFragment->isPseudoElementRegion())
+            continue;
+        countNonPseudoRegions++;
+        if (namedFlowFragment->regionOversetState() == RegionEmpty)
+            return countNonPseudoRegions;
     }
     return -1;
 }
 
 PassRefPtr<NodeList> WebKitNamedFlow::getRegionsByContent(Node* contentNode)
 {
-    Vector<RefPtr<Node> > regionNodes;
-
     if (!contentNode)
-        return StaticNodeList::adopt(regionNodes);
+        return StaticElementList::createEmpty();
 
     if (m_flowManager->document())
         m_flowManager->document()->updateLayoutIgnorePendingStylesheets();
@@ -120,67 +124,75 @@ PassRefPtr<NodeList> WebKitNamedFlow::getRegionsByContent(Node* contentNode)
     // The renderer may be destroyed or created after the style update.
     // Because this is called from JS, where the wrapper keeps a reference to the NamedFlow, no guard is necessary.
     if (!m_parentFlowThread)
-        return StaticNodeList::adopt(regionNodes);
+        return StaticElementList::createEmpty();
+
+    Vector<Ref<Element>> regionElements;
 
     if (inFlowThread(contentNode->renderer(), m_parentFlowThread)) {
         const RenderRegionList& regionList = m_parentFlowThread->renderRegionList();
-        for (RenderRegionList::const_iterator iter = regionList.begin(); iter != regionList.end(); ++iter) {
-            const RenderRegion* renderRegion = *iter;
+        for (const auto& renderRegion : regionList) {
+            const RenderNamedFlowFragment* namedFlowFragment = toRenderNamedFlowFragment(renderRegion);
             // FIXME: Pseudo-elements are not included in the list.
-            if (!renderRegion->node())
+            // They will be included when we will properly support the Region interface
+            // http://dev.w3.org/csswg/css-regions/#the-region-interface
+            if (namedFlowFragment->isPseudoElementRegion())
                 continue;
-            if (m_parentFlowThread->objectInFlowRegion(contentNode->renderer(), renderRegion))
-                regionNodes.append(renderRegion->node());
+            if (m_parentFlowThread->objectInFlowRegion(contentNode->renderer(), namedFlowFragment)) {
+                ASSERT(namedFlowFragment->generatingElement());
+                regionElements.append(*namedFlowFragment->generatingElement());
+            }
         }
     }
 
-    return StaticNodeList::adopt(regionNodes);
+    return StaticElementList::adopt(regionElements);
 }
 
 PassRefPtr<NodeList> WebKitNamedFlow::getRegions()
 {
-    Vector<RefPtr<Node> > regionNodes;
-
     if (m_flowManager->document())
         m_flowManager->document()->updateLayoutIgnorePendingStylesheets();
 
     // The renderer may be destroyed or created after the style update.
     // Because this is called from JS, where the wrapper keeps a reference to the NamedFlow, no guard is necessary.
     if (!m_parentFlowThread)
-        return StaticNodeList::adopt(regionNodes);
+        return StaticElementList::createEmpty();
+
+    Vector<Ref<Element>> regionElements;
 
     const RenderRegionList& regionList = m_parentFlowThread->renderRegionList();
-    for (RenderRegionList::const_iterator iter = regionList.begin(); iter != regionList.end(); ++iter) {
-        const RenderRegion* renderRegion = *iter;
+    for (const auto& renderRegion : regionList) {
+        const RenderNamedFlowFragment* namedFlowFragment = toRenderNamedFlowFragment(renderRegion);
         // FIXME: Pseudo-elements are not included in the list.
-        if (!renderRegion->node())
+        // They will be included when we will properly support the Region interface
+        // http://dev.w3.org/csswg/css-regions/#the-region-interface
+        if (namedFlowFragment->isPseudoElementRegion())
             continue;
-        regionNodes.append(renderRegion->node());
+        ASSERT(namedFlowFragment->generatingElement());
+        regionElements.append(*namedFlowFragment->generatingElement());
     }
 
-    return StaticNodeList::adopt(regionNodes);
+    return StaticElementList::adopt(regionElements);
 }
 
 PassRefPtr<NodeList> WebKitNamedFlow::getContent()
 {
-    Vector<RefPtr<Node> > contentNodes;
-
     if (m_flowManager->document())
         m_flowManager->document()->updateLayoutIgnorePendingStylesheets();
 
     // The renderer may be destroyed or created after the style update.
     // Because this is called from JS, where the wrapper keeps a reference to the NamedFlow, no guard is necessary.
     if (!m_parentFlowThread)
-        return StaticNodeList::adopt(contentNodes);
+        return StaticElementList::createEmpty();
 
-    const NamedFlowContentNodes& contentNodesList = m_parentFlowThread->contentNodes();
-    for (NamedFlowContentNodes::const_iterator it = contentNodesList.begin(); it != contentNodesList.end(); ++it) {
-        Node* node = *it;
-        ASSERT(node->computedStyle()->flowThread() == m_parentFlowThread->flowThreadName());
-        contentNodes.append(node);
+    Vector<Ref<Element>> contentElements;
+
+    const NamedFlowContentElements& contentElementsList = m_parentFlowThread->contentElements();
+    for (auto& element : contentElementsList) {
+        ASSERT(element->computedStyle()->flowThread() == m_parentFlowThread->flowThreadName());
+        contentElements.append(*element);
     }
 
-    return StaticNodeList::adopt(contentNodes);
+    return StaticElementList::adopt(contentElements);
 }
 
 void WebKitNamedFlow::setRenderer(RenderNamedFlowThread* parentFlowThread)
@@ -192,16 +204,6 @@ void WebKitNamedFlow::setRenderer(RenderNamedFlowThread* parentFlowThread)
     m_parentFlowThread = parentFlowThread;
 }
 
-EventTargetData* WebKitNamedFlow::eventTargetData()
-{
-    return &m_eventTargetData;
-}
-
-EventTargetData* WebKitNamedFlow::ensureEventTargetData()
-{
-    return &m_eventTargetData;
-}
-
 void WebKitNamedFlow::dispatchRegionLayoutUpdateEvent()
 {
     ASSERT(!NoEventDispatchAssertion::isEventDispatchForbidden());
@@ -210,14 +212,18 @@ void WebKitNamedFlow::dispatchRegionLayoutUpdateEvent()
     if (flowState() == FlowStateNull)
         return;
 
-    RefPtr<Event> event = UIEvent::create(eventNames().webkitregionlayoutupdateEvent, false, false, m_flowManager->document()->defaultView(), 0);
-
-    dispatchEvent(event);
+    dispatchEvent(UIEvent::create(eventNames().webkitregionlayoutupdateEvent, false, false, m_flowManager->document()->defaultView(), 0));
 }
-
-const AtomicString& WebKitNamedFlow::interfaceName() const
+    
+void WebKitNamedFlow::dispatchRegionOversetChangeEvent()
 {
-    return eventNames().interfaceForWebKitNamedFlow;
+    ASSERT(!NoEventDispatchAssertion::isEventDispatchForbidden());
+    
+    // If the flow is in the "NULL" state the event should not be dispatched any more.
+    if (flowState() == FlowStateNull)
+        return;
+
+    dispatchEvent(UIEvent::create(eventNames().webkitregionoversetchangeEvent, false, false, m_flowManager->document()->defaultView(), 0));
 }
 
 ScriptExecutionContext* WebKitNamedFlow::scriptExecutionContext() const

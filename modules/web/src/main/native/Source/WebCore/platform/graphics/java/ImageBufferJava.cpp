@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
 
@@ -142,6 +142,11 @@ PassRefPtr<Image> ImageBuffer::copyImage(BackingStoreCopy copyBehavior, ScaleBeh
         m_data.m_image,
         m_context->platformContext()->rq_ref(),
         m_size.width(), m_size.height());
+}
+
+BackingStoreCopy ImageBuffer::fastCopyImageMode()
+{
+    return CopyBackingStore; // todo tav revise
 }
 
 void ImageBuffer::platformTransformColorSpace(const Vector<int> &lookUpTable)
@@ -366,7 +371,8 @@ void ImageBuffer::drawPattern(
     const FloatPoint& phase,
     ColorSpace styleColorSpace,
     CompositeOperator op,
-    const FloatRect& destRect)
+    const FloatRect& destRect,
+    BlendMode bm) // todo tav new param
 {
     RefPtr<Image> imageCopy = copyImage();
     imageCopy->drawPattern(

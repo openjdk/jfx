@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,14 +54,17 @@ import static com.oracle.tools.packager.StandardBundlerParam.*;
 import static com.oracle.tools.packager.windows.WinAppBundler.ICON_ICO;
 import static com.oracle.tools.packager.windows.WindowsBundlerParam.WIN_RUNTIME;
 import static com.oracle.tools.packager.windows.WindowsBundlerParam.MENU_GROUP;
+import static com.oracle.tools.packager.windows.WindowsBundlerParam.INSTALLDIR_CHOOSER;
 import static org.junit.Assert.*;
-
+ 
 public class WinExeBundlerTest {
 
     static File tmpBase;
     static File workDir;
     static File appResourcesDir;
     static File fakeMainJar;
+    static String runtimeJdk;
+    static String runtimeJre;
     static Set<File> appResources;
     static boolean retain = false;
 
@@ -69,6 +72,9 @@ public class WinExeBundlerTest {
     public static void prepareApp() {
         // only run on windows
         Assume.assumeTrue(System.getProperty("os.name").toLowerCase().startsWith("win"));
+
+        runtimeJdk = System.getenv("PACKAGER_JDK_ROOT");
+        runtimeJre = System.getenv("PACKAGER_JRE_ROOT");
 
         // only run if we have InnoSetup installed
         Assume.assumeNotNull(WinExeBundler.TOOL_INNO_SETUP_COMPILER_EXECUTABLE.fetchFrom(new HashMap<>()));
@@ -302,6 +308,7 @@ public class WinExeBundlerTest {
 //                START_ON_INSTALL,
 //                STOP_ON_UNINSTALL,
         bundleParams.put(SYSTEM_WIDE.getID(), false);
+        bundleParams.put(INSTALLDIR_CHOOSER.getID(), true);
         bundleParams.put(TITLE.getID(), "Everything Title");
         bundleParams.put(VENDOR.getID(), "Packager Tests");
 
@@ -509,4 +516,36 @@ public class WinExeBundlerTest {
         assertNotNull(result);
         assertTrue(result.exists());
     }
+
+    /**
+     * Turn on AppCDS
+     */
+    @Test
+    public void testAppCDS() throws IOException, ConfigException, UnsupportedPlatformException {
+        Bundler bundler = new WinExeBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        // not part of the typical setup, for testing
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+        bundleParams.put(VERBOSE.getID(), true);
+        if (runtimeJdk != null) {
+            bundleParams.put(WIN_RUNTIME.getID(), runtimeJdk);
+        }
+
+        bundleParams.put(APP_NAME.getID(), "AppCDS");
+        bundleParams.put(IDENTIFIER.getID(), "com.example.appcds.exe.Test");
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(UNLOCK_COMMERCIAL_FEATURES.getID(), true);
+        bundleParams.put(ENABLE_APP_CDS.getID(), true);
+
+        boolean valid = bundler.validate(bundleParams);
+        assertTrue(valid);
+
+        File output = bundler.execute(bundleParams, new File(workDir, "CDSTest"));
+        System.err.println("Bundle at - " + output);
+        assertNotNull(output);
+        assertTrue(output.exists());
+    }
+    
 }

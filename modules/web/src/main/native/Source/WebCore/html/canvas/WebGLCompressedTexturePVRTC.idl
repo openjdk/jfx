@@ -26,8 +26,7 @@
 [
     NoInterfaceObject,
     Conditional=WEBGL,
-    GenerateIsReachable=ImplContext,
-    OmitConstructor,
+    GenerateIsReachable=ImplWebGLRenderingContext,
     DoNotCheckConstants
 ] interface WebGLCompressedTexturePVRTC {
     /* Compressed Texture Formats */

@@ -23,12 +23,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 [
-    ImplementationLacksVTable
+    ImplementationLacksVTable,
 ] interface CanvasGradient {
 
-    void addColorStop([Default=Undefined] optional float offset, 
-                      [Default=Undefined] optional DOMString color)
-            raises (DOMException);
+    [RaisesException] void addColorStop([Default=Undefined] optional float offset, 
+                      [Default=Undefined] optional DOMString color);
 
-    };
+};
 

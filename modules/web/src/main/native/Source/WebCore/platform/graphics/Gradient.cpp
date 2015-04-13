@@ -50,7 +50,6 @@ Gradient::Gradient(const FloatPoint& p0, const FloatPoint& p1)
     platformInit();
 }
 
-
 Gradient::Gradient(const FloatPoint& p0, float r0, const FloatPoint& p1, float r1, float aspectRatio)
     : m_radial(true)
     , m_p0(p0)
@@ -171,7 +170,7 @@ void Gradient::setGradientSpaceTransform(const AffineTransform& gradientSpaceTra
     invalidateHash();
 }
 
-#if !USE(CAIRO) && !PLATFORM(BLACKBERRY)
+#if !USE(CAIRO)
 void Gradient::setPlatformGradientSpaceTransform(const AffineTransform&)
 {
 }

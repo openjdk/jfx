@@ -28,11 +28,10 @@
 
 [
     NoInterfaceObject,
-        Conditional=SQL_DATABASE,
-        OmitConstructor,
+    Conditional=SQL_DATABASE,
     JSNoStaticTables,
-    ImplementationLacksVTable
+    ImplementationLacksVTable,
 ] interface SQLResultSetRowList {
-        readonly attribute unsigned long length;
+    readonly attribute unsigned long length;
     [Custom] any item(unsigned long index);
-    };
+};

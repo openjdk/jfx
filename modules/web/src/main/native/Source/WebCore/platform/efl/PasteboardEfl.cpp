@@ -23,44 +23,16 @@
 #include "config.h"
 #include "Pasteboard.h"
 
-#include "DocumentFragment.h"
 #include "NotImplemented.h"
-#include <wtf/text/StringHash.h>
+#include <wtf/PassOwnPtr.h>
 
 namespace WebCore {
 
-Pasteboard* Pasteboard::generalPasteboard()
-{
-    static Pasteboard* pasteboard = new Pasteboard();
-    return pasteboard;
-}
-
 Pasteboard::Pasteboard()
 {
-    notImplemented();
 }
 
 void Pasteboard::writePlainText(const String&, SmartReplaceOption)
-{
-    notImplemented();
-}
-
-void Pasteboard::writeSelection(Range*, bool, Frame*, ShouldSerializeSelectedTextForClipboard)
-{
-    notImplemented();
-}
-
-void Pasteboard::writeURL(const KURL&, const String&, Frame*)
-{
-    notImplemented();
-}
-
-void Pasteboard::writeImage(Node*, const KURL&, const String&)
-{
-    notImplemented();
-}
-
-void Pasteboard::writeClipboard(Clipboard*)
 {
     notImplemented();
 }
@@ -74,18 +46,6 @@ bool Pasteboard::canSmartReplace()
 {
     notImplemented();
     return false;
-}
-
-PassRefPtr<DocumentFragment> Pasteboard::documentFragment(Frame*, PassRefPtr<Range>, bool, bool&)
-{
-    notImplemented();
-    return 0;
-}
-
-String Pasteboard::plainText(Frame*)
-{
-    notImplemented();
-    return String();
 }
 
 PassOwnPtr<Pasteboard> Pasteboard::createForCopyAndPaste()
@@ -121,10 +81,20 @@ void Pasteboard::clear(const String&)
     notImplemented();
 }
 
+void Pasteboard::read(PasteboardPlainText&)
+{
+    notImplemented();
+}
+
 String Pasteboard::readString(const String&)
 {
     notImplemented();
     return String();
+}
+
+void Pasteboard::write(const PasteboardURL&)
+{
+    notImplemented();
 }
 
 bool Pasteboard::writeString(const String&, const String&)
@@ -133,10 +103,10 @@ bool Pasteboard::writeString(const String&, const String&)
     return false;
 }
 
-ListHashSet<String> Pasteboard::types()
+Vector<String> Pasteboard::types()
 {
     notImplemented();
-    return ListHashSet<String>();
+    return Vector<String>();
 }
 
 Vector<String> Pasteboard::readFilenames()

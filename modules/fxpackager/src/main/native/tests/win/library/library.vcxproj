@@ -109,6 +109,7 @@
     <ClCompile Include="..\..\..\library\common\FilePath.cpp" />
     <ClCompile Include="..\..\..\library\common\GenericPlatform.cpp" />
     <ClCompile Include="..\..\..\library\common\Helpers.cpp" />
+    <ClCompile Include="..\..\..\library\common\IniFile.cpp" />
     <ClCompile Include="..\..\..\library\common\Java.cpp" />
     <ClCompile Include="..\..\..\library\common\JavaUserPreferences.cpp" />
     <ClCompile Include="..\..\..\library\common\JavaVirtualMachine.cpp" />
@@ -130,6 +131,7 @@
     <ClInclude Include="..\..\..\library\common\FilePath.h" />
     <ClInclude Include="..\..\..\library\common\GenericPlatform.h" />
     <ClInclude Include="..\..\..\library\common\Helpers.h" />
+    <ClInclude Include="..\..\..\library\common\IniFile.h" />
     <ClInclude Include="..\..\..\library\common\Java.h" />
     <ClInclude Include="..\..\..\library\common\JavaUserPreferences.h" />
     <ClInclude Include="..\..\..\library\common\JavaVirtualMachine.h" />
@@ -138,6 +140,7 @@
     <ClInclude Include="..\..\..\library\common\MacPlatform.h" />
     <ClInclude Include="..\..\..\library\common\Macros.h" />
     <ClInclude Include="..\..\..\library\common\Messages.h" />
+    <ClInclude Include="..\..\..\library\common\OrderedMap.h" />
     <ClInclude Include="..\..\..\library\common\Package.h" />
     <ClInclude Include="..\..\..\library\common\Platform.h" />
     <ClInclude Include="..\..\..\library\common\PlatformString.h" />

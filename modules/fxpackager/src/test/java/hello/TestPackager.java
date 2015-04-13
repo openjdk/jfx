@@ -172,6 +172,11 @@ public class TestPackager {
         TestPackager.args = args;
         //Schedule a job for the event-dispatching thread:
         //creating and showing this application's GUI.
-        javax.swing.SwingUtilities.invokeLater(TestPackager::createAndShowGUI);
+		try {
+			javax.swing.SwingUtilities.invokeAndWait(TestPackager::createAndShowGUI);
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
     }
 }

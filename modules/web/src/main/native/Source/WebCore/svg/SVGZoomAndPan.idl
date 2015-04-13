@@ -25,15 +25,13 @@
  */
 
 [
-        Conditional=SVG,
-        ObjCProtocol,
-    SuppressToJSObject,
-    ImplementationLacksVTable
+    NoInterfaceObject,
+    ObjCProtocol
 ] interface SVGZoomAndPan {
-        const unsigned short SVG_ZOOMANDPAN_UNKNOWN = 0;
-        const unsigned short SVG_ZOOMANDPAN_DISABLE = 1;
-        const unsigned short SVG_ZOOMANDPAN_MAGNIFY = 2;
+    const unsigned short SVG_ZOOMANDPAN_UNKNOWN = 0;
+    const unsigned short SVG_ZOOMANDPAN_DISABLE = 1;
+    const unsigned short SVG_ZOOMANDPAN_MAGNIFY = 2;
 
-        attribute unsigned short zoomAndPan;
-    };
+    attribute unsigned short zoomAndPan;
+};
 

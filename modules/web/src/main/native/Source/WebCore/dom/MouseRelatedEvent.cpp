@@ -2,7 +2,7 @@
  * Copyright (C) 2001 Peter Kelly (pmk@post.com)
  * Copyright (C) 2001 Tobias Anton (anton@stud.fbi.fh-darmstadt.de)
  * Copyright (C) 2006 Samuel Weinig (sam.weinig@gmail.com)
- * Copyright (C) 2003, 2005, 2006, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2003, 2005, 2006, 2008, 2013 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -23,7 +23,6 @@
 #include "config.h"
 #include "MouseRelatedEvent.h"
 
-#include "DOMWindow.h"
 #include "Document.h"
 #include "Frame.h"
 #include "FrameView.h"
@@ -48,17 +47,21 @@ static LayoutSize contentsScrollOffset(AbstractView* abstractView)
     FrameView* frameView = frame->view();
     if (!frameView)
         return LayoutSize();
+#if !PLATFORM(IOS)
     float scaleFactor = frame->pageZoomFactor() * frame->frameScaleFactor();
     return LayoutSize(frameView->scrollX() / scaleFactor, frameView->scrollY() / scaleFactor);
+#else
+    return LayoutSize(frameView->actualScrollX(), frameView->actualScrollY());
+#endif
 }
 
-MouseRelatedEvent::MouseRelatedEvent(const AtomicString& eventType, bool canBubble, bool cancelable, PassRefPtr<AbstractView> abstractView,
+MouseRelatedEvent::MouseRelatedEvent(const AtomicString& eventType, bool canBubble, bool cancelable, double timestamp, PassRefPtr<AbstractView> abstractView,
                                      int detail, const IntPoint& screenLocation, const IntPoint& windowLocation,
 #if ENABLE(POINTER_LOCK)
                                      const IntPoint& movementDelta,
 #endif
                                      bool ctrlKey, bool altKey, bool shiftKey, bool metaKey, bool isSimulated)
-    : UIEventWithKeyState(eventType, canBubble, cancelable, abstractView, detail, ctrlKey, altKey, shiftKey, metaKey)
+    : UIEventWithKeyState(eventType, canBubble, cancelable, timestamp, abstractView, detail, ctrlKey, altKey, shiftKey, metaKey)
     , m_screenLocation(screenLocation)
 #if ENABLE(POINTER_LOCK)
     , m_movementDelta(movementDelta)
@@ -71,7 +74,11 @@ MouseRelatedEvent::MouseRelatedEvent(const AtomicString& eventType, bool canBubb
     Frame* frame = view() ? view()->frame() : 0;
     if (frame && !isSimulated) {
         if (FrameView* frameView = frame->view()) {
+#if !PLATFORM(IOS)
             scrollPosition = frameView->scrollPosition();
+#else
+            scrollPosition = frameView->actualScrollPosition();
+#endif
             adjustedPageLocation = frameView->windowToContents(windowLocation);
             float scaleFactor = 1 / (frame->pageZoomFactor() * frame->frameScaleFactor());
             if (scaleFactor != 1.0f) {
@@ -156,16 +163,16 @@ void MouseRelatedEvent::computeRelativePosition()
     m_offsetLocation = m_pageLocation;
 
     // Must have an updated render tree for this math to work correctly.
-    targetNode->document()->updateLayoutIgnorePendingStylesheets();
+    targetNode->document().updateLayoutIgnorePendingStylesheets();
 
     // Adjust offsetLocation to be relative to the target's position.
-        if (RenderObject* r = targetNode->renderer()) {
+    if (RenderObject* r = targetNode->renderer()) {
         FloatPoint localPos = r->absoluteToLocal(absoluteLocation(), UseTransforms);
-            m_offsetLocation = roundedLayoutPoint(localPos);
-            float scaleFactor = 1 / (pageZoomFactor(this) * frameScaleFactor(this));
-            if (scaleFactor != 1.0f)
-                m_offsetLocation.scale(scaleFactor, scaleFactor);
-        }
+        m_offsetLocation = roundedLayoutPoint(localPos);
+        float scaleFactor = 1 / (pageZoomFactor(this) * frameScaleFactor(this));
+        if (scaleFactor != 1.0f)
+            m_offsetLocation.scale(scaleFactor, scaleFactor);
+    }
 
     // Adjust layerLocation to be relative to the layer.
     // FIXME: event.layerX and event.layerY are poorly defined,

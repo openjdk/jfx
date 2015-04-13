@@ -54,7 +54,7 @@ namespace WebCore {
 PassRefPtr<DatabaseSync> DatabaseSync::create(ScriptExecutionContext*, PassRefPtr<DatabaseBackendBase> backend)
 {
     return static_cast<DatabaseSync*>(backend.get());
-    }
+}
 
 DatabaseSync::DatabaseSync(PassRefPtr<DatabaseBackendContext> databaseContext,
     const String& name, const String& expectedVersion, const String& displayName, unsigned long estimatedSize)

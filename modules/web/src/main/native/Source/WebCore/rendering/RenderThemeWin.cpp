@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007 Apple Inc.
+ * Copyright (C) 2006, 2007, 2013 Apple Inc.
  * Copyright (C) 2009 Kenneth Rohde Christiansen
  *
  * This library is free software; you can redistribute it and/or
@@ -26,14 +26,19 @@
 #include "Element.h"
 #include "FontMetrics.h"
 #include "Frame.h"
+#include "FrameSelection.h"
 #include "GraphicsContext.h"
+#include "HTMLMeterElement.h"
 #include "LocalWindowsContext.h"
 #include "PaintInfo.h"
+#include "RenderMeter.h"
 #include "RenderSlider.h"
 #include "Settings.h"
 #include "SoftLinking.h"
 #include "SystemInfo.h"
+#include "UserAgentScripts.h"
 #include "UserAgentStyleSheets.h"
+#include <wtf/win/GDIObject.h>
 
 #if ENABLE(VIDEO)
 #include "RenderMediaControls.h"
@@ -108,6 +113,36 @@
 #define UPS_PRESSED     3
 #define UPS_DISABLED    4
 
+// Progress bar parts
+#define PP_BAR          1
+#define PP_BARVERT      2
+#define PP_CHUNK        3
+#define PP_CHUNKVERT    4
+#define PP_FILL         5
+#define PP_FILLVERT     6
+#define PP_PULSEOVERLAY 7
+#define PP_MOVEOVERLAY  8
+#define PP_PULSEOVERLAYVERT 9
+#define PP_MOVEOVERLAYVERT  10
+#define PP_TRANSPARENTBAR   11
+#define PP_TRANSPARENTBARVERT 12
+
+// Progress bar states
+#define PBBS_NORMAL     1
+#define PBBS_PARTIAL    2
+#define PBBVS_NORMAL    1 // Vertical
+#define PBBVS_PARTIAL   2
+
+// Progress bar fill states
+#define PBFS_NORMAL     1
+#define PBFS_ERROR      2
+#define PBFS_PAUSED     3
+#define PBFS_PARTIAL    4
+#define PBFVS_NORMAL    1 // Vertical
+#define PBFVS_ERROR     2
+#define PBFVS_PAUSED    3
+#define PBFVS_PARTIAL   4
+
 
 SOFT_LINK_LIBRARY(uxtheme)
 SOFT_LINK(uxtheme, OpenThemeData, HANDLE, WINAPI, (HWND hwnd, LPCWSTR pszClassList), (hwnd, pszClassList))
@@ -142,12 +177,6 @@ static const float defaultSearchFieldResultsButtonWidth = 18;
 
 static bool gWebKitIsBeingUnloaded;
 
-static bool documentIsInApplicationChromeMode(const Document* document)
-{
-    Settings* settings = document->settings();
-    return settings && settings->applicationChromeMode();
-}
-
 void RenderThemeWin::setWebKitIsBeingUnloaded()
 {
     gWebKitIsBeingUnloaded = true;
@@ -172,6 +201,7 @@ RenderThemeWin::RenderThemeWin()
     , m_menuListTheme(0)
     , m_sliderTheme(0)
     , m_spinButtonTheme(0)
+    , m_progressBarTheme(0)
 {
     haveTheme = uxthemeLibrary() && IsThemeActive();
 }
@@ -219,6 +249,13 @@ HANDLE RenderThemeWin::spinButtonTheme() const
     return m_spinButtonTheme;
 }
 
+HANDLE RenderThemeWin::progressBarTheme() const
+{
+    if (haveTheme && !m_progressBarTheme)
+        m_progressBarTheme = OpenThemeData(0, L"Progress");
+    return m_progressBarTheme;
+}
+
 void RenderThemeWin::close()
 {
     // This method will need to be called when the OS theme changes to flush our cached themes.
@@ -232,7 +269,9 @@ void RenderThemeWin::close()
         CloseThemeData(m_sliderTheme);
     if (m_spinButtonTheme)
         CloseThemeData(m_spinButtonTheme);
-    m_buttonTheme = m_textFieldTheme = m_menuListTheme = m_sliderTheme = m_spinButtonTheme = 0;
+    if (m_progressBarTheme)
+        CloseThemeData(m_progressBarTheme);
+    m_buttonTheme = m_textFieldTheme = m_menuListTheme = m_sliderTheme = m_spinButtonTheme = m_progressBarTheme = 0;
 
     haveTheme = uxthemeLibrary() && IsThemeActive();
 }
@@ -296,7 +335,7 @@ static void fillFontDescription(FontDescription& fontDescription, LOGFONT& logFo
     fillFontDescription(fontDescription, logFont, abs(logFont.lfHeight));
 }
 
-void RenderThemeWin::systemFont(int propId, FontDescription& fontDescription) const
+void RenderThemeWin::systemFont(CSSValueID valueID, FontDescription& fontDescription) const
 {
     static FontDescription captionFont;
     static FontDescription controlFont;
@@ -316,65 +355,65 @@ void RenderThemeWin::systemFont(int propId, FontDescription& fontDescription) co
         ::SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(ncm), &ncm, 0);
     }
  
-    switch (propId) {
-        case CSSValueIcon: {
-            if (!iconFont.isAbsoluteSize()) {
+    switch (valueID) {
+    case CSSValueIcon: {
+        if (!iconFont.isAbsoluteSize()) {
+            LOGFONT logFont;
+            ::SystemParametersInfo(SPI_GETICONTITLELOGFONT, sizeof(logFont), &logFont, 0);
+            fillFontDescription(iconFont, logFont);
+        }
+        fontDescription = iconFont;
+        break;
+    }
+    case CSSValueMenu:
+        if (!menuFont.isAbsoluteSize())
+            fillFontDescription(menuFont, ncm.lfMenuFont);
+        fontDescription = menuFont;
+        break;
+    case CSSValueMessageBox:
+        if (!messageBoxFont.isAbsoluteSize())
+            fillFontDescription(messageBoxFont, ncm.lfMessageFont);
+        fontDescription = messageBoxFont;
+        break;
+    case CSSValueStatusBar:
+        if (!statusBarFont.isAbsoluteSize())
+            fillFontDescription(statusBarFont, ncm.lfStatusFont);
+        fontDescription = statusBarFont;
+        break;
+    case CSSValueCaption:
+        if (!captionFont.isAbsoluteSize())
+            fillFontDescription(captionFont, ncm.lfCaptionFont);
+        fontDescription = captionFont;
+        break;
+    case CSSValueSmallCaption:
+        if (!smallCaptionFont.isAbsoluteSize())
+            fillFontDescription(smallCaptionFont, ncm.lfSmCaptionFont);
+        fontDescription = smallCaptionFont;
+        break;
+    case CSSValueWebkitSmallControl:
+    case CSSValueWebkitMiniControl: // Just map to small.
+    case CSSValueWebkitControl: // Just map to small.
+        if (!controlFont.isAbsoluteSize()) {
+            HGDIOBJ hGDI = ::GetStockObject(DEFAULT_GUI_FONT);
+            if (hGDI) {
                 LOGFONT logFont;
-                ::SystemParametersInfo(SPI_GETICONTITLELOGFONT, sizeof(logFont), &logFont, 0);
-                fillFontDescription(iconFont, logFont);
+                if (::GetObject(hGDI, sizeof(logFont), &logFont) > 0)
+                    fillFontDescription(controlFont, logFont, defaultControlFontPixelSize);
             }
-            fontDescription = iconFont;
-            break;
         }
-        case CSSValueMenu:
-            if (!menuFont.isAbsoluteSize())
-                fillFontDescription(menuFont, ncm.lfMenuFont);
-            fontDescription = menuFont;
-            break;
-        case CSSValueMessageBox:
-            if (!messageBoxFont.isAbsoluteSize())
-                fillFontDescription(messageBoxFont, ncm.lfMessageFont);
-            fontDescription = messageBoxFont;
-            break;
-        case CSSValueStatusBar:
-            if (!statusBarFont.isAbsoluteSize())
-                fillFontDescription(statusBarFont, ncm.lfStatusFont);
-            fontDescription = statusBarFont;
-            break;
-        case CSSValueCaption:
-            if (!captionFont.isAbsoluteSize())
-                fillFontDescription(captionFont, ncm.lfCaptionFont);
-            fontDescription = captionFont;
-            break;
-        case CSSValueSmallCaption:
-            if (!smallCaptionFont.isAbsoluteSize())
-                fillFontDescription(smallCaptionFont, ncm.lfSmCaptionFont);
-            fontDescription = smallCaptionFont;
-            break;
-        case CSSValueWebkitSmallControl:
-        case CSSValueWebkitMiniControl: // Just map to small.
-        case CSSValueWebkitControl: // Just map to small.
-            if (!controlFont.isAbsoluteSize()) {
-                HGDIOBJ hGDI = ::GetStockObject(DEFAULT_GUI_FONT);
-                if (hGDI) {
-                    LOGFONT logFont;
-                    if (::GetObject(hGDI, sizeof(logFont), &logFont) > 0)
-                        fillFontDescription(controlFont, logFont, defaultControlFontPixelSize);
-                }
+        fontDescription = controlFont;
+        break;
+    default: { // Everything else uses the stock GUI font.
+        if (!systemFont.isAbsoluteSize()) {
+            HGDIOBJ hGDI = ::GetStockObject(DEFAULT_GUI_FONT);
+            if (hGDI) {
+                LOGFONT logFont;
+                if (::GetObject(hGDI, sizeof(logFont), &logFont) > 0)
+                    fillFontDescription(systemFont, logFont);
             }
-            fontDescription = controlFont;
-            break;
-        default: { // Everything else uses the stock GUI font.
-            if (!systemFont.isAbsoluteSize()) {
-                HGDIOBJ hGDI = ::GetStockObject(DEFAULT_GUI_FONT);
-                if (hGDI) {
-                    LOGFONT logFont;
-                    if (::GetObject(hGDI, sizeof(logFont), &logFont) > 0)
-                        fillFontDescription(systemFont, logFont);
-                }
-            }
-            fontDescription = systemFont;
         }
+        fontDescription = systemFont;
+    }
     }
 }
 
@@ -398,7 +437,7 @@ bool RenderThemeWin::supportsFocusRing(const RenderStyle* style) const
 unsigned RenderThemeWin::determineClassicState(RenderObject* o, ControlSubPart subPart)
 {
     unsigned state = 0;
-    switch (o->style()->appearance()) {
+    switch (o->style().appearance()) {
         case PushButtonPart:
         case ButtonPart:
         case DefaultButtonPart:
@@ -410,7 +449,7 @@ unsigned RenderThemeWin::determineClassicState(RenderObject* o, ControlSubPart s
             break;
         case RadioPart:
         case CheckboxPart:
-            state = (o->style()->appearance() == RadioPart) ? DFCS_BUTTONRADIO : DFCS_BUTTONCHECK;
+            state = (o->style().appearance() == RadioPart) ? DFCS_BUTTONRADIO : DFCS_BUTTONCHECK;
             if (isChecked(o))
                 state |= DFCS_CHECKED;
             if (!isEnabled(o))
@@ -445,7 +484,7 @@ unsigned RenderThemeWin::determineClassicState(RenderObject* o, ControlSubPart s
 unsigned RenderThemeWin::determineState(RenderObject* o)
 {
     unsigned result = TS_NORMAL;
-    ControlPart appearance = o->style()->appearance();
+    ControlPart appearance = o->style().appearance();
     if (!isEnabled(o))
         result = TS_DISABLED;
     else if (isReadOnlyControl(o) && (TextFieldPart == appearance || TextAreaPart == appearance || SearchFieldPart == appearance))
@@ -468,7 +507,7 @@ unsigned RenderThemeWin::determineSliderThumbState(RenderObject* o)
     unsigned result = TUS_NORMAL;
     if (!isEnabled(o))
         result = TUS_DISABLED;
-    else if (supportsFocus(o->style()->appearance()) && isFocused(o))
+    else if (supportsFocus(o->style().appearance()) && isFocused(o))
         result = TUS_FOCUSED;
     else if (isPressed(o))
         result = TUS_PRESSED;
@@ -484,7 +523,7 @@ unsigned RenderThemeWin::determineButtonState(RenderObject* o)
         result = PBS_DISABLED;
     else if (isPressed(o))
         result = PBS_PRESSED;
-    else if (supportsFocus(o->style()->appearance()) && isFocused(o))
+    else if (supportsFocus(o->style().appearance()) && isFocused(o))
         result = PBS_DEFAULTED;
     else if (isHovered(o))
         result = PBS_HOT;
@@ -509,7 +548,7 @@ unsigned RenderThemeWin::determineSpinButtonState(RenderObject* o, ControlSubPar
 ThemeData RenderThemeWin::getClassicThemeData(RenderObject* o, ControlSubPart subPart)
 {
     ThemeData result;
-    switch (o->style()->appearance()) {
+    switch (o->style().appearance()) {
         case PushButtonPart:
         case ButtonPart:
         case DefaultButtonPart:
@@ -521,6 +560,10 @@ ThemeData RenderThemeWin::getClassicThemeData(RenderObject* o, ControlSubPart su
         case MenulistPart:
             result.m_part = DFC_SCROLL;
             result.m_state = determineClassicState(o);
+            break;
+        case MeterPart:
+            result.m_part = PP_BAR;
+            result.m_state = determineState(o);
             break;
         case SearchFieldPart:
         case TextFieldPart:
@@ -560,7 +603,7 @@ ThemeData RenderThemeWin::getThemeData(RenderObject* o, ControlSubPart subPart)
         return getClassicThemeData(o, subPart);
 
     ThemeData result;
-    switch (o->style()->appearance()) {
+    switch (o->style().appearance()) {
         case PushButtonPart:
         case ButtonPart:
         case DefaultButtonPart:
@@ -575,7 +618,7 @@ ThemeData RenderThemeWin::getThemeData(RenderObject* o, ControlSubPart subPart)
         case MenulistButtonPart: {
             const bool isVistaOrLater = (windowsVersion() >= WindowsVista);
             result.m_part = isVistaOrLater ? CP_DROPDOWNBUTTONRIGHT : CP_DROPDOWNBUTTON;
-            if (isVistaOrLater && documentIsInApplicationChromeMode(o->document())) {
+            if (isVistaOrLater && o->frame().settings().applicationChromeMode()) {
                 // The "readonly" look we use in application chrome mode
                 // only uses a "normal" look for the drop down button.
                 result.m_state = TS_NORMAL;
@@ -583,6 +626,10 @@ ThemeData RenderThemeWin::getThemeData(RenderObject* o, ControlSubPart subPart)
                 result.m_state = determineState(o);
             break;
         }
+        case MeterPart:
+            result.m_part = PP_BAR;
+            result.m_state = determineState(o);
+            break;
         case RadioPart:
             result.m_part = BP_RADIO;
             result.m_state = determineState(o);
@@ -638,34 +685,32 @@ static void drawControl(GraphicsContext* context, RenderObject* o, HANDLE theme,
         } else if (themeData.m_part == TKP_TRACK || themeData.m_part == TKP_TRACKVERT) {
             ::DrawEdge(hdc, &widgetRect, EDGE_SUNKEN, BF_RECT | BF_ADJUST);
             ::FillRect(hdc, &widgetRect, (HBRUSH)GetStockObject(GRAY_BRUSH));
-        } else if ((o->style()->appearance() == SliderThumbHorizontalPart ||
-                    o->style()->appearance() == SliderThumbVerticalPart) && 
+        } else if ((o->style().appearance() == SliderThumbHorizontalPart ||
+                    o->style().appearance() == SliderThumbVerticalPart) && 
                    (themeData.m_part == TKP_THUMBBOTTOM || themeData.m_part == TKP_THUMBTOP || 
                     themeData.m_part == TKP_THUMBLEFT || themeData.m_part == TKP_THUMBRIGHT)) {
             ::DrawEdge(hdc, &widgetRect, EDGE_RAISED, BF_RECT | BF_SOFT | BF_MIDDLE | BF_ADJUST);
             if (themeData.m_state == TUS_DISABLED) {
                 static WORD patternBits[8] = {0xaa, 0x55, 0xaa, 0x55, 0xaa, 0x55, 0xaa, 0x55};
-                HBITMAP patternBmp = ::CreateBitmap(8, 8, 1, 1, patternBits);
+                auto patternBmp = adoptGDIObject(::CreateBitmap(8, 8, 1, 1, patternBits));
                 if (patternBmp) {
-                    HBRUSH brush = (HBRUSH) ::CreatePatternBrush(patternBmp);
+                    auto brush = adoptGDIObject(::CreatePatternBrush(patternBmp.get()));
                     COLORREF oldForeColor = ::SetTextColor(hdc, ::GetSysColor(COLOR_3DFACE));
                     COLORREF oldBackColor = ::SetBkColor(hdc, ::GetSysColor(COLOR_3DHILIGHT));
                     POINT p;
                     ::GetViewportOrgEx(hdc, &p);
                     ::SetBrushOrgEx(hdc, p.x + widgetRect.left, p.y + widgetRect.top, NULL);
-                    HBRUSH oldBrush = (HBRUSH) ::SelectObject(hdc, brush);
-                    ::FillRect(hdc, &widgetRect, brush);
+                    HGDIOBJ oldBrush = ::SelectObject(hdc, brush.get());
+                    ::FillRect(hdc, &widgetRect, brush.get());
                     ::SetTextColor(hdc, oldForeColor);
                     ::SetBkColor(hdc, oldBackColor);
                     ::SelectObject(hdc, oldBrush);
-                    ::DeleteObject(brush); 
                 } else
                     ::FillRect(hdc, &widgetRect, (HBRUSH)COLOR_3DHILIGHT);
-                ::DeleteObject(patternBmp);
             }
         } else {
             // Push buttons, buttons, checkboxes and radios, and the dropdown arrow in menulists.
-            if (o->style()->appearance() == DefaultButtonPart) {
+            if (o->style().appearance() == DefaultButtonPart) {
                 HBRUSH brush = ::GetSysColorBrush(COLOR_3DDKSHADOW);
                 ::FrameRect(hdc, &widgetRect, brush);
                 ::InflateRect(&widgetRect, -1, -1);
@@ -732,13 +777,13 @@ bool RenderThemeWin::paintTextField(RenderObject* o, const PaintInfo& i, const I
     return false;
 }
 
-bool RenderThemeWin::paintMenuList(RenderObject* o, const PaintInfo& i, const IntRect& r)
+bool RenderThemeWin::paintMenuList(RenderObject* renderer, const PaintInfo& paintInfo, const IntRect& rect)
 {
     HANDLE theme;
     int part;
     if (haveTheme && (windowsVersion() >= WindowsVista)) {
         theme = menuListTheme();
-        if (documentIsInApplicationChromeMode(o->document()))
+        if (renderer->frame().settings().applicationChromeMode())
             part = CP_READONLY;
         else
             part = CP_BORDER;
@@ -747,9 +792,9 @@ bool RenderThemeWin::paintMenuList(RenderObject* o, const PaintInfo& i, const In
         part = TFP_TEXTFIELD;
     }
 
-    drawControl(i.context,  o, theme, ThemeData(part, determineState(o)), r);
+    drawControl(paintInfo.context,  renderer, theme, ThemeData(part, determineState(renderer)), rect);
     
-    return paintMenuListButton(o, i, r);
+    return paintMenuListButtonDecorations(renderer, paintInfo, rect);
 }
 
 void RenderThemeWin::adjustMenuListStyle(StyleResolver* styleResolver, RenderStyle* style, Element* e) const
@@ -782,23 +827,23 @@ void RenderThemeWin::adjustMenuListButtonStyle(StyleResolver* styleResolver, Ren
     minHeight = max(minHeight, dropDownBoxMinHeight);
 
     style->setMinHeight(Length(minHeight, Fixed));
-    
+
     style->setLineHeight(RenderStyle::initialLineHeight());
     
     // White-space is locked to pre
     style->setWhiteSpace(PRE);
 }
 
-bool RenderThemeWin::paintMenuListButton(RenderObject* o, const PaintInfo& i, const IntRect& r)
+bool RenderThemeWin::paintMenuListButtonDecorations(RenderObject* renderer, const PaintInfo& paintInfo, const IntRect& rect)
 {
     // FIXME: Don't make hardcoded assumptions about the thickness of the textfield border.
     int borderThickness = haveTheme ? 1 : 2;
 
     // Paint the dropdown button on the inner edge of the text field,
     // leaving space for the text field's 1px border
-    IntRect buttonRect(r);
+    IntRect buttonRect(rect);
     buttonRect.inflate(-borderThickness);
-    if (o->style()->direction() == LTR)
+    if (renderer->style().direction() == LTR)
         buttonRect.setX(buttonRect.maxX() - dropDownButtonWidth);
     buttonRect.setWidth(dropDownButtonWidth);
 
@@ -809,7 +854,7 @@ bool RenderThemeWin::paintMenuListButton(RenderObject* o, const PaintInfo& i, co
         buttonRect.setWidth(buttonRect.width() + vistaMenuListButtonOutset);
     }
 
-    drawControl(i.context, o, menuListTheme(), getThemeData(o), buttonRect);
+    drawControl(paintInfo.context, renderer, menuListTheme(), getThemeData(renderer), buttonRect);
 
     return false;
 }
@@ -820,10 +865,10 @@ bool RenderThemeWin::paintSliderTrack(RenderObject* o, const PaintInfo& i, const
 {
     IntRect bounds = r;
     
-    if (o->style()->appearance() ==  SliderHorizontalPart) {
+    if (o->style().appearance() ==  SliderHorizontalPart) {
         bounds.setHeight(trackWidth);
         bounds.setY(r.y() + r.height() / 2 - trackWidth / 2);
-    } else if (o->style()->appearance() == SliderVerticalPart) {
+    } else if (o->style().appearance() == SliderVerticalPart) {
         bounds.setWidth(trackWidth);
         bounds.setX(r.x() + r.width() / 2 - trackWidth / 2);
     }
@@ -851,7 +896,7 @@ void RenderThemeWin::adjustSliderThumbSize(RenderStyle* style, Element*) const
         style->setWidth(Length(sliderThumbWidth, Fixed));
         style->setHeight(Length(sliderThumbHeight, Fixed));
     }
-#if ENABLE(VIDEO)
+#if ENABLE(VIDEO) && USE(CG)
     else if (part == MediaSliderThumbPart || part == MediaVolumeSliderThumbPart) 
         RenderMediaControls::adjustMediaSliderThumbSize(style);
 #endif
@@ -870,7 +915,7 @@ void RenderThemeWin::adjustSearchFieldStyle(StyleResolver* styleResolver, Render
     style->setPaddingRight(Length(padding, Fixed));
     style->setPaddingTop(Length(padding, Fixed));
     style->setPaddingBottom(Length(padding, Fixed));
-    if (e && e->focused() && e->document()->frame()->selection()->isFocusedAndActive())
+    if (e && e->focused() && e->document().frame()->selection().isFocusedAndActive())
         style->setOutlineOffset(-2);
 }
 
@@ -895,7 +940,7 @@ bool RenderThemeWin::paintSearchFieldCancelButton(RenderObject* o, const PaintIn
 
     static Image* cancelImage = Image::loadPlatformResource("searchCancel").leakRef();
     static Image* cancelPressedImage = Image::loadPlatformResource("searchCancelPressed").leakRef();
-    paintInfo.context->drawImage(isPressed(o) ? cancelPressedImage : cancelImage, o->style()->colorSpace(), bounds);
+    paintInfo.context->drawImage(isPressed(o) ? cancelPressedImage : cancelImage, o->style().colorSpace(), bounds);
     return false;
 }
 
@@ -908,14 +953,14 @@ void RenderThemeWin::adjustSearchFieldCancelButtonStyle(StyleResolver*, RenderSt
     style->setHeight(Length(cancelButtonSize, Fixed));
 }
 
-void RenderThemeWin::adjustSearchFieldDecorationStyle(StyleResolver*, RenderStyle* style, Element*) const
+void RenderThemeWin::adjustSearchFieldDecorationPartStyle(StyleResolver*, RenderStyle* style, Element*) const
 {
     IntSize emptySize(1, 11);
     style->setWidth(Length(emptySize.width(), Fixed));
     style->setHeight(Length(emptySize.height(), Fixed));
 }
 
-void RenderThemeWin::adjustSearchFieldResultsDecorationStyle(StyleResolver*, RenderStyle* style, Element*) const
+void RenderThemeWin::adjustSearchFieldResultsDecorationPartStyle(StyleResolver*, RenderStyle* style, Element*) const
 {
     // Scale the decoration size based on the font size
     float fontScale = style->fontSize() / defaultControlFontPixelSize;
@@ -925,7 +970,7 @@ void RenderThemeWin::adjustSearchFieldResultsDecorationStyle(StyleResolver*, Ren
     style->setHeight(Length(magnifierSize, Fixed));
 }
 
-bool RenderThemeWin::paintSearchFieldResultsDecoration(RenderObject* o, const PaintInfo& paintInfo, const IntRect& r)
+bool RenderThemeWin::paintSearchFieldResultsDecorationPart(RenderObject* o, const PaintInfo& paintInfo, const IntRect& r)
 {
     IntRect bounds = r;
     ASSERT(o->parent());
@@ -944,7 +989,7 @@ bool RenderThemeWin::paintSearchFieldResultsDecoration(RenderObject* o, const Pa
     bounds.setY(parentBox.y() + (parentBox.height() - bounds.height() + 1) / 2);
     
     static Image* magnifierImage = Image::loadPlatformResource("searchMagnifier").leakRef();
-    paintInfo.context->drawImage(magnifierImage, o->style()->colorSpace(), bounds);
+    paintInfo.context->drawImage(magnifierImage, o->style().colorSpace(), bounds);
     return false;
 }
 
@@ -980,47 +1025,47 @@ bool RenderThemeWin::paintSearchFieldResultsButton(RenderObject* o, const PaintI
     bounds.setY(parentBox.y() + (parentBox.height() - bounds.height() + 1) / 2);
 
     static Image* magnifierImage = Image::loadPlatformResource("searchMagnifierResults").leakRef();
-    paintInfo.context->drawImage(magnifierImage, o->style()->colorSpace(), bounds);
+    paintInfo.context->drawImage(magnifierImage, o->style().colorSpace(), bounds);
     return false;
 }
 
 // Map a CSSValue* system color to an index understood by GetSysColor
-static int cssValueIdToSysColorIndex(int cssValueId)
+static int cssValueIdToSysColorIndex(CSSValueID cssValueId)
 {
     switch (cssValueId) {
-        case CSSValueActiveborder: return COLOR_ACTIVEBORDER;
-        case CSSValueActivecaption: return COLOR_ACTIVECAPTION;
-        case CSSValueAppworkspace: return COLOR_APPWORKSPACE;
-        case CSSValueBackground: return COLOR_BACKGROUND;
-        case CSSValueButtonface: return COLOR_BTNFACE;
-        case CSSValueButtonhighlight: return COLOR_BTNHIGHLIGHT;
-        case CSSValueButtonshadow: return COLOR_BTNSHADOW;
-        case CSSValueButtontext: return COLOR_BTNTEXT;
-        case CSSValueCaptiontext: return COLOR_CAPTIONTEXT;
-        case CSSValueGraytext: return COLOR_GRAYTEXT;
-        case CSSValueHighlight: return COLOR_HIGHLIGHT;
-        case CSSValueHighlighttext: return COLOR_HIGHLIGHTTEXT;
-        case CSSValueInactiveborder: return COLOR_INACTIVEBORDER;
-        case CSSValueInactivecaption: return COLOR_INACTIVECAPTION;
-        case CSSValueInactivecaptiontext: return COLOR_INACTIVECAPTIONTEXT;
-        case CSSValueInfobackground: return COLOR_INFOBK;
-        case CSSValueInfotext: return COLOR_INFOTEXT;
-        case CSSValueMenu: return COLOR_MENU;
-        case CSSValueMenutext: return COLOR_MENUTEXT;
-        case CSSValueScrollbar: return COLOR_SCROLLBAR;
-        case CSSValueThreeddarkshadow: return COLOR_3DDKSHADOW;
-        case CSSValueThreedface: return COLOR_3DFACE;
-        case CSSValueThreedhighlight: return COLOR_3DHIGHLIGHT;
-        case CSSValueThreedlightshadow: return COLOR_3DLIGHT;
-        case CSSValueThreedshadow: return COLOR_3DSHADOW;
-        case CSSValueWindow: return COLOR_WINDOW;
-        case CSSValueWindowframe: return COLOR_WINDOWFRAME;
-        case CSSValueWindowtext: return COLOR_WINDOWTEXT;
-        default: return -1; // Unsupported CSSValue
+    case CSSValueActiveborder: return COLOR_ACTIVEBORDER;
+    case CSSValueActivecaption: return COLOR_ACTIVECAPTION;
+    case CSSValueAppworkspace: return COLOR_APPWORKSPACE;
+    case CSSValueBackground: return COLOR_BACKGROUND;
+    case CSSValueButtonface: return COLOR_BTNFACE;
+    case CSSValueButtonhighlight: return COLOR_BTNHIGHLIGHT;
+    case CSSValueButtonshadow: return COLOR_BTNSHADOW;
+    case CSSValueButtontext: return COLOR_BTNTEXT;
+    case CSSValueCaptiontext: return COLOR_CAPTIONTEXT;
+    case CSSValueGraytext: return COLOR_GRAYTEXT;
+    case CSSValueHighlight: return COLOR_HIGHLIGHT;
+    case CSSValueHighlighttext: return COLOR_HIGHLIGHTTEXT;
+    case CSSValueInactiveborder: return COLOR_INACTIVEBORDER;
+    case CSSValueInactivecaption: return COLOR_INACTIVECAPTION;
+    case CSSValueInactivecaptiontext: return COLOR_INACTIVECAPTIONTEXT;
+    case CSSValueInfobackground: return COLOR_INFOBK;
+    case CSSValueInfotext: return COLOR_INFOTEXT;
+    case CSSValueMenu: return COLOR_MENU;
+    case CSSValueMenutext: return COLOR_MENUTEXT;
+    case CSSValueScrollbar: return COLOR_SCROLLBAR;
+    case CSSValueThreeddarkshadow: return COLOR_3DDKSHADOW;
+    case CSSValueThreedface: return COLOR_3DFACE;
+    case CSSValueThreedhighlight: return COLOR_3DHIGHLIGHT;
+    case CSSValueThreedlightshadow: return COLOR_3DLIGHT;
+    case CSSValueThreedshadow: return COLOR_3DSHADOW;
+    case CSSValueWindow: return COLOR_WINDOW;
+    case CSSValueWindowframe: return COLOR_WINDOWFRAME;
+    case CSSValueWindowtext: return COLOR_WINDOWTEXT;
+    default: return -1; // Unsupported CSSValue
     }
 }
 
-Color RenderThemeWin::systemColor(int cssValueId) const
+Color RenderThemeWin::systemColor(CSSValueID cssValueId) const
 {
     int sysColorIndex = cssValueIdToSysColorIndex(cssValueId);
     if (sysColorIndex == -1)
@@ -1031,95 +1076,71 @@ Color RenderThemeWin::systemColor(int cssValueId) const
 }
 
 #if ENABLE(VIDEO)
-
-String RenderThemeWin::extraMediaControlsStyleSheet()
+String RenderThemeWin::mediaControlsStyleSheet()
 {
-    return String(mediaControlsQuickTimeUserAgentStyleSheet, sizeof(mediaControlsQuickTimeUserAgentStyleSheet));
+#if ENABLE(MEDIA_CONTROLS_SCRIPT)
+    return String(mediaControlsAppleUserAgentStyleSheet, sizeof(mediaControlsAppleUserAgentStyleSheet));
+#else
+    return emptyString();
+#endif
 }
 
-#if ENABLE(FULLSCREEN_API)
-String RenderThemeWin::extraFullScreenStyleSheet()
+String RenderThemeWin::mediaControlsScript()
 {
-    return String(fullscreenQuickTimeUserAgentStyleSheet, sizeof(fullscreenQuickTimeUserAgentStyleSheet));
+#if ENABLE(MEDIA_CONTROLS_SCRIPT)
+    return String(mediaControlsAppleJavaScript, sizeof(mediaControlsAppleJavaScript));
+#else
+    return emptyString();
+#endif
 }
 #endif
 
-bool RenderThemeWin::supportsClosedCaptioning() const
+#if ENABLE(METER_ELEMENT)
+void RenderThemeWin::adjustMeterStyle(StyleResolver*, RenderStyle* style, Element*) const
 {
+    style->setBoxShadow(nullptr);
+}
+
+bool RenderThemeWin::supportsMeter(ControlPart part) const
+{
+    switch (part) {
+    case MeterPart:
+        return true;
+    default:
+        return false;
+    }
+}
+
+IntSize RenderThemeWin::meterSizeForBounds(const RenderMeter*, const IntRect& bounds) const
+{
+    return bounds.size();
+}
+
+bool RenderThemeWin::paintMeter(RenderObject* renderObject, const PaintInfo& paintInfo, const IntRect& rect)
+{
+    if (!renderObject->isMeter())
+        return true;
+
+    HTMLMeterElement* element = toRenderMeter(renderObject)->meterElement();
+
+    ThemeData theme = getThemeData(renderObject);
+
+    int remaining = static_cast<int>((1.0 - element->valueRatio()) * static_cast<double>(rect.size().width()));
+
+    // Draw the background
+    drawControl(paintInfo.context, renderObject, progressBarTheme(), theme, rect);
+
+    // Draw the progress portion
+    IntRect completedRect(rect);
+    completedRect.contract(remaining, 0);
+
+    theme.m_part = PP_FILL;
+    drawControl(paintInfo.context, renderObject, progressBarTheme(), theme, completedRect);
+
     return true;
 }
 
-bool RenderThemeWin::paintMediaFullscreenButton(RenderObject* o, const PaintInfo& paintInfo, const IntRect& r)
-{
-    return RenderMediaControls::paintMediaControlsPart(MediaEnterFullscreenButton, o, paintInfo, r);
-}
-
-bool RenderThemeWin::paintMediaMuteButton(RenderObject* o, const PaintInfo& paintInfo, const IntRect& r)
-{
-    return RenderMediaControls::paintMediaControlsPart(MediaMuteButton, o, paintInfo, r);
-}
-
-bool RenderThemeWin::paintMediaPlayButton(RenderObject* o, const PaintInfo& paintInfo, const IntRect& r)
-{
-    return RenderMediaControls::paintMediaControlsPart(MediaPlayButton, o, paintInfo, r);
-}
-
-bool RenderThemeWin::paintMediaRewindButton(RenderObject* o, const PaintInfo& paintInfo, const IntRect& r)
-{
-    return RenderMediaControls::paintMediaControlsPart(MediaRewindButton, o, paintInfo, r);
-}
-
-bool RenderThemeWin::paintMediaSeekBackButton(RenderObject* o, const PaintInfo& paintInfo, const IntRect& r)
-{
-    return RenderMediaControls::paintMediaControlsPart(MediaSeekBackButton, o, paintInfo, r);
-}
-
-bool RenderThemeWin::paintMediaSeekForwardButton(RenderObject* o, const PaintInfo& paintInfo, const IntRect& r)
-{
-    return RenderMediaControls::paintMediaControlsPart(MediaSeekForwardButton, o, paintInfo, r);
-}
-
-bool RenderThemeWin::paintMediaSliderTrack(RenderObject* o, const PaintInfo& paintInfo, const IntRect& r)
-{
-    return RenderMediaControls::paintMediaControlsPart(MediaSlider, o, paintInfo, r);
-}
-
-bool RenderThemeWin::paintMediaSliderThumb(RenderObject* o, const PaintInfo& paintInfo, const IntRect& r)
-{
-    return RenderMediaControls::paintMediaControlsPart(MediaSliderThumb, o, paintInfo, r);
-}
-
-bool RenderThemeWin::paintMediaToggleClosedCaptionsButton(RenderObject* o, const PaintInfo& paintInfo, const IntRect& r)
-{
-    return RenderMediaControls::paintMediaControlsPart(MediaShowClosedCaptionsButton, o, paintInfo, r);
-}
-
-bool RenderThemeWin::paintMediaControlsBackground(RenderObject* o, const PaintInfo& paintInfo, const IntRect& r)
-{
-    return RenderMediaControls::paintMediaControlsPart(MediaTimelineContainer, o, paintInfo, r);
-}
-
-bool RenderThemeWin::paintMediaVolumeSliderContainer(RenderObject* o, const PaintInfo& paintInfo, const IntRect& r)
-{
-    return RenderMediaControls::paintMediaControlsPart(MediaVolumeSliderContainer, o, paintInfo, r);
-}
-
-bool RenderThemeWin::paintMediaVolumeSliderTrack(RenderObject* o, const PaintInfo& paintInfo, const IntRect& r)
-{
-    return RenderMediaControls::paintMediaControlsPart(MediaVolumeSlider, o, paintInfo, r);
-}
-
-bool RenderThemeWin::paintMediaVolumeSliderThumb(RenderObject* o, const PaintInfo& paintInfo, const IntRect& r)
-{
-    return RenderMediaControls::paintMediaControlsPart(MediaVolumeSliderThumb, o, paintInfo, r);
-}
-
-IntPoint RenderThemeWin::volumeSliderOffsetFromMuteButton(RenderBox* muteButtonBox, const IntSize& size) const
-{
-    return RenderMediaControls::volumeSliderOffsetFromMuteButton(muteButtonBox, size);
-}
-
-
 #endif
+
 
 }

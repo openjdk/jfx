@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -235,6 +235,11 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
 
     @Override protected  void dataItemRemoved(final Data<X,Y> item, final Series<X,Y> series) {
         final Node symbol = item.getNode();
+
+        if (symbol != null) {
+            symbol.focusTraversableProperty().unbind();
+        }
+
         // remove item from sorted list
         int itemIndex = series.getItemIndex(item);
         if (shouldAnimate()) {

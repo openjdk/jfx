@@ -590,6 +590,7 @@ public class FXCanvas extends Canvas {
         boolean control = (me.stateMask & SWT.CONTROL) != 0;
         boolean alt = (me.stateMask & SWT.ALT) != 0;
         boolean meta = (me.stateMask & SWT.COMMAND) != 0;
+        int button = me.button;
         switch (embedMouseType) {
             case AbstractEvents.MOUSEEVENT_PRESSED:
                 primaryBtnDown |= me.button == 1;
@@ -604,12 +605,32 @@ public class FXCanvas extends Canvas {
             case AbstractEvents.MOUSEEVENT_CLICKED:
                 // Don't send click events to FX, as they are generated in Scene
                 return;
+
+            case AbstractEvents.MOUSEEVENT_MOVED:
+            case AbstractEvents.MOUSEEVENT_DRAGGED:
+            case AbstractEvents.MOUSEEVENT_ENTERED:
+            case AbstractEvents.MOUSEEVENT_EXITED:
+                // If this event was the result of mouse movement and has no
+                // button associated with it, then we look at the state to
+                // determine which button to report
+                if (button == 0) {
+                    if ((me.stateMask & SWT.BUTTON1) != 0) {
+                        button = 1;
+                    } else if ((me.stateMask & SWT.BUTTON2) != 0) {
+                        button = 2;
+                    } else if ((me.stateMask & SWT.BUTTON3) != 0) {
+                        button = 3;
+                    }
+                }
+                break;
+
             default:
                 break;
         }
+
         scenePeer.mouseEvent(
                 embedMouseType,
-                SWTEvents.mouseButtonToEmbedMouseButton(me.button, me.stateMask),
+                SWTEvents.mouseButtonToEmbedMouseButton(button, me.stateMask),
                 primaryBtnDown, middleBtnDown, secondaryBtnDown,
                 me.x, me.y,
                 los.x, los.y,

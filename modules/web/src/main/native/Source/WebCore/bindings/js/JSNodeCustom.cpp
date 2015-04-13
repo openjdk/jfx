@@ -58,22 +58,19 @@
 #include "JSHTMLElementWrapperFactory.h"
 #include "JSNotation.h"
 #include "JSProcessingInstruction.h"
+#include "JSSVGElementWrapperFactory.h"
 #include "JSText.h"
 #include "Node.h"
 #include "Notation.h"
 #include "ProcessingInstruction.h"
 #include "RegisteredEventListener.h"
+#include "SVGElement.h"
 #include "ShadowRoot.h"
 #include "StyleSheet.h"
 #include "StyledElement.h"
 #include "Text.h"
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefPtr.h>
-
-#if ENABLE(SVG)
-#include "JSSVGElementWrapperFactory.h"
-#include "SVGElement.h"
-#endif
 
 using namespace JSC;
 
@@ -105,15 +102,13 @@ static inline bool isReachableFromDOM(JSNode* jsNode, Node* node, SlotVisitor& v
         // because it is the only thing keeping the image element alive, and if
         // the element is destroyed, its load event will not fire.
         // FIXME: The DOM should manage this issue without the help of JavaScript wrappers.
-        if (node->hasTagName(imgTag)) {
-            HTMLImageElement *el = dynamic_cast<HTMLImageElement*>(node);
-            if (el && el->hasPendingActivity())
+        if (isHTMLImageElement(node)) {
+            if (toHTMLImageElement(node)->hasPendingActivity())
                 return true;
         }
     #if ENABLE(VIDEO)
-        else if (node->hasTagName(audioTag)) {
-            HTMLAudioElement *el = dynamic_cast<HTMLAudioElement*>(node);
-            if (el && !el->paused())
+        else if (isHTMLAudioElement(node)) {
+            if (!toHTMLAudioElement(node)->paused())
                 return true;
         }
     #endif
@@ -130,22 +125,13 @@ static inline bool isReachableFromDOM(JSNode* jsNode, Node* node, SlotVisitor& v
 bool JSNodeOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, SlotVisitor& visitor)
 {
     JSNode* jsNode = jsCast<JSNode*>(handle.get().asCell());
-    return isReachableFromDOM(jsNode, jsNode->impl(), visitor);
-}
-
-void JSNodeOwner::finalize(JSC::Handle<JSC::Unknown> handle, void* context)
-{
-    JSNode* jsNode = static_cast<JSNode*>(handle.get().asCell());
-    DOMWrapperWorld* world = static_cast<DOMWrapperWorld*>(context);
-    uncacheWrapper(world, jsNode->impl(), jsNode);
-    jsNode->releaseImpl();
+    return isReachableFromDOM(jsNode, &jsNode->impl(), visitor);
 }
 
 JSValue JSNode::insertBefore(ExecState* exec)
 {
-    Node* imp = static_cast<Node*>(impl());
     ExceptionCode ec = 0;
-    bool ok = imp->insertBefore(toNode(exec->argument(0)), toNode(exec->argument(1)), ec, AttachLazily);
+    bool ok = impl().insertBefore(toNode(exec->argument(0)), toNode(exec->argument(1)), ec);
     setDOMException(exec, ec);
     if (ok)
         return exec->argument(0);
@@ -154,9 +140,8 @@ JSValue JSNode::insertBefore(ExecState* exec)
 
 JSValue JSNode::replaceChild(ExecState* exec)
 {
-    Node* imp = static_cast<Node*>(impl());
     ExceptionCode ec = 0;
-    bool ok = imp->replaceChild(toNode(exec->argument(0)), toNode(exec->argument(1)), ec, AttachLazily);
+    bool ok = impl().replaceChild(toNode(exec->argument(0)), toNode(exec->argument(1)), ec);
     setDOMException(exec, ec);
     if (ok)
         return exec->argument(1);
@@ -165,9 +150,8 @@ JSValue JSNode::replaceChild(ExecState* exec)
 
 JSValue JSNode::removeChild(ExecState* exec)
 {
-    Node* imp = static_cast<Node*>(impl());
     ExceptionCode ec = 0;
-    bool ok = imp->removeChild(toNode(exec->argument(0)), ec);
+    bool ok = impl().removeChild(toNode(exec->argument(0)), ec);
     setDOMException(exec, ec);
     if (ok)
         return exec->argument(0);
@@ -176,9 +160,8 @@ JSValue JSNode::removeChild(ExecState* exec)
 
 JSValue JSNode::appendChild(ExecState* exec)
 {
-    Node* imp = static_cast<Node*>(impl());
     ExceptionCode ec = 0;
-    bool ok = imp->appendChild(toNode(exec->argument(0)), ec, AttachLazily);
+    bool ok = impl().appendChild(toNode(exec->argument(0)), ec);
     setDOMException(exec, ec);
     if (ok)
         return exec->argument(0);
@@ -187,7 +170,7 @@ JSValue JSNode::appendChild(ExecState* exec)
 
 JSScope* JSNode::pushEventHandlerScope(ExecState* exec, JSScope* node) const
 {
-    if (inherits(&JSHTMLElement::s_info))
+    if (inherits(JSHTMLElement::info()))
         return jsCast<const JSHTMLElement*>(this)->pushEventHandlerScope(exec, node);
     return node;
 }
@@ -195,13 +178,13 @@ JSScope* JSNode::pushEventHandlerScope(ExecState* exec, JSScope* node) const
 void JSNode::visitChildren(JSCell* cell, SlotVisitor& visitor)
 {
     JSNode* thisObject = jsCast<JSNode*>(cell);
-    ASSERT_GC_OBJECT_INHERITS(thisObject, &s_info);
+    ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     COMPILE_ASSERT(StructureFlags & OverridesVisitChildren, OverridesVisitChildrenWithoutSettingFlag);
     ASSERT(thisObject->structure()->typeInfo().overridesVisitChildren());
     Base::visitChildren(thisObject, visitor);
 
-    Node* node = thisObject->impl();
-    node->visitJSEventListeners(visitor);
+    Node& node = thisObject->impl();
+    node.visitJSEventListeners(visitor);
 
     visitor.addOpaqueRoot(root(node));
 }
@@ -216,10 +199,8 @@ static ALWAYS_INLINE JSValue createWrapperInline(ExecState* exec, JSDOMGlobalObj
         case Node::ELEMENT_NODE:
             if (node->isHTMLElement())
                 wrapper = createJSHTMLWrapper(exec, globalObject, toHTMLElement(node));
-#if ENABLE(SVG)
             else if (node->isSVGElement())
                 wrapper = createJSSVGWrapper(exec, globalObject, toSVGElement(node));
-#endif
             else
                 wrapper = CREATE_DOM_WRAPPER(exec, globalObject, Element, node);
             break;
@@ -278,7 +259,7 @@ JSValue toJSNewlyCreated(ExecState* exec, JSDOMGlobalObject* globalObject, Node*
 
 void willCreatePossiblyOrphanedTreeByRemovalSlowCase(Node* root)
 {
-    ScriptState* scriptState = mainWorldScriptState(root->document()->frame());
+    JSC::ExecState* scriptState = mainWorldExecState(root->document().frame());
     if (!scriptState)
         return;
 

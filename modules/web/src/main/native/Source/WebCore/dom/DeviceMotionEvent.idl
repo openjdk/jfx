@@ -24,7 +24,7 @@
  */
 
 [
-        Conditional=DEVICE_ORIENTATION,
+    Conditional=DEVICE_ORIENTATION,
 ] interface DeviceMotionEvent : Event {
     [Custom] readonly attribute Acceleration acceleration;
     [Custom] readonly attribute Acceleration accelerationIncludingGravity;
@@ -37,5 +37,5 @@
                                         [Default=Undefined] optional Acceleration accelerationIncludingGravity, 
                                         [Default=Undefined] optional RotationRate rotationRate, 
                                         [Default=Undefined] optional double interval);
-    };
+};
 
