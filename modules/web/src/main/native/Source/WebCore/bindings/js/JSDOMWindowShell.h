@@ -40,41 +40,39 @@ namespace WebCore {
     class JSDOMWindowShell : public JSC::JSProxy {
         typedef JSC::JSProxy Base;
     public:
-        JSDOMWindowShell(PassRefPtr<DOMWindow>, JSC::Structure*, DOMWrapperWorld*);
         static void destroy(JSCell*);
 
         JSDOMWindow* window() const { return JSC::jsCast<JSDOMWindow*>(target()); }
         void setWindow(JSC::VM&, JSDOMWindow*);
         void setWindow(PassRefPtr<DOMWindow>);
 
-        static const JSC::ClassInfo s_info;
+        DECLARE_INFO;
 
-        DOMWindow* impl() const;
+        DOMWindow& impl() const;
 
-        static JSDOMWindowShell* create(PassRefPtr<DOMWindow> window, JSC::Structure* structure, DOMWrapperWorld* world) 
+        static JSDOMWindowShell* create(JSC::VM& vm, PassRefPtr<DOMWindow> window, JSC::Structure* structure, DOMWrapperWorld& world)
         {
-            JSC::Heap& heap = JSDOMWindow::commonVM()->heap;
-            JSDOMWindowShell* shell = new (NotNull, JSC::allocateCell<JSDOMWindowShell>(heap)) JSDOMWindowShell(structure, world);
-            shell->finishCreation(*world->vm(), window);
+            JSDOMWindowShell* shell = new (NotNull, JSC::allocateCell<JSDOMWindowShell>(vm.heap)) JSDOMWindowShell(vm, structure, world);
+            shell->finishCreation(vm, window);
             return shell; 
         }
 
         static JSC::Structure* createStructure(JSC::VM& vm, JSC::JSValue prototype) 
         {
-            return JSC::Structure::create(vm, 0, prototype, JSC::TypeInfo(JSC::ProxyType, StructureFlags), &s_info);
+            return JSC::Structure::create(vm, 0, prototype, JSC::TypeInfo(JSC::ProxyType, StructureFlags), info());
         }
 
-        DOMWrapperWorld* world() { return m_world.get(); }
+        DOMWrapperWorld& world() { return m_world.get(); }
 
     protected:
-        JSDOMWindowShell(JSC::Structure*, DOMWrapperWorld*);
+        JSDOMWindowShell(JSC::VM&, JSC::Structure*, DOMWrapperWorld&);
         void finishCreation(JSC::VM&, PassRefPtr<DOMWindow>);
 
-        RefPtr<DOMWrapperWorld> m_world;
+        Ref<DOMWrapperWorld> m_world;
     };
 
     JSC::JSValue toJS(JSC::ExecState*, Frame*);
-    JSDOMWindowShell* toJSDOMWindowShell(Frame*, DOMWrapperWorld*);
+    JSDOMWindowShell* toJSDOMWindowShell(Frame*, DOMWrapperWorld&);
 
 } // namespace WebCore
 

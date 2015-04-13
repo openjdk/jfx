@@ -18,12 +18,11 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SVG)
 #include "SVGPathBlender.h"
 
 #include "AnimationUtilities.h"
 #include "SVGPathSeg.h"
+#include "SVGPathSource.h"
 #include <wtf/TemporaryChange.h>
 
 namespace WebCore {
@@ -408,5 +407,3 @@ void SVGPathBlender::cleanup()
 }
 
 }
-
-#endif // ENABLE(SVG)

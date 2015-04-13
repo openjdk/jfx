@@ -34,10 +34,6 @@
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
 
-#ifndef NDEBUG
-#include <stdio.h>
-#endif
-
 using namespace WTF;
 
 namespace JSC { namespace Yarr {
@@ -711,6 +707,7 @@ public:
             return true;
         case QuantifierNonGreedy:
             ASSERT(backTrack->begin != notFound);
+            FALLTHROUGH;
         case QuantifierFixedCount:
             break;
         }
@@ -731,6 +728,7 @@ public:
                 context->term -= term.atom.parenthesesWidth;
                 return false;
             }
+            FALLTHROUGH;
         case QuantifierNonGreedy:
             if (backTrack->begin == notFound) {
                 backTrack->begin = input.getPos();
@@ -746,6 +744,7 @@ public:
                 context->term -= term.atom.parenthesesWidth;
                 return true;
             }
+            FALLTHROUGH;
         case QuantifierFixedCount:
             break;
         }
@@ -1510,8 +1509,11 @@ public:
     void atomPatternCharacter(UChar ch, unsigned inputPosition, unsigned frameLocation, Checked<unsigned> quantityCount, QuantifierType quantityType)
     {
         if (m_pattern.m_ignoreCase) {
-            UChar lo = Unicode::toLower(ch);
-            UChar hi = Unicode::toUpper(ch);
+            ASSERT(u_tolower(ch) <= 0xFFFF);
+            ASSERT(u_toupper(ch) <= 0xFFFF);
+
+            UChar lo = u_tolower(ch);
+            UChar hi = u_toupper(ch);
 
             if (lo != hi) {
                 m_bodyDisjunction->terms.append(ByteTerm(lo, hi, inputPosition, frameLocation, quantityCount, quantityType));
@@ -1921,7 +1923,7 @@ private:
     OwnPtr<ByteDisjunction> m_bodyDisjunction;
     unsigned m_currentAlternativeIndex;
     Vector<ParenthesesStackEntry> m_parenthesesStack;
-    Vector<OwnPtr<ByteDisjunction> > m_allParenthesesInfo;
+    Vector<OwnPtr<ByteDisjunction>> m_allParenthesesInfo;
 };
 
 PassOwnPtr<BytecodePattern> byteCompile(YarrPattern& pattern, BumpPointerAllocator* allocator)

@@ -45,15 +45,19 @@ Macros::~Macros(void) {
 void Macros::Initialize() {
     Package& package = Package::GetInstance();
     Macros& macros = Macros::GetInstance();
-    
+
     // Public macros.
     macros.AddMacro(_T("$APPDIR"), package.GetPackageRootDirectory());
     macros.AddMacro(_T("$PACKAGEDIR"), package.GetPackageAppDirectory());
     macros.AddMacro(_T("$LAUNCHERDIR"), package.GetPackageLauncherDirectory());
-    
+    macros.AddMacro(_T("$APPDATADIR"), package.GetAppDataDirectory());
+
     TString javaHome = FilePath::ExtractFilePath(package.GetJVMLibraryFileName());
     macros.AddMacro(_T("$JREHOME"), javaHome);
-    
+
+    // App CDS Macros
+    macros.AddMacro(_T("$CACHEDIR"), package.GetAppCDSCacheDirectory());
+
     // Private macros.
     TString javaVMLibraryName = FilePath::ExtractFileName(javaHome);
     macros.AddMacro(_T("$JAVAVMLIBRARYNAME"), javaVMLibraryName);

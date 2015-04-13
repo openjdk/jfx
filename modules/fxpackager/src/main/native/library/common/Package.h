@@ -46,14 +46,15 @@
 class PackageBootFields {
 public:
     enum MemoryState {msManual, msAuto};
-    
+
 public:
-    TOrderedMap FJVMArgs;
+    OrderedMap<TString, TString> FJVMArgs;
     std::list<TString> FArgs;
-    
+
     TString FPackageRootDirectory;
     TString FPackageAppDirectory;
     TString FPackageLauncherDirectory;
+    TString FAppDataDirectory;
     TString FAppID;
     TString FPackageAppDataDirectory;
     TString FClassPath;
@@ -65,7 +66,9 @@ public:
     TString FSplashScreenFileName;
     bool FUseJavaPreferences;
     TString FCommandName;
-    
+
+    TString FAppCDSCacheFileName;
+
     TPlatformNumber FMemorySize;
     MemoryState FMemoryState;
 };
@@ -77,44 +80,52 @@ private:
     void operator=(Package const&); // Don't implement
 
 private:
+    bool FInitialized;
     PackageBootFields* FBootFields;
     TString FJVMUserArgsConfigFileName;
-    
-    bool FDebugging;
+    TString FAppCDSCacheDirectory;
 
-    //PropertyFile* FJVMUserConfig; // Contains JVM user overrides
-    TOrderedMap FJVMUserArgsOverrides;
-    TOrderedMap FDefaultJVMUserArgs; // Contains JVM user defaults
-    TOrderedMap FJVMUserArgs; // Contains a merge of JVM defaults and user overrides
+    DebugState FDebugging;
+
+    OrderedMap<TString, TString> FJVMUserArgsOverrides;
+    OrderedMap<TString, TString> FDefaultJVMUserArgs; // Contains JVM user defaults
+    OrderedMap<TString, TString> FJVMUserArgs; // Contains a merge of JVM defaults and user overrides
 
 
     Package(void);
 
-    void Initialize();
+    //void Initialize();
     void MergeJVMDefaultsWithOverrides();
     TString GetMainJar();
-    
+    void SaveJVMUserArgOverrides(OrderedMap<TString, TString> Data);
+    void ReadJVMArgs(ISectionalPropertyContainer* Config);
+
 public:
     static Package& GetInstance();
     ~Package(void);
 
+    void Initialize();
+    void Clear();
     void FreeBootFields();
 
     void SetCommandLineArguments(int argc, TCHAR* argv[]);
 
-    TOrderedMap GetJVMArgs();
-    TOrderedMap GetDefaultJVMUserArgs();
-    TOrderedMap GetJVMUserArgOverrides();
-    void SetJVMUserArgOverrides(TOrderedMap Value);
-    TOrderedMap GetJVMUserArgs();
+    OrderedMap<TString, TString> GetJVMArgs();
+    OrderedMap<TString, TString> GetDefaultJVMUserArgs();
+    OrderedMap<TString, TString> GetJVMUserArgOverrides();
+    void SetJVMUserArgOverrides(OrderedMap<TString, TString> Value);
+    OrderedMap<TString, TString> GetJVMUserArgs();
 
     std::list<TString> GetArgs();
 
     TString GetPackageRootDirectory();
     TString GetPackageAppDirectory();
     TString GetPackageLauncherDirectory();
-    
+    TString GetAppDataDirectory();
+
     TString GetJVMUserArgsConfigFileName();
+    TString GetAppCDSCacheDirectory();
+    TString GetAppCDSCacheFileName();
 
     TString GetAppID();
     TString GetPackageAppDataDirectory();
@@ -126,9 +137,11 @@ public:
     TString GetSplashScreenFileName();
     bool HasSplashScreen();
     TString GetCommandName();
-    
+
     TPlatformNumber GetMemorySize();
     PackageBootFields::MemoryState GetMemoryState();
+
+    DebugState Debugging();
 };
 
 #endif //PACKAGE_H

@@ -35,22 +35,27 @@
 #import "FontDescription.h"
 #import "SharedBuffer.h"
 #import "WebCoreSystemInterface.h"
+#if USE(APPKIT)
 #import <AppKit/AppKit.h>
 #import <ApplicationServices/ApplicationServices.h>
+#else
+#import <CoreText/CoreText.h>
+#endif
 #import <float.h>
 #import <unicode/uchar.h>
 #import <wtf/Assertions.h>
 #import <wtf/StdLibExtras.h>
 #import <wtf/RetainPtr.h>
 
+#if !PLATFORM(IOS)
 @interface NSFont (WebAppKitSecretAPI)
 - (BOOL)_isFakeFixedPitch;
 @end
-
-using namespace std;
+#endif
 
 namespace WebCore {
-  
+
+#if USE(APPKIT)
 static bool fontHasVerticalGlyphs(CTFontRef ctFont)
 {
     // The check doesn't look neat but this is what AppKit does for vertical writing...
@@ -74,8 +79,8 @@ static bool initFontData(SimpleFontData* fontData)
 
 static NSString *webFallbackFontFamily(void)
 {
-    DEFINE_STATIC_LOCAL(RetainPtr<NSString>, webFallbackFontFamily, ([[NSFont systemFontOfSize:16.0f] familyName]));
-    return webFallbackFontFamily.get();
+    static NSString *webFallbackFontFamily = [[[NSFont systemFontOfSize:16.0f] familyName] retain];
+    return webFallbackFontFamily;
 }
 
 const SimpleFontData* SimpleFontData::getCompositeFontReferenceFontData(NSFont *key) const
@@ -257,6 +262,7 @@ void SimpleFontData::platformCharWidthInit()
     // Fallback to a cross-platform estimate, which will populate these values if they are non-positive.
     initCharWidths();
 }
+#endif // USE(APPKIT)
 
 void SimpleFontData::platformDestroy()
 {
@@ -268,8 +274,9 @@ void SimpleFontData::platformDestroy()
         if (m_derivedFontData->emphasisMark)
             fontCache()->releaseFontData(m_derivedFontData->emphasisMark.get());
     }
-    }
+}
 
+#if !PLATFORM(IOS)
 PassRefPtr<SimpleFontData> SimpleFontData::platformCreateScaledFontData(const FontDescription& fontDescription, float scaleFactor) const
 {
     if (isCustomFont()) {
@@ -306,7 +313,9 @@ PassRefPtr<SimpleFontData> SimpleFontData::platformCreateScaledFontData(const Fo
 
     return 0;
 }
+#endif // !PLATFORM(IOS)
 
+#if !PLATFORM(IOS)
 bool SimpleFontData::containsCharacters(const UChar* characters, int length) const
 {
     NSString *string = [[NSString alloc] initWithCharactersNoCopy:const_cast<unichar*>(characters) length:length freeWhenDone:NO];
@@ -337,6 +346,7 @@ void SimpleFontData::determinePitch()
            [name caseInsensitiveCompare:@"MS-PGothic"] != NSOrderedSame &&
            [name caseInsensitiveCompare:@"MonotypeCorsiva"] != NSOrderedSame;
 }
+#endif // !PLATFORM(IOS)
 
 FloatRect SimpleFontData::platformBoundsForGlyph(Glyph glyph) const
 {
@@ -349,6 +359,7 @@ FloatRect SimpleFontData::platformBoundsForGlyph(Glyph glyph) const
     return boundingBox;
 }
 
+#if !PLATFORM(IOS)
 float SimpleFontData::platformWidthForGlyph(Glyph glyph) const
 {
     CGSize advance = CGSizeZero;
@@ -369,6 +380,7 @@ float SimpleFontData::platformWidthForGlyph(Glyph glyph) const
 
     return advance.width + m_syntheticBoldOffset;
 }
+#endif // !PLATFORM(IOS)
 
 struct ProviderInfo {
     const UChar* characters;

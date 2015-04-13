@@ -27,6 +27,12 @@
 #include "config.h"
 #include "WTFThreadData.h"
 
+#include <wtf/text/AtomicStringTable.h>
+
+#if USE(WEB_THREAD)
+#include <wtf/MainThread.h>
+#endif
+
 namespace WTF {
 
 ThreadSpecific<WTFThreadData>* WTFThreadData::staticData;
@@ -35,13 +41,27 @@ WTFThreadData::WTFThreadData()
     : m_apiData(0)
     , m_atomicStringTable(0)
     , m_atomicStringTableDestructor(0)
+#if !USE(WEB_THREAD)
     , m_defaultIdentifierTable(new JSC::IdentifierTable())
     , m_currentIdentifierTable(m_defaultIdentifierTable)
+#endif
     , m_stackBounds(StackBounds::currentThreadStackBounds())
 #if ENABLE(STACK_STATS)
     , m_stackStats()
 #endif
+    , m_savedStackPointerAtVMEntry(0)
+    , m_savedLastStackTop(stack().origin())
 {
+#if USE(WEB_THREAD)
+    static JSC::IdentifierTable* sharedIdentifierTable = new JSC::IdentifierTable();
+    if (pthread_main_np() || isWebThread())
+        m_defaultIdentifierTable = sharedIdentifierTable;
+    else
+        m_defaultIdentifierTable = new JSC::IdentifierTable();
+
+    m_currentIdentifierTable = m_defaultIdentifierTable;
+#endif
+    AtomicStringTable::create(*this);
 }
 
 WTFThreadData::~WTFThreadData()

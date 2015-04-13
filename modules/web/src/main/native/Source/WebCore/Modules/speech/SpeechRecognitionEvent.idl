@@ -24,7 +24,7 @@
  */
 
 [
-        Conditional=SCRIPTED_SPEECH,
+    Conditional=SCRIPTED_SPEECH,
     ConstructorTemplate=Event,
     InterfaceName=webkitSpeechRecognitionEvent
 ] interface SpeechRecognitionEvent : Event {
@@ -32,4 +32,4 @@
     [InitializedByEventConstructor] readonly attribute SpeechRecognitionResultList results;
 
     readonly attribute Document emma;
-    };
+};

@@ -24,11 +24,11 @@
  */
 
 [
-        Conditional=SVG&FILTERS
-] interface SVGFEOffsetElement : SVGStyledElement,
-                                                     SVGFilterPrimitiveStandardAttributes {
-        readonly attribute SVGAnimatedString in1;
-        readonly attribute SVGAnimatedNumber dx;
-        readonly attribute SVGAnimatedNumber dy;
-    };
+    Conditional=FILTERS
+] interface SVGFEOffsetElement : SVGElement {
+    readonly attribute SVGAnimatedString in1;
+    readonly attribute SVGAnimatedNumber dx;
+    readonly attribute SVGAnimatedNumber dy;
+};
 
+SVGFEOffsetElement implements SVGFilterPrimitiveStandardAttributes;

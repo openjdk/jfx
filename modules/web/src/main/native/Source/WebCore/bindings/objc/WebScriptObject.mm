@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2006, 2007, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2004, 2006, 2007, 2008, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +26,6 @@
 #import "config.h"
 #import "WebScriptObjectPrivate.h"
 
-#import "BindingSecurity.h"
 #import "BridgeJSC.h"
 #import "Console.h"
 #import "DOMInternal.h"
@@ -125,7 +124,7 @@ id createJSWrapper(JSC::JSObject* object, PassRefPtr<JSC::Bindings::RootObject> 
 
 static void addExceptionToConsole(ExecState* exec)
 {
-    JSDOMWindow* window = asJSDOMWindow(exec->dynamicGlobalObject());
+    JSDOMWindow* window = asJSDOMWindow(exec->vmEntryGlobalObject());
     if (!window || !exec->hadException())
         return;
     reportCurrentException(exec);
@@ -377,9 +376,9 @@ static void getListFromNSArray(ExecState *exec, NSArray *array, RootObject* root
     ASSERT(!exec->hadException());
 
     JSLockHolder lock(exec);
-
-    PutPropertySlot slot;
-    [self _imp]->methodTable()->put([self _imp], exec, Identifier(exec, String(key)), convertObjcValueToValue(exec, &value, ObjcObjectType, [self _rootObject]), slot);
+    JSObject* object = JSC::jsDynamicCast<JSObject*>([self _imp]);
+    PutPropertySlot slot(object);
+    object->methodTable()->put(object, exec, Identifier(exec, String(key)), convertObjcValueToValue(exec, &value, ObjcObjectType, [self _rootObject]), slot);
 
     if (exec->hadException()) {
         addExceptionToConsole(exec);
@@ -534,13 +533,11 @@ static void getListFromNSArray(ExecState *exec, NSArray *array, RootObject* root
         JSObject* object = asObject(value);
         JSLockHolder lock(rootObject->globalObject()->vm());
 
-        if (object->inherits(&JSHTMLElement::s_info)) {
+        if (object->inherits(JSHTMLElement::info())) {
             // Plugin elements cache the instance internally.
-            HTMLElement* el = jsCast<JSHTMLElement*>(object)->impl();
-            ObjcInstance* instance = static_cast<ObjcInstance*>(pluginInstance(el));
-            if (instance)
+            if (ObjcInstance* instance = static_cast<ObjcInstance*>(pluginInstance(jsCast<JSHTMLElement*>(object)->impl())))
                 return instance->getObject();
-        } else if (object->inherits(&ObjCRuntimeObject::s_info)) {
+        } else if (object->inherits(ObjCRuntimeObject::info())) {
             ObjCRuntimeObject* runtimeObject = static_cast<ObjCRuntimeObject*>(object);
             ObjcInstance* instance = runtimeObject->getInternalObjCInstance();
             if (instance)
@@ -554,7 +551,7 @@ static void getListFromNSArray(ExecState *exec, NSArray *array, RootObject* root
     if (value.isString()) {
         ExecState* exec = rootObject->globalObject()->globalExec();
         const String& u = asString(value)->value(exec);
-        return [NSString stringWithCharacters:u.characters() length:u.length()];
+        return [NSString stringWithCharacters:u.deprecatedCharacters() length:u.length()];
     }
 
     if (value.isNumber())

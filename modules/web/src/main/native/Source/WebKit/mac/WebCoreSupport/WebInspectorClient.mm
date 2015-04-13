@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -43,18 +43,19 @@
 #import "WebUIDelegate.h"
 #import "WebViewInternal.h"
 #import <algorithm>
-#import <WebCore/Frame.h>
+#import <bindings/ScriptValue.h>
+#import <inspector/InspectorAgentBase.h>
 #import <WebCore/InspectorController.h>
 #import <WebCore/InspectorFrontendClient.h>
+#import <WebCore/MainFrame.h>
 #import <WebCore/Page.h>
 #import <WebCore/ScriptController.h>
-#import <WebCore/ScriptValue.h>
 #import <WebCore/SoftLinking.h>
 #import <WebKit/DOMExtensions.h>
 #import <WebKitSystemInterface.h>
-#import <wtf/PassOwnPtr.h>
+#import <wtf/text/Base64.h>
 
-SOFT_LINK_STAGED_FRAMEWORK_OPTIONAL(WebInspector, PrivateFrameworks, A)
+SOFT_LINK_STAGED_FRAMEWORK(WebInspectorUI, PrivateFrameworks, A)
 
 // The margin from the top and right of the dock button (same as the full screen button).
 static const CGFloat dockButtonMargin = 3;
@@ -144,11 +145,11 @@ InspectorFrontendChannel* WebInspectorClient::openInspectorFrontend(InspectorCon
     [windowController.get() setInspectorClient:this];
 
     m_frontendPage = core([windowController.get() webView]);
-    OwnPtr<WebInspectorFrontendClient> frontendClient = adoptPtr(new WebInspectorFrontendClient(m_webView, windowController.get(), inspectorController, m_frontendPage, createFrontendSettings()));
+    auto frontendClient = std::make_unique<WebInspectorFrontendClient>(m_webView, windowController.get(), inspectorController, m_frontendPage, createFrontendSettings());
     m_frontendClient = frontendClient.get();
     RetainPtr<WebInspectorFrontend> webInspectorFrontend = adoptNS([[WebInspectorFrontend alloc] initWithFrontendClient:frontendClient.get()]);
     [[m_webView inspector] setFrontend:webInspectorFrontend.get()];
-    m_frontendPage->inspectorController()->setInspectorFrontendClient(frontendClient.release());
+    m_frontendPage->inspectorController().setInspectorFrontendClient(std::move(frontendClient));
     return this;
 }
 
@@ -179,14 +180,37 @@ void WebInspectorClient::hideHighlight()
     [m_highlighter.get() hideHighlight];
 }
 
+void WebInspectorClient::indicate()
+{
+    [m_webView setIndicatingForRemoteInspector:YES];
+}
+
+void WebInspectorClient::hideIndication()
+{
+    [m_webView setIndicatingForRemoteInspector:NO];
+}
+
+void WebInspectorClient::didSetSearchingForNode(bool enabled)
+{
+    WebInspector *inspector = [m_webView inspector];
+
+    ASSERT(isMainThread());
+
+    if (enabled)
+        [[NSNotificationCenter defaultCenter] postNotificationName:WebInspectorDidStartSearchingForNode object:inspector];
+    else
+        [[NSNotificationCenter defaultCenter] postNotificationName:WebInspectorDidStopSearchingForNode object:inspector];
+}
+
 void WebInspectorClient::releaseFrontend()
 {
     m_frontendClient = 0;
     m_frontendPage = 0;
 }
 
-WebInspectorFrontendClient::WebInspectorFrontendClient(WebView* inspectedWebView, WebInspectorWindowController* windowController, InspectorController* inspectorController, Page* frontendPage, WTF::PassOwnPtr<Settings> settings)
-    : InspectorFrontendClientLocal(inspectorController,  frontendPage, settings)
+
+WebInspectorFrontendClient::WebInspectorFrontendClient(WebView* inspectedWebView, WebInspectorWindowController* windowController, InspectorController* inspectorController, Page* frontendPage, std::unique_ptr<Settings> settings)
+    : InspectorFrontendClientLocal(inspectorController,  frontendPage, std::move(settings))
     , m_inspectedWebView(inspectedWebView)
     , m_windowController(windowController)
 {
@@ -208,7 +232,7 @@ void WebInspectorFrontendClient::frontendLoaded()
     InspectorFrontendClientLocal::frontendLoaded();
 
     WebFrame *frame = [m_inspectedWebView mainFrame];
-    
+
     WebFrameLoadDelegateImplementationCache* implementations = WebViewGetFrameLoadDelegateImplementations(m_inspectedWebView);
     if (implementations->didClearInspectorWindowObjectForFrameFunc)
         CallFrameLoadDelegate(implementations->didClearInspectorWindowObjectForFrameFunc, m_inspectedWebView,
@@ -218,24 +242,12 @@ void WebInspectorFrontendClient::frontendLoaded()
     setAttachedWindow(attached ? DOCKED_TO_BOTTOM : UNDOCKED);
 }
 
-static bool useWebKitWebInspector()
-{
-    // Call the soft link framework function to dlopen it, then [NSBundle bundleWithIdentifier:] will work.
-    WebInspectorLibrary();
-
-    if (![[NSBundle bundleWithIdentifier:@"com.apple.WebInspector"] pathForResource:@"Main" ofType:@"html"])
-        return true;
-
-    if (![[NSBundle bundleWithIdentifier:@"com.apple.WebCore"] pathForResource:@"inspector" ofType:@"html" inDirectory:@"inspector"])
-        return false;
-
-    return [[NSUserDefaults standardUserDefaults] boolForKey:@"UseWebKitWebInspector"];
-}
-
 String WebInspectorFrontendClient::localizedStringsURL()
 {
-    NSBundle *bundle = useWebKitWebInspector() ? [NSBundle bundleWithIdentifier:@"com.apple.WebCore"] : [NSBundle bundleWithIdentifier:@"com.apple.WebInspector"]; 
-    NSString *path = [bundle pathForResource:@"localizedStrings" ofType:@"js"];
+    // Call the soft link framework function to dlopen it, then [NSBundle bundleWithIdentifier:] will work.
+    WebInspectorUILibrary();
+
+    NSString *path = [[NSBundle bundleWithIdentifier:@"com.apple.WebInspectorUI"] pathForResource:@"localizedStrings" ofType:@"js"];
     if ([path length])
         return [[NSURL fileURLWithPath:path] absoluteString];
     return String();
@@ -303,17 +315,17 @@ void WebInspectorFrontendClient::updateWindowTitle() const
     [[m_windowController.get() window] setTitle:title];
 }
 
-void WebInspectorFrontendClient::save(const String& suggestedURL, const String& content, bool forceSaveDialog)
+void WebInspectorFrontendClient::save(const String& suggestedURL, const String& content, bool base64Encoded, bool forceSaveDialog)
 {
     ASSERT(!suggestedURL.isEmpty());
-    
+
     NSURL *platformURL = m_suggestedToActualURLMap.get(suggestedURL).get();
     if (!platformURL) {
         platformURL = [NSURL URLWithString:suggestedURL];
         // The user must confirm new filenames before we can save to them.
         forceSaveDialog = true;
     }
-    
+
     ASSERT(platformURL);
     if (!platformURL)
         return;
@@ -324,17 +336,26 @@ void WebInspectorFrontendClient::save(const String& suggestedURL, const String& 
 
     auto saveToURL = ^(NSURL *actualURL) {
         ASSERT(actualURL);
-        
+
         m_suggestedToActualURLMap.set(suggestedURLCopy, actualURL);
-        [contentCopy writeToURL:actualURL atomically:YES encoding:NSUTF8StringEncoding error:NULL];
-        core([m_windowController webView])->mainFrame()->script()->executeScript([NSString stringWithFormat:@"InspectorFrontendAPI.savedURL(\"%@\")", actualURL.absoluteString]);
+
+        if (base64Encoded) {
+            Vector<char> out;
+            if (!base64Decode(contentCopy, out, Base64FailOnInvalidCharacterOrExcessPadding))
+                return;
+            RetainPtr<NSData> dataContent = adoptNS([[NSData alloc] initWithBytes:out.data() length:out.size()]);
+            [dataContent writeToURL:actualURL atomically:YES];
+        } else
+            [contentCopy writeToURL:actualURL atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+
+        core([m_windowController webView])->mainFrame().script().executeScript([NSString stringWithFormat:@"InspectorFrontendAPI.savedURL(\"%@\")", actualURL.absoluteString]);
     };
 
     if (!forceSaveDialog) {
         saveToURL(platformURL);
         return;
     }
-    
+
     NSSavePanel *panel = [NSSavePanel savePanel];
     panel.nameFieldStringValue = platformURL.lastPathComponent;
     panel.directoryURL = [platformURL URLByDeletingLastPathComponent];
@@ -350,7 +371,7 @@ void WebInspectorFrontendClient::save(const String& suggestedURL, const String& 
 void WebInspectorFrontendClient::append(const String& suggestedURL, const String& content)
 {
     ASSERT(!suggestedURL.isEmpty());
-    
+
     RetainPtr<NSURL> actualURL = m_suggestedToActualURLMap.get(suggestedURL);
     // do not append unless the user has already confirmed this filename in save().
     if (!actualURL)
@@ -361,7 +382,7 @@ void WebInspectorFrontendClient::append(const String& suggestedURL, const String
     [handle writeData:[content dataUsingEncoding:NSUTF8StringEncoding]];
     [handle closeFile];
 
-    core([m_windowController webView])->mainFrame()->script()->executeScript([NSString stringWithFormat:@"InspectorFrontendAPI.appendedToURL(\"%@\")", [actualURL absoluteString]]);
+    core([m_windowController webView])->mainFrame().script().executeScript([NSString stringWithFormat:@"InspectorFrontendAPI.appendedToURL(\"%@\")", [actualURL absoluteString]]);
 }
 
 // MARK: -
@@ -426,12 +447,10 @@ void WebInspectorFrontendClient::append(const String& suggestedURL, const String
 
 - (NSString *)inspectorPagePath
 {
-    NSString *path;
-    if (useWebKitWebInspector())
-        path = [[NSBundle bundleWithIdentifier:@"com.apple.WebCore"] pathForResource:@"inspector" ofType:@"html" inDirectory:@"inspector"];
-    else
-        path = [[NSBundle bundleWithIdentifier:@"com.apple.WebInspector"] pathForResource:@"Main" ofType:@"html"];
+    // Call the soft link framework function to dlopen it, then [NSBundle bundleWithIdentifier:] will work.
+    WebInspectorUILibrary();
 
+    NSString *path = [[NSBundle bundleWithIdentifier:@"com.apple.WebInspectorUI"] pathForResource:@"Main" ofType:@"html"];
     ASSERT([path length]);
     return path;
 }
@@ -453,9 +472,9 @@ void WebInspectorFrontendClient::append(const String& suggestedURL, const String
     window = [[WebInspectorWindow alloc] initWithContentRect:NSMakeRect(60.0, 200.0, 750.0, 650.0) styleMask:styleMask backing:NSBackingStoreBuffered defer:NO];
     [window setDelegate:self];
     [window setMinSize:NSMakeSize(400.0, 400.0)];
-        [window setAutorecalculatesContentBorderThickness:NO forEdge:NSMaxYEdge];
-        [window setContentBorderThickness:55. forEdge:NSMaxYEdge];
-        WKNSWindowMakeBottomCornersSquare(window);
+    [window setAutorecalculatesContentBorderThickness:NO forEdge:NSMaxYEdge];
+    [window setContentBorderThickness:55. forEdge:NSMaxYEdge];
+    WKNSWindowMakeBottomCornersSquare(window);
 
     // Create a full screen button so we can turn it into a dock button.
     _dockButton = [NSWindow standardWindowButton:NSWindowFullScreenButton forStyleMask:styleMask];
@@ -562,7 +581,7 @@ void WebInspectorFrontendClient::append(const String& suggestedURL, const String
     }
 
     _visible = YES;
-    
+
     _shouldAttach = _inspectorClient->inspectorStartsAttached() && _frontendClient->canAttachWindow() && !_inspectorClient->inspectorAttachDisabled();
 
     if (_shouldAttach) {
@@ -674,7 +693,7 @@ void WebInspectorFrontendClient::append(const String& suggestedURL, const String
 
     if (notifyInspectorController) {
         if (Page* inspectedPage = [_inspectedWebView.get() page])
-            inspectedPage->inspectorController()->disconnectFrontend();
+            inspectedPage->inspectorController().disconnectFrontend(Inspector::InspectorDisconnectReason::InspectorDestroyed);
     }
 
     RetainPtr<WebInspectorWindowController> protect(self);
@@ -683,11 +702,6 @@ void WebInspectorFrontendClient::append(const String& suggestedURL, const String
 
 // MARK: -
 // MARK: UI delegate
-
-- (NSUInteger)webView:(WebView *)sender dragDestinationActionMaskForDraggingInfo:(id <NSDraggingInfo>)draggingInfo
-{
-    return WebDragDestinationActionNone;
-}
 
 - (void)webView:(WebView *)sender runOpenPanelForFileButtonWithResultListener:(id<WebOpenPanelResultListener>)resultListener allowMultipleFiles:(BOOL)allowMultipleFiles
 {
@@ -785,6 +799,5 @@ void WebInspectorFrontendClient::append(const String& suggestedURL, const String
 
     return YES;
 }
-
 
 @end

@@ -30,6 +30,8 @@
 #define HRTFDatabaseLoader_h
 
 #include "HRTFDatabase.h"
+#include <memory>
+#include <wtf/HashMap.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
@@ -41,14 +43,12 @@ namespace WebCore {
 
 class HRTFDatabaseLoader : public RefCounted<HRTFDatabaseLoader> {
 public:
-    // Lazily creates the singleton HRTFDatabaseLoader (if not already created) and starts loading asynchronously (when created the first time).
-    // Returns the singleton HRTFDatabaseLoader.
+    // Lazily creates a HRTFDatabaseLoader (if not already created) for the given sample-rate
+    // and starts loading asynchronously (when created the first time).
+    // Returns the HRTFDatabaseLoader.
     // Must be called from the main thread.
     static PassRefPtr<HRTFDatabaseLoader> createAndLoadAsynchronouslyIfNecessary(float sampleRate);
 
-    // Returns the singleton HRTFDatabaseLoader.
-    static HRTFDatabaseLoader* loader() { return s_loader; }
-    
     // Both constructor and destructor must be called from the main thread.
     ~HRTFDatabaseLoader();
     
@@ -65,11 +65,6 @@ public:
     // Called in asynchronous loading thread.
     void load();
 
-    // defaultHRTFDatabase() gives access to the loaded database.
-    // This can be called from any thread, but it is the callers responsibilty to call this while the context (and thus HRTFDatabaseLoader)
-    // is still alive.  Otherwise this will return 0.
-    static HRTFDatabase* defaultHRTFDatabase();
-
 private:
     // Both constructor and destructor must be called from the main thread.
     explicit HRTFDatabaseLoader(float sampleRate);
@@ -78,8 +73,7 @@ private:
     // This must be called from the main thread.
     void loadAsynchronously();
 
-    static HRTFDatabaseLoader* s_loader; // singleton
-    OwnPtr<HRTFDatabase> m_hrtfDatabase;
+    std::unique_ptr<HRTFDatabase> m_hrtfDatabase;
 
     // Holding a m_threadLock is required when accessing m_databaseLoaderThread.
     Mutex m_threadLock;

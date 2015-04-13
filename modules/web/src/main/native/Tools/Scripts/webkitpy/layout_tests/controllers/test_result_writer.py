@@ -45,43 +45,7 @@ def write_test_result(filesystem, port, results_directory, test_name, driver_out
         writer.write_stderr(driver_output.error)
 
     for failure in failures:
-        # FIXME: Instead of this long 'if' block, each failure class might
-        # have a responsibility for writing a test result.
-        if isinstance(failure, (test_failures.FailureMissingResult,
-                                test_failures.FailureTextMismatch)):
-            writer.write_text_files(driver_output.text, expected_driver_output.text)
-            writer.create_text_diff_and_write_result(driver_output.text, expected_driver_output.text)
-        elif isinstance(failure, test_failures.FailureMissingImage):
-            writer.write_image_files(driver_output.image, expected_image=None)
-        elif isinstance(failure, test_failures.FailureMissingImageHash):
-            writer.write_image_files(driver_output.image, expected_driver_output.image)
-        elif isinstance(failure, test_failures.FailureImageHashMismatch):
-            writer.write_image_files(driver_output.image, expected_driver_output.image)
-            writer.write_image_diff_files(driver_output.image_diff)
-        elif isinstance(failure, (test_failures.FailureAudioMismatch,
-                                  test_failures.FailureMissingAudio)):
-            writer.write_audio_files(driver_output.audio, expected_driver_output.audio)
-        elif isinstance(failure, test_failures.FailureCrash):
-            crashed_driver_output = expected_driver_output if failure.is_reftest else driver_output
-            writer.write_crash_log(crashed_driver_output.crash_log)
-        elif isinstance(failure, test_failures.FailureReftestMismatch):
-            writer.write_image_files(driver_output.image, expected_driver_output.image)
-            # FIXME: This work should be done earlier in the pipeline (e.g., when we compare images for non-ref tests).
-            # FIXME: We should always have 2 images here.
-            if driver_output.image and expected_driver_output.image:
-                diff_image, diff_percent, err_str = port.diff_image(expected_driver_output.image, driver_output.image, tolerance=0)
-                if diff_image:
-                    writer.write_image_diff_files(diff_image)
-                    failure.diff_percent = diff_percent
-                else:
-                    _log.warn('ref test mismatch did not produce an image diff.')
-            writer.write_reftest(failure.reference_filename)
-        elif isinstance(failure, test_failures.FailureReftestMismatchDidNotOccur):
-            writer.write_image_files(driver_output.image, expected_image=None)
-            writer.write_reftest(failure.reference_filename)
-        else:
-            assert isinstance(failure, (test_failures.FailureTimeout, test_failures.FailureReftestNoImagesGenerated))
-
+        failure.write_failure(writer, driver_output, expected_driver_output, port)
 
 class TestResultWriter(object):
     """A class which handles all writing operations to the result directory."""
@@ -93,7 +57,6 @@ class TestResultWriter(object):
     FILENAME_SUFFIX_STDERR = "-stderr"
     FILENAME_SUFFIX_CRASH_LOG = "-crash-log"
     FILENAME_SUFFIX_SAMPLE = "-sample"
-    FILENAME_SUFFIX_WDIFF = "-wdiff.html"
     FILENAME_SUFFIX_PRETTY_PATCH = "-pretty-diff.html"
     FILENAME_SUFFIX_IMAGE_DIFF = "-diff.png"
     FILENAME_SUFFIX_IMAGE_DIFFS_HTML = "-diffs.html"
@@ -189,15 +152,9 @@ class TestResultWriter(object):
         diff_filename = self.output_filename(self.FILENAME_SUFFIX_DIFF + file_type)
         self._write_binary_file(diff_filename, diff)
 
-        # Shell out to wdiff to get colored inline diffs.
-        if self._port.wdiff_available():
-            wdiff = self._port.wdiff_text(expected_filename, actual_filename)
-            wdiff_filename = self.output_filename(self.FILENAME_SUFFIX_WDIFF)
-            self._write_binary_file(wdiff_filename, wdiff)
-
         # Use WebKit's PrettyPatch.rb to get an HTML diff.
-        if self._port.pretty_patch_available():
-            pretty_patch = self._port.pretty_patch_text(diff_filename)
+        if self._port.pretty_patch.pretty_patch_available():
+            pretty_patch = self._port.pretty_patch.pretty_patch_text(diff_filename)
             pretty_patch_filename = self.output_filename(self.FILENAME_SUFFIX_PRETTY_PATCH)
             self._write_binary_file(pretty_patch_filename, pretty_patch)
 

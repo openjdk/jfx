@@ -24,40 +24,38 @@
  */
 
 [
-        Conditional=VIDEO_TRACK,
-        EventTarget,
+    Conditional=VIDEO_TRACK,
+    EventTarget,
     GenerateIsReachable=ImplElementRoot,
-        JSCustomMarkFunction,
-    SkipVTableValidation
+    JSCustomMarkFunction,
+    SkipVTableValidation,
 ] interface TextTrack {
-        readonly attribute DOMString kind;
-        readonly attribute DOMString label;
-        readonly attribute DOMString language;
+    readonly attribute DOMString id;
+    [CustomSetter] attribute DOMString kind;
+    readonly attribute DOMString label;
+    [CustomSetter] attribute DOMString language;
 
     attribute DOMString mode;
 
-        readonly attribute TextTrackCueList cues;
-        readonly attribute TextTrackCueList activeCues;
-                 attribute EventListener oncuechange;
+    readonly attribute TextTrackCueList cues;
+    readonly attribute TextTrackCueList activeCues;
+             attribute EventListener oncuechange;
 
-    void addCue(TextTrackCue cue);
-    void removeCue(TextTrackCue cue)
-            raises (DOMException);
+    [RaisesException] void addCue(TextTrackCue cue);
+    [RaisesException] void removeCue(TextTrackCue cue);
 
 #if defined(ENABLE_WEBVTT_REGIONS) && ENABLE_WEBVTT_REGIONS
     readonly attribute TextTrackRegionList regions;
     void addRegion(TextTrackRegion region);
-    void removeRegion(TextTrackRegion region)
-        raises (DOMException);
+    [RaisesException] void removeRegion(TextTrackRegion region);
 #endif
 
-        // EventTarget interface
+    // EventTarget interface
     void addEventListener(DOMString type, 
                           EventListener listener, 
                           optional boolean useCapture);
     void removeEventListener(DOMString type, 
                              EventListener listener, 
                              optional boolean useCapture);
-    boolean dispatchEvent(Event evt)
-            raises(EventException);
-    };
+    [RaisesException] boolean dispatchEvent(Event evt);
+};

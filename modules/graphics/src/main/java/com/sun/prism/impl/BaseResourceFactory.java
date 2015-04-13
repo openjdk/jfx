@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,14 +37,10 @@ import java.util.WeakHashMap;
 import java.util.Collection;
 
 public abstract class BaseResourceFactory implements ResourceFactory {
-
-    private static final Map<Image,Texture> clampTexCache =
-        new WeakHashMap<Image,Texture>();
-    private static final Map<Image,Texture> repeatTexCache =
-        new WeakHashMap<Image,Texture>();
+    private final Map<Image,Texture> clampTexCache;
+    private final Map<Image,Texture> repeatTexCache;
     // Solely used by diffuse and selfillum maps in PhongMaterial for 3D rendering
-    private static final Map<Image,Texture> mipmapTexCache =
-        new WeakHashMap<Image,Texture>();
+    private final Map<Image,Texture> mipmapTexCache;
 
     // Use a WeakHashMap as it automatically removes dead objects when they're
     // collected
@@ -54,6 +50,21 @@ public abstract class BaseResourceFactory implements ResourceFactory {
     private Texture regionTexture;
     private Texture glyphTexture;
     private boolean superShaderAllowed;
+
+    public BaseResourceFactory() {
+        this(new WeakHashMap<Image,Texture>(),
+             new WeakHashMap<Image,Texture>(),
+             new WeakHashMap<Image,Texture>());
+    }
+
+    public BaseResourceFactory(Map<Image, Texture> clampTexCache,
+                               Map<Image, Texture> repeatTexCache,
+                               Map<Image, Texture> mipmapTexCache)
+    {
+        this.clampTexCache = clampTexCache;
+        this.repeatTexCache = repeatTexCache;
+        this.mipmapTexCache = mipmapTexCache;
+    }
 
     @Override public void addFactoryListener(ResourceFactoryListener l) {
         listenerMap.put(l, Boolean.TRUE);

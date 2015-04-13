@@ -27,8 +27,8 @@
 #ifndef ResourceRequest_h
 #define ResourceRequest_h
 
+#include "GUniquePtrSoup.h"
 #include "ResourceRequestBase.h"
-
 #include <libsoup/soup.h>
 
 namespace WebCore {
@@ -36,55 +36,85 @@ namespace WebCore {
     class ResourceRequest : public ResourceRequestBase {
     public:
         ResourceRequest(const String& url)
-            : ResourceRequestBase(KURL(ParsedURLString, url), UseProtocolCachePolicy)
+            : ResourceRequestBase(URL(ParsedURLString, url), UseProtocolCachePolicy)
+            , m_acceptEncoding(true)
             , m_soupFlags(static_cast<SoupMessageFlags>(0))
+            , m_initiatingPageID(0)
         {
         }
 
-        ResourceRequest(const KURL& url)
+        ResourceRequest(const URL& url)
             : ResourceRequestBase(url, UseProtocolCachePolicy)
+            , m_acceptEncoding(true)
             , m_soupFlags(static_cast<SoupMessageFlags>(0))
+            , m_initiatingPageID(0)
         {
         }
 
-        ResourceRequest(const KURL& url, const String& referrer, ResourceRequestCachePolicy policy = UseProtocolCachePolicy)
+        ResourceRequest(const URL& url, const String& referrer, ResourceRequestCachePolicy policy = UseProtocolCachePolicy)
             : ResourceRequestBase(url, policy)
+            , m_acceptEncoding(true)
             , m_soupFlags(static_cast<SoupMessageFlags>(0))
+            , m_initiatingPageID(0)
         {
             setHTTPReferrer(referrer);
         }
 
         ResourceRequest()
-            : ResourceRequestBase(KURL(), UseProtocolCachePolicy)
+            : ResourceRequestBase(URL(), UseProtocolCachePolicy)
+            , m_acceptEncoding(true)
             , m_soupFlags(static_cast<SoupMessageFlags>(0))
+            , m_initiatingPageID(0)
         {
         }
 
         ResourceRequest(SoupMessage* soupMessage)
-            : ResourceRequestBase(KURL(), UseProtocolCachePolicy)
+            : ResourceRequestBase(URL(), UseProtocolCachePolicy)
+            , m_acceptEncoding(true)
             , m_soupFlags(static_cast<SoupMessageFlags>(0))
+            , m_initiatingPageID(0)
         {
             updateFromSoupMessage(soupMessage);
         }
 
+        ResourceRequest(SoupRequest* soupRequest)
+            : ResourceRequestBase(URL(soup_request_get_uri(soupRequest)), UseProtocolCachePolicy)
+            , m_acceptEncoding(true)
+            , m_soupFlags(static_cast<SoupMessageFlags>(0))
+            , m_initiatingPageID(0)
+        {
+            updateFromSoupRequest(soupRequest);
+        }
+
         void updateFromDelegatePreservingOldHTTPBody(const ResourceRequest& delegateProvidedRequest) { *this = delegateProvidedRequest; }
+
+        bool acceptEncoding() const { return m_acceptEncoding; }
+        void setAcceptEncoding(bool acceptEncoding) { m_acceptEncoding = acceptEncoding; }
 
         void updateSoupMessageHeaders(SoupMessageHeaders*) const;
         void updateFromSoupMessageHeaders(SoupMessageHeaders*);
         void updateSoupMessage(SoupMessage*) const;
         SoupMessage* toSoupMessage() const;
         void updateFromSoupMessage(SoupMessage*);
+        void updateSoupRequest(SoupRequest*) const;
+        void updateFromSoupRequest(SoupRequest*);
 
         SoupMessageFlags soupMessageFlags() const { return m_soupFlags; }
         void setSoupMessageFlags(SoupMessageFlags soupFlags) { m_soupFlags = soupFlags; }
 
-        SoupURI* soupURI() const;
+        uint64_t initiatingPageID() const { return m_initiatingPageID; }
+        void setInitiatingPageID(uint64_t pageID) { m_initiatingPageID = pageID; }
+
+        GUniquePtr<SoupURI> createSoupURI() const;
 
     private:
         friend class ResourceRequestBase;
 
+        bool m_acceptEncoding : 1;
         SoupMessageFlags m_soupFlags;
+        uint64_t m_initiatingPageID;
 
+        void updateSoupMessageMembers(SoupMessage*) const;
         void doUpdatePlatformRequest() { }
         void doUpdateResourceRequest() { }
         void doUpdatePlatformHTTPBody() { }
@@ -96,6 +126,29 @@ namespace WebCore {
 
     struct CrossThreadResourceRequestData : public CrossThreadResourceRequestDataBase {
     };
+
+#if SOUP_CHECK_VERSION(2, 43, 1)
+inline SoupMessagePriority toSoupMessagePriority(ResourceLoadPriority priority)
+{
+    switch (priority) {
+    case ResourceLoadPriorityUnresolved:
+        return SOUP_MESSAGE_PRIORITY_NORMAL;
+    case ResourceLoadPriorityVeryLow:
+        return SOUP_MESSAGE_PRIORITY_VERY_LOW;
+    case ResourceLoadPriorityLow:
+        return SOUP_MESSAGE_PRIORITY_LOW;
+    case ResourceLoadPriorityMedium:
+        return SOUP_MESSAGE_PRIORITY_NORMAL;
+    case ResourceLoadPriorityHigh:
+        return SOUP_MESSAGE_PRIORITY_HIGH;
+    case ResourceLoadPriorityVeryHigh:
+        return SOUP_MESSAGE_PRIORITY_VERY_HIGH;
+    }
+
+    ASSERT_NOT_REACHED();
+    return SOUP_MESSAGE_PRIORITY_VERY_LOW;
+}
+#endif
 
 } // namespace WebCore
 

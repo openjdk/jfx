@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
 #ifndef APICast_h
@@ -28,6 +28,7 @@
 
 #include "JSAPIValueWrapper.h"
 #include "JSCJSValue.h"
+#include "JSCJSValueInlines.h"
 #include "JSGlobalObject.h"
 
 namespace JSC {
@@ -123,6 +124,7 @@ inline JSC::VM* toJS(JSContextGroupRef g)
 
 inline JSValueRef toRef(JSC::ExecState* exec, JSC::JSValue v)
 {
+    ASSERT(exec->vm().currentThreadIsHoldingAPILock());
 #if USE(JSVALUE32_64)
     if (!v)
         return 0;

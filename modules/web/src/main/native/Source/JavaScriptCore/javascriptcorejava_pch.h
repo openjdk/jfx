@@ -30,8 +30,6 @@
 //#include <wtf/DateMath.h>
 #include <wtf/Deque.h>
 #include <wtf/DisallowCType.h>
-#include <wtf/FastAllocBase.h>
-#include <wtf/FastMalloc.h>
 #include <wtf/Forward.h>
 #include <wtf/GetPtr.h>
 #include <wtf/HashCountedSet.h>
@@ -43,7 +41,6 @@
 #include <wtf/ListHashSet.h>
 #include <wtf/MathExtras.h>
 #include <wtf/Noncopyable.h>
-#include <wtf/OwnArrayPtr.h>
 #include <wtf/OwnPtr.h>
 #include <wtf/OwnPtrCommon.h>
 #include <wtf/PassOwnPtr.h>
@@ -57,13 +54,10 @@
 #include <wtf/VectorTraits.h>
 
 #include <wtf/unicode/Collator.h>
-#include <wtf/unicode/Unicode.h>
 #include <wtf/unicode/UTF8.h>
 
 #if USE(JAVA_UNICODE)
 #include <wtf/unicode/java/UnicodeJava.h>
-#elif USE(ICU_UNICODE)
-#include <wtf/unicode/icu/UnicodeIcu.h>
 #endif
 
 #ifndef SKIP_STATIC_CONSTRUCTORS_ON_GCC
@@ -88,7 +82,6 @@
 
 #include <jit/JIT.h>
 #include <jit/JITCode.h>
-#include <jit/JITStubCall.h>
 
 #include <parser/Lexer.h>
 #include <parser/NodeInfo.h>
@@ -132,7 +125,6 @@
 #include <runtime/JSONObject.h>
 #include <runtime/JSObject.h>
 #include <runtime/JSPropertyNameIterator.h>
-#include <runtime/JSStaticScopeObject.h>
 #include <runtime/JSString.h>
 #include <runtime/JSType.h>
 #include <runtime/JSObject.h>

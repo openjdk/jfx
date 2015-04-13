@@ -2,22 +2,23 @@ list(APPEND WTF_SOURCES
     efl/MainThreadEfl.cpp
     efl/OwnPtrEfl.cpp
     efl/RefPtrEfl.cpp
+    efl/RunLoopEfl.cpp
 
-    gobject/GOwnPtr.cpp
     gobject/GRefPtr.cpp
 )
 
 list(APPEND WTF_LIBRARIES
-    pthread
-    ${GLIB_LIBRARIES}
-    ${GLIB_GIO_LIBRARIES}
-    ${GLIB_GOBJECT_LIBRARIES}
-    ${ECORE_LIBRARIES}
     ${ECORE_EVAS_LIBRARIES}
     ${ECORE_IMF_LIBRARIES}
+    ${ECORE_LIBRARIES}
     ${EINA_LIBRARIES}
     ${EO_LIBRARIES}
     ${EVAS_LIBRARIES}
+    ${GLIB_GIO_LIBRARIES}
+    ${GLIB_GOBJECT_LIBRARIES}
+    ${GLIB_LIBRARIES}
+    ${ZLIB_LIBRARIES}
+    pthread
 )
 
 list(APPEND WTF_INCLUDE_DIRECTORIES

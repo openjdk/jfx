@@ -37,8 +37,8 @@ class JSBoundFunction : public JSFunction {
 public:
     typedef JSFunction Base;
 
-    static JSBoundFunction* create(ExecState*, JSGlobalObject*, JSObject* targetFunction, JSValue boundThis, JSValue boundArgs, int, const String&);
-
+    static JSBoundFunction* create(VM&, JSGlobalObject*, JSObject* targetFunction, JSValue boundThis, JSValue boundArgs, int, const String&);
+    
     static void destroy(JSCell*);
 
     static bool customHasInstance(JSObject*, ExecState*, JSValue);
@@ -50,10 +50,10 @@ public:
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype) 
     {
         ASSERT(globalObject);
-        return Structure::create(vm, globalObject, prototype, TypeInfo(JSFunctionType, StructureFlags), &s_info); 
+        return Structure::create(vm, globalObject, prototype, TypeInfo(JSFunctionType, StructureFlags), info()); 
     }
 
-    static const ClassInfo s_info;
+    DECLARE_INFO;
 
 protected:
     const static unsigned StructureFlags = OverridesHasInstance | OverridesVisitChildren | Base::StructureFlags;
@@ -61,9 +61,9 @@ protected:
     static void visitChildren(JSCell*, SlotVisitor&);
 
 private:
-    JSBoundFunction(ExecState*, JSGlobalObject*, Structure*, JSObject* targetFunction, JSValue boundThis, JSValue boundArgs);
+    JSBoundFunction(VM&, JSGlobalObject*, Structure*, JSObject* targetFunction, JSValue boundThis, JSValue boundArgs);
     
-    void finishCreation(ExecState*, NativeExecutable*, int, const String&);
+    void finishCreation(VM&, NativeExecutable*, int, const String&);
 
     WriteBarrier<JSObject> m_targetFunction;
     WriteBarrier<Unknown> m_boundThis;

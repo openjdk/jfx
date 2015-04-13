@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012, 2013, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,7 +29,7 @@
 #include "CodeBlock.h"
 #include "JSGlobalObject.h"
 #include "Operands.h"
-#include "Operations.h"
+#include "JSCInlines.h"
 #include <wtf/StringPrintStream.h>
 
 namespace JSC { namespace Profiler {
@@ -38,20 +38,22 @@ BytecodeSequence::BytecodeSequence(CodeBlock* codeBlock)
 {
     StringPrintStream out;
     
-#if ENABLE(VALUE_PROFILER)
     for (unsigned i = 0; i < codeBlock->numberOfArgumentValueProfiles(); ++i) {
-        CString description = codeBlock->valueProfileForArgument(i)->briefDescription();
+        ConcurrentJITLocker locker(codeBlock->m_lock);
+        CString description = codeBlock->valueProfileForArgument(i)->briefDescription(locker);
         if (!description.length())
             continue;
         out.reset();
-        out.print("arg", i, " (r", argumentToOperand(i), "): ", description);
+        out.print("arg", i, " (r", virtualRegisterForArgument(i).offset(), "): ", description);
         m_header.append(out.toCString());
     }
-#endif // ENABLE(VALUE_PROFILER)
+    
+    StubInfoMap stubInfos;
+    codeBlock->getStubInfoMap(stubInfos);
     
     for (unsigned bytecodeIndex = 0; bytecodeIndex < codeBlock->instructions().size();) {
         out.reset();
-        codeBlock->dumpBytecode(out, bytecodeIndex);
+        codeBlock->dumpBytecode(out, bytecodeIndex, stubInfos);
         m_sequence.append(Bytecode(bytecodeIndex, codeBlock->vm()->interpreter->getOpcodeID(codeBlock->instructions()[bytecodeIndex].u.opcode), out.toCString()));
         bytecodeIndex += opcodeLength(
             codeBlock->vm()->interpreter->getOpcodeID(

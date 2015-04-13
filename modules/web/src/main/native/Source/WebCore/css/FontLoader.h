@@ -69,7 +69,7 @@ public:
     bool loading() const { return m_loadingCount > 0; }
 
     virtual ScriptExecutionContext* scriptExecutionContext() const;
-    virtual const AtomicString& interfaceName() const;
+    virtual EventTargetInterface eventTargetInterface() const;
 
     using RefCounted<FontLoader>::ref;
     using RefCounted<FontLoader>::deref;
@@ -85,10 +85,10 @@ public:
 private:
     FontLoader(Document*);
 
-    virtual void refEventTarget() { ref(); }
-    virtual void derefEventTarget() { deref(); }
-    virtual EventTargetData* eventTargetData();
-    virtual EventTargetData* ensureEventTargetData();
+    virtual void refEventTarget() override { ref(); }
+    virtual void derefEventTarget() override { deref(); }
+    virtual EventTargetData* eventTargetData() override;
+    virtual EventTargetData& ensureEventTargetData() override;
 
     void scheduleEvent(PassRefPtr<Event>);
     void firePendingEvents();
@@ -97,8 +97,8 @@ private:
     Document* m_document;
     EventTargetData m_eventTargetData;
     unsigned m_loadingCount;
-    Vector<RefPtr<Event> > m_pendingEvents;
-    Vector<RefPtr<VoidCallback> > m_callbacks;
+    Vector<RefPtr<Event>> m_pendingEvents;
+    Vector<RefPtr<VoidCallback>> m_callbacks;
     RefPtr<Event> m_loadingDoneEvent;
 };
 

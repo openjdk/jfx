@@ -63,7 +63,7 @@ protected:
         : m_slot(slot)
     {
     }
-
+    
     void swap(HandleBase& other) { std::swap(m_slot, other.m_slot); }
 
     void setSlot(HandleSlot slot)
@@ -128,7 +128,7 @@ protected:
         : HandleBase(slot)
     {
     }
-
+    
 private:
     friend class HandleSet;
     friend class WeakBlock;
@@ -145,43 +145,43 @@ template <typename Base> Handle<JSObject> HandleConverter<Base, Unknown>::asObje
 }
 
 template <typename T, typename U> inline bool operator==(const Handle<T>& a, const Handle<U>& b)
-{
-    return a.get() == b.get();
+{ 
+    return a.get() == b.get(); 
 }
 
 template <typename T, typename U> inline bool operator==(const Handle<T>& a, U* b)
-{
-    return a.get() == b;
+{ 
+    return a.get() == b; 
 }
 
-template <typename T, typename U> inline bool operator==(T* a, const Handle<U>& b)
+template <typename T, typename U> inline bool operator==(T* a, const Handle<U>& b) 
 {
-    return a == b.get();
+    return a == b.get(); 
 }
 
 template <typename T, typename U> inline bool operator!=(const Handle<T>& a, const Handle<U>& b)
-{
-    return a.get() != b.get();
+{ 
+    return a.get() != b.get(); 
 }
 
 template <typename T, typename U> inline bool operator!=(const Handle<T>& a, U* b)
 {
-    return a.get() != b;
+    return a.get() != b; 
 }
 
 template <typename T, typename U> inline bool operator!=(T* a, const Handle<U>& b)
-{
-    return a != b.get();
+{ 
+    return a != b.get(); 
 }
 
 template <typename T, typename U> inline bool operator!=(const Handle<T>& a, JSValue b)
 {
-    return a.get() != b;
+    return a.get() != b; 
 }
 
 template <typename T, typename U> inline bool operator!=(JSValue a, const Handle<U>& b)
-{
-    return a != b.get();
+{ 
+    return a != b.get(); 
 }
 
 }

@@ -6,7 +6,6 @@
   <classpathentry kind="src" exported="true" path="/swt"/>
   <classpathentry kind="src" exported="true" path="/swing"/>
   <classpathentry kind="src" exported="true" path="/media"/>
-  <classpathentry kind="src" exported="true" path="/builders"/>
   <classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
   <classpathentry kind="output" path="bin"/>
 </classpath>

@@ -62,7 +62,7 @@ private:
     IDBDatabaseError(unsigned short code)
         : m_code(code), m_message(IDBDatabaseException::getErrorDescription(code)) { }
     IDBDatabaseError(unsigned short code, const String& message)
-            : m_code(code), m_message(message) { }
+        : m_code(code), m_message(message) { }
 
     const unsigned short m_code;
     const String m_message;

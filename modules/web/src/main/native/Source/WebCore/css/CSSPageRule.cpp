@@ -27,7 +27,7 @@
 #include "CSSStyleSheet.h"
 #include "Document.h"
 #include "PropertySetCSSStyleDeclaration.h"
-#include "StylePropertySet.h"
+#include "StyleProperties.h"
 #include "StyleRule.h"
 #include <wtf/Vector.h>
 #include <wtf/text/StringBuilder.h>
@@ -49,7 +49,7 @@ CSSPageRule::~CSSPageRule()
 CSSStyleDeclaration* CSSPageRule::style()
 {
     if (!m_propertiesCSSOMWrapper)
-        m_propertiesCSSOMWrapper = StyleRuleCSSStyleDeclaration::create(m_pageRule->mutableProperties(), this);
+        m_propertiesCSSOMWrapper = StyleRuleCSSStyleDeclaration::create(m_pageRule->mutableProperties(), *this);
     return m_propertiesCSSOMWrapper.get();
 }
 
@@ -63,7 +63,7 @@ String CSSPageRule::selectorText() const
         if (!pageSpecification.isEmpty() && pageSpecification != starAtom) {
             text.append(' ');
             text.append(pageSpecification);
-    }
+        }
     }
     return text.toString();
 }
@@ -86,7 +86,7 @@ String CSSPageRule::cssText() const
     StringBuilder result;
     result.append(selectorText());
     result.appendLiteral(" { ");
-    String decls = m_pageRule->properties()->asText();
+    String decls = m_pageRule->properties().asText();
     result.append(decls);
     if (!decls.isEmpty())
         result.append(' ');

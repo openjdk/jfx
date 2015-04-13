@@ -19,43 +19,44 @@
  */
 
 [
-        CustomNamedGetter,
+    CustomNamedGetter,
+    NewImpurePropertyFiresWatchpoints,
 ] interface HTMLDocument : Document {
     [Custom] void open();
-        void close();
+    void close();
     [Custom] void write([Default=Undefined] optional DOMString text);
     [Custom] void writeln([Default=Undefined] optional DOMString text);
 
-        readonly attribute HTMLCollection embeds;
-        readonly attribute HTMLCollection plugins;
-        readonly attribute HTMLCollection scripts;
+    readonly attribute HTMLCollection embeds;
+    readonly attribute HTMLCollection plugins;
+    readonly attribute HTMLCollection scripts;
 
-        // Extensions
+    // Extensions
 
 #if defined(LANGUAGE_JAVASCRIPT) && LANGUAGE_JAVASCRIPT
-        // FIXME: This should eventually be available (if they are wanted) for all languages.
+    // FIXME: This should eventually be available (if they are wanted) for all languages.
     [Custom, Replaceable, Deletable] readonly attribute HTMLAllCollection all;
 #endif
 
-        void clear();
+    void clear();
 
-        void captureEvents();
-        void releaseEvents();
+    void captureEvents();
+    void releaseEvents();
 
-        readonly attribute long width;
-        readonly attribute long height;
+    readonly attribute long width;
+    readonly attribute long height;
              [TreatNullAs=NullString] attribute DOMString dir;
              [TreatNullAs=NullString] attribute DOMString designMode;
-        readonly attribute DOMString compatMode;
+    readonly attribute DOMString compatMode;
 
-        readonly attribute Element activeElement;
-        boolean hasFocus();
+    readonly attribute Element activeElement;
+    boolean hasFocus();
 
-        // Deprecated attributes
+    // Deprecated attributes
              [TreatNullAs=NullString] attribute DOMString bgColor;
              [TreatNullAs=NullString] attribute DOMString fgColor;
              [TreatNullAs=NullString] attribute DOMString alinkColor;
              [TreatNullAs=NullString] attribute DOMString linkColor;
              [TreatNullAs=NullString] attribute DOMString vlinkColor;
-    };
+};
 

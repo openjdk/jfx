@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -78,10 +78,10 @@ public final class TestImages {
     public static Image createAnimatedTestImage(
             final int width,
             final int height,
-            final int... frameDelays) {
+            final int loopCount, final int... frameDelays) {
         final String url = "file:testAnimImg_" + width + "x" + height + ".png";
         final StubPlatformImageInfo spii = 
-                new StubPlatformImageInfo(width, height, frameDelays);
+                new StubPlatformImageInfo(width, height, frameDelays, loopCount);
         imageLoaderFactory.registerImage(url, spii);
 
         return new Image(url);

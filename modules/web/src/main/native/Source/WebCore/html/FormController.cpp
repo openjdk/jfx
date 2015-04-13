@@ -21,8 +21,6 @@
 #include "config.h"
 #include "FormController.h"
 
-#include "FileChooser.h"
-#include "HTMLFormControlElementWithState.h"
 #include "HTMLFormElement.h"
 #include "HTMLInputElement.h"
 #include <wtf/text/StringBuilder.h>
@@ -175,8 +173,8 @@ class SavedFormState {
     WTF_MAKE_FAST_ALLOCATED;
 
 public:
-    static PassOwnPtr<SavedFormState> create();
-    static PassOwnPtr<SavedFormState> deserialize(const Vector<String>&, size_t& index);
+    static OwnPtr<SavedFormState> create();
+    static OwnPtr<SavedFormState> deserialize(const Vector<String>&, size_t& index);
     void serializeTo(Vector<String>&) const;
     bool isEmpty() const { return m_stateForNewFormElements.isEmpty(); }
     void appendControlState(const AtomicString& name, const AtomicString& type, const FormControlState&);
@@ -192,7 +190,7 @@ private:
     size_t m_controlStateCount;
 };
 
-PassOwnPtr<SavedFormState> SavedFormState::create()
+OwnPtr<SavedFormState> SavedFormState::create()
 {
     return adoptPtr(new SavedFormState);
 }
@@ -202,7 +200,7 @@ static bool isNotFormControlTypeCharacter(UChar ch)
     return ch != '-' && (ch > 'z' || ch < 'a');
 }
 
-PassOwnPtr<SavedFormState> SavedFormState::deserialize(const Vector<String>& stateVector, size_t& index)
+OwnPtr<SavedFormState> SavedFormState::deserialize(const Vector<String>& stateVector, size_t& index)
 {
     if (index >= stateVector.size())
         return nullptr;
@@ -291,7 +289,7 @@ class FormKeyGenerator {
     WTF_MAKE_FAST_ALLOCATED;
 
 public:
-    static PassOwnPtr<FormKeyGenerator> create() { return adoptPtr(new FormKeyGenerator); }
+    static OwnPtr<FormKeyGenerator> create() { return adoptPtr(new FormKeyGenerator); }
     AtomicString formKey(const HTMLFormControlElementWithState&);
     void willDeleteForm(HTMLFormElement*);
 
@@ -328,7 +326,7 @@ static inline void recordFormStructure(const HTMLFormElement& form, StringBuilde
 
 static inline String formSignature(const HTMLFormElement& form)
 {
-    KURL actionURL = form.getURLAttribute(actionAttr);
+    URL actionURL = form.getURLAttribute(actionAttr);
     // Remove the query part because it might contain volatile parameters such
     // as a session key.
     actionURL.setQuery(String());
@@ -368,12 +366,7 @@ AtomicString FormKeyGenerator::formKey(const HTMLFormControlElementWithState& co
 void FormKeyGenerator::willDeleteForm(HTMLFormElement* form)
 {
     ASSERT(form);
-    if (m_formToKeyMap.isEmpty())
-        return;
-    FormToKeyMap::iterator it = m_formToKeyMap.find(form);
-    if (it == m_formToKeyMap.end())
-        return;
-    m_formToKeyMap.remove(it);
+    m_formToKeyMap.remove(form);
 }
 
 // ----------------------------------------------------------------------------
@@ -386,6 +379,17 @@ FormController::~FormController()
 {
 }
 
+unsigned FormController::formElementsCharacterCount() const
+{
+    unsigned count = 0;
+    for (auto& element : m_formElementsWithState) {
+        FormControlState state = element->saveFormControlState();
+        if (state.valueSize() && element->isTextFormControl())
+            count += state[0].length();
+    }
+    return count;
+}
+
 static String formStateSignature()
 {
     // In the legacy version of serialized state, the first item was a name
@@ -395,12 +399,12 @@ static String formStateSignature()
     return signature;
 }
 
-PassOwnPtr<FormController::SavedFormStateMap> FormController::createSavedFormStateMap(const FormElementListHashSet& controlList)
+OwnPtr<FormController::SavedFormStateMap> FormController::createSavedFormStateMap(const FormElementListHashSet& controlList)
 {
     OwnPtr<FormKeyGenerator> keyGenerator = FormKeyGenerator::create();
     OwnPtr<SavedFormStateMap> stateMap = adoptPtr(new SavedFormStateMap);
     for (FormElementListHashSet::const_iterator it = controlList.begin(); it != controlList.end(); ++it) {
-        HTMLFormControlElementWithState* control = *it;
+        HTMLFormControlElementWithState* control = it->get();
         if (!control->shouldSaveAndRestoreFormControlState())
             continue;
         SavedFormStateMap::AddResult result = stateMap->add(keyGenerator->formKey(*control).impl(), nullptr);
@@ -513,6 +517,18 @@ Vector<String> FormController::getReferencedFilePaths(const Vector<String>& stat
     for (SavedFormStateMap::const_iterator it = map.begin(), end = map.end(); it != end; ++it)
         toReturn.appendVector(it->value->getReferencedFilePaths());
     return toReturn;
+}
+
+void FormController::registerFormElementWithState(HTMLFormControlElementWithState* control)
+{
+    ASSERT(!m_formElementsWithState.contains(control));
+    m_formElementsWithState.add(control);
+}
+
+void FormController::unregisterFormElementWithState(HTMLFormControlElementWithState* control)
+{
+    ASSERT(m_formElementsWithState.contains(control));
+    m_formElementsWithState.remove(control);
 }
 
 } // namespace WebCore

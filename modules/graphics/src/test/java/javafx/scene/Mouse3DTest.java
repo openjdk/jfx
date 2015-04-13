@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -639,7 +639,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 50, 25, -25);
         assertPickResult(e.getPickResult(),
-                sph, point(50, 25, -25), 975, NOFACE, point(0.59375, 0.62402));
+                sph, point(50, 25, -25), 975, NOFACE, point(0.65625, 0.62402));
     }
 
     @Test
@@ -668,7 +668,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 50, 25, -25);
         assertPickResult(e.getPickResult(),
-                sph, point(50, 25, -25), 1, NOFACE, point(0.59375, 0.62402));
+                sph, point(50, 25, -25), 1, NOFACE, point(0.65625, 0.62402));
     }
 
     @Test

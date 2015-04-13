@@ -30,8 +30,6 @@
 #include "OESVertexArrayObject.h"
 
 #include "Extensions3D.h"
-#include "WebGLRenderingContext.h"
-#include "WebGLVertexArrayObjectOES.h"
 
 namespace WebCore {
 
@@ -49,7 +47,7 @@ WebGLExtension::ExtensionName OESVertexArrayObject::getName() const
     return OESVertexArrayObjectName;
 }
 
-PassOwnPtr<OESVertexArrayObject> OESVertexArrayObject::create(WebGLRenderingContext* context)
+OwnPtr<OESVertexArrayObject> OESVertexArrayObject::create(WebGLRenderingContext* context)
 {
     return adoptPtr(new OESVertexArrayObject(context));
 }
@@ -108,8 +106,6 @@ void OESVertexArrayObject::bindVertexArrayOES(WebGLVertexArrayObjectOES* arrayOb
         extensions->bindVertexArrayOES(0);
         m_context->setBoundVertexArrayObject(0);
     }
-    
-    m_context->cleanupAfterGraphicsCall(false);
 }
 
 } // namespace WebCore

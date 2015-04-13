@@ -41,7 +41,7 @@ public class ErrorLoggingUtiltity {
     }
 
     // getLogManager will redirect existing PlatformLogger to the Logger
-    private static final Logger logger = LogManager.getLogManager().getLogger("beans");
+    private static final Logger logger = LogManager.getLogManager().getLogger("javafx.beans");
 
     Level level;
     LogRecord lastRecord;

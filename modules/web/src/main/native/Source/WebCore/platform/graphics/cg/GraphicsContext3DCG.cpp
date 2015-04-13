@@ -31,9 +31,12 @@
 #include "GraphicsContext3D.h"
 
 #include "BitmapImage.h"
-#include "GraphicsContext3DNEON.h"
 #include "GraphicsContextCG.h"
 #include "Image.h"
+
+#if HAVE(ARM_NEON_INTRINSICS)
+#include "GraphicsContext3DNEON.h"
+#endif
 
 #include <CoreGraphics/CGBitmapContext.h>
 #include <CoreGraphics/CGContext.h>
@@ -41,6 +44,7 @@
 #include <CoreGraphics/CGImage.h>
 
 #include <wtf/RetainPtr.h>
+#include <wtf/StdLibExtras.h>
 
 namespace WebCore {
 
@@ -476,7 +480,7 @@ bool GraphicsContext3D::ImageExtractor::extractImage(bool premultiplyAlpha, bool
     // but it would premultiply the alpha channel as a side effect.
     // Prefer to mannually Convert 16bit per-component formats to RGBA8 formats instead.
     if (bitsPerComponent == 16) {
-        m_formalizedRGBA8Data = adoptArrayPtr(new uint8_t[m_imageWidth * m_imageHeight * 4]);
+        m_formalizedRGBA8Data = std::make_unique<uint8_t[]>(m_imageWidth * m_imageHeight * 4);
         const uint16_t* source = reinterpret_cast<const uint16_t*>(m_imagePixelData);
         uint8_t* destination = m_formalizedRGBA8Data.get();
         const ptrdiff_t srcStrideInElements = bytesPerRow / sizeof(uint16_t);
@@ -531,7 +535,7 @@ void GraphicsContext3D::paintToCanvas(const unsigned char* imagePixels, int imag
     context->scale(FloatSize(1, -1));
     context->translate(0, -imageHeight);
     context->setImageInterpolationQuality(InterpolationNone);
-    context->drawNativeImage(cgImage.get(), imageSize, ColorSpaceDeviceRGB, canvasRect, FloatRect(FloatPoint(), imageSize), CompositeCopy);
+    context->drawNativeImage(cgImage.get(), imageSize, ColorSpaceDeviceRGB, canvasRect, FloatRect(FloatPoint(), imageSize), 1, CompositeCopy);
 }
 
 } // namespace WebCore

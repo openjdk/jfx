@@ -18,23 +18,20 @@
  * Boston, MA 02110-1301, USA.
  */
 
-    // Introduced in DOM Level 2:
+// Introduced in DOM Level 2:
 [
-    NoInterfaceObject,
     JSCustomMarkFunction,
-    ImplementationLacksVTable
+    ImplementationLacksVTable,
 ] interface NodeIterator {
-        readonly attribute Node root;
-        readonly attribute unsigned long whatToShow;
-        readonly attribute NodeFilter filter;
-        readonly attribute boolean expandEntityReferences;
-        readonly attribute Node referenceNode;
-        readonly attribute boolean pointerBeforeReferenceNode;
+    readonly attribute Node root;
+    readonly attribute unsigned long whatToShow;
+    readonly attribute NodeFilter filter;
+    readonly attribute boolean expandEntityReferences;
+    readonly attribute Node referenceNode;
+    readonly attribute boolean pointerBeforeReferenceNode;
 
-        [CallWith=ScriptState] Node nextNode() 
-            raises (DOMException);
-        [CallWith=ScriptState] Node previousNode()
-            raises (DOMException);
-        void detach();
-    };
+    [CallWith=ScriptState, RaisesException] Node nextNode();
+    [CallWith=ScriptState, RaisesException] Node previousNode();
+    void detach();
+};
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
  */
 #ifndef WebPage_h
 #define WebPage_h
@@ -12,6 +12,10 @@
 #include "IntRect.h"
 #include "PrintContext.h"
 #include "ScrollTypes.h"
+
+#include <jni.h> // todo tav remove when building w/ pch
+#include <JavaRef.h>
+#include <UnicodeJava.h>
 
 namespace WebCore {
 
@@ -83,10 +87,10 @@ public:
     void disableWatchdog();
 
 private:
+    void requestJavaRepaint(const IntRect&);
 #if USE(ACCELERATED_COMPOSITING)
     void markForSync();
     void syncLayers();
-    void requestJavaRepaint(const IntRect&);
     IntRect pageRect();
     void renderCompositedLayers(GraphicsContext&, const IntRect&);
 
@@ -96,7 +100,7 @@ private:
     virtual void paintContents(const GraphicsLayer*,
                                GraphicsContext&,
                                GraphicsLayerPaintingPhase,
-                               const IntRect&);
+                               const FloatRect&);
     virtual bool showDebugBorders(const GraphicsLayer*) const;
     virtual bool showRepaintCounter(const GraphicsLayer*) const;
 #endif

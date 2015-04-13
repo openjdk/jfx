@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,7 +36,7 @@ public class AcceleratedScreen {
     private long eglSurface;
     private long eglContext;
     private long eglDisplay;
-    protected static LinuxSystem ls = LinuxSystem.getLinuxSystem();
+    protected static final LinuxSystem ls = LinuxSystem.getLinuxSystem();
     private EGL egl;
 
     /** Returns a platform-specific native display handle suitable for use with

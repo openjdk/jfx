@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,8 +48,8 @@ import javafx.css.StyleableProperty;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
-import com.sun.javafx.Logging;
-import com.sun.javafx.Utils;
+import com.sun.javafx.util.Logging;
+import com.sun.javafx.util.Utils;
 import com.sun.javafx.css.CalculatedValue;
 import com.sun.javafx.css.CascadingStyle;
 import com.sun.javafx.css.CssError;
@@ -75,7 +75,7 @@ import static com.sun.javafx.css.CalculatedValue.*;
  */
 final class CssStyleHelper {
 
-    private static final PlatformLogger LOGGER = com.sun.javafx.Logging.getCSSLogger();
+    private static final PlatformLogger LOGGER = com.sun.javafx.util.Logging.getCSSLogger();
 
     private CssStyleHelper() {
         this.triggerStates = new PseudoClassState();
@@ -1165,7 +1165,7 @@ final class CssStyleHelper {
             final Object val = parsedValue.getValue();
             if (val instanceof String) {
 
-                final String sval = (String)val;
+                final String sval = ((String) val).toLowerCase(Locale.ROOT);
 
                 CascadingStyle resolved =
                     resolveRef(styleable, sval, styleMap, states);
@@ -1783,8 +1783,13 @@ final class CssStyleHelper {
             // if we have a font shorthand and it is more specific than font-size, then don't use the font-size style
             if (fontShorthand != null && fontShorthand.compareTo(fontSize) < 0) {
                 fontSize = null;
+            } else if (origin == StyleOrigin.USER) {
+                // If fontSize is an inline or author-stylesheet style, use it.
+                // Otherwise, fontSize is a user-agent stylesheet style and should not override the USER style.
+                if (StyleOrigin.USER.compareTo(fontSize.getOrigin()) > 0) {
+                    fontSize = null;
+                }
             }
-
         } else if (origin != StyleOrigin.USER) {
             //
             // If we don't have a font-size, see if there is an inherited font-size.

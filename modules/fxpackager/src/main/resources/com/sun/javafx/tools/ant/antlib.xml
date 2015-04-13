@@ -19,6 +19,8 @@
                  classname="com.sun.javafx.tools.ant.FileSet"/>
     <typedef name="preferences"
                  classname="com.sun.javafx.tools.ant.Preferences"/>
+    <typedef name="permissions"
+                 classname="com.sun.javafx.tools.ant.Permissions"/>
 
     <taskdef name="jar"
                  classname="com.sun.javafx.tools.ant.FXJar"/>

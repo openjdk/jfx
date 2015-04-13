@@ -28,7 +28,7 @@
  * \file
  * \brief C API: String Enumeration 
  */
-
+ 
 /**
  * An enumeration object.
  * For usage in C programs.

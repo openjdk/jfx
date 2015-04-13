@@ -19,8 +19,7 @@
  */
 
 [
-        IndexedGetter,
-        CustomNamedGetter
+    CustomNamedGetter,
 ] interface HTMLFormElement : HTMLElement {
     [Reflect=accept_charset] attribute DOMString acceptCharset;
     [Reflect, URL] attribute DOMString action;
@@ -32,14 +31,19 @@
     [Reflect] attribute boolean noValidate;
     [Reflect] attribute DOMString target;
 
-        readonly attribute HTMLCollection elements;
-        readonly attribute long length;
+    readonly attribute HTMLCollection elements;
+    readonly attribute long length;
+
+    getter Element (unsigned long index);
+
+    [Conditional=IOS_AUTOCORRECT_AND_AUTOCAPITALIZE] attribute boolean autocorrect;
+    [Conditional=IOS_AUTOCORRECT_AND_AUTOCAPITALIZE, TreatNullAs=NullString] attribute DOMString autocapitalize;
 
 #if defined(LANGUAGE_JAVASCRIPT) && LANGUAGE_JAVASCRIPT
-        [ImplementedAs=submitFromJavaScript] void submit();
+    [ImplementedAs=submitFromJavaScript] void submit();
 #else
-        void submit();
+    void submit();
 #endif
-        void reset();
-        boolean checkValidity();
-    };
+    void reset();
+    boolean checkValidity();
+};

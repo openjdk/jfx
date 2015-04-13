@@ -1,13 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
-    <classpathentry kind="src" path="app-lifecycle/ClassLoaderApp/src"/>
-    <classpathentry kind="src" path="app-lifecycle/ClassLoaderTest/test"/>
     <!--
     <classpathentry kind="src" path="functional/animation"/>
-    -->
-    <classpathentry kind="src" path="golden-image-suite/src"/>
-    <!--
-    <classpathentry kind="src" path="golden-image-suite/test"/>
     -->
     <classpathentry kind="src" path="manual/printing"/>
     <classpathentry kind="src" path="performance/VMPerformance/src"/>

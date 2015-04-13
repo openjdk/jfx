@@ -79,7 +79,7 @@ DragIcon::DragIcon()
 DragIcon::~DragIcon()
 {
     if (m_window)
-    gtk_widget_destroy(m_window);
+        gtk_widget_destroy(m_window);
 }
 
 void DragIcon::draw(cairo_t* context)
@@ -98,12 +98,12 @@ void DragIcon::setImage(cairo_surface_t* image)
     m_image = image;
     m_imageSize = IntSize(cairo_image_surface_get_width(image), cairo_image_surface_get_height(image));
     if (isComposited) {
-    gtk_window_resize(GTK_WINDOW(m_window), m_imageSize.width(), m_imageSize.height());
+        gtk_window_resize(GTK_WINDOW(m_window), m_imageSize.width(), m_imageSize.height());
         return;
     }
 
 #ifdef GTK_API_VERSION_2
-    m_pixbuf = adoptGRef(cairoImageSurfaceToGdkPixbuf(image));
+    m_pixbuf = adoptGRef(cairoSurfaceToGdkPixbuf(image));
 #endif
 }
 
@@ -117,7 +117,7 @@ void DragIcon::useForDrag(GdkDragContext* context)
 void DragIcon::useForDrag(GdkDragContext* context, const IntPoint& hotspot)
 {
     if (isComposited) {
-    gtk_drag_set_icon_widget(context, m_window, hotspot.x(), hotspot.y());
+        gtk_drag_set_icon_widget(context, m_window, hotspot.x(), hotspot.y());
         return;
     }
 #ifdef GTK_API_VERSION_2

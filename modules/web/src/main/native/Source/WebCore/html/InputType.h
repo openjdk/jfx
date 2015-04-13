@@ -35,18 +35,21 @@
 
 #include "FeatureObserver.h"
 #include "HTMLTextFormControlElement.h"
+#include "RenderPtr.h"
 #include "StepRange.h"
+#include <wtf/FastMalloc.h>
 #include <wtf/Forward.h>
-#include <wtf/FastAllocBase.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RefPtr.h>
-#include <wtf/Vector.h>
+
+#if PLATFORM(IOS)
+#include "DateComponents.h"
+#endif
 
 namespace WebCore {
 
 class BeforeTextInsertedEvent;
 class Chrome;
-class Color;
 class DateComponents;
 class DragData;
 class Event;
@@ -59,21 +62,13 @@ class Icon;
 class KeyboardEvent;
 class MouseEvent;
 class Node;
-class RenderArena;
-class RenderObject;
 class RenderStyle;
 class TouchEvent;
+class TextControlInnerTextElement;
+
+struct InputElementClickState;
 
 typedef int ExceptionCode;
-
-struct ClickHandlingState {
-    WTF_MAKE_FAST_ALLOCATED;
-  
-public:
-    bool checked;
-    bool indeterminate;
-    RefPtr<HTMLInputElement> checkedRadioButton;
-};
 
 // An InputType object represents the type-specific part of an HTMLInputElement.
 // Do not expose instances of InputType and classes derived from it to classes
@@ -83,8 +78,8 @@ class InputType {
     WTF_MAKE_FAST_ALLOCATED;
 
 public:
-    static PassOwnPtr<InputType> create(HTMLInputElement*, const AtomicString&);
-    static PassOwnPtr<InputType> createText(HTMLInputElement*);
+    static std::unique_ptr<InputType> create(HTMLInputElement&, const AtomicString&);
+    static std::unique_ptr<InputType> createText(HTMLInputElement&);
     virtual ~InputType();
 
     static bool themeSupportsDataListUI(InputType*);
@@ -101,9 +96,6 @@ public:
     // inflexible because it's harder to add new input types if there is
     // scattered code with special cases for various types.
 
-#if ENABLE(INPUT_TYPE_COLOR)
-    virtual bool isColorControl() const;
-#endif
     virtual bool isCheckbox() const;
     virtual bool isDateField() const;
     virtual bool isDateTimeField() const;
@@ -127,6 +119,10 @@ public:
     virtual bool isTimeField() const;
     virtual bool isURLField() const;
     virtual bool isWeekField() const;
+
+#if ENABLE(INPUT_TYPE_COLOR)
+    virtual bool isColorControl() const;
+#endif
 
     // Form value functions
 
@@ -167,6 +163,7 @@ public:
     double minimum() const;
     double maximum() const;
     virtual bool sizeShouldIncludeDecoration(int defaultSize, int& preferredSize) const;
+    virtual float decorationWidth() const;
     bool stepMismatch(const String&) const;
     virtual bool getAllowedValueStep(Decimal*) const;
     virtual StepRange createStepRange(AnyStepHandling) const;
@@ -186,17 +183,19 @@ public:
 
     virtual void handleClickEvent(MouseEvent*);
     virtual void handleMouseDownEvent(MouseEvent*);
-    virtual PassOwnPtr<ClickHandlingState> willDispatchClick();
-    virtual void didDispatchClick(Event*, const ClickHandlingState&);
+    virtual void willDispatchClick(InputElementClickState&);
+    virtual void didDispatchClick(Event*, const InputElementClickState&);
     virtual void handleDOMActivateEvent(Event*);
     virtual void handleKeydownEvent(KeyboardEvent*);
     virtual void handleKeypressEvent(KeyboardEvent*);
     virtual void handleKeyupEvent(KeyboardEvent*);
     virtual void handleBeforeTextInsertedEvent(BeforeTextInsertedEvent*);
+    virtual void forwardEvent(Event*);
+
 #if ENABLE(TOUCH_EVENTS)
     virtual void handleTouchEvent(TouchEvent*);
 #endif
-    virtual void forwardEvent(Event*);
+
     // Helpers for event handlers.
     virtual bool shouldSubmitImplicitly(Event*);
     virtual PassRefPtr<HTMLFormElement> formForSubmission() const;
@@ -209,6 +208,7 @@ public:
     virtual void accessKeyAction(bool sendMouseEvents);
     virtual bool canBeSuccessfulSubmitButton();
     virtual void subtreeHasChanged();
+
 #if ENABLE(TOUCH_EVENTS)
     virtual bool hasTouchEventHandler() const;
 #endif
@@ -220,24 +220,24 @@ public:
     virtual void createShadowSubtree();
     virtual void destroyShadowSubtree();
 
-    virtual HTMLElement* containerElement() const { return 0; }
-    virtual HTMLElement* innerBlockElement() const { return 0; }
-    virtual HTMLElement* innerTextElement() const { return 0; }
-    virtual HTMLElement* innerSpinButtonElement() const { return 0; }
-    virtual HTMLElement* resultsButtonElement() const { return 0; }
-    virtual HTMLElement* cancelButtonElement() const { return 0; }
-#if ENABLE(INPUT_SPEECH)
-    virtual HTMLElement* speechButtonElement() const { return 0; }
-#endif
-    virtual HTMLElement* sliderThumbElement() const { return 0; }
-    virtual HTMLElement* sliderTrackElement() const { return 0; }
+    virtual HTMLElement* containerElement() const { return nullptr; }
+    virtual HTMLElement* innerBlockElement() const { return nullptr; }
+    virtual TextControlInnerTextElement* innerTextElement() const { return nullptr; }
+    virtual HTMLElement* innerSpinButtonElement() const { return nullptr; }
+    virtual HTMLElement* resultsButtonElement() const { return nullptr; }
+    virtual HTMLElement* cancelButtonElement() const { return nullptr; }
+    virtual HTMLElement* sliderThumbElement() const { return nullptr; }
+    virtual HTMLElement* sliderTrackElement() const { return nullptr; }
     virtual HTMLElement* placeholderElement() const;
+
+#if ENABLE(INPUT_SPEECH)
+    virtual HTMLElement* speechButtonElement() const { return nullptr; }
+#endif
 
     // Miscellaneous functions
 
     virtual bool rendererIsNeeded();
-    virtual RenderObject* createRenderer(RenderArena*, RenderStyle*) const;
-    virtual PassRefPtr<RenderStyle> customStyleForRenderer(PassRefPtr<RenderStyle>);
+    virtual RenderPtr<RenderElement> createInputRenderer(PassRef<RenderStyle>);
     virtual void addSearchResult();
     virtual void attach();
     virtual void detach();
@@ -248,12 +248,15 @@ public:
     virtual bool shouldRespectAlignAttribute();
     virtual FileList* files();
     virtual void setFiles(PassRefPtr<FileList>);
+#if ENABLE(DRAG_SUPPORT)
     // Should return true if the given DragData has more than one dropped files.
-    virtual bool receiveDroppedFiles(const DragData*);
-#if ENABLE(FILE_SYSTEM)
-    virtual String droppedFileSystemId();
+    virtual bool receiveDroppedFiles(const DragData&);
 #endif
     virtual Icon* icon() const;
+#if PLATFORM(IOS)
+    virtual String displayString() const;
+#endif
+
     // Should return true if the corresponding renderer for a type can display a suggested value.
     virtual bool canSetSuggestedValue();
     virtual bool shouldSendChangeEventAfterCheckedChanged();
@@ -278,11 +281,12 @@ public:
     virtual void requiredAttributeChanged();
     virtual void valueAttributeChanged();
     virtual String defaultToolTip() const;
+    virtual void updateClearButtonVisibility();
+
 #if ENABLE(DATALIST_ELEMENT)
     virtual void listAttributeTargetChanged();
     virtual Decimal findClosestTickMarkValue(const Decimal&);
 #endif
-    virtual void updateClearButtonVisibility();
 
     // Parses the specified string for the type, and return
     // the Decimal value for the parsing result if the parsing
@@ -301,6 +305,10 @@ public:
     // string. This should not be called for types without valueAsNumber.
     virtual String serialize(const Decimal&) const;
 
+#if PLATFORM(IOS)
+    virtual DateComponents::Type dateType() const;
+#endif
+
     virtual bool supportsIndeterminateAppearance() const;
 
     virtual bool supportsSelectionAPI() const;
@@ -313,8 +321,8 @@ public:
     void dispatchSimulatedClickIfActive(KeyboardEvent*) const;
 
 protected:
-    InputType(HTMLInputElement* element) : m_element(element) { }
-    HTMLInputElement* element() const { return m_element; }
+    explicit InputType(HTMLInputElement& element) : m_element(element) { }
+    HTMLInputElement& element() const { return m_element; }
     Chrome* chrome() const;
     Decimal parseToNumberOrNaN(const String&) const;
     void observeFeatureIfVisible(FeatureObserver::Feature) const;
@@ -324,7 +332,7 @@ private:
     void applyStep(int count, AnyStepHandling, TextFieldEventBehavior, ExceptionCode&);
 
     // Raw pointer because the HTMLInputElement object owns this InputType object.
-    HTMLInputElement* m_element;
+    HTMLInputElement& m_element;
 };
 
 } // namespace WebCore

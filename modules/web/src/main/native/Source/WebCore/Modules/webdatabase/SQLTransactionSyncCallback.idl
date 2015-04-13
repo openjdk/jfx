@@ -29,7 +29,7 @@
  */
 
 [
-        Conditional=SQL_DATABASE,
+    Conditional=SQL_DATABASE,
 ] callback interface SQLTransactionSyncCallback {
     boolean handleEvent(SQLTransactionSync transaction);
-    };
+};

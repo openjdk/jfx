@@ -28,9 +28,7 @@
 
 #if ENABLE(VIDEO)
 
-#include "ActiveDOMObject.h"
 #include "Event.h"
-#include "EventListener.h"
 #include "EventTarget.h"
 #include "MediaControllerInterface.h"
 #include "Timer.h"
@@ -45,9 +43,9 @@ class HTMLMediaElement;
 class Event;
 class ScriptExecutionContext;
 
-class MediaController : public RefCounted<MediaController>, public MediaControllerInterface, public EventTarget {
+class MediaController final : public RefCounted<MediaController>, public MediaControllerInterface, public EventTargetWithInlineData {
 public:
-    static PassRefPtr<MediaController> create(ScriptExecutionContext*);
+    static PassRefPtr<MediaController> create(ScriptExecutionContext&);
     virtual ~MediaController();
 
     void addMediaElement(HTMLMediaElement*);
@@ -56,58 +54,58 @@ public:
 
     const String& mediaGroup() const { return m_mediaGroup; }
     
-    virtual PassRefPtr<TimeRanges> buffered() const;
-    virtual PassRefPtr<TimeRanges> seekable() const;
-    virtual PassRefPtr<TimeRanges> played();
+    virtual PassRefPtr<TimeRanges> buffered() const override;
+    virtual PassRefPtr<TimeRanges> seekable() const override;
+    virtual PassRefPtr<TimeRanges> played() override;
     
-    virtual double duration() const;
-    virtual double currentTime() const;
-    virtual void setCurrentTime(double, ExceptionCode&);
+    virtual double duration() const override;
+    virtual double currentTime() const override;
+    virtual void setCurrentTime(double) override;
     
-    virtual bool paused() const { return m_paused; }
-    virtual void play();
-    virtual void pause();
+    virtual bool paused() const override { return m_paused; }
+    virtual void play() override;
+    virtual void pause() override;
     void unpause();
     
-    virtual double defaultPlaybackRate() const { return m_defaultPlaybackRate; }
-    virtual void setDefaultPlaybackRate(double);
+    virtual double defaultPlaybackRate() const override { return m_defaultPlaybackRate; }
+    virtual void setDefaultPlaybackRate(double) override;
     
-    virtual double playbackRate() const;
-    virtual void setPlaybackRate(double);
+    virtual double playbackRate() const override;
+    virtual void setPlaybackRate(double) override;
     
-    virtual double volume() const { return m_volume; }
-    virtual void setVolume(double, ExceptionCode&);
+    virtual double volume() const override { return m_volume; }
+    virtual void setVolume(double, ExceptionCode&) override;
     
-    virtual bool muted() const { return m_muted; }
-    virtual void setMuted(bool);
+    virtual bool muted() const override { return m_muted; }
+    virtual void setMuted(bool) override;
     
-    virtual ReadyState readyState() const { return m_readyState; }
+    virtual ReadyState readyState() const override { return m_readyState; }
 
     enum PlaybackState { WAITING, PLAYING, ENDED };
     const AtomicString& playbackState() const;
 
-    virtual bool supportsFullscreen() const { return false; }
-    virtual bool isFullscreen() const { return false; }
-    virtual void enterFullscreen() { }
+    virtual bool supportsFullscreen() const override { return false; }
+    virtual bool isFullscreen() const override { return false; }
+    virtual void enterFullscreen() override { }
 
-    virtual bool hasAudio() const;
-    virtual bool hasVideo() const;
-    virtual bool hasClosedCaptions() const;
-    virtual void setClosedCaptionsVisible(bool);
-    virtual bool closedCaptionsVisible() const { return m_closedCaptionsVisible; }
+    virtual bool hasAudio() const override;
+    virtual bool hasVideo() const override;
+    virtual bool hasClosedCaptions() const override;
+    virtual void setClosedCaptionsVisible(bool) override;
+    virtual bool closedCaptionsVisible() const override { return m_closedCaptionsVisible; }
     
-    virtual bool supportsScanning() const;
+    virtual bool supportsScanning() const override;
     
-    virtual void beginScrubbing();
-    virtual void endScrubbing();
+    virtual void beginScrubbing() override;
+    virtual void endScrubbing() override;
     
-    virtual bool canPlay() const;
+    virtual bool canPlay() const override;
     
-    virtual bool isLiveStream() const;
+    virtual bool isLiveStream() const override;
     
-    virtual bool hasCurrentSrc() const;
+    virtual bool hasCurrentSrc() const override;
     
-    virtual void returnToRealtime();
+    virtual void returnToRealtime() override;
 
     bool isBlocked() const;
 
@@ -116,28 +114,25 @@ public:
     using RefCounted<MediaController>::deref;
 
 private:
-    MediaController(ScriptExecutionContext*);
+    explicit MediaController(ScriptExecutionContext&);
     void reportControllerState();
     void updateReadyState();
     void updatePlaybackState();
     void updateMediaElements();
     void bringElementUpToSpeed(HTMLMediaElement*);
     void scheduleEvent(const AtomicString& eventName);
-    void asyncEventTimerFired(Timer<MediaController>*);
-    void clearPositionTimerFired(Timer<MediaController>*);
+    void asyncEventTimerFired(Timer<MediaController>&);
+    void clearPositionTimerFired(Timer<MediaController>&);
     bool hasEnded() const;
     void scheduleTimeupdateEvent();
-    void timeupdateTimerFired(Timer<MediaController>*);
+    void timeupdateTimerFired(Timer<MediaController>&);
     void startTimeupdateTimer();
 
     // EventTarget
-    virtual void refEventTarget() { ref(); }
-    virtual void derefEventTarget() { deref(); }
-    virtual const AtomicString& interfaceName() const;
-    virtual ScriptExecutionContext* scriptExecutionContext() const { return m_scriptExecutionContext; };
-    virtual EventTargetData* eventTargetData() { return &m_eventTargetData; }
-    virtual EventTargetData* ensureEventTargetData() { return &m_eventTargetData; }
-    EventTargetData m_eventTargetData;
+    virtual void refEventTarget() override { ref(); }
+    virtual void derefEventTarget() override { deref(); }
+    virtual EventTargetInterface eventTargetInterface() const override { return MediaControllerEventTargetInterfaceType; }
+    virtual ScriptExecutionContext* scriptExecutionContext() const override { return &m_scriptExecutionContext; };
 
     friend class HTMLMediaElement;
     friend class MediaControllerEventListener;
@@ -149,13 +144,13 @@ private:
     bool m_muted;
     ReadyState m_readyState;
     PlaybackState m_playbackState;
-    Vector<RefPtr<Event> > m_pendingEvents;
+    Vector<RefPtr<Event>> m_pendingEvents;
     Timer<MediaController> m_asyncEventTimer;
     mutable Timer<MediaController> m_clearPositionTimer;
     String m_mediaGroup;
     bool m_closedCaptionsVisible;
-    PassRefPtr<Clock> m_clock;
-    ScriptExecutionContext* m_scriptExecutionContext;
+    std::unique_ptr<Clock> m_clock;
+    ScriptExecutionContext& m_scriptExecutionContext;
     Timer<MediaController> m_timeupdateTimer;
     double m_previousTimeupdateTime;
 };

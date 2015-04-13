@@ -32,10 +32,9 @@
 #include "Filter.h"
 #include "FloatPoint.h"
 #include "GraphicsContext.h"
-#include "RenderTreeAsText.h"
 #include "TextStream.h"
 
-#include <wtf/Uint8ClampedArray.h>
+#include <runtime/Uint8ClampedArray.h>
 
 typedef unsigned char (*BlendType)(unsigned char colorA, unsigned char colorB, unsigned char alphaA, unsigned char alphaB);
 

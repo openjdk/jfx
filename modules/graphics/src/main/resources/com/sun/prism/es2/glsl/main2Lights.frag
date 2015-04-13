@@ -25,6 +25,28 @@
 
 // main fragment shader
 
+#ifdef GL_ES
+
+#extension GL_OES_standard_derivatives : enable
+
+// Define default float precision for fragment shaders
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+precision highp int;
+#else
+precision mediump float;
+precision mediump int;
+#endif
+
+#else
+
+// Ignore GL_ES precision specifiers:
+#define lowp
+#define mediump
+#define highp
+
+#endif
+
 vec4 apply_diffuse();
 vec4 apply_specular();
 vec3 apply_normal();

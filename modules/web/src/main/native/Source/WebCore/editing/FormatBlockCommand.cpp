@@ -45,7 +45,7 @@ static inline bool isElementForFormatBlock(Node* node)
     return node->isElementNode() && isElementForFormatBlock(toElement(node)->tagQName());
 }
 
-FormatBlockCommand::FormatBlockCommand(Document* document, const QualifiedName& tagName) 
+FormatBlockCommand::FormatBlockCommand(Document& document, const QualifiedName& tagName)
     : ApplyBlockElementCommand(document, tagName)
     , m_didApply(false)
 {
@@ -149,14 +149,14 @@ Node* enclosingBlockToSplitTreeTo(Node* startNode)
 {
     Node* lastBlock = startNode;
     for (Node* n = startNode; n; n = n->parentNode()) {
-        if (!n->rendererIsEditable())
+        if (!n->hasEditableStyle())
             return lastBlock;
-        if (isTableCell(n) || n->hasTagName(bodyTag) || !n->parentNode() || !n->parentNode()->rendererIsEditable() || isElementForFormatBlock(n))
+        if (isTableCell(n) || n->hasTagName(bodyTag) || !n->parentNode() || !n->parentNode()->hasEditableStyle() || isElementForFormatBlock(n))
             return n;
         if (isBlock(n))
             lastBlock = n;
         if (isListElement(n))
-            return n->parentNode()->rendererIsEditable() ? n->parentNode() : n;
+            return n->parentNode()->hasEditableStyle() ? n->parentNode() : n;
     }
     return lastBlock;
 }

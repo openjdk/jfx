@@ -19,8 +19,8 @@
  */
 
 [
-        JSGenerateToNativeObject
+    JSGenerateToNativeObject
 ] interface HTMLTableCaptionElement : HTMLElement {
     [Reflect] attribute DOMString align;
-    };
+};
 

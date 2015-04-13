@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,6 @@ package com.oracle.tools.packager.mac;
 
 import com.oracle.tools.packager.*;
 import com.oracle.tools.packager.IOUtils;
-import sun.misc.BASE64Encoder;
 
 import java.io.*;
 import java.text.MessageFormat;
@@ -55,6 +54,14 @@ public class MacDmgBundler extends MacBaseInstallerBundler {
             Boolean.class,
             params -> Boolean.FALSE,
             (s, p) -> Boolean.parseBoolean(s));
+
+    public static final BundlerParamInfo<String> INSTALLER_SUFFIX = new StandardBundlerParam<> (
+            I18N.getString("param.installer-suffix.name"),
+            I18N.getString("param.installer-suffix.description"),
+            "mac.dmg.installerName.suffix",
+            String.class,
+            params -> "",
+            (s, p) -> s);
 
     public MacDmgBundler() {
         super();
@@ -177,16 +184,29 @@ public class MacDmgBundler extends MacBaseInstallerBundler {
 
     private void prepareLicense(Map<String, ? super Object> params) {
         try {
-            if (LICENSE_FILE.fetchFrom(params).isEmpty()) {
+            File licFile = null;
+            
+            List<String> licFiles = LICENSE_FILE.fetchFrom(params);
+            if (licFiles.isEmpty()) {
+                return;
+            }
+            String licFileStr = licFiles.get(0);
+            
+            for (RelativeFileSet rfs : APP_RESOURCES_LIST.fetchFrom(params)) {
+                if (rfs.contains(licFileStr)) {
+                    licFile = new File(rfs.getBaseDirectory(), licFileStr);
+                    break;
+                }
+            }
+            
+            if (licFile == null) {
+                // this is NPE protection, validate should have caught it's absence
+                // so we don't complain or throw an error
                 return;
             }
 
-            File licFile = new File(APP_RESOURCES.fetchFrom(params).getBaseDirectory(),
-                    LICENSE_FILE.fetchFrom(params).get(0));
-
             byte[] licenseContentOriginal = IOUtils.readFully(licFile);
-            BASE64Encoder encoder = new BASE64Encoder();
-            String licenseInBase64 = encoder.encode(licenseContentOriginal);
+            String licenseInBase64 = Base64.getEncoder().encodeToString(licenseContentOriginal);
 
             Map<String, String> data = new HashMap<>();
             data.put("APPLICATION_LICENSE_TEXT", licenseInBase64);
@@ -294,7 +314,9 @@ public class MacDmgBundler extends MacBaseInstallerBundler {
         if (!imagesRoot.exists()) imagesRoot.mkdirs();
 
         File protoDMG = new File(imagesRoot, APP_NAME.fetchFrom(p) +"-tmp.dmg");
-        File finalDMG = new File(outdir, INSTALLER_NAME.fetchFrom(p) +".dmg");
+        File finalDMG = new File(outdir, INSTALLER_NAME.fetchFrom(p)
+                + INSTALLER_SUFFIX.fetchFrom(p)
+                + ".dmg");
 
         File srcFolder = APP_IMAGE_BUILD_ROOT.fetchFrom(p); //new File(imageDir, p.name+".app");
         File predefinedImage = getPredefinedImage(p);
@@ -467,6 +489,7 @@ public class MacDmgBundler extends MacBaseInstallerBundler {
 
         results.addAll(MacAppBundler.getAppBundleParameters());
         results.addAll(Arrays.asList(
+                INSTALLER_SUFFIX,
                 LICENSE_FILE,
                 SIMPLE_DMG,
                 SYSTEM_WIDE
@@ -496,13 +519,17 @@ public class MacDmgBundler extends MacBaseInstallerBundler {
 
             // validate license file, if used, exists in the proper place
             if (params.containsKey(LICENSE_FILE.getID())) {
-                RelativeFileSet appResources = APP_RESOURCES.fetchFrom(params);
+                List<RelativeFileSet> appResourcesList = APP_RESOURCES_LIST.fetchFrom(params);
                 for (String license : LICENSE_FILE.fetchFrom(params)) {
-                    if (!appResources.contains(license)) {
+                    boolean found = false;
+                    for (RelativeFileSet appResources : appResourcesList) {
+                        found = found || appResources.contains(license);
+                    }
+                    if (!found) {
                         throw new ConfigException(
                                 I18N.getString("error.license-missing"),
                                 MessageFormat.format(I18N.getString("error.license-missing.advice"),
-                                        license, appResources.getBaseDirectory().toString()));
+                                        license));
                     }
                 }
             }

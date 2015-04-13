@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
  */
 
 #ifndef ResourceRequest_h
@@ -12,23 +12,23 @@ namespace WebCore {
     class ResourceRequest : public ResourceRequestBase {
     public:
         ResourceRequest(const String& url)
-            : ResourceRequestBase(KURL(ParsedURLString, url), UseProtocolCachePolicy)
+            : ResourceRequestBase(URL(ParsedURLString, url), UseProtocolCachePolicy)
         {
         }
 
-        ResourceRequest(const KURL& url) 
+        ResourceRequest(const URL& url) 
             : ResourceRequestBase(url, UseProtocolCachePolicy)
         {
         }
 
-        ResourceRequest(const KURL& url, const String& referrer, ResourceRequestCachePolicy policy = UseProtocolCachePolicy) 
+        ResourceRequest(const URL& url, const String& referrer, ResourceRequestCachePolicy policy = UseProtocolCachePolicy) 
             : ResourceRequestBase(url, policy)
         {
             setHTTPReferrer(referrer);
         }
         
         ResourceRequest()
-            : ResourceRequestBase(KURL(), UseProtocolCachePolicy)
+            : ResourceRequestBase(URL(), UseProtocolCachePolicy)
         {
         }
 

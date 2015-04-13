@@ -27,33 +27,34 @@
 #define ProgressTracker_h
 
 #include "Timer.h"
+#include <chrono>
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/Noncopyable.h>
-#include <wtf/OwnPtr.h>
 #include <wtf/RefPtr.h>
 
 namespace WebCore {
 
 class Frame;
 class ResourceResponse;
+class ProgressTrackerClient;
 struct ProgressItem;
 
 class ProgressTracker {
     WTF_MAKE_NONCOPYABLE(ProgressTracker); WTF_MAKE_FAST_ALLOCATED;
 public:
+    explicit ProgressTracker(ProgressTrackerClient&);
     ~ProgressTracker();
 
-    static PassOwnPtr<ProgressTracker> create();
     static unsigned long createUniqueIdentifier();
 
     double estimatedProgress() const;
 
-    void progressStarted(Frame*);
-    void progressCompleted(Frame*);
+    void progressStarted(Frame&);
+    void progressCompleted(Frame&);
     
     void incrementProgress(unsigned long identifier, const ResourceResponse&);
-    void incrementProgress(unsigned long identifier, const char*, int);
+    void incrementProgress(unsigned long identifier, unsigned bytesReceived);
     void completeProgress(unsigned long identifier);
 
     long long totalPageAndResourceBytesToLoad() const { return m_totalPageAndResourceBytesToLoad; }
@@ -62,31 +63,32 @@ public:
     bool isMainLoadProgressing() const;
 
 private:
-    ProgressTracker();
-
     void reset();
     void finalProgressComplete();
-    
-    void progressHeartbeatTimerFired(Timer<ProgressTracker>*);
+
+    void progressHeartbeatTimerFired(Timer<ProgressTracker>&);
     
     static unsigned long s_uniqueIdentifier;
     
+    ProgressTrackerClient& m_client;
     long long m_totalPageAndResourceBytesToLoad;
     long long m_totalBytesReceived;
     double m_lastNotifiedProgressValue;
-    double m_lastNotifiedProgressTime;
+    std::chrono::steady_clock::time_point m_lastNotifiedProgressTime;
     double m_progressNotificationInterval;
-    double m_progressNotificationTimeInterval;
+    std::chrono::milliseconds m_progressNotificationTimeInterval;
     bool m_finalProgressChangedSent;    
     double m_progressValue;
     RefPtr<Frame> m_originatingProgressFrame;
     
     int m_numProgressTrackedFrames;
-    HashMap<unsigned long, OwnPtr<ProgressItem> > m_progressItems;
+    HashMap<unsigned long, std::unique_ptr<ProgressItem>> m_progressItems;
 
     Timer<ProgressTracker> m_progressHeartbeatTimer;
     unsigned m_heartbeatsWithNoProgress;
     long long m_totalBytesReceivedBeforePreviousHeartbeat;
+    std::chrono::steady_clock::time_point m_mainLoadCompletionTime;
+    bool m_isMainLoad;
 };
     
 }

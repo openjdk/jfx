@@ -83,7 +83,7 @@ struct RegExpKey {
     };
 };
 
-inline bool operator==(const RegExpKey& a, const RegExpKey& b) 
+inline bool operator==(const RegExpKey& a, const RegExpKey& b)
 {
     if (a.flagsValue != b.flagsValue)
         return false;

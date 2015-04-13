@@ -47,10 +47,8 @@ public:
     virtual void insert(const SegmentedString&) = 0;
 
     // appendBytes and flush are used by DocumentWriter (the loader).
-    virtual void appendBytes(DocumentWriter*, const char* bytes, size_t length) = 0;
-    virtual void flush(DocumentWriter*) = 0;
-
-    virtual void pinToMainThread() { }
+    virtual void appendBytes(DocumentWriter&, const char* bytes, size_t length) = 0;
+    virtual void flush(DocumentWriter&) = 0;
 
     // FIXME: append() should be private, but DocumentWriter::replaceDocument uses it for now.
     // FIXME: This really should take a PassOwnPtr to signify that it expects to take
@@ -100,7 +98,7 @@ public:
     virtual void resumeScheduledTasks();
 
 protected:
-    explicit DocumentParser(Document*);
+    explicit DocumentParser(Document&);
 
 private:
     enum ParserState {

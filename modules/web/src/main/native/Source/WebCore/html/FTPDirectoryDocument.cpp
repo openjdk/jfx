@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2007, 2008, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,7 +33,6 @@
 #include "LocalizedStrings.h"
 #include "Logging.h"
 #include "FTPDirectoryParser.h"
-#include "SegmentedString.h"
 #include "Settings.h"
 #include "SharedBuffer.h"
 #include "Text.h"
@@ -41,32 +40,29 @@
 #include <wtf/GregorianDateTime.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/CString.h>
-#include <wtf/text/WTFString.h>
 #include <wtf/unicode/CharacterNames.h>
-
-using namespace std;
 
 namespace WebCore {
 
 using namespace HTMLNames;
     
-class FTPDirectoryDocumentParser : public HTMLDocumentParser {
+class FTPDirectoryDocumentParser final : public HTMLDocumentParser {
 public:
-    static PassRefPtr<FTPDirectoryDocumentParser> create(HTMLDocument* document)
+    static PassRefPtr<FTPDirectoryDocumentParser> create(HTMLDocument& document)
     {
         return adoptRef(new FTPDirectoryDocumentParser(document));
     }
 
-    virtual void append(PassRefPtr<StringImpl>);
-    virtual void finish();
+    virtual void append(PassRefPtr<StringImpl>) override;
+    virtual void finish() override;
 
-    virtual bool isWaitingForScripts() const { return false; }
+    virtual bool isWaitingForScripts() const override { return false; }
 
     inline void checkBuffer(int len = 10)
     {
         if ((m_dest - m_buffer) > m_size - len) {
             // Enlarge buffer
-            int newSize = max(m_size * 2, m_size + len);
+            int newSize = std::max(m_size * 2, m_size + len);
             int oldOffset = m_dest - m_buffer;
             m_buffer = static_cast<UChar*>(fastRealloc(m_buffer, newSize * sizeof(UChar)));
             m_dest = m_buffer + oldOffset;
@@ -75,7 +71,7 @@ public:
     }
         
 private:
-    FTPDirectoryDocumentParser(HTMLDocument*);
+    FTPDirectoryDocumentParser(HTMLDocument&);
 
     // The parser will attempt to load the document template specified via the preference
     // Failing that, it will fall back and create the basic document which will have a minimal
@@ -99,8 +95,8 @@ private:
     ListState m_listState;
 };
 
-FTPDirectoryDocumentParser::FTPDirectoryDocumentParser(HTMLDocument* document)
-    : HTMLDocumentParser(document, false)
+FTPDirectoryDocumentParser::FTPDirectoryDocumentParser(HTMLDocument& document)
+    : HTMLDocumentParser(document)
     , m_skipLF(false)
     , m_size(254)
     , m_buffer(static_cast<UChar*>(fastMalloc(sizeof(UChar) * m_size)))
@@ -111,42 +107,42 @@ FTPDirectoryDocumentParser::FTPDirectoryDocumentParser(HTMLDocument* document)
 void FTPDirectoryDocumentParser::appendEntry(const String& filename, const String& size, const String& date, bool isDirectory)
 {
     RefPtr<Element> rowElement = m_tableElement->insertRow(-1, IGNORE_EXCEPTION);
-    rowElement->setAttribute("class", "ftpDirectoryEntryRow", IGNORE_EXCEPTION);
+    rowElement->setAttribute(HTMLNames::classAttr, "ftpDirectoryEntryRow");
 
     RefPtr<Element> element = document()->createElement(tdTag, false);
-    element->appendChild(Text::create(document(), String(&noBreakSpace, 1)), IGNORE_EXCEPTION);
+    element->appendChild(Text::create(*document(), String(&noBreakSpace, 1)), IGNORE_EXCEPTION);
     if (isDirectory)
-        element->setAttribute("class", "ftpDirectoryIcon ftpDirectoryTypeDirectory", IGNORE_EXCEPTION);
+        element->setAttribute(HTMLNames::classAttr, "ftpDirectoryIcon ftpDirectoryTypeDirectory");
     else
-        element->setAttribute("class", "ftpDirectoryIcon ftpDirectoryTypeFile", IGNORE_EXCEPTION);
+        element->setAttribute(HTMLNames::classAttr, "ftpDirectoryIcon ftpDirectoryTypeFile");
     rowElement->appendChild(element, IGNORE_EXCEPTION);
 
     element = createTDForFilename(filename);
-    element->setAttribute("class", "ftpDirectoryFileName", IGNORE_EXCEPTION);
+    element->setAttribute(HTMLNames::classAttr, "ftpDirectoryFileName");
     rowElement->appendChild(element, IGNORE_EXCEPTION);
 
     element = document()->createElement(tdTag, false);
-    element->appendChild(Text::create(document(), date), IGNORE_EXCEPTION);
-    element->setAttribute("class", "ftpDirectoryFileDate", IGNORE_EXCEPTION);
+    element->appendChild(Text::create(*document(), date), IGNORE_EXCEPTION);
+    element->setAttribute(HTMLNames::classAttr, "ftpDirectoryFileDate");
     rowElement->appendChild(element, IGNORE_EXCEPTION);
 
     element = document()->createElement(tdTag, false);
-    element->appendChild(Text::create(document(), size), IGNORE_EXCEPTION);
-    element->setAttribute("class", "ftpDirectoryFileSize", IGNORE_EXCEPTION);
+    element->appendChild(Text::create(*document(), size), IGNORE_EXCEPTION);
+    element->setAttribute(HTMLNames::classAttr, "ftpDirectoryFileSize");
     rowElement->appendChild(element, IGNORE_EXCEPTION);
 }
 
 PassRefPtr<Element> FTPDirectoryDocumentParser::createTDForFilename(const String& filename)
 {
     String fullURL = document()->baseURL().string();
-    if (fullURL[fullURL.length() - 1] == '/')
+    if (fullURL.endsWith('/'))
         fullURL.append(filename);
     else
-        fullURL.append("/" + filename);
+        fullURL.append(makeString('/', filename));
 
     RefPtr<Element> anchorElement = document()->createElement(aTag, false);
-    anchorElement->setAttribute("href", fullURL, IGNORE_EXCEPTION);
-    anchorElement->appendChild(Text::create(document(), filename), IGNORE_EXCEPTION);
+    anchorElement->setAttribute(HTMLNames::hrefAttr, fullURL);
+    anchorElement->appendChild(Text::create(*document(), filename), IGNORE_EXCEPTION);
 
     RefPtr<Element> tdElement = document()->createElement(tdTag, false);
     tdElement->appendChild(anchorElement, IGNORE_EXCEPTION);
@@ -157,7 +153,7 @@ PassRefPtr<Element> FTPDirectoryDocumentParser::createTDForFilename(const String
 static String processFilesizeString(const String& size, bool isDirectory)
 {
     if (isDirectory)
-        return "--";
+        return ASCIILiteral("--");
 
     bool valid;
     int64_t bytes = size.toUInt64(&valid);
@@ -175,7 +171,7 @@ static String processFilesizeString(const String& size, bool isDirectory)
 
 static bool wasLastDayOfMonth(int year, int month, int day)
 {
-    static int lastDays[] = { 31, 0, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+    static const int lastDays[] = { 31, 0, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
     if (month < 0 || month > 11)
         return false;
 
@@ -245,9 +241,9 @@ static String processFileDateString(const FTPTime& fileTime)
     String dateString;
 
     if (fileTime.tm_year > -1)
-        dateString = String(months[month]) + " " + String::number(fileTime.tm_mday) + ", " + String::number(fileTime.tm_year);
+        dateString = makeString(months[month], ' ', String::number(fileTime.tm_mday), ", ", String::number(fileTime.tm_year));
     else
-        dateString = String(months[month]) + " " + String::number(fileTime.tm_mday) + ", " + String::number(now.year());
+        dateString = makeString(months[month], ' ', String::number(fileTime.tm_mday), ", ", String::number(now.year()));
 
     return dateString + timeOfDay;
 }
@@ -265,7 +261,7 @@ void FTPDirectoryDocumentParser::parseAndAppendOneLine(const String& inputLine)
 
     String filename(result.filename, result.filenameLength);
     if (result.type == FTPDirectoryEntry) {
-        filename.append("/");
+        filename.append('/');
 
         // We have no interest in linking to "current directory"
         if (filename == "./")
@@ -289,7 +285,7 @@ static inline PassRefPtr<SharedBuffer> createTemplateDocumentData(Settings* sett
     
 bool FTPDirectoryDocumentParser::loadDocumentTemplate()
 {
-    DEFINE_STATIC_LOCAL(RefPtr<SharedBuffer>, templateDocumentData, (createTemplateDocumentData(document()->settings())));
+    static SharedBuffer* templateDocumentData = createTemplateDocumentData(document()->settings()).leakRef();
     // FIXME: Instead of storing the data, we'd rather actually parse the template data into the template Document once,
     // store that document, then "copy" it whenever we get an FTP directory listing.  There are complexities with this 
     // approach that make it worth putting this off.
@@ -304,10 +300,10 @@ bool FTPDirectoryDocumentParser::loadDocumentTemplate()
     RefPtr<Element> tableElement = document()->getElementById("ftpDirectoryTable");
     if (!tableElement)
         LOG_ERROR("Unable to find element by id \"ftpDirectoryTable\" in the template document.");
-    else if (!tableElement->hasTagName(tableTag))
+    else if (!isHTMLTableElement(tableElement.get()))
         LOG_ERROR("Element of id \"ftpDirectoryTable\" is not a table element");
     else 
-        m_tableElement = static_cast<HTMLTableElement*>(tableElement.get());
+        m_tableElement = toHTMLTableElement(tableElement.get());
 
     // Bail if we found the table element
     if (m_tableElement)
@@ -315,8 +311,8 @@ bool FTPDirectoryDocumentParser::loadDocumentTemplate()
 
     // Otherwise create one manually
     tableElement = document()->createElement(tableTag, false);
-    m_tableElement = static_cast<HTMLTableElement*>(tableElement.get());
-    m_tableElement->setAttribute("id", "ftpDirectoryTable", IGNORE_EXCEPTION);
+    m_tableElement = toHTMLTableElement(tableElement.get());
+    m_tableElement->setAttribute(HTMLNames::idAttr, "ftpDirectoryTable");
 
     // If we didn't find the table element, lets try to append our own to the body
     // If that fails for some reason, cram it on the end of the document as a last
@@ -340,10 +336,13 @@ void FTPDirectoryDocumentParser::createBasicDocument()
     document()->appendChild(bodyElement, IGNORE_EXCEPTION);
 
     RefPtr<Element> tableElement = document()->createElement(tableTag, false);
-    m_tableElement = static_cast<HTMLTableElement*>(tableElement.get());
-    m_tableElement->setAttribute("id", "ftpDirectoryTable", IGNORE_EXCEPTION);
+    m_tableElement = toHTMLTableElement(tableElement.get());
+    m_tableElement->setAttribute(HTMLNames::idAttr, "ftpDirectoryTable");
+    m_tableElement->setAttribute(HTMLNames::styleAttr, "width:100%");
 
     bodyElement->appendChild(m_tableElement, IGNORE_EXCEPTION);
+
+    document()->processViewport("width=device-width", ViewportArguments::ViewportMeta);
 }
 
 void FTPDirectoryDocumentParser::append(PassRefPtr<StringImpl> inputSource)
@@ -425,7 +424,7 @@ void FTPDirectoryDocumentParser::finish()
     HTMLDocumentParser::finish();
 }
 
-FTPDirectoryDocument::FTPDirectoryDocument(Frame* frame, const KURL& url)
+FTPDirectoryDocument::FTPDirectoryDocument(Frame* frame, const URL& url)
     : HTMLDocument(frame, url)
 {
 #if !LOG_DISABLED
@@ -435,7 +434,7 @@ FTPDirectoryDocument::FTPDirectoryDocument(Frame* frame, const KURL& url)
 
 PassRefPtr<DocumentParser> FTPDirectoryDocument::createParser()
 {
-    return FTPDirectoryDocumentParser::create(this);
+    return FTPDirectoryDocumentParser::create(*this);
 }
 
 }

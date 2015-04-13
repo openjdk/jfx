@@ -27,10 +27,10 @@
 #include "FloatRect.h"
 #include "IntRect.h"
 
-#include <wtf/PassOwnPtr.h>
+#include <runtime/Uint8ClampedArray.h>
+
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
-#include <wtf/Uint8ClampedArray.h>
 #include <wtf/Vector.h>
 
 #if ENABLE(OPENCL)
@@ -46,7 +46,7 @@ class FilterEffect;
 class ImageBuffer;
 class TextStream;
 
-typedef Vector<RefPtr<FilterEffect> > FilterEffectVector;
+typedef Vector<RefPtr<FilterEffect>> FilterEffectVector;
 
 enum FilterEffectType {
     FilterEffectTypeUnknown,
@@ -108,7 +108,7 @@ public:
 #else
     inline void applyAll() { apply(); }
 #endif
-    
+
     // Correct any invalid pixels, if necessary, in the result of a filter operation.
     // This method is used to ensure valid pixel values on filter inputs and the final result.
     // Only the arithmetic composite filter ever needs to perform correction.
@@ -178,7 +178,7 @@ protected:
     void forceValidPreMultipliedPixels();
 
 private:
-    OwnPtr<ImageBuffer> m_imageBufferResult;
+    std::unique_ptr<ImageBuffer> m_imageBufferResult;
     RefPtr<Uint8ClampedArray> m_unmultipliedImageResult;
     RefPtr<Uint8ClampedArray> m_premultipliedImageResult;
     FilterEffectVector m_inputEffects;

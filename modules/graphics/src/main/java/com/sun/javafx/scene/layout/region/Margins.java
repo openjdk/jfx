@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -114,7 +114,7 @@ public class Margins {
             // unitsMatch will only be false if proportional is true and
             // not all of the units are percent.
             if (unitsMatch == false) {
-                   final PlatformLogger LOGGER = com.sun.javafx.Logging.getCSSLogger();
+                   final PlatformLogger LOGGER = com.sun.javafx.util.Logging.getCSSLogger();
                     if (LOGGER.isLoggable(Level.WARNING)) {
                         final String msg =
                             new StringBuilder("units do no match: ")

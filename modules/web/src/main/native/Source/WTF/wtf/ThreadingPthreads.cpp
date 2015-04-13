@@ -96,9 +96,7 @@ private:
     pthread_t m_pthreadHandle;
 };
 
-typedef HashMap<ThreadIdentifier, OwnPtr<PthreadState> > ThreadMap;
-
-static Mutex* atomicallyInitializedStaticMutex;
+typedef HashMap<ThreadIdentifier, std::unique_ptr<PthreadState>> ThreadMap;
 
 void unsafeThreadWasDetached(ThreadIdentifier);
 void threadDidExit(ThreadIdentifier);
@@ -110,31 +108,19 @@ static Mutex& threadMapMutex()
     return mutex;
 }
 
-#if OS(QNX) && CPU(ARM_THUMB2)
-static void enableIEEE754Denormal()
-{
-    // Clear the ARM_VFP_FPSCR_FZ flag in FPSCR.
-    unsigned fpscr;
-    asm volatile("vmrs %0, fpscr" : "=r"(fpscr));
-    fpscr &= ~0x01000000u;
-    asm volatile("vmsr fpscr, %0" : : "r"(fpscr));
-}
-#endif
-
 void initializeThreading()
 {
-    if (atomicallyInitializedStaticMutex)
+    static bool isInitialized;
+
+    if (isInitialized)
         return;
 
-#if OS(QNX) && CPU(ARM_THUMB2)
-    enableIEEE754Denormal();
-#endif
+    isInitialized = true;
 
     WTF::double_conversion::initialize();
     // StringImpl::empty() does not construct its static string in a threadsafe fashion,
     // so ensure it has been initialized from here.
     StringImpl::empty();
-    atomicallyInitializedStaticMutex = new Mutex;
     threadMapMutex();
     initializeRandomNumberGenerator();
     ThreadIdentifierData::initializeOnce();
@@ -142,17 +128,6 @@ void initializeThreading()
     wtfThreadData();
     s_dtoaP5Mutex = new Mutex;
     initializeDates();
-}
-
-void lockAtomicallyInitializedStaticMutex()
-{
-    ASSERT(atomicallyInitializedStaticMutex);
-    atomicallyInitializedStaticMutex->lock();
-}
-
-void unlockAtomicallyInitializedStaticMutex()
-{
-    atomicallyInitializedStaticMutex->unlock();
 }
 
 static ThreadMap& threadMap()
@@ -179,7 +154,7 @@ static ThreadIdentifier establishIdentifierForPthreadHandle(const pthread_t& pth
     ASSERT(!identifierByPthreadHandle(pthreadHandle));
     MutexLocker locker(threadMapMutex());
     static ThreadIdentifier identifierCount = 1;
-    threadMap().add(identifierCount, adoptPtr(new PthreadState(pthreadHandle)));
+    threadMap().add(identifierCount, std::make_unique<PthreadState>(pthreadHandle));
     return identifierCount++;
 }
 
@@ -191,22 +166,22 @@ static pthread_t pthreadHandleForIdentifierWithLockAlreadyHeld(ThreadIdentifier 
 static void* wtfThreadEntryPoint(void* param)
 {
     // Balanced by .leakPtr() in createThreadInternal.
-    OwnPtr<ThreadFunctionInvocation> invocation = adoptPtr(static_cast<ThreadFunctionInvocation*>(param));
+    auto invocation = std::unique_ptr<ThreadFunctionInvocation>(static_cast<ThreadFunctionInvocation*>(param));
     invocation->function(invocation->data);
-    return 0;
+    return nullptr;
 }
 
 ThreadIdentifier createThreadInternal(ThreadFunction entryPoint, void* data, const char*)
 {
-    OwnPtr<ThreadFunctionInvocation> invocation = adoptPtr(new ThreadFunctionInvocation(entryPoint, data));
+    auto invocation = std::make_unique<ThreadFunctionInvocation>(entryPoint, data);
     pthread_t threadHandle;
     if (pthread_create(&threadHandle, 0, wtfThreadEntryPoint, invocation.get())) {
         LOG_ERROR("Failed to create pthread at entry point %p with data %p", wtfThreadEntryPoint, invocation.get());
         return 0;
     }
 
-    // Balanced by adoptPtr() in wtfThreadEntryPoint.
-    ThreadFunctionInvocation* leakedInvocation = invocation.leakPtr();
+    // Balanced by std::unique_ptr constructor in wtfThreadEntryPoint.
+    ThreadFunctionInvocation* leakedInvocation = invocation.release();
     UNUSED_PARAM(leakedInvocation);
 
     return establishIdentifierForPthreadHandle(threadHandle);
@@ -216,8 +191,6 @@ void initializeCurrentThreadInternal(const char* threadName)
 {
 #if HAVE(PTHREAD_SETNAME_NP)
     pthread_setname_np(threadName);
-#elif OS(QNX)
-    pthread_setname_np(pthread_self(), threadName);
 #else
     UNUSED_PARAM(threadName);
 #endif
@@ -226,10 +199,6 @@ void initializeCurrentThreadInternal(const char* threadName)
     // All threads that potentially use APIs above the BSD layer must be registered with the Objective-C
     // garbage collector in case API implementations use garbage-collected memory.
     objc_registerThreadWithCollector();
-#endif
-
-#if OS(QNX) && CPU(ARM_THUMB2)
-    enableIEEE754Denormal();
 #endif
 
     ThreadIdentifier id = identifierByPthreadHandle(pthread_self());
@@ -301,11 +270,6 @@ void threadDidExit(ThreadIdentifier threadID)
 
     if (state->joinableState() != PthreadState::Joinable)
         threadMap().remove(threadID);
-}
-
-void yield()
-{
-    sched_yield();
 }
 
 ThreadIdentifier currentThread()

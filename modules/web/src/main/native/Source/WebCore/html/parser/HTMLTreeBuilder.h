@@ -41,7 +41,6 @@
 #include <wtf/Vector.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/TextPosition.h>
-#include <wtf/unicode/Unicode.h>
 
 namespace WebCore {
 
@@ -58,14 +57,8 @@ class HTMLDocumentParser;
 class HTMLTreeBuilder {
     WTF_MAKE_NONCOPYABLE(HTMLTreeBuilder); WTF_MAKE_FAST_ALLOCATED;
 public:
-    static PassOwnPtr<HTMLTreeBuilder> create(HTMLDocumentParser* parser, HTMLDocument* document, ParserContentPolicy parserContentPolicy, bool reportErrors, const HTMLParserOptions& options)
-    {
-        return adoptPtr(new HTMLTreeBuilder(parser, document, parserContentPolicy, reportErrors, options));
-    }
-    static PassOwnPtr<HTMLTreeBuilder> create(HTMLDocumentParser* parser, DocumentFragment* fragment, Element* contextElement, ParserContentPolicy parserContentPolicy, const HTMLParserOptions& options)
-    {
-        return adoptPtr(new HTMLTreeBuilder(parser, fragment, contextElement, parserContentPolicy, options));
-    }
+    HTMLTreeBuilder(HTMLDocumentParser&, HTMLDocument&, ParserContentPolicy, const HTMLParserOptions&);
+    HTMLTreeBuilder(HTMLDocumentParser&, DocumentFragment&, Element* contextElement, ParserContentPolicy, const HTMLParserOptions&);
     ~HTMLTreeBuilder();
 
     const HTMLElementStack* openElements() const { return m_tree.openElements(); }
@@ -73,10 +66,10 @@ public:
     bool isParsingFragment() const { return !!m_fragmentContext.fragment(); }
 #if ENABLE(TEMPLATE_ELEMENT)
     bool isParsingTemplateContents() const { return m_tree.openElements()->hasTemplateInHTMLScope(); }
-    bool isParsingFragmentOrTemplateContents() const { return isParsingFragment() || isParsingTemplateContents(); }
 #else
-    bool isParsingFragmentOrTemplateContents() const { return isParsingFragment(); }
+    bool isParsingTemplateContents() const { return false; }
 #endif
+    bool isParsingFragmentOrTemplateContents() const { return isParsingFragment() || isParsingTemplateContents(); }
 
     void detach();
 
@@ -95,34 +88,36 @@ private:
     class ExternalCharacterTokenBuffer;
     // Represents HTML5 "insertion mode"
     // http://www.whatwg.org/specs/web-apps/current-work/multipage/parsing.html#insertion-mode
-    enum InsertionMode {
-        InitialMode,
-        BeforeHTMLMode,
-        BeforeHeadMode,
-        InHeadMode,
-        InHeadNoscriptMode,
-        AfterHeadMode,
-        TemplateContentsMode,
-        InBodyMode,
-        TextMode,
-        InTableMode,
-        InTableTextMode,
-        InCaptionMode,
-        InColumnGroupMode,
-        InTableBodyMode,
-        InRowMode,
-        InCellMode,
-        InSelectMode,
-        InSelectInTableMode,
-        AfterBodyMode,
-        InFramesetMode,
-        AfterFramesetMode,
-        AfterAfterBodyMode,
-        AfterAfterFramesetMode,
+    enum class InsertionMode {
+        Initial,
+        BeforeHTML,
+        BeforeHead,
+        InHead,
+        InHeadNoscript,
+        AfterHead,
+        TemplateContents,
+        InBody,
+        Text,
+        InTable,
+        InTableText,
+        InCaption,
+        InColumnGroup,
+        InTableBody,
+        InRow,
+        InCell,
+        InSelect,
+        InSelectInTable,
+        AfterBody,
+        InFrameset,
+        AfterFrameset,
+        AfterAfterBody,
+        AfterAfterFrameset,
     };
 
-    HTMLTreeBuilder(HTMLDocumentParser*, HTMLDocument*, ParserContentPolicy, bool reportErrors, const HTMLParserOptions&);
-    HTMLTreeBuilder(HTMLDocumentParser*, DocumentFragment*, Element* contextElement, ParserContentPolicy, const HTMLParserOptions&);
+#if PLATFORM(IOS)
+    void insertPhoneNumberLink(const String&);
+    void linkifyPhoneNumbers(const String&);
+#endif
 
     void processToken(AtomicHTMLToken*);
 
@@ -204,7 +199,7 @@ private:
         WTF_MAKE_NONCOPYABLE(FragmentParsingContext);
     public:
         FragmentParsingContext();
-        FragmentParsingContext(DocumentFragment*, Element* contextElement);
+        FragmentParsingContext(DocumentFragment&, Element* contextElement);
         ~FragmentParsingContext();
 
         DocumentFragment* fragment() const { return m_fragment; }
@@ -239,7 +234,7 @@ private:
 
     // We access parser because HTML5 spec requires that we be able to change the state of the tokenizer
     // from within parser actions. We also need it to track the current position.
-    HTMLDocumentParser* m_parser;
+    HTMLDocumentParser& m_parser;
 
     RefPtr<Element> m_scriptToProcess; // <script> tag which needs processing before resuming the parser.
     TextPosition m_scriptToProcessStartPosition; // Starting line number of the script tag needing processing.

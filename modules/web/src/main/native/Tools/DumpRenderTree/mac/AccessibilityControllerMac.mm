@@ -44,7 +44,7 @@ AccessibilityController::AccessibilityController()
 
 AccessibilityController::~AccessibilityController()
 {
-    // The notification handler should be nil because removeNotificationListener() should have been called in the test.
+    // ResetToConsistentState should have cleared this already.
     ASSERT(!m_globalNotificationHandler);
 }
 
@@ -89,7 +89,7 @@ static id findAccessibleObjectById(id obj, NSString *idAttribute)
     }
     END_AX_OBJC_EXCEPTIONS
 
-    return 0;
+    return nullptr;
 }
 
 AccessibilityUIElement AccessibilityController::accessibleElementById(JSStringRef idAttributeRef)
@@ -100,7 +100,7 @@ AccessibilityUIElement AccessibilityController::accessibleElementById(JSStringRe
     if (result)
         return AccessibilityUIElement(result);
 
-    return 0;
+    return nullptr;
 }
 
 void AccessibilityController::setLogFocusEvents(bool)
@@ -117,6 +117,11 @@ void AccessibilityController::setLogValueChangeEvents(bool)
 
 void AccessibilityController::setLogAccessibilityEvents(bool)
 {
+}
+
+void AccessibilityController::platformResetToConsistentState()
+{
+    m_globalNotificationHandler.clear();
 }
 
 bool AccessibilityController::addNotificationListener(JSObjectRef functionCallback)
@@ -137,7 +142,11 @@ bool AccessibilityController::addNotificationListener(JSObjectRef functionCallba
 
 void AccessibilityController::removeNotificationListener()
 {
-    // Mac programmers should not be trying to remove a listener that's already removed.
-    ASSERT(m_globalNotificationHandler);
-    m_globalNotificationHandler.clear();
+    // No longer a need to cleanup for tests, since resetToConsistentState will remove the listener.
+}
+
+JSRetainPtr<JSStringRef> AccessibilityController::platformName() const
+{
+    JSRetainPtr<JSStringRef> platformName(Adopt, JSStringCreateWithUTF8CString("mac"));
+    return platformName;
 }

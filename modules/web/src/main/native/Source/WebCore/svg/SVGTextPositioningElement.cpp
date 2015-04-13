@@ -19,8 +19,6 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SVG)
 #include "SVGTextPositioningElement.h"
 
 #include "Attribute.h"
@@ -49,7 +47,7 @@ BEGIN_REGISTER_ANIMATED_PROPERTIES(SVGTextPositioningElement)
     REGISTER_PARENT_ANIMATED_PROPERTIES(SVGTextContentElement)
 END_REGISTER_ANIMATED_PROPERTIES
 
-SVGTextPositioningElement::SVGTextPositioningElement(const QualifiedName& tagName, Document* document)
+SVGTextPositioningElement::SVGTextPositioningElement(const QualifiedName& tagName, Document& document)
     : SVGTextContentElement(tagName, document)
 {
     registerAnimatedPropertiesForSVGTextPositioningElement();
@@ -65,7 +63,7 @@ bool SVGTextPositioningElement::isSupportedAttribute(const QualifiedName& attrNa
         supportedAttributes.add(SVGNames::dyAttr);
         supportedAttributes.add(SVGNames::rotateAttr);
     }
-    return supportedAttributes.contains<QualifiedName, SVGAttributeHashTranslator>(attrName);
+    return supportedAttributes.contains<SVGAttributeHashTranslator>(attrName);
 }
 
 void SVGTextPositioningElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
@@ -135,14 +133,14 @@ void SVGTextPositioningElement::svgAttributeChanged(const QualifiedName& attrNam
     if (updateRelativeLengths)
         updateRelativeLengthsInformation();
 
-    RenderObject* renderer = this->renderer();
+    auto renderer = this->renderer();
     if (!renderer)
         return;
 
     if (updateRelativeLengths || attrName == SVGNames::rotateAttr) {
-        if (RenderSVGText* textRenderer = RenderSVGText::locateRenderSVGTextAncestor(renderer))
-            textRenderer->setNeedsPositioningValuesUpdate();
-        RenderSVGResource::markForLayoutAndParentResourceInvalidation(renderer);
+        if (auto* textAncestor = RenderSVGText::locateRenderSVGTextAncestor(*renderer))
+            textAncestor->setNeedsPositioningValuesUpdate();
+        RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
         return;
     }
 
@@ -173,5 +171,3 @@ SVGTextPositioningElement* SVGTextPositioningElement::elementFromRenderer(Render
 }
 
 }
-
-#endif // ENABLE(SVG)

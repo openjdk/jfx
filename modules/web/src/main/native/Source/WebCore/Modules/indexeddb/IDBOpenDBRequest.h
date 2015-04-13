@@ -29,38 +29,40 @@
 #if ENABLE(INDEXED_DATABASE)
 
 #include "IDBRequest.h"
+#include "IndexedDB.h"
 
 namespace WebCore {
 
-class IDBDatabaseCallbacksImpl;
+class IDBDatabaseCallbacks;
 
 class IDBOpenDBRequest : public IDBRequest {
 public:
-    static PassRefPtr<IDBOpenDBRequest> create(ScriptExecutionContext*, PassRefPtr<IDBDatabaseCallbacksImpl>, int64_t transactionId, int64_t version);
+    static PassRefPtr<IDBOpenDBRequest> create(ScriptExecutionContext*, PassRefPtr<IDBDatabaseCallbacks>, int64_t transactionId, uint64_t version, IndexedDB::VersionNullness);
     virtual ~IDBOpenDBRequest();
 
     using IDBRequest::onSuccess;
 
-    virtual void onBlocked(int64_t existingVersion) OVERRIDE;
-    virtual void onUpgradeNeeded(int64_t oldVersion, PassRefPtr<IDBDatabaseBackendInterface>, const IDBDatabaseMetadata&) OVERRIDE;
-    virtual void onSuccess(PassRefPtr<IDBDatabaseBackendInterface>, const IDBDatabaseMetadata&) OVERRIDE;
+    virtual void onBlocked(uint64_t existingVersion) override;
+    virtual void onUpgradeNeeded(uint64_t oldVersion, PassRefPtr<IDBDatabaseBackend>, const IDBDatabaseMetadata&) override;
+    virtual void onSuccess(PassRefPtr<IDBDatabaseBackend>, const IDBDatabaseMetadata&) override;
 
     // EventTarget
-    virtual const AtomicString& interfaceName() const;
-    virtual bool dispatchEvent(PassRefPtr<Event>) OVERRIDE;
+    virtual EventTargetInterface eventTargetInterface() const;
+    virtual bool dispatchEvent(PassRefPtr<Event>) override;
 
     DEFINE_ATTRIBUTE_EVENT_LISTENER(blocked);
     DEFINE_ATTRIBUTE_EVENT_LISTENER(upgradeneeded);
 
 protected:
-    virtual bool shouldEnqueueEvent() const OVERRIDE;
+    virtual bool shouldEnqueueEvent() const override;
 
 private:
-    IDBOpenDBRequest(ScriptExecutionContext*, PassRefPtr<IDBDatabaseCallbacksImpl>, int64_t transactionId, int64_t version);
+    IDBOpenDBRequest(ScriptExecutionContext*, PassRefPtr<IDBDatabaseCallbacks>, int64_t transactionId, uint64_t version, IndexedDB::VersionNullness);
 
-    RefPtr<IDBDatabaseCallbacksImpl> m_databaseCallbacks;
+    RefPtr<IDBDatabaseCallbacks> m_databaseCallbacks;
     const int64_t m_transactionId;
-    int64_t m_version;
+    uint64_t m_version;
+    IndexedDB::VersionNullness m_versionNullness;
 };
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package javafx.scene.control;
 
 import static com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
+import static javafx.application.Platform.runLater;
 import static javafx.scene.control.TableColumn.SortType.ASCENDING;
 import static javafx.scene.control.TableColumn.SortType.DESCENDING;
 import static org.junit.Assert.*;
@@ -4692,6 +4693,106 @@ public class TableViewTest {
         sl.dispose();
     }
 
+    @Test public void test_rt_16068_firstElement_selectAndRemoveSameRow() {
+        // select and then remove the 'a' item, selection and focus should both
+        // stay at the first row, now 'b'
+        test_rt_16068(0, 0, 0);
+    }
+
+    @Test public void test_rt_16068_firstElement_selectRowAndRemoveLaterSibling() {
+        // select row 'a', and remove row 'c', selection and focus should not change
+        test_rt_16068(0, 2, 0);
+    }
+
+    @Test public void test_rt_16068_middleElement_selectAndRemoveSameRow() {
+        // select and then remove the 'b' item, selection and focus should both
+        // move up one row to the 'a' item
+        test_rt_16068(1, 1, 0);
+    }
+
+    @Test public void test_rt_16068_middleElement_selectRowAndRemoveLaterSibling() {
+        // select row 'b', and remove row 'c', selection and focus should not change
+        test_rt_16068(1, 2, 1);
+    }
+
+    @Test public void test_rt_16068_middleElement_selectRowAndRemoveEarlierSibling() {
+        // select row 'b', and remove row 'a', selection and focus should move up
+        // one row, remaining on 'b'
+        test_rt_16068(1, 0, 0);
+    }
+
+    @Test public void test_rt_16068_lastElement_selectAndRemoveSameRow() {
+        // select and then remove the 'd' item, selection and focus should both
+        // move up one row to the 'c' item
+        test_rt_16068(3, 3, 2);
+    }
+
+    @Test public void test_rt_16068_lastElement_selectRowAndRemoveEarlierSibling() {
+        // select row 'd', and remove row 'a', selection and focus should move up
+        // one row, remaining on 'd'
+        test_rt_16068(3, 0, 2);
+    }
+
+    private void test_rt_16068(int indexToSelect, int indexToRemove, int expectedIndex) {
+        TableView<String> stringTableView = new TableView<>();
+        stringTableView.getItems().addAll("a","b", "c", "d");
+
+        TableColumn<String,String> column = new TableColumn<>("Column");
+        column.setCellValueFactory(cdf -> new ReadOnlyStringWrapper(cdf.getValue()));
+        stringTableView.getColumns().add(column);
+
+        TableView.TableViewSelectionModel<?> sm = stringTableView.getSelectionModel();
+        FocusModel<?> fm = stringTableView.getFocusModel();
+
+        sm.select(indexToSelect);
+        assertEquals(indexToSelect, sm.getSelectedIndex());
+        assertEquals(stringTableView.getItems().get(indexToSelect), sm.getSelectedItem());
+        assertEquals(indexToSelect, fm.getFocusedIndex());
+        assertEquals(stringTableView.getItems().get(indexToSelect), fm.getFocusedItem());
+
+        stringTableView.getItems().remove(indexToRemove);
+        assertEquals(expectedIndex, sm.getSelectedIndex());
+        assertEquals(stringTableView.getItems().get(expectedIndex), sm.getSelectedItem());
+        assertEquals(expectedIndex, fm.getFocusedIndex());
+        assertEquals(stringTableView.getItems().get(expectedIndex), fm.getFocusedItem());
+    }
+
+    private int test_rt_39822_count = 0;
+    @Test public void test_rt_39822() {
+        // get the current exception handler before replacing with our own,
+        // as ListListenerHelp intercepts the exception otherwise
+        final Thread.UncaughtExceptionHandler exceptionHandler = Thread.currentThread().getUncaughtExceptionHandler();
+        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> {
+            e.printStackTrace();
+
+            if (test_rt_39822_count == 0) {
+                test_rt_39822_count++;
+                if (! (e instanceof IllegalStateException)) {
+                    fail("Incorrect exception type - expecting IllegalStateException");
+                }
+            } else {
+                // don't care
+                test_rt_39822_count++;
+            }
+        });
+
+        TableView<String> table = new TableView<>();
+        TableColumn<String, String> col1 = new TableColumn<>("Foo");
+        table.getColumns().addAll(col1, col1);  // add column twice
+
+        StageLoader sl = null;
+        try {
+            sl = new StageLoader(table);
+        } finally {
+            if (sl != null) {
+                sl.dispose();
+            }
+
+            // reset the exception handler
+            Thread.currentThread().setUncaughtExceptionHandler(exceptionHandler);
+        }
+    }
+
     private int test_rt_39842_count = 0;
     @Test public void test_rt_39842_selectLeftDown() {
         test_rt_39842(true, false);
@@ -4758,5 +4859,331 @@ public class TableViewTest {
         }
 
         sl.dispose();
+    }
+
+    @Test public void test_rt_22599() {
+        ObservableList<RT22599_DataType> initialData = FXCollections.observableArrayList(
+                new RT22599_DataType(1, "row1"),
+                new RT22599_DataType(2, "row2"),
+                new RT22599_DataType(3, "row3")
+        );
+
+        TableColumn<RT22599_DataType, String> col = new TableColumn<>("Header");
+        col.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue().text));
+
+        TableView<RT22599_DataType> table = new TableView<>();
+        table.setItems(initialData);
+        table.getColumns().addAll(col);
+
+        StageLoader sl = new StageLoader(table);
+
+        // testing initial state
+        assertNotNull(table.getSkin());
+        assertEquals("row1", VirtualFlowTestUtils.getCell(table, 0, 0).getText());
+        assertEquals("row2", VirtualFlowTestUtils.getCell(table, 1, 0).getText());
+        assertEquals("row3", VirtualFlowTestUtils.getCell(table, 2, 0).getText());
+
+        // change row 0 (where "row1" currently resides), keeping same id.
+        // Because 'set' is called, the control should update to the new content
+        // without any user interaction
+        RT22599_DataType data;
+        initialData.set(0, data = new RT22599_DataType(0, "row1a"));
+        Toolkit.getToolkit().firePulse();
+        assertEquals("row1a", VirtualFlowTestUtils.getCell(table, 0, 0).getText());
+
+        // change the row 0 (where we currently have "row1a") value directly.
+        // Because there is no associated property, this won't be observed, so
+        // the control should still show "row1a" rather than "row1b"
+        data.text = "row1b";
+        Toolkit.getToolkit().firePulse();
+        assertEquals("row1a", VirtualFlowTestUtils.getCell(table, 0, 0).getText());
+
+        // call refresh() to force a refresh of all visible cells
+        table.refresh();
+        Toolkit.getToolkit().firePulse();
+        assertEquals("row1b", VirtualFlowTestUtils.getCell(table, 0, 0).getText());
+
+        sl.dispose();
+    }
+
+    private static class RT22599_DataType {
+        public int id = 0;
+        public String text = "";
+
+        public RT22599_DataType(int id, String text) {
+            this.id = id;
+            this.text = text;
+        }
+
+        @Override public boolean equals(Object obj) {
+            if (obj == null) return false;
+            return id == ((RT22599_DataType)obj).id;
+        }
+    }
+
+    private int rt_39966_count = 0;
+    @Test public void test_rt_39966() {
+        ObservableList<String> initialData = FXCollections.observableArrayList("Hello World");
+
+        TableColumn<String, String> col = new TableColumn<>("Header");
+        col.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue()));
+
+        TableView<String> table = new TableView<>(initialData);
+        table.getColumns().addAll(col);
+
+        StageLoader sl = new StageLoader(table);
+
+        // initially there is no selection
+        assertTrue(table.getSelectionModel().isEmpty());
+
+        table.getSelectionModel().selectedItemProperty().addListener((value, s1, s2) -> {
+            if (rt_39966_count == 0) {
+                rt_39966_count++;
+                assertFalse(table.getSelectionModel().isEmpty());
+            } else {
+                assertTrue(table.getSelectionModel().isEmpty());
+            }
+        });
+
+        // our assertion two lines down always succeeds. What fails is our
+        // assertion above within the listener.
+        table.getSelectionModel().select(0);
+        assertFalse(table.getSelectionModel().isEmpty());
+
+        initialData.remove(0);
+        assertTrue(table.getSelectionModel().isEmpty());
+
+        sl.dispose();
+    }
+
+    /**
+     * Bullet 1: selected index must be updated
+     * Corner case: last selected. Fails for core
+     */
+    @Test public void test_rt_40012_selectedAtLastOnDisjointRemoveItemsAbove() {
+        ObservableList<String> items = FXCollections.observableArrayList("0", "1", "2", "3", "4", "5");
+        TableView<String> stringTableView = new TableView<>(items);
+        TableView.TableViewSelectionModel<?> sm = stringTableView.getSelectionModel();
+
+        TableColumn<String,String> column = new TableColumn<>("Column");
+        column.setCellValueFactory(cdf -> new ReadOnlyStringWrapper(cdf.getValue()));
+        stringTableView.getColumns().add(column);
+
+        int last = items.size() - 1;
+
+        // selecting item "5"
+        sm.select(last);
+
+        // disjoint remove of 2 elements above the last selected
+        // Removing "1" and "3"
+        items.removeAll(items.get(1), items.get(3));
+
+        // selection should move up two places such that it remains on item "5",
+        // but in index (last - 2).
+        int expected = last - 2;
+        assertEquals("5", sm.getSelectedItem());
+        assertEquals("selected index after disjoint removes above", expected, sm.getSelectedIndex());
+    }
+
+    /**
+     * Variant of 1: if selectedIndex is not updated,
+     * the old index is no longer valid
+     * for accessing the items.
+     */
+    @Test public void test_rt_40012_accessSelectedAtLastOnDisjointRemoveItemsAbove() {
+        ObservableList<String> items = FXCollections.observableArrayList("0", "1", "2", "3", "4", "5");
+        TableView<String> stringTableView = new TableView<>(items);
+        TableView.TableViewSelectionModel<?> sm = stringTableView.getSelectionModel();
+
+        TableColumn<String,String> column = new TableColumn<>("Column");
+        column.setCellValueFactory(cdf -> new ReadOnlyStringWrapper(cdf.getValue()));
+        stringTableView.getColumns().add(column);
+
+        int last = items.size() - 1;
+
+        // selecting item "5"
+        sm.select(last);
+
+        // disjoint remove of 2 elements above the last selected
+        items.removeAll(items.get(1), items.get(3));
+        int selected = sm.getSelectedIndex();
+        if (selected > -1) {
+            items.get(selected);
+        }
+    }
+
+    /**
+     * Bullet 2: selectedIndex notification count
+     *
+     * Note that we don't use the corner case of having the last index selected
+     * (which fails already on updating the index)
+     */
+    private int rt_40012_count = 0;
+    @Test public void test_rt_40012_selectedIndexNotificationOnDisjointRemovesAbove() {
+        ObservableList<String> items = FXCollections.observableArrayList("0", "1", "2", "3", "4", "5");
+        TableView<String> stringTableView = new TableView<>(items);
+        TableView.TableViewSelectionModel<?> sm = stringTableView.getSelectionModel();
+
+        TableColumn<String,String> column = new TableColumn<>("Column");
+        column.setCellValueFactory(cdf -> new ReadOnlyStringWrapper(cdf.getValue()));
+        stringTableView.getColumns().add(column);
+
+        int last = items.size() - 2;
+        sm.select(last);
+        assertEquals(last, sm.getSelectedIndex());
+
+        rt_40012_count = 0;
+        sm.selectedIndexProperty().addListener(o -> rt_40012_count++);
+
+        // disjoint remove of 2 elements above the last selected
+        items.removeAll(items.get(1), items.get(3));
+        assertEquals("sanity: selectedIndex must be shifted by -2", last - 2, sm.getSelectedIndex());
+        assertEquals("must fire single event on removes above", 1, rt_40012_count);
+    }
+
+    /**
+     * Bullet 3: unchanged selectedItem must not fire change
+     */
+    @Test
+    public void test_rt_40012_selectedItemNotificationOnDisjointRemovesAbove() {
+        ObservableList<String> items = FXCollections.observableArrayList("0", "1", "2", "3", "4", "5");
+        TableView<String> stringTableView = new TableView<>(items);
+        TableView.TableViewSelectionModel<?> sm = stringTableView.getSelectionModel();
+
+        TableColumn<String,String> column = new TableColumn<>("Column");
+        column.setCellValueFactory(cdf -> new ReadOnlyStringWrapper(cdf.getValue()));
+        stringTableView.getColumns().add(column);
+
+        int last = items.size() - 2;
+        Object lastItem = items.get(last);
+        sm.select(last);
+        assertEquals(lastItem, sm.getSelectedItem());
+
+        rt_40012_count = 0;
+        sm.selectedItemProperty().addListener(o -> rt_40012_count++);
+
+        // disjoint remove of 2 elements above the last selected
+        items.removeAll(items.get(1), items.get(3));
+        assertEquals("sanity: selectedItem unchanged", lastItem, sm.getSelectedItem());
+        assertEquals("must not fire on unchanged selected item", 0, rt_40012_count);
+    }
+
+    /**
+     * ClearAndSelect fires invalid change event if selectedIndex is unchanged.
+     */
+    private int rt_40212_count = 0;
+    @Test public void test_rt_40212() {
+        final TableView<Number> table = new TableView<>();
+        for (int i = 0; i < 10; i++) {
+            table.getItems().add(i);
+        }
+
+        TableColumn<Number,Number> column = new TableColumn<>("Column");
+        column.setCellValueFactory(cdf -> new ReadOnlyIntegerWrapper((int) cdf.getValue()));
+        table.getColumns().add(column);
+
+        MultipleSelectionModel<Number> sm = table.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        sm.selectRange(3, 5);
+        int selected = sm.getSelectedIndex();
+
+        sm.getSelectedIndices().addListener((ListChangeListener<Integer>) change -> {
+            assertEquals("sanity: selectedIndex unchanged", selected, sm.getSelectedIndex());
+            while(change.next()) {
+                assertEquals("single event on clearAndSelect already selected", 1, ++rt_40212_count);
+
+                boolean type = change.wasAdded() || change.wasRemoved() || change.wasPermutated() || change.wasUpdated();
+                assertTrue("at least one of the change types must be true", type);
+            }
+        });
+
+        sm.clearAndSelect(selected);
+    }
+
+    @Test public void test_rt_40280() {
+        final TableView<String> view = new TableView<>();
+        StageLoader sl = new StageLoader(view);
+        view.getSelectionModel().getFocusedIndex();
+        view.getFocusModel().getFocusedIndex();
+        sl.dispose();
+    }
+
+    /**
+     * Test list change of selectedIndices on setIndices. Fails for core ..
+     */
+    @Test public void test_rt_40263() {
+        final TableView<Integer> view = new TableView<>();
+        for (int i = 0; i < 10; i++) {
+            view.getItems().add(i);
+        }
+
+        MultipleSelectionModel<Integer> sm = view.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        int[] indices = new int[]{2, 5, 7};
+        ListChangeListener<Integer> l = c -> {
+            // firstly, we expect only one change
+            int subChanges = 0;
+            while(c.next()) {
+                subChanges++;
+            }
+            assertEquals(1, subChanges);
+
+            // secondly, we expect the added size to be three, as that is the
+            // number of items selected
+            c.reset();
+            c.next();
+            System.out.println("Added items: " + c.getAddedSubList());
+            assertEquals(indices.length, c.getAddedSize());
+            assertArrayEquals(indices, c.getAddedSubList().stream().mapToInt(i -> i).toArray());
+        };
+        sm.getSelectedIndices().addListener(l);
+        sm.selectIndices(indices[0], indices);
+    }
+
+    @Test public void test_rt_40319_toRight_toBottom()          { test_rt_40319(true, true, false);   }
+    @Test public void test_rt_40319_toRight_toTop()             { test_rt_40319(true, false, false);  }
+    @Test public void test_rt_40319_toLeft_toBottom()           { test_rt_40319(false, true, false);  }
+    @Test public void test_rt_40319_toLeft_toTop()              { test_rt_40319(false, false, false); }
+    @Test public void test_rt_40319_toRight_toBottom_useMouse() { test_rt_40319(true, true, true);    }
+    @Test public void test_rt_40319_toRight_toTop_useMouse()    { test_rt_40319(true, false, true);   }
+    @Test public void test_rt_40319_toLeft_toBottom_useMouse()  { test_rt_40319(false, true, true);   }
+    @Test public void test_rt_40319_toLeft_toTop_useMouse()     { test_rt_40319(false, false, true);  }
+
+    private void test_rt_40319(boolean toRight, boolean toBottom, boolean useMouse) {
+        ObservableList<Person> p = FXCollections.observableArrayList();
+        p.add(new Person("FirstName1", "LastName1", ""));
+        p.add(new Person("FirstName2", "LastName2", ""));
+        p.add(new Person("FirstName3", "LastName3", ""));
+
+        TableView<Person> t = new TableView<>(p);
+        sm = t.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        TableColumn<Person, String> c1 = new TableColumn<>("First Name");
+        c1.setCellValueFactory(new PropertyValueFactory<>("firstname"));
+        TableColumn<Person, String> c2 = new TableColumn<>("Last Name");
+        c2.setCellValueFactory(new PropertyValueFactory<>("lastname"));
+        t.getColumns().addAll(c1, c2);
+
+        final int startIndex = toRight ? 0 : 2;
+        final int endIndex = toRight ? 2 : 0;
+        final TableColumn<Person,String> startColumn = toBottom ? c1 : c2;
+        final TableColumn<Person,String> endColumn = toBottom ? c2 : c1;
+
+        sm.select(startIndex, startColumn);
+
+        if (useMouse) {
+            Cell endCell = VirtualFlowTestUtils.getCell(t, endIndex, toRight ? 1 : 0);
+            MouseEventFirer mouse = new MouseEventFirer(endCell);
+            mouse.fireMousePressAndRelease(KeyModifier.SHIFT);
+        } else {
+            t.getSelectionModel().selectRange(startIndex, startColumn, endIndex, endColumn);
+        }
+
+        assertEquals(3, sm.getSelectedItems().size());
+        assertEquals(3, sm.getSelectedIndices().size());
+        assertEquals(3, sm.getSelectedCells().size());
     }
 }

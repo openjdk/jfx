@@ -48,7 +48,7 @@
 #endif
 
 namespace WebCore {
- 
+
 int screenDepth(Widget*)
 {
 #ifdef HAVE_ECORE_X

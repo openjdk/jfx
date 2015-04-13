@@ -24,11 +24,9 @@
  */
 
 [
-    Conditional=SVG,
     SkipVTableValidation
 ] interface SVGAnimatedString {
-        attribute DOMString baseVal
-            setter raises(DOMException);
-        readonly attribute DOMString animVal;
-    };
+    [SetterRaisesException] attribute DOMString baseVal;
+    readonly attribute DOMString animVal;
+};
 

@@ -20,7 +20,6 @@
 #ifndef SVGAnimatedListPropertyTearOff_h
 #define SVGAnimatedListPropertyTearOff_h
 
-#if ENABLE(SVG)
 #include "SVGAnimatedProperty.h"
 #include "SVGListPropertyTearOff.h"
 #include "SVGStaticListPropertyTearOff.h"
@@ -35,7 +34,7 @@ class SVGAnimatedListPropertyTearOff : public SVGAnimatedProperty {
 public:
     typedef typename SVGPropertyTraits<PropertyType>::ListItemType ListItemType;
     typedef SVGPropertyTearOff<ListItemType> ListItemTearOff;
-    typedef Vector<RefPtr<ListItemTearOff> > ListWrapperCache;
+    typedef Vector<RefPtr<ListItemTearOff>> ListWrapperCache;
     typedef SVGListProperty<PropertyType> ListProperty;
     typedef SVGListPropertyTearOff<PropertyType> ListPropertyTearOff;
     typedef PropertyType ContentType;
@@ -54,7 +53,7 @@ public:
         return static_cast<ListProperty*>(m_animVal.get());
     }
 
-    virtual bool isAnimatedListTearOff() const { return true; }
+    virtual bool isAnimatedListTearOff() const override { return true; }
 
     int findItem(SVGProperty* property) const
     {
@@ -154,7 +153,7 @@ public:
         synchronizeWrappersIfNeeded();
     }
 
-    static PassRefPtr<SVGAnimatedListPropertyTearOff<PropertyType> > create(SVGElement* contextElement, const QualifiedName& attributeName, AnimatedPropertyType animatedPropertyType, PropertyType& values)
+    static PassRefPtr<SVGAnimatedListPropertyTearOff<PropertyType>> create(SVGElement* contextElement, const QualifiedName& attributeName, AnimatedPropertyType animatedPropertyType, PropertyType& values)
     {
         ASSERT(contextElement);
         return adoptRef(new SVGAnimatedListPropertyTearOff<PropertyType>(contextElement, attributeName, animatedPropertyType, values));
@@ -180,5 +179,4 @@ protected:
 
 }
 
-#endif // ENABLE(SVG)
 #endif // SVGAnimatedListPropertyTearOff_h

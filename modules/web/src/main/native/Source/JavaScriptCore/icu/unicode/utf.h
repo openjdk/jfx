@@ -182,7 +182,7 @@
  * @stable ICU 2.8
  */
 #define U_IS_SUPPLEMENTARY(c) ((uint32_t)((c)-0x10000)<=0xfffff)
-
+ 
 /**
  * Is this code point a lead surrogate (U+d800..U+dbff)?
  * @param c 32-bit code point

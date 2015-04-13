@@ -47,14 +47,14 @@ void SplitElementCommand::executeApply()
     if (m_atChild->parentNode() != m_element2)
         return;
     
-    Vector<RefPtr<Node> > children;
+    Vector<RefPtr<Node>> children;
     for (Node* node = m_element2->firstChild(); node != m_atChild; node = node->nextSibling())
         children.append(node);
     
     ExceptionCode ec = 0;
     
     ContainerNode* parent = m_element2->parentNode();
-    if (!parent || !parent->rendererIsEditable())
+    if (!parent || !parent->hasEditableStyle())
         return;
     parent->insertBefore(m_element1.get(), m_element2.get(), ec);
     if (ec)
@@ -77,10 +77,10 @@ void SplitElementCommand::doApply()
 
 void SplitElementCommand::doUnapply()
 {
-    if (!m_element1 || !m_element1->rendererIsEditable() || !m_element2->rendererIsEditable())
+    if (!m_element1 || !m_element1->hasEditableStyle() || !m_element2->hasEditableStyle())
         return;
 
-    Vector<RefPtr<Node> > children;
+    Vector<RefPtr<Node>> children;
     for (Node* node = m_element1->firstChild(); node; node = node->nextSibling())
         children.append(node);
 

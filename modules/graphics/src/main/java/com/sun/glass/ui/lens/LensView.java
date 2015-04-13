@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -204,6 +204,11 @@ final class LensView extends View {
     //Menu event - i.e context menu hint (usually mouse right click) 
     protected void _notifyMenu(int x, int y, int xAbs, int yAbs, boolean isKeyboardTrigger) {
         notifyMenu(x, y, xAbs, yAbs, isKeyboardTrigger);
+    }
+
+    @Override
+    protected int _getNativeFrameBuffer(long ptr) {
+        return 0;
     }
 
     /**

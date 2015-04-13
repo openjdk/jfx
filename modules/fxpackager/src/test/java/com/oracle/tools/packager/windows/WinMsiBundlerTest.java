@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -55,6 +55,7 @@ import static com.oracle.tools.packager.windows.WinAppBundler.ICON_ICO;
 import static com.oracle.tools.packager.windows.WinMsiBundler.PRODUCT_VERSION;
 import static com.oracle.tools.packager.windows.WindowsBundlerParam.WIN_RUNTIME;
 import static com.oracle.tools.packager.windows.WindowsBundlerParam.MENU_GROUP;
+import static com.oracle.tools.packager.windows.WindowsBundlerParam.INSTALLDIR_CHOOSER;
 import static org.junit.Assert.*;
 
 public class WinMsiBundlerTest {
@@ -63,6 +64,8 @@ public class WinMsiBundlerTest {
     static File workDir;
     static File appResourcesDir;
     static File fakeMainJar;
+    static String runtimeJdk;
+    static String runtimeJre;
     static Set<File> appResources;
     static boolean retain = false;
 
@@ -70,6 +73,9 @@ public class WinMsiBundlerTest {
     public static void prepareApp() {
         // only run on windows
         Assume.assumeTrue(System.getProperty("os.name").toLowerCase().startsWith("win"));
+
+        runtimeJdk = System.getenv("PACKAGER_JDK_ROOT");
+        runtimeJre = System.getenv("PACKAGER_JRE_ROOT");
 
         // only run if we have Wix tools installed
         Assume.assumeNotNull(WinMsiBundler.TOOL_LIGHT_EXECUTABLE.fetchFrom(new HashMap<>()));
@@ -83,7 +89,10 @@ public class WinMsiBundlerTest {
         appResourcesDir = new File("build/tmp/tests", "appResources");
         fakeMainJar = new File(appResourcesDir, "mainApp.jar");
 
-        appResources = new HashSet<>(Arrays.asList(fakeMainJar));
+        appResources = new HashSet<>(Arrays.asList(fakeMainJar,
+                new File(appResourcesDir, "LICENSE"),
+                new File(appResourcesDir, "LICENSE2")
+        ));
     }
 
     @Before
@@ -148,6 +157,7 @@ public class WinMsiBundlerTest {
         );
         bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(LICENSE_FILE.getID(), Arrays.asList("LICENSE", "LICENSE2"));
         bundleParams.put(VERBOSE.getID(), true);
 
         boolean valid = bundler.validate(bundleParams);
@@ -264,6 +274,20 @@ public class WinMsiBundlerTest {
         assertNull(output);
     }
 
+    @Test(expected = ConfigException.class)
+    public void invalidLicenseFile() throws ConfigException, UnsupportedPlatformException {
+        Bundler bundler = new WinMsiBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(LICENSE_FILE.getID(), "BOGUS_LICENSE");
+
+        bundler.validate(bundleParams);
+    }
+    
     @Test
     public void testValidateVersion() {
         String validVersions[] = {null, "1", "255", "1.0", "255.255.0", "255.255.6000"};
@@ -304,6 +328,7 @@ public class WinMsiBundlerTest {
         bundleParams.put(WIN_RUNTIME.getID(), System.getProperty("java.home"));
 
         bundleParams.put(DESCRIPTION.getID(), "Everything Description");
+        bundleParams.put(LICENSE_FILE.getID(), "LICENSE");
         bundleParams.put(MENU_GROUP.getID(), "EverythingMenuGroup");
         bundleParams.put(MENU_HINT.getID(), true);
 //                RUN_AT_STARTUP,
@@ -312,6 +337,7 @@ public class WinMsiBundlerTest {
 //                START_ON_INSTALL,
 //                STOP_ON_UNINSTALL,
         bundleParams.put(SYSTEM_WIDE.getID(), false);
+        bundleParams.put(INSTALLDIR_CHOOSER.getID(), true);
         bundleParams.put(VENDOR.getID(), "Everything Vendor");
         System.out.println(bundleParams.keySet());
 
@@ -518,5 +544,37 @@ public class WinMsiBundlerTest {
         System.err.println("Bundle at - " + result);
         assertNotNull(result);
         assertTrue(result.exists());    	
+    }
+
+
+    /**
+     * Turn on AppCDS
+     */
+    @Test
+    public void testAppCDS() throws IOException, ConfigException, UnsupportedPlatformException {
+        Bundler bundler = new WinMsiBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        // not part of the typical setup, for testing
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+        bundleParams.put(VERBOSE.getID(), true);
+        if (runtimeJdk != null) {
+            bundleParams.put(WIN_RUNTIME.getID(), runtimeJdk);
+        }
+
+        bundleParams.put(APP_NAME.getID(), "AppCDS");
+        bundleParams.put(IDENTIFIER.getID(), "com.example.appcds.msi.Test");
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(UNLOCK_COMMERCIAL_FEATURES.getID(), true);
+        bundleParams.put(ENABLE_APP_CDS.getID(), true);
+
+        boolean valid = bundler.validate(bundleParams);
+        assertTrue(valid);
+
+        File output = bundler.execute(bundleParams, new File(workDir, "CDSTest"));
+        System.err.println("Bundle at - " + output);
+        assertNotNull(output);
+        assertTrue(output.exists());
     }
 }

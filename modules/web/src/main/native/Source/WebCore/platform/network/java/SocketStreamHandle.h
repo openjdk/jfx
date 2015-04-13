@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2009 Apple Inc. All rights reserved.
  * Copyright (C) 2009, 2011 Google Inc.  All rights reserved.
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -46,7 +46,7 @@ class SocketStreamHandleClient;
 
 class SocketStreamHandle : public RefCounted<SocketStreamHandle>, public SocketStreamHandleBase {
 public:
-    static PassRefPtr<SocketStreamHandle> create(const KURL& url, Page* page, SocketStreamHandleClient* client) { return adoptRef(new SocketStreamHandle(url, page, client)); }
+    static PassRefPtr<SocketStreamHandle> create(const URL& url, Page* page, SocketStreamHandleClient* client) { return adoptRef(new SocketStreamHandle(url, page, client)); }
 
     virtual ~SocketStreamHandle();
 
@@ -57,11 +57,11 @@ public:
 
 protected:
     // SocketStreamHandleBase functions.
-    virtual int platformSend(const char* data, int length) OVERRIDE;
-    virtual void platformClose() OVERRIDE;
+    virtual int platformSend(const char* data, int length) override;
+    virtual void platformClose() override;
 
 private:
-    SocketStreamHandle(const KURL&, Page*, SocketStreamHandleClient*);
+    SocketStreamHandle(const URL&, Page*, SocketStreamHandleClient*);
 
     JGObject m_ref;
 };

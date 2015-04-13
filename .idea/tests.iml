@@ -4,13 +4,10 @@
     <output url="file://$MODULE_DIR$/tests/bin" />
     <exclude-output />
     <content url="file://$MODULE_DIR$/tests">
-      <sourceFolder url="file://$MODULE_DIR$/tests/app-lifecycle/ClassLoaderApp/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/tests/manual/printing" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/tests/performance/VMPerformance/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/tests/system/src/test/java" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/tests/app-lifecycle/ClassLoaderTest/test" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/tests/system/src/test/resources" type="java-resource" />
-      <sourceFolder url="file://$MODULE_DIR$/tests/golden-image-suite/src" isTestSource="false" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="rt" />

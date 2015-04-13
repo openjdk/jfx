@@ -263,7 +263,7 @@ U_CDECL_END
  * Thus the strings "UTF-8", "utf_8", "u*T@f08" and "Utf 8" are exactly equivalent.
  * See section 1.4, Charset Alias Matching in Unicode Technical Standard #22
  * at http://www.unicode.org/reports/tr22/
- * 
+ *
  * @param name1 a converter name or alias, zero-terminated
  * @param name2 a converter name or alias, zero-terminated
  * @return 0 if the names match, or a negative value if the name1

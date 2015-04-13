@@ -35,7 +35,7 @@
 #include "DocumentThreadableLoader.h"
 #include "ScriptExecutionContext.h"
 #include "SecurityOrigin.h"
-#include "WorkerContext.h"
+#include "WorkerGlobalScope.h"
 #include "WorkerRunLoop.h"
 #include "WorkerThreadableLoader.h"
 
@@ -51,31 +51,27 @@ ThreadableLoaderOptions::~ThreadableLoaderOptions()
 {
 }
 
-PassRefPtr<ThreadableLoader> ThreadableLoader::create(ScriptExecutionContext* context, ThreadableLoaderClient* client, const ResourceRequest& request, const ThreadableLoaderOptions& options) 
+PassRefPtr<ThreadableLoader> ThreadableLoader::create(ScriptExecutionContext* context, ThreadableLoaderClient* client, const ResourceRequest& request, const ThreadableLoaderOptions& options)
 {
     ASSERT(client);
     ASSERT(context);
 
-#if ENABLE(WORKERS)
-    if (context->isWorkerContext())
-        return WorkerThreadableLoader::create(static_cast<WorkerContext*>(context), client, WorkerRunLoop::defaultMode(), request, options);
-#endif // ENABLE(WORKERS)
+    if (context->isWorkerGlobalScope())
+        return WorkerThreadableLoader::create(toWorkerGlobalScope(context), client, WorkerRunLoop::defaultMode(), request, options);
 
-    return DocumentThreadableLoader::create(toDocument(context), client, request, options);
+    return DocumentThreadableLoader::create(toDocument(*context), *client, request, options);
 }
 
 void ThreadableLoader::loadResourceSynchronously(ScriptExecutionContext* context, const ResourceRequest& request, ThreadableLoaderClient& client, const ThreadableLoaderOptions& options)
 {
     ASSERT(context);
 
-#if ENABLE(WORKERS)
-    if (context->isWorkerContext()) {
-        WorkerThreadableLoader::loadResourceSynchronously(static_cast<WorkerContext*>(context), request, client, options);
+    if (context->isWorkerGlobalScope()) {
+        WorkerThreadableLoader::loadResourceSynchronously(toWorkerGlobalScope(context), request, client, options);
         return;
     }
-#endif // ENABLE(WORKERS)
 
-    DocumentThreadableLoader::loadResourceSynchronously(toDocument(context), request, client, options);
+    DocumentThreadableLoader::loadResourceSynchronously(*toDocument(context), request, client, options);
 }
 
 } // namespace WebCore

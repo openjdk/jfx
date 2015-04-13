@@ -16,22 +16,17 @@
  * the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  * Boston, MA 02110-1301, USA.
  */
+[
+    Constructor([Default=NullString] optional DOMString data),
+    ConstructorCallWith=ScriptExecutionContext
+] interface Text : CharacterData {
 
-    interface Text : CharacterData {
+    // DOM Level 1
 
-        // DOM Level 1
+    [RaisesException] Text splitText([IsIndex,Default=Undefined] optional unsigned long offset);
 
-    Text splitText([IsIndex,Default=Undefined] optional unsigned long offset)
-            raises (DOMException);
-
-        // Introduced in DOM Level 3:
-        readonly attribute DOMString       wholeText;
-    Text               replaceWholeText([Default=Undefined] optional DOMString content)
-                                            raises(DOMException);
-    // ShadowAware API
-#if defined(ENABLE_SHADOW_DOM) && ENABLE_SHADOW_DOM && defined(LANGUAGE_JAVASCRIPT) && LANGUAGE_JAVASCRIPT
-    [ImplementedAs=insertionParentForBinding] readonly attribute Node webkitInsertionParent;
-#endif
-
-    };
+    // Introduced in DOM Level 3:
+    readonly attribute DOMString       wholeText;
+    [RaisesException] Text               replaceWholeText([Default=Undefined] optional DOMString content);
+};
 

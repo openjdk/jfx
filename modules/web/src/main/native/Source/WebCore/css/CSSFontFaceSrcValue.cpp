@@ -63,7 +63,7 @@ bool CSSFontFaceSrcValue::isSupportedFormat() const
            ;
 }
 
-String CSSFontFaceSrcValue::customCssText() const
+String CSSFontFaceSrcValue::customCSSText() const
 {
     StringBuilder result;
     if (isLocal())
@@ -80,7 +80,7 @@ String CSSFontFaceSrcValue::customCssText() const
     return result.toString();
 }
 
-void CSSFontFaceSrcValue::addSubresourceStyleURLs(ListHashSet<KURL>& urls, const StyleSheetContents* styleSheet) const
+void CSSFontFaceSrcValue::addSubresourceStyleURLs(ListHashSet<URL>& urls, const StyleSheetContents* styleSheet) const
 {
     if (!isLocal())
         addSubresourceURL(urls, styleSheet->completeURL(m_resource));

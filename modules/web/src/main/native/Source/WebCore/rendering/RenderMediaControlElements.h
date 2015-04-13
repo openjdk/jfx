@@ -31,14 +31,14 @@
 #if ENABLE(VIDEO)
 
 #include "MediaControlElements.h"
-#include "RenderBlock.h"
+#include "RenderBlockFlow.h"
 #include "RenderFlexibleBox.h"
 
 namespace WebCore {
 
-class RenderMediaVolumeSliderContainer : public RenderBlock {
+class RenderMediaVolumeSliderContainer final : public RenderBlockFlow {
 public:
-    RenderMediaVolumeSliderContainer(Element*);
+    RenderMediaVolumeSliderContainer(Element&, PassRef<RenderStyle>);
 
 private:
     virtual void layout();
@@ -46,9 +46,9 @@ private:
 
 // ----------------------------
 
-class RenderMediaControlTimelineContainer : public RenderFlexibleBox {
+class RenderMediaControlTimelineContainer final : public RenderFlexibleBox {
 public:
-    RenderMediaControlTimelineContainer(Element*);
+    RenderMediaControlTimelineContainer(Element&, PassRef<RenderStyle>);
 
 private:
     virtual void layout();
@@ -58,9 +58,9 @@ private:
 
 #if ENABLE(VIDEO_TRACK)
 
-class RenderTextTrackContainerElement : public RenderBlock {
+class RenderTextTrackContainerElement final : public RenderBlockFlow {
 public:
-    RenderTextTrackContainerElement(Element*);
+    RenderTextTrackContainerElement(Element&, PassRef<RenderStyle>);
 
 private:
     virtual void layout();

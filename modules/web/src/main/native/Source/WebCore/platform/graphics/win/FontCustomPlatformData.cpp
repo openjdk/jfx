@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2008, 2009, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2007, 2008, 2009, 2010, 2013 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -24,11 +24,11 @@
 #include "FontPlatformData.h"
 #include "OpenTypeUtilities.h"
 #include "SharedBuffer.h"
-#include "WOFFFileFormat.h"
 #include <ApplicationServices/ApplicationServices.h>
 #include <WebKitSystemInterface/WebKitSystemInterface.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/text/Base64.h>
+#include <wtf/win/GDIObject.h>
 
 namespace WebCore {
 
@@ -38,14 +38,14 @@ FontCustomPlatformData::~FontCustomPlatformData()
 {
     if (m_fontReference)
             RemoveFontMemResourceEx(m_fontReference);
-    }
+}
 
 FontPlatformData FontCustomPlatformData::fontPlatformData(int size, bool bold, bool italic, FontOrientation, FontWidthVariant, FontRenderingMode renderingMode)
 {
     ASSERT(m_fontReference);
 
     LOGFONT& logFont = *static_cast<LOGFONT*>(malloc(sizeof(LOGFONT)));
-        memcpy(logFont.lfFaceName, m_name.charactersWithNullTermination(), sizeof(logFont.lfFaceName[0]) * min(static_cast<size_t>(LF_FACESIZE), 1 + m_name.length()));
+    memcpy(logFont.lfFaceName, m_name.charactersWithNullTermination().data(), sizeof(logFont.lfFaceName[0]) * std::min<size_t>(static_cast<size_t>(LF_FACESIZE), 1 + m_name.length()));
 
     logFont.lfHeight = -size;
     if (renderingMode == NormalRenderingMode)
@@ -62,10 +62,10 @@ FontPlatformData FontCustomPlatformData::fontPlatformData(int size, bool bold, b
     logFont.lfItalic = italic;
     logFont.lfWeight = bold ? 700 : 400;
 
-    HFONT hfont = CreateFontIndirect(&logFont);
+    auto hfont = adoptGDIObject(::CreateFontIndirect(&logFont));
 
     RetainPtr<CGFontRef> cgFont = adoptCF(CGFontCreateWithPlatformFont(&logFont));
-    return FontPlatformData(hfont, cgFont.get(), size, bold, italic, renderingMode == AlternateRenderingMode);
+    return FontPlatformData(std::move(hfont), cgFont.get(), size, bold, italic, renderingMode == AlternateRenderingMode);
 }
 
 // Creates a unique and unpredictable font name, in order to avoid collisions and to
@@ -80,26 +80,14 @@ static String createUniqueFontName()
     return fontName;
 }
 
-FontCustomPlatformData* createFontCustomPlatformData(SharedBuffer* buffer)
+std::unique_ptr<FontCustomPlatformData> createFontCustomPlatformData(SharedBuffer& buffer)
 {
-    ASSERT_ARG(buffer, buffer);
-
-    RefPtr<SharedBuffer> sfntBuffer;
-    if (isWOFF(buffer)) {
-        Vector<char> sfnt;
-        if (!convertWOFFToSfnt(buffer, sfnt))
-            return 0;
-
-        sfntBuffer = SharedBuffer::adoptVector(sfnt);
-        buffer = sfntBuffer.get();
-    }
-
     String fontName = createUniqueFontName();
     HANDLE fontReference;
-        fontReference = renameAndActivateFont(buffer, fontName);
-        if (!fontReference)
-            return 0;
-    return new FontCustomPlatformData(fontReference, fontName);
+    fontReference = renameAndActivateFont(buffer, fontName);
+    if (!fontReference)
+        return nullptr;
+    return std::make_unique<FontCustomPlatformData>(fontReference, fontName);
 }
 
 bool FontCustomPlatformData::supportsFormat(const String& format)

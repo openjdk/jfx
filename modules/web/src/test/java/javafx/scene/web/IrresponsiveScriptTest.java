@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +25,12 @@
 
 package javafx.scene.web;
 
+import com.sun.javafx.PlatformUtil;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
 import javafx.event.EventHandler;
 import netscape.javascript.JSException;
+import org.junit.Assume;
 import org.junit.Test;
 
 public class IrresponsiveScriptTest extends TestBase {

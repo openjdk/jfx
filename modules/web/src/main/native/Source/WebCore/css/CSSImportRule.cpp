@@ -70,7 +70,7 @@ String CSSImportRule::cssText() const
     if (m_importRule->mediaQueries()) {
         String mediaText = m_importRule->mediaQueries()->mediaText();
         if (!mediaText.isEmpty()) {
-        result.append(' ');
+            result.append(' ');
             result.append(mediaText);
         }
     }
@@ -85,7 +85,7 @@ CSSStyleSheet* CSSImportRule::styleSheet() const
         return 0;
 
     if (!m_styleSheetCSSOMWrapper)
-        m_styleSheetCSSOMWrapper = CSSStyleSheet::create(m_importRule->styleSheet(), const_cast<CSSImportRule*>(this));
+        m_styleSheetCSSOMWrapper = CSSStyleSheet::create(*m_importRule->styleSheet(), const_cast<CSSImportRule*>(this));
     return m_styleSheetCSSOMWrapper.get(); 
 }
 

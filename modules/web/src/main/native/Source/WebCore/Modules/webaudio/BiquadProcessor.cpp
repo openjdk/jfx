@@ -60,9 +60,9 @@ BiquadProcessor::~BiquadProcessor()
         uninitialize();
 }
 
-PassOwnPtr<AudioDSPKernel> BiquadProcessor::createKernel()
+std::unique_ptr<AudioDSPKernel> BiquadProcessor::createKernel()
 {
-    return adoptPtr(new BiquadDSPKernel(this));
+    return std::make_unique<BiquadDSPKernel>(this);
 }
 
 void BiquadProcessor::checkForDirtyCoefficients()
@@ -77,24 +77,24 @@ void BiquadProcessor::checkForDirtyCoefficients()
         m_filterCoefficientsDirty = true;
         m_hasSampleAccurateValues = true;
     } else {
-    if (m_hasJustReset) {
-        // Snap to exact values first time after reset, then smooth for subsequent changes.
-        m_parameter1->resetSmoothedValue();
-        m_parameter2->resetSmoothedValue();
-        m_parameter3->resetSmoothedValue();
+        if (m_hasJustReset) {
+            // Snap to exact values first time after reset, then smooth for subsequent changes.
+            m_parameter1->resetSmoothedValue();
+            m_parameter2->resetSmoothedValue();
+            m_parameter3->resetSmoothedValue();
             m_parameter4->resetSmoothedValue();
-        m_filterCoefficientsDirty = true;
-        m_hasJustReset = false;
-    } else {
-        // Smooth all of the filter parameters. If they haven't yet converged to their target value then mark coefficients as dirty.
-        bool isStable1 = m_parameter1->smooth();
-        bool isStable2 = m_parameter2->smooth();
-        bool isStable3 = m_parameter3->smooth();
+            m_filterCoefficientsDirty = true;
+            m_hasJustReset = false;
+        } else {
+            // Smooth all of the filter parameters. If they haven't yet converged to their target value then mark coefficients as dirty.
+            bool isStable1 = m_parameter1->smooth();
+            bool isStable2 = m_parameter2->smooth();
+            bool isStable3 = m_parameter3->smooth();
             bool isStable4 = m_parameter4->smooth();
             if (!(isStable1 && isStable2 && isStable3 && isStable4))
-            m_filterCoefficientsDirty = true;
+                m_filterCoefficientsDirty = true;
+        }
     }
-}
 }
 
 void BiquadProcessor::process(const AudioBus* source, AudioBus* destination, size_t framesToProcess)
@@ -128,7 +128,7 @@ void BiquadProcessor::getFrequencyResponse(int nFrequencies,
     // to avoid interfering with the processing running in the audio
     // thread on the main kernels.
     
-    OwnPtr<BiquadDSPKernel> responseKernel = adoptPtr(new BiquadDSPKernel(this));
+    auto responseKernel = std::make_unique<BiquadDSPKernel>(this);
 
     responseKernel->getFrequencyResponse(nFrequencies, frequencyHz, magResponse, phaseResponse);
 }

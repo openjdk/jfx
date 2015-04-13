@@ -58,7 +58,7 @@ class WebVTTTokenizer {
     WTF_MAKE_NONCOPYABLE(WebVTTTokenizer);
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static PassOwnPtr<WebVTTTokenizer> create() { return adoptPtr(new WebVTTTokenizer); }
+    static OwnPtr<WebVTTTokenizer> create() { return adoptPtr(new WebVTTTokenizer); }
 
     typedef WebVTTTokenizerState State;
 
@@ -100,7 +100,7 @@ public:
 
 private:
     WebVTTTokenizer();
-    
+
     // m_token is owned by the caller. If nextToken is not on the stack,
     // this member might be pointing to unallocated memory.
     WebVTTToken* m_token;

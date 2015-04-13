@@ -41,7 +41,7 @@ namespace WebCore {
 
 class FormData;
 class Frame;
-class KURL;
+class URL;
 class ResourceError;
 class ResourceHandle;
 class ResourceResponse;
@@ -54,21 +54,22 @@ class ResourceResponse;
 class PingLoader : private ResourceHandleClient {
     WTF_MAKE_NONCOPYABLE(PingLoader); WTF_MAKE_FAST_ALLOCATED;
 public:
-    static void loadImage(Frame*, const KURL& url);
-    static void sendPing(Frame*, const KURL& pingURL, const KURL& destinationURL);
-    static void sendViolationReport(Frame*, const KURL& reportURL, PassRefPtr<FormData> report);
+    static void loadImage(Frame&, const URL&);
+    static void sendPing(Frame&, const URL& pingURL, const URL& destinationURL);
+    static void sendViolationReport(Frame&, const URL& reportURL, PassRefPtr<FormData> report);
 
     virtual ~PingLoader();
 
 private:
-    PingLoader(Frame*, ResourceRequest&);
+    static void createPingLoader(Frame&, ResourceRequest&);
+    PingLoader(Frame&, ResourceRequest&);
 
-    virtual void didReceiveResponse(ResourceHandle*, const ResourceResponse&) OVERRIDE { delete this; }
-    virtual void didReceiveData(ResourceHandle*, const char*, int, int) OVERRIDE { delete this; }
-    virtual void didFinishLoading(ResourceHandle*, double) OVERRIDE { delete this; }
-    virtual void didFail(ResourceHandle*, const ResourceError&) OVERRIDE { delete this; }
-    virtual bool shouldUseCredentialStorage(ResourceHandle*)  OVERRIDE { return m_shouldUseCredentialStorage; }
-    void timeout(Timer<PingLoader>*) { delete this; }
+    virtual void didReceiveResponse(ResourceHandle*, const ResourceResponse&) override { delete this; }
+    virtual void didReceiveData(ResourceHandle*, const char*, unsigned, int) override { delete this; }
+    virtual void didFinishLoading(ResourceHandle*, double) override { delete this; }
+    virtual void didFail(ResourceHandle*, const ResourceError&) override { delete this; }
+    virtual bool shouldUseCredentialStorage(ResourceHandle*)  override { return m_shouldUseCredentialStorage; }
+    void timeoutTimerFired(Timer<PingLoader>&) { delete this; }
 
     RefPtr<ResourceHandle> m_handle;
     Timer<PingLoader> m_timeout;

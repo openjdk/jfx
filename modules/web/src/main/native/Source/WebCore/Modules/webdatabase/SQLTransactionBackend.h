@@ -34,6 +34,7 @@
 #include "AbstractSQLTransactionBackend.h"
 #include "DatabaseBasicTypes.h"
 #include "SQLTransactionStateMachine.h"
+#include <memory>
 #include <wtf/Deque.h>
 #include <wtf/Forward.h>
 #include <wtf/text/WTFString.h>
@@ -68,6 +69,10 @@ public:
     void lockAcquired();
     void performNextStep();
 
+#if PLATFORM(IOS)
+    bool shouldPerformWhilePaused() const;
+#endif
+
     DatabaseBackend* database() { return m_database.get(); }
     bool isReadOnly() { return m_readOnly; }
     void notifyDatabaseThreadIsShuttingDown();
@@ -77,19 +82,19 @@ private:
         PassRefPtr<SQLTransactionWrapper>, bool readOnly);
 
     // APIs called from the frontend published via AbstractSQLTransactionBackend:
-    virtual void requestTransitToState(SQLTransactionState) OVERRIDE;
-    virtual PassRefPtr<SQLError> transactionError() OVERRIDE;
-    virtual AbstractSQLStatement* currentStatement() OVERRIDE;
-    virtual void setShouldRetryCurrentStatement(bool) OVERRIDE;
-    virtual void executeSQL(PassOwnPtr<AbstractSQLStatement>, const String& statement,
-        const Vector<SQLValue>& arguments, int permissions) OVERRIDE;
+    virtual void requestTransitToState(SQLTransactionState) override;
+    virtual PassRefPtr<SQLError> transactionError() override;
+    virtual AbstractSQLStatement* currentStatement() override;
+    virtual void setShouldRetryCurrentStatement(bool) override;
+    virtual void executeSQL(std::unique_ptr<AbstractSQLStatement>, const String& statement,
+        const Vector<SQLValue>& arguments, int permissions) override;
 
     void doCleanup();
 
     void enqueueStatementBackend(PassRefPtr<SQLStatementBackend>);
 
     // State Machine functions:
-    virtual StateFunction stateFunctionFor(SQLTransactionState) OVERRIDE;
+    virtual StateFunction stateFunctionFor(SQLTransactionState) override;
     void computeNextStateAndCleanupIfNeeded();
 
     // State functions:
@@ -129,9 +134,9 @@ private:
     bool m_hasVersionMismatch;
 
     Mutex m_statementMutex;
-    Deque<RefPtr<SQLStatementBackend> > m_statementQueue;
+    Deque<RefPtr<SQLStatementBackend>> m_statementQueue;
 
-    OwnPtr<SQLiteTransaction> m_sqliteTransaction;
+    std::unique_ptr<SQLiteTransaction> m_sqliteTransaction;
     RefPtr<OriginLock> m_originLock;
 };
 

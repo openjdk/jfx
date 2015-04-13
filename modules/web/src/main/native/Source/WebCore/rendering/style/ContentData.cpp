@@ -33,70 +33,45 @@
 
 namespace WebCore {
 
-PassOwnPtr<ContentData> ContentData::create(PassRefPtr<StyleImage> image)
+std::unique_ptr<ContentData> ContentData::clone() const
 {
-    return adoptPtr(new ImageContentData(image));
-}
-
-PassOwnPtr<ContentData> ContentData::create(const String& text)
-{
-    return adoptPtr(new TextContentData(text));
-}
-
-PassOwnPtr<ContentData> ContentData::create(PassOwnPtr<CounterContent> counter)
-{
-    return adoptPtr(new CounterContentData(counter));
-}
-
-PassOwnPtr<ContentData> ContentData::create(QuoteType quote)
-{
-    return adoptPtr(new QuoteContentData(quote));
-}
-
-PassOwnPtr<ContentData> ContentData::clone() const
-{
-    OwnPtr<ContentData> result = cloneInternal();
+    auto result = cloneInternal();
     
     ContentData* lastNewData = result.get();
     for (const ContentData* contentData = next(); contentData; contentData = contentData->next()) {
-        OwnPtr<ContentData> newData = contentData->cloneInternal();
-        lastNewData->setNext(newData.release());
+        auto newData = contentData->cloneInternal();
+        lastNewData->setNext(std::move(newData));
         lastNewData = lastNewData->next();
     }
         
-    return result.release();
+    return result;
 }
 
-RenderObject* ImageContentData::createRenderer(Document* doc, RenderStyle* pseudoStyle) const
+RenderPtr<RenderObject> ImageContentData::createContentRenderer(Document& document, const RenderStyle& pseudoStyle) const
 {
-    RenderImage* image = RenderImage::createAnonymous(doc);
-    image->setPseudoStyle(pseudoStyle);
-    if (m_image)
-        image->setImageResource(RenderImageResourceStyleImage::create(m_image.get()));
-    else
-        image->setImageResource(RenderImageResource::create());
-    return image;
+    auto image = createRenderer<RenderImage>(document, RenderStyle::createStyleInheritingFromPseudoStyle(pseudoStyle), m_image.get());
+    image->initializeStyle();
+    image->setAltText(altText());
+    return std::move(image);
 }
 
-RenderObject* TextContentData::createRenderer(Document* doc, RenderStyle* pseudoStyle) const
+RenderPtr<RenderObject> TextContentData::createContentRenderer(Document& document, const RenderStyle&) const
 {
-    RenderObject* renderer = new (doc->renderArena()) RenderTextFragment(doc, m_text.impl());
-    renderer->setPseudoStyle(pseudoStyle);
-    return renderer;
+    auto fragment = createRenderer<RenderTextFragment>(document, m_text);
+    fragment->setAltText(altText());
+    return std::move(fragment);
 }
 
-RenderObject* CounterContentData::createRenderer(Document* doc, RenderStyle* pseudoStyle) const
+RenderPtr<RenderObject> CounterContentData::createContentRenderer(Document& document, const RenderStyle&) const
 {
-    RenderObject* renderer = new (doc->renderArena()) RenderCounter(doc, *m_counter);
-    renderer->setPseudoStyle(pseudoStyle);
-    return renderer;
+    return createRenderer<RenderCounter>(document, *m_counter);
 }
 
-RenderObject* QuoteContentData::createRenderer(Document* doc, RenderStyle* pseudoStyle) const
+RenderPtr<RenderObject> QuoteContentData::createContentRenderer(Document& document, const RenderStyle& pseudoStyle) const
 {
-    RenderObject* renderer = new (doc->renderArena()) RenderQuote(doc, m_quote);
-    renderer->setPseudoStyle(pseudoStyle);
-    return renderer;
+    auto quote = createRenderer<RenderQuote>(document, RenderStyle::createStyleInheritingFromPseudoStyle(pseudoStyle), m_quote);
+    quote->initializeStyle();
+    return std::move(quote);
 }
 
 } // namespace WebCore

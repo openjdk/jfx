@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
 
@@ -31,7 +31,7 @@ void ContextMenuClientJava::contextMenuItemSelected(ContextMenuItem*, const Cont
     notImplemented();
 }
 
-void ContextMenuClientJava::downloadURL(const KURL& url)
+void ContextMenuClientJava::downloadURL(const URL& url)
 {
     notImplemented();
 }

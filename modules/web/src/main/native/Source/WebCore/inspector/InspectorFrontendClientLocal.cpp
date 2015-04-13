@@ -38,26 +38,28 @@
 #include "DOMWrapperWorld.h"
 #include "Document.h"
 #include "FloatRect.h"
-#include "Frame.h"
 #include "FrameLoadRequest.h"
 #include "FrameLoader.h"
 #include "FrameView.h"
-#include "InspectorBackendDispatcher.h"
 #include "InspectorController.h"
 #include "InspectorFrontendHost.h"
 #include "InspectorPageAgent.h"
+#include "InspectorWebBackendDispatchers.h"
+#include "MainFrame.h"
 #include "Page.h"
 #include "ScriptController.h"
-#include "ScriptFunctionCall.h"
-#include "ScriptObject.h"
+#include "ScriptGlobalObject.h"
 #include "ScriptState.h"
 #include "Settings.h"
 #include "Timer.h"
 #include "UserGestureIndicator.h"
 #include "WindowFeatures.h"
+#include <bindings/ScriptValue.h>
 #include <wtf/Deque.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
+
+using namespace Inspector;
 
 namespace WebCore {
 
@@ -73,7 +75,7 @@ class InspectorBackendDispatchTask {
 public:
     InspectorBackendDispatchTask(InspectorController* inspectorController)
         : m_inspectorController(inspectorController)
-        , m_timer(this, &InspectorBackendDispatchTask::onTimer)
+        , m_timer(this, &InspectorBackendDispatchTask::timerFired)
     {
     }
 
@@ -90,7 +92,7 @@ public:
         m_timer.stop();
     }
 
-    void onTimer(Timer<InspectorBackendDispatchTask>*)
+    void timerFired(Timer<InspectorBackendDispatchTask>&)
     {
         if (!m_messages.isEmpty()) {
             // Dispatch can lead to the timer destruction -> schedule the next shot first.
@@ -114,15 +116,15 @@ void InspectorFrontendClientLocal::Settings::setProperty(const String&, const St
 {
 }
 
-InspectorFrontendClientLocal::InspectorFrontendClientLocal(InspectorController* inspectorController, Page* frontendPage, PassOwnPtr<Settings> settings)
+InspectorFrontendClientLocal::InspectorFrontendClientLocal(InspectorController* inspectorController, Page* frontendPage, std::unique_ptr<Settings> settings)
     : m_inspectorController(inspectorController)
     , m_frontendPage(frontendPage)
-    , m_settings(settings)
+    , m_settings(std::move(settings))
     , m_frontendLoaded(false)
     , m_dockSide(UNDOCKED)
 {
-    m_frontendPage->settings()->setAllowFileAccessFromFileURLs(true);
-    m_dispatchTask = adoptPtr(new InspectorBackendDispatchTask(inspectorController));
+    m_frontendPage->settings().setAllowFileAccessFromFileURLs(true);
+    m_dispatchTask = std::make_unique<InspectorBackendDispatchTask>(inspectorController);
 }
 
 InspectorFrontendClientLocal::~InspectorFrontendClientLocal()
@@ -138,9 +140,9 @@ void InspectorFrontendClientLocal::windowObjectCleared()
     if (m_frontendHost)
         m_frontendHost->disconnectClient();
     
-    ScriptState* frontendScriptState = scriptStateFromPage(debuggerWorld(), m_frontendPage);
+    JSC::ExecState* frontendExecState = execStateFromPage(debuggerWorld(), m_frontendPage);
     m_frontendHost = InspectorFrontendHost::create(this, m_frontendPage);
-    ScriptGlobalObject::set(frontendScriptState, "InspectorFrontendHost", m_frontendHost.get());
+    ScriptGlobalObject::set(frontendExecState, "InspectorFrontendHost", m_frontendHost.get());
 }
 
 void InspectorFrontendClientLocal::frontendLoaded()
@@ -165,7 +167,7 @@ void InspectorFrontendClientLocal::requestSetDockSide(DockSide dockSide)
     } else if (canAttachWindow()) {
         attachWindow(dockSide);
         setAttachedWindow(dockSide);
-}
+    }
 }
 
 bool InspectorFrontendClientLocal::canAttachWindow()
@@ -180,8 +182,8 @@ bool InspectorFrontendClientLocal::canAttachWindow()
         return true;
 
     // Don't allow the attach if the window would be too small to accommodate the minimum inspector size.
-    unsigned inspectedPageHeight = m_inspectorController->inspectedPage()->mainFrame()->view()->visibleHeight();
-    unsigned inspectedPageWidth = m_inspectorController->inspectedPage()->mainFrame()->view()->visibleWidth();
+    unsigned inspectedPageHeight = m_inspectorController->inspectedPage().mainFrame().view()->visibleHeight();
+    unsigned inspectedPageWidth = m_inspectorController->inspectedPage().mainFrame().view()->visibleWidth();
     unsigned maximumAttachedHeight = inspectedPageHeight * maximumAttachedHeightRatio;
     return minimumAttachedHeight <= maximumAttachedHeight && minimumAttachedWidth <= inspectedPageWidth;
 }
@@ -193,7 +195,7 @@ void InspectorFrontendClientLocal::setDockingUnavailable(bool unavailable)
 
 void InspectorFrontendClientLocal::changeAttachedWindowHeight(unsigned height)
 {
-    unsigned totalHeight = m_frontendPage->mainFrame()->view()->visibleHeight() + m_inspectorController->inspectedPage()->mainFrame()->view()->visibleHeight();
+    unsigned totalHeight = m_frontendPage->mainFrame().view()->visibleHeight() + m_inspectorController->inspectedPage().mainFrame().view()->visibleHeight();
     unsigned attachedHeight = constrainedAttachedWindowHeight(height, totalHeight);
     m_settings->setProperty(inspectorAttachedHeightSetting, String::number(attachedHeight));
     setAttachedWindowHeight(attachedHeight);
@@ -201,29 +203,28 @@ void InspectorFrontendClientLocal::changeAttachedWindowHeight(unsigned height)
 
 void InspectorFrontendClientLocal::changeAttachedWindowWidth(unsigned width)
 {
-    unsigned totalWidth = m_frontendPage->mainFrame()->view()->visibleWidth() + m_inspectorController->inspectedPage()->mainFrame()->view()->visibleWidth();
+    unsigned totalWidth = m_frontendPage->mainFrame().view()->visibleWidth() + m_inspectorController->inspectedPage().mainFrame().view()->visibleWidth();
     unsigned attachedWidth = constrainedAttachedWindowWidth(width, totalWidth);
     setAttachedWindowWidth(attachedWidth);
 }
 
 void InspectorFrontendClientLocal::openInNewTab(const String& url)
 {
-    UserGestureIndicator indicator(DefinitelyProcessingNewUserGesture);
-    Page* page = m_inspectorController->inspectedPage();
-    Frame* mainFrame = page->mainFrame();
-    FrameLoadRequest request(mainFrame->document()->securityOrigin(), ResourceRequest(), "_blank");
+    UserGestureIndicator indicator(DefinitelyProcessingUserGesture);
+    Frame& mainFrame = m_inspectorController->inspectedPage().mainFrame();
+    FrameLoadRequest request(mainFrame.document()->securityOrigin(), ResourceRequest(), "_blank");
 
     bool created;
     WindowFeatures windowFeatures;
-    RefPtr<Frame> frame = WebCore::createWindow(mainFrame, mainFrame, request, windowFeatures, created);
+    RefPtr<Frame> frame = WebCore::createWindow(&mainFrame, &mainFrame, request, windowFeatures, created);
     if (!frame)
         return;
 
-    frame->loader()->setOpener(mainFrame);
+    frame->loader().setOpener(&mainFrame);
     frame->page()->setOpenedByDOM();
 
     // FIXME: Why does one use mainFrame and the other frame?
-    frame->loader()->changeLocation(mainFrame->document()->securityOrigin(), frame->document()->completeURL(url), "", false, false);
+    frame->loader().changeLocation(mainFrame.document()->securityOrigin(), frame->document()->completeURL(url), "", false, false);
 }
 
 void InspectorFrontendClientLocal::moveWindowBy(float x, float y)
@@ -255,7 +256,7 @@ void InspectorFrontendClientLocal::setAttachedWindow(DockSide dockSide)
 
 void InspectorFrontendClientLocal::restoreAttachedWindowHeight()
 {
-    unsigned inspectedPageHeight = m_inspectorController->inspectedPage()->mainFrame()->view()->visibleHeight();
+    unsigned inspectedPageHeight = m_inspectorController->inspectedPage().mainFrame().view()->visibleHeight();
     String value = m_settings->getProperty(inspectorAttachedHeightSetting);
     unsigned preferredHeight = value.isEmpty() ? defaultAttachedHeight : value.toUInt();
     
@@ -324,14 +325,12 @@ void InspectorFrontendClientLocal::showMainResourceForFrame(Frame* frame)
 
 unsigned InspectorFrontendClientLocal::constrainedAttachedWindowHeight(unsigned preferredHeight, unsigned totalWindowHeight)
 {
-    using namespace std;
-    return roundf(max(minimumAttachedHeight, min<float>(preferredHeight, totalWindowHeight * maximumAttachedHeightRatio)));
+    return roundf(std::max(minimumAttachedHeight, std::min<float>(preferredHeight, totalWindowHeight * maximumAttachedHeightRatio)));
 }
 
 unsigned InspectorFrontendClientLocal::constrainedAttachedWindowWidth(unsigned preferredWidth, unsigned totalWindowWidth)
 {
-    using namespace std;
-    return roundf(max(minimumAttachedWidth, min<float>(preferredWidth, totalWindowWidth - minimumAttachedInspectedWidth)));
+    return roundf(std::max(minimumAttachedWidth, std::min<float>(preferredWidth, totalWindowWidth - minimumAttachedInspectedWidth)));
 }
 
 void InspectorFrontendClientLocal::sendMessageToBackend(const String& message)
@@ -346,16 +345,14 @@ bool InspectorFrontendClientLocal::isUnderTest()
 
 bool InspectorFrontendClientLocal::evaluateAsBoolean(const String& expression)
 {
-    if (!m_frontendPage->mainFrame())
-        return false;
-    ScriptValue value = m_frontendPage->mainFrame()->script()->executeScript(expression);
-    return value.toString(mainWorldScriptState(m_frontendPage->mainFrame())) == "true";
+    Deprecated::ScriptValue value = m_frontendPage->mainFrame().script().executeScript(expression);
+    return value.toString(mainWorldExecState(&m_frontendPage->mainFrame())) == "true";
 }
 
 void InspectorFrontendClientLocal::evaluateOnLoad(const String& expression)
 {
     if (m_frontendLoaded)
-        m_frontendPage->mainFrame()->script()->executeScript("InspectorFrontendAPI.dispatch(" + expression + ")");
+        m_frontendPage->mainFrame().script().executeScript("InspectorFrontendAPI.dispatch(" + expression + ")");
     else
         m_evaluateOnLoad.append(expression);
 }

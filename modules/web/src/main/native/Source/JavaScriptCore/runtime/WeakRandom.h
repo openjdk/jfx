@@ -20,11 +20,11 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  *
  *
  * Copyright (c) 2009 Ian C. Bullard
- *
+ * 
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -33,10 +33,10 @@
  * copies of the Software, and to permit persons to whom the
  * Software is furnished to do so, subject to the following
  * conditions:
- *
+ * 
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
- *
+ * 
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -56,11 +56,11 @@
 namespace JSC {
 
 class WeakRandom {
+friend class JSGlobalObject; // For access to initializeSeed() during replay.
 public:
     WeakRandom(unsigned seed)
-        : m_low(seed ^ 0x49616E42)
-        , m_high(seed)
     {
+        initializeSeed(seed);
     }
     
     // Returns the seed provided that you've never called get() or getUint32().
@@ -83,6 +83,12 @@ private:
         m_high += m_low;
         m_low += m_high;
         return m_high;
+    }
+
+    void initializeSeed(unsigned seed)
+    {
+        m_low = seed ^ 0x49616E42;
+        m_high = seed;
     }
 
     unsigned m_low;

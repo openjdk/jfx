@@ -28,11 +28,10 @@
 
 #include "CachedImage.h"
 #include "CanvasPattern.h"
-#include "HTMLCanvasElement.h"
 #include "HTMLImageElement.h"
 #include "HTMLVideoElement.h"
 #include "Image.h"
-#include "KURL.h"
+#include "URL.h"
 #include "SecurityOrigin.h"
 
 namespace WebCore {
@@ -91,7 +90,7 @@ bool CanvasRenderingContext::wouldTaintOrigin(const HTMLVideoElement* video)
     return false;
 }
 
-bool CanvasRenderingContext::wouldTaintOrigin(const KURL& url)
+bool CanvasRenderingContext::wouldTaintOrigin(const URL& url)
 {
     if (!canvas()->originClean() || m_cleanURLs.contains(url.string()))
         return false;
@@ -106,7 +105,7 @@ bool CanvasRenderingContext::wouldTaintOrigin(const KURL& url)
     return false;
 }
 
-void CanvasRenderingContext::checkOrigin(const KURL& url)
+void CanvasRenderingContext::checkOrigin(const URL& url)
 {
     if (wouldTaintOrigin(url))
         canvas()->setOriginTainted();

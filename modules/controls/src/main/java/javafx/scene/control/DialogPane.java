@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,6 +34,7 @@ import java.util.WeakHashMap;
 import com.sun.javafx.scene.control.skin.Utils;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
 import javafx.beans.DefaultProperty;
+import javafx.beans.InvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -796,17 +797,18 @@ public class DialogPane extends Pane {
      */
     protected Node createDetailsButton() {
         final Hyperlink detailsButton = new Hyperlink();
-        detailsButton.getStyleClass().setAll("details-button", "more"); //$NON-NLS-1$ //$NON-NLS-2$
         final String moreText = ControlResources.getString("Dialog.detail.button.more"); //$NON-NLS-1$
         final String lessText = ControlResources.getString("Dialog.detail.button.less"); //$NON-NLS-1$
 
-        detailsButton.setText(moreText);
-        
-        expandedProperty().addListener(o -> {
+        InvalidationListener expandedListener = o -> {
             final boolean isExpanded = isExpanded();
             detailsButton.setText(isExpanded ? lessText : moreText);
             detailsButton.getStyleClass().setAll("details-button", (isExpanded ? "less" : "more")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-        });
+        };
+
+        // we call the listener immediately to ensure the state is correct at start up
+        expandedListener.invalidated(null);
+        expandedProperty().addListener(expandedListener);
 
         detailsButton.setOnAction(ae -> setExpanded(!isExpanded()));
         return detailsButton;
@@ -818,7 +820,8 @@ public class DialogPane extends Pane {
     @Override protected void layoutChildren() {
         final boolean hasHeader = hasHeader();
 
-        final double w = Math.max(minWidth(-1), getWidth()) - (snappedLeftInset() + snappedRightInset());
+        // snapped insets code commented out to resolve RT-39738
+        final double w = Math.max(minWidth(-1), getWidth());// - (snappedLeftInset() + snappedRightInset());
 
         final double minHeight = minHeight(w);
         final double prefHeight = prefHeight(w);
@@ -890,10 +893,10 @@ public class DialogPane extends Pane {
                 x += graphicPrefWidth;
             }
         } else {
-            header.resizeRelocate(leftPadding, topPadding, w - rightPadding, headerPrefHeight);
+            header.resizeRelocate(x, y, w - (leftPadding + rightPadding), headerPrefHeight);
             y += headerPrefHeight;
         }
-        
+
         content.resizeRelocate(x, y, availableContentWidth, contentAreaHeight);
         y += hasHeader ? contentAreaHeight : contentAndGraphicHeight;
         
@@ -903,7 +906,10 @@ public class DialogPane extends Pane {
         }
         
         if (buttonBar != null) {
-            buttonBar.resizeRelocate(leftPadding, (h - buttonBarPrefHeight - bottomPadding), w - rightPadding, buttonBarPrefHeight);
+            buttonBar.resizeRelocate(leftPadding,
+                                     y,
+                                     w - (leftPadding + rightPadding),
+                                     buttonBarPrefHeight);
         }
     }
 

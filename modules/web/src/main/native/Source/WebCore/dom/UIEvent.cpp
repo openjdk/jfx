@@ -24,8 +24,6 @@
 #include "UIEvent.h"
 
 #include "Console.h"
-#include "DOMWindow.h"
-#include "EventDispatcher.h"
 #include "Node.h"
 
 namespace WebCore {
@@ -36,6 +34,14 @@ UIEventInit::UIEventInit()
 {
 }
 
+UIEventInit::UIEventInit(bool bubbles, bool cancelable)
+    : EventInit(bubbles, cancelable)
+    , view(0)
+    , detail(0)
+{
+}
+
+    
 UIEvent::UIEvent()
     : m_detail(0)
 {
@@ -43,6 +49,13 @@ UIEvent::UIEvent()
 
 UIEvent::UIEvent(const AtomicString& eventType, bool canBubbleArg, bool cancelableArg, PassRefPtr<AbstractView> viewArg, int detailArg)
     : Event(eventType, canBubbleArg, cancelableArg)
+    , m_view(viewArg)
+    , m_detail(detailArg)
+{
+}
+
+UIEvent::UIEvent(const AtomicString& eventType, bool canBubbleArg, bool cancelableArg, double timestamp, PassRefPtr<AbstractView> viewArg, int detailArg)
+    : Event(eventType, canBubbleArg, cancelableArg, timestamp)
     , m_view(viewArg)
     , m_detail(detailArg)
 {
@@ -75,9 +88,9 @@ bool UIEvent::isUIEvent() const
     return true;
 }
 
-const AtomicString& UIEvent::interfaceName() const
+EventInterface UIEvent::eventInterface() const
 {
-    return eventNames().interfaceForUIEvent;
+    return UIEventInterfaceType;
 }
 
 int UIEvent::keyCode() const

@@ -33,7 +33,11 @@
 
 #include "BlobData.h"
 #include <wtf/Forward.h>
-#include <wtf/RefCounted.h>
+
+namespace JSC {
+class ArrayBuffer;
+class ArrayBufferView;
+}
 
 namespace WebCore {
 
@@ -51,8 +55,8 @@ public:
     void append(Blob*);
     void append(const String& text, const String& ending);
 #if ENABLE(BLOB)
-    void append(ArrayBuffer*);
-    void append(ArrayBufferView*);
+    void append(JSC::ArrayBuffer*);
+    void append(PassRefPtr<JSC::ArrayBufferView>);
 #endif
 
     PassRefPtr<Blob> getBlob(const String& contentType);

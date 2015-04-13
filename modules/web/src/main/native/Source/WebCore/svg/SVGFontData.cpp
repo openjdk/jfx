@@ -22,10 +22,12 @@
 #if ENABLE(SVG_FONTS)
 #include "SVGFontData.h"
 
-#include "RenderObject.h"
+#include "RenderElement.h"
 #include "SVGAltGlyphElement.h"
 #include "SVGFontElement.h"
+#include "SVGFontFaceElement.h"
 #include "SVGGlyph.h"
+#include "SVGGlyphElement.h"
 #include "SVGNames.h"
 #include "SVGTextRunRenderingContext.h"
 #include "TextRun.h"
@@ -33,7 +35,6 @@
 #include "XMLNames.h"
 #include <wtf/text/StringBuilder.h>
 #include <wtf/unicode/CharacterNames.h>
-#include <wtf/unicode/Unicode.h>
 
 using namespace WTF;
 using namespace Unicode;
@@ -145,7 +146,7 @@ bool SVGFontData::applySVGGlyphSelection(WidthIterator& iterator, GlyphData& gly
     }
 
     if (mirror)
-        remainingTextInRun = createStringWithMirroredCharacters(remainingTextInRun.characters(), remainingTextInRun.length());
+        remainingTextInRun = createStringWithMirroredCharacters(remainingTextInRun.deprecatedCharacters(), remainingTextInRun.length());
     if (!currentCharacter && arabicForms.isEmpty())
         arabicForms = charactersWithArabicForm(remainingTextInRun, mirror);
 
@@ -157,22 +158,22 @@ bool SVGFontData::applySVGGlyphSelection(WidthIterator& iterator, GlyphData& gly
 
     RenderObject* renderObject = 0;
     if (TextRun::RenderingContext* renderingContext = run.renderingContext())
-        renderObject = static_cast<SVGTextRunRenderingContext*>(renderingContext)->renderer();
+        renderObject = &static_cast<SVGTextRunRenderingContext*>(renderingContext)->renderer();
 
     String language;
     bool isVerticalText = false;
     Vector<String> altGlyphNames;
 
     if (renderObject) {
-        RenderObject* parentRenderObject = renderObject->isText() ? renderObject->parent() : renderObject;
-        ASSERT(parentRenderObject);
+        RenderElement* parentRenderer = renderObject->isRenderElement() ? toRenderElement(renderObject) : renderObject->parent();
+        ASSERT(parentRenderer);
 
-        isVerticalText = parentRenderObject->style()->svgStyle()->isVerticalWritingMode();
-        if (Element* parentRenderObjectElement = toElement(parentRenderObject->node())) {
-            language = parentRenderObjectElement->getAttribute(XMLNames::langAttr);
+        isVerticalText = parentRenderer->style().svgStyle().isVerticalWritingMode();
+        if (Element* parentRendererElement = parentRenderer->element()) {
+            language = parentRendererElement->getAttribute(XMLNames::langAttr);
 
-            if (parentRenderObjectElement->hasTagName(SVGNames::altGlyphTag)) {
-                SVGAltGlyphElement* altGlyph = static_cast<SVGAltGlyphElement*>(parentRenderObjectElement);
+            if (isSVGAltGlyphElement(parentRendererElement)) {
+                SVGAltGlyphElement* altGlyph = toSVGAltGlyphElement(parentRendererElement);
                 if (!altGlyph->hasValidGlyphElements(altGlyphNames))
                     altGlyphNames.clear();
             }
@@ -295,7 +296,7 @@ String SVGFontData::createStringWithMirroredCharacters(const UChar* characters, 
     while (i < length) {
         UChar32 character;
         U16_NEXT(characters, i, length, character);
-        mirroredCharacters.append(mirroredChar(character));
+        mirroredCharacters.append(u_charMirror(character));
     }
 
     return mirroredCharacters.toString();

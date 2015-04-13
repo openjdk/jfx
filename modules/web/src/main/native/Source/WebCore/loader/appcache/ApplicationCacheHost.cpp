@@ -67,7 +67,7 @@ void ApplicationCacheHost::selectCacheWithoutManifest()
     ApplicationCacheGroup::selectCacheWithoutManifestURL(m_documentLoader->frame());
 }
 
-void ApplicationCacheHost::selectCacheWithManifest(const KURL& manifestURL)
+void ApplicationCacheHost::selectCacheWithManifest(const URL& manifestURL)
 {
     ApplicationCacheGroup::selectCache(m_documentLoader->frame(), manifestURL);
 }
@@ -75,7 +75,7 @@ void ApplicationCacheHost::selectCacheWithManifest(const KURL& manifestURL)
 void ApplicationCacheHost::maybeLoadMainResource(ResourceRequest& request, SubstituteData& substituteData)
 {
     // Check if this request should be loaded from the application cache
-    if (!substituteData.isValid() && isApplicationCacheEnabled()) {
+    if (!substituteData.isValid() && isApplicationCacheEnabled() && !isApplicationCacheBlockedForRequest(request)) {
         ASSERT(!m_mainResourceApplicationCache);
 
         m_mainResourceApplicationCache = ApplicationCacheGroup::cacheForMainRequest(request, m_documentLoader);
@@ -83,9 +83,12 @@ void ApplicationCacheHost::maybeLoadMainResource(ResourceRequest& request, Subst
         if (m_mainResourceApplicationCache) {
             // Get the resource from the application cache. By definition, cacheForMainRequest() returns a cache that contains the resource.
             ApplicationCacheResource* resource = m_mainResourceApplicationCache->resourceForRequest(request);
-            substituteData = SubstituteData(resource->data(), 
+            substituteData = SubstituteData(resource->data(),
                                             resource->response().mimeType(),
-                                            resource->response().textEncodingName(), KURL());
+                                            resource->response().textEncodingName(),
+                                            URL(),
+                                            URL(),
+                                            SubstituteData::ShouldRevealToSessionHistory);
         }
     }
 }
@@ -100,7 +103,7 @@ bool ApplicationCacheHost::maybeLoadFallbackForMainResponse(const ResourceReques
 {
     if (r.httpStatusCode() / 100 == 4 || r.httpStatusCode() / 100 == 5) {
         ASSERT(!m_mainResourceApplicationCache);
-        if (isApplicationCacheEnabled()) {
+        if (isApplicationCacheEnabled() && !isApplicationCacheBlockedForRequest(request)) {
             m_mainResourceApplicationCache = ApplicationCacheGroup::fallbackCacheForMainRequest(request, documentLoader());
 
             if (scheduleLoadFallbackResourceFromApplicationCache(documentLoader()->mainResourceLoader(), m_mainResourceApplicationCache.get()))
@@ -114,7 +117,7 @@ bool ApplicationCacheHost::maybeLoadFallbackForMainError(const ResourceRequest& 
 {
     if (!error.isCancellation()) {
         ASSERT(!m_mainResourceApplicationCache);
-        if (isApplicationCacheEnabled()) {
+        if (isApplicationCacheEnabled() && !isApplicationCacheBlockedForRequest(request)) {
             m_mainResourceApplicationCache = ApplicationCacheGroup::fallbackCacheForMainRequest(request, m_documentLoader);
 
             if (scheduleLoadFallbackResourceFromApplicationCache(documentLoader()->mainResourceLoader(), m_mainResourceApplicationCache.get()))
@@ -154,9 +157,9 @@ void ApplicationCacheHost::finishedLoadingMainResource()
         group->finishedLoadingMainResource(m_documentLoader);
 }
 
-bool ApplicationCacheHost::maybeLoadResource(ResourceLoader* loader, ResourceRequest& request, const KURL& originalURL)
+bool ApplicationCacheHost::maybeLoadResource(ResourceLoader* loader, ResourceRequest& request, const URL& originalURL)
 {
-    if (!isApplicationCacheEnabled())
+    if (!isApplicationCacheEnabled() && !isApplicationCacheBlockedForRequest(request))
         return false;
     
     if (request.url() != originalURL)
@@ -190,9 +193,12 @@ bool ApplicationCacheHost::maybeLoadFallbackForResponse(ResourceLoader* resource
 
 bool ApplicationCacheHost::maybeLoadFallbackForError(ResourceLoader* resourceLoader, const ResourceError& error)
 {
-    if (!error.isCancellation())
+    if (!error.isCancellation()) {
+        if (resourceLoader == m_documentLoader->mainResourceLoader())
+            return maybeLoadFallbackForMainError(resourceLoader->request(), error);
         if (scheduleLoadFallbackResourceFromApplicationCache(resourceLoader))
             return true;
+    }
     return false;
 }
 
@@ -204,7 +210,7 @@ bool ApplicationCacheHost::maybeLoadSynchronously(ResourceRequest& request, Reso
             response = resource->response();
             data.append(resource->data()->data(), resource->data()->size());
         } else {
-            error = documentLoader()->frameLoader()->client()->cannotShowURLError(request);
+            error = documentLoader()->frameLoader()->client().cannotShowURLError(request);
         }
         return true;
     }
@@ -279,10 +285,9 @@ void ApplicationCacheHost::fillResourceList(ResourceInfoList* resources)
     ApplicationCache* cache = applicationCache();
     if (!cache || !cache->isComplete())
         return;
-     
-    ApplicationCache::ResourceMap::const_iterator end = cache->end();
-    for (ApplicationCache::ResourceMap::const_iterator it = cache->begin(); it != end; ++it) {
-        RefPtr<ApplicationCacheResource> resource = it->value;
+    
+    for (const auto& urlAndResource : *cache) {
+        RefPtr<ApplicationCacheResource> resource = urlAndResource.value;
         unsigned type = resource->type();
         bool isMaster   = type & ApplicationCacheResource::Master;
         bool isManifest = type & ApplicationCacheResource::Manifest;
@@ -297,7 +302,7 @@ ApplicationCacheHost::CacheInfo ApplicationCacheHost::applicationCacheInfo()
 {
     ApplicationCache* cache = applicationCache();
     if (!cache || !cache->isComplete())
-        return CacheInfo(KURL(), 0, 0, 0);
+        return CacheInfo(URL(), 0, 0, 0);
   
     // FIXME: Add "Creation Time" and "Update Time" to Application Caches.
     return CacheInfo(cache->manifestResource()->url(), 0, 0, cache->estimatedSizeInStorage());
@@ -372,7 +377,7 @@ bool ApplicationCacheHost::getApplicationCacheFallbackResource(const ResourceReq
     if (!ApplicationCache::requestIsHTTPOrHTTPSGet(request))
         return false;
 
-    KURL fallbackURL;
+    URL fallbackURL;
     if (cache->isURLInOnlineWhitelist(request.url()))
         return false;
     if (!cache->urlMatchesFallbackNamespace(request.url(), &fallbackURL))
@@ -386,7 +391,7 @@ bool ApplicationCacheHost::getApplicationCacheFallbackResource(const ResourceReq
 
 bool ApplicationCacheHost::scheduleLoadFallbackResourceFromApplicationCache(ResourceLoader* loader, ApplicationCache* cache)
 {
-    if (!isApplicationCacheEnabled())
+    if (!isApplicationCacheEnabled() && !isApplicationCacheBlockedForRequest(loader->request()))
         return false;
 
     ApplicationCacheResource* resource;
@@ -471,9 +476,13 @@ void ApplicationCacheHost::abort()
 
 bool ApplicationCacheHost::isApplicationCacheEnabled()
 {
-  return m_documentLoader->frame() &&
-         m_documentLoader->frame()->settings()->offlineWebApplicationCacheEnabled() &&
-         !m_documentLoader->frame()->settings()->privateBrowsingEnabled();
+    return m_documentLoader->frame() && m_documentLoader->frame()->settings().offlineWebApplicationCacheEnabled() && !m_documentLoader->frame()->settings().privateBrowsingEnabled();
+}
+
+bool ApplicationCacheHost::isApplicationCacheBlockedForRequest(const ResourceRequest& request)
+{
+    RefPtr<SecurityOrigin> origin = SecurityOrigin::create(request.url());
+    return m_documentLoader->frame() && !origin->canAccessApplicationCache(m_documentLoader->frame()->document()->topOrigin());
 }
 
 }  // namespace WebCore

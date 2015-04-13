@@ -35,33 +35,32 @@ namespace WebCore {
 // Render base^(1/index), or sqrt(base) via the derived class RenderMathMLSquareRoot, using radical notation.
 class RenderMathMLRoot : public RenderMathMLBlock {
 public:
-    RenderMathMLRoot(Element*);
-    
-    virtual LayoutUnit paddingTop() const OVERRIDE;
-    virtual LayoutUnit paddingBottom() const OVERRIDE;
-    virtual LayoutUnit paddingLeft() const OVERRIDE;
-    virtual LayoutUnit paddingRight() const OVERRIDE;
-    virtual LayoutUnit paddingBefore() const OVERRIDE;
-    virtual LayoutUnit paddingAfter() const OVERRIDE;
-    virtual LayoutUnit paddingStart() const OVERRIDE;
-    virtual LayoutUnit paddingEnd() const OVERRIDE;
+    RenderMathMLRoot(Element&, PassRef<RenderStyle>);
+    RenderMathMLRoot(Document&, PassRef<RenderStyle>);
 
-    virtual void addChild(RenderObject* newChild, RenderObject* beforeChild = 0) OVERRIDE;
+    virtual LayoutUnit paddingTop() const override;
+    virtual LayoutUnit paddingBottom() const override;
+    virtual LayoutUnit paddingLeft() const override;
+    virtual LayoutUnit paddingRight() const override;
+    virtual LayoutUnit paddingBefore() const override;
+    virtual LayoutUnit paddingAfter() const override;
+    virtual LayoutUnit paddingStart() const override;
+    virtual LayoutUnit paddingEnd() const override;
+
+    virtual void addChild(RenderObject* newChild, RenderObject* beforeChild = 0) override;
     
 protected:
-    virtual void layout() OVERRIDE;
+    virtual void layout() override;
     
-    virtual void paint(PaintInfo&, const LayoutPoint&) OVERRIDE;
+    virtual void paint(PaintInfo&, const LayoutPoint&) override;
 
 private:
-    virtual bool isRenderMathMLRoot() const { return true; }
-    virtual const char* renderName() const { return "RenderMathMLRoot"; }
-    
-    virtual void computePreferredLogicalWidths() OVERRIDE;
+    virtual bool isRenderMathMLRoot() const override final { return true; }
+    virtual const char* renderName() const override { return "RenderMathMLRoot"; }
     
     // This may return 0 for a non-MathML index (which won't occur in valid MathML).
-    RenderBoxModelObject* index() const;
-    
+    RenderBox* index() const;
+
     int m_intrinsicPaddingBefore;
     int m_intrinsicPaddingAfter;
     int m_intrinsicPaddingStart;

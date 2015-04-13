@@ -37,6 +37,76 @@
 #include "Platform.h"
 #include "PlatformString.h"
 
+#include <vector>
+
+enum FileAttribute {
+#ifdef WINDOWS
+    faArchive = FILE_ATTRIBUTE_ARCHIVE,
+    faCompressed = FILE_ATTRIBUTE_COMPRESSED,
+    faDevice = FILE_ATTRIBUTE_DEVICE,
+    faDirectory = FILE_ATTRIBUTE_DIRECTORY,
+    faEncrypted = FILE_ATTRIBUTE_ENCRYPTED,
+    faHidden = FILE_ATTRIBUTE_HIDDEN,
+    //faIntegrityStream = FILE_ATTRIBUTE_INTEGRITY_STREAM,
+    faNormal = FILE_ATTRIBUTE_NORMAL,
+    faNotContentIndexed = FILE_ATTRIBUTE_NOT_CONTENT_INDEXED,
+    //faNoScrubData = FILE_ATTRIBUTE_NO_SCRUB_DATA,
+    faOffline = FILE_ATTRIBUTE_OFFLINE,
+    faSystem = FILE_ATTRIBUTE_SYSTEM,
+    faSymbolicLink = FILE_ATTRIBUTE_REPARSE_POINT,
+    faSparceFile = FILE_ATTRIBUTE_SPARSE_FILE,
+    faReadOnly = FILE_ATTRIBUTE_READONLY,
+    faTemporary = FILE_ATTRIBUTE_TEMPORARY,
+    faVirtual = FILE_ATTRIBUTE_VIRTUAL
+#endif //WINDOWS
+#ifdef POSIX
+    faBlockSpecial,
+    faCharacterSpecial,
+    faFIFOSpecial,
+    faNormal,
+    faDirectory,
+    faSymbolicLink,
+    faSocket,
+
+    // Owner
+    faReadOnly,
+    faWriteOnly,
+    faReadWrite,
+    faExecute,
+
+    // Group
+    faGroupReadOnly,
+    faGroupWriteOnly,
+    faGroupReadWrite,
+    faGroupExecute,
+
+    // Others
+    faOthersReadOnly,
+    faOthersWriteOnly,
+    faOthersReadWrite,
+    faOthersExecute,
+
+    faHidden
+#endif //POSIX
+};
+
+class FileAttributes {
+private:
+    TString FFileName;
+    bool FFollowLink;
+    std::vector<FileAttribute> FAttributes;
+
+    bool WriteAttributes();
+    bool ReadAttributes();
+    bool Valid(const FileAttribute Value);
+
+public:
+    FileAttributes(const TString FileName, bool FollowLink = true);
+
+    void Append(const FileAttribute Value);
+    bool Contains(const FileAttribute Value);
+    void Remove(const FileAttribute Value);
+};
 
 class FilePath {
 private:
@@ -48,15 +118,17 @@ public:
     static bool DirectoryExists(const TString DirectoryName);
 
     static bool DeleteFile(const TString FileName);
+    static bool DeleteDirectory(const TString DirectoryName);
 
     static TString ExtractFilePath(TString Path);
     static TString ExtractFileExt(TString Path);
     static TString ExtractFileName(TString Path);
     static TString ChangeFileExt(TString Path, TString Extension);
 
-    static TString IncludeTrailingSlash(const TString value);
-    static TString IncludeTrailingSlash(const char* value);
-    static TString IncludeTrailingSlash(const wchar_t* value);
+    static TString IncludeTrailingSeparater(const TString value);
+    static TString IncludeTrailingSeparater(const char* value);
+    static TString IncludeTrailingSeparater(const wchar_t* value);
+    static TString FixPathForPlatform(TString Path);
     static TString FixPathSeparatorForPlatform(TString Path);
     static TString PathSeparator();
 

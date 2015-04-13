@@ -24,40 +24,37 @@
  */
 
 [
-        Conditional=VIDEO,
-        Constructor,
-        CallWith=ScriptExecutionContext,
-        JSGenerateToJSObject,
-        EventTarget
+    Conditional=VIDEO,
+    Constructor,
+    ConstructorCallWith=ScriptExecutionContext,
+    JSGenerateToJSObject,
+    EventTarget,
 ] interface MediaController {
-        readonly attribute TimeRanges buffered;
-        readonly attribute TimeRanges seekable;
+    readonly attribute TimeRanges buffered;
+    readonly attribute TimeRanges seekable;
 
-        readonly attribute double duration;
-        attribute double currentTime
-            setter raises (DOMException);
+    readonly attribute double duration;
+    attribute double currentTime;
 
-        readonly attribute boolean paused;
-        readonly attribute TimeRanges played;
+    readonly attribute boolean paused;
+    readonly attribute TimeRanges played;
     readonly attribute DOMString playbackState;
-        void play();
-        void pause();
+    void play();
+    void pause();
     void unpause();
 
-        attribute double defaultPlaybackRate;
-        attribute double playbackRate;
+    attribute double defaultPlaybackRate;
+    attribute double playbackRate;
 
-        attribute double volume
-            setter raises (DOMException);
-        attribute boolean muted;
+    [SetterRaisesException] attribute double volume;
+    attribute boolean muted;
 
-        // EventTarget interface
+    // EventTarget interface
     void addEventListener(DOMString type, 
                           EventListener listener, 
                           optional boolean useCapture);
     void removeEventListener(DOMString type, 
                              EventListener listener, 
                              optional boolean useCapture);
-    boolean dispatchEvent(Event evt)
-            raises(EventException);
-    };
+    [RaisesException] boolean dispatchEvent(Event evt);
+};

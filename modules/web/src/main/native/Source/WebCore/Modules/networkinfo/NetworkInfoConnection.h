@@ -58,7 +58,7 @@ public:
     void networkInfoControllerDestroyed() { m_controller = 0; }
 
     // EventTarget implementation.
-    virtual const AtomicString& interfaceName() const;
+    virtual EventTargetInterface eventTargetInterface() const;
     virtual ScriptExecutionContext* scriptExecutionContext() const { return ActiveDOMObject::scriptExecutionContext(); }
 
     using RefCounted<NetworkInfoConnection>::ref;
@@ -76,10 +76,10 @@ private:
     explicit NetworkInfoConnection(Navigator*);
 
     // EventTarget implementation.
-    virtual EventTargetData* eventTargetData();
-    virtual EventTargetData* ensureEventTargetData();
-    virtual void refEventTarget() { ref(); }
-    virtual void derefEventTarget() { deref(); }
+    virtual EventTargetData* eventTargetData() override;
+    virtual EventTargetData& ensureEventTargetData() override;
+    virtual void refEventTarget() override { ref(); }
+    virtual void derefEventTarget() override { deref(); }
 
     // EventTarget implementation.
     EventTargetData m_eventTargetData;

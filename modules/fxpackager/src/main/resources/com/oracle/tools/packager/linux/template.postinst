@@ -21,6 +21,7 @@ case "$1" in
     configure)
         echo Adding shortcut to the menu
 SECONDARY_LAUNCHERS_INSTALL
+APP_CDS_CACHE
         xdg-desktop-menu install --novendor /opt/APPLICATION_FS_NAME/APPLICATION_LAUNCHER_FILENAME.desktop
 FILE_ASSOCIATION_INSTALL
 

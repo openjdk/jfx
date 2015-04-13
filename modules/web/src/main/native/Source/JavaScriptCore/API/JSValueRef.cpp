@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
 #include "config.h"
@@ -29,15 +29,14 @@
 #include "APICast.h"
 #include "APIShims.h"
 #include "JSAPIWrapperObject.h"
+#include "JSCJSValue.h"
 #include "JSCallbackObject.h"
-
-#include <runtime/JSCJSValue.h>
-#include <runtime/JSGlobalObject.h>
-#include <runtime/JSONObject.h>
-#include <runtime/JSString.h>
-#include <runtime/LiteralParser.h>
-#include <runtime/Operations.h>
-#include <runtime/Protect.h>
+#include "JSGlobalObject.h"
+#include "JSONObject.h"
+#include "JSString.h"
+#include "LiteralParser.h"
+#include "JSCInlines.h"
+#include "Protect.h"
 
 #include <wtf/Assertions.h>
 #include <wtf/text/StringHash.h>
@@ -175,14 +174,14 @@ bool JSValueIsObjectOfClass(JSContextRef ctx, JSValueRef value, JSClassRef jsCla
     APIEntryShim entryShim(exec);
 
     JSValue jsValue = toJS(exec, value);
-
+    
     if (JSObject* o = jsValue.getObject()) {
-        if (o->inherits(&JSCallbackObject<JSGlobalObject>::s_info))
+        if (o->inherits(JSCallbackObject<JSGlobalObject>::info()))
             return jsCast<JSCallbackObject<JSGlobalObject>*>(o)->inherits(jsClass);
-        if (o->inherits(&JSCallbackObject<JSDestructibleObject>::s_info))
+        if (o->inherits(JSCallbackObject<JSDestructibleObject>::info()))
             return jsCast<JSCallbackObject<JSDestructibleObject>*>(o)->inherits(jsClass);
 #if JSC_OBJC_API_ENABLED
-        if (o->inherits(&JSCallbackObject<JSAPIWrapperObject>::s_info))
+        if (o->inherits(JSCallbackObject<JSAPIWrapperObject>::info()))
             return jsCast<JSCallbackObject<JSAPIWrapperObject>*>(o)->inherits(jsClass);
 #endif
     }
@@ -328,7 +327,7 @@ JSValueRef JSValueMakeFromJSONString(JSContextRef ctx, JSStringRef string)
         LiteralParser<LChar> parser(exec, str.characters8(), length, StrictJSON);
         return toRef(exec, parser.tryLiteralParse());
     }
-    LiteralParser<UChar> parser(exec, str.characters(), length, StrictJSON);
+    LiteralParser<UChar> parser(exec, str.deprecatedCharacters(), length, StrictJSON);
     return toRef(exec, parser.tryLiteralParse());
 }
 
@@ -397,7 +396,7 @@ JSStringRef JSValueToStringCopy(JSContextRef ctx, JSValueRef value, JSValueRef* 
     APIEntryShim entryShim(exec);
 
     JSValue jsValue = toJS(exec, value);
-
+    
     RefPtr<OpaqueJSString> stringRef(OpaqueJSString::create(jsValue.toString(exec)->value(exec)));
     if (exec->hadException()) {
         if (exception)
@@ -418,7 +417,7 @@ JSObjectRef JSValueToObject(JSContextRef ctx, JSValueRef value, JSValueRef* exce
     APIEntryShim entryShim(exec);
 
     JSValue jsValue = toJS(exec, value);
-
+    
     JSObjectRef objectRef = toRef(jsValue.toObject(exec));
     if (exec->hadException()) {
         if (exception)
@@ -427,7 +426,7 @@ JSObjectRef JSValueToObject(JSContextRef ctx, JSValueRef value, JSValueRef* exce
         objectRef = 0;
     }
     return objectRef;
-}
+}    
 
 void JSValueProtect(JSContextRef ctx, JSValueRef value)
 {

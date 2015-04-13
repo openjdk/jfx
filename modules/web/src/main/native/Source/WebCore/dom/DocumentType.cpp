@@ -28,7 +28,7 @@
 
 namespace WebCore {
 
-DocumentType::DocumentType(Document* document, const String& name, const String& publicId, const String& systemId)
+DocumentType::DocumentType(Document& document, const String& name, const String& publicId, const String& systemId)
     : Node(document, CreateOther)
     , m_name(name)
     , m_publicId(publicId)
@@ -36,9 +36,9 @@ DocumentType::DocumentType(Document* document, const String& name, const String&
 {
 }
 
-KURL DocumentType::baseURI() const
+URL DocumentType::baseURI() const
 {
-    return KURL();
+    return URL();
 }
 
 String DocumentType::nodeName() const
@@ -54,30 +54,6 @@ Node::NodeType DocumentType::nodeType() const
 PassRefPtr<Node> DocumentType::cloneNode(bool /*deep*/)
 {
     return create(document(), m_name, m_publicId, m_systemId);
-}
-
-Node::InsertionNotificationRequest DocumentType::insertedInto(ContainerNode* insertionPoint)
-{
-    Node::insertedInto(insertionPoint);
-    if (!insertionPoint->inDocument())
-        return InsertionDone;
-
-    // Our document node can be null if we were created by a DOMImplementation.  We use the parent() instead.
-    ASSERT(parentNode() && parentNode()->isDocumentNode());
-    if (parentNode() && parentNode()->isDocumentNode()) {
-        Document* doc = toDocument(parentNode());
-        if (!doc->doctype())
-            doc->setDocType(this);
-    }
-
-    return InsertionDone;
-}
-
-void DocumentType::removedFrom(ContainerNode* insertionPoint)
-{
-    if (insertionPoint->inDocument() && document() && document()->doctype() == this)
-        document()->setDocType(0);
-    Node::removedFrom(insertionPoint);
 }
 
 }

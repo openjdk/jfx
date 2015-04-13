@@ -35,7 +35,7 @@
 #define JAVAUSERPREFERENCES_H
 
 
-#include "PropertyFile.h"
+#include "Helpers.h"
 
 #include <map>
 
@@ -43,14 +43,14 @@
 class JavaUserPreferences {
 protected:
     TString FAppid;
-    TOrderedMap FMap;
+    OrderedMap<TString, TString> FMap;
 
 public:
     static JavaUserPreferences* CreateInstance(void);
     JavaUserPreferences(void);
     virtual ~JavaUserPreferences(void);
 
-    TOrderedMap GetData();
+    OrderedMap<TString, TString> GetData();
 
 public:
     virtual bool Load(TString Appid) = 0;

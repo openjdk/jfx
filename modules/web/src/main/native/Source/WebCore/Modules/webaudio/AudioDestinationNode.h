@@ -42,12 +42,12 @@ public:
     virtual ~AudioDestinationNode();
     
     // AudioNode   
-    virtual void process(size_t) { }; // we're pulled by hardware so this is never called
-    virtual void reset() { m_currentSampleFrame = 0; };
+    virtual void process(size_t) override { }; // we're pulled by hardware so this is never called
+    virtual void reset() override { m_currentSampleFrame = 0; }
     
     // The audio hardware calls render() to get the next render quantum of audio into destinationBus.
     // It will optionally give us local/live audio input in sourceBus (if it's not 0).
-    virtual void render(AudioBus* sourceBus, AudioBus* destinationBus, size_t numberOfFrames);
+    virtual void render(AudioBus* sourceBus, AudioBus* destinationBus, size_t numberOfFrames) override;
 
     size_t currentSampleFrame() const { return m_currentSampleFrame; }
     double currentTime() const { return currentSampleFrame() / static_cast<double>(sampleRate()); }
@@ -58,7 +58,7 @@ public:
     virtual void enableInput(const String& inputDeviceId) = 0;
 
     virtual void startRendering() = 0;
-    
+
     AudioSourceProvider* localAudioInputProvider() { return &m_localAudioInputProvider; }
     
 protected:
@@ -78,7 +78,7 @@ protected:
         }
 
         // AudioSourceProvider.
-        virtual void provideInput(AudioBus* destinationBus, size_t numberOfFrames)
+        virtual void provideInput(AudioBus* destinationBus, size_t numberOfFrames) override
         {
             bool isGood = destinationBus && destinationBus->length() == numberOfFrames && m_sourceBus->length() == numberOfFrames;
             ASSERT(isGood);
@@ -90,8 +90,8 @@ protected:
         RefPtr<AudioBus> m_sourceBus;
     };
 
-    virtual double tailTime() const OVERRIDE { return 0; }
-    virtual double latencyTime() const OVERRIDE { return 0; }
+    virtual double tailTime() const override { return 0; }
+    virtual double latencyTime() const override { return 0; }
 
     // Counts the number of sample-frames processed by the destination.
     size_t m_currentSampleFrame;

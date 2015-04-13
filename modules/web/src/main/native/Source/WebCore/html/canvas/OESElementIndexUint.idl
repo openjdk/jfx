@@ -26,7 +26,6 @@
 [
     NoInterfaceObject,
     Conditional=WEBGL,
-    GenerateIsReachable=ImplContext,
-    OmitConstructor
+    GenerateIsReachable=ImplWebGLRenderingContext,
 ] interface OESElementIndexUint {
 };

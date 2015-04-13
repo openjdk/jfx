@@ -34,7 +34,7 @@
 #include <wtf/Platform.h>
 
 #include <wtf/Assertions.h>
-#include <wtf/FastAllocBase.h>
+#include <wtf/FastMalloc.h>
 #include <wtf/Locker.h>
 #include <wtf/Noncopyable.h>
 
@@ -90,23 +90,6 @@ private:
 
 typedef Locker<Mutex> MutexLocker;
 
-class MutexTryLocker {
-    WTF_MAKE_NONCOPYABLE(MutexTryLocker);
-public:
-    MutexTryLocker(Mutex& mutex) : m_mutex(mutex), m_locked(mutex.tryLock()) { }
-    ~MutexTryLocker()
-    {
-        if (m_locked)
-            m_mutex.unlock();
-    }
-
-    bool locked() const { return m_locked; }
-
-private:
-    Mutex& m_mutex;
-    bool m_locked;
-};
-
 class ThreadCondition {
     WTF_MAKE_NONCOPYABLE(ThreadCondition);
 public:
@@ -134,7 +117,6 @@ WTF_EXPORT_PRIVATE DWORD absoluteTimeToWaitTimeoutInterval(double absoluteTime);
 
 using WTF::Mutex;
 using WTF::MutexLocker;
-using WTF::MutexTryLocker;
 using WTF::ThreadCondition;
 
 #if OS(WINDOWS)

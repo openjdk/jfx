@@ -35,11 +35,11 @@ namespace JSC {
 class ASTBuilder {
     struct BinaryOpInfo {
         BinaryOpInfo() {}
-        BinaryOpInfo(int s, int d, int e, bool r)
-            : start(s)
-            , divot(d)
-            , end(e)
-            , hasAssignment(r)
+        BinaryOpInfo(const JSTextPosition& otherStart, const JSTextPosition& otherDivot, const JSTextPosition& otherEnd, bool rhsHasAssignment)
+            : start(otherStart)
+            , divot(otherDivot)
+            , end(otherEnd)
+            , hasAssignment(rhsHasAssignment)
         {
         }
         BinaryOpInfo(const BinaryOpInfo& lhs, const BinaryOpInfo& rhs)
@@ -49,26 +49,28 @@ class ASTBuilder {
             , hasAssignment(lhs.hasAssignment || rhs.hasAssignment)
         {
         }
-        int start;
-        int divot;
-        int end;
+        JSTextPosition start;
+        JSTextPosition divot;
+        JSTextPosition end;
         bool hasAssignment;
     };
     
     
     struct AssignmentInfo {
         AssignmentInfo() {}
-        AssignmentInfo(ExpressionNode* node, int start, int divot, int initAssignments, Operator op)
+        AssignmentInfo(ExpressionNode* node, const JSTextPosition& start, const JSTextPosition& divot, int initAssignments, Operator op)
             : m_node(node)
             , m_start(start)
             , m_divot(divot)
             , m_initAssignments(initAssignments)
             , m_op(op)
         {
+            ASSERT(m_divot.offset >= m_divot.lineStartOffset);
+            ASSERT(m_start.offset >= m_start.lineStartOffset);
         }
         ExpressionNode* m_node;
-        int m_start;
-        int m_divot;
+        JSTextPosition m_start;
+        JSTextPosition m_divot;
         int m_initAssignments;
         Operator m_op;
     };
@@ -88,6 +90,7 @@ public:
         UnaryExprContext(ASTBuilder&) {}
     };
 
+
     typedef SyntaxChecker FunctionBodyBuilder;
 
     typedef ExpressionNode* Expression;
@@ -105,7 +108,10 @@ public:
     typedef CaseClauseNode* Clause;
     typedef ConstDeclNode* ConstDeclList;
     typedef std::pair<ExpressionNode*, BinaryOpInfo> BinaryOperand;
-    
+    typedef RefPtr<DeconstructionPatternNode> DeconstructionPattern;
+    typedef RefPtr<ArrayPatternNode> ArrayPattern;
+    typedef RefPtr<ObjectPatternNode> ObjectPattern;
+    typedef RefPtr<BindingNode> BindingPattern;
     static const bool CreatesAST = true;
     static const bool NeedsFreeVariableInfo = true;
     static const bool CanUseFunctionCache = true;
@@ -113,7 +119,7 @@ public:
     static const int  DontBuildStrings = 0;
 
     ExpressionNode* makeBinaryNode(const JSTokenLocation&, int token, std::pair<ExpressionNode*, BinaryOpInfo>, std::pair<ExpressionNode*, BinaryOpInfo>);
-    ExpressionNode* makeFunctionCallNode(const JSTokenLocation&, ExpressionNode* func, ArgumentsNode* args, int start, int divot, int end);
+    ExpressionNode* makeFunctionCallNode(const JSTokenLocation&, ExpressionNode* func, ArgumentsNode* args, const JSTextPosition& divotStart, const JSTextPosition& divot, const JSTextPosition& divotEnd);
 
     JSC::SourceElements* createSourceElements() { return new (m_vm) JSC::SourceElements(); }
 
@@ -126,11 +132,11 @@ public:
 
     CommaNode* createCommaExpr(const JSTokenLocation& location, ExpressionNode* lhs, ExpressionNode* rhs) { return new (m_vm) CommaNode(location, lhs, rhs); }
 
-    ExpressionNode* makeAssignNode(const JSTokenLocation&, ExpressionNode* left, Operator, ExpressionNode* right, bool leftHasAssignments, bool rightHasAssignments, int start, int divot, int end);
-    ExpressionNode* makePrefixNode(const JSTokenLocation&, ExpressionNode*, Operator, int start, int divot, int end);
-    ExpressionNode* makePostfixNode(const JSTokenLocation&, ExpressionNode*, Operator, int start, int divot, int end);
+    ExpressionNode* makeAssignNode(const JSTokenLocation&, ExpressionNode* left, Operator, ExpressionNode* right, bool leftHasAssignments, bool rightHasAssignments, const JSTextPosition& start, const JSTextPosition& divot, const JSTextPosition& end);
+    ExpressionNode* makePrefixNode(const JSTokenLocation&, ExpressionNode*, Operator, const JSTextPosition& start, const JSTextPosition& divot, const JSTextPosition& end);
+    ExpressionNode* makePostfixNode(const JSTokenLocation&, ExpressionNode*, Operator, const JSTextPosition& start, const JSTextPosition& divot, const JSTextPosition& end);
     ExpressionNode* makeTypeOfNode(const JSTokenLocation&, ExpressionNode*);
-    ExpressionNode* makeDeleteNode(const JSTokenLocation&, ExpressionNode*, int start, int divot, int end);
+    ExpressionNode* makeDeleteNode(const JSTokenLocation&, ExpressionNode*, const JSTextPosition& start, const JSTextPosition& divot, const JSTextPosition& end);
     ExpressionNode* makeNegateNode(const JSTokenLocation&, ExpressionNode*);
     ExpressionNode* makeBitwiseNotNode(const JSTokenLocation&, ExpressionNode*);
     ExpressionNode* makeMultNode(const JSTokenLocation&, ExpressionNode* left, ExpressionNode* right, bool rightHasAssignments);
@@ -163,7 +169,7 @@ public:
         usesThis();
         return new (m_vm) ThisNode(location);
     }
-    ExpressionNode* createResolve(const JSTokenLocation& location, const Identifier* ident, int start)
+    ExpressionNode* createResolve(const JSTokenLocation& location, const Identifier* ident, const JSTextPosition& start)
     {
         if (m_vm->propertyNames->arguments == *ident)
             usesArguments();
@@ -210,38 +216,46 @@ public:
         return new (m_vm) NullNode(location);
     }
 
-    ExpressionNode* createBracketAccess(const JSTokenLocation& location, ExpressionNode* base, ExpressionNode* property, bool propertyHasAssignments, int start, int divot, int end)
+    ExpressionNode* createBracketAccess(const JSTokenLocation& location, ExpressionNode* base, ExpressionNode* property, bool propertyHasAssignments, const JSTextPosition& start, const JSTextPosition& divot, const JSTextPosition& end)
     {
         BracketAccessorNode* node = new (m_vm) BracketAccessorNode(location, base, property, propertyHasAssignments);
         setExceptionLocation(node, start, divot, end);
         return node;
     }
 
-    ExpressionNode* createDotAccess(const JSTokenLocation& location, ExpressionNode* base, const Identifier* property, int start, int divot, int end)
+    ExpressionNode* createDotAccess(const JSTokenLocation& location, ExpressionNode* base, const Identifier* property, const JSTextPosition& start, const JSTextPosition& divot, const JSTextPosition& end)
     {
         DotAccessorNode* node = new (m_vm) DotAccessorNode(location, base, *property);
         setExceptionLocation(node, start, divot, end);
         return node;
     }
 
-    ExpressionNode* createRegExp(const JSTokenLocation& location, const Identifier& pattern, const Identifier& flags, int start)
+    ExpressionNode* createSpreadExpression(const JSTokenLocation& location, ExpressionNode* expression, const JSTextPosition& start, const JSTextPosition& divot, const JSTextPosition& end)
+    {
+        auto node = new (m_vm) SpreadExpressionNode(location, expression);
+        setExceptionLocation(node, start, divot, end);
+        return node;
+    }
+
+    ExpressionNode* createRegExp(const JSTokenLocation& location, const Identifier& pattern, const Identifier& flags, const JSTextPosition& start)
     {
         if (Yarr::checkSyntax(pattern.string()))
             return 0;
         RegExpNode* node = new (m_vm) RegExpNode(location, pattern, flags);
         int size = pattern.length() + 2; // + 2 for the two /'s
-        setExceptionLocation(node, start, start + size, start + size);
+        JSTextPosition end = start + size;
+        setExceptionLocation(node, start, end, end);
         return node;
     }
 
-    ExpressionNode* createNewExpr(const JSTokenLocation& location, ExpressionNode* expr, ArgumentsNode* arguments, int start, int divot, int end)
+    ExpressionNode* createNewExpr(const JSTokenLocation& location, ExpressionNode* expr, ArgumentsNode* arguments, const JSTextPosition& start, const JSTextPosition& divot, const JSTextPosition& end)
     {
         NewExprNode* node = new (m_vm) NewExprNode(location, expr, arguments);
         setExceptionLocation(node, start, divot, end);
         return node;
     }
 
-    ExpressionNode* createNewExpr(const JSTokenLocation& location, ExpressionNode* expr, int start, int end)
+    ExpressionNode* createNewExpr(const JSTokenLocation& location, ExpressionNode* expr, const JSTextPosition& start, const JSTextPosition& end)
     {
         NewExprNode* node = new (m_vm) NewExprNode(location, expr);
         setExceptionLocation(node, start, end, end);
@@ -253,7 +267,7 @@ public:
         return new (m_vm) ConditionalNode(location, condition, lhs, rhs);
     }
 
-    ExpressionNode* createAssignResolve(const JSTokenLocation& location, const Identifier& ident, ExpressionNode* rhs, int start, int divot, int end)
+    ExpressionNode* createAssignResolve(const JSTokenLocation& location, const Identifier& ident, ExpressionNode* rhs, const JSTextPosition& start, const JSTextPosition& divot, const JSTextPosition& end)
     {
         if (rhs->isFuncExprNode())
             static_cast<FuncExprNode*>(rhs)->body()->setInferredName(ident);
@@ -262,35 +276,35 @@ public:
         return node;
     }
 
-    ExpressionNode* createFunctionExpr(const JSTokenLocation& location, const Identifier* name, FunctionBodyNode* body, ParameterNode* parameters, int openBracePos, int closeBracePos, int bodyStartLine, int bodyEndLine)
+    ExpressionNode* createFunctionExpr(const JSTokenLocation& location, const Identifier* name, FunctionBodyNode* body, ParameterNode* parameters, unsigned openBraceOffset, unsigned closeBraceOffset, int bodyStartLine, int bodyEndLine, unsigned startColumn)
     {
-        FuncExprNode* result = new (m_vm) FuncExprNode(location, *name, body, m_sourceCode->subExpression(openBracePos, closeBracePos, bodyStartLine), parameters);
-        body->setLoc(bodyStartLine, bodyEndLine, location.charPosition);
+        FuncExprNode* result = new (m_vm) FuncExprNode(location, *name, body, m_sourceCode->subExpression(openBraceOffset, closeBraceOffset, bodyStartLine, startColumn), parameters);
+        body->setLoc(bodyStartLine, bodyEndLine, location.startOffset, location.lineStartOffset);
         return result;
     }
 
-    FunctionBodyNode* createFunctionBody(const JSTokenLocation& startLocation, const JSTokenLocation& endLocation, bool inStrictContext)
+    FunctionBodyNode* createFunctionBody(const JSTokenLocation& startLocation, const JSTokenLocation& endLocation, unsigned startColumn, unsigned endColumn, bool inStrictContext)
     {
-        return FunctionBodyNode::create(m_vm, startLocation, endLocation, inStrictContext);
+        return FunctionBodyNode::create(m_vm, startLocation, endLocation, startColumn, endColumn, inStrictContext);
+    }
+
+    void setFunctionNameStart(FunctionBodyNode* body, int functionNameStart)
+    {
+        body->setFunctionNameStart(functionNameStart);
     }
     
-    void setFunctionStart(FunctionBodyNode* body, int functionStart)
-    {
-        body->setFunctionStart(functionStart);
-    }
-    
-    template <bool> PropertyNode* createGetterOrSetterProperty(const JSTokenLocation& location, PropertyNode::Type type, const Identifier* name, ParameterNode* params, FunctionBodyNode* body, int openBracePos, int closeBracePos, int bodyStartLine, int bodyEndLine)
+    NEVER_INLINE PropertyNode* createGetterOrSetterProperty(const JSTokenLocation& location, PropertyNode::Type type, bool, const Identifier* name, ParameterNode* params, FunctionBodyNode* body, unsigned openBraceOffset, unsigned closeBraceOffset, int bodyStartLine, int bodyEndLine, unsigned bodyStartColumn)
     {
         ASSERT(name);
-        body->setLoc(bodyStartLine, bodyEndLine, location.charPosition);
+        body->setLoc(bodyStartLine, bodyEndLine, location.startOffset, location.lineStartOffset);
         body->setInferredName(*name);
-        return new (m_vm) PropertyNode(m_vm, *name, new (m_vm) FuncExprNode(location, m_vm->propertyNames->nullIdentifier, body, m_sourceCode->subExpression(openBracePos, closeBracePos, bodyStartLine), params), type);
+        return new (m_vm) PropertyNode(m_vm, *name, new (m_vm) FuncExprNode(location, m_vm->propertyNames->nullIdentifier, body, m_sourceCode->subExpression(openBraceOffset, closeBraceOffset, bodyStartLine, bodyStartColumn), params), type);
     }
     
-    template <bool> PropertyNode* createGetterOrSetterProperty(VM*, const JSTokenLocation& location, PropertyNode::Type type, double name, ParameterNode* params, FunctionBodyNode* body, int openBracePos, int closeBracePos, int bodyStartLine, int bodyEndLine)
+    NEVER_INLINE PropertyNode* createGetterOrSetterProperty(VM*, const JSTokenLocation& location, PropertyNode::Type type, bool, double name, ParameterNode* params, FunctionBodyNode* body, unsigned openBraceOffset, unsigned closeBraceOffset, int bodyStartLine, int bodyEndLine, unsigned bodyStartColumn)
     {
-        body->setLoc(bodyStartLine, bodyEndLine, location.charPosition);
-        return new (m_vm) PropertyNode(m_vm, name, new (m_vm) FuncExprNode(location, m_vm->propertyNames->nullIdentifier, body, m_sourceCode->subExpression(openBracePos, closeBracePos, bodyStartLine), params), type);
+        body->setLoc(bodyStartLine, bodyEndLine, location.startOffset, location.lineStartOffset);
+        return new (m_vm) PropertyNode(m_vm, name, new (m_vm) FuncExprNode(location, m_vm->propertyNames->nullIdentifier, body, m_sourceCode->subExpression(openBraceOffset, closeBraceOffset, bodyStartLine, bodyStartColumn), params), type);
     }
 
     ArgumentsNode* createArguments() { return new (m_vm) ArgumentsNode(); }
@@ -298,21 +312,22 @@ public:
     ArgumentListNode* createArgumentsList(const JSTokenLocation& location, ExpressionNode* arg) { return new (m_vm) ArgumentListNode(location, arg); }
     ArgumentListNode* createArgumentsList(const JSTokenLocation& location, ArgumentListNode* args, ExpressionNode* arg) { return new (m_vm) ArgumentListNode(location, args, arg); }
 
-    template <bool> PropertyNode* createProperty(const Identifier* propertyName, ExpressionNode* node, PropertyNode::Type type)
+    PropertyNode* createProperty(const Identifier* propertyName, ExpressionNode* node, PropertyNode::Type type, bool)
     {
         if (node->isFuncExprNode())
             static_cast<FuncExprNode*>(node)->body()->setInferredName(*propertyName);
         return new (m_vm) PropertyNode(m_vm, *propertyName, node, type);
     }
-    template <bool> PropertyNode* createProperty(VM*, double propertyName, ExpressionNode* node, PropertyNode::Type type) { return new (m_vm) PropertyNode(m_vm, propertyName, node, type); }
+    PropertyNode* createProperty(VM*, double propertyName, ExpressionNode* node, PropertyNode::Type type, bool) { return new (m_vm) PropertyNode(m_vm, propertyName, node, type); }
+    PropertyNode* createProperty(VM*, ExpressionNode* propertyName, ExpressionNode* node, PropertyNode::Type type, bool) { return new (m_vm) PropertyNode(m_vm, propertyName, node, type); }
     PropertyListNode* createPropertyList(const JSTokenLocation& location, PropertyNode* property) { return new (m_vm) PropertyListNode(location, property); }
     PropertyListNode* createPropertyList(const JSTokenLocation& location, PropertyNode* property, PropertyListNode* tail) { return new (m_vm) PropertyListNode(location, property, tail); }
 
     ElementNode* createElementList(int elisions, ExpressionNode* expr) { return new (m_vm) ElementNode(elisions, expr); }
     ElementNode* createElementList(ElementNode* elems, int elisions, ExpressionNode* expr) { return new (m_vm) ElementNode(elems, elisions, expr); }
 
-    ParameterNode* createFormalParameterList(const Identifier& ident) { return new (m_vm) ParameterNode(ident); }
-    ParameterNode* createFormalParameterList(ParameterNode* list, const Identifier& ident) { return new (m_vm) ParameterNode(list, ident); }
+    ParameterNode* createFormalParameterList(DeconstructionPattern pattern) { return new (m_vm) ParameterNode(pattern); }
+    ParameterNode* createFormalParameterList(ParameterNode* list, DeconstructionPattern pattern) { return new (m_vm) ParameterNode(list, pattern); }
 
     CaseClauseNode* createClause(ExpressionNode* expr, JSC::SourceElements* statements) { return new (m_vm) CaseClauseNode(expr, statements); }
     ClauseListNode* createClauseList(CaseClauseNode* clause) { return new (m_vm) ClauseListNode(clause); }
@@ -320,56 +335,72 @@ public:
 
     void setUsesArguments(FunctionBodyNode* node) { node->setUsesArguments(); }
 
-    StatementNode* createFuncDeclStatement(const JSTokenLocation& location, const Identifier* name, FunctionBodyNode* body, ParameterNode* parameters, int openBracePos, int closeBracePos, int bodyStartLine, int bodyEndLine)
+    StatementNode* createFuncDeclStatement(const JSTokenLocation& location, const Identifier* name, FunctionBodyNode* body, ParameterNode* parameters, unsigned openBraceOffset, unsigned closeBraceOffset, int bodyStartLine, int bodyEndLine, unsigned bodyStartColumn)
     {
-        FuncDeclNode* decl = new (m_vm) FuncDeclNode(location, *name, body, m_sourceCode->subExpression(openBracePos, closeBracePos, bodyStartLine), parameters);
+        FuncDeclNode* decl = new (m_vm) FuncDeclNode(location, *name, body, m_sourceCode->subExpression(openBraceOffset, closeBraceOffset, bodyStartLine, bodyStartColumn), parameters);
         if (*name == m_vm->propertyNames->arguments)
             usesArguments();
         m_scope.m_funcDeclarations->data.append(decl->body());
-        body->setLoc(bodyStartLine, bodyEndLine, location.charPosition);
+        body->setLoc(bodyStartLine, bodyEndLine, location.startOffset, location.lineStartOffset);
         return decl;
     }
 
     StatementNode* createBlockStatement(const JSTokenLocation& location, JSC::SourceElements* elements, int startLine, int endLine)
     {
         BlockNode* block = new (m_vm) BlockNode(location, elements);
-        block->setLoc(startLine, endLine, location.charPosition);
+        block->setLoc(startLine, endLine, location.startOffset, location.lineStartOffset);
         return block;
     }
 
-    StatementNode* createExprStatement(const JSTokenLocation& location, ExpressionNode* expr, int start, int end)
+    StatementNode* createExprStatement(const JSTokenLocation& location, ExpressionNode* expr, const JSTextPosition& start, int end)
     {
         ExprStatementNode* result = new (m_vm) ExprStatementNode(location, expr);
-        result->setLoc(start, end, location.charPosition);
+        result->setLoc(start.line, end, start.offset, start.lineStartOffset);
         return result;
     }
 
     StatementNode* createIfStatement(const JSTokenLocation& location, ExpressionNode* condition, StatementNode* trueBlock, StatementNode* falseBlock, int start, int end)
     {
         IfElseNode* result = new (m_vm) IfElseNode(location, condition, trueBlock, falseBlock);
-        result->setLoc(start, end, location.charPosition);
+        result->setLoc(start, end, location.startOffset, location.lineStartOffset);
         return result;
     }
 
     StatementNode* createForLoop(const JSTokenLocation& location, ExpressionNode* initializer, ExpressionNode* condition, ExpressionNode* iter, StatementNode* statements, int start, int end)
     {
         ForNode* result = new (m_vm) ForNode(location, initializer, condition, iter, statements);
-        result->setLoc(start, end, location.charPosition);
+        result->setLoc(start, end, location.startOffset, location.lineStartOffset);
         return result;
     }
 
-    StatementNode* createForInLoop(const JSTokenLocation& location, const Identifier* ident, ExpressionNode* initializer, ExpressionNode* iter, StatementNode* statements, int start, int divot, int end, int initStart, int initEnd, int startLine, int endLine)
-    {
-        ForInNode* result = new (m_vm) ForInNode(m_vm, location, *ident, initializer, iter, statements, initStart, initStart - start, initEnd - initStart);
-        result->setLoc(startLine, endLine, location.charPosition);
-        setExceptionLocation(result, start, divot + 1, end);
-        return result;
-    }
-
-    StatementNode* createForInLoop(const JSTokenLocation& location, ExpressionNode* lhs, ExpressionNode* iter, StatementNode* statements, int eStart, int eDivot, int eEnd, int start, int end)
+    StatementNode* createForInLoop(const JSTokenLocation& location, ExpressionNode* lhs, ExpressionNode* iter, StatementNode* statements, const JSTextPosition& eStart, const JSTextPosition& eDivot, const JSTextPosition& eEnd, int start, int end)
     {
         ForInNode* result = new (m_vm) ForInNode(location, lhs, iter, statements);
-        result->setLoc(start, end, location.charPosition);
+        result->setLoc(start, end, location.startOffset, location.lineStartOffset);
+        setExceptionLocation(result, eStart, eDivot, eEnd);
+        return result;
+    }
+    
+    StatementNode* createForInLoop(const JSTokenLocation& location, PassRefPtr<DeconstructionPatternNode> pattern, ExpressionNode* iter, StatementNode* statements, const JSTextPosition& eStart, const JSTextPosition& eDivot, const JSTextPosition& eEnd, int start, int end)
+    {
+        ForInNode* result = new (m_vm) ForInNode(m_vm, location, pattern.get(), iter, statements);
+        result->setLoc(start, end, location.startOffset, location.lineStartOffset);
+        setExceptionLocation(result, eStart, eDivot, eEnd);
+        return result;
+    }
+    
+    StatementNode* createForOfLoop(const JSTokenLocation& location, ExpressionNode* lhs, ExpressionNode* iter, StatementNode* statements, const JSTextPosition& eStart, const JSTextPosition& eDivot, const JSTextPosition& eEnd, int start, int end)
+    {
+        ForOfNode* result = new (m_vm) ForOfNode(location, lhs, iter, statements);
+        result->setLoc(start, end, location.startOffset, location.lineStartOffset);
+        setExceptionLocation(result, eStart, eDivot, eEnd);
+        return result;
+    }
+    
+    StatementNode* createForOfLoop(const JSTokenLocation& location, PassRefPtr<DeconstructionPatternNode> pattern, ExpressionNode* iter, StatementNode* statements, const JSTextPosition& eStart, const JSTextPosition& eDivot, const JSTextPosition& eEnd, int start, int end)
+    {
+        ForOfNode* result = new (m_vm) ForOfNode(m_vm, location, pattern.get(), iter, statements);
+        result->setLoc(start, end, location.startOffset, location.lineStartOffset);
         setExceptionLocation(result, eStart, eDivot, eEnd);
         return result;
     }
@@ -383,47 +414,47 @@ public:
             result = new (m_vm) EmptyStatementNode(location);
         else
             result = new (m_vm) VarStatementNode(location, expr);
-        result->setLoc(start, end, location.charPosition);
+        result->setLoc(start, end, location.startOffset, location.lineStartOffset);
         return result;
     }
 
-    StatementNode* createReturnStatement(const JSTokenLocation& location, ExpressionNode* expression, int eStart, int eEnd, int startLine, int endLine)
+    StatementNode* createReturnStatement(const JSTokenLocation& location, ExpressionNode* expression, const JSTextPosition& start, const JSTextPosition& end)
     {
         ReturnNode* result = new (m_vm) ReturnNode(location, expression);
-        setExceptionLocation(result, eStart, eEnd, eEnd);
-        result->setLoc(startLine, endLine, location.charPosition);
+        setExceptionLocation(result, start, end, end);
+        result->setLoc(start.line, end.line, start.offset, start.lineStartOffset);
         return result;
     }
 
-    StatementNode* createBreakStatement(const JSTokenLocation& location, int eStart, int eEnd, int startLine, int endLine)
+    StatementNode* createBreakStatement(const JSTokenLocation& location, const JSTextPosition& start, const JSTextPosition& end)
     {
         BreakNode* result = new (m_vm) BreakNode(m_vm, location);
-        setExceptionLocation(result, eStart, eEnd, eEnd);
-        result->setLoc(startLine, endLine, location.charPosition);
+        setExceptionLocation(result, start, end, end);
+        result->setLoc(start.line, end.line, start.offset, start.lineStartOffset);
         return result;
     }
 
-    StatementNode* createBreakStatement(const JSTokenLocation& location, const Identifier* ident, int eStart, int eEnd, int startLine, int endLine)
+    StatementNode* createBreakStatement(const JSTokenLocation& location, const Identifier* ident, const JSTextPosition& start, const JSTextPosition& end)
     {
         BreakNode* result = new (m_vm) BreakNode(location, *ident);
-        setExceptionLocation(result, eStart, eEnd, eEnd);
-        result->setLoc(startLine, endLine, location.charPosition);
+        setExceptionLocation(result, start, end, end);
+        result->setLoc(start.line, end.line, start.offset, start.lineStartOffset);
         return result;
     }
 
-    StatementNode* createContinueStatement(const JSTokenLocation& location, int eStart, int eEnd, int startLine, int endLine)
+    StatementNode* createContinueStatement(const JSTokenLocation& location, const JSTextPosition& start, const JSTextPosition& end)
     {
         ContinueNode* result = new (m_vm) ContinueNode(m_vm, location);
-        setExceptionLocation(result, eStart, eEnd, eEnd);
-        result->setLoc(startLine, endLine, location.charPosition);
+        setExceptionLocation(result, start, end, end);
+        result->setLoc(start.line, end.line, start.offset, start.lineStartOffset);
         return result;
     }
 
-    StatementNode* createContinueStatement(const JSTokenLocation& location, const Identifier* ident, int eStart, int eEnd, int startLine, int endLine)
+    StatementNode* createContinueStatement(const JSTokenLocation& location, const Identifier* ident, const JSTextPosition& start, const JSTextPosition& end)
     {
         ContinueNode* result = new (m_vm) ContinueNode(location, *ident);
-        setExceptionLocation(result, eStart, eEnd, eEnd);
-        result->setLoc(startLine, endLine, location.charPosition);
+        setExceptionLocation(result, start, end, end);
+        result->setLoc(start.line, end.line, start.offset, start.lineStartOffset);
         return result;
     }
 
@@ -432,7 +463,7 @@ public:
         TryNode* result = new (m_vm) TryNode(location, tryBlock, *ident, catchBlock, finallyBlock);
         if (catchBlock)
             usesCatch();
-        result->setLoc(startLine, endLine, location.charPosition);
+        result->setLoc(startLine, endLine, location.startOffset, location.lineStartOffset);
         return result;
     }
 
@@ -440,43 +471,43 @@ public:
     {
         CaseBlockNode* cases = new (m_vm) CaseBlockNode(firstClauses, defaultClause, secondClauses);
         SwitchNode* result = new (m_vm) SwitchNode(location, expr, cases);
-        result->setLoc(startLine, endLine, location.charPosition);
+        result->setLoc(startLine, endLine, location.startOffset, location.lineStartOffset);
         return result;
     }
 
     StatementNode* createWhileStatement(const JSTokenLocation& location, ExpressionNode* expr, StatementNode* statement, int startLine, int endLine)
     {
         WhileNode* result = new (m_vm) WhileNode(location, expr, statement);
-        result->setLoc(startLine, endLine, location.charPosition);
+        result->setLoc(startLine, endLine, location.startOffset, location.lineStartOffset);
         return result;
     }
 
     StatementNode* createDoWhileStatement(const JSTokenLocation& location, StatementNode* statement, ExpressionNode* expr, int startLine, int endLine)
     {
         DoWhileNode* result = new (m_vm) DoWhileNode(location, statement, expr);
-        result->setLoc(startLine, endLine, location.charPosition);
+        result->setLoc(startLine, endLine, location.startOffset, location.lineStartOffset);
         return result;
     }
 
-    StatementNode* createLabelStatement(const JSTokenLocation& location, const Identifier* ident, StatementNode* statement, int start, int end)
+    StatementNode* createLabelStatement(const JSTokenLocation& location, const Identifier* ident, StatementNode* statement, const JSTextPosition& start, const JSTextPosition& end)
     {
         LabelNode* result = new (m_vm) LabelNode(location, *ident, statement);
         setExceptionLocation(result, start, end, end);
         return result;
     }
 
-    StatementNode* createWithStatement(const JSTokenLocation& location, ExpressionNode* expr, StatementNode* statement, int start, int end, int startLine, int endLine)
+    StatementNode* createWithStatement(const JSTokenLocation& location, ExpressionNode* expr, StatementNode* statement, unsigned start, const JSTextPosition& end, unsigned startLine, unsigned endLine)
     {
         usesWith();
         WithNode* result = new (m_vm) WithNode(location, expr, statement, end, end - start);
-        result->setLoc(startLine, endLine, location.charPosition);
+        result->setLoc(startLine, endLine, location.startOffset, location.lineStartOffset);
         return result;
     }    
     
-    StatementNode* createThrowStatement(const JSTokenLocation& location, ExpressionNode* expr, int start, int end, int startLine, int endLine)
+    StatementNode* createThrowStatement(const JSTokenLocation& location, ExpressionNode* expr, const JSTextPosition& start, const JSTextPosition& end)
     {
         ThrowNode* result = new (m_vm) ThrowNode(location, expr);
-        result->setLoc(startLine, endLine, location.charPosition);
+        result->setLoc(start.line, end.line, start.offset, start.lineStartOffset);
         setExceptionLocation(result, start, end, end);
         return result;
     }
@@ -484,14 +515,14 @@ public:
     StatementNode* createDebugger(const JSTokenLocation& location, int startLine, int endLine)
     {
         DebuggerStatementNode* result = new (m_vm) DebuggerStatementNode(location);
-        result->setLoc(startLine, endLine, location.charPosition);
+        result->setLoc(startLine, endLine, location.startOffset, location.lineStartOffset);
         return result;
     }
     
     StatementNode* createConstStatement(const JSTokenLocation& location, ConstDeclNode* decls, int startLine, int endLine)
     {
         ConstStatementNode* result = new (m_vm) ConstStatementNode(location, decls);
-        result->setLoc(startLine, endLine, location.charPosition);
+        result->setLoc(startLine, endLine, location.startOffset, location.lineStartOffset);
         return result;
     }
 
@@ -512,7 +543,8 @@ public:
     {
         if (m_vm->propertyNames->arguments == *ident)
             usesArguments();
-        m_scope.m_varDeclarations->data.append(std::make_pair(ident, attrs));
+        ASSERT(ident->impl()->isIdentifier());
+        m_scope.m_varDeclarations->data.append(std::make_pair(*ident, attrs));
     }
 
     ExpressionNode* combineCommaNodes(const JSTokenLocation& location, ExpressionNode* list, ExpressionNode* init)
@@ -528,7 +560,7 @@ public:
 
     int evalCount() const { return m_evalCount; }
 
-    void appendBinaryExpressionInfo(int& operandStackDepth, ExpressionNode* current, int exprStart, int lhs, int rhs, bool hasAssignments)
+    void appendBinaryExpressionInfo(int& operandStackDepth, ExpressionNode* current, const JSTextPosition& exprStart, const JSTextPosition& lhs, const JSTextPosition& rhs, bool hasAssignments)
     {
         operandStackDepth++;
         m_binaryOperandStack.append(std::make_pair(current, BinaryOpInfo(exprStart, lhs, rhs, hasAssignments)));
@@ -568,7 +600,7 @@ public:
         return result;
     }
     
-    void appendUnaryToken(int& tokenStackDepth, int type, int start)
+    void appendUnaryToken(int& tokenStackDepth, int type, const JSTextPosition& start)
     {
         tokenStackDepth++;
         m_unaryTokenStack.append(std::make_pair(type, start));
@@ -579,7 +611,7 @@ public:
         return m_unaryTokenStack.last().first;
     }
     
-    int unaryTokenStackLastStart(int&)
+    const JSTextPosition& unaryTokenStackLastStart(int&)
     {
         return m_unaryTokenStack.last().second;
     }
@@ -590,25 +622,63 @@ public:
         m_unaryTokenStack.removeLast();
     }
     
-    void assignmentStackAppend(int& assignmentStackDepth, ExpressionNode* node, int start, int divot, int assignmentCount, Operator op)
+    void assignmentStackAppend(int& assignmentStackDepth, ExpressionNode* node, const JSTextPosition& start, const JSTextPosition& divot, int assignmentCount, Operator op)
     {
         assignmentStackDepth++;
+        ASSERT(start.offset >= start.lineStartOffset);
+        ASSERT(divot.offset >= divot.lineStartOffset);
         m_assignmentInfoStack.append(AssignmentInfo(node, start, divot, assignmentCount, op));
     }
 
-    ExpressionNode* createAssignment(const JSTokenLocation& location, int& assignmentStackDepth, ExpressionNode* rhs, int initialAssignmentCount, int currentAssignmentCount, int lastTokenEnd)
+    ExpressionNode* createAssignment(const JSTokenLocation& location, int& assignmentStackDepth, ExpressionNode* rhs, int initialAssignmentCount, int currentAssignmentCount, const JSTextPosition& lastTokenEnd)
     {
-        ExpressionNode* result = makeAssignNode(location, m_assignmentInfoStack.last().m_node, m_assignmentInfoStack.last().m_op, rhs, m_assignmentInfoStack.last().m_initAssignments != initialAssignmentCount, m_assignmentInfoStack.last().m_initAssignments != currentAssignmentCount, m_assignmentInfoStack.last().m_start, m_assignmentInfoStack.last().m_divot + 1, lastTokenEnd);
+        AssignmentInfo& info = m_assignmentInfoStack.last();
+        ExpressionNode* result = makeAssignNode(location, info.m_node, info.m_op, rhs, info.m_initAssignments != initialAssignmentCount, info.m_initAssignments != currentAssignmentCount, info.m_start, info.m_divot + 1, lastTokenEnd);
         m_assignmentInfoStack.removeLast();
         assignmentStackDepth--;
         return result;
     }
     
-    const Identifier& getName(Property property) const { return property->name(); }
+    const Identifier* getName(Property property) const { return property->name(); }
     PropertyNode::Type getType(Property property) const { return property->type(); }
 
     bool isResolve(ExpressionNode* expr) const { return expr->isResolveNode(); }
 
+    ExpressionNode* createDeconstructingAssignment(const JSTokenLocation& location, PassRefPtr<DeconstructionPatternNode> pattern, ExpressionNode* initializer)
+    {
+        return new (m_vm) DeconstructingAssignmentNode(location, pattern.get(), initializer);
+    }
+    
+    ArrayPattern createArrayPattern(const JSTokenLocation&)
+    {
+        return ArrayPatternNode::create(m_vm);
+    }
+    
+    void appendArrayPatternSkipEntry(ArrayPattern node, const JSTokenLocation& location)
+    {
+        node->appendIndex(location, 0);
+    }
+
+    void appendArrayPatternEntry(ArrayPattern node, const JSTokenLocation& location, DeconstructionPattern pattern)
+    {
+        node->appendIndex(location, pattern.get());
+    }
+    
+    ObjectPattern createObjectPattern(const JSTokenLocation&)
+    {
+        return ObjectPatternNode::create(m_vm);
+    }
+    
+    void appendObjectPatternEntry(ObjectPattern node, const JSTokenLocation& location, bool wasString, const Identifier& identifier, DeconstructionPattern pattern)
+    {
+        node->appendEntry(location, identifier, wasString, pattern.get());
+    }
+    
+    BindingPattern createBindingLocation(const JSTokenLocation&, const Identifier& boundProperty, const JSTextPosition& start, const JSTextPosition& end)
+    {
+        return BindingNode::create(m_vm, boundProperty, start, end);
+    }
+    
 private:
     struct Scope {
         Scope(VM* vm)
@@ -624,9 +694,10 @@ private:
         int m_numConstants;
     };
 
-    static void setExceptionLocation(ThrowableExpressionData* node, unsigned start, unsigned divot, unsigned end)
+    static void setExceptionLocation(ThrowableExpressionData* node, const JSTextPosition& divotStart, const JSTextPosition& divot, const JSTextPosition& divotEnd)
     {
-        node->setExceptionSourceCode(divot, divot - start, end - divot);
+        ASSERT(divot.offset >= divot.lineStartOffset);
+        node->setExceptionSourceCode(divot, divotStart, divotEnd);
     }
 
     void incConstants() { m_scope.m_numConstants++; }
@@ -649,8 +720,8 @@ private:
     Scope m_scope;
     Vector<BinaryOperand, 10, UnsafeVectorOverflow> m_binaryOperandStack;
     Vector<AssignmentInfo, 10, UnsafeVectorOverflow> m_assignmentInfoStack;
-    Vector<pair<int, int>, 10, UnsafeVectorOverflow> m_binaryOperatorStack;
-    Vector<pair<int, int>, 10, UnsafeVectorOverflow> m_unaryTokenStack;
+    Vector<std::pair<int, int>, 10, UnsafeVectorOverflow> m_binaryOperatorStack;
+    Vector<std::pair<int, JSTextPosition>, 10, UnsafeVectorOverflow> m_unaryTokenStack;
     int m_evalCount;
 };
 
@@ -663,21 +734,21 @@ ExpressionNode* ASTBuilder::makeTypeOfNode(const JSTokenLocation& location, Expr
     return new (m_vm) TypeOfValueNode(location, expr);
 }
 
-ExpressionNode* ASTBuilder::makeDeleteNode(const JSTokenLocation& location, ExpressionNode* expr, int start, int divot, int end)
+ExpressionNode* ASTBuilder::makeDeleteNode(const JSTokenLocation& location, ExpressionNode* expr, const JSTextPosition& start, const JSTextPosition& divot, const JSTextPosition& end)
 {
     if (!expr->isLocation())
         return new (m_vm) DeleteValueNode(location, expr);
     if (expr->isResolveNode()) {
         ResolveNode* resolve = static_cast<ResolveNode*>(expr);
-        return new (m_vm) DeleteResolveNode(location, resolve->identifier(), divot, divot - start, end - divot);
+        return new (m_vm) DeleteResolveNode(location, resolve->identifier(), divot, start, end);
     }
     if (expr->isBracketAccessorNode()) {
         BracketAccessorNode* bracket = static_cast<BracketAccessorNode*>(expr);
-        return new (m_vm) DeleteBracketNode(location, bracket->base(), bracket->subscript(), divot, divot - start, end - divot);
+        return new (m_vm) DeleteBracketNode(location, bracket->base(), bracket->subscript(), divot, start, end);
     }
     ASSERT(expr->isDotAccessorNode());
     DotAccessorNode* dot = static_cast<DotAccessorNode*>(expr);
-    return new (m_vm) DeleteDotNode(location, dot->base(), dot->identifier(), divot, divot - start, end - divot);
+    return new (m_vm) DeleteDotNode(location, dot->base(), dot->identifier(), divot, start, end);
 }
 
 ExpressionNode* ASTBuilder::makeNegateNode(const JSTokenLocation& location, ExpressionNode* n)
@@ -794,39 +865,40 @@ ExpressionNode* ASTBuilder::makeBitXOrNode(const JSTokenLocation& location, Expr
     return new (m_vm) BitXOrNode(location, expr1, expr2, rightHasAssignments);
 }
 
-ExpressionNode* ASTBuilder::makeFunctionCallNode(const JSTokenLocation& location, ExpressionNode* func, ArgumentsNode* args, int start, int divot, int end)
+ExpressionNode* ASTBuilder::makeFunctionCallNode(const JSTokenLocation& location, ExpressionNode* func, ArgumentsNode* args, const JSTextPosition& divotStart, const JSTextPosition& divot, const JSTextPosition& divotEnd)
 {
+    ASSERT(divot.offset >= divot.lineStartOffset);
     if (!func->isLocation())
-        return new (m_vm) FunctionCallValueNode(location, func, args, divot, divot - start, end - divot);
+        return new (m_vm) FunctionCallValueNode(location, func, args, divot, divotStart, divotEnd);
     if (func->isResolveNode()) {
         ResolveNode* resolve = static_cast<ResolveNode*>(func);
         const Identifier& identifier = resolve->identifier();
         if (identifier == m_vm->propertyNames->eval) {
             usesEval();
-            return new (m_vm) EvalFunctionCallNode(location, args, divot, divot - start, end - divot);
+            return new (m_vm) EvalFunctionCallNode(location, args, divot, divotStart, divotEnd);
         }
-        return new (m_vm) FunctionCallResolveNode(location, identifier, args, divot, divot - start, end - divot);
+        return new (m_vm) FunctionCallResolveNode(location, identifier, args, divot, divotStart, divotEnd);
     }
     if (func->isBracketAccessorNode()) {
         BracketAccessorNode* bracket = static_cast<BracketAccessorNode*>(func);
-        FunctionCallBracketNode* node = new (m_vm) FunctionCallBracketNode(location, bracket->base(), bracket->subscript(), args, divot, divot - start, end - divot);
-        node->setSubexpressionInfo(bracket->divot(), bracket->endOffset());
+        FunctionCallBracketNode* node = new (m_vm) FunctionCallBracketNode(location, bracket->base(), bracket->subscript(), args, divot, divotStart, divotEnd);
+        node->setSubexpressionInfo(bracket->divot(), bracket->divotEnd().offset);
         return node;
     }
     ASSERT(func->isDotAccessorNode());
     DotAccessorNode* dot = static_cast<DotAccessorNode*>(func);
     FunctionCallDotNode* node;
-    if (dot->identifier() == m_vm->propertyNames->call)
-        node = new (m_vm) CallFunctionCallDotNode(location, dot->base(), dot->identifier(), args, divot, divot - start, end - divot);
-    else if (dot->identifier() == m_vm->propertyNames->apply)
-        node = new (m_vm) ApplyFunctionCallDotNode(location, dot->base(), dot->identifier(), args, divot, divot - start, end - divot);
+    if (dot->identifier() == m_vm->propertyNames->call || dot->identifier() == m_vm->propertyNames->callPrivateName)
+        node = new (m_vm) CallFunctionCallDotNode(location, dot->base(), dot->identifier(), args, divot, divotStart, divotEnd);
+    else if (dot->identifier() == m_vm->propertyNames->apply || dot->identifier() == m_vm->propertyNames->applyPrivateName)
+        node = new (m_vm) ApplyFunctionCallDotNode(location, dot->base(), dot->identifier(), args, divot, divotStart, divotEnd);
     else
-        node = new (m_vm) FunctionCallDotNode(location, dot->base(), dot->identifier(), args, divot, divot - start, end - divot);
-    node->setSubexpressionInfo(dot->divot(), dot->endOffset());
+        node = new (m_vm) FunctionCallDotNode(location, dot->base(), dot->identifier(), args, divot, divotStart, divotEnd);
+    node->setSubexpressionInfo(dot->divot(), dot->divotEnd().offset);
     return node;
 }
 
-ExpressionNode* ASTBuilder::makeBinaryNode(const JSTokenLocation& location, int token, pair<ExpressionNode*, BinaryOpInfo> lhs, pair<ExpressionNode*, BinaryOpInfo> rhs)
+ExpressionNode* ASTBuilder::makeBinaryNode(const JSTokenLocation& location, int token, std::pair<ExpressionNode*, BinaryOpInfo> lhs, std::pair<ExpressionNode*, BinaryOpInfo> rhs)
 {
     switch (token) {
     case OR:
@@ -908,10 +980,10 @@ ExpressionNode* ASTBuilder::makeBinaryNode(const JSTokenLocation& location, int 
     return 0;
 }
 
-ExpressionNode* ASTBuilder::makeAssignNode(const JSTokenLocation& location, ExpressionNode* loc, Operator op, ExpressionNode* expr, bool locHasAssignments, bool exprHasAssignments, int start, int divot, int end)
+ExpressionNode* ASTBuilder::makeAssignNode(const JSTokenLocation& location, ExpressionNode* loc, Operator op, ExpressionNode* expr, bool locHasAssignments, bool exprHasAssignments, const JSTextPosition& start, const JSTextPosition& divot, const JSTextPosition& end)
 {
     if (!loc->isLocation())
-        return new (m_vm) AssignErrorNode(location, divot, divot - start, end - divot);
+        return new (m_vm) AssignErrorNode(location, divot, start, end);
 
     if (loc->isResolveNode()) {
         ResolveNode* resolve = static_cast<ResolveNode*>(loc);
@@ -922,14 +994,14 @@ ExpressionNode* ASTBuilder::makeAssignNode(const JSTokenLocation& location, Expr
             setExceptionLocation(node, start, divot, end);
             return node;
         }
-        return new (m_vm) ReadModifyResolveNode(location, resolve->identifier(), op, expr, exprHasAssignments, divot, divot - start, end - divot);
+        return new (m_vm) ReadModifyResolveNode(location, resolve->identifier(), op, expr, exprHasAssignments, divot, start, end);
     }
     if (loc->isBracketAccessorNode()) {
         BracketAccessorNode* bracket = static_cast<BracketAccessorNode*>(loc);
         if (op == OpEqual)
-            return new (m_vm) AssignBracketNode(location, bracket->base(), bracket->subscript(), expr, locHasAssignments, exprHasAssignments, bracket->divot(), bracket->divot() - start, end - bracket->divot());
-        ReadModifyBracketNode* node = new (m_vm) ReadModifyBracketNode(location, bracket->base(), bracket->subscript(), op, expr, locHasAssignments, exprHasAssignments, divot, divot - start, end - divot);
-        node->setSubexpressionInfo(bracket->divot(), bracket->endOffset());
+            return new (m_vm) AssignBracketNode(location, bracket->base(), bracket->subscript(), expr, locHasAssignments, exprHasAssignments, bracket->divot(), start, end);
+        ReadModifyBracketNode* node = new (m_vm) ReadModifyBracketNode(location, bracket->base(), bracket->subscript(), op, expr, locHasAssignments, exprHasAssignments, divot, start, end);
+        node->setSubexpressionInfo(bracket->divot(), bracket->divotEnd().offset);
         return node;
     }
     ASSERT(loc->isDotAccessorNode());
@@ -937,22 +1009,22 @@ ExpressionNode* ASTBuilder::makeAssignNode(const JSTokenLocation& location, Expr
     if (op == OpEqual) {
         if (expr->isFuncExprNode())
             static_cast<FuncExprNode*>(expr)->body()->setInferredName(dot->identifier());
-        return new (m_vm) AssignDotNode(location, dot->base(), dot->identifier(), expr, exprHasAssignments, dot->divot(), dot->divot() - start, end - dot->divot());
+        return new (m_vm) AssignDotNode(location, dot->base(), dot->identifier(), expr, exprHasAssignments, dot->divot(), start, end);
     }
 
-    ReadModifyDotNode* node = new (m_vm) ReadModifyDotNode(location, dot->base(), dot->identifier(), op, expr, exprHasAssignments, divot, divot - start, end - divot);
-    node->setSubexpressionInfo(dot->divot(), dot->endOffset());
+    ReadModifyDotNode* node = new (m_vm) ReadModifyDotNode(location, dot->base(), dot->identifier(), op, expr, exprHasAssignments, divot, start, end);
+    node->setSubexpressionInfo(dot->divot(), dot->divotEnd().offset);
     return node;
 }
 
-ExpressionNode* ASTBuilder::makePrefixNode(const JSTokenLocation& location, ExpressionNode* expr, Operator op, int start, int divot, int end)
+ExpressionNode* ASTBuilder::makePrefixNode(const JSTokenLocation& location, ExpressionNode* expr, Operator op, const JSTextPosition& start, const JSTextPosition& divot, const JSTextPosition& end)
 {
-    return new (m_vm) PrefixNode(location, expr, op, divot, divot - start, end - divot);
+    return new (m_vm) PrefixNode(location, expr, op, divot, start, end);
 }
 
-ExpressionNode* ASTBuilder::makePostfixNode(const JSTokenLocation& location, ExpressionNode* expr, Operator op, int start, int divot, int end)
+ExpressionNode* ASTBuilder::makePostfixNode(const JSTokenLocation& location, ExpressionNode* expr, Operator op, const JSTextPosition& start, const JSTextPosition& divot, const JSTextPosition& end)
 {
-    return new (m_vm) PostfixNode(location, expr, op, divot, divot - start, end - divot);
+    return new (m_vm) PostfixNode(location, expr, op, divot, start, end);
 }
 
 }

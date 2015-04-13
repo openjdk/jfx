@@ -30,12 +30,14 @@
 #include "PurgeableBuffer.h"
 #include <wtf/PassOwnPtr.h>
 #include <wtf/unicode/UTF8.h>
-#include <wtf/unicode/Unicode.h>
 
-using namespace std;
+#if ENABLE(DISK_IMAGE_CACHE)
+#include "DiskImageCacheIOS.h"
+#endif
 
 namespace WebCore {
 
+#if !USE(NETWORK_CFDATA_ARRAY_CALLBACK)
 static const unsigned segmentSize = 0x1000;
 static const unsigned segmentPositionMask = 0x0FFF;
 
@@ -49,6 +51,7 @@ static inline unsigned offsetInSegment(unsigned position)
     return position & segmentPositionMask;
 }
 
+static inline char* allocateSegment() WARN_UNUSED_RETURN;
 static inline char* allocateSegment()
 {
     return static_cast<char*>(fastMalloc(segmentSize));
@@ -58,40 +61,68 @@ static inline void freeSegment(char* p)
 {
     fastFree(p);
 }
+#endif
 
 SharedBuffer::SharedBuffer()
     : m_size(0)
+    , m_shouldUsePurgeableMemory(false)
+#if ENABLE(DISK_IMAGE_CACHE)
+    , m_isMemoryMapped(false)
+    , m_diskImageCacheId(DiskImageCache::invalidDiskCacheId)
+    , m_notifyMemoryMappedCallback(nullptr)
+    , m_notifyMemoryMappedCallbackData(nullptr)
+#endif
 {
 }
 
-SharedBuffer::SharedBuffer(size_t size)
+SharedBuffer::SharedBuffer(unsigned size)
     : m_size(size)
     , m_buffer(size)
+    , m_shouldUsePurgeableMemory(false)
+#if ENABLE(DISK_IMAGE_CACHE)
+    , m_isMemoryMapped(false)
+    , m_diskImageCacheId(DiskImageCache::invalidDiskCacheId)
+    , m_notifyMemoryMappedCallback(nullptr)
+    , m_notifyMemoryMappedCallbackData(nullptr)
+#endif
 {
 }
 
-SharedBuffer::SharedBuffer(const char* data, int size)
+SharedBuffer::SharedBuffer(const char* data, unsigned size)
     : m_size(0)
+    , m_shouldUsePurgeableMemory(false)
+#if ENABLE(DISK_IMAGE_CACHE)
+    , m_isMemoryMapped(false)
+    , m_diskImageCacheId(DiskImageCache::invalidDiskCacheId)
+    , m_notifyMemoryMappedCallback(nullptr)
+    , m_notifyMemoryMappedCallbackData(nullptr)
+#endif
 {
-    // FIXME: Use unsigned consistently, and check for invalid casts when calling into SharedBuffer from other code.
-    if (size < 0)
-        CRASH();
-
     append(data, size);
 }
 
-SharedBuffer::SharedBuffer(const unsigned char* data, int size)
+SharedBuffer::SharedBuffer(const unsigned char* data, unsigned size)
     : m_size(0)
+    , m_shouldUsePurgeableMemory(false)
+#if ENABLE(DISK_IMAGE_CACHE)
+    , m_isMemoryMapped(false)
+    , m_diskImageCacheId(DiskImageCache::invalidDiskCacheId)
+    , m_notifyMemoryMappedCallback(nullptr)
+    , m_notifyMemoryMappedCallbackData(nullptr)
+#endif
 {
-    // FIXME: Use unsigned consistently, and check for invalid casts when calling into SharedBuffer from other code.
-    if (size < 0)
-        CRASH();
-
     append(reinterpret_cast<const char*>(data), size);
 }
     
 SharedBuffer::~SharedBuffer()
 {
+#if ENABLE(DISK_IMAGE_CACHE)
+    if (m_diskImageCacheId) {
+        diskImageCache().removeItem(m_diskImageCacheId);
+        m_isMemoryMapped = false;
+        m_diskImageCacheId = DiskImageCache::invalidDiskCacheId;
+    }
+#endif
     clear();
 }
 
@@ -122,6 +153,72 @@ unsigned SharedBuffer::size() const
     return m_size;
 }
 
+#if ENABLE(DISK_IMAGE_CACHE)
+bool SharedBuffer::isAllowedToBeMemoryMapped() const
+{
+    return m_diskImageCacheId != DiskImageCache::invalidDiskCacheId;
+}
+
+SharedBuffer::MemoryMappingState SharedBuffer::allowToBeMemoryMapped()
+{
+    if (isMemoryMapped())
+        return SharedBuffer::SuccessAlreadyMapped;
+
+    if (isAllowedToBeMemoryMapped())
+        return SharedBuffer::PreviouslyQueuedForMapping;
+
+    m_diskImageCacheId = diskImageCache().writeItem(this);
+    if (m_diskImageCacheId == DiskImageCache::invalidDiskCacheId)
+        return SharedBuffer::FailureCacheFull;
+
+    return SharedBuffer::QueuedForMapping;
+}
+
+void SharedBuffer::failedMemoryMap()
+{
+    if (m_notifyMemoryMappedCallback)
+        m_notifyMemoryMappedCallback(this, SharedBuffer::Failed, m_notifyMemoryMappedCallbackData);
+}
+
+void SharedBuffer::markAsMemoryMapped()
+{
+    ASSERT(!isMemoryMapped());
+
+    m_isMemoryMapped = true;
+    unsigned savedSize = size();
+    clear();
+    m_size = savedSize;
+
+    if (m_notifyMemoryMappedCallback)
+        m_notifyMemoryMappedCallback(this, SharedBuffer::Succeeded, m_notifyMemoryMappedCallbackData);
+}
+
+SharedBuffer::MemoryMappedNotifyCallbackData SharedBuffer::memoryMappedNotificationCallbackData() const
+{
+    return m_notifyMemoryMappedCallbackData;
+}
+
+SharedBuffer::MemoryMappedNotifyCallback SharedBuffer::memoryMappedNotificationCallback() const
+{
+    return m_notifyMemoryMappedCallback;
+}
+
+void SharedBuffer::setMemoryMappedNotificationCallback(MemoryMappedNotifyCallback callback, MemoryMappedNotifyCallbackData data)
+{
+    ASSERT(!m_notifyMemoryMappedCallback || !callback);
+    ASSERT(!m_notifyMemoryMappedCallbackData || !data);
+
+    m_notifyMemoryMappedCallback = callback;
+    m_notifyMemoryMappedCallbackData = data;
+}
+#endif
+
+// Try to create a PurgeableBuffer. We can fail to create one for any of the
+// following reasons:
+//   - shouldUsePurgeableMemory is set to false.
+//   - the size of the buffer is less than the minimum size required by
+//     PurgeableBuffer (currently 16k).
+//   - PurgeableBuffer::createUninitialized() call fails.
 void SharedBuffer::createPurgeableBuffer() const
 {
     if (m_purgeableBuffer)
@@ -135,23 +232,66 @@ void SharedBuffer::createPurgeableBuffer() const
         return;
 #endif
 
-    m_purgeableBuffer = PurgeableBuffer::create(buffer().data(), m_size);
+    if (!hasOneRef())
+        return;
+
+    if (!m_shouldUsePurgeableMemory)
+        return;
+
+    char* destination = 0;
+    m_purgeableBuffer = PurgeableBuffer::createUninitialized(m_size, destination);
+    if (!m_purgeableBuffer)
+        return;
+    unsigned bufferSize = m_buffer.size();
+    if (bufferSize) {
+        memcpy(destination, m_buffer.data(), bufferSize);
+        destination += bufferSize;
+        m_buffer.clear();
+    }
+    copyBufferAndClear(destination, m_size - bufferSize);
 }
 
 const char* SharedBuffer::data() const
 {
+#if ENABLE(DISK_IMAGE_CACHE)
+    if (isMemoryMapped())
+        return static_cast<const char*>(diskImageCache().dataForItem(m_diskImageCacheId));
+#endif
+
     if (hasPlatformData())
         return platformData();
-    
+
 #if USE(NETWORK_CFDATA_ARRAY_CALLBACK)
     if (const char* buffer = singleDataArrayBuffer())
         return buffer;
 #endif
-    
+
+    createPurgeableBuffer();
+
     if (m_purgeableBuffer)
         return m_purgeableBuffer->data();
     
     return this->buffer().data();
+}
+
+PassRefPtr<ArrayBuffer> SharedBuffer::createArrayBuffer() const
+{
+    RefPtr<ArrayBuffer> arrayBuffer = ArrayBuffer::createUninitialized(static_cast<unsigned>(size()), sizeof(char));
+
+    const char* segment = 0;
+    unsigned position = 0;
+    while (unsigned segmentSize = getSomeData(segment, position)) {
+        memcpy(static_cast<char*>(arrayBuffer->data()) + position, segment, segmentSize);
+        position += segmentSize;
+    }
+
+    if (position != arrayBuffer->byteLength()) {
+        ASSERT_NOT_REACHED();
+        // Don't return the incomplete ArrayBuffer.
+        return 0;
+    }
+
+    return arrayBuffer.release();
 }
 
 void SharedBuffer::append(SharedBuffer* data)
@@ -167,11 +307,15 @@ void SharedBuffer::append(SharedBuffer* data)
 void SharedBuffer::append(const char* data, unsigned length)
 {
     ASSERT(!m_purgeableBuffer);
+#if ENABLE(DISK_IMAGE_CACHE)
+    ASSERT(!isMemoryMapped());
+#endif
     if (!length)
         return;
 
     maybeTransferPlatformData();
-    
+
+#if !USE(NETWORK_CFDATA_ARRAY_CALLBACK)
     unsigned positionInSegment = offsetInSegment(m_size - m_buffer.size());
     m_size += length;
 
@@ -191,7 +335,7 @@ void SharedBuffer::append(const char* data, unsigned length)
         segment = m_segments.last() + positionInSegment;
 
     unsigned segmentFreeSpace = segmentSize - positionInSegment;
-    unsigned bytesToCopy = min(length, segmentFreeSpace);
+    unsigned bytesToCopy = std::min(length, segmentFreeSpace);
 
     for (;;) {
         memcpy(segment, data, bytesToCopy);
@@ -202,8 +346,14 @@ void SharedBuffer::append(const char* data, unsigned length)
         data += bytesToCopy;
         segment = allocateSegment();
         m_segments.append(segment);
-        bytesToCopy = min(length, segmentSize);
+        bytesToCopy = std::min(length, segmentSize);
     }
+#else
+    m_size += length;
+    if (m_buffer.isEmpty())
+        m_buffer.reserveInitialCapacity(length);
+    m_buffer.append(data, length);
+#endif
 }
 
 void SharedBuffer::append(const Vector<char>& data)
@@ -215,17 +365,18 @@ void SharedBuffer::clear()
 {
     clearPlatformData();
     
+#if !USE(NETWORK_CFDATA_ARRAY_CALLBACK)
     for (unsigned i = 0; i < m_segments.size(); ++i)
         freeSegment(m_segments[i]);
 
     m_segments.clear();
-    m_size = 0;
-
-    m_buffer.clear();
-    m_purgeableBuffer.clear();
-#if USE(NETWORK_CFDATA_ARRAY_CALLBACK)
+#else
     m_dataArray.clear();
 #endif
+
+    m_size = 0;
+    m_buffer.clear();
+    m_purgeableBuffer.clear();
 }
 
 PassRefPtr<SharedBuffer> SharedBuffer::copy() const
@@ -239,8 +390,13 @@ PassRefPtr<SharedBuffer> SharedBuffer::copy() const
     clone->m_size = m_size;
     clone->m_buffer.reserveCapacity(m_size);
     clone->m_buffer.append(m_buffer.data(), m_buffer.size());
+#if !USE(NETWORK_CFDATA_ARRAY_CALLBACK)
     for (unsigned i = 0; i < m_segments.size(); ++i)
         clone->m_buffer.append(m_segments[i], segmentSize);
+#else
+    for (unsigned i = 0; i < m_dataArray.size(); ++i)
+        clone->append(m_dataArray[i].get());
+#endif
     return clone;
 }
 
@@ -250,24 +406,29 @@ PassOwnPtr<PurgeableBuffer> SharedBuffer::releasePurgeableBuffer()
     return m_purgeableBuffer.release(); 
 }
 
+#if !USE(NETWORK_CFDATA_ARRAY_CALLBACK)
+void SharedBuffer::copyBufferAndClear(char* destination, unsigned bytesToCopy) const
+{
+    for (unsigned i = 0; i < m_segments.size(); ++i) {
+        unsigned effectiveBytesToCopy = std::min(bytesToCopy, segmentSize);
+        memcpy(destination, m_segments[i], effectiveBytesToCopy);
+        destination += effectiveBytesToCopy;
+        bytesToCopy -= effectiveBytesToCopy;
+        freeSegment(m_segments[i]);
+    }
+    m_segments.clear();
+}
+#endif
+
 const Vector<char>& SharedBuffer::buffer() const
 {
+#if ENABLE(DISK_IMAGE_CACHE)
+    ASSERT(!isMemoryMapped());
+#endif
     unsigned bufferSize = m_buffer.size();
     if (m_size > bufferSize) {
         m_buffer.resize(m_size);
-        char* destination = m_buffer.data() + bufferSize;
-        unsigned bytesLeft = m_size - bufferSize;
-        for (unsigned i = 0; i < m_segments.size(); ++i) {
-            unsigned bytesToCopy = min(bytesLeft, segmentSize);
-            memcpy(destination, m_segments[i], bytesToCopy);
-            destination += bytesToCopy;
-            bytesLeft -= bytesToCopy;
-            freeSegment(m_segments[i]);
-        }
-        m_segments.clear();
-#if USE(NETWORK_CFDATA_ARRAY_CALLBACK)
-        copyDataArrayAndClear(destination, bytesLeft);
-#endif
+        copyBufferAndClear(m_buffer.data() + bufferSize, m_size - bufferSize);
     }
     return m_buffer;
 }
@@ -279,6 +440,15 @@ unsigned SharedBuffer::getSomeData(const char*& someData, unsigned position) con
         someData = 0;
         return 0;
     }
+
+#if ENABLE(DISK_IMAGE_CACHE)
+    ASSERT(position < size());
+    if (isMemoryMapped()) {
+        const char* data = static_cast<const char*>(diskImageCache().dataForItem(m_diskImageCacheId));
+        someData = data + position;
+        return size() - position;
+    }
+#endif
 
     if (hasPlatformData() || m_purgeableBuffer) {
         ASSERT_WITH_SECURITY_IMPLICATION(position < size());
@@ -294,28 +464,26 @@ unsigned SharedBuffer::getSomeData(const char*& someData, unsigned position) con
     }
  
     position -= consecutiveSize;
+#if !USE(NETWORK_CFDATA_ARRAY_CALLBACK)
     unsigned segments = m_segments.size();
     unsigned maxSegmentedSize = segments * segmentSize;
     unsigned segment = segmentIndex(position);
     if (segment < segments) {
         unsigned bytesLeft = totalSize - consecutiveSize;
-        unsigned segmentedSize = min(maxSegmentedSize, bytesLeft);
+        unsigned segmentedSize = std::min(maxSegmentedSize, bytesLeft);
 
         unsigned positionInSegment = offsetInSegment(position);
         someData = m_segments[segment] + positionInSegment;
         return segment == segments - 1 ? segmentedSize - position : segmentSize - positionInSegment;
     }
-#if USE(NETWORK_CFDATA_ARRAY_CALLBACK)
-    ASSERT(maxSegmentedSize <= position);
-    position -= maxSegmentedSize;
-    return copySomeDataFromDataArray(someData, position);
-#else
     ASSERT_NOT_REACHED();
     return 0;
+#else
+    return copySomeDataFromDataArray(someData, position);
 #endif
 }
 
-#if !USE(CF) || PLATFORM(QT)
+#if !USE(CF) && !USE(SOUP)
 
 inline void SharedBuffer::clearPlatformData()
 {
@@ -354,7 +522,7 @@ PassRefPtr<SharedBuffer> utf8Buffer(const String& string)
 
     // Convert to runs of 8-bit characters.
     char* p = buffer.data();
-    const UChar* d = string.characters();
+    const UChar* d = string.deprecatedCharacters();
     WTF::Unicode::ConversionResult result = WTF::Unicode::convertUTF16ToUTF8(&d, d + length, &p, p + buffer.size(), true);
     if (result != WTF::Unicode::conversionOK)
         return 0;

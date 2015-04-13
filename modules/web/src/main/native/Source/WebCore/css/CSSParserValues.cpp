@@ -25,21 +25,21 @@
 #include "CSSFunctionValue.h"
 #include "CSSSelector.h"
 #include "CSSSelectorList.h"
-#if ENABLE(CSS_VARIABLES)
-#include "CSSVariableValue.h"
-#endif
 
 namespace WebCore {
 
 using namespace WTF;
 
+void destroy(const CSSParserValue& value)
+{
+    if (value.unit == CSSParserValue::Function)
+        delete value.function;
+}
+
 CSSParserValueList::~CSSParserValueList()
 {
-    size_t numValues = m_values.size();
-    for (size_t i = 0; i < numValues; i++) {
-        if (m_values[i].unit == CSSParserValue::Function)
-            delete m_values[i].function;
-    }
+    for (size_t i = 0, size = m_values.size(); i < size; i++)
+        destroy(m_values[i]);
 }
 
 void CSSParserValueList::addValue(const CSSParserValue& v)
@@ -70,9 +70,9 @@ PassRefPtr<CSSValue> CSSParserValue::createCSSValue()
         return CSSPrimitiveValue::createIdentifier(id);
     
     if (unit == CSSParserValue::Operator) {
-        RefPtr<CSSPrimitiveValue> primitiveValue = CSSPrimitiveValue::createIdentifier(iValue);
+        RefPtr<CSSPrimitiveValue> primitiveValue = CSSPrimitiveValue::createParserOperator(iValue);
         primitiveValue->setPrimitiveType(CSSPrimitiveValue::CSS_PARSER_OPERATOR);
-        return primitiveValue;
+        return primitiveValue.release();
     }
     if (unit == CSSParserValue::Function)
         return CSSFunctionValue::create(function);
@@ -82,14 +82,13 @@ PassRefPtr<CSSValue> CSSParserValue::createCSSValue()
     CSSPrimitiveValue::UnitTypes primitiveUnit = static_cast<CSSPrimitiveValue::UnitTypes>(unit);
     switch (primitiveUnit) {
     case CSSPrimitiveValue::CSS_IDENT:
+    case CSSPrimitiveValue::CSS_PROPERTY_ID:
+    case CSSPrimitiveValue::CSS_VALUE_ID:
         return CSSPrimitiveValue::create(string, CSSPrimitiveValue::CSS_PARSER_IDENTIFIER);
     case CSSPrimitiveValue::CSS_NUMBER:
         return CSSPrimitiveValue::create(fValue, isInt ? CSSPrimitiveValue::CSS_PARSER_INTEGER : CSSPrimitiveValue::CSS_NUMBER);
     case CSSPrimitiveValue::CSS_STRING:
     case CSSPrimitiveValue::CSS_URI:
-#if ENABLE(CSS_VARIABLES)
-    case CSSPrimitiveValue::CSS_VARIABLE_NAME:
-#endif
     case CSSPrimitiveValue::CSS_PARSER_HEXCOLOR:
         return CSSPrimitiveValue::create(string, primitiveUnit);
     case CSSPrimitiveValue::CSS_PERCENTAGE:
@@ -115,6 +114,7 @@ PassRefPtr<CSSValue> CSSParserValue::createCSSValue()
     case CSSPrimitiveValue::CSS_TURN:
     case CSSPrimitiveValue::CSS_REMS:
     case CSSPrimitiveValue::CSS_CHS:
+    case CSSPrimitiveValue::CSS_FR:
         return CSSPrimitiveValue::create(fValue, primitiveUnit);
     case CSSPrimitiveValue::CSS_UNKNOWN:
     case CSSPrimitiveValue::CSS_DIMENSION:
@@ -147,12 +147,12 @@ PassRefPtr<CSSValue> CSSParserValue::createCSSValue()
 }
 
 CSSParserSelector::CSSParserSelector()
-    : m_selector(adoptPtr(fastNew<CSSSelector>()))
+    : m_selector(std::make_unique<CSSSelector>())
 {
 }
 
 CSSParserSelector::CSSParserSelector(const QualifiedName& tagQName)
-    : m_selector(adoptPtr(new CSSSelector(tagQName)))
+    : m_selector(std::make_unique<CSSSelector>(tagQName))
 {
 }
 
@@ -160,22 +160,22 @@ CSSParserSelector::~CSSParserSelector()
 {
     if (!m_tagHistory)
         return;
-    Vector<OwnPtr<CSSParserSelector>, 16> toDelete;
-    OwnPtr<CSSParserSelector> selector = m_tagHistory.release();
+    Vector<std::unique_ptr<CSSParserSelector>, 16> toDelete;
+    std::unique_ptr<CSSParserSelector> selector = std::move(m_tagHistory);
     while (true) {
-        OwnPtr<CSSParserSelector> next = selector->m_tagHistory.release();
-        toDelete.append(selector.release());
+        std::unique_ptr<CSSParserSelector> next = std::move(selector->m_tagHistory);
+        toDelete.append(std::move(selector));
         if (!next)
             break;
-        selector = next.release();
+        selector = std::move(next);
     }
 }
 
-void CSSParserSelector::adoptSelectorVector(Vector<OwnPtr<CSSParserSelector> >& selectorVector)
+void CSSParserSelector::adoptSelectorVector(Vector<std::unique_ptr<CSSParserSelector>>& selectorVector)
 {
-    CSSSelectorList* selectorList = fastNew<CSSSelectorList>();
+    auto selectorList = std::make_unique<CSSSelectorList>();
     selectorList->adoptSelectorVector(selectorVector);
-    m_selector->setSelectorList(adoptPtr(selectorList));
+    m_selector->setSelectorList(std::move(selectorList));
 }
 
 bool CSSParserSelector::isSimple() const
@@ -198,32 +198,32 @@ bool CSSParserSelector::isSimple() const
     return false;
 }
 
-void CSSParserSelector::insertTagHistory(CSSSelector::Relation before, PassOwnPtr<CSSParserSelector> selector, CSSSelector::Relation after)
+void CSSParserSelector::insertTagHistory(CSSSelector::Relation before, std::unique_ptr<CSSParserSelector> selector, CSSSelector::Relation after)
 {
     if (m_tagHistory)
-        selector->setTagHistory(m_tagHistory.release());
+        selector->setTagHistory(std::move(m_tagHistory));
     setRelation(before);
     selector->setRelation(after);
-    m_tagHistory = selector;
+    m_tagHistory = std::move(selector);
 }
 
-void CSSParserSelector::appendTagHistory(CSSSelector::Relation relation, PassOwnPtr<CSSParserSelector> selector)
+void CSSParserSelector::appendTagHistory(CSSSelector::Relation relation, std::unique_ptr<CSSParserSelector> selector)
 {
     CSSParserSelector* end = this;
     while (end->tagHistory())
         end = end->tagHistory();
     end->setRelation(relation);
-    end->setTagHistory(selector);
+    end->setTagHistory(std::move(selector));
 }
 
 void CSSParserSelector::prependTagSelector(const QualifiedName& tagQName, bool tagIsForNamespaceRule)
 {
-    OwnPtr<CSSParserSelector> second = adoptPtr(new CSSParserSelector);
-    second->m_selector = m_selector.release();
-    second->m_tagHistory = m_tagHistory.release();
-    m_tagHistory = second.release();
+    auto second = std::make_unique<CSSParserSelector>();
+    second->m_selector = std::move(m_selector);
+    second->m_tagHistory = std::move(m_tagHistory);
+    m_tagHistory = std::move(second);
 
-    m_selector = adoptPtr(new CSSSelector(tagQName, tagIsForNamespaceRule));
+    m_selector = std::make_unique<CSSSelector>(tagQName, tagIsForNamespaceRule);
     m_selector->m_relation = CSSSelector::SubSelector;
 }
 

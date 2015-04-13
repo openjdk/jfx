@@ -27,23 +27,23 @@
 #include "IncrementalSweeper.h"
 
 #include "APIShims.h"
+#include "DelayedReleaseScope.h"
 #include "Heap.h"
 #include "JSObject.h"
 #include "JSString.h"
 #include "MarkedBlock.h"
+#include "JSCInlines.h"
 
 #include <wtf/HashSet.h>
 #include <wtf/WTFThreadData.h>
 
 namespace JSC {
 
-#if USE(CF) || PLATFORM(BLACKBERRY) || PLATFORM(QT)
+#if USE(CF)
 
 static const double sweepTimeSlice = .01; // seconds
 static const double sweepTimeTotal = .10;
 static const double sweepTimeMultiplier = 1.0 / sweepTimeTotal;
-
-#if USE(CF)
 
 IncrementalSweeper::IncrementalSweeper(Heap* heap, CFRunLoopRef runLoop)
     : HeapTimer(heap->vm(), runLoop)
@@ -67,36 +67,6 @@ void IncrementalSweeper::cancelTimer()
     CFRunLoopTimerSetNextFireDate(m_timer.get(), CFAbsoluteTimeGetCurrent() + s_decade);
 }
 
-#elif PLATFORM(BLACKBERRY) || PLATFORM(QT)
-   
-IncrementalSweeper::IncrementalSweeper(Heap* heap)
-    : HeapTimer(heap->vm())
-    , m_currentBlockToSweepIndex(0)
-    , m_blocksToSweep(heap->m_blockSnapshot)
-{
-}
-
-PassOwnPtr<IncrementalSweeper> IncrementalSweeper::create(Heap* heap)
-{
-    return adoptPtr(new IncrementalSweeper(heap));
-}
-
-void IncrementalSweeper::scheduleTimer()
-{
-#if PLATFORM(QT)
-    m_timer.start(sweepTimeSlice * sweepTimeMultiplier * 1000, this);
-#else
-    m_timer.start(sweepTimeSlice * sweepTimeMultiplier);
-#endif
-}
-
-void IncrementalSweeper::cancelTimer()
-{
-    m_timer.stop();
-}
-
-#endif
-
 void IncrementalSweeper::doWork()
 {
     doSweep(WTF::monotonicallyIncreasingTime());
@@ -104,6 +74,7 @@ void IncrementalSweeper::doWork()
 
 void IncrementalSweeper::doSweep(double sweepBeginTime)
 {
+    DelayedReleaseScope scope(m_vm->heap.m_objectSpace);
     while (m_currentBlockToSweepIndex < m_blocksToSweep.size()) {
         sweepNextBlock();
 
@@ -175,7 +146,7 @@ void IncrementalSweeper::willFinishSweeping()
 void IncrementalSweeper::sweepNextBlock()
 {
 }
-    
+
 #endif
 
 } // namespace JSC
