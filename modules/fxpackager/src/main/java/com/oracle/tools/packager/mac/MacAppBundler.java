@@ -368,13 +368,28 @@ public class MacAppBundler extends AbstractImageBundler {
             return true;
         }
 
+        // make sure we are pointing at the right JDK.
+        RelativeFileSet runtime = MAC_RUNTIME.fetchFrom(p);
+        if (runtime != null) {
+            runtime = new RelativeFileSet(runtime);
+            if ("jre".equals(runtime.getBaseDirectory().getName())) {
+                runtime.upshift();
+            }
+            if ("Home".equals(runtime.getBaseDirectory().getName())) {
+                runtime.upshift();
+            }
+            if ("Contents".equals(runtime.getBaseDirectory().getName())) {
+                runtime.upshift();
+            }
+        }
+        
         //validate required inputs
-        testRuntime(MAC_RUNTIME.fetchFrom(p), new String[] {
+        testRuntime(runtime, new String[] {
                 "Contents/Home/(jre/)?lib/[^/]+/libjvm.dylib", // most reliable
                 "Contents/Home/(jre/)?lib/rt.jar", // fallback canary for JDK 8
         });
         if (USE_FX_PACKAGING.fetchFrom(p)) {
-            testRuntime(MAC_RUNTIME.fetchFrom(p), new String[] {"Contents/Home/(jre/)?lib/ext/jfxrt.jar", "Contents/Home/(jre/)?lib/jfxrt.jar"});
+            testRuntime(runtime, new String[] {"Contents/Home/(jre/)?lib/ext/jfxrt.jar", "Contents/Home/(jre/)?lib/jfxrt.jar"});
         }
 
         // validate short version
@@ -570,18 +585,30 @@ public class MacAppBundler extends AbstractImageBundler {
     }
 
     private void copyRuntime(File plugInsDirectory, Map<String, ? super Object> params) throws IOException {
-        RelativeFileSet runTime = MAC_RUNTIME.fetchFrom(params);
-        if (runTime == null) {
+        RelativeFileSet runtime = MAC_RUNTIME.fetchFrom(params);
+        if (runtime == null) {
             //request to use system runtime => do not bundle
             return;
         }
+        runtime = new RelativeFileSet(runtime);
+        if ("jre".equals(runtime.getBaseDirectory().getName())) {
+            runtime.upshift();
+        }
+        if ("Home".equals(runtime.getBaseDirectory().getName())) {
+            runtime.upshift();
+        }
+        if ("Contents".equals(runtime.getBaseDirectory().getName())) {
+            runtime.upshift();
+        }
+        
+        
         plugInsDirectory.mkdirs();
 
-        File srcdir = runTime.getBaseDirectory();
+        File srcdir = runtime.getBaseDirectory();
         // the name in .../Contents/PlugIns/ must have a dot to be verified 
         // properly by the Mac App Store.
         File destDir = new File(plugInsDirectory, "Java.runtime");
-        Set<String> filesToCopy = runTime.getIncludedFiles();
+        Set<String> filesToCopy = runtime.getIncludedFiles();
 
         for (String fname : filesToCopy) {
             IOUtils.copyFile(
@@ -892,7 +919,6 @@ public class MacAppBundler extends AbstractImageBundler {
         if (params.containsKey(MAC_RUNTIME.getID())) {
             Object o = params.get(MAC_RUNTIME.getID());
             if (o instanceof RelativeFileSet) {
-
                 baseDir = ((RelativeFileSet)o).getBaseDirectory();
             } else {
                 baseDir = new File(o.toString());

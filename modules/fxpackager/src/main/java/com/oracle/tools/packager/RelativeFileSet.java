@@ -33,7 +33,7 @@ import java.util.Set;
 
 public class RelativeFileSet {
 
-    public static enum Type {
+    public enum Type {
         UNKNOWN, jnlp, jar, nativelib, icon, license, data
     }
 
@@ -44,6 +44,15 @@ public class RelativeFileSet {
 
     private File basedir;
     Set<String> files = new LinkedHashSet<>();
+    
+    public RelativeFileSet(RelativeFileSet copy) {
+        type = copy.type;
+        mode = copy.mode;
+        os = copy.os;
+        arch = copy.arch;
+        basedir = copy.basedir;
+        files = new LinkedHashSet<>(copy.files);
+    }
 
     public RelativeFileSet(File base, Collection<File> files) {
         basedir = base;
@@ -58,6 +67,16 @@ public class RelativeFileSet {
                 this.files.add(absolute.substring(baseAbsolute.length()+1));
             }
         }
+    }
+    
+    public void upshift() {
+        String root = basedir.getName();
+        basedir = basedir.getParentFile();
+        Set<String> newFiles = new LinkedHashSet<>();
+        for (String s : files) {
+            newFiles.add(root + File.separator + s);
+        }
+        files = newFiles;
     }
 
     public RelativeFileSet(File base, Set<File> files) {
