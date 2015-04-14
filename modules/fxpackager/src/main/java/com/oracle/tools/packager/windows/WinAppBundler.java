@@ -305,6 +305,9 @@ public class WinAppBundler extends AbstractImageBundler {
 
     private void copyMSVCDLLs(File rootDirectory, File jreDir) throws IOException {
         String vsVer = null;
+        if (jreDir == null || !jreDir.isDirectory()) {
+            jreDir = new File(System.getProperty("java.home"));
+        }
 
         // first copy the ones needed for the launcher
         for (String thisVer : VS_VERS) {

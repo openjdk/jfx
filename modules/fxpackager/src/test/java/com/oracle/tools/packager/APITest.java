@@ -66,7 +66,7 @@ public class APITest {
         }
         tmpBase.mkdirs();
 
-        workDir = new File(tmpBase, "cliapp");
+        workDir = new File(tmpBase, "apiapp");
         appResourcesDir = new File(tmpBase, "appResources");
         fakeMainJar = new File(appResourcesDir, "mainApp.jar");
 
