@@ -72,7 +72,7 @@ public class MacAppBundlerTest {
     static boolean retain = false;
     static boolean signingKeysPresent = false;
 
-    static final File FAKE_CERT_ROOT = new File("build/tmp/tests/cert/");
+    static final File FAKE_CERT_ROOT = new File("build/tmp/tests/cert/").getAbsoluteFile();
     
     @BeforeClass
     public static void prepareApp() {
@@ -138,7 +138,7 @@ public class MacAppBundlerTest {
                     "-in", FAKE_CERT_ROOT + "/app.csr",
                     "-signkey", FAKE_CERT_ROOT + "/app.key",
                     "-out", FAKE_CERT_ROOT + "/app.crt",
-                    "-extfile", FAKE_CERT_ROOT + "/app.cnf",
+                    "-extfile", FAKE_CERT_ROOT + "/app-cert.cfg",
                     "-extensions", "codesign");
             IOUtils.exec(pb, VERBOSE.fetchFrom(p));
 
