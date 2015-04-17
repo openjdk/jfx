@@ -157,6 +157,13 @@ Vector<String> Clipboard::types() const
 
     return m_pasteboard->types();
 }
+    
+#if PLATFORM(JAVA)
+Vector<String> Clipboard::typesPrivate() const
+{
+    return m_pasteboard->types();
+}
+#endif
 
 PassRefPtr<FileList> Clipboard::files() const
 {

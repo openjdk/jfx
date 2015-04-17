@@ -9,10 +9,11 @@
 #include "CachedImage.h"
 #include "DragActions.h"
 #include "DragClient.h"
+#include <wtf/Vector.h>
+#include <WTFString.h>
 
 #include "JavaEnv.h"
 #include "DragClientJava.h"
-#include "ClipboardJava.h"
 
 namespace WebCore {
 
@@ -128,9 +129,9 @@ void DragClientJava::startDrag(
     static JGClass clsString(env->FindClass("java/lang/String"));
     static JGClass clsObject(env->FindClass("java/lang/Object"));
 
-    ListHashSet<String> mimeTypes( ((ClipboardJava*)&clipboard)->typesPrivate() );
-    JLObjectArray jmimeTypes( env->NewObjectArray(mimeTypes.size(), clsString, NULL) );
-    JLObjectArray jvalues( env->NewObjectArray(mimeTypes.size(), clsObject, NULL) );
+    Vector<String> mimeTypes(clipboard.typesPrivate());
+    JLObjectArray jmimeTypes(env->NewObjectArray(mimeTypes.size(), clsString, NULL));
+    JLObjectArray jvalues(env->NewObjectArray(mimeTypes.size(), clsObject, NULL));
     CheckAndClearException(env); // OOME
 
     {
@@ -141,8 +142,8 @@ void DragClientJava::startDrag(
         clipboard.setAccessPolicy(ClipboardReadable);
 
         int index = 0;
-        ListHashSet<String>::const_iterator end = mimeTypes.end();
-        for(ListHashSet<String>::const_iterator i = mimeTypes.begin();
+        Vector<String>::const_iterator end = mimeTypes.end();
+        for(Vector<String>::const_iterator i = mimeTypes.begin();
             end!=i;
             ++i, ++index)
         {

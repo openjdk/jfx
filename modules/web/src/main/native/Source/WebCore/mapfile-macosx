@@ -1825,7 +1825,6 @@
                _Java_com_sun_webkit_SharedBuffer_twkGetSomeData
                _Java_com_sun_webkit_SharedBuffer_twkSize
                _Java_com_sun_webkit_Timer_twkFireTimerEvent
-               _Java_com_sun_webkit_WCPasteboard_initIDs
                _Java_com_sun_webkit_WCPluginWidget_initIDs
                _Java_com_sun_webkit_WCPluginWidget_twkConvertToPage
                _Java_com_sun_webkit_WCPluginWidget_twkInvalidateWindowlessPluginRect

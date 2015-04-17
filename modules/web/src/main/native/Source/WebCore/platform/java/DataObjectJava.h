@@ -19,9 +19,10 @@ namespace WebCore {
     // during a drag-n-drop operation.  This is the data that WebCore is aware
     // of and is not specific to a platform.
     class DataObjectJava : public RefCounted<DataObjectJava> {
-        static const URL   &emptyURL(){ static URL r; return r; }
-        static const String &emptyString(){ static String r; return r; }
     public:
+        static const URL& emptyURL()            { static URL r; return r; }
+        static const String& emptyString()      { static String r; return r; }
+
         static const String &mimePlainText()    { static String r("text/plain"); return r; }
         static const String &mimeHTML()         { static String r("text/html"); return r; }
         static const String &mimeURIList()      { static String r("text/uri-list"); return r; }
@@ -52,52 +53,59 @@ namespace WebCore {
         }
 
         void clear() {
-            availMimeTypes.clear();
+            m_availMimeTypes.clear();
         }
+        
         void clearData(const String& mimeType) {
-            availMimeTypes.remove(mimeType);
+            size_t pos = m_availMimeTypes.find(mimeType);
+            if (pos != WTF::notFound) {
+                m_availMimeTypes.remove(pos);
+            }
         }
 
         bool hasData() const {
-            return !availMimeTypes.isEmpty();
+            return !m_availMimeTypes.isEmpty();
         }
 
         //setters
-        void setUrl(const URL &_url, const String &_urlTitle) {
-            availMimeTypes.add(mimeURIList());
-            availMimeTypes.add(mimeShortcutName());
-            url = _url;
-            urlTitle = _urlTitle;
+        void setURL(const URL &url, const String &urlTitle) {
+            m_availMimeTypes.append(mimeURIList());
+            m_availMimeTypes.append(mimeShortcutName());
+            m_url = url;
+            m_urlTitle = urlTitle;
             m_filenames.clear();
         }
-        void setFiles(const Vector<String> &filenames){
-            availMimeTypes.add(mimeURIList());
-            availMimeTypes.remove(mimeShortcutName());
-            url = emptyURL();
-            urlTitle = emptyString();
+        
+        void setFiles(const Vector<String> &filenames) {
+            m_availMimeTypes.append(mimeURIList());
+            clearData(mimeShortcutName());
+            m_url = emptyURL();
+            m_urlTitle = emptyString();
             m_filenames = filenames;
         }
-        void setPlainText(const String &_plainText){
-            availMimeTypes.add( mimePlainText() );
-            plainText = _plainText;
+        
+        void setPlainText(const String &plainText){
+            m_availMimeTypes.append(mimePlainText());
+            m_plainText = plainText;
         }
-        void setHTML(const String &_textHtml, const URL &_htmlBaseUrl){
-            availMimeTypes.add( mimeHTML() );
-            textHtml = _textHtml;
-            htmlBaseUrl = _htmlBaseUrl;
+        
+        void setHTML(const String &textHtml, const URL &htmlBaseUrl) {
+            m_availMimeTypes.append(mimeHTML());
+            m_textHtml = textHtml;
+            m_htmlBaseUrl = htmlBaseUrl;
         }
 
-        bool setData(const String& mimeType, const String& data){
+        bool setData(const String& mimeType, const String& data) {
             bool succeeded = true;
             String canonicalMimeType = normalizeMIMEType(mimeType);
             if (canonicalMimeType == mimeURIList())
-                setUrl(URL(ParsedURLString, data), emptyString());
+                setURL(URL(ParsedURLString, data), emptyString());
             else if (canonicalMimeType == mimeHTML())
                 setHTML(data, emptyURL());
             else if (canonicalMimeType == mimePlainText()) // two special cases for IE compatibility
                 setPlainText(data);
             else if (canonicalMimeType == mimeShortcutName())
-                urlTitle = data; //activates by previous setUrl call
+                m_urlTitle = data; //activates by previous setUrl call
             else
                 succeeded = false;
             return succeeded;
@@ -105,11 +113,12 @@ namespace WebCore {
 
         //getters
         //URL
-        ListHashSet<String> types(){
+        Vector<String> types() {
             //returns MIME Types available in clipboard.
-            return availMimeTypes;
+            return m_availMimeTypes;
         }
-        String getData(const String& mimeType){
+        
+        String getData(const String& mimeType) {
             String canonicalMimeType = normalizeMIMEType(mimeType);
             String ret;
             if (canonicalMimeType == mimeURIList())
@@ -119,24 +128,26 @@ namespace WebCore {
             else if (canonicalMimeType == mimePlainText())
                 ret = asPlainText();
             else if (canonicalMimeType == mimeShortcutName())
-                ret = urlTitle;
+                ret = m_urlTitle;
             return ret;
         }
+        
         bool containsURL() const {
-            return availMimeTypes.contains(mimeURIList());
+            return m_availMimeTypes.contains(mimeURIList());
         }
+        
         String asURL(String* title = NULL) const
         {
             if (!containsURL())
                 return String();
 
-            if( url.isEmpty() && !m_filenames.isEmpty())
+            if(m_url.isEmpty() && !m_filenames.isEmpty())
                 return m_filenames.at(0);
 
             // |title| can be NULL
             if (title)
-                *title = urlTitle;
-            return url.string();
+                *title = m_urlTitle;
+            return m_url.string();
         }
 
         //File List
@@ -144,23 +155,23 @@ namespace WebCore {
             return containsURL();
         }
         void asFilenames(Vector<String>& result) const {
-            if( url.isEmpty() && !m_filenames.isEmpty())
+            if(m_url.isEmpty() && !m_filenames.isEmpty())
                 result = m_filenames;
             else
-                result.append( url.string() );
+                result.append(m_url.string());
         }
 
         //Plain Text
         bool containsPlainText() const {
-            return availMimeTypes.contains(mimePlainText());
+            return m_availMimeTypes.contains(mimePlainText());
         }
         String asPlainText() const {
-            return plainText;
+            return m_plainText;
         }
 
 
         bool containsHTML() const {
-            return availMimeTypes.contains(mimeHTML());
+            return m_availMimeTypes.contains(mimeHTML());
         }
         String asHTML(String* baseURL = NULL) const
         {
@@ -169,12 +180,13 @@ namespace WebCore {
 
             // |baseURL| can be NULL
             if (baseURL)
-                *baseURL = htmlBaseUrl;
-            return textHtml;
+                *baseURL = m_htmlBaseUrl;
+            return m_textHtml;
         }
 
-        String fileContentFilename;
-        RefPtr<SharedBuffer> fileContent;
+        // tav todo: where and how it's supposed to be used?
+        String m_fileContentFilename;
+        RefPtr<SharedBuffer> m_fileContent;
 
         ~DataObjectJava() {
         }
@@ -184,24 +196,32 @@ namespace WebCore {
         }
 
     private:
-        ListHashSet<String> availMimeTypes;
+        Vector<String> m_availMimeTypes;
 
         //URL
-        URL url;
-        String urlTitle;
+        URL m_url;
+        String m_urlTitle;
         Vector<String> m_filenames;
 
         //plain text
-        String plainText;
+        String m_plainText;
 
         //html text
-        String textHtml;
-        URL   htmlBaseUrl;
+        String m_textHtml;
+        URL m_htmlBaseUrl;
 
         DataObjectJava() {
         }
-        DataObjectJava(const DataObjectJava&){
-            ASSERT(false);
+
+        DataObjectJava(const DataObjectJava& data) :
+            m_availMimeTypes(data.m_availMimeTypes),
+            m_url(data.m_url),
+            m_urlTitle(data.m_urlTitle),
+            m_filenames(data.m_filenames),
+            m_plainText(data.m_plainText),
+            m_textHtml(data.m_textHtml),
+            m_htmlBaseUrl(data.m_htmlBaseUrl)
+        {
         }
     };
 } // namespace WebCore

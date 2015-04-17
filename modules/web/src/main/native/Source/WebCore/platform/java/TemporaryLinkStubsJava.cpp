@@ -11,7 +11,6 @@
 #endif
 
 #include "Clipboard.h" // WebKit BUG: must be included from Editor.h
-#include "ClipboardJava.h"
 #include "CookieStorage.h"
 #include "Color.h"
 #include "ChromiumBridge.h"

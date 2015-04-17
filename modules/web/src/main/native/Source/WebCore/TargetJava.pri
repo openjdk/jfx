@@ -277,8 +277,7 @@ HEADERS += \
     bindings/java/JavaDOMUtils.h \
     bindings/java/JavaEventListener.h \
     page/java/ChromeClientJava.h \
-    platform/java/ClipboardJava.h \
-    platform/java/ClipboardUtilitiesJava.h \
+    platform/java/PasteboardUtilitiesJava.h \
     platform/java/DataObjectJava.h \
     platform/java/ContextMenuClientJava.h \
     platform/java/DragClientJava.h \
@@ -1285,8 +1284,7 @@ SOURCES += \
     platform/MemoryPressureHandler.cpp \
     platform/MIMETypeRegistry.cpp \
     platform/java/BridgeUtils.cpp \
-    platform/java/ClipboardJava.cpp \
-    platform/java/ClipboardUtilitiesJava.cpp \
+    platform/java/PasteboardUtilitiesJava.cpp \
     platform/java/ContextMenuClientJava.cpp \
     platform/java/ContextMenuItemJava.cpp \
     platform/java/ContextMenuJava.cpp \

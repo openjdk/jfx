@@ -1,8 +1,8 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  */
-#ifndef ClipboardUtilitiesJava_h
-#define ClipboardUtilitiesJava_h
+#ifndef PasteboardUtilitiesJava_h
+#define PasteboardUtilitiesJava_h
 
 #include <wtf/Forward.h>
 
@@ -15,4 +15,4 @@ void replaceNBSPWithSpace(String&);
 
 } // namespace WebCore
 
-#endif // ClipboardUtilitiesJava_h
+#endif // PasteboardUtilitiesJava_h

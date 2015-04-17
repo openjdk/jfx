@@ -5,7 +5,6 @@
 
 #include "NotImplemented.h"
 
-#include "ClipboardJava.h"
 #include "EventHandler.h"
 #include "FocusController.h"
 #include "Frame.h"
@@ -14,6 +13,7 @@
 #include "Page.h"
 #include "PlatformKeyboardEvent.h"
 #include "Widget.h"
+#include "Clipboard.h"
 
 namespace WebCore {
 
@@ -26,7 +26,7 @@ unsigned EventHandler::accessKeyModifiers()
 
 PassRefPtr<Clipboard> EventHandler::createDraggingClipboard() const
 {
-    return ClipboardJava::create(ClipboardWritable, Clipboard::DragAndDrop, DataObjectJava::create(), &m_frame);
+    return Clipboard::createForDragAndDrop();    
 }
 
 void EventHandler::focusDocumentView()
