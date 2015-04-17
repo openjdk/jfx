@@ -124,23 +124,38 @@ bool ChangeIcon(_TCHAR* iconFileName, _TCHAR* executableFileName)
     }
 
     // Reading .ICO file
-    LPICONDIR lpid = (LPICONDIR)malloc(sizeof(ICONDIR));
+    WORD idReserved, idType, idCount;
 
     DWORD dwBytesRead;
-    ReadFile(icon, &lpid->idReserved, sizeof(WORD), &dwBytesRead, NULL);
-    ReadFile(icon, &lpid->idType, sizeof(WORD), &dwBytesRead, NULL);
-    ReadFile(icon, &lpid->idCount, sizeof(WORD), &dwBytesRead, NULL);
+    ReadFile(icon, &idReserved, sizeof(WORD), &dwBytesRead, NULL);
+    ReadFile(icon, &idType, sizeof(WORD), &dwBytesRead, NULL);
+    ReadFile(icon, &idCount, sizeof(WORD), &dwBytesRead, NULL);
 
-    lpid = (LPICONDIR)realloc(lpid, (sizeof(WORD) * 3) + (sizeof(ICONDIRENTRY) * lpid->idCount));
+    LPICONDIR lpid = (LPICONDIR)malloc(sizeof(ICONDIR) + (sizeof(ICONDIRENTRY) * (idCount - 1)));
+
+    if (lpid == NULL) {
+        CloseHandle(icon);
+        wprintf(L"Unknown error.\n");
+    }
+
+    lpid->idReserved = idReserved;
+    lpid->idType = idType;
+    lpid->idCount = idCount;
 
     ReadFile(icon, &lpid->idEntries[0], sizeof(ICONDIRENTRY) * lpid->idCount, &dwBytesRead, NULL);
-    LPGRPICONDIR lpgid;
-    lpgid = (LPGRPICONDIR)malloc(sizeof(GRPICONDIR));
 
-    lpgid->idReserved = lpid->idReserved;
-    lpgid->idType = lpid->idType;
-    lpgid->idCount = lpid->idCount;
-    lpgid = (LPGRPICONDIR)realloc(lpgid, (sizeof(WORD) * 3) + (sizeof(GRPICONDIRENTRY) * lpgid->idCount));
+
+    LPGRPICONDIR lpgid = (LPGRPICONDIR)malloc(sizeof(GRPICONDIR) + (sizeof(GRPICONDIRENTRY) * (idCount - 1)));
+
+    if (lpid == NULL) {
+        CloseHandle(icon);
+        free(lpid);
+        wprintf(L"Unknown error.\n");
+    }
+
+    lpgid->idReserved = idReserved;
+    lpgid->idType = idType;
+    lpgid->idCount = idCount;
 
     for(int i = 0; i < lpgid->idCount; i++)
     {
@@ -156,7 +171,11 @@ bool ChangeIcon(_TCHAR* iconFileName, _TCHAR* executableFileName)
 
     // Store images in .EXE
     HANDLE update = BeginUpdateResource( executableFileName, FALSE );
+
     if (update == NULL) {
+        free(lpid);
+        free(lpgid);
+        CloseHandle(icon);
         PrintError();
         return result;
     }
@@ -169,18 +188,28 @@ bool ChangeIcon(_TCHAR* iconFileName, _TCHAR* executableFileName)
         if (!UpdateResource(update, RT_ICON, MAKEINTRESOURCE(lpgid->idEntries[i].nID),
                            language, &lpBuffer[0], lpid->idEntries[i].dwBytesInRes))
         {
+            free(lpBuffer);
+            free(lpid);
+            free(lpgid);
+            CloseHandle(icon);
             PrintError();
             return result;
         }
         free(lpBuffer);
     }
+
+    free(lpid);
     CloseHandle(icon);
+
     if (!UpdateResource(update, RT_GROUP_ICON,  MAKEINTRESOURCE(1), language,
                         &lpgid[0], (sizeof(WORD) * 3) + (sizeof(GRPICONDIRENTRY) * lpgid->idCount)))
     {
+        free(lpgid);
         PrintError();
         return result;
     }
+
+    free(lpgid);
 
     if (EndUpdateResource(update, FALSE) == FALSE) {
         PrintError();
