@@ -7,6 +7,9 @@ TARGET = jfxwebkit
 
 VPATH += $$PWD
 
+JAVASCRIPTCORE_TARGET = JavaScriptCoreJava
+JAVASCRIPTCORE_DESTDIR = $$OUT_PWD/../lib
+
 win32-*|linux* {
     PRECOMPILED_HEADER = $$PWD/webcorejava_pch.h
 }
@@ -266,12 +269,12 @@ mac* {
 }
 
 win32-* {
-    POST_TARGETDEPS += ../lib/JavaScriptCoreJava.lib
+    POST_TARGETDEPS += $${JAVASCRIPTCORE_DESTDIR}/$${JAVASCRIPTCORE_TARGET}.lib
 }
 linux-*|solaris-*|mac* {
-    POST_TARGETDEPS += ../lib/libJavaScriptCoreJava.a
+    POST_TARGETDEPS += $${JAVASCRIPTCORE_DESTDIR}/lib$${JAVASCRIPTCORE_TARGET}.a
 }
-LIBS += -lJavaScriptCoreJava
+LIBS = -L$$JAVASCRIPTCORE_DESTDIR -l$$JAVASCRIPTCORE_TARGET $$LIBS
 
 HEADERS += \
     bindings/java/JavaDOMUtils.h \
