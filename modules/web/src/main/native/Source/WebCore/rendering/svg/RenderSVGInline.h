@@ -21,48 +21,48 @@
 #ifndef RenderSVGInline_h
 #define RenderSVGInline_h
 
-#if ENABLE(SVG)
 #include "RenderInline.h"
-
-#include "SVGRenderSupport.h"
+#include "SVGGraphicsElement.h"
 
 namespace WebCore {
 
 class RenderSVGInline : public RenderInline {
 public:
-    explicit RenderSVGInline(Element*);
+    RenderSVGInline(SVGGraphicsElement&, PassRef<RenderStyle>);
 
-    virtual const char* renderName() const { return "RenderSVGInline"; }
-    virtual bool requiresLayer() const { return false; }
-    virtual bool isSVGInline() const { return true; }
+    SVGGraphicsElement& graphicsElement() const { return toSVGGraphicsElement(nodeForNonAnonymous()); }
+
+private:
+    void element() const = delete;
+
+    virtual const char* renderName() const override { return "RenderSVGInline"; }
+    virtual bool requiresLayer() const override final { return false; }
+    virtual bool isSVGInline() const override final { return true; }
 
     // Chapter 10.4 of the SVG Specification say that we should use the
     // object bounding box of the parent text element.
     // We search for the root text element and take its bounding box.
     // It is also necessary to take the stroke and repaint rect of
     // this element, since we need it for filters.
-    virtual FloatRect objectBoundingBox() const;
-    virtual FloatRect strokeBoundingBox() const;
-    virtual FloatRect repaintRectInLocalCoordinates() const;
+    virtual FloatRect objectBoundingBox() const override final;
+    virtual FloatRect strokeBoundingBox() const override final;
+    virtual FloatRect repaintRectInLocalCoordinates() const override final;
 
-    virtual LayoutRect clippedOverflowRectForRepaint(const RenderLayerModelObject* repaintContainer) const OVERRIDE;
-    virtual void computeFloatRectForRepaint(const RenderLayerModelObject* repaintContainer, FloatRect&, bool fixed = false) const OVERRIDE;
-    virtual void mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState&, MapCoordinatesFlags = ApplyContainerFlip, bool* wasFixed = 0) const OVERRIDE;
-    virtual const RenderObject* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const OVERRIDE;
-    virtual void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const;
+    virtual LayoutRect clippedOverflowRectForRepaint(const RenderLayerModelObject* repaintContainer) const override final;
+    virtual void computeFloatRectForRepaint(const RenderLayerModelObject* repaintContainer, FloatRect&, bool fixed = false) const override final;
+    virtual void mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState&, MapCoordinatesFlags = ApplyContainerFlip, bool* wasFixed = 0) const override final;
+    virtual const RenderObject* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const override final;
+    virtual void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const override final;
 
-private:
-    virtual InlineFlowBox* createInlineFlowBox();
+    virtual std::unique_ptr<InlineFlowBox> createInlineFlowBox() override final;
 
-    virtual void willBeDestroyed();
-    virtual void styleWillChange(StyleDifference, const RenderStyle* newStyle);
-    virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle);
+    virtual void willBeDestroyed() override final;
+    virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override final;
 
-    virtual void addChild(RenderObject* child, RenderObject* beforeChild = 0) OVERRIDE;
-    virtual void removeChild(RenderObject*) OVERRIDE;
+    virtual void addChild(RenderObject* child, RenderObject* beforeChild = 0) override final;
+    virtual void removeChild(RenderObject&) override final;
 };
 
 }
 
-#endif // ENABLE(SVG)
 #endif // !RenderSVGTSpan_H

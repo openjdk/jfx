@@ -21,20 +21,20 @@
 #ifndef SVGPolylineElement_h
 #define SVGPolylineElement_h
 
-#if ENABLE(SVG)
 #include "SVGPolyElement.h"
 
 namespace WebCore {
 
-class SVGPolylineElement FINAL : public SVGPolyElement {
+class SVGPolylineElement final : public SVGPolyElement {
 public:
-    static PassRefPtr<SVGPolylineElement> create(const QualifiedName&, Document*);
+    static PassRefPtr<SVGPolylineElement> create(const QualifiedName&, Document&);
 
 private:
-    SVGPolylineElement(const QualifiedName&, Document*);
+    SVGPolylineElement(const QualifiedName&, Document&);
 };
+
+NODE_TYPE_CASTS(SVGPolylineElement)
 
 } // namespace WebCore
 
-#endif // ENABLE(SVG)
 #endif

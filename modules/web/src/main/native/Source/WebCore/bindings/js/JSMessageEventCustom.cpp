@@ -31,7 +31,6 @@
 #include "config.h"
 #include "JSMessageEvent.h"
 
-#include "JSArrayBuffer.h"
 #include "JSBlob.h"
 #include "JSDOMBinding.h"
 #include "JSDOMWindow.h"
@@ -39,6 +38,7 @@
 #include "JSMessagePortCustom.h"
 #include "MessageEvent.h"
 #include <runtime/JSArray.h>
+#include <runtime/JSArrayBuffer.h>
 
 using namespace JSC;
 
@@ -49,11 +49,11 @@ JSValue JSMessageEvent::data(ExecState* exec) const
     if (JSValue cachedValue = m_data.get())
         return cachedValue;
 
-    MessageEvent* event = static_cast<MessageEvent*>(impl());
+    MessageEvent& event = impl();
     JSValue result;
-    switch (event->dataType()) {
+    switch (event.dataType()) {
     case MessageEvent::DataTypeScriptValue: {
-        ScriptValue scriptValue = event->dataAsScriptValue();
+        Deprecated::ScriptValue scriptValue = event.dataAsScriptValue();
         if (scriptValue.hasNoValue())
             result = jsNull();
         else
@@ -62,24 +62,24 @@ JSValue JSMessageEvent::data(ExecState* exec) const
     }
 
     case MessageEvent::DataTypeSerializedScriptValue:
-        if (RefPtr<SerializedScriptValue> serializedValue = event->dataAsSerializedScriptValue()) {
-            MessagePortArray ports = static_cast<MessageEvent*>(impl())->ports();
+        if (RefPtr<SerializedScriptValue> serializedValue = event.dataAsSerializedScriptValue()) {
+            MessagePortArray ports = impl().ports();
+            // FIXME: Why does this suppress exceptions?
             result = serializedValue->deserialize(exec, globalObject(), &ports, NonThrowing);
-        }
-        else
+        } else
             result = jsNull();
         break;
 
     case MessageEvent::DataTypeString:
-        result = jsStringWithCache(exec, event->dataAsString());
+        result = jsStringWithCache(exec, event.dataAsString());
         break;
 
     case MessageEvent::DataTypeBlob:
-        result = toJS(exec, globalObject(), event->dataAsBlob());
+        result = toJS(exec, globalObject(), event.dataAsBlob());
         break;
 
     case MessageEvent::DataTypeArrayBuffer:
-        result = toJS(exec, globalObject(), event->dataAsArrayBuffer());
+        result = toJS(exec, globalObject(), event.dataAsArrayBuffer());
         break;
     }
 
@@ -96,21 +96,21 @@ static JSC::JSValue handleInitMessageEvent(JSMessageEvent* jsEvent, JSC::ExecSta
     const String originArg = exec->argument(4).toString(exec)->value(exec);
     const String lastEventIdArg = exec->argument(5).toString(exec)->value(exec);
     DOMWindow* sourceArg = toDOMWindow(exec->argument(6));
-    OwnPtr<MessagePortArray> messagePorts;
+    std::unique_ptr<MessagePortArray> messagePorts;
     OwnPtr<ArrayBufferArray> arrayBuffers;
     if (!exec->argument(7).isUndefinedOrNull()) {
-        messagePorts = adoptPtr(new MessagePortArray);
+        messagePorts = std::make_unique<MessagePortArray>();
         arrayBuffers = adoptPtr(new ArrayBufferArray);
         fillMessagePortArray(exec, exec->argument(7), *messagePorts, *arrayBuffers);
         if (exec->hadException())
             return jsUndefined();
     }
-    ScriptValue dataArg = ScriptValue(exec->vm(), exec->argument(3));
+    Deprecated::ScriptValue dataArg = Deprecated::ScriptValue(exec->vm(), exec->argument(3));
     if (exec->hadException())
         return jsUndefined();
 
-    MessageEvent* event = static_cast<MessageEvent*>(jsEvent->impl());
-    event->initMessageEvent(typeArg, canBubbleArg, cancelableArg, dataArg, originArg, lastEventIdArg, sourceArg, messagePorts.release());
+    MessageEvent& event = jsEvent->impl();
+    event.initMessageEvent(typeArg, canBubbleArg, cancelableArg, dataArg, originArg, lastEventIdArg, sourceArg, std::move(messagePorts));
     jsEvent->m_data.set(exec->vm(), jsEvent, dataArg.jsValue());
     return jsUndefined();
 }

@@ -34,11 +34,16 @@
 
 #include "HRTFDatabase.h"
 #include <wtf/MainThread.h>
+#include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
 
-// Singleton
-HRTFDatabaseLoader* HRTFDatabaseLoader::s_loader = 0;
+// Keeps track of loaders on a per-sample-rate basis.
+static HashMap<double, HRTFDatabaseLoader*>& loaderMap()
+{
+    static NeverDestroyed<HashMap<double, HRTFDatabaseLoader*>> loaderMap;
+    return loaderMap;
+}
 
 PassRefPtr<HRTFDatabaseLoader> HRTFDatabaseLoader::createAndLoadAsynchronouslyIfNecessary(float sampleRate)
 {
@@ -46,16 +51,17 @@ PassRefPtr<HRTFDatabaseLoader> HRTFDatabaseLoader::createAndLoadAsynchronouslyIf
 
     RefPtr<HRTFDatabaseLoader> loader;
     
-    if (!s_loader) {
-        // Lazily create and load.
-        loader = adoptRef(new HRTFDatabaseLoader(sampleRate));
-        s_loader = loader.get();
-        loader->loadAsynchronously();
-    } else {
-        loader = s_loader;
+    loader = loaderMap().get(sampleRate);
+    if (loader) {
         ASSERT(sampleRate == loader->databaseSampleRate());
+        return loader;
     }
-    
+
+    loader = adoptRef(new HRTFDatabaseLoader(sampleRate));
+    loaderMap().add(sampleRate, loader.get());
+
+    loader->loadAsynchronously();
+
     return loader;
 }
 
@@ -71,13 +77,11 @@ HRTFDatabaseLoader::~HRTFDatabaseLoader()
     ASSERT(isMainThread());
 
     waitForLoaderThreadCompletion();
-    m_hrtfDatabase.clear();
-    
-    // Clear out singleton.
-    ASSERT(this == s_loader);
-    s_loader = 0;
-}
+    m_hrtfDatabase = nullptr;
 
+    // Remove ourself from the map.
+    loaderMap().remove(m_databaseSampleRate);
+}
 
 // Asynchronously load the database in this thread.
 static void databaseLoaderEntry(void* threadData)
@@ -92,7 +96,7 @@ void HRTFDatabaseLoader::load()
     ASSERT(!isMainThread());
     if (!m_hrtfDatabase.get()) {
         // Load the default HRTF database.
-        m_hrtfDatabase = HRTFDatabase::create(m_databaseSampleRate);
+        m_hrtfDatabase = std::make_unique<HRTFDatabase>(m_databaseSampleRate);
     }
 }
 
@@ -121,14 +125,6 @@ void HRTFDatabaseLoader::waitForLoaderThreadCompletion()
     if (m_databaseLoaderThread)
         waitForThreadCompletion(m_databaseLoaderThread);
     m_databaseLoaderThread = 0;
-}
-
-HRTFDatabase* HRTFDatabaseLoader::defaultHRTFDatabase()
-{
-    if (!s_loader)
-        return 0;
-    
-    return s_loader->database();
 }
 
 } // namespace WebCore

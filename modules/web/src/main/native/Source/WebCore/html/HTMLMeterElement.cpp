@@ -23,10 +23,10 @@
 #include "HTMLMeterElement.h"
 
 #include "Attribute.h"
+#include "ElementIterator.h"
 #include "EventNames.h"
 #include "ExceptionCode.h"
 #include "FormDataList.h"
-#include "NodeRenderingContext.h"
 #include "HTMLFormElement.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
@@ -35,13 +35,12 @@
 #include "RenderMeter.h"
 #include "RenderTheme.h"
 #include "ShadowRoot.h"
-#include <wtf/StdLibExtras.h>
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-HTMLMeterElement::HTMLMeterElement(const QualifiedName& tagName, Document* document)
+HTMLMeterElement::HTMLMeterElement(const QualifiedName& tagName, Document& document)
     : LabelableElement(tagName, document)
 {
     ASSERT(hasTagName(meterTag));
@@ -51,24 +50,24 @@ HTMLMeterElement::~HTMLMeterElement()
 {
 }
 
-PassRefPtr<HTMLMeterElement> HTMLMeterElement::create(const QualifiedName& tagName, Document* document)
+PassRefPtr<HTMLMeterElement> HTMLMeterElement::create(const QualifiedName& tagName, Document& document)
 {
     RefPtr<HTMLMeterElement> meter = adoptRef(new HTMLMeterElement(tagName, document));
     meter->ensureUserAgentShadowRoot();
     return meter;
 }
 
-RenderObject* HTMLMeterElement::createRenderer(RenderArena* arena, RenderStyle* style)
+RenderPtr<RenderElement> HTMLMeterElement::createElementRenderer(PassRef<RenderStyle> style)
 {
-    if (hasAuthorShadowRoot() || !document()->page()->theme()->supportsMeter(style->appearance()))
-        return RenderObject::createObject(this, style);
+    if (!document().page()->theme().supportsMeter(style.get().appearance()))
+        return RenderElement::createFor(*this, std::move(style));
 
-    return new (arena) RenderMeter(this);
+    return createRenderer<RenderMeter>(*this, std::move(style));
 }
 
-bool HTMLMeterElement::childShouldCreateRenderer(const NodeRenderingContext& childContext) const
+bool HTMLMeterElement::childShouldCreateRenderer(const Node& child) const
 {
-    return childContext.isOnUpperEncapsulationBoundary() && HTMLElement::childShouldCreateRenderer(childContext);
+    return hasShadowRootParent(child) && HTMLElement::childShouldCreateRenderer(child);
 }
 
 void HTMLMeterElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
@@ -90,7 +89,7 @@ void HTMLMeterElement::setMin(double min, ExceptionCode& ec)
         ec = NOT_SUPPORTED_ERR;
         return;
     }
-    setAttribute(minAttr, String::number(min));
+    setAttribute(minAttr, AtomicString::number(min));
 }
 
 double HTMLMeterElement::max() const
@@ -104,7 +103,7 @@ void HTMLMeterElement::setMax(double max, ExceptionCode& ec)
         ec = NOT_SUPPORTED_ERR;
         return;
     }
-    setAttribute(maxAttr, String::number(max));
+    setAttribute(maxAttr, AtomicString::number(max));
 }
 
 double HTMLMeterElement::value() const
@@ -119,7 +118,7 @@ void HTMLMeterElement::setValue(double value, ExceptionCode& ec)
         ec = NOT_SUPPORTED_ERR;
         return;
     }
-    setAttribute(valueAttr, String::number(value));
+    setAttribute(valueAttr, AtomicString::number(value));
 }
 
 double HTMLMeterElement::low() const
@@ -134,7 +133,7 @@ void HTMLMeterElement::setLow(double low, ExceptionCode& ec)
         ec = NOT_SUPPORTED_ERR;
         return;
     }
-    setAttribute(lowAttr, String::number(low));
+    setAttribute(lowAttr, AtomicString::number(low));
 }
 
 double HTMLMeterElement::high() const
@@ -149,7 +148,7 @@ void HTMLMeterElement::setHigh(double high, ExceptionCode& ec)
         ec = NOT_SUPPORTED_ERR;
         return;
     }
-    setAttribute(highAttr, String::number(high));
+    setAttribute(highAttr, AtomicString::number(high));
 }
 
 double HTMLMeterElement::optimum() const
@@ -164,7 +163,7 @@ void HTMLMeterElement::setOptimum(double optimum, ExceptionCode& ec)
         ec = NOT_SUPPORTED_ERR;
         return;
     }
-    setAttribute(optimumAttr, String::number(optimum));
+    setAttribute(optimumAttr, AtomicString::number(optimum));
 }
 
 HTMLMeterElement::GaugeRegion HTMLMeterElement::gaugeRegion() const
@@ -222,11 +221,8 @@ void HTMLMeterElement::didElementStateChange()
 RenderMeter* HTMLMeterElement::renderMeter() const
 {
     if (renderer() && renderer()->isMeter())
-        return static_cast<RenderMeter*>(renderer());
-
-    RenderObject* renderObject = userAgentShadowRoot()->firstChild()->renderer();
-    ASSERT(!renderObject || renderObject->isMeter());
-    return static_cast<RenderMeter*>(renderObject);
+        return toRenderMeter(renderer());
+    return toRenderMeter(descendantsOfType<Element>(*userAgentShadowRoot()).first()->renderer());
 }
 
 void HTMLMeterElement::didAddUserAgentShadowRoot(ShadowRoot* root)

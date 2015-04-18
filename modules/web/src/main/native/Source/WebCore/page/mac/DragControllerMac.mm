@@ -27,10 +27,15 @@
 #import "DragController.h"
 
 #if ENABLE(DRAG_SUPPORT)
+
+#import "Clipboard.h"
+#import "DragClient.h"
 #import "DragData.h"
-#import "Frame.h"
+#import "Element.h"
 #import "FrameView.h"
+#import "MainFrame.h"
 #import "Page.h"
+#import "Pasteboard.h"
 
 namespace WebCore {
 
@@ -42,19 +47,17 @@ const int DragController::DragIconBottomInset = 3;
 
 const float DragController::DragImageAlpha = 0.75f;
 
-bool DragController::isCopyKeyDown(DragData* dragData)
+bool DragController::isCopyKeyDown(DragData& dragData)
 {
-    return dragData->flags() & DragApplicationIsCopyKeyDown;
+    return dragData.flags() & DragApplicationIsCopyKeyDown;
 }
     
-DragOperation DragController::dragOperation(DragData* dragData)
+DragOperation DragController::dragOperation(DragData& dragData)
 {
-    ASSERT(dragData);
-
-    if ((dragData->flags() & DragApplicationIsModal) || !dragData->containsURL(m_page->mainFrame()))
+    if ((dragData.flags() & DragApplicationIsModal) || !dragData.containsURL(&m_page.mainFrame()))
         return DragOperationNone;
 
-    if (!m_documentUnderMouse || (!(dragData->flags() & (DragApplicationHasAttachedSheet | DragApplicationIsSource))))
+    if (!m_documentUnderMouse || (!(dragData.flags() & (DragApplicationHasAttachedSheet | DragApplicationIsSource))))
         return DragOperationCopy;
 
     return DragOperationNone;
@@ -75,8 +78,13 @@ void DragController::cleanupAfterSystemDrag()
     // call it anyway to be on the safe side.
     // We don't want to do this for WebKit2, since the client call to start the drag
     // is asynchronous.
-    if (m_page->mainFrame()->view()->platformWidget())
+    if (m_page.mainFrame().view()->platformWidget())
         dragEnded();
+}
+
+void DragController::declareAndWriteDragImage(Clipboard& clipboard, Element& element, const URL& url, const String& label)
+{
+    m_client.declareAndWriteDragImage(clipboard.pasteboard().name(), element, url, label, element.document().frame());
 }
 
 } // namespace WebCore

@@ -32,9 +32,9 @@
 #include "RenderView.h"
 
 namespace WebCore {
-    
-RenderFrameBase::RenderFrameBase(Element* element)
-    : RenderPart(element)
+
+RenderFrameBase::RenderFrameBase(HTMLFrameElementBase& element, PassRef<RenderStyle> style)
+    : RenderWidget(element, std::move(style))
 {
 }
 
@@ -54,14 +54,14 @@ inline bool shouldExpandFrame(LayoutUnit width, LayoutUnit height, bool hasFixed
 
 void RenderFrameBase::layoutWithFlattening(bool hasFixedWidth, bool hasFixedHeight)
 {
-    FrameView* childFrameView = toFrameView(widget());
-    RenderView* childRoot = childFrameView ? childFrameView->frame()->contentRenderer() : 0;
+    FrameView* childFrameView = childView();
+    RenderView* childRoot = childFrameView ? childFrameView->frame().contentRenderer() : 0;
 
     if (!childRoot || !shouldExpandFrame(width(), height(), hasFixedWidth, hasFixedHeight)) {
         updateWidgetPosition();
         if (childFrameView)
             childFrameView->layout();
-        setNeedsLayout(false);
+        clearNeedsLayout();
         return;
     }
 
@@ -72,8 +72,7 @@ void RenderFrameBase::layoutWithFlattening(bool hasFixedWidth, bool hasFixedHeig
     // we obey them and do not expand. With frame flattening
     // no subframe much ever become scrollable.
 
-    HTMLFrameElementBase* element = static_cast<HTMLFrameElementBase*>(node());
-    bool isScrollable = element->scrollingMode() != ScrollbarAlwaysOff;
+    bool isScrollable = frameOwnerElement().scrollingMode() != ScrollbarAlwaysOff;
 
     // consider iframe inset border
     int hBorder = borderLeft() + borderRight();
@@ -81,7 +80,7 @@ void RenderFrameBase::layoutWithFlattening(bool hasFixedWidth, bool hasFixedHeig
 
     // make sure minimum preferred width is enforced
     if (isScrollable || !hasFixedWidth) {
-        setWidth(max(width(), childRoot->minPreferredLogicalWidth() + hBorder));
+        setWidth(std::max(width(), childRoot->minPreferredLogicalWidth() + hBorder));
         // update again to pass the new width to the child frame
         updateWidgetPosition();
         childFrameView->layout();
@@ -89,17 +88,17 @@ void RenderFrameBase::layoutWithFlattening(bool hasFixedWidth, bool hasFixedHeig
 
     // expand the frame by setting frame height = content height
     if (isScrollable || !hasFixedHeight || childRoot->isFrameSet())
-        setHeight(max<LayoutUnit>(height(), childFrameView->contentsHeight() + vBorder));
+        setHeight(std::max<LayoutUnit>(height(), childFrameView->contentsHeight() + vBorder));
     if (isScrollable || !hasFixedWidth || childRoot->isFrameSet())
-        setWidth(max<LayoutUnit>(width(), childFrameView->contentsWidth() + hBorder));
+        setWidth(std::max<LayoutUnit>(width(), childFrameView->contentsWidth() + hBorder));
 
     updateWidgetPosition();
 
     ASSERT(!childFrameView->layoutPending());
     ASSERT(!childRoot->needsLayout());
-    ASSERT(!childRoot->firstChild() || !childRoot->firstChild()->firstChild() || !childRoot->firstChild()->firstChild()->needsLayout());
+    ASSERT(!childRoot->firstChild() || !childRoot->firstChild()->firstChildSlow() || !childRoot->firstChild()->firstChildSlow()->needsLayout());
 
-    setNeedsLayout(false);
+    clearNeedsLayout();
 }
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2015, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -108,9 +108,9 @@ public class SamplePage extends StackPane implements Page {
     String apiClassToUrl(String classname) {
         String urlEnd = classname.replaceAll("\\.([a-z])", "/$1").replaceFirst("\\.([A-Z])", "/$1");
         if (classname.startsWith("javafx")) {
-            return "http://download.java.net/jdk8/jfxdocs/"+urlEnd+".html";
+            return "https://docs.oracle.com/javase/8/javafx/api/"+urlEnd+".html";
         } else {
-            return "http://download.java.net/jdk8/docs/api/"+urlEnd+".html";
+            return "https://docs.oracle.com/javase/8/docs/api/"+urlEnd+".html";
         }
     }
 

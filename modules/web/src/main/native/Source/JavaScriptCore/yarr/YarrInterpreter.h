@@ -28,7 +28,6 @@
 
 #include "YarrPattern.h"
 #include <wtf/PassOwnPtr.h>
-#include <wtf/unicode/Unicode.h>
 
 namespace WTF {
 class BumpPointerAllocator;
@@ -337,7 +336,7 @@ public:
 struct BytecodePattern {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    BytecodePattern(PassOwnPtr<ByteDisjunction> body, Vector<OwnPtr<ByteDisjunction> >& parenthesesInfoToAdopt, YarrPattern& pattern, BumpPointerAllocator* allocator)
+    BytecodePattern(PassOwnPtr<ByteDisjunction> body, Vector<OwnPtr<ByteDisjunction>>& parenthesesInfoToAdopt, YarrPattern& pattern, BumpPointerAllocator* allocator)
         : m_body(body)
         , m_ignoreCase(pattern.m_ignoreCase)
         , m_multiline(pattern.m_multiline)
@@ -366,8 +365,8 @@ public:
     CharacterClass* wordcharCharacterClass;
 
 private:
-    Vector<OwnPtr<ByteDisjunction> > m_allParenthesesInfo;
-    Vector<OwnPtr<CharacterClass> > m_userCharacterClasses;
+    Vector<OwnPtr<ByteDisjunction>> m_allParenthesesInfo;
+    Vector<OwnPtr<CharacterClass>> m_userCharacterClasses;
 };
 
 JS_EXPORT_PRIVATE PassOwnPtr<BytecodePattern> byteCompile(YarrPattern&, BumpPointerAllocator*);

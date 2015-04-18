@@ -19,18 +19,16 @@
  */
 
 [
-        IndexedGetter,
-        NamedGetter,
-        CustomToJSObject,
+    CustomToJSObject,
     GenerateIsReachable=ImplOwnerNodeRoot,
     ObjCPolymorphic,
 ] interface HTMLCollection {
-        readonly attribute unsigned long length;
-    Node item([Default=Undefined] optional unsigned long index);
-    Node namedItem([Default=Undefined] optional DOMString name);
+    readonly attribute unsigned long length;
+    getter Node item([Default=Undefined] optional unsigned long index);
+    getter Node namedItem([Default=Undefined] optional DOMString name);
 
 #if defined(LANGUAGE_OBJECTIVE_C) && LANGUAGE_OBJECTIVE_C
     NodeList tags([Default=Undefined] optional DOMString name);
 #endif
-    };
+};
 

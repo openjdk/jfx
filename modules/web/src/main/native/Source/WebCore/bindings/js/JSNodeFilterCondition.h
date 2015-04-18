@@ -23,8 +23,8 @@
 #include "NodeFilterCondition.h"
 #include <heap/Weak.h>
 #include <heap/WeakInlines.h>
+#include <runtime/JSCInlines.h>
 #include <runtime/JSCJSValue.h>
-#include <runtime/Operations.h>
 #include <wtf/PassRefPtr.h>
 
 namespace WebCore {
@@ -42,7 +42,7 @@ namespace WebCore {
     private:
         JSNodeFilterCondition(JSC::VM&, NodeFilter* owner, JSC::JSValue filter);
 
-        virtual short acceptNode(ScriptState*, Node*) const;
+        virtual short acceptNode(JSC::ExecState*, Node*) const;
 
         class WeakOwner : public JSC::WeakHandleOwner {
             virtual bool isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown>, void* context, JSC::SlotVisitor&);

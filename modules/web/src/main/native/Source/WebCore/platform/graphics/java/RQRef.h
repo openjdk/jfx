@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  */
 #ifndef RQRef_h
 #define RQRef_h
@@ -7,6 +7,8 @@
 #include <jni.h>
 #include <JavaEnv.h>
 #include <wtf/RefCounted.h>
+#include <wtf/PassRef.h>
+#include <wtf/RefPtr.h>
 
 namespace WebCore {
 

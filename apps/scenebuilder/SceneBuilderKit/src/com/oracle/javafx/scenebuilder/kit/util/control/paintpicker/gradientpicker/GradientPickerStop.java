@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -34,7 +34,6 @@ package com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.gradientpick
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker.Mode;
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPickerController;
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.colorpicker.ColorPicker;
-import com.sun.javafx.Utils;
 
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -88,6 +87,15 @@ public class GradientPickerStop extends VBox {
     private final double edgeMargin = 2.0;
     private final GradientPicker gradientPicker;
 
+    /*
+     * Clamp value to be between min and max.
+     */
+    private static double clamp(double min, double value, double max) {
+        if (value < min) return min;
+        if (value > max) return max;
+        return value;
+    }
+
     public GradientPickerStop(GradientPicker ge, double mini, double maxi, double val, Color c) {
         gradientPicker = ge;
         min = mini;
@@ -98,7 +106,7 @@ public class GradientPickerStop extends VBox {
     }
 
     public void setOffset(double val) {
-        offset = Utils.clamp(min, val, max);
+        offset = clamp(min, val, max);
         valueToPixels();
     }
 
@@ -224,7 +232,7 @@ public class GradientPickerStop extends VBox {
         double dragValue = event.getSceneX() - startDragX;
         double deltaX = origX + dragValue;
         double trackWidth = getParent().getBoundsInLocal().getWidth();
-        final Double newX = Utils.clamp(edgeMargin, deltaX, (trackWidth - (getWidth() + edgeMargin)));
+        final Double newX = clamp(edgeMargin, deltaX, (trackWidth - (getWidth() + edgeMargin)));
         setLayoutX(newX);
 //        showHUD();
         pixelsToValue();
@@ -246,7 +254,7 @@ public class GradientPickerStop extends VBox {
     }
 
     private void valueToPixels() {
-        double stopValue = Utils.clamp(min, offset, max);
+        double stopValue = clamp(min, offset, max);
         double availablePixels = getParent().getLayoutBounds().getWidth() - (thumbWidth + edgeMargin);
         double range = max - min;
         double pixelPosition = ((availablePixels / range) * stopValue);

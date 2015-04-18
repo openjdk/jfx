@@ -27,12 +27,11 @@
 #ifndef StackBounds_h
 #define StackBounds_h
 
+#include <algorithm>
+
 namespace WTF {
 
 class StackBounds {
-    // isSafeToRecurse() / recursionLimit() tests (by default)
-    // that we are at least this far from the end of the stack.
-    //
     // This 64k number was picked because a sampling of stack usage differences
     // between consecutive entries into one of the Interpreter::execute...()
     // functions was seen to be as high as 27k. Hence, 64k is chosen as a
@@ -49,14 +48,6 @@ public:
         return bounds;
     }
 
-    bool isSafeToRecurse(size_t minAvailableDelta = s_defaultAvailabilityDelta) const
-    {
-        checkConsistency();
-        if (isGrowingDownward())
-            return current() >= recursionLimit(minAvailableDelta);
-        return current() <= recursionLimit(minAvailableDelta);
-    }
-
     void* origin() const
     {
         ASSERT(m_origin);
@@ -70,28 +61,38 @@ public:
         return static_cast<char*>(m_bound) - static_cast<char*>(m_origin);
     }
 
-private:
-    StackBounds()
-        : m_origin(0)
-        , m_bound(0)
-    {
-    }
-
-    void initialize();
-
-    void* current() const
-    {
-        checkConsistency();
-        void* currentPosition = &currentPosition;
-        return currentPosition;
-    }
-
     void* recursionLimit(size_t minAvailableDelta = s_defaultAvailabilityDelta) const
     {
         checkConsistency();
         if (isGrowingDownward())
             return static_cast<char*>(m_bound) + minAvailableDelta;
         return static_cast<char*>(m_bound) - minAvailableDelta;
+    }
+
+    void* recursionLimit(char* startOfUserStack, size_t maxUserStack, size_t reservedZoneSize) const
+    {
+        checkConsistency();
+        if (maxUserStack < reservedZoneSize)
+            reservedZoneSize = maxUserStack;
+        size_t maxUserStackWithReservedZone = maxUserStack - reservedZoneSize;
+
+        if (isGrowingDownward()) {
+            char* endOfStackWithReservedZone = reinterpret_cast<char*>(m_bound) + reservedZoneSize;
+            if (startOfUserStack < endOfStackWithReservedZone)
+                return endOfStackWithReservedZone;
+            size_t availableUserStack = startOfUserStack - endOfStackWithReservedZone;
+            if (maxUserStackWithReservedZone > availableUserStack)
+                maxUserStackWithReservedZone = availableUserStack;
+            return startOfUserStack - maxUserStackWithReservedZone;
+        }
+
+        char* endOfStackWithReservedZone = reinterpret_cast<char*>(m_bound) - reservedZoneSize;
+        if (startOfUserStack > endOfStackWithReservedZone)
+            return endOfStackWithReservedZone;
+        size_t availableUserStack = endOfStackWithReservedZone - startOfUserStack;
+        if (maxUserStackWithReservedZone > availableUserStack)
+            maxUserStackWithReservedZone = availableUserStack;
+        return startOfUserStack + maxUserStackWithReservedZone;
     }
 
     bool isGrowingDownward() const
@@ -108,6 +109,15 @@ private:
         return true;
 #endif
     }
+
+private:
+    StackBounds()
+        : m_origin(0)
+        , m_bound(0)
+    {
+    }
+
+    WTF_EXPORT_PRIVATE void initialize();
 
     void checkConsistency() const
     {

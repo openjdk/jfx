@@ -1,11 +1,12 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
 #include "RenderingQueue.h"
 #include "RQRef.h"
 #include "JavaRef.h"
 #include "JavaEnv.h"
+#include <wtf/HashMap.h>
 
 #include "com_sun_webkit_graphics_WCRenderQueue.h"
 

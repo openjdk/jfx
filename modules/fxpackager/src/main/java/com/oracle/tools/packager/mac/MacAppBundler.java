@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,7 +24,7 @@
  */
 package com.oracle.tools.packager.mac;
 
-import com.oracle.tools.packager.AbstractBundler;
+import com.oracle.tools.packager.AbstractImageBundler;
 import com.oracle.tools.packager.BundlerParamInfo;
 import com.oracle.tools.packager.EnumeratedBundlerParam;
 import com.oracle.tools.packager.JreUtils;
@@ -41,14 +41,19 @@ import java.io.*;
 import java.math.BigInteger;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.text.MessageFormat;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
+import static com.oracle.tools.packager.mac.MacBaseInstallerBundler.SIGNING_KEYCHAIN;
 import static com.oracle.tools.packager.mac.MacBaseInstallerBundler.SIGNING_KEY_USER;
 import static com.oracle.tools.packager.mac.MacBaseInstallerBundler.getPredefinedImage;
 
-public class MacAppBundler extends AbstractBundler {
+public class MacAppBundler extends AbstractImageBundler {
 
     private static final ResourceBundle I18N =
             ResourceBundle.getBundle(MacAppBundler.class.getName());
@@ -60,7 +65,8 @@ public class MacAppBundler extends AbstractBundler {
     private final static String LIBRARY_NAME         = "libpackager.dylib";
     private static final String TEMPLATE_BUNDLE_ICON = "GenericApp.icns";
     private static final String OS_TYPE_CODE         = "APPL";
-    private static final String TEMPLATE_INFO_PLIST  = "Info.plist.template";
+    private static final String TEMPLATE_INFO_PLIST_LEGACY  = "Info.plist.template";
+    private static final String TEMPLATE_INFO_PLIST_LITE    = "Info-lite.plist.template";
 
     private static Map<String, String> getMacCategories() {
         Map<String, String> map = new HashMap<>();
@@ -108,6 +114,15 @@ public class MacAppBundler extends AbstractBundler {
 
         return map;
     }
+
+    public static final BundlerParamInfo<Boolean> MAC_CONFIGURE_LAUNCHER_IN_PLIST =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.configure-launcher-in-plist"),
+                    I18N.getString("param.configure-launcher-in-plist.description"),
+                    "mac.configure-launcher-in-plist",
+                    Boolean.class,
+                    params -> Boolean.FALSE,
+                    (s, p) -> Boolean.valueOf(s));
 
     public static final EnumeratedBundlerParam<String> MAC_CATEGORY =
             new EnumeratedBundlerParam<>(
@@ -176,7 +191,7 @@ public class MacAppBundler extends AbstractBundler {
             URL.class,
             params -> MacResources.class.getResource(EXECUTABLE_NAME),
             (s, p) -> {
-               try {
+                try {
                     return new URL(s);
                 } catch (MalformedURLException e) {
                     Log.info(e.toString());
@@ -215,7 +230,7 @@ public class MacAppBundler extends AbstractBundler {
             I18N.getString("param.signing-key-developer-id-app.description"),
             "mac.signing-key-developer-id-app",
             String.class,
-            params -> MacBaseInstallerBundler.findKey("Developer ID Application: " + SIGNING_KEY_USER.fetchFrom(params), VERBOSE.fetchFrom(params)),
+            params -> MacBaseInstallerBundler.findKey("Developer ID Application: " + SIGNING_KEY_USER.fetchFrom(params), SIGNING_KEYCHAIN.fetchFrom(params), VERBOSE.fetchFrom(params)),
             (s, p) -> s);
 
     public static final BundlerParamInfo<String> BUNDLE_ID_SIGNING_PREFIX = new StandardBundlerParam<>(
@@ -271,6 +286,12 @@ public class MacAppBundler extends AbstractBundler {
         super();
         baseResourceLoader = MacResources.class;
     }
+
+    @Override
+    protected String getCacheLocation(Map<String, ? super Object> params) {
+        return "$CACHEDIR/";
+    }
+
 
     public static boolean validCFBundleVersion(String v) {
         // CFBundleVersion (String - iOS, OS X) specifies the build version
@@ -340,28 +361,11 @@ public class MacAppBundler extends AbstractBundler {
         if (!System.getProperty("os.name").toLowerCase().contains("os x")) {
             throw new UnsupportedPlatformException();
         }
-
-        StandardBundlerParam.validateMainClassInfoFromAppResources(p);
-
-        Map<String, String> userJvmOptions = USER_JVM_OPTIONS.fetchFrom(p);
-        if (userJvmOptions != null) {
-            for (Map.Entry<String, String> entry : userJvmOptions.entrySet()) {
-                if (entry.getValue() == null || entry.getValue().isEmpty()) {
-                    throw new ConfigException(
-                            MessageFormat.format(I18N.getString("error.empty-user-jvm-option-value"), entry.getKey()),
-                            I18N.getString("error.empty-user-jvm-option-value.advice"));
-                }
-            }
-        }
-
+        
+        imageBundleValidation(p);
+        
         if (getPredefinedImage(p) != null) {
             return true;
-        }
-
-        if (MAIN_JAR.fetchFrom(p) == null) {
-            throw new ConfigException(
-                    I18N.getString("error.no-application-jar"),
-                    I18N.getString("error.no-application-jar.advice"));
         }
 
         //validate required inputs
@@ -412,6 +416,8 @@ public class MacAppBundler extends AbstractBundler {
 
     public File doBundle(Map<String, ? super Object> p, File outputDirectory, boolean dependentTask) {
         File rootDirectory = null;
+        Map<String, ? super Object> originalParams = new HashMap<>(p);
+        
         if (!outputDirectory.isDirectory() && !outputDirectory.mkdirs()) {
             throw new RuntimeException(MessageFormat.format(I18N.getString("error.cannot-create-output-dir"), outputDirectory.getAbsolutePath()));
         }
@@ -471,6 +477,15 @@ public class MacAppBundler extends AbstractBundler {
                     MacResources.class.getResource(LIBRARY_NAME),
                     new File(macOSDirectory, LIBRARY_NAME));
 
+            // maybe generate launcher config
+            if (!MAC_CONFIGURE_LAUNCHER_IN_PLIST.fetchFrom(p)) {
+                if (LAUNCHER_CFG_FORMAT.fetchFrom(p).equals(CFG_FORMAT_PROPERTIES)) {
+                    writeCfgFile(p, rootDirectory);
+                } else {
+                    writeCfgFile(p, new File(rootDirectory, getLauncherCfgName(p)), "$APPDIR/PlugIns/Java.runtime");
+                }
+            }
+
             executableFile.setExecutable(true, false);
 
             // Copy runtime to PlugIns folder
@@ -479,7 +494,7 @@ public class MacAppBundler extends AbstractBundler {
             // Copy class path entries to Java folder
             copyClassPathEntries(javaDirectory, p);
 
-//TODO: Need to support adding native libraries.
+            //TODO: Need to support adding native libraries.
             // Copy library path entries to MacOS folder
             //copyLibraryPathEntries(macOSDirectory);
 
@@ -497,10 +512,17 @@ public class MacAppBundler extends AbstractBundler {
                 }
             }
 
-
             // Generate Info.plist
             IOUtils.copyFile(getConfig_InfoPlist(p),
                     new File(contentsDirectory, "Info.plist"));
+            
+            // create the secondary launchers, if any
+            List<Map<String, ? super Object>> entryPoints = StandardBundlerParam.SECONDARY_LAUNCHERS.fetchFrom(p);
+            for (Map<String, ? super Object> entryPoint : entryPoints) {
+                Map<String, ? super Object> tmp = new HashMap<>(originalParams);
+                tmp.putAll(entryPoint);
+                createLauncherForEntryPoint(tmp, rootDirectory);
+            }
 
             // maybe sign
             if (Optional.ofNullable(SIGN_BUNDLE.fetchFrom(p)).orElse(Boolean.TRUE)) {
@@ -527,24 +549,23 @@ public class MacAppBundler extends AbstractBundler {
     public void cleanupConfigFiles(Map<String, ? super Object> params) {
         //Since building the app can be bypassed, make sure configRoot was set
         if (CONFIG_ROOT.fetchFrom(params) != null) {
-            if (getConfig_Icon(params) != null) {
-                getConfig_Icon(params).delete();
-            }
-            if (getConfig_InfoPlist(params) != null) {
-                getConfig_InfoPlist(params).delete();
-            }
+            getConfig_Icon(params).delete();
+            getConfig_InfoPlist(params).delete();
         }
     }
 
     private void copyClassPathEntries(File javaDirectory, Map<String, ? super Object> params) throws IOException {
-        RelativeFileSet classPath = APP_RESOURCES.fetchFrom(params);
-        if (classPath == null) {
+        List<RelativeFileSet> resourcesList = APP_RESOURCES_LIST.fetchFrom(params);
+        if (resourcesList == null) {
             throw new RuntimeException(I18N.getString("message.null-classpath"));
         }
-        File srcdir = classPath.getBaseDirectory();
-        for (String fname : classPath.getIncludedFiles()) {
-            IOUtils.copyFile(
-                    new File(srcdir, fname), new File(javaDirectory, fname));
+        
+        for (RelativeFileSet classPath : resourcesList) {
+            File srcdir = classPath.getBaseDirectory();
+            for (String fname : classPath.getIncludedFiles()) {
+                IOUtils.copyFile(
+                        new File(srcdir, fname), new File(javaDirectory, fname));
+            }
         }
     }
 
@@ -831,8 +852,11 @@ public class MacAppBundler extends AbstractBundler {
         Writer w = new BufferedWriter(new FileWriter(file));
         w.write(preprocessTextResource(
                 MAC_BUNDLER_PREFIX + getConfig_InfoPlist(params).getName(),
-                I18N.getString("resource.bundle-config-file"), TEMPLATE_INFO_PLIST, data,
-                VERBOSE.fetchFrom(params),
+                I18N.getString("resource.bundle-config-file"),
+                MAC_CONFIGURE_LAUNCHER_IN_PLIST.fetchFrom(params)
+                    ? TEMPLATE_INFO_PLIST_LEGACY
+                    : TEMPLATE_INFO_PLIST_LITE,
+                data, VERBOSE.fetchFrom(params),
                 DROP_IN_RESOURCES_ROOT.fetchFrom(params)));
         w.close();
 
@@ -1017,6 +1041,7 @@ public class MacAppBundler extends AbstractBundler {
         return Arrays.asList(
                 APP_NAME,
                 APP_RESOURCES,
+                // APP_RESOURCES_LIST, // ??
                 ARGUMENTS,
                 BUNDLE_ID_SIGNING_PREFIX,
                 CLASSPATH,
@@ -1033,6 +1058,7 @@ public class MacAppBundler extends AbstractBundler {
                 MAIN_JAR,
                 PREFERENCES_ID,
                 PRELOADER_CLASS,
+                SIGNING_KEYCHAIN,
                 USER_JVM_OPTIONS,
                 VERSION
         );
@@ -1042,5 +1068,131 @@ public class MacAppBundler extends AbstractBundler {
     @Override
     public File execute(Map<String, ? super Object> params, File outputParentDir) {
         return doBundle(params, outputParentDir, false);
+    }
+
+    private void createLauncherForEntryPoint(Map<String, ? super Object> p, File rootDirectory) throws IOException {
+        prepareConfigFiles(p);
+
+        if (LAUNCHER_CFG_FORMAT.fetchFrom(p).equals(CFG_FORMAT_PROPERTIES)) {
+            writeCfgFile(p, rootDirectory);
+        } else {
+            writeCfgFile(p, new File(rootDirectory, getLauncherCfgName(p)), "$APPDIR/PlugIns/Java.runtime");
+        }
+
+        // Copy executable root folder
+        File executableFile = new File(rootDirectory, "Contents/MacOS/" + getLauncherName(p));
+        IOUtils.copyFromURL(
+                RAW_EXECUTABLE_URL.fetchFrom(p),
+                executableFile);
+        executableFile.setExecutable(true, false);
+
+    }
+
+    public static String getLauncherCfgName(Map<String, ? super Object> p) {
+        return "Contents/Java/" + APP_NAME.fetchFrom(p) +".cfg";
+    }
+
+    private void writeCfgFile(Map<String, ? super Object> params, File rootDir) throws FileNotFoundException {
+        File pkgInfoFile = new File(rootDir, getLauncherCfgName(params));
+
+        pkgInfoFile.delete();
+
+        PrintStream out = new PrintStream(pkgInfoFile);
+        if (MAC_RUNTIME.fetchFrom(params) == null) {
+            out.println("app.runtime=");
+        } else {
+            out.println("app.runtime=$APPDIR/PlugIns/Java.runtime");
+        }
+        out.println("app.mainjar=" + MAIN_JAR.fetchFrom(params).getIncludedFiles().iterator().next());
+        out.println("app.version=" + VERSION.fetchFrom(params));
+        //for future AU support (to be able to find app in the registry)
+        out.println("app.id=" + IDENTIFIER.fetchFrom(params));
+        out.println("app.preferences.id=" + PREFERENCES_ID.fetchFrom(params));
+        out.println("app.identifier=" + IDENTIFIER.fetchFrom(params));
+
+        out.println("app.mainclass=" +
+                MAIN_CLASS.fetchFrom(params).replaceAll("\\.", "/"));
+        out.println("app.classpath=" + CLASSPATH.fetchFrom(params));
+
+        List<String> jvmargs = JVM_OPTIONS.fetchFrom(params);
+        int idx = 1;
+        for (String a : jvmargs) {
+            out.println("jvmarg."+idx+"="+a);
+            idx++;
+        }
+        Map<String, String> jvmProps = JVM_PROPERTIES.fetchFrom(params);
+        for (Map.Entry<String, String> entry : jvmProps.entrySet()) {
+            out.println("jvmarg."+idx+"=-D"+entry.getKey()+"="+entry.getValue());
+            idx++;
+        }
+
+        String preloader = PRELOADER_CLASS.fetchFrom(params);
+        if (preloader != null) {
+            out.println("jvmarg."+idx+"=-Djavafx.preloader="+preloader);
+        }
+
+        Map<String, String> overridableJVMOptions = USER_JVM_OPTIONS.fetchFrom(params);
+        idx = 1;
+        for (Map.Entry<String, String> arg: overridableJVMOptions.entrySet()) {
+            if (arg.getKey() == null || arg.getValue() == null) {
+                Log.info(I18N.getString("message.jvm-user-arg-is-null"));
+            }
+            else {
+                out.println("jvmuserarg."+idx+".name="+arg.getKey());
+                out.println("jvmuserarg."+idx+".value="+arg.getValue());
+            }
+            idx++;
+        }
+
+        // add command line args
+        List<String> args = ARGUMENTS.fetchFrom(params);
+        idx = 1;
+        for (String a : args) {
+            out.println("arg."+idx+"="+a);
+            idx++;
+        }
+
+        out.close();
+    }
+    @Override
+    public void extractRuntimeFlags(Map<String, ? super Object> params) {
+        if (params.containsKey(".runtime.autodetect")) return;
+
+        params.put(".runtime.autodetect", "attempted");
+        RelativeFileSet runtime = MAC_RUNTIME.fetchFrom(params);
+        String commandline;
+        if (runtime == null) {
+            //System JRE, report nothing useful
+            params.put(".runtime.autodetect", "systemjre");
+        } else {
+            File workingBase = runtime.getBaseDirectory();
+            if (workingBase.getName().equals("jre")) {
+                workingBase = workingBase.getParentFile();
+            }
+            if (workingBase.getName().equals("Home")) {
+                workingBase = workingBase.getParentFile();
+            }
+            if (workingBase.getName().equals("Contents")) {
+                workingBase = workingBase.getParentFile();
+            }
+
+
+            try {
+                byte[] infoPlistBytes = Files.readAllBytes(workingBase.toPath().resolve(Paths.get("Contents", "Info.plist")));
+                String infoPlist = new String(infoPlistBytes);
+
+                Pattern cfBundleVersionMatcher = Pattern.compile("<key>CFBundleVersion</key>\\s*<string>([^<]+)</string>");
+                Matcher m = cfBundleVersionMatcher.matcher(infoPlist);
+                if (m.find()) {
+                    AbstractImageBundler.extractFlagsFromVersion(params, "java version \"" + m.group(1) + "\"\n");
+                    params.put(".runtime.autodetect", "succeeded");
+                } else {
+                    params.put(".runtime.autodetect", "failed");
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+                params.put(".runtime.autodetect", "failed");
+            }
+        }
     }
 }

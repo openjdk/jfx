@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2010, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,11 +27,12 @@
 #include "GraphicsContextCG.h"
 
 #include "AffineTransform.h"
+#include "GraphicsContextPlatformPrivateCG.h"
 #include "Path.h"
 
 #include <CoreGraphics/CGBitmapContext.h>
 #include <WebKitSystemInterface/WebKitSystemInterface.h>
-#include "GraphicsContextPlatformPrivateCG.h"
+#include <wtf/win/GDIObject.h>
 
 using namespace std;
 
@@ -81,8 +82,8 @@ void GraphicsContext::platformInit(HDC hdc, bool hasAlpha)
     setPaintingDisabled(!m_data->m_cgContext);
     if (m_data->m_cgContext) {
         // Make sure the context starts in sync with our state.
-        setPlatformFillColor(fillColor(), ColorSpaceDeviceRGB);
-        setPlatformStrokeColor(strokeColor(), ColorSpaceDeviceRGB);
+        setPlatformFillColor(fillColor(), fillColorSpace());
+        setPlatformStrokeColor(strokeColor(), strokeColorSpace());
     }
 }
 
@@ -99,7 +100,7 @@ void GraphicsContext::releaseWindowsContext(HDC hdc, const IntRect& dstRect, boo
     if (dstRect.isEmpty())
         return;
 
-    OwnPtr<HBITMAP> bitmap = adoptPtr(static_cast<HBITMAP>(GetCurrentObject(hdc, OBJ_BITMAP)));
+    auto bitmap = adoptGDIObject(static_cast<HBITMAP>(::GetCurrentObject(hdc, OBJ_BITMAP)));
 
     DIBPixelData pixelData(bitmap.get());
 
@@ -181,6 +182,11 @@ static const Color& grammarPatternColor() {
     return grammarColor;
 }
 
+void GraphicsContext::updateDocumentMarkerResources()
+{
+    // Unnecessary, since our document markers don't use resources.
+}
+
 void GraphicsContext::drawLineForDocumentMarker(const FloatPoint& point, float width, DocumentMarkerLineStyle style)
 {
     if (paintingDisabled())
@@ -222,10 +228,10 @@ void GraphicsContext::drawLineForDocumentMarker(const FloatPoint& point, float w
     
     // Dash lengths for the top and bottom of the error underline are the same.
     // These are magic.
-    static const float edge_dash_lengths[] = {2.0f, 2.0f};
-    static const float middle_dash_lengths[] = {2.76f, 1.24f};
-    static const float edge_offset = -(edge_dash_lengths[1] - 1.0f) / 2.0f;
-    static const float middle_offset = -(middle_dash_lengths[1] - 1.0f) / 2.0f;
+    static const CGFloat edge_dash_lengths[] = {2.0f, 2.0f};
+    static const CGFloat middle_dash_lengths[] = { 2.76f, 1.24f };
+    static const CGFloat edge_offset = -(edge_dash_lengths[1] - 1.0f) / 2.0f;
+    static const CGFloat middle_offset = -(middle_dash_lengths[1] - 1.0f) / 2.0f;
 
     // Line opacities.  Once again, these are magic.
     const float upperOpacity = 0.33f;

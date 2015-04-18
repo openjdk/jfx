@@ -44,8 +44,11 @@ class Scrollbar;
 // It's intended as a stopgap measure until we can merge all plug-in views into a single plug-in view.
 class PluginViewBase : public Widget {
 public:
-#if USE(ACCELERATED_COMPOSITING)
     virtual PlatformLayer* platformLayer() const { return 0; }
+#if PLATFORM(IOS)
+    virtual bool willProvidePluginLayer() const { return false; }
+    virtual void attachPluginLayer() { }
+    virtual void detachPluginLayer() { }
 #endif
 
     virtual JSC::JSObject* scriptObject(JSC::JSGlobalObject*) { return 0; }
@@ -69,25 +72,13 @@ public:
     virtual bool shouldAllowNavigationFromDrags() const { return false; }
 
     virtual bool isPluginViewBase() const { return true; }
+    virtual bool shouldNotAddLayer() const { return false; }
 
 protected:
     explicit PluginViewBase(PlatformWidget widget = 0) : Widget(widget) { }
 };
-    
-inline PluginViewBase* toPluginViewBase(Widget* widget)
-{
-    ASSERT(!widget || widget->isPluginViewBase());
-    return static_cast<PluginViewBase*>(widget);
-}
 
-inline const PluginViewBase* toPluginViewBase(const Widget* widget)
-{
-    ASSERT(!widget || widget->isPluginViewBase());
-    return static_cast<const PluginViewBase*>(widget);
-}
-
-// This will catch anyone doing an unnecessary cast.
-void toPluginViewBase(const PluginViewBase*);
+WIDGET_TYPE_CASTS(PluginViewBase, isPluginViewBase());
 
 } // namespace WebCore
 

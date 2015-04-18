@@ -13,7 +13,7 @@ AppCopyright=APPLICATION_COPYRIGHT
 ;AppUpdatesURL=http://java.com/
 DefaultDirName=APPLICATION_INSTALL_ROOT\APPLICATION_NAME
 DisableStartupPrompt=Yes
-DisableDirPage=Yes
+DisableDirPage=DISABLE_DIR_PAGE
 DisableProgramGroupPage=Yes
 DisableReadyPage=Yes
 DisableFinishedPage=Yes
@@ -48,6 +48,7 @@ Name: "{commondesktop}\APPLICATION_NAME"; Filename: "{app}\APPLICATION_NAME.exe"
 SECONDARY_LAUNCHERS
 
 [Run]
+Filename: "{app}\RUN_FILENAME.exe"; Parameters: "-Xappcds:generatecache"; Check: APPLICATION_APP_CDS_INSTALL()
 Filename: "{app}\RUN_FILENAME.exe"; Description: "{cm:LaunchProgram,APPLICATION_NAME}"; Flags: nowait postinstall skipifsilent; Check: APPLICATION_NOT_SERVICE()
 Filename: "{app}\RUN_FILENAME.exe"; Parameters: "-install -svcName ""APPLICATION_NAME"" -svcDesc ""APPLICATION_DESCRIPTION"" -mainExe ""APPLICATION_LAUNCHER_FILENAME"" START_ON_INSTALL RUN_AT_STARTUP"; Check: APPLICATION_SERVICE()
 

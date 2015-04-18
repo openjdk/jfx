@@ -24,33 +24,19 @@
  */
 
 #ifndef DFGInsertionSet_h
-#define DFGInsectionSet_h
+#define DFGInsertionSet_h
 
 #include <wtf/Platform.h>
 
 #if ENABLE(DFG_JIT)
 
 #include "DFGGraph.h"
+#include <wtf/Insertion.h>
 #include <wtf/Vector.h>
 
 namespace JSC { namespace DFG {
 
-class Insertion {
-public:
-    Insertion() { }
-    
-    Insertion(size_t index, Node* element)
-        : m_index(index)
-        , m_element(element)
-    {
-    }
-    
-    size_t index() const { return m_index; }
-    Node* element() const { return m_element; }
-private:
-    size_t m_index;
-    Node* m_element;
-};
+typedef WTF::Insertion<Node*> Insertion;
 
 class InsertionSet {
 public:
@@ -79,22 +65,23 @@ public:
     DFG_VARIADIC_TEMPLATE_FUNCTION(DFG_DEFINE_INSERT_NODE)
 #undef DFG_DEFINE_INSERT_NODE
     
+    Node* insertConstant(size_t index, NodeOrigin origin, JSValue value)
+    {
+        unsigned constantReg =
+            m_graph.constantRegisterForConstant(value);
+        return insertNode(
+            index, speculationFromValue(value), JSConstant, origin,
+            OpInfo(constantReg));
+    }
+    
+    Node* insertConstant(size_t index, CodeOrigin origin, JSValue value)
+    {
+        return insertConstant(index, NodeOrigin(origin), value);
+    }
+
     void execute(BasicBlock* block)
     {
-        if (!m_insertions.size())
-            return;
-        block->grow(block->size() + m_insertions.size());
-        size_t lastIndex = block->size();
-        for (size_t indexInInsertions = m_insertions.size(); indexInInsertions--;) {
-            Insertion& insertion = m_insertions[indexInInsertions];
-            size_t firstIndex = insertion.index() + indexInInsertions;
-            size_t indexOffset = indexInInsertions + 1;
-            for (size_t i = lastIndex; --i > firstIndex;)
-                block->at(i) = block->at(i - indexOffset);
-            block->at(firstIndex) = insertion.element();
-            lastIndex = firstIndex;
-        }
-        m_insertions.resize(0);
+        executeInsertions(*block, m_insertions);
     }
 private:
     Graph& m_graph;

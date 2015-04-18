@@ -27,79 +27,95 @@
 #ifndef XPathStep_h
 #define XPathStep_h
 
-#include "XPathExpressionNode.h"
-#include "XPathNodeSet.h"
+#include <wtf/Vector.h>
+#include <wtf/text/AtomicString.h>
 
 namespace WebCore {
 
 class Node;
 
-    namespace XPath {
+namespace XPath {
 
-        class Predicate;
-        
-        class Step : public ParseNode {
-    WTF_MAKE_NONCOPYABLE(Step);
+class Expression;
+class NodeSet;
+
+class Step {
     WTF_MAKE_FAST_ALLOCATED;
-        public:
-            enum Axis {
-                AncestorAxis, AncestorOrSelfAxis, AttributeAxis,
-                ChildAxis, DescendantAxis, DescendantOrSelfAxis,
-                FollowingAxis, FollowingSiblingAxis, NamespaceAxis,
-                ParentAxis, PrecedingAxis, PrecedingSiblingAxis,
-                SelfAxis
-            };
-            
-            class NodeTest {
-                WTF_MAKE_FAST_ALLOCATED;
-            public:
-                enum Kind {
-                    TextNodeTest, CommentNodeTest, ProcessingInstructionNodeTest, AnyNodeTest, NameTest
-                };
-                
-                NodeTest(Kind kind) : m_kind(kind) {}
-                NodeTest(Kind kind, const String& data) : m_kind(kind), m_data(data) {}
-                NodeTest(Kind kind, const String& data, const String& namespaceURI) : m_kind(kind), m_data(data), m_namespaceURI(namespaceURI) {}
-                
-                Kind kind() const { return m_kind; }
-                const AtomicString& data() const { return m_data; }
-                const AtomicString& namespaceURI() const { return m_namespaceURI; }
-                Vector<Predicate*>& mergedPredicates() { return m_mergedPredicates; }
-                const Vector<Predicate*>& mergedPredicates() const { return m_mergedPredicates; }
-                
-            private:
-                Kind m_kind;
-                AtomicString m_data;
-                AtomicString m_namespaceURI;
+public:
+    enum Axis {
+        AncestorAxis, AncestorOrSelfAxis, AttributeAxis,
+        ChildAxis, DescendantAxis, DescendantOrSelfAxis,
+        FollowingAxis, FollowingSiblingAxis, NamespaceAxis,
+        ParentAxis, PrecedingAxis, PrecedingSiblingAxis,
+        SelfAxis
+    };
 
-                // When possible, we merge some or all predicates with node test for better performance.
-                Vector<Predicate*> m_mergedPredicates;
-            };
+    class NodeTest {
+        WTF_MAKE_FAST_ALLOCATED;
+    public:
+        enum Kind { TextNodeTest, CommentNodeTest, ProcessingInstructionNodeTest, AnyNodeTest, NameTest };
 
-    Step(Axis, const NodeTest&, const Vector<Predicate*>& predicates = Vector<Predicate*>());
-            ~Step();
+        explicit NodeTest(Kind kind) : m_kind(kind) { }
+        NodeTest(Kind kind, const AtomicString& data) : m_kind(kind), m_data(data) { }
+        NodeTest(Kind kind, const AtomicString& data, const AtomicString& namespaceURI) : m_kind(kind), m_data(data), m_namespaceURI(namespaceURI) { }
 
-            void optimize();
+#if COMPILER(MSVC)
+        NodeTest(const NodeTest&);
+        void operator=(const NodeTest&);
 
-            void evaluate(Node* context, NodeSet&) const;
+        NodeTest(NodeTest&& other)
+            : m_kind(other.m_kind)
+            , m_data(std::move(other.m_data))
+            , m_namespaceURI(std::move(other.m_namespaceURI))
+            , m_mergedPredicates(std::move(other.m_mergedPredicates))
+        {
+        }
+        NodeTest& operator=(NodeTest&& other)
+        {
+            m_kind = other.m_kind;
+            m_data = std::move(other.m_data);
+            m_namespaceURI = std::move(other.m_namespaceURI);
+            m_mergedPredicates = std::move(other.m_mergedPredicates);
+            return *this;
+        }
+#endif
 
-            Axis axis() const { return m_axis; }
-            const NodeTest& nodeTest() const { return m_nodeTest; }
+    private:
+        friend class Step;
+        friend void optimizeStepPair(Step&, Step&, bool&);
+        friend bool nodeMatchesBasicTest(Node&, Axis, const NodeTest&);
+        friend bool nodeMatches(Node&, Axis, const NodeTest&);
 
-        private:
-            friend void optimizeStepPair(Step*, Step*, bool&);
-            bool predicatesAreContextListInsensitive() const;
+        Kind m_kind;
+        AtomicString m_data;
+        AtomicString m_namespaceURI;
+        Vector<std::unique_ptr<Expression>> m_mergedPredicates;
+    };
 
-            void parseNodeTest(const String&);
-            void nodesInAxis(Node* context, NodeSet&) const;
-            String namespaceFromNodetest(const String& nodeTest) const;
+    Step(Axis, NodeTest);
+    Step(Axis, NodeTest, Vector<std::unique_ptr<Expression>>);
+    ~Step();
 
-            Axis m_axis;
-            NodeTest m_nodeTest;
-            Vector<Predicate*> m_predicates;
-        };
+    void optimize();
 
-        void optimizeStepPair(Step*, Step*, bool& dropSecondStep);
+    void evaluate(Node& context, NodeSet&) const;
+
+    Axis axis() const { return m_axis; }
+
+private:
+    friend void optimizeStepPair(Step&, Step&, bool&);
+
+    bool predicatesAreContextListInsensitive() const;
+
+    void parseNodeTest(const String&);
+    void nodesInAxis(Node& context, NodeSet&) const;
+
+    Axis m_axis;
+    NodeTest m_nodeTest;
+    Vector<std::unique_ptr<Expression>> m_predicates;
+};
+
+void optimizeStepPair(Step&, Step&, bool& dropSecondStep);
 
 } // namespace XPath
 

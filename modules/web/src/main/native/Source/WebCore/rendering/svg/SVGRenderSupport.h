@@ -24,7 +24,6 @@
 #ifndef SVGRenderSupport_h
 #define SVGRenderSupport_h
 
-#if ENABLE(SVG)
 #include "PaintInfo.h"
 
 namespace WebCore {
@@ -34,6 +33,7 @@ class FloatRect;
 class ImageBuffer;
 class LayoutRect;
 class RenderBoxModelObject;
+class RenderElement;
 class RenderGeometryMap;
 class RenderLayerModelObject;
 class RenderObject;
@@ -45,48 +45,53 @@ class TransformState;
 class SVGRenderSupport {
 public:
     // Shares child layouting code between RenderSVGRoot/RenderSVG(Hidden)Container
-    static void layoutChildren(RenderObject*, bool selfNeedsLayout);
+    static void layoutChildren(RenderElement&, bool selfNeedsLayout);
 
     // Helper function determining wheter overflow is hidden
-    static bool isOverflowHidden(const RenderObject*);
+    static bool isOverflowHidden(const RenderElement&);
 
-    static void intersectRepaintRectWithShadows(const RenderObject*, FloatRect&);
+    static void intersectRepaintRectWithShadows(const RenderElement&, FloatRect&);
 
     // Calculates the repaintRect in combination with filter, clipper and masker in local coordinates.
-    static void intersectRepaintRectWithResources(const RenderObject*, FloatRect&);
+    static void intersectRepaintRectWithResources(const RenderElement&, FloatRect&);
 
     // Determines whether a container needs to be laid out because it's filtered and a child is being laid out.
-    static bool filtersForceContainerLayout(RenderObject*);
+    static bool filtersForceContainerLayout(const RenderElement&);
 
     // Determines whether the passed point lies in a clipping area
-    static bool pointInClippingArea(RenderObject*, const FloatPoint&);
+    static bool pointInClippingArea(const RenderElement&, const FloatPoint&);
 
-    static void computeContainerBoundingBoxes(const RenderObject* container, FloatRect& objectBoundingBox, bool& objectBoundingBoxValid, FloatRect& strokeBoundingBox, FloatRect& repaintBoundingBox);
+    static void computeContainerBoundingBoxes(const RenderElement& container, FloatRect& objectBoundingBox, bool& objectBoundingBoxValid, FloatRect& strokeBoundingBox, FloatRect& repaintBoundingBox);
     static bool paintInfoIntersectsRepaintRect(const FloatRect& localRepaintRect, const AffineTransform& localTransform, const PaintInfo&);
 
     // Important functions used by nearly all SVG renderers centralizing coordinate transformations / repaint rect calculations
-    static FloatRect repaintRectForRendererInLocalCoordinatesExcludingSVGShadow(const RenderObject*);
-    static LayoutRect clippedOverflowRectForRepaint(const RenderObject*, const RenderLayerModelObject* repaintContainer);
-    static void computeFloatRectForRepaint(const RenderObject*, const RenderLayerModelObject* repaintContainer, FloatRect&, bool fixed);
-    static void mapLocalToContainer(const RenderObject*, const RenderLayerModelObject* repaintContainer, TransformState&, bool* wasFixed = 0);
-    static const RenderObject* pushMappingToContainer(const RenderObject*, const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&);
-    static bool checkForSVGRepaintDuringLayout(RenderObject*);
+    static FloatRect repaintRectForRendererInLocalCoordinatesExcludingSVGShadow(const RenderElement&);
+    static LayoutRect clippedOverflowRectForRepaint(const RenderElement&, const RenderLayerModelObject* repaintContainer);
+    static void computeFloatRectForRepaint(const RenderElement&, const RenderLayerModelObject* repaintContainer, FloatRect&, bool fixed);
+    static void mapLocalToContainer(const RenderElement&, const RenderLayerModelObject* repaintContainer, TransformState&, bool* wasFixed = 0);
+    static const RenderElement* pushMappingToContainer(const RenderElement&, const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&);
+    static bool checkForSVGRepaintDuringLayout(const RenderElement&);
 
     // Shared between SVG renderers and resources.
-    static void applyStrokeStyleToContext(GraphicsContext*, const RenderStyle*, const RenderObject*);
+    static void applyStrokeStyleToContext(GraphicsContext*, const RenderStyle&, const RenderElement&);
 
     // Determines if any ancestor's transform has changed.
-    static bool transformToRootChanged(RenderObject*);
+    static bool transformToRootChanged(RenderElement*);
 
     // Helper functions to keep track of whether a renderer has an SVG shadow applied.
-    static bool rendererHasSVGShadow(const RenderObject*);
-    static void setRendererHasSVGShadow(RenderObject*, bool hasShadow);
+    static bool rendererHasSVGShadow(const RenderObject&);
+    static void setRendererHasSVGShadow(RenderObject&, bool hasShadow);
 
-    static void childAdded(RenderObject* parent, RenderObject* child);
-    static void styleChanged(RenderObject*);
+    static void childAdded(RenderElement& parent, RenderObject& child);
+    static void styleChanged(RenderElement&, const RenderStyle*);
+
+#if ENABLE(CSS_COMPOSITING)
+    static bool isolatesBlending(const RenderStyle&);
+    static void updateMaskedAncestorShouldIsolateBlending(const RenderElement&);
+#endif
 
     // FIXME: These methods do not belong here.
-    static const RenderSVGRoot* findTreeRootObject(const RenderObject*);
+    static const RenderSVGRoot& findTreeRootObject(const RenderElement&);
 
 private:
     // This class is not constructable.
@@ -96,5 +101,4 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(SVG)
 #endif // SVGRenderSupport_h

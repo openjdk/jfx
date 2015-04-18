@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -219,7 +219,9 @@ public class WinMsiBundler  extends AbstractBundler {
 //                STOP_ON_UNINSTALL,
                 SYSTEM_WIDE,
                 //UPGRADE_UUID,
-                VENDOR
+                VENDOR,
+                LICENSE_FILE,
+                INSTALLDIR_CHOOSER
         );
     }
 
@@ -334,6 +336,23 @@ public class WinMsiBundler  extends AbstractBundler {
                 }
             }
 
+            // validate license file, if used, exists in the proper place
+            if (p.containsKey(LICENSE_FILE.getID())) {
+                List<RelativeFileSet> appResourcesList = APP_RESOURCES_LIST.fetchFrom(p);
+                for (String license : LICENSE_FILE.fetchFrom(p)) {
+                    boolean found = false;
+                    for (RelativeFileSet appResources : appResourcesList) {
+                        found = found || appResources.contains(license);
+                    }
+                    if (!found) {
+                        throw new ConfigException(
+                                I18N.getString("error.license-missing"),
+                                MessageFormat.format(I18N.getString("error.license-missing.advice"),
+                                        license));
+                    }
+                }
+            }
+            
             return true;
         } catch (RuntimeException re) {
             if (re.getCause() instanceof ConfigException) {
@@ -391,7 +410,7 @@ public class WinMsiBundler  extends AbstractBundler {
         return true;
     }
 
-    private boolean prepareProto(Map<String, ? super Object> p) {
+    private boolean prepareProto(Map<String, ? super Object> p) throws IOException {
         File bundleRoot = MSI_IMAGE_DIR.fetchFrom(p);
         File appDir = APP_BUNDLER.fetchFrom(p).doBundle(p, bundleRoot, true);
         p.put(WIN_APP_IMAGE.getID(), appDir);
@@ -401,6 +420,21 @@ public class WinMsiBundler  extends AbstractBundler {
             appDir = SERVICE_BUNDLER.fetchFrom(p).doBundle(p, appDir, true);
         }
 
+        List<String> licenseFiles = LICENSE_FILE.fetchFrom(p);
+        if (licenseFiles != null) {
+            //need to copy license file to the root of win.app.image
+            outerLoop:
+            for (RelativeFileSet rfs : APP_RESOURCES_LIST.fetchFrom(p)) {
+                for (String s : licenseFiles) {
+                    if (rfs.contains(s)) {
+                        File lfile = new File(rfs.getBaseDirectory(), s);
+                        IOUtils.copyFile(lfile, new File(appDir, lfile.getName()));
+                        break outerLoop;
+                    }
+                }
+            }
+        }
+        
         // copy file association icons
         List<Map<String, ? super Object>> fileAssociations = FILE_ASSOCIATIONS.fetchFrom(p);
         for (Map<String, ? super Object> fileAssociation : fileAssociations) {
@@ -468,7 +502,7 @@ public class WinMsiBundler  extends AbstractBundler {
                     IOUtils.copyFile(configScriptSrc, configScript);
                     Log.info(MessageFormat.format(I18N.getString("message.running-wsh-script"), configScript.getAbsolutePath()));
                     IOUtils.run("wscript", configScript, VERBOSE.fetchFrom(p));
-                }
+                }                
                 return buildMSI(p, outdir);
             }
             return null;
@@ -576,6 +610,9 @@ public class WinMsiBundler  extends AbstractBundler {
             data.put("WIN64", "no");
         }
 
+        data.put("UI_BLOCK", getUIBlock(params));
+        data.put("APP_CDS_BLOCK", getAppCDSBlock(params));
+
         List<Map<String, ? super Object>> secondaryLaunchers = SECONDARY_LAUNCHERS.fetchFrom(params);
 
         StringBuilder secondaryLauncherIcons = new StringBuilder();
@@ -610,6 +647,66 @@ public class WinMsiBundler  extends AbstractBundler {
     private final static String LAUNCHER_ID = "LauncherId";
     private final static String LAUNCHER_SVC_ID = "LauncherSvcId";
 
+    /**
+     * Overrides the dialog sequence in built-in dialog set "WixUI_InstallDir"
+     * to exclude license dialog
+     */
+    private static final String TWEAK_FOR_EXCLUDING_LICENSE =
+        "     <Publish Dialog=\"WelcomeDlg\" Control=\"Next\"" +
+        "              Event=\"NewDialog\" Value=\"InstallDirDlg\" Order=\"2\"> 1" +
+        "     </Publish>\n" +
+        "     <Publish Dialog=\"InstallDirDlg\" Control=\"Back\"" +
+        "              Event=\"NewDialog\" Value=\"WelcomeDlg\" Order=\"2\"> 1" +
+        "     </Publish>\n";            
+
+    /**
+     * Creates UI element using WiX built-in dialog sets - WixUI_InstallDir/WixUI_Minimal.
+     * The dialog sets are the closest to what we want to implement.
+     * 
+     * WixUI_Minimal for license dialog only
+     * WixUI_InstallDir for installdir dialog only or for both installdir/license dialogs
+     */
+    private String getUIBlock(Map<String, ? super Object> params) {
+        String uiBlock = "     <UI/>\n"; // UI-less element
+
+        if (INSTALLDIR_CHOOSER.fetchFrom(params)) {
+            boolean enableTweakForExcludingLicense = (getLicenseFile(params) == null);
+            uiBlock =
+                "     <UI>\n" +
+                "     <Property Id=\"WIXUI_INSTALLDIR\" Value=\"APPLICATIONFOLDER\" />\n" +
+                "     <UIRef Id=\"WixUI_InstallDir\" />\n" +
+                (enableTweakForExcludingLicense ? TWEAK_FOR_EXCLUDING_LICENSE : "") +
+                "     </UI>\n";
+        } else if (getLicenseFile(params) != null) {
+            uiBlock =
+                "     <UI>\n" +
+                "     <UIRef Id=\"WixUI_Minimal\" />\n" +
+                "     </UI>\n";
+        }
+
+        return uiBlock;
+    }
+    
+    private String getAppCDSBlock(Map<String, ? super Object> params) {
+        String cdsBlock = "";
+        if (UNLOCK_COMMERCIAL_FEATURES.fetchFrom(params) && ENABLE_APP_CDS.fetchFrom(params)
+                        && ("install".equals(APP_CDS_CACHE_MODE.fetchFrom(params))
+                        || "auto+install".equals(APP_CDS_CACHE_MODE.fetchFrom(params))))
+        {
+            cdsBlock = 
+                    "     <CustomAction Id=\"CACHE_CDS\"\n" +
+                    "          Directory=\"APPLICATIONFOLDER\"\n" +
+                    "          ExeCommand=\"[APPLICATIONFOLDER]" + WinAppBundler.getLauncherName(params) +" -Xappcds:generatecache\"\n" +
+                    "          Execute=\"commit\"\n" +
+                    "          Return=\"check\"/>\n" +
+                    "\n" +
+                    "     <InstallExecuteSequence>\n" +
+                    "         <Custom Action=\"CACHE_CDS\" Before=\"InstallFinalize\" />\n" +
+                    "     </InstallExecuteSequence>";
+        }
+        return cdsBlock;
+    }
+    
     private void walkFileTree(Map<String, ? super Object> params, File root, PrintStream out, String prefix) {
         List<File> dirs = new ArrayList<>();
         List<File> files = new ArrayList<>();
@@ -916,7 +1013,7 @@ public class WinMsiBundler  extends AbstractBundler {
         }
         //component is defined in the template.wsx
         out.println("    <ComponentRef Id=\"CleanupMainApplicationFolder\" />");
-        out.println(" </Feature>");
+        out.println(" </Feature>");        
         out.println("</Include>");
 
         out.close();
@@ -927,6 +1024,15 @@ public class WinMsiBundler  extends AbstractBundler {
         return new File(CONFIG_ROOT.fetchFrom(params), APP_NAME.fetchFrom(params) + ".wxs");
     }
 
+    private String getLicenseFile(Map<String, ? super Object> params) {
+        List<String> licenseFiles = LICENSE_FILE.fetchFrom(params);
+        if (licenseFiles == null || licenseFiles.isEmpty()) {
+            return null;
+        } else {
+            return licenseFiles.get(0);
+        }
+    }
+    
     private boolean prepareWiXConfig(Map<String, ? super Object> params) throws IOException {
         return prepareMainProjectFile(params) && prepareContentList(params);
 
@@ -954,16 +1060,32 @@ public class WinMsiBundler  extends AbstractBundler {
         IOUtils.exec(pb, VERBOSE.fetchFrom(params));
 
         Log.verbose(MessageFormat.format(I18N.getString("message.generating-msi"), msiOut.getAbsolutePath()));
+        
+        boolean enableLicenseUI = (getLicenseFile(params) != null);
+        boolean enableInstalldirUI = INSTALLDIR_CHOOSER.fetchFrom(params);
 
+        List<String> commandLine = new ArrayList<String>();
+
+        commandLine.add(TOOL_LIGHT_EXECUTABLE.fetchFrom(params));        
+        if (enableLicenseUI) {
+            commandLine.add("-dWixUILicenseRtf="+getLicenseFile(params));
+        }
+        commandLine.add("-nologo");
+        commandLine.add("-spdb");
+        commandLine.add("-sice:60"); //ignore warnings due to "missing launcguage info" (ICE60)
+        commandLine.add(candleOut.getAbsolutePath());
+        commandLine.add("-ext");
+        commandLine.add("WixUtilExtension");
+        if (enableLicenseUI || enableInstalldirUI) {
+            commandLine.add("-ext");
+            commandLine.add("WixUIExtension.dll");
+        }
+        commandLine.add("-out");
+        commandLine.add(msiOut.getAbsolutePath());
+        
         //create .msi
-        pb = new ProcessBuilder(
-                TOOL_LIGHT_EXECUTABLE.fetchFrom(params),
-                "-nologo",
-                "-spdb",
-                "-sice:60", //ignore warnings due to "missing launcguage info" (ICE60)
-                candleOut.getAbsolutePath(),
-                "-ext", "WixUtilExtension",
-                "-out", msiOut.getAbsolutePath());
+        pb = new ProcessBuilder(commandLine);
+
         pb = pb.directory(WIN_APP_IMAGE.fetchFrom(params));
         IOUtils.exec(pb, VERBOSE.fetchFrom(params));
 

@@ -35,11 +35,13 @@
 
 namespace WebCore {
 
+class RenderElement;
+
 // An ImplicitAnimation tracks the state of a transition of a specific CSS property
-// for a single RenderObject.
+// for a single RenderElement.
 class ImplicitAnimation : public AnimationBase {
 public:
-    static PassRefPtr<ImplicitAnimation> create(const Animation* animation, CSSPropertyID animatingProperty, RenderObject* renderer, CompositeAnimation* compositeAnimation, RenderStyle* fromStyle)
+    static PassRefPtr<ImplicitAnimation> create(const Animation& animation, CSSPropertyID animatingProperty, RenderElement* renderer, CompositeAnimation* compositeAnimation, RenderStyle* fromStyle)
     {
         return adoptRef(new ImplicitAnimation(animation, animatingProperty, renderer, compositeAnimation, fromStyle));
     };
@@ -47,19 +49,19 @@ public:
     CSSPropertyID transitionProperty() const { return m_transitionProperty; }
     CSSPropertyID animatingProperty() const { return m_animatingProperty; }
 
-    virtual void onAnimationEnd(double elapsedTime);
-    virtual bool startAnimation(double timeOffset);
-    virtual void pauseAnimation(double /*timeOffset*/);
-    virtual void endAnimation();
+    virtual void onAnimationEnd(double elapsedTime) override;
+    virtual bool startAnimation(double timeOffset) override;
+    virtual void pauseAnimation(double timeOffset) override;
+    virtual void endAnimation() override;
 
-    virtual void animate(CompositeAnimation*, RenderObject*, const RenderStyle* currentStyle, RenderStyle* targetStyle, RefPtr<RenderStyle>& animatedStyle);
-    virtual void getAnimatedStyle(RefPtr<RenderStyle>& animatedStyle);
+    virtual void animate(CompositeAnimation*, RenderElement*, const RenderStyle* currentStyle, RenderStyle* targetStyle, RefPtr<RenderStyle>& animatedStyle) override;
+    virtual void getAnimatedStyle(RefPtr<RenderStyle>& animatedStyle) override;
     virtual void reset(RenderStyle* to);
 
     void setOverridden(bool);
-    virtual bool overridden() const { return m_overridden; }
+    virtual bool overridden() const override { return m_overridden; }
 
-    virtual bool affectsProperty(CSSPropertyID) const;
+    virtual bool affectsProperty(CSSPropertyID) const override;
 
     bool hasStyle() const { return m_fromStyle && m_toStyle; }
 
@@ -67,7 +69,7 @@ public:
 
     void blendPropertyValueInStyle(CSSPropertyID, RenderStyle*);
 
-    virtual double timeToNextService();
+    virtual double timeToNextService() override;
     
     bool active() const { return m_active; }
     void setActive(bool b) { m_active = b; }
@@ -82,7 +84,7 @@ protected:
 #endif
 
 private:
-    ImplicitAnimation(const Animation*, CSSPropertyID, RenderObject*, CompositeAnimation*, RenderStyle*);
+    ImplicitAnimation(const Animation&, CSSPropertyID, RenderElement*, CompositeAnimation*, RenderStyle*);
     virtual ~ImplicitAnimation();
 
     CSSPropertyID m_transitionProperty; // Transition property as specified in the RenderStyle.

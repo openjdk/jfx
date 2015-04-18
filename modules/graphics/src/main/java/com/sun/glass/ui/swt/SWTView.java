@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,6 +48,11 @@ final class SWTView extends View {
 
     //TODO - implement IME
     @Override protected void _enableInputMethodEvents(long ptr, boolean enable) { }
+
+    @Override
+    protected int _getNativeFrameBuffer(long ptr) {
+        return 0;
+    }
 
     @Override protected long _create(Map caps) {
         if (hiddenShell == null) {

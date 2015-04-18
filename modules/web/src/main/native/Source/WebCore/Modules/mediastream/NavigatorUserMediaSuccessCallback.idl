@@ -23,8 +23,8 @@
  */
 
 [
-        Conditional=MEDIA_STREAM,
+    Conditional=MEDIA_STREAM,
 ] callback interface NavigatorUserMediaSuccessCallback {
-    boolean handleEvent(LocalMediaStream stream);
-    };
+    boolean handleEvent(MediaStream stream);
+};
 

@@ -25,11 +25,10 @@
 
 [
     NoInterfaceObject,
-        Conditional=WEBGL,
-    GenerateIsReachable=ImplContext,
-        OmitConstructor,
-        DoNotCheckConstants
+    Conditional=WEBGL,
+    GenerateIsReachable=ImplWebGLRenderingContext,
+    DoNotCheckConstants
 ] interface WebGLDebugRendererInfo {
-        const unsigned int UNMASKED_VENDOR_WEBGL = 0x9245;
-        const unsigned int UNMASKED_RENDERER_WEBGL = 0x9246;
-    };
+    const unsigned int UNMASKED_VENDOR_WEBGL = 0x9245;
+    const unsigned int UNMASKED_RENDERER_WEBGL = 0x9246;
+};

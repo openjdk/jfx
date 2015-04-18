@@ -19,9 +19,9 @@
  */
 
 [
-        CustomNamedSetter,
-        JSCustomGetOwnPropertySlotAndDescriptor,
-        CustomCall
+    CustomNamedSetter,
+    JSCustomGetOwnPropertySlotAndDescriptor,
+    CustomCall
 ] interface HTMLAppletElement : HTMLElement {
     [Reflect] attribute DOMString align;
     [Reflect] attribute DOMString alt;
@@ -42,5 +42,5 @@
     [Reflect] attribute long vspace;
 #endif
     [Reflect] attribute DOMString width;
-    };
+};
 

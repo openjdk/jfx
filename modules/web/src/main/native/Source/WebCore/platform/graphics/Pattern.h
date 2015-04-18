@@ -40,14 +40,12 @@ typedef CGPatternRef PlatformPatternPtr;
 #elif USE(CAIRO)
 #include <cairo.h>
 typedef cairo_pattern_t* PlatformPatternPtr;
+#elif USE(WINGDI)
+typedef void* PlatformPatternPtr;
 #elif PLATFORM(JAVA)
 #include <jni.h>
+#include <JavaRef.h> // todo tav remove when building w/ pch
 typedef JGObject PlatformPatternPtr;
-#elif PLATFORM(QT)
-#include <QBrush>
-typedef QBrush PlatformPatternPtr;
-#elif OS(WINCE)
-typedef void* PlatformPatternPtr;
 #endif
 
 namespace WebCore {
@@ -65,12 +63,7 @@ public:
     void platformDestroy();
 
     // Pattern space is an abstract space that maps to the default user space by the transformation 'userSpaceTransformation' 
-#if PLATFORM(QT)
-    // Qt ignores user space transformation and uses pattern's instead
-    PlatformPatternPtr createPlatformPattern() const;
-#else
     PlatformPatternPtr createPlatformPattern(const AffineTransform& userSpaceTransformation) const;
-#endif
     void setPatternSpaceTransform(const AffineTransform& patternSpaceTransformation);
     const AffineTransform& getPatternSpaceTransform() { return m_patternSpaceTransformation; };
     void setPlatformPatternSpaceTransform();

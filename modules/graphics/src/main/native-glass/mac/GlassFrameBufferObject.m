@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -190,6 +190,7 @@
         self->_height = 0;
         self->_texture = 0;
         self->_fbo = 0;
+        self->_isSwPipe = NO;
         
         [self _assertContext];
         if ([self _supportsFbo] == NO)
@@ -229,12 +230,16 @@
     {
         if ((width > 0) && (height > 0))
         {
-            self->_fboToRestore = 0; // default to screen
-            glGetIntegerv(GL_FRAMEBUFFER_BINDING_EXT, (GLint*)&self->_fboToRestore);
-            LOG("               will need to restore to FBO: %d", self->_fboToRestore);
-            
+            if(self->_isSwPipe)
+            {
+                self->_fboToRestore = 0; // default to screen
+                glGetIntegerv(GL_FRAMEBUFFER_BINDING_EXT, (GLint*)&self->_fboToRestore);
+                LOG("               will need to restore to FBO: %d", self->_fboToRestore);
+            }
+
             [self _createFboIfNeededForWidth:width andHeight:height];
-            if (self->_fbo != 0)
+
+            if (self->_isSwPipe && (self->_fbo != 0))
             {
                 GLuint framebufferToBind = self->_fbo; // our own FBO
                 glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, framebufferToBind);
@@ -248,26 +253,27 @@
 
 - (void)unbind
 {
-    LOG("           GlassFrameBufferObject unbind");
-    [self _assertContext];
+    if (self->_isSwPipe)
     {
-        GLint framebufferCurrent = 0;
-        glGetIntegerv(GL_FRAMEBUFFER_BINDING_EXT, &framebufferCurrent);
-#if 0
-        assert(framebufferCurrent == self->_fbo);
-#else
-        if ((GLuint)framebufferCurrent != self->_fbo)
+        LOG("           GlassFrameBufferObject unbind"); 
+        [self _assertContext];
         {
-            fprintf(stderr, "ERROR: unexpected fbo is bound! Expected %d, but found %d\n", self->_fbo, framebufferCurrent);
+            GLint framebufferCurrent = 0;
+            glGetIntegerv(GL_FRAMEBUFFER_BINDING_EXT, &framebufferCurrent);
+
+            if ((GLuint)framebufferCurrent != self->_fbo)
+            {
+                fprintf(stderr, "ERROR: unexpected fbo is bound! Expected %d, but found %d\n", self->_fbo, framebufferCurrent);
+            }
+
+            if (![GlassApplication syncRenderingDisabled]) {         
+                glFinish();
+            }
+            GLuint framebufferToRevertTo = self->_fboToRestore;
+            glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, framebufferToRevertTo);
+            LOG("               restored to FBO: %d", framebufferToRevertTo);
+            LOG("               glGetError(): %d", glGetError());
         }
-#endif
-        if (![GlassApplication syncRenderingDisabled]) {         
-            glFinish();
-        }
-        GLuint framebufferToRevertTo = self->_fboToRestore;
-        glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, framebufferToRevertTo);
-        LOG("               restored to FBO: %d", framebufferToRevertTo);
-        LOG("               glGetError(): %d", glGetError());
     }
 }
 
@@ -327,6 +333,11 @@
 - (GLuint)fbo
 {
     return self->_fbo;
+}
+
+- (void)setIsSwPipe:(BOOL)isSwPipe
+{
+    self->_isSwPipe = isSwPipe;
 }
 
 @end

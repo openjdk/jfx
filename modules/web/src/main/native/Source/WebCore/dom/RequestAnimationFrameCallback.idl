@@ -29,9 +29,9 @@
  */
 
 [
-        Conditional=REQUEST_ANIMATION_FRAME,
+    Conditional=REQUEST_ANIMATION_FRAME,
 ] callback interface RequestAnimationFrameCallback{
     // highResTime is passed as high resolution timestamp, see
     // http://www.w3.org/TR/hr-time/ for details.
     [Custom] boolean handleEvent(double highResTime);
-    };
+};

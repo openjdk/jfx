@@ -36,34 +36,21 @@
 #include <wtf/ThreadSpecific.h>
 #include <wtf/Threading.h>
 
-// FIXME: This is a temporary layering violation while we move more string code to WTF.
+// FIXME: This is a temporary layering violation until we move more of the string code from JavaScriptCore to WTF.
 namespace JSC {
-
-typedef HashMap<const char*, RefPtr<StringImpl>, PtrHash<const char*> > LiteralIdentifierTable;
 
 class IdentifierTable {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    ~IdentifierTable();
+    WTF_EXPORT_PRIVATE ~IdentifierTable();
 
-    HashSet<StringImpl*>::AddResult add(StringImpl* value);
-    template<typename U, typename V>
-    HashSet<StringImpl*>::AddResult add(U value);
+    WTF_EXPORT_PRIVATE HashSet<StringImpl*>::AddResult add(StringImpl*);
+    template<typename U, typename V> HashSet<StringImpl*>::AddResult add(U);
 
-    bool remove(StringImpl* r)
-    {
-        HashSet<StringImpl*>::iterator iter = m_table.find(r);
-        if (iter == m_table.end())
-            return false;
-        m_table.remove(iter);
-        return true;
-    }
-
-    LiteralIdentifierTable& literalTable() { return m_literalTable; }
+    bool remove(StringImpl* identifier) { return m_table.remove(identifier); }
 
 private:
     HashSet<StringImpl*> m_table;
-    LiteralIdentifierTable m_literalTable;
 };
 
 }
@@ -119,6 +106,26 @@ public:
     }
 #endif
 
+    void* savedStackPointerAtVMEntry()
+    {
+        return m_savedStackPointerAtVMEntry;
+    }
+
+    void setSavedStackPointerAtVMEntry(void* stackPointerAtVMEntry)
+    {
+        m_savedStackPointerAtVMEntry = stackPointerAtVMEntry;
+    }
+
+    void* savedLastStackTop()
+    {
+        return m_savedLastStackTop;
+    }
+
+    void setSavedLastStackTop(void* lastStackTop)
+    {
+        m_savedLastStackTop = lastStackTop;
+    }
+
     void* m_apiData;
 
 private:
@@ -131,6 +138,8 @@ private:
 #if ENABLE(STACK_STATS)
     StackStats::PerThreadStats m_stackStats;
 #endif
+    void* m_savedStackPointerAtVMEntry;
+    void* m_savedLastStackTop;
 
     static WTF_EXPORTDATA ThreadSpecific<WTFThreadData>* staticData;
     friend WTFThreadData& wtfThreadData();

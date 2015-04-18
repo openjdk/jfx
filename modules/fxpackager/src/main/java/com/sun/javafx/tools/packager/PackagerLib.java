@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,19 +25,17 @@
 
 package com.sun.javafx.tools.packager;
 
-import com.oracle.tools.packager.*;
+import com.oracle.tools.packager.Bundlers;
 import com.oracle.tools.packager.ConfigException;
 import com.oracle.tools.packager.Log;
 import com.oracle.tools.packager.RelativeFileSet;
 import com.oracle.tools.packager.UnsupportedPlatformException;
-import com.sun.javafx.tools.packager.DeployParams.Icon;
 import com.sun.javafx.tools.packager.JarSignature.InputStreamSource;
-import com.sun.javafx.tools.packager.bundlers.*;
+import com.sun.javafx.tools.packager.bundlers.BundleParams;
 import com.sun.javafx.tools.packager.bundlers.Bundler.BundleType;
-import com.sun.javafx.tools.resource.DeployResource;
 import com.sun.javafx.tools.resource.PackagerResource;
+
 import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -47,7 +45,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.PrintStream;
 import java.io.Writer;
 import java.lang.reflect.Method;
 import java.net.MalformedURLException;
@@ -63,13 +60,11 @@ import java.security.PrivateKey;
 import java.security.SignatureException;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.Certificate;
-import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Base64;
-import java.util.EnumMap;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -83,8 +78,6 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -94,16 +87,7 @@ public class PackagerLib {
     private static final ResourceBundle bundle =
             ResourceBundle.getBundle("com/sun/javafx/tools/packager/Bundle");
 
-    private static final String dtFX = "dtjava.js";
-
-    private static final String webfilesDir = "web-files";
-    //Note: leading "." is important for IE8
-    private static final String EMBEDDED_DT = "./"+webfilesDir+"/"+dtFX;
-
-    private static final String PUBLIC_DT = "http://java.com/js/dtjava.js";
-
     private CreateJarParams createJarParams;
-    private DeployParams deployParams;
     private CreateBSSParams createBssParams;
     private File bssTmpDir;
 
@@ -235,6 +219,13 @@ public class PackagerLib {
             attr.put(new Attributes.Name("Class-Path"), cp);
         }
 
+        attr.put(new Attributes.Name("Permissions"),
+                 createJarParams.allPermissions ? "all-permissions" : "sandbox");
+        
+        if (createJarParams.codebase != null) {
+            attr.put(new Attributes.Name("Codebase"), createJarParams.codebase);
+        }
+        
         attr.put(new Attributes.Name("JavaFX-Version"), createJarParams.fxVersion);
 
         if (createJarParams.preloader != null) {
@@ -293,182 +284,16 @@ public class PackagerLib {
         this.createJarParams = null;
     }
 
-    private String readTextFile(File in) throws PackagerException {
-        StringBuilder sb = new StringBuilder();
-        try (InputStreamReader isr = new InputStreamReader(new FileInputStream(in))) {
-            char[] buf = new char[16384];
-            int len;
-            while ((len = isr.read(buf)) > 0) {
-                sb.append(buf, sb.length(), len);
-            }
-        } catch (IOException ex) {
-            throw new PackagerException(ex, "ERR_FileReadFailed",
-                    in.getAbsolutePath());
-        }
-        return sb.toString();
-    }
-
-    private String processTemplate(String inpText,
-            Map<TemplatePlaceholders, String> templateStrings) {
-        //Core pattern matches
-        //   #DT.SCRIPT#
-        //   #DT.EMBED.CODE.ONLOAD#
-        //   #DT.EMBED.CODE.ONLOAD(App2)#
-        String corePattern = "(#[\\w\\.\\(\\)]+#)";
-        //This will match
-        //   "/*", "//" or "<!--" with arbitrary number of spaces
-        String prefixGeneric = "[\\/\\*-<\\!]*[ \\t]*";
-        //This will match
-        //   "/*", "//" or "<!--" with arbitrary number of spaces
-        String suffixGeneric = "[ \\t]*[\\*\\/>-]*";
-
-        //NB: result core match is group number 1
-        Pattern mainPattern = Pattern.compile(
-                prefixGeneric + corePattern + suffixGeneric);
-
-        Matcher m = mainPattern.matcher(inpText);
-        StringBuffer result = new StringBuffer();
-        while (m.find()) {
-            String match = m.group();
-            String coreMatch = m.group(1);
-            //have match, not validate it is not false positive ...
-            // e.g. if we matched just some spaces in prefix/suffix ...
-            boolean inComment =
-                    (match.startsWith("<!--") && match.endsWith("-->")) ||
-                    (match.startsWith("//")) ||
-                    (match.startsWith("/*") && match.endsWith(" */"));
-
-            //try to find if we have match
-            String coreReplacement = null;
-            //map with rules have no template ids
-            //int p = coreMatch.indexOf("\\(");
-            //strip leading/trailing #, then split of id part
-            String parts[] = coreMatch.substring(1, coreMatch.length()-1).split("[\\(\\)]");
-            String rulePart = parts[0];
-            String idPart = (parts.length == 1) ?
-                    //strip trailing ')'
-                    null : parts[1];
-            if (templateStrings.containsKey(
-                    TemplatePlaceholders.fromString(rulePart))
-                    && (idPart == null /* it is ok for templeteId to be not null, e.g. DT.SCRIPT.CODE */
-                        || idPart.equals(deployParams.appId))) {
-                coreReplacement = templateStrings.get(
-                        TemplatePlaceholders.fromString(rulePart));
-            }
-
-            if (coreReplacement != null) {
-                if (inComment || coreMatch.length() == match.length()) {
-                    m.appendReplacement(result, coreReplacement);
-                } else { // pattern matched something that is not comment
-                         // Very unlikely but lets play it safe
-                    int pp = match.indexOf(coreMatch);
-                    String v = match.substring(0, pp) +
-                            coreReplacement +
-                            match.substring(pp + coreMatch.length());
-                    m.appendReplacement(result, v);
-                }
-            }
-        }
-        m.appendTail(result);
-        return result.toString();
-    }
-
-    private static enum Mode {FX, APPLET, SwingAPP}
-
     public void generateDeploymentPackages(DeployParams deployParams) throws PackagerException {
         if (deployParams == null) {
             throw new IllegalArgumentException("Parameters must not be null.");
         }
-        this.deployParams = deployParams;
-        boolean templateOn = !deployParams.templates.isEmpty();
-        Map<TemplatePlaceholders, String> templateStrings = null;
-        if (templateOn) {
-            templateStrings =
-               new EnumMap<>(TemplatePlaceholders.class);
-        }
+
         try {
-            //In case of FX app we will have one JNLP and one HTML
-            //In case of Swing with FX we will have 2 JNLP files and one HTML
-            String jnlp_filename_webstart = deployParams.outfile + ".jnlp";
-            String jnlp_filename_browser
-                    = deployParams.isSwingApp ?
-                        (deployParams.outfile + "_browser.jnlp") : jnlp_filename_webstart;
-            String html_filename = deployParams.outfile + ".html";
-
-            //create out dir
-            File odir = deployParams.outdir;
-            odir.mkdirs();
-
-            if (deployParams.includeDT && !extractWebFiles()) {
-                throw new PackagerException("ERR_NoEmbeddedDT");
-            }
-
-            ByteArrayOutputStream jnlp_bos_webstart = new ByteArrayOutputStream();
-            ByteArrayOutputStream jnlp_bos_browser = new ByteArrayOutputStream();
-
-            //for swing case we need to generate 2 JNLP files
-            if (deployParams.isSwingApp) {
-               PrintStream jnlp_ps = new PrintStream(jnlp_bos_webstart);
-               generateJNLP(jnlp_ps, jnlp_filename_webstart, Mode.SwingAPP);
-               jnlp_ps.close();
-               //save JNLP
-               save(jnlp_filename_webstart, jnlp_bos_webstart.toByteArray());
-
-               jnlp_ps = new PrintStream(jnlp_bos_browser);
-               generateJNLP(jnlp_ps, jnlp_filename_browser, Mode.APPLET);
-               jnlp_ps.close();
-               //save JNLP
-               save(jnlp_filename_browser, jnlp_bos_browser.toByteArray());
-
-            } else {
-                PrintStream jnlp_ps = new PrintStream(jnlp_bos_browser);
-                generateJNLP(jnlp_ps, jnlp_filename_browser, Mode.FX);
-                jnlp_ps.close();
-
-                //save JNLP
-                save(jnlp_filename_browser, jnlp_bos_browser.toByteArray());
-
-                jnlp_bos_webstart = jnlp_bos_browser;
-            }
-
-            //we do not need html if this is component and not main app
-            if (!deployParams.isExtension) {
-                ByteArrayOutputStream html_bos =
-                        new ByteArrayOutputStream();
-                PrintStream html_ps = new PrintStream(html_bos);
-                generateHTML(html_ps,
-                        jnlp_bos_browser.toByteArray(), jnlp_filename_browser,
-                        jnlp_bos_webstart.toByteArray(), jnlp_filename_webstart,
-                        templateStrings, deployParams.isSwingApp);
-                html_ps.close();
-
-                //process template file
-                if (templateOn) {
-                    for (DeployParams.Template t: deployParams.templates) {
-                        File out = t.out;
-                        if (out == null) {
-                            System.out.println(
-                                    "Perform inplace substitution for " +
-                                    t.in.getAbsolutePath());
-                            out = t.in;
-                        }
-                        save(out, processTemplate(
-                                readTextFile(t.in), templateStrings).getBytes());
-                    }
-                } else {
-                    //save HTML
-                    save(html_filename, html_bos.toByteArray());
-                }
-            }
-
-            //copy jar files
-            for (DeployResource resource: deployParams.resources) {
-                copyFiles(resource, deployParams.outdir);
-            }
-
             BundleParams bp = deployParams.getBundleParams();
             if (bp != null) {
-                generateNativeBundles(deployParams.outdir, bp.getBundleParamsAsMap(), deployParams.getBundleType().toString(), deployParams.getTargetFormat());
+                generateNativeBundles(deployParams.outdir, bp.getBundleParamsAsMap(), "JNLP", "jnlp");
+                generateNativeBundles(new File(deployParams.outdir, "bundles"), bp.getBundleParamsAsMap(), deployParams.getBundleType().toString(), deployParams.getTargetFormat());
             }
         } catch (PackagerException ex) {
             throw ex;
@@ -476,12 +301,9 @@ public class PackagerLib {
             throw new PackagerException(ex, "ERR_DeployFailed", ex.getMessage());
         }
 
-        this.deployParams = null;
     }
 
     private void generateNativeBundles(File outdir, Map<String, ? super Object> params, String bundleType, String bundleFormat) throws PackagerException {
-        outdir = new File(outdir, "bundles");
-
         if (params.containsKey(BundleParams.PARAM_RUNTIME)) {
             RelativeFileSet runtime = BundleParams.getRuntime(params);
             if (runtime == null) {
@@ -497,6 +319,7 @@ public class PackagerLib {
         }
 
         for (com.oracle.tools.packager.Bundler bundler : Bundlers.createBundlersInstance().getBundlers(bundleType)) {
+
             // if they specify the bundle format, require we match the ID
             if (bundleFormat != null && !bundleFormat.equalsIgnoreCase(bundler.getID())) continue;
 
@@ -521,34 +344,6 @@ public class PackagerLib {
             } catch (RuntimeException re) {
                 com.oracle.tools.packager.Log.info(MessageFormat.format(bundle.getString("MSG_BundlerRuntimeException"), bundler.getName(), re.toString()));
                 com.oracle.tools.packager.Log.debug(re);
-            }
-        }
-    }
-
-    private static void copyFiles(DeployResource resource, File outdir) throws IOException, PackagerException {
-
-        if (resource.getFile().isDirectory()) {
-            final File baseDir = resource.getBaseDir();
-            File[] children = resource.getFile().listFiles();
-            if (children != null) {
-                for (File file : children) {
-                    copyFiles(new DeployResource(baseDir, file), outdir);
-                }
-            }
-        } else {
-            final File srcFile = resource.getFile();
-            if (srcFile.exists() && srcFile.isFile()) {
-                //skip file copying if jar is in the same location
-                final File destFile =
-                        new File(outdir, resource.getRelativePath());
-
-                if (!srcFile.getCanonicalFile().equals(
-                        destFile.getCanonicalFile())) {
-                    copyFileToOutDir(new FileInputStream(srcFile),
-                                     destFile);
-                } else {
-                    com.oracle.tools.packager.Log.verbose(MessageFormat.format(bundle.getString("MSG_JarNoSelfCopy"), resource.getRelativePath()));
-                }
             }
         }
     }
@@ -826,472 +621,8 @@ public class PackagerLib {
         }
     }
 
-    //return null if args are default
-    private String getJvmArguments(boolean includeProperties) {
-        StringBuilder sb = new StringBuilder();
-        for(String v: deployParams.jvmargs) {
-            sb.append(v);  //may need to escape if parameter has spaces
-            sb.append(" ");
-        }
-        if (includeProperties) {
-            for(String k: deployParams.properties.keySet()) {
-                sb.append("-D");
-                sb.append(k);
-                sb.append("=");
-                sb.append(deployParams.properties.get(k)); //may need to escape if value has spaces
-                sb.append(" ");
-            }
-        }
-        if (sb.length() > 0) {
-            return sb.toString();
-        }
-        return null;
-    }
-
-    private void generateJNLP(PrintStream out, String jnlp_filename, Mode m)
-            throws IOException, CertificateEncodingException
-    {
-        out.println("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
-        //have to use "old" spec version or old javaws will fail
-        // with "unknown" version exception ...
-        out.println("<jnlp spec=\"1.0\" xmlns:jfx=\"http://javafx.com\"" +
-                (deployParams.codebase != null ?
-                     " codebase=\"" + deployParams.codebase + "\"" : "") +
-                " href=\""+jnlp_filename+"\">");
-        out.println("  <information>");
-        out.println("    <title>" +
-                ((deployParams.title != null)
-                ? deployParams.title : "Sample JavaFX Application") +
-                "</title>");
-        out.println("    <vendor>" +
-                ((deployParams.vendor != null)
-                ? deployParams.vendor : "Unknown vendor") +
-                "</vendor>");
-        out.println("    <description>" +
-                ((deployParams.description != null)
-                ? deployParams.description : "Sample JavaFX 2.0 application.") +
-                "</description>");
-        for (Icon i : deployParams.icons) {
-            if (i.mode == DeployParams.RunMode.WEBSTART ||
-                    i.mode == DeployParams.RunMode.ALL) {
-                out.println("    <icon href=\"" + i.href + "\" " +
-                        ((i.kind != null) ? " kind=\"" + i.kind + "\"" : "") +
-                        ((i.width != Icon.UNDEFINED) ?
-                                " width=\"" + i.width + "\"" : "") +
-                        ((i.height != Icon.UNDEFINED) ?
-                                " height=\"" + i.height + "\"" : "") +
-                        ((i.depth != Icon.UNDEFINED) ?
-                                " depth=\"" + i.depth + "\"" : "") +
-                        "/>");
-            }
-        }
-
-        if (deployParams.offlineAllowed && !deployParams.isExtension) {
-            out.println("    <offline-allowed/>");
-        }
-
-        if (Boolean.TRUE.equals(deployParams.needShortcut)) {
-            out.println("  <shortcut><desktop/></shortcut>");
-
-//            //TODO: Add support for a more sophisticated shortcut tag.
-//  <shortcut/> // install no shortcuts, and do not consider "installed"
-//  <shortcut installed="true"/> // install no shortcuts, but consider "installed"
-//  <shortcut installed="false"><desktop/></shortcut> // install desktop shortcut, but do not consider the app "installed"
-//  <shortcut installed="true"><menu/></shortcut> // install menu shortcut, and consider app "installed"
-        }
-
-        out.println("  </information>");
-
-        boolean needToCloseResourceTag = false;
-        //jre is available for all platforms
-        if (!deployParams.isExtension) {
-            out.println("  <resources>");
-            needToCloseResourceTag = true;
-
-            String vmargs = getJvmArguments(false);
-            vmargs = (vmargs == null) ? "" : " java-vm-args=\""+vmargs+"\" ";
-            out.println("    <j2se version=\"" + deployParams.jrePlatform + "\"" +
-                    vmargs + " href=\"http://java.sun.com/products/autodl/j2se\"/>");
-            for (String k : deployParams.properties.keySet()) {
-                out.println("    <property name=\"" + k +
-                        "\" value=\"" + deployParams.properties.get(k) + "\"/>");
-            }
-        }
-        String currentOS = null, currentArch = null;
-        //NOTE: This should sort the list by os+arch; it will reduce the number of resource tags
-        String pendingPrint = null;
-        for (DeployResource resource: deployParams.resources) {
-            //if not same OS or arch then open new resources element
-            if (!needToCloseResourceTag ||
-                ((currentOS == null && resource.getOs() != null) ||
-                 currentOS != null && !currentOS.equals(resource.getOs())) ||
-                ((currentArch == null && resource.getArch() != null) ||
-                 currentArch != null && !currentArch.equals(resource.getArch()))) {
-
-                //we do not print right a way as it may be empty block
-                // Not all resources make sense for JNLP (e.g. data or license)
-                if (needToCloseResourceTag) {
-                   pendingPrint = "  </resources>\n";
-                } else {
-                    pendingPrint = "";
-                }
-                currentOS = resource.getOs();
-                currentArch = resource.getArch();
-                pendingPrint += "  <resources" +
-                        ((currentOS != null) ? " os=\"" + currentOS + "\"" : "") +
-                        ((currentArch != null) ? " arch=\""+currentArch+"\"" : "") +
-                        ">\n";
-            }
-            final File srcFile = resource.getFile();
-            if (srcFile.exists() && srcFile.isFile()) {
-                final String relativePath = resource.getRelativePath();
-                DeployResource.Type type = resource.getType();
-                switch (type) {
-                    case jar:
-                        if (pendingPrint != null) {
-                            out.print(pendingPrint);
-                            pendingPrint = null;
-                            needToCloseResourceTag = true;
-                        }
-                        out.print("    <jar href=\"" + relativePath + "\" size=\""
-                                + srcFile.length() + "\"");
-                        out.print(" download=\"" + resource.getMode() + "\" ");
-                        out.println("/>");
-                        break;
-                    case jnlp:
-                        if (pendingPrint != null) {
-                            out.print(pendingPrint);
-                            pendingPrint = null;
-                            needToCloseResourceTag = true;
-                        }
-                        out.println("    <extension href=\"" + relativePath + "\"/>");
-                        break;
-                    case nativelib:
-                        if (pendingPrint != null) {
-                            out.print(pendingPrint);
-                            needToCloseResourceTag = true;
-                            pendingPrint = null;
-                        }
-                        out.println("    <nativelib href=\"" + relativePath + "\"/>");
-                        break;
-                }
-            }
-        }
-        if (needToCloseResourceTag) {
-            out.println("  </resources>");
-        }
-
-        if (deployParams.allPermissions) {
-            out.println("<security>");
-            out.println("  <all-permissions/>");
-            out.println("</security>");
-        }
-
-        if (!deployParams.isExtension) {
-            if (m == Mode.APPLET) {
-                out.print("  <applet-desc  width=\"" + deployParams.width
-                        + "\" height=\"" + deployParams.height + "\"");
-
-                out.print(" main-class=\"" + deployParams.applicationClass + "\" ");
-                out.println(" name=\"" + deployParams.appName + "\" >");
-                if (deployParams.params != null) {
-                    for (Param p : deployParams.params) {
-                        out.println("    <param name=\"" + p.name + "\""
-                                + (p.value != null
-                                ? (" value=\"" + p.value + "\"") : "")
-                                + "/>");
-                    }
-                }
-                out.println("  </applet-desc>");
-            } else if (m == Mode.SwingAPP) {
-                out.print("  <application-desc main-class=\"" + deployParams.applicationClass + "\" ");
-                out.println(" name=\"" + deployParams.appName + "\" >");
-                if (deployParams.arguments != null) {
-                    for (String a : deployParams.arguments) {
-                        out.println("    <argument>" + a + "</argument>");
-                    }
-                }
-                out.println("  </application-desc>");
-            } else { //JavaFX application
-                //embed fallback application
-                if (deployParams.fallbackApp != null) {
-                    out.print("  <applet-desc  width=\"" + deployParams.width
-                            + "\" height=\"" + deployParams.height + "\"");
-
-                    out.print(" main-class=\"" + deployParams.fallbackApp + "\" ");
-                    out.println(" name=\"" + deployParams.appName + "\" >");
-                    out.println("    <param name=\"requiredFXVersion\" value=\""
-                            + deployParams.fxPlatform + "\"/>");
-                    out.println("  </applet-desc>");
-                }
-
-                //javafx application descriptor
-                out.print("  <jfx:javafx-desc  width=\"" + deployParams.width
-                        + "\" height=\"" + deployParams.height + "\"");
-
-                out.print(" main-class=\"" + deployParams.applicationClass + "\" ");
-                out.print(" name=\"" + deployParams.appName + "\" ");
-                if (deployParams.preloader != null) {
-                    out.print(" preloader-class=\"" + deployParams.preloader + "\"");
-                }
-                if (((deployParams.params == null) || deployParams.params.isEmpty())
-                        && (deployParams.arguments == null || deployParams.arguments.isEmpty())) {
-                    out.println("/>");
-                } else {
-                    out.println(">");
-                    if (deployParams.params != null) {
-                        for (Param p : deployParams.params) {
-                            out.println("    <fx:param name=\"" + p.name + "\""
-                                    + (p.value != null
-                                    ? (" value=\"" + p.value + "\"") : "")
-                                    + "/>");
-                        }
-                    }
-                    if (deployParams.arguments != null) {
-                        for (String a : deployParams.arguments) {
-                            out.println("    <fx:argument>" + a + "</fx:argument>");
-                        }
-                    }
-                    out.println("  </jfx:javafx-desc>");
-                }
-            }
-        }
-
-        out.println("  <update check=\"" + deployParams.updateMode + "\"/>");
-        out.println("</jnlp>");
-    }
-
-
-
-    private void addToList(List<String> l, String name, String value, boolean isString) {
-        String s = isString ? "'" : "";
-        String v = name +" : " + s + value + s;
-        l.add(v);
-    }
-
-    private String listToString(List<String> lst, String offset) {
-        StringBuilder b = new StringBuilder();
-        if (lst == null || lst.isEmpty()) {
-            return offset + "{}";
-        }
-
-        b.append(offset).append("{\n");
-        boolean first = true;
-        for (String s : lst) {
-            if (!first) {
-                b.append(",\n");
-            }
-            first = false;
-            b.append(offset).append("    ");
-            b.append(s);
-        }
-        b.append("\n");
-        b.append(offset).append("}");
-        return b.toString();
-    }
-
     private String encodeAsBase64(byte inp[]) {
         return Base64.getEncoder().encodeToString(inp);
-    }
-
-    private void generateHTML(PrintStream out,
-            byte[] jnlp_bytes_browser, String jnlpfile_browser,
-            byte[] jnlp_bytes_webstart, String jnlpfile_webstart,
-            Map<TemplatePlaceholders, String> templateStrings,
-            boolean swingMode) {
-        String poff = "    ";
-        String poff2 = poff + poff;
-        String poff3 = poff2 + poff;
-
-        StringBuilder out_embed_dynamic = new StringBuilder();
-        StringBuilder out_embed_onload = new StringBuilder();
-        StringBuilder out_launch_code = new StringBuilder();
-
-        String appletParams = getAppletParameters();
-        String jnlp_content_browser = null;
-        String jnlp_content_webstart = null;
-
-        if (deployParams.embedJNLP) {
-            jnlp_content_browser = encodeAsBase64(jnlp_bytes_browser);
-            jnlp_content_webstart = encodeAsBase64(jnlp_bytes_webstart);
-        }
-
-        out.println("<html><head>");
-        String dtURL = deployParams.includeDT ? EMBEDDED_DT : PUBLIC_DT;
-        String includeDtString = "<SCRIPT src=\"" + dtURL + "\"></SCRIPT>";
-        if (templateStrings != null) {
-            templateStrings.put(TemplatePlaceholders.SCRIPT_URL, dtURL);
-            templateStrings.put(TemplatePlaceholders.SCRIPT_CODE, includeDtString);
-        }
-        out.println("  " + includeDtString);
-
-        List<String> w_app = new ArrayList<>();
-        List<String> w_platform = new ArrayList<>();
-        List<String> w_callback = new ArrayList<>();
-
-        addToList(w_app, "url", jnlpfile_webstart, true);
-        if (jnlp_content_webstart != null) {
-            addToList(w_app, "jnlp_content", jnlp_content_webstart, true);
-        }
-
-        addToList(w_platform, "javafx", deployParams.fxPlatform, true);
-        String vmargs = getJvmArguments(true);
-        if (vmargs != null) {
-            addToList(w_platform, "jvmargs", vmargs, true);
-        }
-
-        if (!"".equals(appletParams)) {
-            addToList(w_app, "params", "{"+appletParams+"}", false);
-        }
-
-        if ((deployParams.callbacks != null) && !deployParams.callbacks.isEmpty()) {
-            for (JSCallback cb: deployParams.callbacks) {
-                addToList(w_callback, cb.getName(), cb.getCmd(), false);
-            }
-        }
-
-        //prepare content of launchApp function
-        out_launch_code.append(poff2).append("dtjava.launch(");
-        out_launch_code.append(listToString(w_app, poff3)).append(",\n");
-        out_launch_code.append(listToString(w_platform, poff3)).append(",\n");
-        out_launch_code.append(listToString(w_callback, poff3)).append("\n");
-        out_launch_code.append(poff2).append(");\n");
-
-        out.println("<script>");
-        out.println(poff  + "function launchApplication(jnlpfile) {");
-        out.print(out_launch_code.toString());
-        out.println(poff2 + "return false;");
-        out.println(poff + "}");
-        out.println("</script>");
-
-        if (templateStrings != null) {
-            templateStrings.put(TemplatePlaceholders.LAUNCH_CODE,
-                    out_launch_code.toString());
-        }
-
-        //applet deployment
-        String appId = deployParams.appId; //if null then it will be autogenerated
-        String placeholder = deployParams.placeholder;
-        if (placeholder == null) { //placeholder can not be null
-            placeholder = "'javafx-app-placeholder'";
-        }
-
-        //prepare content of embedApp()
-        List<String> p_app = new ArrayList<>();
-        List<String> p_platform = new ArrayList<>();
-        List<String> p_callback = new ArrayList<>();
-
-        if (appId != null) {
-            addToList(p_app, "id", appId, true);
-        }
-        if (deployParams.isSwingApp) {
-          addToList(p_app, "toolkit", "swing", true);
-        }
-        addToList(p_app, "url", jnlpfile_browser, true);
-        addToList(p_app, "placeholder", placeholder, false);
-        if (deployParams.embeddedWidth != null && deployParams.embeddedHeight != null) {
-          addToList(p_app, "width", ""+deployParams.embeddedWidth, true);
-          addToList(p_app, "height", ""+deployParams.embeddedHeight, true);
-        } else {
-          addToList(p_app, "width", ""+deployParams.width, false);
-          addToList(p_app, "height", ""+deployParams.height, false);
-        }
-        if (jnlp_content_browser != null) {
-            addToList(p_app, "jnlp_content", jnlp_content_browser, true);
-        }
-
-        addToList(p_platform, "javafx", deployParams.fxPlatform, true);
-        if (vmargs != null) {
-            addToList(p_platform, "jvmargs", vmargs, true);
-        }
-
-        if ((deployParams.callbacks != null) && !deployParams.callbacks.isEmpty()) {
-            for (JSCallback cb: deployParams.callbacks) {
-                addToList(p_callback, cb.getName(), cb.getCmd(), false);
-            }
-        }
-
-        if (!"".equals(appletParams)) {
-            addToList(p_app, "params", "{"+appletParams+"}", false);
-        }
-
-        if (swingMode) {
-            //Splash will not work in SwingMode
-            //Unless user overwrites onGetSplash handler (and that means he handles splash on his own)
-            // we will reset splash function to be "none"
-            boolean needOnGetSplashImpl = true;
-            if (deployParams.callbacks != null) {
-                for (JSCallback c: deployParams.callbacks) {
-                    if ("onGetSplash".equals(c.getName())) {
-                        needOnGetSplashImpl = false;
-                    }
-                }
-            }
-
-            if (needOnGetSplashImpl) {
-                addToList(p_callback, "onGetSplash", "function() {}", false);
-            }
-        }
-
-        out_embed_dynamic.append("dtjava.embed(\n");
-        out_embed_dynamic.append(listToString(p_app, poff3)).append(",\n");
-        out_embed_dynamic.append(listToString(p_platform, poff3)).append(",\n");
-        out_embed_dynamic.append(listToString(p_callback, poff3)).append("\n");
-
-        out_embed_dynamic.append(poff2).append(");\n");
-
-        //now wrap content with function
-        String embedFuncName = "javafxEmbed" +
-                ((deployParams.appId != null) ?
-                   "_"+deployParams.appId : "");
-        out_embed_onload.append("\n<script>\n");
-        out_embed_onload.append(poff).append("function ").append(embedFuncName).append("() {\n");
-        out_embed_onload.append(poff2);
-        out_embed_onload.append(out_embed_dynamic);
-        out_embed_onload.append(poff).append("}\n");
-
-        out_embed_onload.append(poff).append(
-            "<!-- Embed FX application into web page once page is loaded -->\n");
-        out_embed_onload.append(poff).append("dtjava.addOnloadCallback(").append(embedFuncName).append(
-            ");\n");
-        out_embed_onload.append("</script>\n");
-
-        if (templateStrings != null) {
-            templateStrings.put(
-                    TemplatePlaceholders.EMBED_CODE_ONLOAD,
-                    out_embed_onload.toString());
-            templateStrings.put(
-                    TemplatePlaceholders.EMBED_CODE_DYNAMIC,
-                    out_embed_dynamic.toString());
-        }
-
-        out.println(out_embed_onload.toString());
-
-        out.println("</head><body>");
-        out.println("<h2>Test page for <b>"+deployParams.appName+"</b></h2>");
-        String launchString = "return launchApplication('" + jnlpfile_webstart + "');";
-        out.println("  <b>Webstart:</b> <a href='" + jnlpfile_webstart +
-                "' onclick=\"" + launchString + "\">"
-                    + "click to launch this app as webstart</a><br><hr><br>");
-        out.println("");
-        out.println("  <!-- Applet will be inserted here -->");
-        //placeholder is wrapped with single quotes already
-        out.println("  <div id="+placeholder+"></div>");
-        out.println("</body></html>");
-    }
-
-    private void save(String fname, byte[] content) throws IOException {
-        File odir = deployParams.outdir;
-        save(new File(odir, fname), content);
-    }
-
-    private void save(File f, byte[] content) throws IOException {
-        if (f.exists()) {
-            f.delete();
-        }
-        FileOutputStream fos = new FileOutputStream(f);
-        fos.write(content);
-        fos.close();
     }
 
     private static void copyFileToOutDir(
@@ -1310,21 +641,6 @@ public class PackagerLib {
         } catch (IOException ex) {
             throw new PackagerException(ex, "ERR_FileCopyFailed", outDir.getPath());
         }
-    }
-
-
-    private String getAppletParameters() {
-        String result = "";
-        if (deployParams.htmlParams != null) {
-            for (HtmlParam p: deployParams.htmlParams) {
-                if (!result.isEmpty()) {
-                    result += ", ";
-                }
-                String escape = p.needEscape ? "\"" : "";
-                result += "\""+p.name+"\": " + escape + p.value + escape;
-            }
-        }
-        return result;
     }
 
     private void jar(
@@ -1528,7 +844,7 @@ public class PackagerLib {
         }
 
         try {
-            Method m = clazz.getMethod("convertToBinary", new Class[]{String.class, String.class});
+            Method m = clazz.getMethod("convertToBinary", String.class, String.class);
             m.invoke(null, cssFile, ofname);
         } catch (Exception ex) {
             Throwable causeEx = ex.getCause();
@@ -1593,42 +909,6 @@ public class PackagerLib {
         }
         if (name.endsWith("MANIFEST.MF")) {
             return false;
-        }
-        return true;
-    }
-
-    private static String[] webFiles = {
-      "javafx-loading-100x100.gif",
-      dtFX,
-      "javafx-loading-25x25.gif",
-      "error.png",
-      "upgrade_java.png",
-      "javafx-chrome.png",
-      "get_java.png",
-      "upgrade_javafx.png",
-      "get_javafx.png"
-    };
-
-    private static String prefixWebFiles = "/resources/web-files/";
-
-    private boolean extractWebFiles() throws PackagerException {
-        return doExtractWebFiles(webFiles);
-    }
-
-    private boolean doExtractWebFiles(String lst[]) throws PackagerException {
-        File f = new File(deployParams.outdir, webfilesDir);
-        f.mkdirs();
-
-        for (String s: lst) {
-            InputStream is =
-                    PackagerLib.class.getResourceAsStream(prefixWebFiles+s);
-            if (is == null) {
-                System.err.println("Internal error. Missing resources [" +
-                        (prefixWebFiles+s) + "]");
-                return false;
-            } else {
-                copyFileToOutDir(is, new File(f, s));
-            }
         }
         return true;
     }

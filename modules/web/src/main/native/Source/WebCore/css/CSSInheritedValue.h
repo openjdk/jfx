@@ -28,12 +28,12 @@ namespace WebCore {
 
 class CSSInheritedValue : public CSSValue {
 public:
-    static PassRefPtr<CSSInheritedValue> create()
+    static PassRef<CSSInheritedValue> create()
     {
-        return adoptRef(new CSSInheritedValue);
+        return adoptRef(*new CSSInheritedValue);
     }
 
-    String customCssText() const;
+    String customCSSText() const;
 
     bool equals(const CSSInheritedValue&) const { return true; }
 
@@ -43,6 +43,8 @@ private:
     {
     }
 };
+
+CSS_VALUE_TYPE_CASTS(CSSInheritedValue, isInheritedValue())
 
 } // namespace WebCore
 

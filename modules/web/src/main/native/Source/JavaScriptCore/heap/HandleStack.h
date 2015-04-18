@@ -44,7 +44,7 @@ public:
     };
 
     HandleStack();
-
+    
     void enterScope(Frame&);
     void leaveScope(Frame&);
 
@@ -81,20 +81,20 @@ inline void HandleStack::zapTo(Frame& lastFrame)
     UNUSED_PARAM(lastFrame);
 #else
     const Vector<HandleSlot>& blocks = m_blockStack.blocks();
-
+    
     if (lastFrame.m_end != m_frame.m_end) { // Zapping to a frame in a different block.
         int i = blocks.size() - 1;
         for ( ; blocks[i] + m_blockStack.blockLength != lastFrame.m_end; --i) {
             for (int j = m_blockStack.blockLength - 1; j >= 0; --j)
                 blocks[i][j] = JSValue();
         }
-
+        
         for (HandleSlot it = blocks[i] + m_blockStack.blockLength - 1; it != lastFrame.m_next - 1; --it)
             *it = JSValue();
-
+        
         return;
     }
-
+    
     for (HandleSlot it = m_frame.m_next - 1; it != lastFrame.m_next - 1; --it)
         *it = JSValue();
 #endif

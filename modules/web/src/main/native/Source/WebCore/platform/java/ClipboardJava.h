@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  */
 #ifndef ClipboardJava_h
 #define ClipboardJava_h
@@ -19,7 +19,7 @@ namespace WebCore {
     class Element;
     class Frame;
     class Image;
-    class KURL;
+    class URL;
     class Range;
 
     class ClipboardJava : public Clipboard, public CachedResourceClient {
@@ -51,9 +51,8 @@ namespace WebCore {
         virtual void setDragImageElement(Node*, const IntPoint&);
 
         //Provides the DOM specified
-        virtual DragImageRef createDragImage(IntPoint& dragLoc) const;
-        virtual void declareAndWriteDragImage(Element*, const KURL&, const String& title, Frame*);
-        virtual void writeURL(const KURL&, const String&, Frame*);
+        virtual void declareAndWriteDragImage(Element*, const URL&, const String& title, Frame*);
+        virtual void writeURL(const URL&, const String&, Frame*);
         virtual void writeRange(Range*, Frame*);
         virtual void writePlainText(const String&);
 

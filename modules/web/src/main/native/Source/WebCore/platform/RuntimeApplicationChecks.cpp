@@ -37,7 +37,9 @@ namespace WebCore {
     
 static bool mainBundleIsEqualTo(const String& bundleIdentifierString)
 {
-#if USE(CF)
+    // FIXME: We should consider merging this file with RuntimeApplicationChecksIOS.mm.
+    // Then we can remove the PLATFORM(IOS)-guard.
+#if USE(CF) && !PLATFORM(IOS)
     CFBundleRef mainBundle = CFBundleGetMainBundle();
     if (!mainBundle)
         return false;
@@ -64,6 +66,12 @@ bool applicationIsAppleMail()
 {
     static bool isAppleMail = mainBundleIsEqualTo("com.apple.mail");
     return isAppleMail;
+}
+
+bool applicationIsITunes()
+{
+    static bool isITunes = mainBundleIsEqualTo("com.apple.iTunes");
+    return isITunes;
 }
 
 bool applicationIsMicrosoftMessenger()
@@ -106,6 +114,18 @@ bool applicationIsVersions()
 {
     static bool isVersions = mainBundleIsEqualTo("com.blackpixel.versions");
     return isVersions;
+}
+
+bool applicationIsHRBlock()
+{
+    static bool isHRBlock = mainBundleIsEqualTo("com.hrblock.tax.2010");
+    return isHRBlock;
+}
+
+bool applicationIsSolidStateNetworksDownloader()
+{
+    static bool isSolidStateNetworksDownloader = mainBundleIsEqualTo("com.solidstatenetworks.awkhost");
+    return isSolidStateNetworksDownloader;
 }
 
 } // namespace WebCore

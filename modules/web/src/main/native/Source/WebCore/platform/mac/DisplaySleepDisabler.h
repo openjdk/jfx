@@ -39,8 +39,10 @@ public:
     
 private:
     DisplaySleepDisabler(const char* reason);
-
+    
+#if !PLATFORM(IOS)
     uint32_t m_disableDisplaySleepAssertion;
+#endif // !PLATFORM(IOS)
 };
 
 }

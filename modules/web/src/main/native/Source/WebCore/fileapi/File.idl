@@ -24,14 +24,13 @@
  */
 
 [
-        JSGenerateToNativeObject,
-        JSGenerateToJSObject,
-        JSNoStaticTables
+    JSGenerateToNativeObject,
+    JSGenerateToJSObject,
+    JSNoStaticTables
 ] interface File : Blob {
-        readonly attribute DOMString name;
+    readonly attribute DOMString name;
 #if !defined(LANGUAGE_GOBJECT) || !LANGUAGE_GOBJECT
-        readonly attribute Date lastModifiedDate;
+    readonly attribute Date lastModifiedDate;
 #endif
-    [Conditional=DIRECTORY_UPLOAD] readonly attribute DOMString webkitRelativePath;
-    };
+};
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc.  All rights reserved.
+ * Copyright (C) 2008, 2013 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -55,7 +55,7 @@ PassRefPtr<BitmapImage> BitmapImage::create(HBITMAP hBitmap)
     return BitmapImage::create(surface.release());
 }
 
-bool BitmapImage::getHBITMAPOfSize(HBITMAP bmp, LPSIZE size)
+bool BitmapImage::getHBITMAPOfSize(HBITMAP bmp, const IntSize* size)
 {
     ASSERT(bmp);
 
@@ -68,12 +68,9 @@ bool BitmapImage::getHBITMAPOfSize(HBITMAP bmp, LPSIZE size)
         memset(bmpInfo.bmBits, 255, bufferSize);
     }
 
-    cairo_surface_t* image = cairo_image_surface_create_for_data((unsigned char*)bmpInfo.bmBits,
-                                               CAIRO_FORMAT_ARGB32,
-                                               bmpInfo.bmWidth,
-                                               bmpInfo.bmHeight,
-                                               bmpInfo.bmWidthBytes);
+    unsigned char* bmpdata = (unsigned char*)bmpInfo.bmBits + bmpInfo.bmWidthBytes*(bmpInfo.bmHeight-1);
 
+    cairo_surface_t* image = cairo_image_surface_create_for_data(bmpdata, CAIRO_FORMAT_ARGB32, bmpInfo.bmWidth, bmpInfo.bmHeight, -bmpInfo.bmWidthBytes);
 
     cairo_t* targetRef = cairo_create(image);
     cairo_surface_destroy(image);
@@ -82,9 +79,9 @@ bool BitmapImage::getHBITMAPOfSize(HBITMAP bmp, LPSIZE size)
 
     IntSize imageSize = BitmapImage::size();
     if (size)
-        drawFrameMatchingSourceSize(&gc, FloatRect(0.0f, 0.0f, bmpInfo.bmWidth, bmpInfo.bmHeight), IntSize(*size), ColorSpaceDeviceRGB, CompositeCopy);
+        drawFrameMatchingSourceSize(&gc, FloatRect(0.0f, 0.0f, bmpInfo.bmWidth, bmpInfo.bmHeight), *size, ColorSpaceDeviceRGB, CompositeCopy);
     else
-        draw(&gc, FloatRect(0.0f, 0.0f, bmpInfo.bmWidth, bmpInfo.bmHeight), FloatRect(0.0f, 0.0f, imageSize.width(), imageSize.height()), ColorSpaceDeviceRGB, CompositeCopy, BlendModeNormal);
+        draw(&gc, FloatRect(0.0f, 0.0f, bmpInfo.bmWidth, bmpInfo.bmHeight), FloatRect(0.0f, 0.0f, imageSize.width(), imageSize.height()), ColorSpaceDeviceRGB, CompositeCopy, BlendModeNormal, ImageOrientationDescription());
 
     // Do cleanup
     cairo_destroy(targetRef);
@@ -103,7 +100,7 @@ void BitmapImage::drawFrameMatchingSourceSize(GraphicsContext* ctxt, const Float
         if (cairo_image_surface_get_height(surface.get()) == static_cast<size_t>(srcSize.height()) && cairo_image_surface_get_width(surface.get()) == static_cast<size_t>(srcSize.width())) {
             size_t currentFrame = m_currentFrame;
             m_currentFrame = i;
-            draw(ctxt, dstRect, FloatRect(0.0f, 0.0f, srcSize.width(), srcSize.height()), ColorSpaceDeviceRGB, compositeOp, BlendModeNormal);
+            draw(ctxt, dstRect, FloatRect(0.0f, 0.0f, srcSize.width(), srcSize.height()), ColorSpaceDeviceRGB, compositeOp, BlendModeNormal, ImageOrientationDescription());
             m_currentFrame = currentFrame;
             return;
         }
@@ -111,7 +108,7 @@ void BitmapImage::drawFrameMatchingSourceSize(GraphicsContext* ctxt, const Float
 
     // No image of the correct size was found, fallback to drawing the current frame
     IntSize imageSize = BitmapImage::size();
-    draw(ctxt, dstRect, FloatRect(0.0f, 0.0f, imageSize.width(), imageSize.height()), ColorSpaceDeviceRGB, compositeOp, BlendModeNormal);
+    draw(ctxt, dstRect, FloatRect(0.0f, 0.0f, imageSize.width(), imageSize.height()), ColorSpaceDeviceRGB, compositeOp, BlendModeNormal, ImageOrientationDescription());
 }
 
 } // namespace WebCore

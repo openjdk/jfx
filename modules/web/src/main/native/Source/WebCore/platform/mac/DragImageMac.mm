@@ -34,7 +34,7 @@
 #import "FontSelector.h"
 #import "GraphicsContext.h"
 #import "Image.h"
-#import "KURL.h"
+#import "URL.h"
 #import "ResourceResponse.h"
 #import "StringTruncator.h"
 #import "TextRun.h"
@@ -58,7 +58,10 @@ RetainPtr<NSImage> scaleDragImage(RetainPtr<NSImage> image, FloatSize scale)
     NSSize newSize = NSMakeSize((originalSize.width * scale.width()), (originalSize.height * scale.height()));
     newSize.width = roundf(newSize.width);
     newSize.height = roundf(newSize.height);
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     [image.get() setScalesWhenResized:YES];
+#pragma clang diagnostic pop
     [image.get() setSize:newSize];
     return image;
 }
@@ -67,27 +70,27 @@ RetainPtr<NSImage> dissolveDragImageToFraction(RetainPtr<NSImage> image, float d
 {
     if (!image)
         return nil;
-    
+
     RetainPtr<NSImage> dissolvedImage = adoptNS([[NSImage alloc] initWithSize:[image.get() size]]);
     
     [dissolvedImage.get() lockFocus];
     [image.get() drawAtPoint:NSZeroPoint fromRect:NSMakeRect(0, 0, [image size].width, [image size].height) operation:NSCompositeCopy fraction:delta];
     [dissolvedImage.get() unlockFocus];
-    
+
     return dissolvedImage;
 }
         
-RetainPtr<NSImage> createDragImageFromImage(Image* image, RespectImageOrientationEnum shouldRespectImageOrientation)
+RetainPtr<NSImage> createDragImageFromImage(Image* image, ImageOrientationDescription description)
 {
     IntSize size = image->size();
 
     if (image->isBitmapImage()) {
-        ImageOrientation orientation = DefaultImageOrientation;
-        BitmapImage* bitmapImage = static_cast<BitmapImage *>(image);
-        IntSize sizeRespectingOrientation = bitmapImage->sizeRespectingOrientation();
+        ImageOrientation orientation;
+        BitmapImage* bitmapImage = toBitmapImage(image);
+        IntSize sizeRespectingOrientation = bitmapImage->sizeRespectingOrientation(description);
 
-        if (shouldRespectImageOrientation == RespectImageOrientation)
-            orientation = bitmapImage->currentFrameOrientation();
+        if (description.respectImageOrientation() == RespectImageOrientation)
+            orientation = bitmapImage->orientationForCurrentFrame();
 
         if (orientation != DefaultImageOrientation) {
             // Construct a correctly-rotated copy of the image to use as the drag image.
@@ -267,7 +270,7 @@ static void drawDoubledAtPoint(NSString *string, NSPoint textPoint, NSColor *top
         drawAtPoint(string, textPoint, font, topColor);
 }
 
-DragImageRef createDragImageForLink(KURL& url, const String& title, FontRenderingMode)
+DragImageRef createDragImageForLink(URL& url, const String& title, FontRenderingMode)
 {
     NSString *label = nsStringNilIfEmpty(title);
     NSURL *cocoaURL = url;

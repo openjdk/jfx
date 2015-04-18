@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package com.sun.javafx.fxml.builder;
 
 import javafx.scene.shape.TriangleMesh;
+import javafx.scene.shape.VertexFormat;
 import javafx.util.Builder;
 
 import java.util.Locale;
@@ -39,8 +40,10 @@ public class TriangleMeshBuilder extends TreeMap<String, Object> implements Buil
 
     private float[] points;
     private float[] texCoords;
+    private float[] normals;
     private int[] faces;
     private int[] faceSmoothingGroups;
+    private VertexFormat vertexFormat;
 
     @Override
     public TriangleMesh build() {
@@ -56,6 +59,12 @@ public class TriangleMeshBuilder extends TreeMap<String, Object> implements Buil
         }
         if (faceSmoothingGroups != null) {
             mesh.getFaceSmoothingGroups().setAll(faceSmoothingGroups);
+        }
+        if (normals != null) {
+            mesh.getNormals().setAll(normals);
+        }
+        if (vertexFormat != null) {
+            mesh.setVertexFormat(vertexFormat);
         }
         return mesh;
     }
@@ -86,6 +95,20 @@ public class TriangleMeshBuilder extends TreeMap<String, Object> implements Buil
             faceSmoothingGroups = new int[split.length];
             for (int i = 0; i < split.length; ++i) {
                 faceSmoothingGroups[i] = Integer.parseInt(split[i]);
+            }
+        } else if ("normals".equalsIgnoreCase(key)) {
+            String[] split = ((String) value).split(VALUE_SEPARATOR_REGEX);
+            normals = new float[split.length];
+            for (int i = 0; i < split.length; ++i) {
+                normals[i] = Float.parseFloat(split[i]);
+            }
+        } else if ("vertexformat".equalsIgnoreCase(key)) {
+            if (value instanceof VertexFormat) {
+                vertexFormat = (VertexFormat) value;
+            } else if ("point_texcoord".equalsIgnoreCase((String)value)) {
+                vertexFormat = VertexFormat.POINT_TEXCOORD;
+            } else if ("point_normal_texcoord".equalsIgnoreCase((String)value)) {
+                vertexFormat = VertexFormat.POINT_NORMAL_TEXCOORD;
             }
         }
 

@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
+ *     notice, this list of conditions and the following disclaimer. 
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
+ *     documentation and/or other materials provided with the distribution. 
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission.
+ *     from this software without specific prior written permission. 
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -48,27 +48,27 @@ public:
     JSRetainPtr(const JSRetainPtr&);
     template<typename U> JSRetainPtr(const JSRetainPtr<U>&);
     ~JSRetainPtr();
-
+    
     T get() const { return m_ptr; }
-
+    
     void clear();
     T leakRef();
 
     T operator->() const { return m_ptr; }
-
+    
     bool operator!() const { return !m_ptr; }
 
     // This conversion operator allows implicit conversion to bool but not to other integer types.
     typedef T JSRetainPtr::*UnspecifiedBoolType;
     operator UnspecifiedBoolType() const { return m_ptr ? &JSRetainPtr::m_ptr : 0; }
-
+    
     JSRetainPtr& operator=(const JSRetainPtr&);
     template<typename U> JSRetainPtr& operator=(const JSRetainPtr<U>&);
     JSRetainPtr& operator=(T);
     template<typename U> JSRetainPtr& operator=(U*);
 
     void adopt(T);
-
+    
     void swap(JSRetainPtr&);
 
 private:
@@ -175,33 +175,33 @@ template<typename T> inline void swap(JSRetainPtr<T>& a, JSRetainPtr<T>& b)
 }
 
 template<typename T, typename U> inline bool operator==(const JSRetainPtr<T>& a, const JSRetainPtr<U>& b)
-{
-    return a.get() == b.get();
+{ 
+    return a.get() == b.get(); 
 }
 
 template<typename T, typename U> inline bool operator==(const JSRetainPtr<T>& a, U* b)
-{
-    return a.get() == b;
+{ 
+    return a.get() == b; 
 }
 
-template<typename T, typename U> inline bool operator==(T* a, const JSRetainPtr<U>& b)
+template<typename T, typename U> inline bool operator==(T* a, const JSRetainPtr<U>& b) 
 {
-    return a == b.get();
+    return a == b.get(); 
 }
 
 template<typename T, typename U> inline bool operator!=(const JSRetainPtr<T>& a, const JSRetainPtr<U>& b)
-{
-    return a.get() != b.get();
+{ 
+    return a.get() != b.get(); 
 }
 
 template<typename T, typename U> inline bool operator!=(const JSRetainPtr<T>& a, U* b)
 {
-    return a.get() != b;
+    return a.get() != b; 
 }
 
 template<typename T, typename U> inline bool operator!=(T* a, const JSRetainPtr<U>& b)
-{
-    return a != b.get();
+{ 
+    return a != b.get(); 
 }
 
 

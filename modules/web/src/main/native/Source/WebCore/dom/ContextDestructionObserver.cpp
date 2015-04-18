@@ -45,9 +45,9 @@ ContextDestructionObserver::~ContextDestructionObserver()
 void ContextDestructionObserver::observeContext(ScriptExecutionContext* scriptExecutionContext)
 {
     if (m_scriptExecutionContext) {
-    ASSERT(m_scriptExecutionContext->isContextThread());
-    m_scriptExecutionContext->willDestroyDestructionObserver(this);
-}
+        ASSERT(m_scriptExecutionContext->isContextThread());
+        m_scriptExecutionContext->willDestroyDestructionObserver(this);
+    }
 
     m_scriptExecutionContext = scriptExecutionContext;
 

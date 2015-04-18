@@ -32,8 +32,8 @@
 #include "Widget.h"
 #include <wtf/Assertions.h>
 #include <wtf/CurrentTime.h>
+#include <wtf/WindowsExtras.h>
 
-#include "WindowsExtras.h"
 #include <mmsystem.h>
 
 #if PLATFORM(WIN)
@@ -120,7 +120,7 @@ static void initializeOffScreenTimerWindow()
 {
     if (timerWindowHandle)
         return;
-    
+
 #if OS(WINCE)
     WNDCLASS wcex;
     memset(&wcex, 0, sizeof(WNDCLASS));

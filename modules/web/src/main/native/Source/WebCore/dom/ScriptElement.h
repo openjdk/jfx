@@ -35,7 +35,6 @@ class ScriptElement;
 class ScriptSourceCode;
 
 class ScriptElement : private CachedResourceClient {
-    WTF_MAKE_FAST_ALLOCATED;
 public:
     ScriptElement(Element*, bool createdByParser, bool isEvaluated);
     virtual ~ScriptElement();
@@ -68,7 +67,7 @@ protected:
     bool forceAsync() const { return m_forceAsync; }
 
     // Helper functions used by our parent classes.
-    void insertedInto(ContainerNode*);
+    void insertedInto(ContainerNode&);
     void childrenChanged();
     void handleSourceAttribute(const String& sourceUrl);
     void handleAsyncAttribute();
@@ -80,7 +79,7 @@ private:
     bool requestScript(const String& sourceUrl);
     void stopLoadRequest();
 
-    virtual void notifyFinished(CachedResource*);
+    virtual void notifyFinished(CachedResource*) override;
 
     virtual String sourceAttributeValue() const = 0;
     virtual String charsetAttributeValue() const = 0;

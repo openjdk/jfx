@@ -1,4 +1,5 @@
 # Copyright (C) 2010 Google Inc. All rights reserved.
+# Copyright (C) 2013 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -29,7 +30,6 @@
 import unittest2 as unittest
 
 from webkitpy.common.system.outputcapture import OutputCapture
-from webkitpy.common.checkout.baselineoptimizer import BaselineOptimizer
 from webkitpy.common.net.buildbot.buildbot_mock import MockBuilder
 from webkitpy.common.system.executive_mock import MockExecutive2
 from webkitpy.thirdparty.mock import Mock
@@ -87,12 +87,14 @@ class TestRebaselineTest(_BaseTestCase):
         self.assertMultiLineEqual(command._baseline_directory("Apple Win 7 Release (Tests)"), "/mock-checkout/LayoutTests/platform/win")
         self.assertMultiLineEqual(command._baseline_directory("Apple Lion Release WK1 (Tests)"), "/mock-checkout/LayoutTests/platform/mac-lion")
         self.assertMultiLineEqual(command._baseline_directory("Apple Lion Release WK2 (Tests)"), "/mock-checkout/LayoutTests/platform/mac-wk2")
-        self.assertMultiLineEqual(command._baseline_directory("Apple MountainLion Release WK1 (Tests)"), "/mock-checkout/LayoutTests/platform/mac")
-        self.assertMultiLineEqual(command._baseline_directory("Apple MountainLion Release WK2 (Tests)"), "/mock-checkout/LayoutTests/platform/mac")
-        self.assertMultiLineEqual(command._baseline_directory("GTK Linux 64-bit Debug"), "/mock-checkout/LayoutTests/platform/gtk-wk1")
-        self.assertMultiLineEqual(command._baseline_directory("GTK Linux 64-bit Release WK2 (Tests)"), "/mock-checkout/LayoutTests/platform/gtk-wk2")
+        self.assertMultiLineEqual(command._baseline_directory("Apple MountainLion Release WK1 (Tests)"), "/mock-checkout/LayoutTests/platform/mac-mountainlion")
+        self.assertMultiLineEqual(command._baseline_directory("Apple MountainLion Release WK2 (Tests)"), "/mock-checkout/LayoutTests/platform/mac-wk2")
+        self.assertMultiLineEqual(command._baseline_directory("Apple Mavericks Release WK1 (Tests)"), "/mock-checkout/LayoutTests/platform/mac-wk1")
+        self.assertMultiLineEqual(command._baseline_directory("Apple Mavericks Release WK2 (Tests)"), "/mock-checkout/LayoutTests/platform/mac-wk2")
+        self.assertMultiLineEqual(command._baseline_directory("GTK Linux 64-bit Debug WK1"), "/mock-checkout/LayoutTests/platform/gtk-wk1")
+        self.assertMultiLineEqual(command._baseline_directory("GTK Linux 64-bit Release WK1 (Tests)"), "/mock-checkout/LayoutTests/platform/gtk-wk1")
+        self.assertMultiLineEqual(command._baseline_directory("GTK Linux 64-bit Release"), "/mock-checkout/LayoutTests/platform/gtk-wk2")
         self.assertMultiLineEqual(command._baseline_directory("EFL Linux 64-bit Release WK2"), "/mock-checkout/LayoutTests/platform/efl-wk2")
-        self.assertMultiLineEqual(command._baseline_directory("Qt Linux Release"), "/mock-checkout/LayoutTests/platform/qt")
 
     def test_rebaseline_updates_expectations_file_noop(self):
         self._zero_out_test_expectations()
@@ -245,28 +247,9 @@ class TestRebaselineJson(_BaseTestCase):
         options = MockOptions(optimize=True, verbose=True, move_overwritten_baselines=False, results_directory=None)
         self.command._rebaseline(options,  {"user-scripts/another-test.html": {"MOCK builder": ["txt", "png"]}})
 
-        # Note that we have one run_in_parallel() call followed by a run_command()
-        self.assertEqual(self.tool.executive.calls,
-            [[['echo', 'rebaseline-test-internal', '--suffixes', 'txt,png', '--builder', 'MOCK builder', '--test', 'user-scripts/another-test.html', '--verbose']],
-             ['echo', '--verbose', 'optimize-baselines', '--suffixes', 'txt,png', 'user-scripts/another-test.html']])
-
     def test_rebaseline_debug(self):
         options = MockOptions(optimize=True, verbose=True, move_overwritten_baselines=False, results_directory=None)
         self.command._rebaseline(options,  {"user-scripts/another-test.html": {"MOCK builder (Debug)": ["txt", "png"]}})
-
-        # Note that we have one run_in_parallel() call followed by a run_command()
-        self.assertEqual(self.tool.executive.calls,
-            [[['echo', 'rebaseline-test-internal', '--suffixes', 'txt,png', '--builder', 'MOCK builder (Debug)', '--test', 'user-scripts/another-test.html', '--verbose']],
-             ['echo', '--verbose', 'optimize-baselines', '--suffixes', 'txt,png', 'user-scripts/another-test.html']])
-
-    def test_move_overwritten(self):
-        options = MockOptions(optimize=True, verbose=True, move_overwritten_baselines=True, results_directory=None)
-        self.command._rebaseline(options,  {"user-scripts/another-test.html": {"MOCK builder": ["txt", "png"]}})
-
-        # Note that we have one run_in_parallel() call followed by a run_command()
-        self.assertEqual(self.tool.executive.calls,
-            [[['echo', 'rebaseline-test-internal', '--suffixes', 'txt,png', '--builder', 'MOCK builder', '--test', 'user-scripts/another-test.html', '--move-overwritten-baselines-to', 'test-mac-leopard', '--verbose']],
-             ['echo', '--verbose', 'optimize-baselines', '--suffixes', 'txt,png', 'user-scripts/another-test.html']])
 
     def test_no_optimize(self):
         options = MockOptions(optimize=False, verbose=True, move_overwritten_baselines=False, results_directory=None)
@@ -312,7 +295,7 @@ class TestRebaseline(_BaseTestCase):
             oc.restore_output()
             builders._exact_matches = old_exact_matches
 
-        calls = filter(lambda x: x != ['qmake', '-v'] and x[0] != 'perl', self.tool.executive.calls)
+        calls = filter(lambda x: x[0] != 'perl', self.tool.executive.calls)
         self.assertEqual(calls,
             [[['echo', 'rebaseline-test-internal', '--suffixes', 'txt,png', '--builder', 'MOCK builder', '--test', 'mock/path/to/test.html', '--verbose']]])
 
@@ -334,9 +317,9 @@ class TestRebaselineExpectations(_BaseTestCase):
         self.command.execute(self.options, [], self.tool)
 
         # FIXME: change this to use the test- ports.
-        calls = filter(lambda x: x != ['qmake', '-v'], self.tool.executive.calls)
+        calls = self.tool.executive.calls
         self.assertEqual(len(calls), 1)
-        self.assertEqual(len(calls[0]), 22)
+        self.assertEqual(len(calls[0]), 24)
 
     def test_rebaseline_expectations_noop(self):
         self._zero_out_test_expectations()
@@ -364,38 +347,3 @@ class TestRebaselineExpectations(_BaseTestCase):
 
         self.assertDictEqual(self.command._tests_to_rebaseline(self.lion_port), {'userscripts/another-test.html': set(['png', 'txt', 'wav'])})
         self.assertEqual(self._read(self.lion_expectations_path), '')
-
-
-class _FakeOptimizer(BaselineOptimizer):
-    def read_results_by_directory(self, baseline_name):
-        if baseline_name.endswith('txt'):
-            return {'LayoutTests/passes/text.html': '123456',
-                    'LayoutTests/platform/test-mac-leopard/passes/text.html': 'abcdef'}
-        return {}
-
-
-class TestAnalyzeBaselines(_BaseTestCase):
-    command_constructor = AnalyzeBaselines
-
-    def setUp(self):
-        super(TestAnalyzeBaselines, self).setUp()
-        self.port = self.tool.port_factory.get('test')
-        self.tool.port_factory.get = (lambda port_name=None, options=None: self.port)
-        self.lines = []
-        self.command._optimizer_class = _FakeOptimizer
-        self.command._write = (lambda msg: self.lines.append(msg))  # pylint bug warning about unnecessary lambda? pylint: disable=W0108
-
-    def test_default(self):
-        self.command.execute(MockOptions(suffixes='txt', missing=False, platform=None), ['passes/text.html'], self.tool)
-        self.assertEqual(self.lines,
-            ['passes/text-expected.txt:',
-             '  (generic): 123456',
-             '  test-mac-leopard: abcdef'])
-
-    def test_missing_baselines(self):
-        self.command.execute(MockOptions(suffixes='png,txt', missing=True, platform=None), ['passes/text.html'], self.tool)
-        self.assertEqual(self.lines,
-            ['passes/text-expected.png: (no baselines found)',
-             'passes/text-expected.txt:',
-             '  (generic): 123456',
-             '  test-mac-leopard: abcdef'])

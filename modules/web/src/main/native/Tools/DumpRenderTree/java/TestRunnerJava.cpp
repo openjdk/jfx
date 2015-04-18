@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
 #include "JavaEnv.h"
@@ -430,17 +430,6 @@ void TestRunner::addMockSpeechInputResult(JSStringRef result, double confidence,
 }
 
 void TestRunner::clearAllApplicationCaches()
-{
-    // FIXME: implement to support Application Cache quotas.
-}
-
-
-//void TestRunner::dumpConfigurationForViewport(int /*deviceDPI*/, int /*deviceWidth*/, int /*deviceHeight*/, int /*availableWidth*/, int /*availableHeight*/)
-//{
-//    // FIXME: Implement this.
-//}
-
-void TestRunner::setApplicationCacheOriginQuota(unsigned long long quota)
 {
     // FIXME: implement to support Application Cache quotas.
 }

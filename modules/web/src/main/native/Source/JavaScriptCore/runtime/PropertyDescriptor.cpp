@@ -30,10 +30,10 @@
 
 #include "GetterSetter.h"
 #include "JSObject.h"
-#include "Operations.h"
+#include "JSCInlines.h"
 
 namespace JSC {
-unsigned PropertyDescriptor::defaultAttributes = (DontDelete << 1) - 1;
+unsigned PropertyDescriptor::defaultAttributes = DontDelete | DontEnum | ReadOnly;
 
 bool PropertyDescriptor::writable() const
 {
@@ -115,6 +115,16 @@ void PropertyDescriptor::setDescriptor(JSValue value, unsigned attributes)
     }
 }
 
+void PropertyDescriptor::setCustomDescriptor(unsigned attributes)
+{
+    m_attributes = attributes | Accessor | CustomAccessor;
+    m_attributes &= ~ReadOnly;
+    m_seenAttributes = EnumerablePresent | ConfigurablePresent;
+    setGetter(jsUndefined());
+    setSetter(jsUndefined());
+    m_value = JSValue();
+}
+
 void PropertyDescriptor::setAccessorDescriptor(GetterSetter* accessor, unsigned attributes)
 {
     ASSERT(attributes & Accessor);
@@ -183,9 +193,9 @@ bool sameValue(ExecState* exec, JSValue a, JSValue b)
 
 bool PropertyDescriptor::equalTo(ExecState* exec, const PropertyDescriptor& other) const
 {
-    if (!other.m_value == m_value ||
-        !other.m_getter == m_getter ||
-        !other.m_setter == m_setter)
+    if (other.m_value.isEmpty() != m_value.isEmpty()
+        || other.m_getter.isEmpty() != m_getter.isEmpty()
+        || other.m_setter.isEmpty() != m_setter.isEmpty())
         return false;
     return (!m_value || sameValue(exec, other.m_value, m_value))
         && (!m_getter || JSValue::strictEqual(exec, other.m_getter, m_getter))

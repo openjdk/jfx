@@ -112,21 +112,21 @@ bool GIFLZWContext::outputRow()
         unsigned rowShift = 0;
 
         switch (ipass) {
-    case 1:
+        case 1:
             rowDup = 7;
             rowShift = 3;
-      break;
-    case 2:
+            break;
+        case 2:
             rowDup = 3;
             rowShift = 1;
-      break;
-    case 3:
+            break;
+        case 3:
             rowDup = 1;
             rowShift = 0;
-      break;
-    default:
-      break;
-    }
+            break;
+        default:
+            break;
+        }
 
         drowStart -= rowShift;
         drowEnd = drowStart + rowDup;
@@ -141,60 +141,60 @@ bool GIFLZWContext::outputRow()
 
         if ((unsigned)drowEnd >= m_frameContext->height)
             drowEnd = m_frameContext->height - 1;
-  }
+    }
 
     // Protect against too much image data.
     if ((unsigned)drowStart >= m_frameContext->height)
-    return true;
+        return true;
 
-  // CALLBACK: Let the client know we have decoded a row.
+    // CALLBACK: Let the client know we have decoded a row.
     if (!m_client->haveDecodedRow(m_frameContext->frameId, rowBuffer, m_frameContext->width,
         drowStart, drowEnd - drowStart + 1, m_frameContext->progressiveDisplay && m_frameContext->interlaced && ipass > 1))
-    return false;
+        return false;
 
     if (!m_frameContext->interlaced)
         irow++;
-  else {
-    do {
+    else {
+        do {
             switch (ipass) {
-        case 1:
+            case 1:
                 irow += 8;
                 if (irow >= m_frameContext->height) {
                     ipass++;
                     irow = 4;
-          }
-          break;
+                }
+                break;
 
-        case 2:
+            case 2:
                 irow += 8;
                 if (irow >= m_frameContext->height) {
                     ipass++;
                     irow = 2;
-          }
-          break;
+                }
+                break;
 
-        case 3:
+            case 3:
                 irow += 4;
                 if (irow >= m_frameContext->height) {
                     ipass++;
                     irow = 1;
-          }
-          break;
+                }
+                break;
 
-        case 4:
+            case 4:
                 irow += 2;
                 if (irow >= m_frameContext->height) {
                     ipass++;
                     irow = 0;
-          }
-          break;
+                }
+                break;
 
-        default:
-          break;
-      }
+            default:
+                break;
+            }
         } while (irow > (m_frameContext->height - 1));
-  }
-  return true;
+    }
+    return true;
 }
 
 // Perform Lempel-Ziv-Welch decoding.
@@ -202,17 +202,17 @@ bool GIFLZWContext::outputRow()
 // Otherwise, decoding failed; returns false in this case, which will always cause the GIFImageReader to set the "decode failed" flag.
 bool GIFLZWContext::doLZW(const unsigned char* block, size_t bytesInBlock)
 {
-  int code;
-  int incode;
-  const unsigned char *ch;
-  
-    if (rowPosition == rowBuffer.size())
-    return true;
+    int code;
+    int incode;
+    const unsigned char *ch;
 
-#define OUTPUT_ROW                                                  \
+    if (rowPosition == rowBuffer.size())
+        return true;
+
+#define OUTPUT_ROW \
     do { \
         if (!outputRow()) \
-      return false;                                                        \
+            return false; \
         rowsRemaining--; \
         rowPosition = 0; \
         if (!rowsRemaining) \
@@ -221,94 +221,94 @@ bool GIFLZWContext::doLZW(const unsigned char* block, size_t bytesInBlock)
 
     for (ch = block; bytesInBlock-- > 0; ch++) {
         // Feed the next byte into the decoder's 32-bit input buffer.
-    datum += ((int) *ch) << bits;
-    bits += 8;
+        datum += ((int) *ch) << bits;
+        bits += 8;
 
         // Check for underflow of decoder's 32-bit input buffer.
         while (bits >= codesize) {
             // Get the leading variable-length symbol from the data stream.
-      code = datum & codemask;
-      datum >>= codesize;
-      bits -= codesize;
+            code = datum & codemask;
+            datum >>= codesize;
+            bits -= codesize;
 
             // Reset the dictionary to its original state, if requested.
             if (code == clearCode) {
                 codesize = m_frameContext->datasize + 1;
-        codemask = (1 << codesize) - 1;
+                codemask = (1 << codesize) - 1;
                 avail = clearCode + 2;
-        oldcode = -1;
-        continue;
-      }
+                oldcode = -1;
+                continue;
+            }
 
             // Check for explicit end-of-stream code.
             if (code == (clearCode + 1)) {
                 // end-of-stream should only appear after all image data.
                 if (!rowsRemaining)
-          return true;
+                    return true;
                 return false;
-      }
+            }
 
-      if (oldcode == -1) {
+            if (oldcode == -1) {
                 rowBuffer[rowPosition++] = suffix[code];
                 if (rowPosition == rowBuffer.size())
-          OUTPUT_ROW;
+                    OUTPUT_ROW;
 
-        firstchar = oldcode = code;
-        continue;
-      }
+                firstchar = oldcode = code;
+                continue;
+            }
 
-      incode = code;
-      if (code >= avail) {
+            incode = code;
+            if (code >= avail) {
                 stack[stackp++] = firstchar;
-        code = oldcode;
+                code = oldcode;
 
                 if (stackp == MAX_BYTES)
                     return false;
-      }
+            }
 
             while (code >= clearCode) {
                 if (code >= MAX_BYTES || code == prefix[code])
                     return false;
 
-        // Even though suffix[] only holds characters through suffix[avail - 1],
-        // allowing code >= avail here lets us be more tolerant of malformed
+                // Even though suffix[] only holds characters through suffix[avail - 1],
+                // allowing code >= avail here lets us be more tolerant of malformed
                 // data. As long as code < MAX_BYTES, the only risk is a garbled image,
-        // which is no worse than refusing to display it.
+                // which is no worse than refusing to display it.
                 stack[stackp++] = suffix[code];
-        code = prefix[code];
+                code = prefix[code];
 
                 if (stackp == MAX_BYTES)
                     return false;
-      }
+            }
 
             stack[stackp++] = firstchar = suffix[code];
 
             // Define a new codeword in the dictionary.
-      if (avail < 4096) {
-        prefix[avail] = oldcode;
-        suffix[avail] = firstchar;
-        avail++;
+            if (avail < 4096) {
+                prefix[avail] = oldcode;
+                suffix[avail] = firstchar;
+                avail++;
 
                 // If we've used up all the codewords of a given length
                 // increase the length of codewords by one bit, but don't
                 // exceed the specified maximum codeword size of 12 bits.
                 if ((!(avail & codemask)) && (avail < 4096)) {
-          codesize++;
-          codemask += avail;
-        }
-      }
-      oldcode = incode;
+                    codesize++;
+                    codemask += avail;
+                }
+            }
+            oldcode = incode;
 
             // Copy the decoded data out to the scanline buffer.
-      do {
+            do {
                 rowBuffer[rowPosition++] = stack[--stackp];
                 if (rowPosition == rowBuffer.size())
-          OUTPUT_ROW;
+                    OUTPUT_ROW;
             } while (stackp > 0);
         }
     }
 
-  return true;
+    return true;
 }
 
 // Perform decoding for this frame. frameDecoded will be true if the entire frame is decoded.
@@ -391,10 +391,10 @@ bool GIFImageReader::decode(GIFImageDecoder::GIFQuery query, unsigned haltAtFram
 // Return false if a fatal error is encountered.
 bool GIFImageReader::parse(size_t dataPosition, size_t len, bool parseSizeOnly)
 {
-  if (!len) {
-    // No new data has come in since the last call, just ignore this call.
-    return true;
-  }
+    if (!len) {
+        // No new data has come in since the last call, just ignore this call.
+        return true;
+    }
 
     if (len < m_bytesToConsume)
         return true;
@@ -417,15 +417,15 @@ bool GIFImageReader::parse(size_t dataPosition, size_t len, bool parseSizeOnly)
             // m_bytesToConsume is the current component size because it hasn't been updated.
             m_frames.last()->addLzwBlock(currentComponentPosition, m_bytesToConsume);
             GETN(1, GIFSubBlock);
-      break;
+            break;
 
         case GIFLZWStart: {
             ASSERT(!m_frames.isEmpty());
             m_frames.last()->setDataSize(*currentComponent);
             GETN(1, GIFSubBlock);
-          break;
+            break;
         }
-        
+
         case GIFType: {
             // All GIF files begin with "GIF87a" or "GIF89a".
             if (!strncmp((char*)currentComponent, "GIF89a", 6))
@@ -435,8 +435,8 @@ bool GIFImageReader::parse(size_t dataPosition, size_t len, bool parseSizeOnly)
             else
                 return false;
             GETN(7, GIFGlobalHeader);
-        break;
-      }
+            break;
+        }
 
         case GIFGlobalHeader: {
             // This is the height and width of the "screen" or frame into which images are rendered. The
@@ -461,8 +461,8 @@ bool GIFImageReader::parse(size_t dataPosition, size_t len, bool parseSizeOnly)
                 if (len < globalColormapBytes) {
                     // Wait until we have enough bytes to consume the entire colormap at once.
                     GETN(globalColormapBytes, GIFGlobalColormap);
-        break;
-      }
+                    break;
+                }
 
                 m_isGlobalColormapDefined = true;
                 dataPosition += globalColormapBytes;
@@ -475,7 +475,7 @@ bool GIFImageReader::parse(size_t dataPosition, size_t len, bool parseSizeOnly)
             //   Not used
             //   float aspect = (float)((currentComponent[6] + 15) / 64.0);
             break;
-    }
+        }
 
         case GIFGlobalColormap: {
             m_isGlobalColormapDefined = true;
@@ -518,7 +518,7 @@ bool GIFImageReader::parse(size_t dataPosition, size_t len, bool parseSizeOnly)
                 // contains at least this many bytes. If the GIF specifies a different length, we
                 // allow that, so long as it's larger; the additional data will simply be ignored.
                 bytesInBlock = std::max(bytesInBlock, static_cast<size_t>(4));
-    break;
+                break;
 
             // The GIF spec also specifies the lengths of the following two extensions' headers
             // (as 12 and 11 bytes, respectively). Because we ignore the plain text extension entirely
@@ -526,25 +526,25 @@ bool GIFImageReader::parse(size_t dataPosition, size_t len, bool parseSizeOnly)
             // we allow GIFs to deviate from these values in either direction. This is important for
             // real-world compatibility, as GIFs in the wild exist with application extension headers
             // that are both shorter and longer than 11 bytes.
-      case 0x01:
-        // ignoring plain text extension
-        break;
+            case 0x01:
+                // ignoring plain text extension
+                break;
 
-      case 0xff:
+            case 0xff:
                 es = GIFApplicationExtension;
-        break;
+                break;
 
-      case 0xfe:
+            case 0xfe:
                 es = GIFConsumeComment;
-        break;
-      }
+                break;
+            }
 
             if (bytesInBlock)
                 GETN(bytesInBlock, es);
-      else
+            else
                 GETN(1, GIFImageStart);
-    break;
-      }
+            break;
+        }
 
         case GIFConsumeBlock: {
             if (!*currentComponent)
@@ -568,8 +568,8 @@ bool GIFImageReader::parse(size_t dataPosition, size_t len, bool parseSizeOnly)
 
             // We ignore the "user input" bit.
 
-        // NOTE: This relies on the values in the FrameDisposalMethod enum
-        // matching those in the GIF spec!
+            // NOTE: This relies on the values in the FrameDisposalMethod enum
+            // matching those in the GIF spec!
             int disposalMethod = ((*currentComponent) >> 2) & 0x7;
             currentFrame->disposalMethod = static_cast<WebCore::ImageFrame::FrameDisposalMethod>(disposalMethod);
             // Some specs say that disposal method 3 is "overwrite previous", others that setting
@@ -579,7 +579,7 @@ bool GIFImageReader::parse(size_t dataPosition, size_t len, bool parseSizeOnly)
             currentFrame->delayTime = GETINT16(currentComponent + 1) * 10;
             GETN(1, GIFConsumeBlock);
             break;
-      }
+        }
 
         case GIFCommentExtension: {
             if (*currentComponent)
@@ -587,11 +587,11 @@ bool GIFImageReader::parse(size_t dataPosition, size_t len, bool parseSizeOnly)
             else
                 GETN(1, GIFImageStart);
             break;
-    }
+        }
 
         case GIFConsumeComment: {
             GETN(1, GIFCommentExtension);
-    break;
+            break;
         }
 
         case GIFApplicationExtension: {
@@ -599,10 +599,10 @@ bool GIFImageReader::parse(size_t dataPosition, size_t len, bool parseSizeOnly)
             if (m_bytesToConsume == 11 
                 && (!strncmp((char*)currentComponent, "NETSCAPE2.0", 11) || !strncmp((char*)currentComponent, "ANIMEXTS1.0", 11)))
                 GETN(1, GIFNetscapeExtensionBlock);
-      else
+            else
                 GETN(1, GIFConsumeBlock);
             break;
-    }
+        }
 
         // Netscape-specific GIF extension: animation looping.
         case GIFNetscapeExtensionBlock: {
@@ -611,7 +611,7 @@ bool GIFImageReader::parse(size_t dataPosition, size_t len, bool parseSizeOnly)
                 GETN(std::max(3, static_cast<int>(*currentComponent)), GIFConsumeNetscapeExtension);
             else
                 GETN(1, GIFImageStart);
-    break;
+            break;
         }
 
         // Parse netscape-specific application extensions
@@ -630,32 +630,32 @@ bool GIFImageReader::parse(size_t dataPosition, size_t len, bool parseSizeOnly)
             } else if (netscapeExtension == 2) {
                 // Wait for specified # of bytes to enter buffer.
 
-        // Don't do this, this extension doesn't exist (isn't used at all) 
-        // and doesn't do anything, as our streaming/buffering takes care of it all...
-        // See: http://semmix.pl/color/exgraf/eeg24.htm
+                // Don't do this, this extension doesn't exist (isn't used at all)
+                // and doesn't do anything, as our streaming/buffering takes care of it all...
+                // See: http://semmix.pl/color/exgraf/eeg24.htm
                 GETN(1, GIFNetscapeExtensionBlock);
-      } else {
-        // 0,3-7 are yet to be defined netscape extension codes
+            } else {
+                // 0,3-7 are yet to be defined netscape extension codes
                 return false;
-      }
-      break;
-    }
+            }
+            break;
+        }
 
         case GIFImageHeader: {
             unsigned height, width, xOffset, yOffset;
-      
-      /* Get image offsets, with respect to the screen origin */
+
+            /* Get image offsets, with respect to the screen origin */
             xOffset = GETINT16(currentComponent);
             yOffset = GETINT16(currentComponent + 2);
 
-      /* Get image width and height. */
+            /* Get image width and height. */
             width  = GETINT16(currentComponent + 4);
             height = GETINT16(currentComponent + 6);
 
-      /* Work around broken GIF files where the logical screen
-       * size has weird width or height.  We assume that GIF87a
-       * files don't contain animations.
-       */
+            /* Work around broken GIF files where the logical screen
+             * size has weird width or height.  We assume that GIF87a
+             * files don't contain animations.
+             */
             if (currentFrameIsFirstFrame()
                 && ((m_screenHeight < height) || (m_screenWidth < width) || (m_version == 87))) {
                 m_screenHeight = height;
@@ -663,27 +663,27 @@ bool GIFImageReader::parse(size_t dataPosition, size_t len, bool parseSizeOnly)
                 xOffset = 0;
                 yOffset = 0;
 
-        // CALLBACK: Inform the decoderplugin of our size.
+                // CALLBACK: Inform the decoderplugin of our size.
                 if (m_client && !m_client->setSize(m_screenWidth, m_screenHeight))
-          return false;
-      }
+                    return false;
+            }
 
             // Work around more broken GIF files that have zero image width or height
-      if (!height || !width) {
+            if (!height || !width) {
                 height = m_screenHeight;
                 width = m_screenWidth;
-        if (!height || !width)
+                if (!height || !width)
                     return false;
-      }
+            }
 
             if (parseSizeOnly) {
-        // The decoder needs to stop.  Hand back the number of bytes we consumed from
-        // buffer minus 9 (the amount we consumed to read the header).
+                // The decoder needs to stop. Hand back the number of bytes we consumed from
+                // buffer minus 9 (the amount we consumed to read the header).
                 setRemainingBytes(len + 9);
                 GETN(9, GIFImageHeader);
-        return true;
-      }
-      
+                return true;
+            }
+
             addFrameIfNecessary();
             GIFFrameContext* currentFrame = m_frames.last().get();
 
@@ -721,12 +721,12 @@ bool GIFImageReader::parse(size_t dataPosition, size_t len, bool parseSizeOnly)
                     // Wait until we have enough bytes to consume the entire colormap at once.
                     GETN(localColormapBytes, GIFImageColormap);
                     break;
-        }
+                }
 
                 currentFrame->isLocalColormapDefined = true;
                 dataPosition += localColormapBytes;
                 len -= localColormapBytes;
-        } else {
+            } else {
                 // Switch back to the global palette
                 currentFrame->isLocalColormapDefined = false;
             }
@@ -754,8 +754,8 @@ bool GIFImageReader::parse(size_t dataPosition, size_t len, bool parseSizeOnly)
                 GETN(1, GIFImageStart);
             }
             break;
-      }
-      
+        }
+
         case GIFDone: {
             m_parseCompleted = true;
             return true;
@@ -766,23 +766,23 @@ bool GIFImageReader::parse(size_t dataPosition, size_t len, bool parseSizeOnly)
             return false;
             break;
         }
-        }
+    }
 
     setRemainingBytes(len);
     return true;
-        }
+}
 
 void GIFImageReader::setRemainingBytes(size_t remainingBytes)
 {
     ASSERT(remainingBytes <= m_data->size());
     m_bytesRead = m_data->size() - remainingBytes;
-  }
+}
 
 void GIFImageReader::addFrameIfNecessary()
 {
     if (m_frames.isEmpty() || m_frames.last()->isComplete())
         m_frames.append(adoptPtr(new GIFFrameContext(m_frames.size())));
-  }
+}
 
 // FIXME: Move this method to close to doLZW().
 bool GIFLZWContext::prepareToDecode()
@@ -793,7 +793,7 @@ bool GIFLZWContext::prepareToDecode()
     // that our datasize is strictly less than the MAX_LZW_BITS value (12).
     // This sets the largest possible codemask correctly at 4095.
     if (m_frameContext->datasize >= MAX_LZW_BITS)
-  return false;
+        return false;
     clearCode = 1 << m_frameContext->datasize;
     if (clearCode >= MAX_BYTES)
         return false;

@@ -31,7 +31,7 @@
 
 #include "Archive.h"
 #include "ArchiveResource.h"
-#include "KURL.h"
+#include "URL.h"
 #include <wtf/text/WTFString.h>
 
 #include <wtf/HashMap.h>
@@ -47,12 +47,12 @@ public:
     void addResource(PassRefPtr<ArchiveResource>);
     void addAllResources(Archive*);
     
-    ArchiveResource* archiveResourceForURL(const KURL&);
-    PassRefPtr<Archive> popSubframeArchive(const String& frameName, const KURL&);
+    ArchiveResource* archiveResourceForURL(const URL&);
+    PassRefPtr<Archive> popSubframeArchive(const String& frameName, const URL&);
     
 private:    
-    HashMap<String, RefPtr<ArchiveResource> > m_subresources;
-    HashMap<String, RefPtr<Archive> > m_subframes;
+    HashMap<String, RefPtr<ArchiveResource>> m_subresources;
+    HashMap<String, RefPtr<Archive>> m_subframes;
 };
 
 }

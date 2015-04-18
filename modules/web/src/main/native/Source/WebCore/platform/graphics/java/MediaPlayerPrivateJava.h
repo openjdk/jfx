@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  */
 #ifndef MediaPlayerPrivateJava_h
 #define MediaPlayerPrivateJava_h
@@ -21,11 +21,8 @@ namespace WebCore {
         static PassOwnPtr<MediaPlayerPrivateInterface> CreateMediaEnginePlayer(MediaPlayer *player);
         static void MediaEngineSupportedTypes(HashSet<String>& types);
 
-#if ENABLE(ENCRYPTED_MEDIA)
-        static MediaPlayer::SupportsType MediaEngineSupportsType(const String& type, const String& codecs, const String& keySystem, const KURL& url);
-#else
-        static MediaPlayer::SupportsType MediaEngineSupportsType(const String& type, const String& codecs, const KURL& url);
-#endif
+        static MediaPlayer::SupportsType MediaEngineSupportsType(const MediaEngineSupportParameters&);
+
         // the method caches the set
         static HashSet<String>& GetSupportedTypes();
 

@@ -34,6 +34,13 @@
 #import "GlassWindow+Java.h"
 #import "GlassScreen.h"
 
+//#define VERBOSE
+#ifndef VERBOSE
+#define LOG(MSG, ...)
+#else
+#define LOG(MSG, ...) GLASS_LOG(MSG, ## __VA_ARGS__);
+#endif
+
 static NSWindow *s_grabWindow = nil;
 
 @interface NSWindow (External)
@@ -268,6 +275,8 @@ static NSWindow *s_grabWindow = nil;
 
 - (void)_setVisible
 {
+    LOG("_setVisible: focusable %d enabled %d", self->isFocusable, self->isEnabled);
+    
     if (self->isFocusable == YES && self->isEnabled == YES)
     {
         [self->nsWindow makeMainWindow];

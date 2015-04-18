@@ -30,6 +30,8 @@
 #import "config.h"
 #import "FontCache.h"
 
+#if !PLATFORM(IOS)
+
 #import "Font.h"
 #import "SimpleFontData.h"
 #import "FontPlatformData.h"
@@ -163,14 +165,14 @@ PassRefPtr<SimpleFontData> FontCache::similarFontPlatformData(const FontDescript
         const AtomicString& family = description.familyAt(i);
         if (family.isEmpty())
             continue;
-            static String* matchWords[3] = { new String("Arabic"), new String("Pashto"), new String("Urdu") };
+        static String* matchWords[3] = { new String("Arabic"), new String("Pashto"), new String("Urdu") };
         DEFINE_STATIC_LOCAL(AtomicString, geezaStr, ("Geeza Pro", AtomicString::ConstructFromLiteral));
-            for (int j = 0; j < 3 && !simpleFontData; ++j)
+        for (int j = 0; j < 3 && !simpleFontData; ++j)
             if (family.contains(*matchWords[j], false))
                 simpleFontData = getCachedFontData(description, geezaStr);
-        }
-    return simpleFontData.release();
     }
+    return simpleFontData.release();
+}
 
 PassRefPtr<SimpleFontData> FontCache::getLastResortFallbackFont(const FontDescription& fontDescription, ShouldRetain shouldRetain)
 {
@@ -220,3 +222,5 @@ PassOwnPtr<FontPlatformData> FontCache::createFontPlatformData(const FontDescrip
 }
 
 } // namespace WebCore
+
+#endif // !PLATFORM(IOS)

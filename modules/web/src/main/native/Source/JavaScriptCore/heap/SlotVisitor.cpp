@@ -11,13 +11,15 @@
 #include "VM.h"
 #include "JSObject.h"
 #include "JSString.h"
-#include "Operations.h"
+#include "JSCInlines.h"
 #include <wtf/StackStats.h>
 
 namespace JSC {
 
 SlotVisitor::SlotVisitor(GCThreadSharedData& shared)
     : m_stack(shared.m_vm->heap.blockAllocator())
+    , m_bytesVisited(0)
+    , m_bytesCopied(0)
     , m_visitCount(0)
     , m_isInParallelMode(false)
     , m_shared(shared)
@@ -31,11 +33,19 @@ SlotVisitor::SlotVisitor(GCThreadSharedData& shared)
 
 SlotVisitor::~SlotVisitor()
 {
-    ASSERT(m_stack.isEmpty());
+    clearMarkStack();
 }
 
-void SlotVisitor::setup()
+void SlotVisitor::didStartMarking()
 {
+    if (heap()->operationInProgress() == FullCollection) {
+#if ENABLE(PARALLEL_GC)
+        ASSERT(m_opaqueRoots.isEmpty()); // Should have merged by now.
+#else
+        m_opaqueRoots.clear();
+#endif
+    }
+
     m_shared.m_shouldHashCons = m_shared.m_vm->haveEnoughNewStringsToHashCons();
     m_shouldHashCons = m_shared.m_shouldHashCons;
 #if ENABLE(PARALLEL_GC)
@@ -46,17 +56,19 @@ void SlotVisitor::setup()
 
 void SlotVisitor::reset()
 {
+    m_bytesVisited = 0;
+    m_bytesCopied = 0;
     m_visitCount = 0;
     ASSERT(m_stack.isEmpty());
-#if ENABLE(PARALLEL_GC)
-    ASSERT(m_opaqueRoots.isEmpty()); // Should have merged by now.
-#else
-    m_opaqueRoots.clear();
-#endif
     if (m_shouldHashCons) {
         m_uniqueStrings.clear();
         m_shouldHashCons = false;
     }
+}
+
+void SlotVisitor::clearMarkStack()
+{
+    m_stack.clear();
 }
 
 void SlotVisitor::append(ConservativeRoots& conservativeRoots)
@@ -65,15 +77,12 @@ void SlotVisitor::append(ConservativeRoots& conservativeRoots)
     JSCell** roots = conservativeRoots.roots();
     size_t size = conservativeRoots.size();
     for (size_t i = 0; i < size; ++i)
-        internalAppend(roots[i]);
+        internalAppend(0, roots[i]);
 }
 
 ALWAYS_INLINE static void visitChildren(SlotVisitor& visitor, const JSCell* cell)
 {
     StackStats::probe();
-#if ENABLE(SIMPLE_HEAP_PROFILING)
-    m_visitedTypeCounts.count(cell);
-#endif
 
     ASSERT(Heap::isMarked(cell));
     
@@ -112,15 +121,15 @@ void SlotVisitor::donateKnownParallel()
 
     // If we're contending on the lock, be conservative and assume that another
     // thread is already donating.
-    MutexTryLocker locker(m_shared.m_markingLock);
-    if (!locker.locked())
+    std::unique_lock<std::mutex> lock(m_shared.m_markingMutex, std::try_to_lock);
+    if (!lock.owns_lock())
         return;
 
     // Otherwise, assume that a thread will go idle soon, and donate.
     m_stack.donateSomeCellsTo(m_shared.m_sharedMarkStack);
 
     if (m_shared.m_numberOfActiveParallelMarkers < Options::numberOfGCMarkers())
-        m_shared.m_markingCondition.broadcast();
+        m_shared.m_markingConditionVariable.notify_all();
 }
 
 void SlotVisitor::drain()
@@ -175,12 +184,12 @@ void SlotVisitor::drainFromShared(SharedDrainMode sharedDrainMode)
     
 #if ENABLE(PARALLEL_GC)
     {
-        MutexLocker locker(m_shared.m_markingLock);
+        std::lock_guard<std::mutex> lock(m_shared.m_markingMutex);
         m_shared.m_numberOfActiveParallelMarkers++;
     }
     while (true) {
         {
-            MutexLocker locker(m_shared.m_markingLock);
+            std::unique_lock<std::mutex> lock(m_shared.m_markingMutex);
             m_shared.m_numberOfActiveParallelMarkers--;
 
             // How we wait differs depending on drain mode.
@@ -191,7 +200,7 @@ void SlotVisitor::drainFromShared(SharedDrainMode sharedDrainMode)
                     // Did we reach termination?
                     if (!m_shared.m_numberOfActiveParallelMarkers && m_shared.m_sharedMarkStack.isEmpty()) {
                         // Let any sleeping slaves know it's time for them to return;
-                        m_shared.m_markingCondition.broadcast();
+                        m_shared.m_markingConditionVariable.notify_all();
                         return;
                     }
                     
@@ -200,17 +209,16 @@ void SlotVisitor::drainFromShared(SharedDrainMode sharedDrainMode)
                         break;
                     
                     // Otherwise wait.
-                    m_shared.m_markingCondition.wait(m_shared.m_markingLock);
+                    m_shared.m_markingConditionVariable.wait(lock);
                 }
             } else {
                 ASSERT(sharedDrainMode == SlaveDrain);
                 
                 // Did we detect termination? If so, let the master know.
                 if (!m_shared.m_numberOfActiveParallelMarkers && m_shared.m_sharedMarkStack.isEmpty())
-                    m_shared.m_markingCondition.broadcast();
-                
-                while (m_shared.m_sharedMarkStack.isEmpty() && !m_shared.m_parallelMarkersShouldExit)
-                    m_shared.m_markingCondition.wait(m_shared.m_markingLock);
+                    m_shared.m_markingConditionVariable.notify_all();
+
+                m_shared.m_markingConditionVariable.wait(lock, [this] { return !m_shared.m_sharedMarkStack.isEmpty() || m_shared.m_parallelMarkersShouldExit; });
                 
                 // Is the current phase done? If so, return from this function.
                 if (m_shared.m_parallelMarkersShouldExit)
@@ -232,11 +240,9 @@ void SlotVisitor::mergeOpaqueRoots()
     StackStats::probe();
     ASSERT(!m_opaqueRoots.isEmpty()); // Should only be called when opaque roots are non-empty.
     {
-        MutexLocker locker(m_shared.m_opaqueRootsLock);
-        HashSet<void*>::iterator begin = m_opaqueRoots.begin();
-        HashSet<void*>::iterator end = m_opaqueRoots.end();
-        for (HashSet<void*>::iterator iter = begin; iter != end; ++iter)
-            m_shared.m_opaqueRoots.add(*iter);
+        std::lock_guard<std::mutex> lock(m_shared.m_opaqueRootsMutex);
+        for (auto* root : m_opaqueRoots)
+            m_shared.m_opaqueRoots.add(root);
     }
     m_opaqueRoots.clear();
 }
@@ -279,7 +285,7 @@ ALWAYS_INLINE bool JSString::shouldTryHashCons()
     return ((length() > 1) && !isRope() && !isHashConsSingleton());
 }
 
-ALWAYS_INLINE void SlotVisitor::internalAppend(JSValue* slot)
+ALWAYS_INLINE void SlotVisitor::internalAppend(void* from, JSValue* slot)
 {
     // This internalAppend is only intended for visits to object and array backing stores.
     // as it can change the JSValue pointed to be the argument when the original JSValue
@@ -316,7 +322,7 @@ ALWAYS_INLINE void SlotVisitor::internalAppend(JSValue* slot)
         }
     }
 
-    internalAppend(cell);
+    internalAppend(from, cell);
 }
 
 void SlotVisitor::harvestWeakReferences()

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
 
@@ -14,6 +14,7 @@
 
 namespace WebCore {
 
+  /*
 String FileChooser::basenameForWidth(const Font& font, int width) const
 {
 /*
@@ -43,7 +44,7 @@ String FileChooser::basenameForWidth(const Font& font, int width) const
 
     // if width is too small, just return an empty string
     return "";
-*/
+*
     if (width <= 0)
         return String();
 
@@ -57,5 +58,6 @@ String FileChooser::basenameForWidth(const Font& font, int width) const
 
     return StringTruncator::centerTruncate(string, width, font);
 }
+*/
 
 }

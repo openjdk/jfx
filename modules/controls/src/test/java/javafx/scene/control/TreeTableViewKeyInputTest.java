@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,19 +25,18 @@
 
 package javafx.scene.control;
 
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
+import com.sun.javafx.scene.control.behavior.TableCellBehavior;
+import com.sun.javafx.scene.control.behavior.TreeTableCellBehavior;
 import javafx.beans.property.ReadOnlyStringWrapper;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import javafx.event.EventHandler;
 import javafx.scene.input.KeyCode;
-import javafx.util.Callback;
 import java.util.List;
+import java.util.function.Function;
+
 import com.sun.javafx.PlatformUtil;
-import com.sun.javafx.Utils;
+import com.sun.javafx.util.Utils;
 import com.sun.javafx.scene.control.behavior.TreeTableViewAnchorRetriever;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.KeyModifier;
@@ -4349,6 +4348,378 @@ public class TreeTableViewKeyInputTest {
         assertEquals(3, rt_39088_items_event_count);
         assertEquals(3, indices.size());
         assertEquals(3, items.size());
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt_27709_singleSelection_cellSelection() {
+        test_rt_27709(SelectionMode.SINGLE, true, false);
+    }
+
+    @Test public void test_rt_27709_multipleSelection_cellSelection() {
+        test_rt_27709(SelectionMode.MULTIPLE, true, false);
+    }
+
+    @Test public void test_rt_27709_singleSelection_rowSelection() {
+        test_rt_27709(SelectionMode.SINGLE, false, false);
+    }
+
+    @Test public void test_rt_27709_multipleSelection_rowSelection() {
+        test_rt_27709(SelectionMode.MULTIPLE, false, false);
+    }
+
+    @Test public void test_rt_27709_singleSelection_cellSelection_resetSelection() {
+        test_rt_27709(SelectionMode.SINGLE, true, true);
+    }
+
+    @Test public void test_rt_27709_multipleSelection_cellSelection_resetSelection() {
+        test_rt_27709(SelectionMode.MULTIPLE, true, true);
+    }
+
+    @Test public void test_rt_27709_singleSelection_rowSelection_resetSelection() {
+        test_rt_27709(SelectionMode.SINGLE, false, true);
+    }
+
+    @Test public void test_rt_27709_multipleSelection_rowSelection_resetSelection() {
+        test_rt_27709(SelectionMode.MULTIPLE, false, true);
+    }
+
+    private void test_rt_27709(SelectionMode mode, boolean cellSelectionMode, boolean resetSelection) {
+        root.getChildren().clear();
+        for (int i = 0; i < 10; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        root.setExpanded(true);
+        tableView.setShowRoot(false);
+
+        TreeTableColumn<String, String> col = new TreeTableColumn<>("Column");
+        col.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue().getValue()));
+
+        tableView.getColumns().setAll(col);
+
+        TreeTableView.TreeTableViewSelectionModel<String> sm = tableView.getSelectionModel();
+        sm.setSelectionMode(mode);
+        sm.setCellSelectionEnabled(cellSelectionMode);
+
+        ObservableList<Integer> indices = sm.getSelectedIndices();
+        ObservableList<TreeTablePosition<String,?>> cells = sm.getSelectedCells();
+
+        StageLoader sl = new StageLoader(tableView);
+
+        int expectedSize = mode == SelectionMode.SINGLE ? 1 : 10;
+        int lookupIndex = mode == SelectionMode.SINGLE ? 0 : 9;
+
+        sm.select(0, col);
+        assertEquals(1, indices.size());
+        assertEquals(1, cells.size());
+
+        keyboard.doKeyPress(KeyCode.END, KeyModifier.SHIFT);
+        assertEquals(expectedSize, indices.size());
+        assertEquals(expectedSize, cells.size());
+        assertEquals(9, (int) indices.get(lookupIndex));
+        assertEquals(9, cells.get(lookupIndex).getRow());
+
+        if (resetSelection) {
+            sm.clearAndSelect(9, col);
+            TreeTablePosition<?,?> anchor = TreeTableCellBehavior.getAnchor(tableView, null);
+            assertEquals(9, anchor.getRow());
+            assertEquals(col, anchor.getTableColumn());
+        } else {
+            expectedSize = 1;
+        }
+
+        keyboard.doKeyPress(KeyCode.HOME, KeyModifier.SHIFT);
+        assertEquals(expectedSize, indices.size());
+        assertEquals(expectedSize, cells.size());
+        assertTrue(sm.isSelected(0, col));
+
+        if (resetSelection) {
+            sm.clearAndSelect(0, col);
+
+            TreeTablePosition<?,?> anchor = TreeTableCellBehavior.getAnchor(tableView, null);
+            assertEquals(0, anchor.getRow());
+            assertEquals(col, anchor.getTableColumn());
+        } else {
+            expectedSize = mode == SelectionMode.SINGLE ? 1 : 10;
+        }
+
+        keyboard.doKeyPress(KeyCode.END, KeyModifier.SHIFT);
+        assertEquals(expectedSize, indices.size());
+        assertEquals(expectedSize, cells.size());
+        assertTrue(sm.isSelected(9, col));
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt_18440_goLeft() {
+        test_rt_18440(KeyCode.LEFT, 3, false, colIndex -> {
+            keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());
+            return colIndex - 1;
+        });
+    }
+
+    @Test public void test_rt_18440_goLeft_toEnd() {
+        test_rt_18440(KeyCode.LEFT, 3, true, colIndex -> {
+            keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());
+            return colIndex - 1;
+        });
+    }
+
+    @Test public void test_rt_18440_goRight() {
+        test_rt_18440(KeyCode.RIGHT, 0, false, colIndex -> {
+            keyboard.doRightArrowPress(KeyModifier.getShortcutKey());
+            return colIndex + 1;
+        });
+    }
+
+    @Test public void test_rt_18440_goRight_toEnd() {
+        test_rt_18440(KeyCode.RIGHT, 0, true, colIndex -> {
+            keyboard.doRightArrowPress(KeyModifier.getShortcutKey());
+            return colIndex + 1;
+        });
+    }
+
+    private void test_rt_18440(KeyCode direction, int startColumn, boolean goToEnd, Function<Integer, Integer> r) {
+        root.getChildren().clear();
+        for (int i = 0; i < 10; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        root.setExpanded(true);
+        tableView.setShowRoot(false);
+        tableView.setRoot(root);
+
+        tableView.getColumns().clear();
+        for (int i = 0; i < 4; i++) {
+            TreeTableColumn<String, String> col = new TreeTableColumn<>("Column " + i);
+            col.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue().getValue()));
+            tableView.getColumns().add(col);
+        }
+
+        TreeTableView.TreeTableViewFocusModel fm = tableView.getFocusModel();
+        TreeTableView.TreeTableViewSelectionModel<String> sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(true);
+
+        ObservableList<Integer> indices = sm.getSelectedIndices();
+        ObservableList<TreeItem<String>> items = sm.getSelectedItems();
+
+        StageLoader sl = new StageLoader(tableView);
+
+        assertEquals(0, indices.size());
+        assertEquals(0, items.size());
+
+        sm.select(0, tableView.getColumns().get(startColumn));
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals(tableView.getColumns().get(startColumn), sm.getSelectedCells().get(0).getTableColumn());
+        assertEquals(0, fm.getFocusedIndex());
+        assertEquals(tableView.getColumns().get(startColumn), fm.getFocusedCell().getTableColumn());
+
+        int expectedColumn = r.apply(startColumn);
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals(tableView.getColumns().get(startColumn), sm.getSelectedCells().get(0).getTableColumn());
+        assertEquals(0, fm.getFocusedIndex());
+        assertEquals(tableView.getColumns().get(expectedColumn), fm.getFocusedCell().getTableColumn());
+
+        expectedColumn = r.apply(expectedColumn);
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals(tableView.getColumns().get(startColumn), sm.getSelectedCells().get(0).getTableColumn());
+        assertEquals(0, fm.getFocusedIndex());
+        assertEquals(tableView.getColumns().get(expectedColumn), fm.getFocusedCell().getTableColumn());
+
+        if (goToEnd) {
+            expectedColumn = r.apply(expectedColumn);
+            assertEquals(0, sm.getSelectedIndex());
+            assertEquals(tableView.getColumns().get(startColumn), sm.getSelectedCells().get(0).getTableColumn());
+            assertEquals(0, fm.getFocusedIndex());
+            assertEquals(tableView.getColumns().get(expectedColumn), fm.getFocusedCell().getTableColumn());
+        }
+
+        expectedColumn = direction == KeyCode.RIGHT ? 3 : 0;
+        keyboard.doKeyPress(direction, KeyModifier.SHIFT);
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals(debug(), 4, sm.getSelectedCells().size());
+        assertEquals(0, fm.getFocusedIndex());
+        assertEquals(tableView.getColumns().get(expectedColumn), fm.getFocusedCell().getTableColumn());
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt_24865_moveDownwards() {
+        root.getChildren().clear();
+        for (int i = 0; i < 100; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        root.setExpanded(true);
+        tableView.setShowRoot(false);
+        tableView.setRoot(root);
+
+        Toolkit.getToolkit().firePulse();
+
+        ObservableList<Integer> indices = sm.getSelectedIndices();
+
+        sm.select(0);
+        assertTrue(isSelected(0));
+        assertTrue(fm.isFocused(0));
+        assertEquals(1, indices.size());
+        assertEquals(0, ((TreeTablePosition) TreeTableCellBehavior.getAnchor(tableView, null)).getRow());
+
+        keyboard.doDownArrowPress(KeyModifier.SHIFT);
+        keyboard.doDownArrowPress(KeyModifier.SHIFT);
+        keyboard.doDownArrowPress(KeyModifier.SHIFT);
+        assertTrue(isSelected(0, 1, 2, 3));
+        assertTrue(fm.isFocused(3));
+        assertEquals(4, indices.size());
+        assertEquals(0, ((TreeTablePosition)TreeTableCellBehavior.getAnchor(tableView, null)).getRow());
+
+        keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
+        assertTrue(isSelected(0, 1, 2, 3));
+        assertTrue(isNotSelected(4, 5, 6, 7, 8, 9));
+        assertTrue(fm.isFocused(6));
+        assertEquals(4, indices.size());
+        assertEquals(0, ((TreeTablePosition)TreeTableCellBehavior.getAnchor(tableView, null)).getRow());
+
+        // main point of test: selection between the last index (3) and the focus
+        // index (6) should now be true
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        final int selectedRowCount = indices.size();
+        for (int i = 0; i < selectedRowCount; i++) {
+            assertTrue(isSelected(i));
+        }
+        assertTrue(fm.isFocused(selectedRowCount - 1));
+        assertEquals(0, ((TreeTablePosition)TreeTableCellBehavior.getAnchor(tableView, null)).getRow());
+
+        keyboard.doDownArrowPress(KeyModifier.SHIFT);
+        int newSelectedRowCount = selectedRowCount + 1;
+        for (int i = 0; i < newSelectedRowCount; i++) {
+            assertTrue(isSelected(i));
+        }
+        assertTrue(fm.isFocused(newSelectedRowCount - 1));
+        assertEquals(0, ((TreeTablePosition)TreeTableCellBehavior.getAnchor(tableView, null)).getRow());
+    }
+
+    @Test public void test_rt_24865_moveUpwards() {
+        root.getChildren().clear();
+        for (int i = 0; i < 100; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        root.setExpanded(true);
+        tableView.setShowRoot(false);
+        tableView.setRoot(root);
+
+        Toolkit.getToolkit().firePulse();
+
+        ObservableList<Integer> indices = sm.getSelectedIndices();
+
+        sm.select(50);
+        tableView.scrollTo(50);
+
+        Toolkit.getToolkit().firePulse();
+
+        assertTrue(isSelected(50));
+        assertTrue(fm.isFocused(50));
+        assertEquals(1, indices.size());
+        assertEquals(50, ((TreeTablePosition)TreeTableCellBehavior.getAnchor(tableView, null)).getRow());
+
+        keyboard.doUpArrowPress(KeyModifier.SHIFT);
+        keyboard.doUpArrowPress(KeyModifier.SHIFT);
+        keyboard.doUpArrowPress(KeyModifier.SHIFT);
+        assertTrue(isSelected(50, 49, 48, 47));
+        assertTrue(fm.isFocused(47));
+        assertEquals(4, indices.size());
+        assertEquals(50, ((TreeTablePosition)TreeTableCellBehavior.getAnchor(tableView, null)).getRow());
+
+        keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
+        assertTrue(isSelected(50, 49, 48, 47));
+        assertTrue(isNotSelected(46, 45, 44, 43, 42, 41));
+        assertTrue(fm.isFocused(44));
+        assertEquals(4, indices.size());
+        assertEquals(50, ((TreeTablePosition)TreeTableCellBehavior.getAnchor(tableView, null)).getRow());
+
+        // main point of test: selection between the last index (47) and the focus
+        // index (44) should now be true
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        final int selectedRowCount = indices.size();
+        for (int i = 0; i < selectedRowCount; i++) {
+            assertTrue(isSelected(50 - i));
+        }
+        assertTrue(fm.isFocused(50 - selectedRowCount + 1));
+        assertEquals(50, ((TreeTablePosition)TreeTableCellBehavior.getAnchor(tableView, null)).getRow());
+
+        keyboard.doUpArrowPress(KeyModifier.SHIFT);
+        int newSelectedRowCount = selectedRowCount + 1;
+        for (int i = 0; i < newSelectedRowCount; i++) {
+            assertTrue(isSelected(50 - i));
+        }
+        assertTrue(fm.isFocused(50 - newSelectedRowCount + 1));
+        assertEquals(50, ((TreeTablePosition)TreeTableCellBehavior.getAnchor(tableView, null)).getRow());
+    }
+
+    @Test public void test_rt_39792_goLeft_goPastEnd() {
+        test_rt_39792(3, colIndex -> {
+            keyboard.doLeftArrowPress(KeyModifier.SHIFT);
+            return colIndex - 1;
+        });
+    }
+
+    @Test public void test_rt_39792_goRight_goPastEnd() {
+        test_rt_39792(0, colIndex -> {
+            keyboard.doRightArrowPress(KeyModifier.SHIFT);
+            return colIndex + 1;
+        });
+    }
+
+    private void test_rt_39792(int startColumn, Function<Integer, Integer> r) {
+        root.getChildren().clear();
+        for (int i = 0; i < 10; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        root.setExpanded(true);
+        tableView.setShowRoot(false);
+        tableView.setRoot(root);
+
+        tableView.getColumns().clear();
+        for (int i = 0; i < 4; i++) {
+            TreeTableColumn<String, String> col = new TreeTableColumn<>("Column " + i);
+            col.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue().getValue()));
+            tableView.getColumns().add(col);
+        }
+
+        TreeTableView.TreeTableViewSelectionModel<String> sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(true);
+
+        ObservableList<Integer> indices = sm.getSelectedIndices();
+        ObservableList<TreeItem<String>> items = sm.getSelectedItems();
+
+        StageLoader sl = new StageLoader(tableView);
+
+        assertEquals(0, indices.size());
+        assertEquals(0, items.size());
+
+        sm.select(0, tableView.getColumns().get(startColumn));
+        assertEquals(1, sm.getSelectedCells().size());
+
+        int expectedColumn = r.apply(startColumn);
+        assertEquals(2, sm.getSelectedCells().size());
+
+        expectedColumn = r.apply(expectedColumn);
+        assertEquals(3, sm.getSelectedCells().size());
+
+        expectedColumn = r.apply(expectedColumn);
+        assertEquals(4, sm.getSelectedCells().size());
+
+        // this should not cause any issue, but it does - as noted in RT-39792
+        /*expectedColumn = */r.apply(expectedColumn);
+        assertEquals(4, sm.getSelectedCells().size());
 
         sl.dispose();
     }

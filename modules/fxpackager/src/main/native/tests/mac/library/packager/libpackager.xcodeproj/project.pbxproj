@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		DE052CCE1A9F963700E05736 /* OrderedMap.h in Headers */ = {isa = PBXBuildFile; fileRef = DE052CCC1A9F963700E05736 /* OrderedMap.h */; };
 		DE0959CD19A51A02008845F2 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DE0959CC19A51A02008845F2 /* Cocoa.framework */; };
 		DE0959DE19A51A02008845F2 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DE0959DD19A51A02008845F2 /* XCTest.framework */; };
 		DE0959DF19A51A02008845F2 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DE0959CC19A51A02008845F2 /* Cocoa.framework */; };
@@ -52,6 +53,8 @@
 		DE095A3F19A51A33008845F2 /* PropertyFile.h in Headers */ = {isa = PBXBuildFile; fileRef = DE095A1819A51A33008845F2 /* PropertyFile.h */; };
 		DE095A4019A51A33008845F2 /* WindowsPlatform.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DE095A1919A51A33008845F2 /* WindowsPlatform.cpp */; };
 		DE095A4119A51A33008845F2 /* WindowsPlatform.h in Headers */ = {isa = PBXBuildFile; fileRef = DE095A1A19A51A33008845F2 /* WindowsPlatform.h */; };
+		DE4C1F2B1A8D31B10000D335 /* IniFile.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DE4C1F291A8D31B10000D335 /* IniFile.cpp */; };
+		DE4C1F2C1A8D31B10000D335 /* IniFile.h in Headers */ = {isa = PBXBuildFile; fileRef = DE4C1F2A1A8D31B10000D335 /* IniFile.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -65,6 +68,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		DE052CCC1A9F963700E05736 /* OrderedMap.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = OrderedMap.h; path = ../../../../../library/common/OrderedMap.h; sourceTree = "<group>"; };
 		DE0959C919A51A02008845F2 /* libpackager.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libpackager.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 		DE0959CC19A51A02008845F2 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
 		DE0959CF19A51A02008845F2 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
@@ -76,17 +80,17 @@
 		DE0959E519A51A02008845F2 /* libpackagerTests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "libpackagerTests-Info.plist"; sourceTree = "<group>"; };
 		DE0959E719A51A02008845F2 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		DE0959E919A51A02008845F2 /* packagerTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = packagerTests.m; sourceTree = "<group>"; };
-		DE0959F419A51A33008845F2 /* Exports.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Exports.cpp; path = ../../../../../library/common/Exports.cpp; sourceTree = "<group>"; };
+		DE0959F419A51A33008845F2 /* Exports.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = Exports.cpp; path = ../../../../../library/common/Exports.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		DE0959F519A51A33008845F2 /* Exports.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Exports.h; path = ../../../../../library/common/Exports.h; sourceTree = "<group>"; };
 		DE0959F619A51A33008845F2 /* FilePath.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = FilePath.cpp; path = ../../../../../library/common/FilePath.cpp; sourceTree = "<group>"; };
 		DE0959F719A51A33008845F2 /* FilePath.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FilePath.h; path = ../../../../../library/common/FilePath.h; sourceTree = "<group>"; };
 		DE0959F819A51A33008845F2 /* GenericPlatform.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = GenericPlatform.cpp; path = ../../../../../library/common/GenericPlatform.cpp; sourceTree = "<group>"; };
 		DE0959F919A51A33008845F2 /* GenericPlatform.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GenericPlatform.h; path = ../../../../../library/common/GenericPlatform.h; sourceTree = "<group>"; };
-		DE0959FA19A51A33008845F2 /* Helpers.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Helpers.cpp; path = ../../../../../library/common/Helpers.cpp; sourceTree = "<group>"; };
-		DE0959FB19A51A33008845F2 /* Helpers.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Helpers.h; path = ../../../../../library/common/Helpers.h; sourceTree = "<group>"; };
+		DE0959FA19A51A33008845F2 /* Helpers.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = Helpers.cpp; path = ../../../../../library/common/Helpers.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		DE0959FB19A51A33008845F2 /* Helpers.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; name = Helpers.h; path = ../../../../../library/common/Helpers.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		DE0959FC19A51A33008845F2 /* Java.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Java.cpp; path = ../../../../../library/common/Java.cpp; sourceTree = "<group>"; };
 		DE0959FD19A51A33008845F2 /* Java.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Java.h; path = ../../../../../library/common/Java.h; sourceTree = "<group>"; };
-		DE0959FE19A51A33008845F2 /* JavaUserPreferences.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = JavaUserPreferences.cpp; path = ../../../../../library/common/JavaUserPreferences.cpp; sourceTree = "<group>"; };
+		DE0959FE19A51A33008845F2 /* JavaUserPreferences.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = JavaUserPreferences.cpp; path = ../../../../../library/common/JavaUserPreferences.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		DE0959FF19A51A33008845F2 /* JavaUserPreferences.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = JavaUserPreferences.h; path = ../../../../../library/common/JavaUserPreferences.h; sourceTree = "<group>"; };
 		DE095A0019A51A33008845F2 /* JavaVirtualMachine.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = JavaVirtualMachine.cpp; path = ../../../../../library/common/JavaVirtualMachine.cpp; sourceTree = "<group>"; };
 		DE095A0119A51A33008845F2 /* JavaVirtualMachine.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = JavaVirtualMachine.h; path = ../../../../../library/common/JavaVirtualMachine.h; sourceTree = "<group>"; };
@@ -115,6 +119,8 @@
 		DE095A1819A51A33008845F2 /* PropertyFile.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PropertyFile.h; path = ../../../../../library/common/PropertyFile.h; sourceTree = "<group>"; };
 		DE095A1919A51A33008845F2 /* WindowsPlatform.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = WindowsPlatform.cpp; path = ../../../../../library/common/WindowsPlatform.cpp; sourceTree = "<group>"; };
 		DE095A1A19A51A33008845F2 /* WindowsPlatform.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = WindowsPlatform.h; path = ../../../../../library/common/WindowsPlatform.h; sourceTree = "<group>"; };
+		DE4C1F291A8D31B10000D335 /* IniFile.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = IniFile.cpp; path = ../../../../../library/common/IniFile.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		DE4C1F2A1A8D31B10000D335 /* IniFile.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; name = IniFile.h; path = ../../../../../library/common/IniFile.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -183,8 +189,11 @@
 			children = (
 				DE0959F419A51A33008845F2 /* Exports.cpp */,
 				DE0959F519A51A33008845F2 /* Exports.h */,
+				DE4C1F291A8D31B10000D335 /* IniFile.cpp */,
 				DE0959F619A51A33008845F2 /* FilePath.cpp */,
 				DE0959F719A51A33008845F2 /* FilePath.h */,
+				DE4C1F2A1A8D31B10000D335 /* IniFile.h */,
+				DE052CCC1A9F963700E05736 /* OrderedMap.h */,
 				DE0959F819A51A33008845F2 /* GenericPlatform.cpp */,
 				DE0959F919A51A33008845F2 /* GenericPlatform.h */,
 				DE0959FA19A51A33008845F2 /* Helpers.cpp */,
@@ -261,6 +270,7 @@
 				DE095A3319A51A33008845F2 /* Messages.h in Headers */,
 				DE095A3719A51A33008845F2 /* Platform.h in Headers */,
 				DE095A3519A51A33008845F2 /* Package.h in Headers */,
+				DE4C1F2C1A8D31B10000D335 /* IniFile.h in Headers */,
 				DE095A3B19A51A33008845F2 /* PlatformThread.h in Headers */,
 				DE095A4119A51A33008845F2 /* WindowsPlatform.h in Headers */,
 				DE095A2419A51A33008845F2 /* Java.h in Headers */,
@@ -275,6 +285,7 @@
 				DE095A1E19A51A33008845F2 /* FilePath.h in Headers */,
 				DE095A3019A51A33008845F2 /* Macros.h in Headers */,
 				DE095A2819A51A33008845F2 /* JavaVirtualMachine.h in Headers */,
+				DE052CCE1A9F963700E05736 /* OrderedMap.h in Headers */,
 				DE095A2D19A51A33008845F2 /* MacPlatform.h in Headers */,
 				DE095A3919A51A33008845F2 /* PlatformString.h in Headers */,
 			);
@@ -378,6 +389,7 @@
 				DE095A3C19A51A33008845F2 /* PosixPlatform.cpp in Sources */,
 				DE095A2B19A51A33008845F2 /* Lock.cpp in Sources */,
 				DE095A2919A51A33008845F2 /* LinuxPlatform.cpp in Sources */,
+				DE4C1F2B1A8D31B10000D335 /* IniFile.cpp in Sources */,
 				DE095A3219A51A33008845F2 /* Messages.cpp in Sources */,
 				DE095A2E19A51A33008845F2 /* MacPlatform.mm in Sources */,
 				DE095A2319A51A33008845F2 /* Java.cpp in Sources */,

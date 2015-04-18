@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,7 @@
 
 package com.sun.javafx.css.parser;
 
-import com.sun.javafx.Utils;
+import com.sun.javafx.util.Utils;
 import com.sun.javafx.css.Combinator;
 import com.sun.javafx.css.CompoundSelector;
 import com.sun.javafx.css.CssError;
@@ -79,7 +79,7 @@ import javafx.scene.layout.BackgroundSize;
 import javafx.scene.layout.BorderStrokeStyle;
 import javafx.scene.layout.BorderWidths;
 import javafx.scene.layout.CornerRadii;
-import javafx.scene.layout.CornerRadiiConverter;
+import com.sun.javafx.scene.layout.region.CornerRadiiConverter;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.CycleMethod;
 import javafx.scene.paint.Paint;
@@ -166,7 +166,7 @@ final public class CSSParser {
         sourceOfInlineStyle = styleable;
     }
 
-    private static final PlatformLogger LOGGER = com.sun.javafx.Logging.getCSSLogger();
+    private static final PlatformLogger LOGGER = com.sun.javafx.util.Logging.getCSSLogger();
 
     private static final class ParseException extends Exception {
         ParseException(String message) {
@@ -531,7 +531,7 @@ final public class CSSParser {
     }
 
     private String stripQuotes(String string) {
-        return com.sun.javafx.Utils.stripQuotes(string);
+        return com.sun.javafx.util.Utils.stripQuotes(string);
     }
 
     private double clamp(double min, double val, double max) {
@@ -4181,6 +4181,7 @@ final public class CSSParser {
         }
 
         Stylesheet importedStylesheet = null;
+        final String _sourceOfStylesheet = sourceOfStylesheet;
 
         if (fname != null) {
             // let URLConverter do the conversion
@@ -4193,6 +4194,12 @@ final public class CSSParser {
 
             String urlString = parsedValue.convert(null);
             importedStylesheet = StyleManager.loadStylesheet(urlString);
+
+            // When we load an imported stylesheet, the sourceOfStylesheet field
+            // gets set to the new stylesheet. Once it is done loading we must reset
+            // this field back to the previous value, otherwise we will potentially
+            // run into problems (for example, see RT-40346).
+            sourceOfStylesheet = _sourceOfStylesheet;
         }
         if (importedStylesheet == null) {
             final String msg =

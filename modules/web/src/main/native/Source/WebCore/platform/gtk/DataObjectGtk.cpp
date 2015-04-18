@@ -21,7 +21,7 @@
 
 #include "markup.h"
 #include <gtk/gtk.h>
-#include <wtf/gobject/GOwnPtr.h>
+#include <wtf/gobject/GUniquePtr.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -46,8 +46,13 @@ String DataObjectGtk::text() const
 String DataObjectGtk::markup() const
 {
     if (m_range)
-        return createMarkup(m_range.get(), 0, AnnotateForInterchange, false, ResolveNonLocalURLs);
+        return createMarkup(*m_range, 0, AnnotateForInterchange, false, ResolveNonLocalURLs);
     return m_markup;
+}
+
+HashMap<String, String> DataObjectGtk::unknownTypes() const
+{
+    return m_unknownTypeData;
 }
 
 void DataObjectGtk::setText(const String& newText)
@@ -89,22 +94,22 @@ void DataObjectGtk::setURIList(const String& uriListString)
         if (line[0] == '#')
             continue;
 
-        KURL url = KURL(KURL(), line);
+        URL url = URL(URL(), line);
         if (url.isValid()) {
             if (!setURL) {
                 m_url = url;
                 setURL = true;
             }
 
-            GOwnPtr<GError> error;
-            GOwnPtr<gchar> filename(g_filename_from_uri(line.utf8().data(), 0, &error.outPtr()));
+            GUniqueOutPtr<GError> error;
+            GUniquePtr<gchar> filename(g_filename_from_uri(line.utf8().data(), 0, &error.outPtr()));
             if (!error && filename)
                 m_filenames.append(String::fromUTF8(filename.get()));
         }
     }
 }
 
-void DataObjectGtk::setURL(const KURL& url, const String& label)
+void DataObjectGtk::setURL(const URL& url, const String& label)
 {
     m_url = url;
     m_uriList = url;
@@ -118,7 +123,7 @@ void DataObjectGtk::setURL(const KURL& url, const String& label)
     markup.append("<a href=\"");
     markup.append(url.string());
     markup.append("\">");
-    GOwnPtr<gchar> escaped(g_markup_escape_text(actualLabel.utf8().data(), -1));
+    GUniquePtr<gchar> escaped(g_markup_escape_text(actualLabel.utf8().data(), -1));
     markup.append(String::fromUTF8(escaped.get()));
     markup.append("</a>");
     setMarkup(markup.toString());
@@ -152,9 +157,10 @@ void DataObjectGtk::clearAllExceptFilenames()
     m_text = "";
     m_markup = "";
     m_uriList = "";
-    m_url = KURL();
+    m_url = URL();
     m_image = 0;
     m_range = 0;
+    m_unknownTypeData.clear();
 }
 
 void DataObjectGtk::clearAll()

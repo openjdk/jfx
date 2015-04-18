@@ -57,7 +57,7 @@ my $executablePathAge = -M $executablePath;
 my $sawError = 0;
 
 if (!defined $executablePathAge || !defined $buildTimestampAge || $executablePathAge < $buildTimestampAge) {
-    if (!open NM, "(nm -m '$executablePath' | c++filt | sed 's/^/STDOUT:/') 2>&1 |") {
+    if (!open NM, "(nm -m '$executablePath' | sed 's/^/STDOUT:/') 2>&1 |") {
         print "ERROR: Could not open $executablePath\n";
         $sawError = 1;
         next;
@@ -68,6 +68,9 @@ if (!defined $executablePathAge || !defined $buildTimestampAge || $executablePat
         if (/^STDOUT:/) {
             # Ignore undefined, RTTI and typeinfo symbols.
             next if /\bundefined\b/ or /\b__ZT[IS]/;
+
+            # ASan compiler-rt calls into __asan_mapping_offset and __asan_mapping_scale
+            next if /\b___asan/;
 
             if (/weak external vtable for (.*)$/) {
                 push @weakVTableClasses, $1;

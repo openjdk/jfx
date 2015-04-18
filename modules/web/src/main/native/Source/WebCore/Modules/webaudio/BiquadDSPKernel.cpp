@@ -48,7 +48,7 @@ void BiquadDSPKernel::updateCoefficientsIfNecessary(bool useSmoothing, bool forc
         double value2;
         double gain;
         double detune; // in Cents
-        
+
         if (biquadProcessor()->hasSampleAccurateValues()) {
             value1 = biquadProcessor()->parameter1()->finalValue();
             value2 = biquadProcessor()->parameter2()->finalValue();

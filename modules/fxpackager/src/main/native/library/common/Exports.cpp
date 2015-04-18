@@ -46,19 +46,21 @@ private:
     // This is not a class to create an instance of.
     UserJVMArgsExports();
 
-    static jobjectArray MapKeysToJObjectArray(JNIEnv *env, TOrderedMap map) {
-        JavaStringArray result(env, map.size());
-        unsigned int index = 0;
+    static jobjectArray MapKeysToJObjectArray(JNIEnv *env, OrderedMap<TString, TString> map) {
+        std::vector<TString> keys = map.GetKeys();
+        JavaStringArray result(env, keys.size());
 
-        for (TOrderedMap::iterator iterator = map.begin();
-            iterator != map.end();
-            iterator++) {
-
-            jstring item = PlatformString(iterator->first).toJString(env);
+        for (unsigned int index = 0; index < keys.size(); index++) {
+            jstring item = PlatformString(keys[index]).toJString(env);
             result.SetValue(index, item);
-
-            index++;
         }
+
+//        JavaStringArray result(env, map.Count());
+//
+//        for (map::  iterator = map.begin(); iterator != map.end(); iterator++) {
+//            jstring item = PlatformString(keys[index]).toJString(env);
+//            result.SetValue(index, item);
+//        }
 
         return result.GetData();
     }
@@ -68,18 +70,19 @@ public:
         if (env == NULL || option == NULL)
             return NULL;
 
-        jstring result;
+        jstring result = NULL;
 
         Package& package = Package::GetInstance();
-        TOrderedMap defaultuserargs = package.GetDefaultJVMUserArgs();
+        OrderedMap<TString, TString> defaultuserargs = package.GetDefaultJVMUserArgs();
         TString loption = PlatformString(env, option).toString();
-        PlatformString value = defaultuserargs[loption].value;
 
         try {
+            TString temp;
+            defaultuserargs.GetValue(loption, temp);
+            PlatformString value = temp;
             result = value.toJString(env);
         }
         catch (const JavaException&) {
-            return NULL;
         }
 
         return result;
@@ -89,7 +92,7 @@ public:
         if (env == NULL)
             return NULL;
 
-        jobjectArray result;
+        jobjectArray result = NULL;
 
         Package& package = Package::GetInstance();
 
@@ -97,7 +100,6 @@ public:
             result = MapKeysToJObjectArray(env, package.GetDefaultJVMUserArgs());
         }
         catch (const JavaException&) {
-            return NULL;
         }
 
         return result;
@@ -107,18 +109,19 @@ public:
         if (env == NULL || option == NULL)
             return NULL;
 
-        jstring result;
+        jstring result = NULL;
 
         Package& package = Package::GetInstance();
-        TOrderedMap userargs = package.GetJVMUserArgs();
+        OrderedMap<TString, TString> userargs = package.GetJVMUserArgs();
 
         try {
             TString loption = PlatformString(env, option).toString();
-            PlatformString value = userargs[loption].value;
+            TString temp;
+            userargs.GetValue(loption, temp);
+            PlatformString value = temp;
             result = value.toJString(env);
         }
         catch (const JavaException&) {
-            return NULL;
         }
 
         return result;
@@ -127,9 +130,9 @@ public:
     static void _setUserJvmKeysAndValues(JNIEnv *env, jobjectArray options, jobjectArray values) {
         if (env == NULL || options == NULL || values == NULL)
             return;
-        
+
         Package& package = Package::GetInstance();
-        TOrderedMap newMap;
+        OrderedMap<TString, TString> newMap;
 
         try {
             JavaStringArray loptions(env, options);
@@ -137,10 +140,8 @@ public:
 
             for (unsigned int index = 0; index < loptions.Count(); index++) {
                 TString name = PlatformString(env, loptions.GetValue(index)).toString();
-                TValueIndex value;
-                value.value = PlatformString(env, lvalues.GetValue(index)).toString();
-                value.index = index;
-                newMap.insert(TOrderedMap::value_type(name, value));
+                TString value = PlatformString(env, lvalues.GetValue(index)).toString();
+                newMap.Append(name, value);
             }
         }
         catch (const JavaException&) {
@@ -154,7 +155,7 @@ public:
         if (env == NULL)
             return NULL;
 
-        jobjectArray result;
+        jobjectArray result = NULL;
 
         Package& package = Package::GetInstance();
 
@@ -162,7 +163,6 @@ public:
             result = MapKeysToJObjectArray(env, package.GetJVMUserArgs());
         }
         catch (const JavaException&) {
-            return NULL;
         }
 
         return result;
@@ -195,7 +195,13 @@ extern "C" {
 #ifdef DEBUG
 // Build with debug info. Create a class:
 //
+// package com;
+//
 // class DebugExports {
+//   static {
+//      System.loadLibrary("packager");
+//   }
+//
 //   public static native boolean isdebugged();
 //
 //   public static native int getpid();
@@ -203,7 +209,8 @@ extern "C" {
 //
 // Use the following in Java in the main or somewhere else:
 //
-// uses DebugExports;
+// import com.DebugExports;
+// import java.util.Arrays;
 //
 // if (Arrays.asList(args).contains("-debug")) {
 //   System.out.println("pid=" + getpid());
@@ -218,14 +225,21 @@ extern "C" {
 // The call to isdebugger() will wait until a native debugger is attached. The process
 // identifier (pid) will be printed to the console for you to attach your debugger to.
 extern "C" {
-    JNIEXPORT jint JNICALL Java_debugexports__getpid(JNIEnv *env) {
-        Platform& platform = Platform::GetInstance();
-        return platform.GetProcessID();
+    JNIEXPORT jboolean JNICALL Java_com_DebugExports_isdebugged(JNIEnv *env, jclass klass) {
+        jboolean result = false;
+        Package& package = Package::GetInstance();
+
+        if (package.Debugging() == dsNative) {
+            Platform& platform = Platform::GetInstance();
+            result = platform.GetDebugState() != dsNone;
+        }
+
+        return result;
     }
 
-    JNIEXPORT jboolean JNICALL Java_debugexports__isdebugged(JNIEnv *env) {
+    JNIEXPORT jint JNICALL Java_com_DebugExports_getpid(JNIEnv *env, jclass klass) {
         Platform& platform = Platform::GetInstance();
-        return platform.GetDebugState() != Platform::dsNone;
+        return platform.GetProcessID();
     }
 }
 #endif //DEBUG

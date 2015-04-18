@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
 
@@ -51,7 +51,7 @@ void BufferImage::drawPattern(GraphicsContext *gc, const FloatRect& srcRect, con
 }
 
 void BufferImage::draw(GraphicsContext* gc, const FloatRect& dstRect,
-                       const FloatRect& srcRect, ColorSpace cs, CompositeOperator co, BlendMode bm)
+                       const FloatRect& srcRect, ColorSpace cs, CompositeOperator co, BlendMode bm, ImageOrientationDescription)
 {
     flushImageRQ(gc);
     Image::drawImage(gc, dstRect, srcRect, cs, co, bm);

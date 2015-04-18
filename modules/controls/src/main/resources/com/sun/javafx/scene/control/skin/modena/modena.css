@@ -795,7 +795,6 @@ is being used to size a border should also be in pixels.
     -fx-border-color: transparent;
     -fx-border-width: 1px;
 }
-.hyperlink,
 .hyperlink:hover,
 .hyperlink:hover:visited {
     -fx-text-fill: -fx-accent;
@@ -820,6 +819,13 @@ is being used to size a border should also be in pixels.
 }
 .hyperlink:show-mnemonics > .mnemonic-underline {
     -fx-stroke: -fx-text-fill;
+}
+
+/* Fix for RT-37971 */
+.cell:selected .hyperlink,
+.cell:selected .hyperlink:hover,
+.cell:selected .hyperlink:hover:visited {
+    -fx-text-fill: -fx-text-background-color;
 }
 
 /*******************************************************************************

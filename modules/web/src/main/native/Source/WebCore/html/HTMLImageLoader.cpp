@@ -32,13 +32,13 @@
 #include "Settings.h"
 
 #include "JSDOMWindowBase.h"
+#include <runtime/JSCInlines.h>
 #include <runtime/JSLock.h>
-#include <runtime/Operations.h>
 
 namespace WebCore {
 
-HTMLImageLoader::HTMLImageLoader(Element* node)
-    : ImageLoader(node)
+HTMLImageLoader::HTMLImageLoader(Element& element)
+    : ImageLoader(element)
 {
 }
 
@@ -49,19 +49,19 @@ HTMLImageLoader::~HTMLImageLoader()
 void HTMLImageLoader::dispatchLoadEvent()
 {
     // HTMLVideoElement uses this class to load the poster image, but it should not fire events for loading or failure.
-    if (element()->hasTagName(HTMLNames::videoTag))
+    if (isHTMLVideoElement(element()))
         return;
 
     bool errorOccurred = image()->errorOccurred();
     if (!errorOccurred && image()->response().httpStatusCode() >= 400)
-        errorOccurred = element()->hasTagName(HTMLNames::objectTag); // An <object> considers a 404 to be an error and should fire onerror.
-    element()->dispatchEvent(Event::create(errorOccurred ? eventNames().errorEvent : eventNames().loadEvent, false, false));
+        errorOccurred = isHTMLObjectElement(element()); // An <object> considers a 404 to be an error and should fire onerror.
+    element().dispatchEvent(Event::create(errorOccurred ? eventNames().errorEvent : eventNames().loadEvent, false, false));
 }
 
 String HTMLImageLoader::sourceURI(const AtomicString& attr) const
 {
 #if ENABLE(DASHBOARD_SUPPORT)
-    Settings* settings = element()->document()->settings();
+    Settings* settings = element().document().settings();
     if (settings && settings->usesDashboardBackwardCompatibilityMode() && attr.length() > 7 && attr.startsWith("url(\"") && attr.endsWith("\")"))
         return attr.string().substring(5, attr.length() - 7);
 #endif
@@ -73,20 +73,20 @@ void HTMLImageLoader::notifyFinished(CachedResource*)
 {
     CachedImage* cachedImage = image();
 
-    RefPtr<Element> element = this->element();
+    Ref<Element> protect(element());
     ImageLoader::notifyFinished(cachedImage);
 
     bool loadError = cachedImage->errorOccurred() || cachedImage->response().httpStatusCode() >= 400;
     if (!loadError) {
-        if (!element->inDocument()) {
+        if (!element().inDocument()) {
             JSC::VM* vm = JSDOMWindowBase::commonVM();
             JSC::JSLockHolder lock(vm);
             vm->heap.reportExtraMemoryCost(cachedImage->encodedSize());
         }
     }
 
-    if (loadError && element->hasTagName(HTMLNames::objectTag))
-        static_cast<HTMLObjectElement*>(element.get())->renderFallbackContent();
+    if (loadError && isHTMLObjectElement(element()))
+        toHTMLObjectElement(element()).renderFallbackContent();
 }
 
 }

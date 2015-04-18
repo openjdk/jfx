@@ -72,8 +72,8 @@ void DocumentLoadTiming::markNavigationStart()
 {
     ASSERT(!m_navigationStart && !m_referenceMonotonicTime && !m_referenceWallTime);
 
-        m_navigationStart = m_referenceMonotonicTime = monotonicallyIncreasingTime();
-        m_referenceWallTime = currentTime();
+    m_navigationStart = m_referenceMonotonicTime = monotonicallyIncreasingTime();
+    m_referenceWallTime = currentTime();
 }
 
 void DocumentLoadTiming::setNavigationStart(double navigationStart)
@@ -82,7 +82,7 @@ void DocumentLoadTiming::setNavigationStart(double navigationStart)
     m_navigationStart = navigationStart;
 }
 
-void DocumentLoadTiming::addRedirect(const KURL& redirectingUrl, const KURL& redirectedUrl)
+void DocumentLoadTiming::addRedirect(const URL& redirectingUrl, const URL& redirectedUrl)
 {
     m_redirectCount++;
     if (!m_redirectStart)

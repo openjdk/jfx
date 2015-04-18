@@ -32,31 +32,37 @@
 
 enum TestEnumType { "", "EnumValue1", "EnumValue2", "EnumValue3" };
 
+// Leading underscore on an enum should be removed.
+enum _optional { "", "OptionalValue1", "OptionalValue2", "OptionalValue3" };
+
 [
     Constructor(TestCallback testCallback),
-        InterfaceName=TestObject
+    InterfaceName=TestObject
 ] interface TestObj {
-        // Attributes
+    // Attributes
     readonly attribute long            readOnlyLongAttr;
-        readonly attribute DOMString       readOnlyStringAttr;
-        readonly attribute TestObj         readOnlyTestObjAttr;
+    readonly attribute DOMString       readOnlyStringAttr;
+    readonly attribute TestObj         readOnlyTestObjAttr;
     static readonly attribute long     staticReadOnlyLongAttr;
-        static attribute DOMString         staticStringAttr;
+    static attribute DOMString         staticStringAttr;
     static readonly attribute TestSubObjConstructor TestSubObj;
+    [EnabledBySetting=TestSetting] attribute TestSubObjConstructor TestSubObjEnabledBySetting;
     attribute TestEnumType             enumAttr;
-        attribute short                    shortAttr;
-        attribute unsigned short           unsignedShortAttr;
+    attribute byte                     byteAttr;
+    attribute octet                    octetAttr;
+    attribute short                    shortAttr;
+    attribute unsigned short           unsignedShortAttr;
     attribute long                     longAttr;
-        attribute long long                longLongAttr;
-        attribute unsigned long long       unsignedLongLongAttr;
-        attribute DOMString                stringAttr;
-        attribute TestObj                  testObjAttr;
+    attribute long long                longLongAttr;
+    attribute unsigned long long       unsignedLongLongAttr;
+    attribute DOMString                stringAttr;
+    attribute TestObj testObjAttr;
 
-        // WK_ucfirst, WK_lcfirst exceptional cases.
-        attribute TestObj                  XMLObjAttr;
-        attribute boolean                  create;
+    // WK_ucfirst, WK_lcfirst exceptional cases.
+    attribute TestObj                  XMLObjAttr;
+    attribute boolean                  create;
 
-        // Reflected DOM attributes
+    // Reflected DOM attributes
     [Reflect] attribute DOMString reflectedStringAttr;
     [Reflect] attribute long reflectedIntegralAttr;
     [Reflect] attribute unsigned long reflectedUnsignedIntegralAttr;
@@ -70,34 +76,37 @@ enum TestEnumType { "", "EnumValue1", "EnumValue2", "EnumValue3" };
     // TypedArray attribute
     attribute Float32Array typedArrayAttr;
 
-        // Methods
-        void    voidMethod();
+    // Methods
+    void    voidMethod();
     void    voidMethodWithArgs(long longArg, DOMString strArg, TestObj objArg);
+    byte    byteMethod();
+    byte    byteMethodWithArgs(byte byteArg, DOMString strArg, TestObj objArg);
+    octet   octetMethod();
+    octet   octetMethodWithArgs(octet octetArg, DOMString strArg, TestObj objArg);
     long    longMethod();
     long    longMethodWithArgs(long longArg, DOMString strArg, TestObj objArg);
-        TestObj objMethod();
+    TestObj objMethod();
     TestObj objMethodWithArgs(long longArg, DOMString strArg, TestObj objArg);
 
     void methodWithSequenceArg(sequence<ScriptProfile> sequenceArg);
     sequence<ScriptProfile> methodReturningSequence(long longArg);
 
     void methodWithEnumArg(TestEnumType enumArg);
-    TestObj methodThatRequiresAllArgsAndThrows(DOMString strArg, TestObj objArg)
-            raises(DOMException);
+    [RaisesException] TestObj methodThatRequiresAllArgsAndThrows(DOMString strArg, TestObj objArg);
 
     void serializedValue(SerializedScriptValue serializedArg);
     void optionsObject(Dictionary oo, optional Dictionary ooo);
 
-        // Exceptions
-        void methodWithException() raises(DOMException);
-        attribute long attrWithGetterException getter raises(DOMException);
-        attribute long attrWithSetterException setter raises(DOMException);
-        attribute DOMString stringAttrWithGetterException getter raises(DOMException);
-        attribute DOMString stringAttrWithSetterException setter raises(DOMException);
+    // Exceptions
+    [RaisesException] void methodWithException();
+    [GetterRaisesException] attribute long attrWithGetterException;
+    [SetterRaisesException] attribute long attrWithSetterException;
+    [GetterRaisesException] attribute DOMString stringAttrWithGetterException;
+    [SetterRaisesException] attribute DOMString stringAttrWithSetterException;
 
-        // 'Custom' extended attribute
+    // 'Custom' extended attribute
     [Custom] attribute long            customAttr;
-        [Custom] void customMethod();
+    [Custom] void customMethod();
     [Custom] void customMethodWithArgs(long longArg, DOMString strArg, TestObj objArg);
 
     void addEventListener(DOMString type, 
@@ -107,33 +116,27 @@ enum TestEnumType { "", "EnumValue1", "EnumValue2", "EnumValue3" };
                              EventListener listener, 
                              optional boolean useCapture);
 
-        // 'CallWith' extended attribute
-        [CallWith=ScriptState] void withScriptStateVoid();
-        [CallWith=ScriptState] TestObj withScriptStateObj();
-        [CallWith=ScriptState] void withScriptStateVoidException()
-            raises(DOMException);
-        [CallWith=ScriptState] TestObj withScriptStateObjException()
-            raises(DOMException);
-        [CallWith=ScriptExecutionContext] void withScriptExecutionContext();
-        [CallWith=ScriptExecutionContext|ScriptState] void withScriptExecutionContextAndScriptState();
-        [CallWith=ScriptExecutionContext|ScriptState] TestObj withScriptExecutionContextAndScriptStateObjException()
-            raises(DOMException);
-        [CallWith=  ScriptExecutionContext  |  ScriptState  ] TestObj withScriptExecutionContextAndScriptStateWithSpaces();
-        [CallWith=ScriptArguments|CallStack] void withScriptArgumentsAndCallStack();
+    // 'CallWith' extended attribute
+    [CallWith=ScriptState] void withScriptStateVoid();
+    [CallWith=ScriptState] TestObj withScriptStateObj();
+    [CallWith=ScriptState, RaisesException] void withScriptStateVoidException();
+    [CallWith=ScriptState, RaisesException] TestObj withScriptStateObjException();
+    [CallWith=ScriptExecutionContext] void withScriptExecutionContext();
+    [CallWith=ScriptExecutionContext&ScriptState] void withScriptExecutionContextAndScriptState();
+    [CallWith=ScriptExecutionContext&ScriptState, RaisesException] TestObj withScriptExecutionContextAndScriptStateObjException();
+    [CallWith=  ScriptExecutionContext  &  ScriptState  ] TestObj withScriptExecutionContextAndScriptStateWithSpaces();
+    [CallWith=ScriptArguments&CallStack] void withScriptArgumentsAndCallStack();
 
     [CallWith=ScriptState] attribute long withScriptStateAttribute;
     [CallWith=ScriptExecutionContext] attribute TestObj withScriptExecutionContextAttribute;
-    [CallWith=ScriptState] attribute TestObj withScriptStateAttributeRaises
-            getter raises(DOMException);
-    [CallWith=ScriptExecutionContext] attribute TestObj withScriptExecutionContextAttributeRaises
-            getter raises(DOMException);
-    [CallWith=ScriptExecutionContext|ScriptState] attribute TestObj withScriptExecutionContextAndScriptStateAttribute;
-    [CallWith=ScriptExecutionContext|ScriptState] attribute TestObj withScriptExecutionContextAndScriptStateAttributeRaises
-            getter raises(DOMException);
-    [CallWith=  ScriptExecutionContext  |  ScriptState  ] attribute TestObj withScriptExecutionContextAndScriptStateWithSpacesAttribute;
-    [CallWith=ScriptArguments|CallStack] attribute TestObj withScriptArgumentsAndCallStackAttribute;
+    [CallWith=ScriptState, GetterRaisesException] attribute TestObj withScriptStateAttributeRaises;
+    [CallWith=ScriptExecutionContext, GetterRaisesException] attribute TestObj withScriptExecutionContextAttributeRaises;
+    [CallWith=ScriptExecutionContext&ScriptState] attribute TestObj withScriptExecutionContextAndScriptStateAttribute;
+    [CallWith=ScriptExecutionContext&ScriptState,GetterRaisesException] attribute TestObj withScriptExecutionContextAndScriptStateAttributeRaises;
+    [CallWith=  ScriptExecutionContext  &  ScriptState  ] attribute TestObj withScriptExecutionContextAndScriptStateWithSpacesAttribute;
+    [CallWith=ScriptArguments&CallStack] attribute TestObj withScriptArgumentsAndCallStackAttribute;
 
-        // 'Optional' extended attribute
+    // 'Optional' extended attribute
     void    methodWithOptionalArg(optional long opt);
     void    methodWithNonOptionalArgAndOptionalArg(long nonOpt, optional long opt);
     void    methodWithNonOptionalArgAndTwoOptionalArgs(long nonOpt, optional long opt1, optional long opt2);
@@ -142,7 +145,7 @@ enum TestEnumType { "", "EnumValue1", "EnumValue2", "EnumValue3" };
     void    methodWithOptionalStringIsNullString([Default=NullString] optional DOMString str);
 
 #if defined(TESTING_JS)
-        // 'Callback' extended attribute
+    // 'Callback' extended attribute
     void    methodWithCallbackArg(TestCallback callback);
     void    methodWithNonCallbackArgAndCallbackArg(long nonCallback, TestCallback callback);
     void    methodWithCallbackAndOptionalArg(optional TestCallback callback);
@@ -151,31 +154,31 @@ enum TestEnumType { "", "EnumValue1", "EnumValue2", "EnumValue3" };
     static void    staticMethodWithCallbackArg(TestCallback callback);
 #endif
 
-        // 'Conditional' extended attribute
+    // 'Conditional' extended attribute
     [Conditional=Condition1] attribute long conditionalAttr1;
     [Conditional=Condition1&Condition2] attribute long conditionalAttr2;
     [Conditional=Condition1|Condition2] attribute long conditionalAttr3;
 
-        // 'Conditional' extended method
-        [Conditional=Condition1] DOMString conditionalMethod1();
-        [Conditional=Condition1&Condition2] void conditionalMethod2();
-        [Conditional=Condition1|Condition2] void conditionalMethod3();
+    // 'Conditional' extended method
+    [Conditional=Condition1] DOMString conditionalMethod1();
+    [Conditional=Condition1&Condition2] void conditionalMethod2();
+    [Conditional=Condition1|Condition2] void conditionalMethod3();
 
     [Conditional=Condition1] attribute TestObjectAConstructor conditionalAttr4;
     [Conditional=Condition1&Condition2] attribute TestObjectBConstructor conditionalAttr5;
     [Conditional=Condition1|Condition2] attribute TestObjectCConstructor conditionalAttr6;
 
-        [Conditional=Condition1] const unsigned short CONDITIONAL_CONST = 0;
+    [Conditional=Condition1] const unsigned short CONDITIONAL_CONST = 0;
 
 #if defined(TESTING_JS)
     [CachedAttribute] readonly attribute any cachedAttribute1;
     [CachedAttribute] readonly attribute any cachedAttribute2;
 #endif
-
+    
     attribute any anyAttribute;
 
 #if defined(TESTING_JS)
-        // Overloads
+    // Overloads
     void    overloadedMethod(TestObj? objArg, [StrictTypeChecking] DOMString strArg);
     void    overloadedMethod(TestObj? objArg, optional long longArg);
     void    overloadedMethod([StrictTypeChecking] DOMString strArg);
@@ -189,12 +192,12 @@ enum TestEnumType { "", "EnumValue1", "EnumValue2", "EnumValue3" };
     void    overloadedMethod(DOMString strArg);
 #endif
 
-        // Class methods within JavaScript (like what's used for IDBKeyRange).
-        static void classMethod();
+    // Class methods within JavaScript (like what's used for IDBKeyRange).
+    static void classMethod();
     static long classMethodWithOptional(optional long arg);
     [Custom] static void classMethod2(long arg);
 
-        // Static method with conditional on overloaded methods
+    // Static method with conditional on overloaded methods
     [Conditional=Condition1] static void overloadedMethod1(long arg);
     [Conditional=Condition1] static void overloadedMethod1([StrictTypeChecking] DOMString type);
 
@@ -202,49 +205,52 @@ enum TestEnumType { "", "EnumValue1", "EnumValue2", "EnumValue3" };
 
 #if defined(TESTING_JS)
     void methodWithUnsignedLongSequence(sequence<unsigned long> unsignedLongSequence);
-    DOMString[] stringArrayFunction(DOMString[] values) raises(DOMException);
-    DOMStringList domStringListFunction(DOMStringList values) raises(DOMException);
+    [RaisesException] DOMString[] stringArrayFunction(DOMString[] values);
+    [RaisesException] DOMStringList domStringListFunction(DOMStringList values);
 #endif
 
     [CheckSecurityForNode] readonly attribute Document contentDocument;
-        [CheckSecurityForNode] SVGDocument getSVGDocument()
-            raises(DOMException);
+    [CheckSecurityForNode, RaisesException] SVGDocument getSVGDocument();
 
     void convert1([TreatReturnedNullStringAs=Null] TestNode value);
     void convert2([TreatReturnedNullStringAs=Undefined] TestNode value);
     void convert4([TreatNullAs=NullString] TestNode value);
     void convert5([TreatNullAs=NullString, TreatUndefinedAs=NullString] TestNode value);
 
-        attribute SVGPoint mutablePoint;
+    attribute SVGPoint mutablePoint;
     [Immutable] attribute SVGPoint immutablePoint;
-        SVGPoint mutablePointFunction();
-        [Immutable] SVGPoint immutablePointFunction();
+    SVGPoint mutablePointFunction();
+    [Immutable] SVGPoint immutablePointFunction();
 
-        [ImplementedAs=banana] void orange();
+    [ImplementedAs=banana] void orange();
     [ImplementedAs=blueberry] attribute long strawberry;
 
     [StrictTypeChecking] attribute float strictFloat;
-    [StrictTypeChecking] bool strictFunction(DOMString str, float a, long b)
-            raises(DOMException);
+    [StrictTypeChecking, RaisesException] bool strictFunction(DOMString str, float a, long b);
 
-        // ObjectiveC reserved words.
-        readonly attribute long      description;
-        attribute long               id;
-        readonly attribute DOMString hash;
+#if defined(TESTING_JS)
+    [StrictTypeChecking, RaisesException] bool strictFunctionWithSequence(TestObj objArg, sequence<unsigned long> a);
+    [StrictTypeChecking, RaisesException] bool strictFunctionWithArray(TestObj objArg, long[] array);
+#endif
 
-        // Check constants and enums.
-        const unsigned short CONST_VALUE_0 = 0;
-        const unsigned short CONST_VALUE_1 = 1;
-        const unsigned short CONST_VALUE_2 = 2;
-        const unsigned short CONST_VALUE_4 = 4;
-        const unsigned short CONST_VALUE_8 = 8;
-        const short CONST_VALUE_9 = -1;
-        const DOMString CONST_VALUE_10 = "my constant string";
-        const unsigned short CONST_VALUE_11 = 0xffffffff;
-        const unsigned short CONST_VALUE_12 = 0x01;
-        const unsigned short CONST_VALUE_13 = 0X20;
-        const unsigned short CONST_VALUE_14 = 0x1abc;
-        [Reflect=CONST_IMPL] const unsigned short CONST_JAVASCRIPT = 15;
+    // ObjectiveC reserved words.
+    readonly attribute long      description;
+    attribute long               id;
+    readonly attribute DOMString hash;
+
+    // Check constants and enums.
+    const unsigned short CONST_VALUE_0 = 0;
+    const unsigned short CONST_VALUE_1 = 1;
+    const unsigned short CONST_VALUE_2 = 2;
+    const unsigned short CONST_VALUE_4 = 4;
+    const unsigned short CONST_VALUE_8 = 8;
+    const short CONST_VALUE_9 = -1;
+    const DOMString CONST_VALUE_10 = "my constant string";
+    const unsigned short CONST_VALUE_11 = 0xffffffff;
+    const unsigned short CONST_VALUE_12 = 0x01;
+    const unsigned short CONST_VALUE_13 = 0X20;
+    const unsigned short CONST_VALUE_14 = 0x1abc;
+    [Reflect=CONST_IMPL] const unsigned short CONST_JAVASCRIPT = 15;
 
     [Replaceable] readonly attribute long replaceableAttribute;
 
@@ -260,6 +266,15 @@ enum TestEnumType { "", "EnumValue1", "EnumValue2", "EnumValue3" };
 
     attribute long? nullableLongSettableAttribute;
 
-    attribute long? nullableStringValue
-        getter raises(DOMException);
-    };
+    [GetterRaisesException] attribute long? nullableStringValue;
+
+    // Identifiers with a leading underscore, which should be removed.
+    const unsigned short               _readonly = 0;
+    readonly attribute DOMString       _attribute;
+    attribute _optional                attributeWithReservedEnumType;
+    void _any(float a, long b);
+};
+
+// The following comment should not generate any code.
+// TestObj implements TestImplements;
+

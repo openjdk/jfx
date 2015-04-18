@@ -40,10 +40,10 @@ bool JSNamedNodeMap::canGetItemsForName(ExecState*, NamedNodeMap* impl, Property
     return impl->getNamedItem(propertyNameToAtomicString(propertyName));
 }
 
-JSValue JSNamedNodeMap::nameGetter(ExecState* exec, JSValue slotBase, PropertyName propertyName)
+EncodedJSValue JSNamedNodeMap::nameGetter(ExecState* exec, JSObject* slotBase, EncodedJSValue, PropertyName propertyName)
 {
-    JSNamedNodeMap* thisObj = jsCast<JSNamedNodeMap*>(asObject(slotBase));
-    return toJS(exec, thisObj->globalObject(), thisObj->impl()->getNamedItem(propertyNameToAtomicString(propertyName)));
+    JSNamedNodeMap* thisObj = jsCast<JSNamedNodeMap*>(slotBase);
+    return JSValue::encode(toJS(exec, thisObj->globalObject(), thisObj->impl().getNamedItem(propertyNameToAtomicString(propertyName))));
 }
 
 } // namespace WebCore

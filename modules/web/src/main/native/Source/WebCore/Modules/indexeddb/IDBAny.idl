@@ -25,9 +25,9 @@
 
 [
     NoInterfaceObject,
-        Conditional=INDEXED_DATABASE,
+    Conditional=INDEXED_DATABASE,
     CustomToJSObject,
     JSNoStaticTables
 ] interface IDBAny {
-        // This space is intentionally left blank.
-    };
+    // This space is intentionally left blank.
+};

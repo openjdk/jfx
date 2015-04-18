@@ -27,21 +27,19 @@
 #ifndef RenderSVGResourceFilterPrimitive_h
 #define RenderSVGResourceFilterPrimitive_h
 
-#if ENABLE(SVG) && ENABLE(FILTERS)
+#if ENABLE(FILTERS)
 
-#include "RenderSVGHiddenContainer.h"
 #include "RenderSVGResourceFilter.h"
 
 namespace WebCore {
 
 class FilterEffect;
+class SVGFilterPrimitiveStandardAttributes;
 
-class RenderSVGResourceFilterPrimitive : public RenderSVGHiddenContainer {
+class RenderSVGResourceFilterPrimitive final : public RenderSVGHiddenContainer {
 public:
-    explicit RenderSVGResourceFilterPrimitive(SVGStyledElement* filterPrimitiveElement)
-        : RenderSVGHiddenContainer(filterPrimitiveElement)
-    {
-    }
+    RenderSVGResourceFilterPrimitive(SVGFilterPrimitiveStandardAttributes&, PassRef<RenderStyle>);
+    SVGFilterPrimitiveStandardAttributes& filterPrimitiveElement() const;
 
     virtual void styleDidChange(StyleDifference, const RenderStyle*);
 
@@ -58,10 +56,12 @@ public:
             return;
         static_cast<RenderSVGResourceFilter*>(filter)->primitiveAttributeChanged(this, attribute);
     }
+private:
+    void element() const = delete;
 };
 
 } // namespace WebCore
 
-#endif // ENABLE(SVG) && ENABLE(FILTERS)
+#endif // ENABLE(FILTERS)
 
 #endif // RenderSVGResourceFilterPrimitive_h

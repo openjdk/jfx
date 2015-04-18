@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,6 +54,7 @@ import org.apache.tools.ant.types.FileSet;
  */
 public class FXJar extends Task {
     private String destFile = null;
+    private String codebase = null;
     private Application app = null;
     private Platform platform = null;
     private Resources resources = null;
@@ -80,6 +81,13 @@ public class FXJar extends Task {
         return platform;
     }
 
+    private Permissions perms = null;
+    
+    public Permissions createPermissions() {
+        perms = new Permissions();
+        return perms;
+    }
+    
     public Resources createResources() {
         resources = new Resources();
         return resources;
@@ -92,6 +100,15 @@ public class FXJar extends Task {
      */
     public void setDestfile(String v) {
         destFile = v;
+    }
+    
+    /*
+     * If specified, then packager adds the "Codebase" attribute to the manifest file
+     *
+     * @ant.not-required Default is null.
+     */
+    public void setCodebase(String v) {
+        codebase = v;
     }
 
     /**
@@ -124,6 +141,14 @@ public class FXJar extends Task {
            createJarParams.setArguments(app.get().getArguments());
         }
 
+        if (perms != null) {
+            createJarParams.setAllPermissions(perms.getElevated());
+        }
+        
+        if (codebase != null) {
+            createJarParams.setCodebase(codebase);
+        }
+        
         if (platform != null) {
            createJarParams.setFxVersion(platform.get().javafx);
         }

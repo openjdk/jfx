@@ -21,14 +21,11 @@
 #ifndef SVGTextContentElement_h
 #define SVGTextContentElement_h
 
-#if ENABLE(SVG)
 #include "SVGAnimatedBoolean.h"
 #include "SVGAnimatedEnumeration.h"
 #include "SVGAnimatedLength.h"
 #include "SVGExternalResourcesRequired.h"
-#include "SVGLangSpace.h"
-#include "SVGStyledElement.h"
-#include "SVGTests.h"
+#include "SVGGraphicsElement.h"
 
 namespace WebCore {
 
@@ -67,10 +64,7 @@ struct SVGPropertyTraits<SVGLengthAdjustType> {
     }
 };
 
-class SVGTextContentElement : public SVGStyledElement,
-                              public SVGTests,
-                              public SVGLangSpace,
-                              public SVGExternalResourcesRequired {
+class SVGTextContentElement : public SVGGraphicsElement, public SVGExternalResourcesRequired {
 public:
     // Forward declare enumerations in the W3C naming scheme, for IDL generation.
     enum {
@@ -82,11 +76,11 @@ public:
     unsigned getNumberOfChars();
     float getComputedTextLength();
     float getSubStringLength(unsigned charnum, unsigned nchars, ExceptionCode&);
-    FloatPoint getStartPositionOfChar(unsigned charnum, ExceptionCode&);
-    FloatPoint getEndPositionOfChar(unsigned charnum, ExceptionCode&);
+    SVGPoint getStartPositionOfChar(unsigned charnum, ExceptionCode&);
+    SVGPoint getEndPositionOfChar(unsigned charnum, ExceptionCode&);
     FloatRect getExtentOfChar(unsigned charnum, ExceptionCode&);
     float getRotationOfChar(unsigned charnum, ExceptionCode&);
-    int getCharNumAtPosition(const FloatPoint&);
+    int getCharNumAtPosition(const SVGPoint&);
     void selectSubString(unsigned charnum, unsigned nchars, ExceptionCode&);
 
     static SVGTextContentElement* elementFromRenderer(RenderObject*);
@@ -98,20 +92,20 @@ public:
     static const SVGPropertyInfo* textLengthPropertyInfo();
 
 protected:
-    SVGTextContentElement(const QualifiedName&, Document*);
+    SVGTextContentElement(const QualifiedName&, Document&);
 
-    virtual bool isValid() const { return SVGTests::isValid(); }
+    virtual bool isValid() const override { return SVGTests::isValid(); }
 
     bool isSupportedAttribute(const QualifiedName&);
-    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
-    virtual bool isPresentationAttribute(const QualifiedName&) const OVERRIDE;
-    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStylePropertySet*) OVERRIDE;
-    virtual void svgAttributeChanged(const QualifiedName&);
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
+    virtual bool isPresentationAttribute(const QualifiedName&) const override;
+    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStyleProperties&) override;
+    virtual void svgAttributeChanged(const QualifiedName&) override;
 
-    virtual bool selfHasRelativeLengths() const;
+    virtual bool selfHasRelativeLengths() const override;
 
 private:
-    virtual bool isTextContent() const { return true; }
+    virtual bool isTextContent() const override final { return true; }
 
     // Custom 'textLength' property
     static void synchronizeTextLength(SVGElement* contextElement);
@@ -123,20 +117,13 @@ private:
         DECLARE_ANIMATED_ENUMERATION(LengthAdjust, lengthAdjust, SVGLengthAdjustType)
         DECLARE_ANIMATED_BOOLEAN(ExternalResourcesRequired, externalResourcesRequired) 
     END_DECLARE_ANIMATED_PROPERTIES
-
-    // SVGTests
-    virtual void synchronizeRequiredFeatures() { SVGTests::synchronizeRequiredFeatures(this); }
-    virtual void synchronizeRequiredExtensions() { SVGTests::synchronizeRequiredExtensions(this); }
-    virtual void synchronizeSystemLanguage() { SVGTests::synchronizeSystemLanguage(this); }
 };
 
-inline SVGTextContentElement* toSVGTextContentElement(SVGElement* element)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!element || element->isTextContent());
-    return static_cast<SVGTextContentElement*>(element);
-}
+void isSVGTextContentElement(const SVGTextContentElement&); // Catch unnecessary runtime check of type known at compile time.
+inline bool isSVGTextContentElement(const SVGElement& element) { return element.isTextContent(); }
+inline bool isSVGTextContentElement(const Node& node) { return node.isSVGElement() && toSVGElement(node).isTextContent(); }
+NODE_TYPE_CASTS(SVGTextContentElement)
 
 } // namespace WebCore
 
-#endif // ENABLE(SVG)
 #endif

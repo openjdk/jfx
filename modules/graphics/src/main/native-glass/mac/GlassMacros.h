@@ -31,6 +31,7 @@
 #import <jni.h>
 #import <Cocoa/Cocoa.h>
 #import <assert.h>
+#import <execinfo.h>
 
 #import "GlassStatics.h"
 #import "common.h"
@@ -202,10 +203,25 @@ do {                                                                            
     GlassThreadData *_GlassThreadData = (GlassThreadData*)pthread_getspecific(GlassThreadDataKey); \
     GLASS_POOL_EXIT
 
+#define GLASS_CALLSTACK(MSG) \
+{ \
+    void* callstack[128]; \
+    fprintf(stderr, MSG "%s:%s:%d\n", \
+            __FUNCTION__, __FILE__, __LINE__); \
+    int i, frames = backtrace(callstack, 128); \
+    char** strs = backtrace_symbols(callstack, frames); \
+    for (i = 0; i < frames; ++i) { \
+        printf("%s\n", strs[i]); \
+    } \
+    free(strs); \
+}
+
+
 // retrieve main thread Java env asserting the call originated on main thread
 #define GET_MAIN_JENV \
-        assert(pthread_main_np() == 1); \
-        if (jEnv == NULL) fprintf(stderr, "Java has been detached already, but someone is still trying to use it at %s:%s:%d\n", __FUNCTION__, __FILE__, __LINE__); \
+    assert(pthread_main_np() == 1); \
+    if (jEnv == NULL) \
+        GLASS_CALLSTACK("Java has been detached already, but someone is still trying to use it at ") \
     JNIEnv *env = jEnv;
-        
+
 #endif

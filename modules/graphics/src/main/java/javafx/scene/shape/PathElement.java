@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,7 @@
 
 package javafx.scene.shape;
 
-import com.sun.javafx.WeakReferenceQueue;
+import com.sun.javafx.util.WeakReferenceQueue;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.sg.prism.NGPath;
 import javafx.beans.property.BooleanProperty;

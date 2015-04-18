@@ -18,26 +18,20 @@
  * Boston, MA 02110-1301, USA.
  */
 
-    // Introduced in DOM Level 2:
+// Introduced in DOM Level 2:
 [
     JSCustomHeader,
-        JSCustomMarkFunction,
+    JSCustomMarkFunction,
     GenerateIsReachable,
-        CustomToJSObject,
-        ObjCPolymorphic,
+    CustomToJSObject,
+    ObjCPolymorphic,
 ] interface StyleSheet {
     [TreatReturnedNullStringAs=Null] readonly attribute DOMString        type;
-                 attribute boolean          disabled;
-        readonly attribute Node             ownerNode;
-        readonly attribute StyleSheet       parentStyleSheet;
+             attribute boolean          disabled;
+    readonly attribute Node             ownerNode;
+    readonly attribute StyleSheet       parentStyleSheet;
     [TreatReturnedNullStringAs=Null] readonly attribute DOMString        href;
     [TreatReturnedNullStringAs=Null] readonly attribute DOMString        title;
-        readonly attribute MediaList        media;
-
-#if defined(LANGUAGE_CPP) && LANGUAGE_CPP
-        // Extra WebCore methods exposed to allowe compile-time casting in C++
-        boolean isCSSStyleSheet();
-#endif
-
-    };
+    readonly attribute MediaList        media;
+};
 

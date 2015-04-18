@@ -19,7 +19,6 @@
  */
 
 #include "config.h"
-#if ENABLE(SVG)
 #include "SVGTitleElement.h"
 
 #include "Document.h"
@@ -27,43 +26,42 @@
 
 namespace WebCore {
 
-inline SVGTitleElement::SVGTitleElement(const QualifiedName& tagName, Document* document)
-    : SVGStyledElement(tagName, document)
+inline SVGTitleElement::SVGTitleElement(const QualifiedName& tagName, Document& document)
+    : SVGElement(tagName, document)
 {
     ASSERT(hasTagName(SVGNames::titleTag));
 }
 
-PassRefPtr<SVGTitleElement> SVGTitleElement::create(const QualifiedName& tagName, Document* document)
+PassRefPtr<SVGTitleElement> SVGTitleElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(new SVGTitleElement(tagName, document));
 }
 
-Node::InsertionNotificationRequest SVGTitleElement::insertedInto(ContainerNode* rootParent)
+Node::InsertionNotificationRequest SVGTitleElement::insertedInto(ContainerNode& rootParent)
 {
-    SVGStyledElement::insertedInto(rootParent);
-    if (!rootParent->inDocument())
+    SVGElement::insertedInto(rootParent);
+    if (!rootParent.inDocument())
         return InsertionDone;
+    // FIXME: It's possible to register SVGTitleElement to an HTMLDocument.
     if (firstChild())
         // FIXME: does SVG have a title text direction?
-        document()->setTitleElement(StringWithDirection(textContent(), LTR), this);
+        document().setTitleElement(StringWithDirection(textContent(), LTR), this);
     return InsertionDone;
 }
 
-void SVGTitleElement::removedFrom(ContainerNode* rootParent)
+void SVGTitleElement::removedFrom(ContainerNode& rootParent)
 {
     SVGElement::removedFrom(rootParent);
-    if (rootParent->inDocument())
-        document()->removeTitle(this);
+    if (rootParent.inDocument())
+        document().removeTitle(this);
 }
 
-void SVGTitleElement::childrenChanged(bool changedByParser, Node* beforeChange, Node* afterChange, int childCountDelta)
+void SVGTitleElement::childrenChanged(const ChildChange& change)
 {
-    SVGElement::childrenChanged(changedByParser, beforeChange, afterChange, childCountDelta);
+    SVGElement::childrenChanged(change);
     if (inDocument())
         // FIXME: does SVG have title text direction?
-        document()->setTitleElement(StringWithDirection(textContent(), LTR), this);
+        document().setTitleElement(StringWithDirection(textContent(), LTR), this);
 }
 
 }
-
-#endif // ENABLE(SVG)

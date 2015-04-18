@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-# Copyright (C) 2010 Apple Inc. All rights reserved.
+# Copyright (C) 2010, 2013 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -25,7 +25,6 @@
 
 
 base_directory = ENV['TARGET_BUILD_DIR'] or throw "Unable to find TARGET_BUILD_DIR in the environment!"
-is_shallow_bundle = (ENV['SHALLOW_BUNDLE'] || "NO").upcase == "YES"
 
 Dir.chdir base_directory
 
@@ -38,19 +37,21 @@ $error_printed = false
 
 def print_error msg
   $error_printed = true
-  STDERR.puts "ERROR: #{msg}"
+  STDERR.puts "error: #{msg}"
 end
 
-def build_header_maps is_shallow_bundle
-  current_version_path = is_shallow_bundle ? "" : "Versions/A/"
-  all_headers = `find WebKit.framework/#{current_version_path}{,Private}Headers -type f -name '*.h'`.split
+def build_header_maps
+  all_headers = `find #{ENV['PUBLIC_HEADERS_FOLDER_PATH']} #{ENV['PRIVATE_HEADERS_FOLDER_PATH']} -type f -name '*.h'`.split
 
   all_headers.each do |header|
     if /\/Headers\/(.*)/.match(header)
       $HEADER_NAMES_TO_TYPE[$1] = :public
       $HEADERS_BY_TYPE[:public] << header
     elsif /\/PrivateHeaders\/(.*)/.match(header)
-      $HEADER_NAMES_TO_TYPE[$1] = :private
+      # If the same header exists both as a public header and as a private header, assume that it
+      # has been promoted to public, and the private instance is stale.
+      # FIXME: This can be improved by checking time stamps.
+      $HEADER_NAMES_TO_TYPE[$1] = :private if !$HEADER_NAMES_TO_TYPE[$1]
       $HEADERS_BY_TYPE[:private] << header
     else
       print_error "Unknown header type: #{header}"
@@ -66,12 +67,16 @@ def resolve_include(header, included_header, permitted_types)
 
   # Ignore includes that aren't related to other WebKit headers.
   return unless framework =~ /^Web/
-
+  
   # A header of any type including a WebCore header is a recipe for disaster.
   if framework == "WebCore"
     print_error "#{header} included #{included_header}!"
     return
   end
+
+  # iOS we want to keep the WAK headers private, even if a public header includes them,
+  # so we are going to not show warnings for WAK headers.
+  return if framework == "WebKit" and included_header_name =~ /^WAK/
 
   header_type = $HEADER_NAMES_TO_TYPE[included_header_name]
 
@@ -92,7 +97,7 @@ def verify_includes(header, permitted_types)
   end
 end
 
-build_header_maps is_shallow_bundle
+build_header_maps
 
 $HEADERS_BY_TYPE.each do |header_type, headers|
   permitted_types = $PERMITTED_INCLUDE_TYPES[header_type]

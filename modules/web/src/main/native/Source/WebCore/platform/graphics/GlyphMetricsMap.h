@@ -30,18 +30,17 @@
 #define GlyphMetricsMap_h
 
 #include "Glyph.h"
-#include <wtf/FixedArray.h>
+#include <array>
 #include <wtf/HashMap.h>
 #include <wtf/OwnPtr.h>
 #include <wtf/PassOwnPtr.h>
-#include <wtf/unicode/Unicode.h>
 
 namespace WebCore {
 
 const float cGlyphSizeUnknown = -1;
 
 template<class T> class GlyphMetricsMap {
-    WTF_MAKE_NONCOPYABLE(GlyphMetricsMap);
+    WTF_MAKE_NONCOPYABLE(GlyphMetricsMap); WTF_MAKE_FAST_ALLOCATED;
 public:
     GlyphMetricsMap() : m_filledPrimaryPage(false) { }
     T metricsForGlyph(Glyph glyph)
@@ -55,9 +54,11 @@ public:
     }
 
 private:
-    struct GlyphMetricsPage {
+    class GlyphMetricsPage {
+        WTF_MAKE_FAST_ALLOCATED;
+    public:
         static const size_t size = 256; // Usually covers Latin-1 in a single page.
-        FixedArray<T, size> m_metrics;
+        std::array<T, size> m_metrics;
 
         T metricsForGlyph(Glyph glyph) const { return m_metrics[glyph % size]; }
         void setMetricsForGlyph(Glyph glyph, const T& metrics)
@@ -83,7 +84,7 @@ private:
 
     bool m_filledPrimaryPage;
     GlyphMetricsPage m_primaryPage; // We optimize for the page that contains glyph indices 0-255.
-    OwnPtr<HashMap<int, OwnPtr<GlyphMetricsPage> > > m_pages;
+    OwnPtr<HashMap<int, OwnPtr<GlyphMetricsPage>>> m_pages;
 };
 
 template<> inline float GlyphMetricsMap<float>::unknownMetrics()
@@ -108,7 +109,7 @@ template<class T> typename GlyphMetricsMap<T>::GlyphMetricsPage* GlyphMetricsMap
             if ((page = m_pages->get(pageNumber)))
                 return page;
         } else
-            m_pages = adoptPtr(new HashMap<int, OwnPtr<GlyphMetricsPage> >);
+            m_pages = adoptPtr(new HashMap<int, OwnPtr<GlyphMetricsPage>>);
         page = new GlyphMetricsPage;
         m_pages->set(pageNumber, adoptPtr(page));
     }

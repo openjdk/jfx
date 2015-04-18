@@ -25,39 +25,33 @@
 
 namespace WebCore {
 
-    class HTMLInputElement;
-    class MouseEvent;
-    class SliderThumbElement;
-    
-class RenderSlider : public RenderFlexibleBox {
-    public:
+class HTMLInputElement;
+class MouseEvent;
+class SliderThumbElement;
+
+class RenderSlider final : public RenderFlexibleBox {
+public:
     static const int defaultTrackLength;
 
-    explicit RenderSlider(HTMLInputElement*);
-        virtual ~RenderSlider();
+    RenderSlider(HTMLInputElement&, PassRef<RenderStyle>);
+    virtual ~RenderSlider();
 
-        bool inDragMode() const;
+    HTMLInputElement& element() const;
 
-    private:
-        virtual const char* renderName() const { return "RenderSlider"; }
-        virtual bool isSlider() const { return true; }
-    virtual bool canBeReplacedWithInlineRunIn() const OVERRIDE;
+    bool inDragMode() const;
 
-    virtual int baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const;
-    virtual void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const OVERRIDE;
-    virtual void computePreferredLogicalWidths() OVERRIDE;
-        virtual bool requiresForcedStyleRecalcPropagation() const { return true; }
-        virtual void layout();
-    };
+private:
+    virtual const char* renderName() const override { return "RenderSlider"; }
+    virtual bool isSlider() const override { return true; }
 
-    inline RenderSlider* toRenderSlider(RenderObject* object)
-    {
-    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isSlider());
-        return static_cast<RenderSlider*>(object);
-    }
+    virtual int baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const override;
+    virtual void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const override;
+    virtual void computePreferredLogicalWidths() override;
+    virtual bool requiresForcedStyleRecalcPropagation() const override { return true; }
+    virtual void layout() override;
+};
 
-    // This will catch anyone doing an unnecessary cast.
-    void toRenderSlider(const RenderSlider*);
+RENDER_OBJECT_TYPE_CASTS(RenderSlider, isSlider())
 
 } // namespace WebCore
 

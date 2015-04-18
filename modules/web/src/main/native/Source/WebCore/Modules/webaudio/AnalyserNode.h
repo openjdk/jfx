@@ -41,8 +41,8 @@ public:
     virtual ~AnalyserNode();
     
     // AudioNode
-    virtual void process(size_t framesToProcess);
-    virtual void reset();
+    virtual void process(size_t framesToProcess) override;
+    virtual void reset() override;
 
     // Javascript bindings
     unsigned fftSize() const { return m_analyser.fftSize(); }
@@ -50,22 +50,22 @@ public:
 
     unsigned frequencyBinCount() const { return m_analyser.frequencyBinCount(); }
 
-    void setMinDecibels(float k) { m_analyser.setMinDecibels(k); }
-    float minDecibels() const { return m_analyser.minDecibels(); }
+    void setMinDecibels(double k, ExceptionCode&);
+    double minDecibels() const { return m_analyser.minDecibels(); }
 
-    void setMaxDecibels(float k) { m_analyser.setMaxDecibels(k); }
-    float maxDecibels() const { return m_analyser.maxDecibels(); }
+    void setMaxDecibels(double k, ExceptionCode&);
+    double maxDecibels() const { return m_analyser.maxDecibels(); }
 
-    void setSmoothingTimeConstant(float k) { m_analyser.setSmoothingTimeConstant(k); }
-    float smoothingTimeConstant() const { return m_analyser.smoothingTimeConstant(); }
+    void setSmoothingTimeConstant(double k, ExceptionCode&);
+    double smoothingTimeConstant() const { return m_analyser.smoothingTimeConstant(); }
 
-    void getFloatFrequencyData(Float32Array* array) { m_analyser.getFloatFrequencyData(array); }
-    void getByteFrequencyData(Uint8Array* array) { m_analyser.getByteFrequencyData(array); }
-    void getByteTimeDomainData(Uint8Array* array) { m_analyser.getByteTimeDomainData(array); }
+    void getFloatFrequencyData(JSC::Float32Array* array) { m_analyser.getFloatFrequencyData(array); }
+    void getByteFrequencyData(JSC::Uint8Array* array) { m_analyser.getByteFrequencyData(array); }
+    void getByteTimeDomainData(JSC::Uint8Array* array) { m_analyser.getByteTimeDomainData(array); }
 
 private:
-    virtual double tailTime() const OVERRIDE { return 0; }
-    virtual double latencyTime() const OVERRIDE { return 0; }
+    virtual double tailTime() const override { return 0; }
+    virtual double latencyTime() const override { return 0; }
 
     AnalyserNode(AudioContext*, float sampleRate);
 

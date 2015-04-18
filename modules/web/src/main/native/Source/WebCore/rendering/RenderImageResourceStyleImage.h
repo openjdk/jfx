@@ -32,35 +32,31 @@
 
 namespace WebCore {
 
-class RenderObject;
+class RenderElement;
 
-class RenderImageResourceStyleImage : public RenderImageResource {
+class RenderImageResourceStyleImage final : public RenderImageResource {
 public:
+    explicit RenderImageResourceStyleImage(StyleImage&);
     virtual ~RenderImageResourceStyleImage();
 
-    static PassOwnPtr<RenderImageResource> create(StyleImage* styleImage)
-    {
-        return adoptPtr(new RenderImageResourceStyleImage(styleImage));
-    }
-    virtual void initialize(RenderObject*);
-    virtual void shutdown();
-
-    virtual bool hasImage() const { return true; }
-    virtual PassRefPtr<Image> image(int width = 0, int height = 0) const;
-    virtual bool errorOccurred() const { return m_styleImage->errorOccurred(); }
-
-    virtual void setContainerSizeForRenderer(const IntSize&);
-    virtual bool usesImageContainerSize() const { return m_styleImage->usesImageContainerSize(); }
-    virtual bool imageHasRelativeWidth() const { return m_styleImage->imageHasRelativeWidth(); }
-    virtual bool imageHasRelativeHeight() const { return m_styleImage->imageHasRelativeHeight(); }
-
-    virtual LayoutSize imageSize(float multiplier) const OVERRIDE { return m_styleImage->imageSize(m_renderer, multiplier); }
-
-    virtual WrappedImagePtr imagePtr() const { return m_styleImage->data(); }
-
 private:
-    RenderImageResourceStyleImage(StyleImage*);
-    RefPtr<StyleImage> m_styleImage;
+    virtual void initialize(RenderElement*) override;
+    virtual void shutdown() override;
+
+    virtual bool hasImage() const override { return true; }
+    virtual PassRefPtr<Image> image(int width = 0, int height = 0) const override;
+    virtual bool errorOccurred() const override { return m_styleImage->errorOccurred(); }
+
+    virtual void setContainerSizeForRenderer(const IntSize&) override;
+    virtual bool imageHasRelativeWidth() const override { return m_styleImage->imageHasRelativeWidth(); }
+    virtual bool imageHasRelativeHeight() const override { return m_styleImage->imageHasRelativeHeight(); }
+
+    virtual LayoutSize imageSize(float multiplier) const override { return m_styleImage->imageSize(m_renderer, multiplier); }
+    virtual LayoutSize intrinsicSize(float multiplier) const override { return m_styleImage->imageSize(m_renderer, multiplier); }
+
+    virtual WrappedImagePtr imagePtr() const override { return m_styleImage->data(); }
+
+    Ref<StyleImage> m_styleImage;
 };
 
 } // namespace WebCore

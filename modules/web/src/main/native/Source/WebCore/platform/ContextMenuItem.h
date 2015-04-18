@@ -33,7 +33,7 @@
 #include <wtf/OwnPtr.h>
 #include <wtf/text/WTFString.h>
 
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
 #include <wtf/RetainPtr.h>
 OBJC_CLASS NSMenuItem;
 #elif PLATFORM(GTK)
@@ -58,7 +58,7 @@ namespace WebCore {
         ContextMenuItemTagOpenImageInNewWindow,
         ContextMenuItemTagDownloadImageToDisk,
         ContextMenuItemTagCopyImageToClipboard,
-#if PLATFORM(QT) || PLATFORM(GTK) || PLATFORM(EFL)
+#if PLATFORM(GTK) || PLATFORM(EFL)
         ContextMenuItemTagCopyImageUrlToClipboard,
 #endif
         ContextMenuItemTagOpenFrameInNewWindow,
@@ -72,7 +72,7 @@ namespace WebCore {
 #if PLATFORM(GTK)
         ContextMenuItemTagDelete,
 #endif
-#if PLATFORM(GTK) || PLATFORM(QT) || PLATFORM (EFL)
+#if PLATFORM(GTK) || PLATFORM (EFL)
         ContextMenuItemTagSelectAll,
 #endif
 #if PLATFORM(GTK)
@@ -139,7 +139,7 @@ namespace WebCore {
         ContextMenuItemTagTextDirectionDefault,
         ContextMenuItemTagTextDirectionLeftToRight,
         ContextMenuItemTagTextDirectionRightToLeft,
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
         ContextMenuItemTagCorrectSpellingAutomatically,
         ContextMenuItemTagSubstitutionsMenu,
         ContextMenuItemTagShowSubstitutions,
@@ -155,6 +155,7 @@ namespace WebCore {
         ContextMenuItemTagChangeBack,
 #endif
         ContextMenuItemTagOpenMediaInNewWindow,
+        ContextMenuItemTagDownloadMediaToDisk,
         ContextMenuItemTagCopyMediaLinkToClipboard,
         ContextMenuItemTagToggleMediaControls,
         ContextMenuItemTagToggleMediaLoop,
@@ -163,6 +164,7 @@ namespace WebCore {
         ContextMenuItemTagMediaMute,
         ContextMenuItemTagDictationAlternative,
         ContextMenuItemTagOpenLinkInThisWindow,
+        ContextMenuItemTagToggleVideoFullscreen,
         ContextMenuItemBaseCustomTag = 5000,
         ContextMenuItemCustomTagNoAction = 5998,
         ContextMenuItemLastCustomTag = 5999,
@@ -177,7 +179,7 @@ namespace WebCore {
     };
 
 #if ENABLE(CONTEXT_MENUS)
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
     typedef NSMenuItem* PlatformMenuItemDescription;
 #elif PLATFORM(GTK)
     typedef GtkMenuItem* PlatformMenuItemDescription;
@@ -253,7 +255,7 @@ namespace WebCore {
         bool m_checked;
         Vector<ContextMenuItem> m_subMenuItems;
 #else
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
         RetainPtr<NSMenuItem> m_platformDescription;
 #else
         PlatformMenuItemDescription m_platformDescription;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,7 @@ import java.util.Map;
 
 import com.sun.glass.ui.Screen;
 import com.sun.javafx.PlatformUtil;
+import com.sun.prism.Image;
 import com.sun.prism.MediaFrame;
 import com.sun.prism.Mesh;
 import com.sun.prism.MeshView;
@@ -49,14 +50,19 @@ import com.sun.prism.ps.Shader;
 import com.sun.prism.ps.ShaderFactory;
 import java.lang.reflect.Method;
 import java.util.HashMap;
+import java.util.WeakHashMap;
 
 public class ES2ResourceFactory extends BaseShaderFactory {
+    private static final Map<Image,Texture> clampTexCache = new WeakHashMap<>();
+    private static final Map<Image,Texture> repeatTexCache = new WeakHashMap<>();
+    private static final Map<Image,Texture> mipmapTexCache = new WeakHashMap<>();
 
     private ES2Context context;
     // Maximum size of the texture
     private final int maxTextureSize;
 
     ES2ResourceFactory(Screen screen) {
+        super(clampTexCache, repeatTexCache, mipmapTexCache);
         context = new ES2Context(screen, this);
         maxTextureSize = computeMaxTextureSize();
 

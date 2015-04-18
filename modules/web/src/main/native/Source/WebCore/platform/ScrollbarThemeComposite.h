@@ -28,6 +28,12 @@
 
 #include "ScrollbarTheme.h"
 
+#if PLATFORM(COCOA)
+typedef id ScrollbarPainter;
+#else
+typedef void* ScrollbarPainter;
+#endif
+
 namespace WebCore {
 
 class ScrollbarThemeComposite : public ScrollbarTheme {
@@ -54,6 +60,9 @@ public:
     virtual void splitTrack(ScrollbarThemeClient*, const IntRect& track, IntRect& startTrack, IntRect& thumb, IntRect& endTrack);
     
     virtual int minimumThumbLength(ScrollbarThemeClient*);
+
+    virtual void willPaintScrollbar(GraphicsContext*, ScrollbarThemeClient*) { }
+    virtual void didPaintScrollbar(GraphicsContext*, ScrollbarThemeClient*) { }
 
     virtual void paintScrollbarBackground(GraphicsContext*, ScrollbarThemeClient*) { }
     virtual void paintTrackBackground(GraphicsContext*, ScrollbarThemeClient*, const IntRect&) { }

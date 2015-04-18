@@ -32,9 +32,9 @@ namespace WebCore {
 class CachedImage;
 class ImageDocumentElement;
 
-class ImageDocument FINAL : public HTMLDocument {
+class ImageDocument final : public HTMLDocument {
 public:
-    static PassRefPtr<ImageDocument> create(Frame* frame, const KURL& url)
+    static PassRefPtr<ImageDocument> create(Frame* frame, const URL& url)
     {
         return adoptRef(new ImageDocument(frame, url));
     }
@@ -48,9 +48,9 @@ public:
     void imageClicked(int x, int y);
 
 private:
-    ImageDocument(Frame*, const KURL&);
+    ImageDocument(Frame*, const URL&);
 
-    virtual PassRefPtr<DocumentParser> createParser();
+    virtual PassRefPtr<DocumentParser> createParser() override;
     
     void createDocumentStructure();
     void resizeImageToFit();
@@ -70,21 +70,11 @@ private:
     // Whether the image should be shrunk or not
     bool m_shouldShrinkImage;
 };
-    
-inline ImageDocument* toImageDocument(Document* document)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!document || document->isImageDocument());
-    return static_cast<ImageDocument*>(document);
-}
 
-inline const ImageDocument* toImageDocument(const Document* document)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!document || document->isImageDocument());
-    return static_cast<const ImageDocument*>(document);
-}
+inline bool isImageDocument(const Document& document) { return document.isImageDocument(); }
+void isImageDocument(const ImageDocument&); // Catch unnecessary runtime check of type known at compile time.
 
-// This will catch anyone doing an unnecessary cast.
-void toImageDocument(const ImageDocument*);
+DOCUMENT_TYPE_CASTS(ImageDocument)
 
 }
 

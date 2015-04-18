@@ -24,9 +24,9 @@
  */
 
 [
-        Conditional=VIDEO_TRACK,
-        ConstructorTemplate=Event
+    Conditional=VIDEO_TRACK,
+    ConstructorTemplate=Event
 ] interface TrackEvent : Event {
     [InitializedByEventConstructor, CustomGetter] readonly attribute object track;
-    };
+};
 

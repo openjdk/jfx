@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -290,11 +290,19 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             // now we just set the newSelectionLead to zero in that instance.
             // There exists unit tests that cover this.
             final int newSelectionLead = Math.max(0, selectedIndex + shift);
+
             setSelectedIndex(newSelectionLead);
 
-            // added for RT-30356
-            selectedIndices.set(newSelectionLead, true);
- 
+            // added the selectedIndices call for RT-30356.
+            // changed to check if hasPermutated, and to call select(..) for RT-40010.
+            // This forces the selection event to go through the system and fire
+            // the necessary events.
+            if (hasPermutated) {
+                selectedIndices.set(newSelectionLead, true);
+            } else {
+                select(newSelectionLead);
+            }
+
             // removed due to RT-27185
 //            focus(newSelectionLead);
         }
@@ -385,6 +393,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         boolean isSameItem = newItem != null && newItem.equals(currentItem);
         boolean fireUpdatedItemEvent = isSameRow && ! isSameItem;
 
+        startAtomic();
         if (! selectedIndices.get(row)) {
             if (getSelectionMode() == SINGLE) {
                 quietClearSelection();
@@ -394,6 +403,8 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
         setSelectedIndex(row);
         focus(row);
+
+        stopAtomic();
 
         if (! isAtomic()) {
             int changeIndex = selectedIndicesSeq.indexOf(row);
@@ -514,12 +525,12 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             // list may therefore have the following: [1,4,5], meaning row 5
             // is in position 2 of the selectedIndices list
             Collections.sort(actualSelectedRows);
-            Change<Integer> change = createRangeChange(selectedIndicesSeq, actualSelectedRows);
+            Change<Integer> change = createRangeChange(selectedIndicesSeq, actualSelectedRows, false);
             selectedIndicesSeq.callObservers(change);
         }
     }
     
-    static Change<Integer> createRangeChange(final ObservableList<Integer> list, final List<Integer> addedItems) {
+    static Change<Integer> createRangeChange(final ObservableList<Integer> list, final List<Integer> addedItems, boolean splitChanges) {
         Change<Integer> change = new Change<Integer>(list) {
             private final int[] EMPTY_PERM = new int[0];
             private final int addedSize = addedItems.size(); 
@@ -567,7 +578,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
                     int previousEndValue = endValue;
                     endValue = addedItems.get(pos++);
                     ++to;
-                    if (previousEndValue != (endValue - 1)) {
+                    if (splitChanges && previousEndValue != (endValue - 1)) {
                         break;
                     }
                 }
@@ -578,12 +589,14 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
                 }
                 
                 // we keep going until we've represented all changes!
-                return pos < addedSize;
+                return splitChanges && pos < addedSize;
             }
 
             @Override public void reset() {
                 invalid = true;
                 pos = 0;
+                to = 0;
+                from = 0;
             }
             
             private void checkState() {
@@ -661,31 +674,16 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
     }
 
     @Override public void clearSelection() {
+        List<Integer> removed = createListFromBitSet((BitSet) selectedIndices.clone());
+
+        quietClearSelection();
+
         if (! isAtomic()) {
             setSelectedIndex(-1);
             focus(-1);
-        }
-
-        if (! selectedIndices.isEmpty()) {
-            List<Integer> removed = new AbstractList<Integer>() {
-                final BitSet clone = (BitSet) selectedIndices.clone();
-
-                @Override public Integer get(int index) {
-                    return clone.nextSetBit(index);
-                }
-
-                @Override public int size() {
-                    return clone.cardinality();
-                }
-            };
-
-            quietClearSelection();
-
-            if (! isAtomic()) {
-                selectedIndicesSeq.callObservers(
-                        new NonIterableChange.GenericAddRemoveChange<Integer>(0, 0,
-                        removed, selectedIndicesSeq));
-            }
+            selectedIndicesSeq.callObservers(
+                    new NonIterableChange.GenericAddRemoveChange<>(0, 0,
+                    removed, selectedIndicesSeq));
         }
     }
 
@@ -750,13 +748,33 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
     private ReadOnlyUnbackedObservableList<Integer> createListFromBitSet(final BitSet bitset) {
         return new ReadOnlyUnbackedObservableList<Integer>() {
-            @Override public Integer get(int index) {
-                if (index < 0 || index >= getItemCount()) return -1;
+            private int lastGetIndex = -1;
+            private int lastGetValue = -1;
 
-                for (int pos = 0, val = bitset.nextSetBit(0);
-                     val >= 0 || pos == index;
-                     pos++, val = bitset.nextSetBit(val+1)) {
-                    if (pos == index) return val;
+            @Override public Integer get(int index) {
+                final int itemCount = getItemCount();
+                if (index < 0 || index >= itemCount) return -1;
+
+                if (index == (lastGetIndex + 1) && lastGetValue < itemCount) {
+                    // we're iterating forward in order, short circuit for
+                    // performance reasons (RT-39776)
+                    lastGetIndex++;
+                    lastGetValue = bitset.nextSetBit(lastGetValue + 1);
+                    return lastGetValue;
+                } else if (index == (lastGetIndex - 1) && lastGetValue > 0) {
+                    // we're iterating backward in order, short circuit for
+                    // performance reasons (RT-39776)
+                    lastGetIndex--;
+                    lastGetValue = bitset.previousSetBit(lastGetValue - 1);
+                    return lastGetValue;
+                } else {
+                    for (lastGetIndex = 0, lastGetValue = bitset.nextSetBit(0);
+                         lastGetValue >= 0 || lastGetIndex == index;
+                         lastGetIndex++, lastGetValue = bitset.nextSetBit(lastGetValue + 1)) {
+                        if (lastGetIndex == index) {
+                            return lastGetValue;
+                        }
+                    }
                 }
 
                 return -1;

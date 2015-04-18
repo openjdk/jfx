@@ -26,7 +26,10 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "FastAllocBase.h"
+#ifndef WTF_MediaTime_h
+#define WTF_MediaTime_h
+
+#include <wtf/FastMalloc.h>
 
 #include <cmath>
 #include <limits>
@@ -47,7 +50,7 @@ public:
     };
 
     MediaTime();
-    MediaTime(int64_t value, int32_t scale = DefaultTimeScale, uint32_t flags = Valid);
+    MediaTime(int64_t value, int32_t scale, uint32_t flags = Valid);
     MediaTime(const MediaTime& rhs);
     ~MediaTime();
 
@@ -58,10 +61,14 @@ public:
     double toDouble() const;
 
     MediaTime& operator=(const MediaTime& rhs);
+    MediaTime& operator+=(const MediaTime& rhs) { return *this = *this + rhs; }
+    MediaTime& operator-=(const MediaTime& rhs) { return *this = *this - rhs; }
     MediaTime operator+(const MediaTime& rhs) const;
     MediaTime operator-(const MediaTime& rhs) const;
+    MediaTime operator*(int32_t) const;
     bool operator<(const MediaTime& rhs) const;
     bool operator>(const MediaTime& rhs) const;
+    bool operator!=(const MediaTime& rhs) const;
     bool operator==(const MediaTime& rhs) const;
     bool operator>=(const MediaTime& rhs) const;
     bool operator<=(const MediaTime& rhs) const;
@@ -102,8 +109,12 @@ private:
     uint32_t m_timeFlags;
 };
 
+inline MediaTime operator*(int32_t lhs, const MediaTime& rhs) { return rhs.operator*(lhs); }
+
 WTF_EXPORT_PRIVATE extern MediaTime abs(const MediaTime& rhs);
 }
 
 using WTF::MediaTime;
 using WTF::abs;
+
+#endif
