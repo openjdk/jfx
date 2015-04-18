@@ -8,7 +8,6 @@
 
 #include "DataObjectJava.h"
 #include "Clipboard.h"
-#include "ClipboardJava.h"
 #include "DocumentFragment.h"
 #include "URL.h"
 #include "markup.h"
@@ -17,13 +16,6 @@
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
-
-/*
-PassRefPtr<Clipboard> DragData::createClipboard(ClipboardAccessPolicy policy) const
-{
-    return ClipboardJava::create(policy, true, m_platformDragData);
-}
-*/
 
 bool DragData::containsURL(Frame*, FilenameConversionPolicy filenamePolicy /*= ConvertFilenames*/) const
 {

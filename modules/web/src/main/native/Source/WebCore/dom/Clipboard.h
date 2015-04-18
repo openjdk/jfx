@@ -44,7 +44,6 @@ namespace WebCore {
 
     class Clipboard : public RefCounted<Clipboard> {
 #if PLATFORM(JAVA)
-      friend class ClipboardJava;
       friend class EventHandler;
 #endif
     public:
@@ -59,7 +58,9 @@ namespace WebCore {
         void setEffectAllowed(const String&);
 
         Vector<String> types() const;
-
+#if PLATFORM(JAVA)
+        Vector<String> typesPrivate() const;
+#endif
         PassRefPtr<FileList> files() const;
 
         void clearData(const String& type);

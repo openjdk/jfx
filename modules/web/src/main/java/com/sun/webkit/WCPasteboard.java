@@ -35,11 +35,9 @@ final class WCPasteboard {
     private final static Logger log = 
         Logger.getLogger(WCPasteboard.class.getName());
 
-    private static native void initIDs();
     private static final Pasteboard pasteboard;
 
     static {
-        initIDs();
         pasteboard = Utilities.getUtilities().createPasteboard();
     };
 

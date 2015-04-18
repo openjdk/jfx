@@ -49,6 +49,10 @@ OBJC_CLASS NSString;
 typedef struct HWND__* HWND;
 #endif
 
+#if PLATFORM(JAVA)
+#include "DataObjectJava.h"
+#endif
+
 // FIXME: This class uses the DOM and makes calls to Editor.
 // It should be divested of its knowledge of the frame and editor.
 
@@ -67,7 +71,7 @@ enum ShouldSerializeSelectedTextForClipboard { DefaultSelectedTextType, IncludeI
 // For writing to the pasteboard. Generally sorted with the richest formats on top.
 
 struct PasteboardWebContent {
-#if !(PLATFORM(EFL) || PLATFORM(GTK) || PLATFORM(WIN))
+#if !(PLATFORM(EFL) || PLATFORM(GTK) || PLATFORM(WIN) || PLATFORM(JAVA))
     PasteboardWebContent();
     ~PasteboardWebContent();
     bool canSmartCopyOrDelete;
@@ -92,7 +96,7 @@ struct PasteboardImage {
     PasteboardImage();
     ~PasteboardImage();
     RefPtr<Image> image;
-#if !(PLATFORM(EFL) || PLATFORM(GTK) || PLATFORM(WIN))
+#if !(PLATFORM(EFL) || PLATFORM(GTK) || PLATFORM(WIN) || PLATFORM(JAVA))
     PasteboardURL url;
     RefPtr<SharedBuffer> resourceData;
     String resourceMIMEType;
@@ -105,7 +109,7 @@ class PasteboardWebContentReader {
 public:
     virtual ~PasteboardWebContentReader() { }
 
-#if !(PLATFORM(EFL) || PLATFORM(GTK) || PLATFORM(WIN))
+#if !(PLATFORM(EFL) || PLATFORM(GTK) || PLATFORM(WIN) || PLATFORM(JAVA))
     virtual bool readWebArchive(PassRefPtr<SharedBuffer>) = 0;
     virtual bool readFilenames(const Vector<String>&) = 0;
     virtual bool readHTML(const String&) = 0;
@@ -156,7 +160,7 @@ public:
     void writePasteboard(const Pasteboard& sourcePasteboard);
 
 #if PLATFORM(JAVA)
-    String plainText(Frame&); // todo tav use smth else
+    PassRefPtr<DataObjectJava> dataObject() const { return m_dataObject; }
 #endif
 
 #if ENABLE(DRAG_SUPPORT)
@@ -202,6 +206,11 @@ public:
 private:
     Pasteboard();
 
+#if PLATFORM(JAVA)
+    Pasteboard(PassRefPtr<DataObjectJava>, bool copyPasteMode);
+    static PassOwnPtr<Pasteboard> create(PassRefPtr<DataObjectJava>);    
+#endif
+    
 #if PLATFORM(GTK)
     Pasteboard(PassRefPtr<DataObjectGtk>);
     Pasteboard(GtkClipboard*);
@@ -240,8 +249,8 @@ private:
 #endif
 
 #if PLATFORM(JAVA)
-    String html() const;
-    JGClass m_pasteboardClass;
+    RefPtr<DataObjectJava> m_dataObject;
+    bool m_copyPasteMode;
 #endif
 };
 

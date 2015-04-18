@@ -97,9 +97,12 @@ import javafx.beans.value.ObservableValue;
  * <p>
  * A stage can optionally have an owner Window.
  * When a window is a stage's owner, it is said to be the parent of that stage.
- * When a parent window is closed, all its descendant windows are closed. 
- * The same chained behavior applied for a parent window that is iconified. 
- * A stage will always be on top of its parent window.
+ * <p>
+ * Owned Stages are tied to the parent Window.
+ * An owned stage will always be on top of its parent window.
+ * When a parent window is closed or iconified, then all owned windows will be affected as well.
+ * Owned Stages cannot be independantly iconified.
+ * <p>
  * The owner must be initialized before the stage is made visible.
  *
  * <p><b>Modality</b></p>

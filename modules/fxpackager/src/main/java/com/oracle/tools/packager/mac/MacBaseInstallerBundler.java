@@ -384,6 +384,9 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
     }
     
     public static String findKey(String key, String keychainName, boolean verbose) {
+        if (!System.getProperty("os.name").toLowerCase().contains("os x")) {
+            return null;
+        }
 
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream(); PrintStream ps = new PrintStream(baos)) {
             List<String> searchOptions = new ArrayList<>();

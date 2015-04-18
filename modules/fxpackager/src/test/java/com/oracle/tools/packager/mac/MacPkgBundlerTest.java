@@ -39,8 +39,10 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.Collection;
@@ -72,7 +74,7 @@ public class MacPkgBundlerTest {
     static boolean retain = false;
     static boolean signingKeysPresent = false;
     
-    static final File FAKE_CERT_ROOT = new File("build/tmp/tests/cert/");
+    static final File FAKE_CERT_ROOT = new File("build/tmp/tests/cert/").getAbsoluteFile();
 
     @BeforeClass
     public static void prepareApp() {
@@ -132,8 +134,8 @@ public class MacPkgBundlerTest {
             ProcessBuilder pb = new ProcessBuilder("openssl", "req",
                     "-newkey", "rsa:2048",
                     "-nodes",
-                    "-out", FAKE_CERT_ROOT + "/pkg.csr",
-                    "-keyout", FAKE_CERT_ROOT + "/pkg.key",
+                    "-out", FAKE_CERT_ROOT + "/pkg-app.csr",
+                    "-keyout", FAKE_CERT_ROOT + "/pkg-app.key",
                     "-subj", "/CN=Developer ID Application: Insecure Test Cert/OU=JavaFX Dev/O=Oracle/C=US");
             IOUtils.exec(pb, VERBOSE.fetchFrom(p));
 
@@ -141,11 +143,11 @@ public class MacPkgBundlerTest {
             // create the cert
             pb = new ProcessBuilder("openssl", "x509",
                     "-req",
-                    "-days", "1",
-                    "-in", FAKE_CERT_ROOT + "/pkg.csr",
-                    "-signkey", FAKE_CERT_ROOT + "/pkg.key",
+                    "-days", "10",
+                    "-in", FAKE_CERT_ROOT + "/pkg-app.csr",
+                    "-signkey", FAKE_CERT_ROOT + "/pkg-app.key",
                     "-out", FAKE_CERT_ROOT + "/pkg-app.crt",
-                    "-extfile", FAKE_CERT_ROOT + "/pkg.cnf",
+                    "-extfile", FAKE_CERT_ROOT + "/pkg-cert.cfg",
                     "-extensions", "codesign");
             IOUtils.exec(pb, VERBOSE.fetchFrom(p));
 
@@ -153,19 +155,28 @@ public class MacPkgBundlerTest {
             pb = new ProcessBuilder("certtool",
                     "i", FAKE_CERT_ROOT + "/pkg-app.crt",
                     "k=" + FAKE_CERT_ROOT + "/pkg.keychain",
-                    "r=" + FAKE_CERT_ROOT + "/pkg.key",
+                    "r=" + FAKE_CERT_ROOT + "/pkg-app.key",
                     "c",
                     "p=");
             IOUtils.exec(pb, VERBOSE.fetchFrom(p));
             
-            // now for the pkg cert
+            // create the pkg SSL keys
+            pb = new ProcessBuilder("openssl", "req",
+                    "-newkey", "rsa:2048",
+                    "-nodes",
+                    "-out", FAKE_CERT_ROOT + "/pkg-pkg.csr",
+                    "-keyout", FAKE_CERT_ROOT + "/pkg-pkg.key",
+                    "-subj", "/CN=Developer ID Installer: Insecure Test Cert/OU=JavaFX Dev/O=Oracle/C=US");
+            IOUtils.exec(pb, VERBOSE.fetchFrom(p));
+
+            // create the pkg cert
             pb = new ProcessBuilder("openssl", "x509",
                         "-req",
                         "-days", "10",
-                        "-in", FAKE_CERT_ROOT + "/pkg.csr",
-                        "-signkey", FAKE_CERT_ROOT + "/pkg.key",
+                        "-in", FAKE_CERT_ROOT + "/pkg-pkg.csr",
+                        "-signkey", FAKE_CERT_ROOT + "/pkg-pkg.key",
                         "-out", FAKE_CERT_ROOT + "/pkg-pkg.crt",
-                        "-extfile",FAKE_CERT_ROOT + "/png.cnf",
+                        "-extfile",FAKE_CERT_ROOT + "/pkg-cert.cfg",
                         "-extensions", "productbuild");
             IOUtils.exec(pb, VERBOSE.fetchFrom(p));
 
@@ -173,7 +184,7 @@ public class MacPkgBundlerTest {
             pb = new ProcessBuilder("certtool",
                     "i", FAKE_CERT_ROOT + "/pkg-pkg.crt",
                     "k=" + FAKE_CERT_ROOT + "/pkg.keychain",
-                    "r=" + FAKE_CERT_ROOT + "/pkg.key");
+                    "r=" + FAKE_CERT_ROOT + "/pkg-pkg.key");
             IOUtils.exec(pb, VERBOSE.fetchFrom(p));
             
             return FAKE_CERT_ROOT + "/pkg.keychain";
@@ -646,7 +657,29 @@ public class MacPkgBundlerTest {
         ProcessBuilder pb = new ProcessBuilder(
                 "pkgutil", "--check-signature",
                 appLocation.getCanonicalPath());
-        IOUtils.exec(pb, true);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        PrintStream ps = new PrintStream(baos);
+        try {
+            IOUtils.exec(pb, true, false, ps);
+        } catch (IOException ioe) {
+            if (signingKeysPresent) {
+                // these were real keys, failures are real
+                throw ioe;
+            }
+            // failure was for bogus key
+            if (ioe.getMessage().contains("Exec failed with code 1 ")) {
+                // this is likely because the key is not signed by apple, lets look 
+                // ok, look to see if our key is in the output
+                if (!baos.toString().contains("1. Developer ID Installer: Insecure Test Cert")) {
+                    // didn't list our key as #1, must be some other error
+                    throw ioe;
+                }
+                // ok, this is expected.  Ignore it.
+            } else {
+                // some other failure, throw the error.
+                throw ioe;
+            }
+        }
     }
 
 }

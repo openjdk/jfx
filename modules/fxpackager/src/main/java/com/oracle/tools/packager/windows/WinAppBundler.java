@@ -181,7 +181,7 @@ public class WinAppBundler extends AbstractImageBundler {
             return;
         }
 
-        if (BIT_ARCH_64.fetchFrom(params) != BIT_ARCH_64_RUNTIME.fetchFrom(params)) {
+        if ((BIT_ARCH_64.fetchFrom(params) != BIT_ARCH_64_RUNTIME.fetchFrom(params)) && !"systemjre".equals(params.get(".runtime.autodetect"))) {
             throw new ConfigException(
                     I18N.getString("error.bit-architecture-mismatch"),
                     I18N.getString("error.bit-architecture-mismatch.advice"));

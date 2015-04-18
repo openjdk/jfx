@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -111,14 +111,25 @@ jmethodID jApplicationReportException;
 jmethodID jApplicationGetApplication;
 jmethodID jApplicationGetName;
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 void init_threads() {
-#if !GLIB_CHECK_VERSION(2,31,0)
-    if (!g_thread_supported()) {
-        g_thread_init(NULL);
+    gboolean is_g_thread_get_initialized = FALSE;
+    if (glib_check_version(2, 32, 0)) { // < 2.32
+        if (!glib_check_version(2, 20, 0)) {
+            is_g_thread_get_initialized = g_thread_get_initialized();
+        }
+        if (!is_g_thread_get_initialized) {
+            // Calling g_thread_init() multiple times leads to crash on GLib < 2.24
+            // We can use g_thread_get_initialized () but it is available only for
+            // GLib >= 2.20. We rely on GThreadHelper for GLib < 2.20.
+            // g_thread_init is no longer necessary for GLib >=2.32
+            g_thread_init(NULL);
+        }
     }
-#endif
     gdk_threads_init();
 }
+#pragma GCC diagnostic pop
 
 static jboolean displayValid = JNI_FALSE;
 
