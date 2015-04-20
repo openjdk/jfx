@@ -2736,9 +2736,10 @@ static GstFlowReturn dshowwrapper_chain (GstPad * pad, GstBuffer * buf)
         decoder->force_discontinuity = FALSE;
     }
 
-    HRESULT hr = decoder->pSrc->DeliverSample(buf);
-    if (FAILED(hr) || decoder->is_flushing)
-        return GST_FLOW_WRONG_STATE;
+    if (decoder->is_flushing)
+        ret = GST_FLOW_WRONG_STATE;
+    else if (FAILED(decoder->pSrc->DeliverSample(buf)))
+        ret = GST_FLOW_ERROR;
 
     return ret;
 }
