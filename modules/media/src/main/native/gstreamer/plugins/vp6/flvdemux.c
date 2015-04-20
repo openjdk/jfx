@@ -1011,6 +1011,9 @@ static void flv_demux_loop (GstPad * pad)
 
     if (result == GST_FLOW_UNEXPECTED) {
         flv_demux_push_src_event(filter, gst_event_new_eos ());
+    } else if (result == GST_FLOW_ERROR) {
+        gst_element_message_full(GST_ELEMENT(filter), GST_MESSAGE_ERROR, GST_STREAM_ERROR, GST_STREAM_ERROR_DEMUX, 
+            g_strdup("Failed to demux FLV stream"), NULL, ("flvdemux.c"), ("flv_demux_loop"), 0);
     }
 }
 
