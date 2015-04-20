@@ -1119,7 +1119,10 @@ gboolean CGstAudioPlaybackPipeline::BusCallback(GstBus* bus, GstMessage* msg, sB
                         g_free(debug);
                     break;
                 }
-                else if (pPipeline != NULL && pPipeline->m_pEventDispatcher != NULL && error->domain == GST_STREAM_ERROR && error->code == GST_STREAM_ERROR_CODEC_NOT_FOUND)
+                else if (pPipeline != NULL && pPipeline->m_pEventDispatcher != NULL && error->domain == GST_STREAM_ERROR && 
+                    (error->code == GST_STREAM_ERROR_CODEC_NOT_FOUND || 
+                     error->code == GST_STREAM_ERROR_FAILED ||
+                     error->code == GST_STREAM_ERROR_TYPE_NOT_FOUND))
                 {
                     if (pPipeline->m_pOptions->GetHLSModeEnabled())
                     {

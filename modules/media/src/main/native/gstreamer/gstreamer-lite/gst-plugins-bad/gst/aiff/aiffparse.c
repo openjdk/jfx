@@ -696,7 +696,11 @@ static void
 gst_aiff_parse_ignore_chunk (GstAiffParse * aiff, GstBuffer * buf, guint32 tag,
     guint32 size)
 {
-  guint flush;
+#ifdef GSTREAMER_LITE
+    guint64 flush;
+#else
+    guint flush;
+#endif
 
   if (aiff->streaming) {
     if (!gst_aiff_parse_peek_chunk (aiff, &tag, &size))
@@ -704,7 +708,11 @@ gst_aiff_parse_ignore_chunk (GstAiffParse * aiff, GstBuffer * buf, guint32 tag,
   }
   GST_DEBUG_OBJECT (aiff, "Ignoring tag %" GST_FOURCC_FORMAT,
       GST_FOURCC_ARGS (tag));
+#ifdef GSTREAMER_LITE
+  flush = 8 + (((guint64)size + 1) & ~1);
+#else
   flush = 8 + ((size + 1) & ~1);
+#endif
   aiff->offset += flush;
   if (aiff->streaming) {
     gst_adapter_flush (aiff->adapter, flush);
