@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -447,6 +447,7 @@ public abstract class BaseShaderGraphics
         tex.unlock();
     }
 
+    private static RectBounds TMP_BOUNDS = new RectBounds();
     @Override
     protected void renderShape(Shape shape, BasicStroke stroke,
                                float bx, float by, float bw, float bh)
@@ -456,27 +457,13 @@ public abstract class BaseShaderGraphics
             return;
         }
 
-        // creating/updating the mask texture may unset the current
-        // texture used by pending vertices, so flush the vertex buffer first
-        context.flushVertexBuffer();
-
         // The following is safe; this method does not mutate the transform
         BaseTransform xform = getTransformNoClone();
         MaskData maskData =
             ShapeUtil.rasterizeShape(shape, stroke, getFinalClipNoClone(), xform, true, isAntialiasedShape());
-        Texture maskTex = context.getMaskTexture(maskData, false);
-        int maskW = maskData.getWidth();
-        int maskH = maskData.getHeight();
+        Texture maskTex = context.validateMaskTexture(maskData, false);
 
-        float dx1 = maskData.getOriginX();
-        float dy1 = maskData.getOriginY();
-        float dx2 = dx1 + maskW;
-        float dy2 = dy1 + maskH;
-        float tx1 = 0f;
-        float ty1 = 0f;
-        float tx2 = tx1 + ((float)maskW) / maskTex.getPhysicalWidth();
-        float ty2 = ty1 + ((float)maskH) / maskTex.getPhysicalHeight();
-
+        AffineBase paintTx;
         if (PrismSettings.primTextureSize != 0) {
             // the mask has been generated in device space, so we use
             // identity transform here
@@ -484,17 +471,28 @@ public abstract class BaseShaderGraphics
                 context.validatePaintOp(this, IDENT, MaskType.ALPHA_TEXTURE, maskTex,
                                         bx, by, bw, bh);
 
-            VertexBuffer vb = context.getVertexBuffer();
-            vb.addQuad(dx1, dy1, dx2, dy2, tx1, ty1, tx2, ty2,
-                    getPaintTextureTx(xform, shader, bx, by, bw, bh));
+            paintTx = getPaintTextureTx(xform, shader, bx, by, bw, bh);
         } else {        
             // the mask has been generated in device space, so we use
             // identity transform here
             context.validatePaintOp(this, IDENT, maskTex, bx, by, bw, bh);
-
-            VertexBuffer vb = context.getVertexBuffer();
-            vb.addQuad(dx1, dy1, dx2, dy2, tx1, ty1, tx2, ty2);
+            paintTx = null;
         }
+
+        context.updateMaskTexture(maskData, TMP_BOUNDS, false);
+
+        float dx1 = maskData.getOriginX();
+        float dy1 = maskData.getOriginY();
+        float dx2 = dx1 + maskData.getWidth();
+        float dy2 = dy1 + maskData.getHeight();
+        float tx1 = TMP_BOUNDS.getMinX();
+        float ty1 = TMP_BOUNDS.getMinY();
+        float tx2 = TMP_BOUNDS.getMaxX();
+        float ty2 = TMP_BOUNDS.getMaxY();
+
+        VertexBuffer vb = context.getVertexBuffer();
+        vb.addQuad(dx1, dy1, dx2, dy2, tx1, ty1, tx2, ty2, paintTx);
+
         maskTex.unlock();
     }
 

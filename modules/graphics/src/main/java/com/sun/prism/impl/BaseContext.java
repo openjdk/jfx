@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,7 +32,10 @@ import java.util.Map;
 import com.sun.glass.ui.Screen;
 import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.FontStrike;
+import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.image.ByteToBytePixelConverter;
+import com.sun.javafx.image.impl.ByteGray;
 import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.prism.PixelFormat;
 import com.sun.prism.RTTexture;
@@ -50,7 +53,14 @@ public abstract class BaseContext {
     private final ResourceFactory factory;
     private final VertexBuffer vertexBuffer;
 
+    private static final int MIN_MASK_DIM = 1024;
     private Texture maskTex;
+    private ByteBuffer maskBuffer;
+    private ByteBuffer clearBuffer;
+    private int curMaskRow;
+    private int nextMaskRow;
+    private int curMaskCol;
+    private int highMaskCol;
     private Texture paintTex;
     private int[] paintPixels;
     private ByteBuffer paintBuffer;
@@ -88,6 +98,16 @@ public abstract class BaseContext {
     }
 
     public void flushVertexBuffer() {
+        if (curMaskRow > 0 || curMaskCol > 0) {
+            maskTex.lock();
+            // assert !maskTex.isSurfaceLost();
+            // since it was bound and unflushed...
+            maskTex.update(maskBuffer, maskTex.getPixelFormat(),
+                           0, 0, 0, 0, highMaskCol, nextMaskRow,
+                           maskTex.getPhysicalWidth(), true);
+            maskTex.unlock();
+            curMaskRow = curMaskCol = nextMaskRow = highMaskCol = 0;
+        }
         vertexBuffer.flush();
     }
 
@@ -162,40 +182,99 @@ public abstract class BaseContext {
         return glyphCache;
     }
 
-    public Texture getMaskTexture(MaskData maskData, boolean canScale) {
-        int maskW = maskData.getWidth();
-        int maskH = maskData.getHeight();
+    public Texture validateMaskTexture(MaskData maskData, boolean canScale) {
+        int pad = canScale ? 1 : 0;
+        int needW = maskData.getWidth() + pad + pad;
+        int needH = maskData.getHeight() + pad + pad;
+        int texW = 0, texH = 0;
+
         if (maskTex != null) {
             maskTex.lock();
             if (maskTex.isSurfaceLost()) {
                 maskTex = null;
+            } else {
+                texW = maskTex.getContentWidth();
+                texH = maskTex.getContentHeight();
             }
-        }
-        if (maskTex == null ||
-            maskTex.getContentWidth()  < maskW ||
-            maskTex.getContentHeight() < maskH)
-        {
-            int newTexW = maskW;
-            int newTexH = maskH;
-            if (maskTex != null) {
-                // grow the mask texture so that the new one is always
-                // at least as large as the previous one; this avoids
-                // lots of creation/disposal when the shapes alternate
-                // between narrow/tall and wide/short
-                newTexW = Math.max(maskW, maskTex.getContentWidth());
-                newTexH = Math.max(maskH, maskTex.getContentHeight());
-                maskTex.dispose();
-            }
-            maskTex = getResourceFactory().
-                createMaskTexture(newTexW, newTexH,
-                                  canScale
-                                      ? WrapMode.CLAMP_TO_ZERO
-                                      : WrapMode.CLAMP_NOT_NEEDED);
         }
 
-        maskData.uploadToTexture(maskTex, 0, 0, false);
+        if (maskTex == null || texW < needW || texH < needH) {
+            if (maskTex != null) {
+                flushVertexBuffer();
+                maskTex.dispose();
+                maskTex = null;
+            }
+            maskBuffer = null;
+
+            // grow the mask texture so that the new one is always
+            // at least as large as the previous one; this avoids
+            // lots of creation/disposal when the shapes alternate
+            // between narrow/tall and wide/short
+            int newTexW = Math.max(MIN_MASK_DIM, Math.max(needW, texW));
+            int newTexH = Math.max(MIN_MASK_DIM, Math.max(needH, texH));
+
+            maskTex = getResourceFactory().
+                createMaskTexture(newTexW, newTexH, WrapMode.CLAMP_NOT_NEEDED);
+            maskBuffer = ByteBuffer.allocate(newTexW * newTexH);
+            if (clearBuffer == null || clearBuffer.capacity() < newTexW) {
+                clearBuffer = null;
+                clearBuffer = ByteBuffer.allocate(newTexW);
+            }
+            curMaskRow = curMaskCol = nextMaskRow = highMaskCol = 0;
+        }
 
         return maskTex;
+    }
+
+    public void updateMaskTexture(MaskData maskData, RectBounds maskBounds, boolean canScale) {
+        // assert maskTex bound as texture 1...
+        maskTex.assertLocked();
+        int maskW = maskData.getWidth();
+        int maskH = maskData.getHeight();
+        int texW = maskTex.getContentWidth();
+        int texH = maskTex.getContentHeight();
+        int pad = canScale ? 1 : 0;
+        int needW = maskW + pad + pad;
+        int needH = maskH + pad + pad;
+        if (curMaskCol + needW > texW) {
+            curMaskCol = 0;
+            curMaskRow = nextMaskRow;
+        }
+        if (curMaskRow + needH > texH) {
+            flushVertexBuffer();
+        }
+
+        int offset = curMaskRow * texW + curMaskCol;
+        ByteToBytePixelConverter b2bpc = ByteGray.ToByteGrayConverter();
+        if (canScale) {
+            // [UL => UR)
+            int off = offset;
+            b2bpc.convert(clearBuffer, 0, 0, maskBuffer, off, texW, maskW + 1, 1);
+            // [UR => LR)
+            off = offset + maskW + 1;
+            b2bpc.convert(clearBuffer, 0, 0, maskBuffer, off, texW, 1, maskH + 1);
+            // (UL => LL]
+            off = offset + texW;  // UL corner + 1 row
+            b2bpc.convert(clearBuffer, 0, 0, maskBuffer, off, texW, 1, maskH + 1);
+            // (LL => LR]
+            off = offset + (maskH + 1) * texW + 1; // LL corner + 1 col
+            b2bpc.convert(clearBuffer, 0, 0, maskBuffer, off, texW, maskW + 1, 1);
+            offset += texW + 1;
+        }
+        b2bpc.convert(maskData.getMaskBuffer(), 0, maskW,
+                      maskBuffer, offset, texW,
+                      maskW, maskH);
+
+        float physW = maskTex.getPhysicalWidth();
+        float physH = maskTex.getPhysicalHeight();
+        maskBounds.setMinX((curMaskCol + pad        ) / physW);
+        maskBounds.setMinY((curMaskRow + pad        ) / physH);
+        maskBounds.setMaxX((curMaskCol + pad + maskW) / physW);
+        maskBounds.setMaxY((curMaskRow + pad + maskH) / physH);
+
+        curMaskCol = curMaskCol + needW;
+        if (highMaskCol < curMaskCol) highMaskCol = curMaskCol;
+        if (nextMaskRow < curMaskRow + needH) nextMaskRow = curMaskRow + needH;
     }
 
     public int getRectTextureMaxSize() {
