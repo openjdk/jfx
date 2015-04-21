@@ -2732,13 +2732,15 @@ public class TableView<S> extends Control {
                 updateSelectedIndex(-1);
                 focus(-1);
 
-                ListChangeListener.Change<TablePosition<S, ?>> c = new NonIterableChange<TablePosition<S, ?>>(0, 0, selectedCellsSeq) {
-                    @Override
-                    public List<TablePosition<S, ?>> getRemoved() {
-                        return removed;
-                    }
-                };
-                handleSelectedCellsListChangeEvent(c);
+                if (!removed.isEmpty()) {
+                    ListChangeListener.Change<TablePosition<S, ?>> c = new NonIterableChange<TablePosition<S, ?>>(0, 0, selectedCellsSeq) {
+                        @Override
+                        public List<TablePosition<S, ?>> getRemoved() {
+                            return removed;
+                        }
+                    };
+                    handleSelectedCellsListChangeEvent(c);
+                }
             }
         }
 

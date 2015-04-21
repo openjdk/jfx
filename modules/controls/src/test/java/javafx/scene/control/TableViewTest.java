@@ -5186,4 +5186,45 @@ public class TableViewTest {
         assertEquals(3, sm.getSelectedIndices().size());
         assertEquals(3, sm.getSelectedCells().size());
     }
+
+    private int rt_40546_count = 0;
+    @Test public void test_rt_40546() {
+        ObservableList<Person> p = FXCollections.observableArrayList();
+
+        TableView<Person> t = new TableView<>(p);
+        sm = t.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        TableColumn<Person, String> c1 = new TableColumn<>("First Name");
+        c1.setCellValueFactory(new PropertyValueFactory<>("firstname"));
+        TableColumn<Person, String> c2 = new TableColumn<>("Last Name");
+        c2.setCellValueFactory(new PropertyValueFactory<>("lastname"));
+        t.getColumns().addAll(c1, c2);
+
+        p.add(new Person("FirstName1", "LastName1", ""));
+        p.add(new Person("FirstName2", "LastName2", ""));
+        p.add(new Person("FirstName3", "LastName3", ""));
+
+        // add a listener - although we don't expect to hear anything
+        sm.getSelectedItems().addListener((ListChangeListener) c -> {
+            while (c.next()) {
+                rt_40546_count++;
+            }
+        });
+
+        assertEquals(0, rt_40546_count);
+
+        t.getSelectionModel().clearSelection();
+        assertEquals(0, rt_40546_count);
+
+        p.clear();
+        assertEquals(0, rt_40546_count);
+
+        p.add(new Person("FirstName1", "LastName1", ""));
+        assertEquals(0, rt_40546_count);
+        p.add(new Person("FirstName2", "LastName2", ""));
+        assertEquals(0, rt_40546_count);
+        p.add(new Person("FirstName3", "LastName3", ""));
+        assertEquals(0, rt_40546_count);
+    }
 }
