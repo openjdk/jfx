@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -51,6 +51,12 @@ float4 main(ObjectPsIn objAttr, LocalBump  lSpace) : color {
     if (0) return debug();
     // return retNormal(lSpace.debug);
 
+    float4 tDiff = tex2D(mapDiffuse, objAttr.texD);
+    if (tDiff.a == 0.0) discard;
+    tDiff = tDiff * gDiffuseColor;
+
+    // return gDiffuseColor.aaaa;
+
     float3 nEye = normalize(lSpace.eye);
 
     float3 n = float3(0,0,1);
@@ -61,11 +67,6 @@ float4 main(ObjectPsIn objAttr, LocalBump  lSpace) : color {
     }
 
     float4 ambColor = objAttr.ambient;
-
-    float4 tDiff = tex2D(mapDiffuse, objAttr.texD);
-    tDiff = tDiff * gDiffuseColor;
-
-    // return gDiffuseColor.aaaa;
 
     float4 tSpec = float4(0,0,0,0);
     float sPower = 0;

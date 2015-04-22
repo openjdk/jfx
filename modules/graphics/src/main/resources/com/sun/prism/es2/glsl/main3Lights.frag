@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -67,6 +67,8 @@ void main()
 {
     gl_FragColor = vec4(0.0,0.0,0.0,1.0);
     vec4 diffuse = apply_diffuse();
+
+    if (diffuse.a == 0.0) discard;
 
     vec3 n = apply_normal();
 
