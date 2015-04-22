@@ -418,6 +418,7 @@ jthrowable dispatchJNICall(int count, RootObject* rootObject, jobject obj, bool 
                                             accessControlContext);
 
     jthrowable ex = env->ExceptionOccurred();
+    env->ExceptionClear();
 
     switch (returnType) {
     case JavaTypeVoid:

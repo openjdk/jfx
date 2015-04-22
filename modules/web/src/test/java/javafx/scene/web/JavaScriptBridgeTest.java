@@ -392,6 +392,27 @@ public class JavaScriptBridgeTest extends TestBase {
         });
     }
 
+    // RT-37859
+    public @Test void testThrowJava2() throws InterruptedException {
+        final WebEngine web = getEngine();
+
+        submit(() -> {
+            MyExceptionHelper test = new MyExceptionHelper();
+            bind("test", test);
+            try {
+		String script =
+		    "try { " +
+		    "    test.throwException2(); " +
+		    "} catch (e) { " +
+		    "    document.body.textContent = e; " +
+		    "}";
+		web.executeScript(script);
+            } catch (JSException e) {
+                fail("caught unexpected exception: " + e);
+            }
+        });
+    }
+    
     public static class MyException extends Throwable {
     }
 
@@ -399,6 +420,9 @@ public class JavaScriptBridgeTest extends TestBase {
         public void throwException() throws MyException {
             throw new MyException();
         }
+	public void throwException2() {
+	    throw new RuntimeException("TheRuntimeException");
+	}
     }
 
 
