@@ -18,7 +18,7 @@ VPATH += \
     $$PWD \
 
 INCLUDEPATH += \
-    $$GENERATED_SOURCES_DIR \
+    $$OUT_PWD/$$GENERATED_SOURCES_DIR \
     $$PWD \
     $$PWD/.. \
     $$PWD/assembler \
@@ -44,7 +44,7 @@ INCLUDEPATH += \
     $$PWD/ForwardingHeaders \
     $$PWD/../WTF \
     $$PWD/../WTF/wtf \
-    ../../../generated-src/headers \
+    $$OUT_PWD/../../../generated-src/headers
 
 win* {
     INCLUDEPATH += \

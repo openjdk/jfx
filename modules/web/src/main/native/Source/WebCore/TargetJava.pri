@@ -43,7 +43,7 @@ mac* {
 }
 
 INCLUDEPATH += \
-    $${GENERATED_SOURCES_DIR} \
+    $$OUT_PWD/$$GENERATED_SOURCES_DIR \
     $$SOURCE_DIR \
     $$SOURCE_DIR/WebCore \
     $$SOURCE_DIR/WebCore/accessibility \
@@ -156,12 +156,9 @@ INCLUDEPATH += \
     $$SOURCE_DIR/WTF/wtf/java \
     $$SOURCE_DIR/WTF/wtf/unicode/java \
     $$SOURCE_DIR/../WebKitLibraries/zlib/include \
-    ../../../generated-src/headers \
-    ../JavaScriptCore \
-    ../JavaScriptCore/generated
-
-    
-
+    $$OUT_PWD/../../../generated-src/headers \
+    $$OUT_PWD/../JavaScriptCore \
+    $$OUT_PWD/../JavaScriptCore/generated
 
 !contains(DEFINES, IMAGEIO=1) {
 INCLUDEPATH += \

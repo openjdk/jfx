@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -609,35 +609,74 @@ void ViewContainer::HandleViewTypedEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
     if (!m_deadKeyWParam) {
         wChar = (jchar)wParam;
     } else {
-        wchar_t deadKey;
+        // The character is composed together with the dead key, which
+        // may be translated into one or more combining characters.
+        const size_t COMP_SIZE = 5;
+        wchar_t comp[COMP_SIZE] = { (wchar_t)wParam };
 
         // Some dead keys need additional translation:
         // http://www.fileformat.info/info/unicode/block/combining_diacritical_marks/images.htm
         // Also see awt_Component.cpp for the original dead keys table
-        switch (m_deadKeyWParam) {
-            case L'`':   deadKey = 0x300; break;
-            case L'\'':  deadKey = 0x301; break;
-            case 0x00B4: deadKey = 0x301; break;
-            case L'^':   deadKey = 0x302; break;
-            case L'~':   deadKey = 0x303; break;
-            case 0x02DC: deadKey = 0x303; break;
-            case 0x00AF: deadKey = 0x304; break;
-            case 0x02D8: deadKey = 0x306; break;
-            case 0x02D9: deadKey = 0x307; break;
-            case L'"':   deadKey = 0x308; break;
-            case 0x00A8: deadKey = 0x308; break;
-            case 0x02DA: deadKey = 0x30A; break;
-            case 0x02DD: deadKey = 0x30B; break;
-            case 0x02C7: deadKey = 0x30C; break;
-            case L',':   deadKey = 0x327; break;
-            case 0x00B8: deadKey = 0x327; break;
-            case 0x02DB: deadKey = 0x328; break;
-            default:     deadKey = static_cast<wchar_t>(m_deadKeyWParam); break;
+        if (LOBYTE(m_idLang) == LANG_GREEK) {
+            switch (m_deadKeyWParam) {
+                case L']':   comp[1] = 0x300; break; // varia
+                case L';':   comp[1] = 0x301; break; // oxia (wrong? generates tonos, not oxia)
+                case L'-':   comp[1] = 0x304; break; // macron
+                case L'_':   comp[1] = 0x306; break; // vrachy
+                case L':':   comp[1] = 0x308; break; // dialytika
+                case L'"':   comp[1] = 0x314; break; // dasia
+                case 0x0384: comp[1] = 0x341; break; // tonos
+                case L'[':   comp[1] = 0x342; break; // perispomeni
+                case L'\'':  comp[1] = 0x343; break; // psili
+                case L'~':   comp[1] = 0x344; break; // dialytika oxia
+                case L'{':   comp[1] = 0x345; break; // ypogegrammeni
+
+                case L'`':   comp[1] = 0x308; comp[2] = 0x300; break; // dialytika varia
+                case L'\\':  comp[1] = 0x313; comp[2] = 0x300; break; // psili varia
+                case L'/':   comp[1] = 0x313; comp[2] = 0x301; break; // psili oxia 
+                case L'=':   comp[1] = 0x313; comp[2] = 0x342; break; // psili perispomeni
+                case L'|':   comp[1] = 0x314; comp[2] = 0x300; break; // dasia varia
+                case L'?':   comp[1] = 0x314; comp[2] = 0x301; break; // dasia oxia 
+                case L'+':   comp[1] = 0x314; comp[2] = 0x342; break; // dasia perispomeni
+
+                // AltGr dead chars don't work. Maybe kbd isn't reset properly?
+                // case 0x1fc1: comp[1] = 0x308; comp[2] = 0x342; break; // dialytika perispomeni
+                // case 0x1fde: comp[1] = 0x314; comp[2] = 0x301; comp[3] = 0x345; break; // dasia oxia ypogegrammeni
+
+                default:     comp[1] = static_cast<wchar_t>(m_deadKeyWParam); break;
+            }
+        } else {
+            switch (m_deadKeyWParam) {
+                case L'`':   comp[1] = 0x300; break;
+                case L'\'':  comp[1] = 0x301; break;
+                case 0x00B4: comp[1] = 0x301; break;
+                case L'^':   comp[1] = 0x302; break;
+                case L'~':   comp[1] = 0x303; break;
+                case 0x02DC: comp[1] = 0x303; break;
+                case 0x00AF: comp[1] = 0x304; break;
+                case 0x02D8: comp[1] = 0x306; break;
+                case 0x02D9: comp[1] = 0x307; break;
+                case L'"':   comp[1] = 0x308; break;
+                case 0x00A8: comp[1] = 0x308; break;
+                case 0x02DA: comp[1] = 0x30A; break;
+                case 0x02DD: comp[1] = 0x30B; break;
+                case 0x02C7: comp[1] = 0x30C; break;
+                case L',':   comp[1] = 0x327; break;
+                case 0x00B8: comp[1] = 0x327; break;
+                case 0x02DB: comp[1] = 0x328; break;
+                default:     comp[1] = static_cast<wchar_t>(m_deadKeyWParam); break;
+            }
         }
 
-        wchar_t in[3] = {(wchar_t)wParam, deadKey, L'\0'};
+        int compSize = 3;
+        for (int i = 1; i < COMP_SIZE; i++) {
+            if (comp[i] == L'\0') {
+                compSize = i + 1;
+                break;
+            }
+        }
         wchar_t out[3];
-        int res = ::FoldString(MAP_PRECOMPOSED, (LPWSTR)in, 3, (LPWSTR)out, 3);
+        int res = ::FoldString(MAP_PRECOMPOSED, (LPWSTR)comp, compSize, (LPWSTR)out, 3);
         
         if (res > 0) {
             wChar = (jchar)out[0];

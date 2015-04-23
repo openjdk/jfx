@@ -89,8 +89,6 @@ JavaMethod::~JavaMethod()
 // we get '.' between components from the reflection API.
 static void appendClassName(StringBuilder& builder, const char* className)
 {
-    ASSERT(JSC::VM::sharedInstance().apiLock().currentThreadIsHoldingLock());
-
     char* c = fastStrDup(className);
 
     char* result = c;

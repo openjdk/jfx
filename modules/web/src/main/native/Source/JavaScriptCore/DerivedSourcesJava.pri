@@ -31,7 +31,7 @@ mac* {
 }
 
 INCLUDEPATH += \
-    $$GENERATED_SOURCES_DIR \
+    $$OUT_PWD/$$GENERATED_SOURCES_DIR \
     $$PWD/../WTF \
     $$PWD/runtime \
     $$PWD/parser \

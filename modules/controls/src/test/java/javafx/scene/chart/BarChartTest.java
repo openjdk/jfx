@@ -130,4 +130,14 @@ public class BarChartTest extends XYChartTestBase {
         s.getData().add(s.getData().remove(0));
         assertEquals(3, s.getDataSize());
     }
+
+    @Test
+    public void testRemoveNotAnimated() {
+        startApp();
+        bc.setAnimated(false);
+        Series s = bc.getData().get(0);
+        assertEquals(3, s.getDataSize());
+        s.getData().remove(0);
+        assertEquals(2, s.getDataSize());
+    }
 }

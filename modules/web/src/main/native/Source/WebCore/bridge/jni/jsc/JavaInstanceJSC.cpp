@@ -194,6 +194,8 @@ JSValue JavaInstance::getMethod(ExecState* exec, PropertyName propertyName)
 
 JSValue JavaInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod)
 {
+    ASSERT(exec->vm().apiLock().currentThreadIsHoldingLock());
+    
     if (!asObject(runtimeMethod)->inherits(&JavaRuntimeMethod::s_info))
         exec->vm().throwException(exec, createTypeError(exec, "Attempt to invoke non-Java method on Java object."));
 
