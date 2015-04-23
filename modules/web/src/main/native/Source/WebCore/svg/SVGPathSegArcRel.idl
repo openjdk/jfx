@@ -24,9 +24,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-[
-        Conditional=SVG
-] interface SVGPathSegArcRel : SVGPathSeg {
+interface SVGPathSegArcRel : SVGPathSeg {
     [StrictTypeChecking] attribute float x;
     [StrictTypeChecking] attribute float y;
     [StrictTypeChecking] attribute float r1;
@@ -34,5 +32,5 @@
     [StrictTypeChecking] attribute float angle;
     [StrictTypeChecking] attribute boolean largeArcFlag;
     [StrictTypeChecking] attribute boolean sweepFlag;
-    };
+};
 

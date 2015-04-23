@@ -39,26 +39,24 @@ namespace WebCore {
 
 bool JSHTMLFormElement::canGetItemsForName(ExecState*, HTMLFormElement* form, PropertyName propertyName)
 {
-    Vector<RefPtr<Node> > namedItems;
-    form->getNamedElements(propertyNameToAtomicString(propertyName), namedItems);
-    return namedItems.size();
+    return form->hasNamedElement(propertyNameToAtomicString(propertyName));
 }
 
-JSValue JSHTMLFormElement::nameGetter(ExecState* exec, JSValue slotBase, PropertyName propertyName)
+EncodedJSValue JSHTMLFormElement::nameGetter(ExecState* exec, JSObject* slotBase, EncodedJSValue, PropertyName propertyName)
 {
-    JSHTMLElement* jsForm = jsCast<JSHTMLFormElement*>(asObject(slotBase));
-    HTMLFormElement* form = static_cast<HTMLFormElement*>(jsForm->impl());
+    JSHTMLFormElement* jsForm = jsCast<JSHTMLFormElement*>(slotBase);
+    HTMLFormElement& form = jsForm->impl();
 
-    Vector<RefPtr<Node> > namedItems;
-    form->getNamedElements(propertyNameToAtomicString(propertyName), namedItems);
+    Vector<Ref<Element>> namedItems;
+    form.getNamedElements(propertyNameToAtomicString(propertyName), namedItems);
     
     if (namedItems.isEmpty())
-        return jsUndefined();
+        return JSValue::encode(jsUndefined());
     if (namedItems.size() == 1)
-        return toJS(exec, jsForm->globalObject(), namedItems[0].get());
+        return JSValue::encode(toJS(exec, jsForm->globalObject(), &namedItems[0].get()));
 
     // FIXME: HTML5 specifies that this should be a RadioNodeList.
-    return toJS(exec, jsForm->globalObject(), StaticNodeList::adopt(namedItems).get());
+    return JSValue::encode(toJS(exec, jsForm->globalObject(), StaticElementList::adopt(namedItems).get()));
 }
 
 }

@@ -28,39 +28,41 @@
 #ifndef WorkerScriptController_h
 #define WorkerScriptController_h
 
-#if ENABLE(WORKERS)
 #include <debugger/Debugger.h>
 #include <heap/Strong.h>
 #include <wtf/Forward.h>
 #include <wtf/Threading.h>
 
+namespace Deprecated {
+class ScriptValue;
+}
+
 namespace JSC {
-    class VM;
+class VM;
 }
 
 namespace WebCore {
 
-    class JSWorkerContext;
+    class JSWorkerGlobalScope;
     class ScriptSourceCode;
-    class ScriptValue;
-    class WorkerContext;
+    class WorkerGlobalScope;
 
     class WorkerScriptController {
         WTF_MAKE_NONCOPYABLE(WorkerScriptController); WTF_MAKE_FAST_ALLOCATED;
     public:
-        WorkerScriptController(WorkerContext*);
+        WorkerScriptController(WorkerGlobalScope*);
         ~WorkerScriptController();
 
-        JSWorkerContext* workerContextWrapper()
+        JSWorkerGlobalScope* workerGlobalScopeWrapper()
         {
             initScriptIfNeeded();
-            return m_workerContextWrapper.get();
+            return m_workerGlobalScopeWrapper.get();
         }
 
         void evaluate(const ScriptSourceCode&);
-        void evaluate(const ScriptSourceCode&, ScriptValue* exception);
+        void evaluate(const ScriptSourceCode&, Deprecated::ScriptValue* exception);
 
-        void setException(const ScriptValue&);
+        void setException(const Deprecated::ScriptValue&);
 
         // Async request to terminate a JS run execution. Eventually causes termination
         // exception raised during JS execution, if the worker thread happens to run JS.
@@ -85,20 +87,18 @@ namespace WebCore {
     private:
         void initScriptIfNeeded()
         {
-            if (!m_workerContextWrapper)
+            if (!m_workerGlobalScopeWrapper)
                 initScript();
         }
         void initScript();
 
         RefPtr<JSC::VM> m_vm;
-        WorkerContext* m_workerContext;
-        JSC::Strong<JSWorkerContext> m_workerContextWrapper;
+        WorkerGlobalScope* m_workerGlobalScope;
+        JSC::Strong<JSWorkerGlobalScope> m_workerGlobalScopeWrapper;
         bool m_executionForbidden;
         mutable Mutex m_scheduledTerminationMutex;
     };
 
 } // namespace WebCore
-
-#endif // ENABLE(WORKERS)
 
 #endif // WorkerScriptController_h

@@ -32,10 +32,10 @@
 #include "MacroAssembler.h"
 #include "Opcode.h"
 #include "PropertySlot.h"
-#include "ResolveOperation.h"
 #include "SpecialPointer.h"
 #include "Structure.h"
 #include "StructureChain.h"
+#include "VirtualRegister.h"
 #include <wtf/VectorTraits.h>
 
 namespace JSC {
@@ -43,94 +43,93 @@ namespace JSC {
 class ArrayAllocationProfile;
 class ArrayProfile;
 class ObjectAllocationProfile;
-    struct LLIntCallLinkInfo;
-    struct ValueProfile;
+class VariableWatchpointSet;
+struct LLIntCallLinkInfo;
+struct ValueProfile;
 
-    struct Instruction {
-        Instruction()
-        {
-            u.jsCell.clear();
-        }
+struct Instruction {
+    Instruction()
+    {
+        u.jsCell.clear();
+    }
         
-        Instruction(Opcode opcode)
-        {
+    Instruction(Opcode opcode)
+    {
 #if !ENABLE(COMPUTED_GOTO_OPCODES)
-            // We have to initialize one of the pointer members to ensure that
-            // the entire struct is initialized, when opcode is not a pointer.
-            u.jsCell.clear();
+        // We have to initialize one of the pointer members to ensure that
+        // the entire struct is initialized, when opcode is not a pointer.
+        u.jsCell.clear();
 #endif
-            u.opcode = opcode;
-        }
+        u.opcode = opcode;
+    }
 
-        Instruction(int operand)
-        {
-            // We have to initialize one of the pointer members to ensure that
-            // the entire struct is initialized in 64-bit.
-            u.jsCell.clear();
-            u.operand = operand;
-        }
+    Instruction(int operand)
+    {
+        // We have to initialize one of the pointer members to ensure that
+        // the entire struct is initialized in 64-bit.
+        u.jsCell.clear();
+        u.operand = operand;
+    }
 
     Instruction(VM& vm, JSCell* owner, Structure* structure)
-        {
-            u.structure.clear();
+    {
+        u.structure.clear();
         u.structure.set(vm, owner, structure);
-        }
+    }
     Instruction(VM& vm, JSCell* owner, StructureChain* structureChain)
-        {
-            u.structureChain.clear();
+    {
+        u.structureChain.clear();
         u.structureChain.set(vm, owner, structureChain);
-        }
+    }
     Instruction(VM& vm, JSCell* owner, JSCell* jsCell)
-        {
-            u.jsCell.clear();
+    {
+        u.jsCell.clear();
         u.jsCell.set(vm, owner, jsCell);
-        }
+    }
 
-        Instruction(PropertySlot::GetValueFunc getterFunc) { u.getterFunc = getterFunc; }
+    Instruction(PropertySlot::GetValueFunc getterFunc) { u.getterFunc = getterFunc; }
         
-        Instruction(LLIntCallLinkInfo* callLinkInfo) { u.callLinkInfo = callLinkInfo; }
-        
-        Instruction(ValueProfile* profile) { u.profile = profile; }
+    Instruction(LLIntCallLinkInfo* callLinkInfo) { u.callLinkInfo = callLinkInfo; }
+    Instruction(ValueProfile* profile) { u.profile = profile; }
     Instruction(ArrayProfile* profile) { u.arrayProfile = profile; }
     Instruction(ArrayAllocationProfile* profile) { u.arrayAllocationProfile = profile; }
     Instruction(ObjectAllocationProfile* profile) { u.objectAllocationProfile = profile; }
-        
-        Instruction(WriteBarrier<Unknown>* registerPointer) { u.registerPointer = registerPointer; }
-        
+    Instruction(WriteBarrier<Unknown>* registerPointer) { u.registerPointer = registerPointer; }
     Instruction(Special::Pointer pointer) { u.specialPointer = pointer; }
-        
-        Instruction(bool* predicatePointer) { u.predicatePointer = predicatePointer; }
+    Instruction(StringImpl* uid) { u.uid = uid; }
+    Instruction(bool* predicatePointer) { u.predicatePointer = predicatePointer; }
 
-        union {
-            Opcode opcode;
-            int operand;
-            WriteBarrierBase<Structure> structure;
-            WriteBarrierBase<StructureChain> structureChain;
-            WriteBarrierBase<JSCell> jsCell;
-            WriteBarrier<Unknown>* registerPointer;
+    union {
+        Opcode opcode;
+        int operand;
+        WriteBarrierBase<Structure> structure;
+        WriteBarrierBase<StructureChain> structureChain;
+        WriteBarrierBase<JSCell> jsCell;
+        WriteBarrier<Unknown>* registerPointer;
         Special::Pointer specialPointer;
-            PropertySlot::GetValueFunc getterFunc;
-            LLIntCallLinkInfo* callLinkInfo;
-            ValueProfile* profile;
+        PropertySlot::GetValueFunc getterFunc;
+        LLIntCallLinkInfo* callLinkInfo;
+        StringImpl* uid;
+        ValueProfile* profile;
         ArrayProfile* arrayProfile;
         ArrayAllocationProfile* arrayAllocationProfile;
         ObjectAllocationProfile* objectAllocationProfile;
-            void* pointer;
-            bool* predicatePointer;
-        ResolveOperations* resolveOperations;
-        PutToBaseOperation* putToBaseOperation;
-        } u;
-
-    private:
-        Instruction(StructureChain*);
-        Instruction(Structure*);
-    };
+        VariableWatchpointSet* watchpointSet;
+        WriteBarrierBase<JSActivation> activation;
+        void* pointer;
+        bool* predicatePointer;
+    } u;
+        
+private:
+    Instruction(StructureChain*);
+    Instruction(Structure*);
+};
 
 } // namespace JSC
 
 namespace WTF {
 
-    template<> struct VectorTraits<JSC::Instruction> : VectorTraitsBase<true, JSC::Instruction> { };
+template<> struct VectorTraits<JSC::Instruction> : VectorTraitsBase<true, JSC::Instruction> { };
 
 } // namespace WTF
 

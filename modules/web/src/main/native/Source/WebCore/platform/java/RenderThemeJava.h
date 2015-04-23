@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  */
 #ifndef RenderThemeJava_h
 #define RenderThemeJava_h
@@ -30,7 +30,7 @@ public:
     virtual bool supportsHover(const RenderStyle* style) const { return true; }
 
     // System fonts.
-    virtual void systemFont(int propId, FontDescription&) const;
+    virtual void systemFont(CSSValueID, FontDescription&) const;
 
     static RefPtr<RenderTheme> sm_defaultInstance;
 
@@ -54,7 +54,7 @@ protected:
     virtual bool paintMenuList(RenderObject*, const PaintInfo&, const IntRect&);
 
     virtual void adjustMenuListButtonStyle(StyleResolver*, RenderStyle*, Element*) const;
-    virtual bool paintMenuListButton(RenderObject*, const PaintInfo&, const IntRect&);
+    virtual bool paintMenuListButtonDecorations(RenderObject*, const PaintInfo&, const IntRect&);
 
     virtual void adjustTextAreaStyle(StyleResolver*, RenderStyle*, Element* e) const;
     virtual bool paintTextArea(RenderObject*, const PaintInfo&, const IntRect&);

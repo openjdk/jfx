@@ -37,8 +37,6 @@
 #include <wtf/MathExtras.h>
 #include <wtf/text/WTFString.h>
 
-using namespace std;
-
 namespace WebCore {
 
 // HTML5 specification defines minimum week of year is one.
@@ -691,7 +689,9 @@ String DateComponents::toStringForTime(SecondFormat format) const
     switch (effectiveFormat) {
     default:
         ASSERT_NOT_REACHED();
-        // Fallback to None.
+#if ASSERT_DISABLED
+        FALLTHROUGH; // To None.
+#endif
     case None:
         return String::format("%02d:%02d", m_hour, m_minute);
     case Second:

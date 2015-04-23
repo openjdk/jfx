@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2015, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -31,7 +31,6 @@
  */
 package modena;
 
-import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
@@ -61,7 +60,7 @@ import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.SnapshotParameters;
-import javafx.scene.control.ButtonBuilder;
+import javafx.scene.control.Button;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.ComboBox;
@@ -69,13 +68,11 @@ import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.RadioMenuItem;
-import javafx.scene.control.RadioMenuItemBuilder;
-import javafx.scene.control.ScrollPaneBuilder;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Separator;
-import javafx.scene.control.TabBuilder;
+import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.ToggleButton;
-import javafx.scene.control.ToggleButtonBuilder;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.ToolBar;
 import javafx.scene.control.Tooltip;
@@ -83,10 +80,11 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.image.WritableImage;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBoxBuilder;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.transform.Scale;
+import javafx.scene.control.Control;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
@@ -105,24 +103,31 @@ public class Modena extends Application {
     private static String CASPIAN_STYLESHEET_BASE;
     static {
         try {
+            final String controlPath = "javafx/scene/control/Control.class";
+            String path = Control.class.getResource("Control.class").toExternalForm();
+            String jfxrtRoot = path.substring(0, path.lastIndexOf(controlPath));
             // these are not supported ways to find the platform themes and may 
             // change release to release. Just used here for testing.
             File caspianCssFile = new File("../../../modules/controls/src/main/resources/com/sun/javafx/scene/control/skin/caspian/caspian.css");
             if (!caspianCssFile.exists()) {
                 caspianCssFile = new File("rt/modules/controls/src/main/resources/com/sun/javafx/scene/control/skin/caspian/caspian.css");
             }
-            CASPIAN_STYLESHEET_URL = caspianCssFile.exists() ? 
-                    caspianCssFile.toURI().toURL().toExternalForm() :
-                    com.sun.javafx.scene.control.skin.ButtonSkin.class.getResource("caspian/caspian.css").toExternalForm();
+            if (caspianCssFile.exists()) {
+                CASPIAN_STYLESHEET_URL = caspianCssFile.toURI().toURL().toExternalForm();
+            } else {
+                CASPIAN_STYLESHEET_URL = jfxrtRoot + "com/sun/javafx/scene/control/skin/caspian/caspian.css";
+            }
             File modenaCssFile = new File("../../../modules/controls/src/main/resources/com/sun/javafx/scene/control/skin/modena/modena.css");
             if (!modenaCssFile.exists()) {
                 modenaCssFile = new File("rt/modules/controls/src/main/resources/com/sun/javafx/scene/control/skin/modena/modena.css");
                 System.out.println("modenaCssFile = " + modenaCssFile);
                 System.out.println("modenaCssFile = " + modenaCssFile.getAbsolutePath());
             }
-            MODENA_STYLESHEET_URL = modenaCssFile.exists() ? 
-                    modenaCssFile.toURI().toURL().toExternalForm() : 
-                    com.sun.javafx.scene.control.skin.ButtonSkin.class.getResource("modena/modena.css").toExternalForm();
+            if (modenaCssFile.exists()) {
+                MODENA_STYLESHEET_URL = modenaCssFile.toURI().toURL().toExternalForm();
+            } else {
+                MODENA_STYLESHEET_URL = jfxrtRoot + "com/sun/javafx/scene/control/skin/modena/modena.css";
+            }
             MODENA_STYLESHEET_BASE = MODENA_STYLESHEET_URL.substring(0,MODENA_STYLESHEET_URL.lastIndexOf('/')+1);
             CASPIAN_STYLESHEET_BASE = CASPIAN_STYLESHEET_URL.substring(0,CASPIAN_STYLESHEET_URL.lastIndexOf('/')+1);
             MODENA_EMBEDDED_STYLESHEET_URL = MODENA_STYLESHEET_BASE + "modena-embedded-performance.css";
@@ -309,35 +314,28 @@ public class Modena extends Application {
             samplePage = samplePageNavigation.getSamplePage();
             // Create Content Area
             contentTabs = new TabPane();
-            contentTabs.getTabs().addAll(
-                TabBuilder.create().text("All Controls").content( samplePageNavigation ).build(),
-                TabBuilder.create().text("UI Mosaic").content(
-                    ScrollPaneBuilder.create().content(
-                        mosaic = (Node)FXMLLoader.load(Modena.class.getResource("ui-mosaic.fxml"))
-                    ).build()
-                ).build(),
-                TabBuilder.create().text("Alignment Test").content(
-                    ScrollPaneBuilder.create().content(
-                        heightTest = (Node)FXMLLoader.load(Modena.class.getResource("SameHeightTest.fxml"))
-                    ).build()
-                ).build(),
-                TabBuilder.create().text("Simple Windows").content(
-                    ScrollPaneBuilder.create().content(
-                        simpleWindows = new SimpleWindowPage()
-                    ).build()
-                ).build(),
-                TabBuilder.create().text("Combinations").content(
-                    ScrollPaneBuilder.create().content(
-                        combinationsTest = (Node)FXMLLoader.load(Modena.class.getResource("CombinationTest.fxml"))
-                    ).build()
-                ).build(),
-                // Customer example from bug report http://javafx-jira.kenai.com/browse/DTL-5561
-                TabBuilder.create().text("Customer Example").content(
-                    ScrollPaneBuilder.create().content(
-                        customerTest = (Node)FXMLLoader.load(Modena.class.getResource("ScottSelvia.fxml"))
-                    ).build()
-                ).build()
-            );
+            Tab tab1 = new Tab("All Controls");
+            tab1.setContent(samplePageNavigation);
+            Tab tab2 = new Tab("UI Mosaic");
+            tab2.setContent(new ScrollPane(mosaic = (Node)FXMLLoader.load(Modena.class.getResource("ui-mosaic.fxml"))));
+
+            Tab tab3 = new Tab("Alignment Test");
+            tab3.setContent(new ScrollPane(heightTest =
+                    (Node)FXMLLoader.load(Modena.class.getResource("SameHeightTest.fxml"))));
+
+            Tab tab4 = new Tab("Simple Windows");
+            tab4.setContent(new ScrollPane(simpleWindows = new SimpleWindowPage()));
+
+            Tab tab5 = new Tab("Combinations");
+            tab5.setContent(new ScrollPane(combinationsTest =
+                    (Node)FXMLLoader.load(Modena.class.getResource("CombinationTest.fxml"))));
+
+            // Customer example from bug report http://javafx-jira.kenai.com/browse/DTL-5561
+            Tab tab6 = new Tab("Customer Example");
+            tab6.setContent(new ScrollPane(customerTest =
+                    (Node)FXMLLoader.load(Modena.class.getResource("ScottSelvia.fxml"))));
+
+            contentTabs.getTabs().addAll(tab1, tab2, tab3, tab4, tab5, tab6);
             contentTabs.getSelectionModel().select(selectedTab);
             samplePage.setMouseTransparent(test);
             // height test set selection for 
@@ -350,64 +348,54 @@ public class Modena extends Application {
                 }
             });
             // Create Toolbar
-            retinaButton = ToggleButtonBuilder.create()
-                .text("@2x")
-                .selected(retina)
-                .onAction(event -> {
-                    ToggleButton btn = (ToggleButton)event.getSource();
-                    setRetinaMode(btn.isSelected());
-                })
-                .build();
+            retinaButton = new ToggleButton("@2x");
+            retinaButton.setSelected(retina);
+            retinaButton.setOnAction(event -> {
+                ToggleButton btn = (ToggleButton)event.getSource();
+                setRetinaMode(btn.isSelected());
+            });
             ToggleGroup themesToggleGroup = new ToggleGroup();
-            ToolBar toolBar = new ToolBar(
-                HBoxBuilder.create()
-                    .children(
-                        modenaButton = ToggleButtonBuilder.create()
-                            .text("Modena")
-                            .toggleGroup(themesToggleGroup)
-                            .selected(modena)
-                            .onAction(rebuild)
-                            .styleClass("left-pill")
-                            .build(),
-                        ToggleButtonBuilder.create()
-                            .text("Caspian")
-                            .toggleGroup(themesToggleGroup)
-                            .selected(!modena)
-                            .onAction(rebuild)
-                            .styleClass("right-pill")
-                            .build()
-                    )
-                    .build(),
-                ButtonBuilder.create()
-                    .graphic(new ImageView(new Image(Modena.class.getResource("reload_12x14.png").toString())))
-                    .onAction(rebuild)
-                    .build(),
-                rtlButton = ToggleButtonBuilder.create()
-                    .text("RTL")
-                    .onAction(event -> root.setNodeOrientation(rtlButton.isSelected() ? 
-                            NodeOrientation.RIGHT_TO_LEFT : NodeOrientation.LEFT_TO_RIGHT))
-                    .build(),
-                embeddedPerformanceButton = ToggleButtonBuilder.create()
-                    .text("EP")
-                    .selected(embeddedPerformanceMode)
-                    .tooltip(new Tooltip("Apply Embedded Performance extra stylesheet"))
-                    .onAction(event -> {
-                        embeddedPerformanceMode = embeddedPerformanceButton.isSelected();
-                        rebuild.handle(event);
-                    })
-                    .build(),
-                new Separator(),
-                retinaButton,
-                new Label("Base:"),
-                createBaseColorPicker(),
-                new Label("Background:"),
-                createBackgroundColorPicker(),
-                new Label("Accent:"),
-                createAccentColorPicker(),
-                new Separator(),
-                ButtonBuilder.create().text("Save...").onAction(saveBtnHandler).build(),
-                ButtonBuilder.create().text("Restart").onAction(event -> restart()).build()
-            );
+            modenaButton = new ToggleButton("Modena");
+            modenaButton.setToggleGroup(themesToggleGroup);
+            modenaButton.setSelected(modena);
+            modenaButton.setOnAction(rebuild);
+            modenaButton.getStyleClass().add("left-pill:");
+            ToggleButton caspianButton = new ToggleButton("Caspian");
+            caspianButton.setToggleGroup(themesToggleGroup);
+            caspianButton.setSelected(!modena);
+            caspianButton.setOnAction(rebuild);
+            caspianButton.getStyleClass().add("right-pill");
+            Button reloadButton = new Button("", new ImageView(new Image(Modena.class.getResource("reload_12x14.png").toString())));
+            reloadButton.setOnAction(rebuild);
+
+            rtlButton = new ToggleButton("RTL");
+            rtlButton.setOnAction(event -> root.setNodeOrientation(rtlButton.isSelected() ?
+                    NodeOrientation.RIGHT_TO_LEFT : NodeOrientation.LEFT_TO_RIGHT));
+
+            embeddedPerformanceButton = new ToggleButton("EP");
+            embeddedPerformanceButton.setSelected(embeddedPerformanceMode);
+            embeddedPerformanceButton.setTooltip(new Tooltip("Apply Embedded Performance extra stylesheet"));
+            embeddedPerformanceButton.setOnAction(event -> {
+                embeddedPerformanceMode = embeddedPerformanceButton.isSelected();
+                rebuild.handle(event);
+            });
+
+            Button saveButton = new Button("Save...");
+            saveButton.setOnAction(saveBtnHandler);
+
+            Button restartButton = new Button("Restart");
+            retinaButton.setOnAction(event -> restart());
+
+            ToolBar toolBar = new ToolBar(new HBox(modenaButton, caspianButton), reloadButton, rtlButton,
+                    embeddedPerformanceButton, new Separator(), retinaButton,
+                    new Label("Base:"),
+                    createBaseColorPicker(),
+                    new Label("Background:"),
+                    createBackgroundColorPicker(),
+                    new Label("Accent:"),
+                    createAccentColorPicker(),
+                    new Separator(), saveButton, restartButton
+                    );
             toolBar.setId("TestAppToolbar");
             // Create content group used for scaleing @2x
             final Pane contentGroup = new Pane() {
@@ -444,7 +432,11 @@ public class Modena extends Application {
     }
 
     public RadioMenuItem buildFontRadioMenuItem(String name, final String in_fontName, final int in_fontSize, ToggleGroup tg) {
-        return RadioMenuItemBuilder.create().text(name).onAction(event -> setFont(in_fontName, in_fontSize)).style("-fx-font: " + in_fontSize + "px \"" + in_fontName + "\";").toggleGroup(tg).build();
+        RadioMenuItem rmItem = new RadioMenuItem(name);
+        rmItem.setOnAction(event -> setFont(in_fontName, in_fontSize));
+        rmItem.setStyle("-fx-font: " + in_fontSize + "px \"" + in_fontName + "\";");
+        rmItem.setToggleGroup(tg);
+        return rmItem;
     }
     
     public void setFont(String in_fontName, int in_fontSize) {

@@ -26,16 +26,16 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-    // Eventually we should implement XSLTException:
-    // http://lxr.mozilla.org/seamonkey/source/content/xsl/public/nsIXSLTException.idl
-    // http://bugs.webkit.org/show_bug.cgi?id=5446
+// Eventually we should implement XSLTException:
+// http://lxr.mozilla.org/seamonkey/source/content/xsl/public/nsIXSLTException.idl
+// http://bugs.webkit.org/show_bug.cgi?id=5446
 
 [
-        Conditional=XSLT,
+    Conditional=XSLT,
     Constructor,
-    ImplementationLacksVTable
+    ImplementationLacksVTable,
 ] interface XSLTProcessor {
-        
+    
     void importStylesheet([Default=Undefined] optional Node stylesheet);
     DocumentFragment transformToFragment([Default=Undefined] optional Node source, [Default=Undefined] optional Document docVal);
     Document transformToDocument([Default=Undefined] optional Node source);
@@ -43,9 +43,9 @@
     [Custom] void setParameter(DOMString namespaceURI, DOMString localName, DOMString value);
     [Custom, TreatReturnedNullStringAs=Undefined] DOMString getParameter(DOMString namespaceURI, DOMString localName);
     [Custom] void removeParameter(DOMString namespaceURI, DOMString localName);
-        void clearParameters();
+    void clearParameters();
 
-        void reset();
+    void reset();
 
-    };
+};
 

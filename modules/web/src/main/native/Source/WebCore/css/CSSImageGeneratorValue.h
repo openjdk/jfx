@@ -27,65 +27,71 @@
 #define CSSImageGeneratorValue_h
 
 #include "CSSValue.h"
-#include "GeneratorGeneratedImage.h"
 #include "IntSizeHash.h"
 #include "Timer.h"
 #include <wtf/HashCountedSet.h>
-#include <wtf/RefPtr.h>
 
 namespace WebCore {
 
+class CachedImage;
 class CachedResourceLoader;
-class GeneratorGeneratedImage;
-class RenderObject;
+class GeneratedImage;
+class Image;
+class RenderElement;
 class StyleResolver;
 
 class CSSImageGeneratorValue : public CSSValue {
 public:
     ~CSSImageGeneratorValue();
 
-    void addClient(RenderObject*);
-    void removeClient(RenderObject*);
+    void addClient(RenderElement*);
+    void removeClient(RenderElement*);
 
-    PassRefPtr<Image> image(RenderObject*, const IntSize&);
+    PassRefPtr<Image> image(RenderElement*, const IntSize&);
 
     bool isFixedSize() const;
-    IntSize fixedSize(const RenderObject*);
+    IntSize fixedSize(const RenderElement*);
 
     bool isPending() const;
-    bool knownToBeOpaque(const RenderObject*) const;
+    bool knownToBeOpaque(const RenderElement*) const;
 
     void loadSubimages(CachedResourceLoader*);
 
 protected:
     CSSImageGeneratorValue(ClassType);
 
-    GeneratorGeneratedImage* cachedImageForSize(IntSize);
-    void saveCachedImageForSize(IntSize, PassRefPtr<GeneratorGeneratedImage>);
-    const HashCountedSet<RenderObject*>& clients() const { return m_clients; }
+    GeneratedImage* cachedImageForSize(IntSize);
+    void saveCachedImageForSize(IntSize, PassRefPtr<GeneratedImage>);
+    const HashCountedSet<RenderElement*>& clients() const { return m_clients; }
+
+    // Helper functions for Crossfade and Filter.
+    static CachedImage* cachedImageForCSSValue(CSSValue*, CachedResourceLoader*);
+    static bool subimageIsPending(CSSValue*);
 
 private:
     class CachedGeneratedImage {
     public:
-        CachedGeneratedImage(CSSImageGeneratorValue&, IntSize, PassRefPtr<GeneratorGeneratedImage>);
-        GeneratorGeneratedImage* image() { return m_image.get(); }
+        CachedGeneratedImage(CSSImageGeneratorValue&, IntSize, PassRefPtr<GeneratedImage>);
+        GeneratedImage* image() { return m_image.get(); }
         void puntEvictionTimer() { m_evictionTimer.restart(); }
 
     private:
-        void evictionTimerFired(DeferrableOneShotTimer<CachedGeneratedImage>*);
+        void evictionTimerFired(DeferrableOneShotTimer<CachedGeneratedImage>&);
 
         CSSImageGeneratorValue& m_owner;
         IntSize m_size;
-        RefPtr<GeneratorGeneratedImage> m_image;
+        RefPtr<GeneratedImage> m_image;
         DeferrableOneShotTimer<CachedGeneratedImage> m_evictionTimer;
     };
 
     friend class CachedGeneratedImage;
     void evictCachedGeneratedImage(IntSize);
 
-    HashCountedSet<RenderObject*> m_clients;
-    HashMap<IntSize, OwnPtr<CachedGeneratedImage> > m_images;
+    HashCountedSet<RenderElement*> m_clients;
+    HashMap<IntSize, std::unique_ptr<CachedGeneratedImage>> m_images;
 };
+
+CSS_VALUE_TYPE_CASTS(CSSImageGeneratorValue, isImageGeneratorValue())
 
 } // namespace WebCore
 

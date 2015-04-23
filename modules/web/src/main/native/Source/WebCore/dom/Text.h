@@ -24,18 +24,23 @@
 #define Text_h
 
 #include "CharacterData.h"
+#include "RenderPtr.h"
 
 namespace WebCore {
-    
+
 class RenderText;
+class ScriptExecutionContext;
 
 class Text : public CharacterData {
 public:
     static const unsigned defaultLengthLimit = 1 << 16;
 
-    static PassRefPtr<Text> create(Document*, const String&);
-    static PassRefPtr<Text> createWithLengthLimit(Document*, const String&, unsigned positionInString, unsigned lengthLimit = defaultLengthLimit);
-    static PassRefPtr<Text> createEditingText(Document*, const String&);
+    static PassRefPtr<Text> create(Document&, const String&);
+    static PassRefPtr<Text> create(ScriptExecutionContext&, const String&);
+    static PassRefPtr<Text> createWithLengthLimit(Document&, const String&, unsigned positionInString, unsigned lengthLimit = defaultLengthLimit);
+    static PassRefPtr<Text> createEditingText(Document&, const String&);
+
+    virtual ~Text();
 
     PassRefPtr<Text> splitText(unsigned offset, ExceptionCode&);
 
@@ -44,40 +49,36 @@ public:
     String wholeText() const;
     PassRefPtr<Text> replaceWholeText(const String&, ExceptionCode&);
     
-    void recalcTextStyle(StyleChange);
-    void createTextRendererIfNeeded();
-    bool textRendererIsNeeded(NodeRenderingContext&);
-    RenderText* createTextRenderer(RenderArena*, RenderStyle*);
-    void updateTextRenderer(unsigned offsetOfReplacedData, unsigned lengthOfReplacedData);
-
-    virtual void attach() OVERRIDE FINAL;
+    RenderPtr<RenderText> createTextRenderer(const RenderStyle&);
     
-    virtual bool canContainRangeEndPoint() const OVERRIDE FINAL { return true; }
+    virtual bool canContainRangeEndPoint() const override final { return true; }
+
+    RenderText* renderer() const;
 
 protected:
-    Text(Document* document, const String& data, ConstructionType type)
+    Text(Document& document, const String& data, ConstructionType type)
         : CharacterData(document, data, type)
     {
     }
 
 private:
-    virtual String nodeName() const OVERRIDE;
-    virtual NodeType nodeType() const OVERRIDE;
-    virtual PassRefPtr<Node> cloneNode(bool deep) OVERRIDE;
-    virtual bool childTypeAllowed(NodeType) const OVERRIDE;
+    virtual String nodeName() const override;
+    virtual NodeType nodeType() const override;
+    virtual PassRefPtr<Node> cloneNode(bool deep) override;
+    virtual bool childTypeAllowed(NodeType) const override;
 
     virtual PassRefPtr<Text> virtualCreate(const String&);
 
 #ifndef NDEBUG
-    virtual void formatForDebugger(char* buffer, unsigned length) const;
+    virtual void formatForDebugger(char* buffer, unsigned length) const override;
 #endif
 };
 
-inline Text* toText(Node* node)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!node || node->isTextNode());
-    return static_cast<Text*>(node);
-}
+inline bool isText(const Node& node) { return node.isTextNode(); }
+void isText(const Text&); // Catch unnecessary runtime check of type known at compile time.
+void isText(const ContainerNode&); // Catch unnecessary runtime check of type known at compile time.
+
+NODE_TYPE_CASTS(Text)
 
 } // namespace WebCore
 

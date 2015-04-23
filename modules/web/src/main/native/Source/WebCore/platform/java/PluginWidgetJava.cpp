@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
 #include "EventNames.h"
@@ -226,7 +226,7 @@ void PluginWidgetJava::convertToPage(IntRect& rect)
 
 void PluginWidgetJava::setFrameRect(const IntRect& rect)
 {
-    if (m_element->document()->printing())
+    if (m_element->document().printing())
         return;
 
     if (rect != frameRect())

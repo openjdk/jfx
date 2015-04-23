@@ -18,12 +18,12 @@
  * Boston, MA 02110-1301, USA.
  */
 
-    interface HTMLPreElement : HTMLElement {
-        // FIXME: DOM spec says that width should be of type DOMString
-        // see http://bugs.webkit.org/show_bug.cgi?id=8992
+interface HTMLPreElement : HTMLElement {
+    // FIXME: DOM spec says that width should be of type DOMString
+    // see http://bugs.webkit.org/show_bug.cgi?id=8992
     [Reflect] attribute long width;
-        
-        // Extensions
+    
+    // Extensions
     [Reflect] attribute boolean wrap;
-    };
+};
 

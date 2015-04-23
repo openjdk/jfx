@@ -45,6 +45,8 @@
 #include <runtime/FunctionPrototype.h>
 #include <runtime/JSLock.h>
 
+#include <APICast.h>
+
 using namespace JSC::Bindings;
 using namespace JSC;
 using namespace WebCore;
@@ -104,7 +106,7 @@ JSValue JavaInstance::stringValue(ExecState* exec) const
         JSValue exceptionDescription
             = (JavaInstance::create(ex, rootObject(), accessControlContext())
                ->createRuntimeObject(exec));
-        throwError(exec, createError(exec,
+	exec->vm().throwException(exec, createError(exec,
                                      (exceptionDescription.toString(exec)
                                       ->value(exec))));
         return jsUndefined();
@@ -193,7 +195,7 @@ JSValue JavaInstance::getMethod(ExecState* exec, PropertyName propertyName)
 JSValue JavaInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod)
 {
     if (!asObject(runtimeMethod)->inherits(&JavaRuntimeMethod::s_info))
-        return throwError(exec, createTypeError(exec, "Attempt to invoke non-Java method on Java object."));
+        exec->vm().throwException(exec, createTypeError(exec, "Attempt to invoke non-Java method on Java object."));
 
     int count = exec->argumentCount();
 #if 0
@@ -248,7 +250,7 @@ JSValue JavaInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod
     // to dispatch the call on the appropriate internal VM thread.
     RootObject* rootObject = this->rootObject();
     if (jMethod->isStatic())
-        return throwError(exec, createTypeError(exec, "invoking static method"));
+        return exec->vm().throwException(exec, createTypeError(exec, "invoking static method"));
     if (!rootObject)
         return jsUndefined();
 
@@ -267,7 +269,7 @@ JSValue JavaInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod
           JSValue exceptionDescription
             = (JavaInstance::create(ex, rootObject, accessControlContext())
                ->createRuntimeObject(exec));
-          throwError(exec, exceptionDescription);
+          exec->vm().throwException(exec, exceptionDescription);
           return jsUndefined();
         }
     }

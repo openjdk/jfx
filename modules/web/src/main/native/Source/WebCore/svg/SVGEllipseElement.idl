@@ -23,16 +23,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-[
-        Conditional=SVG
-] interface SVGEllipseElement : SVGStyledElement,
-                                                    SVGTests,
-                                                    SVGLangSpace,
-                                                    SVGExternalResourcesRequired,
-                                                    SVGTransformable {
-        readonly attribute SVGAnimatedLength cx;
-        readonly attribute SVGAnimatedLength cy;
-        readonly attribute SVGAnimatedLength rx;
-        readonly attribute SVGAnimatedLength ry;
-    };
+interface SVGEllipseElement : SVGGraphicsElement {
+    readonly attribute SVGAnimatedLength cx;
+    readonly attribute SVGAnimatedLength cy;
+    readonly attribute SVGAnimatedLength rx;
+    readonly attribute SVGAnimatedLength ry;
+};
 
+SVGEllipseElement implements SVGExternalResourcesRequired;

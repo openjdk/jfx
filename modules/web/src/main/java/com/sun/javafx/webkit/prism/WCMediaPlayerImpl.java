@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -130,7 +130,7 @@ final class WCMediaPlayerImpl extends WCMediaPlayer
                     log.log(Level.WARNING, "CreateThread ERROR: {0}", ex.toString());
                     ex.printStackTrace(System.out);
                 }
-                onError(this, 0, ex.getMessage());
+                onError(this, 0, ex.getMessage());                
                 return;
             }
 
@@ -226,8 +226,12 @@ final class WCMediaPlayerImpl extends WCMediaPlayer
     
     protected void prepareToPlay() {
         synchronized (lock) {
-            if (player == null && createThread != null && !createThread.isAlive()) {
-                createThread.start();
+            if (player == null) {
+                // Only start the thread if it has been created but not yet started.
+                Thread t = createThread;
+                if (t != null && t.getState() == Thread.State.NEW) {
+                    t.start();
+                }
             }
         }
     }

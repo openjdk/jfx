@@ -36,23 +36,23 @@ namespace WebCore {
 
 class CSSCrossfadeValue;
 
-class CrossfadeGeneratedImage : public GeneratedImage {
+class CrossfadeGeneratedImage final : public GeneratedImage {
 public:
     static PassRefPtr<CrossfadeGeneratedImage> create(Image* fromImage, Image* toImage, float percentage, IntSize crossfadeSize, const IntSize& size)
     {
         return adoptRef(new CrossfadeGeneratedImage(fromImage, toImage, percentage, crossfadeSize, size));
     }
 
-    virtual void setContainerSize(const IntSize&) { }
-    virtual bool usesContainerSize() const { return false; }
-    virtual bool hasRelativeWidth() const { return false; }
-    virtual bool hasRelativeHeight() const { return false; }
+    virtual void setContainerSize(const IntSize&) override { }
+    virtual bool usesContainerSize() const override { return false; }
+    virtual bool hasRelativeWidth() const override { return false; }
+    virtual bool hasRelativeHeight() const override { return false; }
 
-    virtual IntSize size() const { return m_crossfadeSize; }
+    virtual IntSize size() const override { return m_crossfadeSize; }
 
 protected:
-    virtual void draw(GraphicsContext*, const FloatRect& dstRect, const FloatRect& srcRect, ColorSpace styleColorSpace, CompositeOperator, BlendMode);
-    virtual void drawPattern(GraphicsContext*, const FloatRect& srcRect, const AffineTransform& patternTransform, const FloatPoint& phase, ColorSpace styleColorSpace, CompositeOperator, const FloatRect& dstRect, BlendMode);
+    virtual void draw(GraphicsContext*, const FloatRect& dstRect, const FloatRect& srcRect, ColorSpace styleColorSpace, CompositeOperator, BlendMode, ImageOrientationDescription) override;
+    virtual void drawPattern(GraphicsContext*, const FloatRect& srcRect, const AffineTransform& patternTransform, const FloatPoint& phase, ColorSpace styleColorSpace, CompositeOperator, const FloatRect& dstRect, BlendMode) override;
 
     CrossfadeGeneratedImage(Image* fromImage, Image* toImage, float percentage, IntSize crossfadeSize, const IntSize&);
 

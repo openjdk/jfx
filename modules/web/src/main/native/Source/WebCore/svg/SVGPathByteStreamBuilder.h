@@ -20,11 +20,9 @@
 #ifndef SVGPathByteStreamBuilder_h
 #define SVGPathByteStreamBuilder_h
 
-#if ENABLE(SVG)
 #include "FloatPoint.h"
 #include "SVGPathByteStream.h"
 #include "SVGPathConsumer.h"
-#include <wtf/PassOwnPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -36,23 +34,23 @@ public:
     void setCurrentByteStream(SVGPathByteStream* byteStream) { m_byteStream = byteStream; }
 
 private:
-    virtual void incrementPathSegmentCount() { }
-    virtual bool continueConsuming() { return true; }
-    virtual void cleanup() { m_byteStream = 0; }
+    virtual void incrementPathSegmentCount() override { }
+    virtual bool continueConsuming() override { return true; }
+    virtual void cleanup() override { m_byteStream = 0; }
 
     // Used in UnalteredParsing/NormalizedParsing modes.
-    virtual void moveTo(const FloatPoint&, bool closed, PathCoordinateMode);
-    virtual void lineTo(const FloatPoint&, PathCoordinateMode);
-    virtual void curveToCubic(const FloatPoint&, const FloatPoint&, const FloatPoint&, PathCoordinateMode);
-    virtual void closePath();
+    virtual void moveTo(const FloatPoint&, bool closed, PathCoordinateMode) override;
+    virtual void lineTo(const FloatPoint&, PathCoordinateMode) override;
+    virtual void curveToCubic(const FloatPoint&, const FloatPoint&, const FloatPoint&, PathCoordinateMode) override;
+    virtual void closePath() override;
 
     // Only used in UnalteredParsing mode.
-    virtual void lineToHorizontal(float, PathCoordinateMode);
-    virtual void lineToVertical(float, PathCoordinateMode);
-    virtual void curveToCubicSmooth(const FloatPoint&, const FloatPoint&, PathCoordinateMode);
-    virtual void curveToQuadratic(const FloatPoint&, const FloatPoint&, PathCoordinateMode);
-    virtual void curveToQuadraticSmooth(const FloatPoint&, PathCoordinateMode);
-    virtual void arcTo(float, float, float, bool largeArcFlag, bool sweepFlag, const FloatPoint&, PathCoordinateMode);
+    virtual void lineToHorizontal(float, PathCoordinateMode) override;
+    virtual void lineToVertical(float, PathCoordinateMode) override;
+    virtual void curveToCubicSmooth(const FloatPoint&, const FloatPoint&, PathCoordinateMode) override;
+    virtual void curveToQuadratic(const FloatPoint&, const FloatPoint&, PathCoordinateMode) override;
+    virtual void curveToQuadraticSmooth(const FloatPoint&, PathCoordinateMode) override;
+    virtual void arcTo(float, float, float, bool largeArcFlag, bool sweepFlag, const FloatPoint&, PathCoordinateMode) override;
 
     template<typename ByteType>
     void writeType(const ByteType& type)
@@ -94,5 +92,4 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(SVG)
 #endif // SVGPathByteStreamBuilder_h

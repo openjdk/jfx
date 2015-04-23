@@ -26,15 +26,15 @@
 
 /**
  * \file
- * \brief Basic types and constants for UTF 
- * 
+ * \brief Basic types and constants for UTF
+ *
  * <h2> Basic types and constants for UTF </h2>
  *   This file defines basic types and constants for utf.h to be
  *   platform-independent. umachine.h and utf.h are included into
  *   utypes.h to provide all the general definitions for ICU.
  *   All of these definitions used to be in utypes.h before
  *   the UTF-handling macros made this unmaintainable.
- * 
+ *
  */
 /*==========================================================================*/
 /* Include platform-dependent definitions                                   */
@@ -91,7 +91,7 @@
 
 /**
  * \def U_CDECL_END
- * This is used to end a declaration of a library private ICU C API 
+ * This is used to end a declaration of a library private ICU C API
  * @stable ICU 2.4
  */
 
@@ -268,7 +268,7 @@ typedef int8_t UBool;
  * @stable ICU 2.0
  */
 #if !defined(U_WCHAR_IS_UTF16) && !defined(U_WCHAR_IS_UTF32)
-#   ifdef __STDC_ISO_10646__ 
+#   ifdef __STDC_ISO_10646__
 #       if (U_SIZEOF_WCHAR_T==2)
 #           define U_WCHAR_IS_UTF16
 #       elif (U_SIZEOF_WCHAR_T==4)
@@ -283,7 +283,7 @@ typedef int8_t UBool;
 #           define U_WCHAR_IS_UTF32
 #       endif
 #   elif defined(U_WINDOWS)
-#       define U_WCHAR_IS_UTF16    
+#       define U_WCHAR_IS_UTF16
 #   endif
 #endif
 
@@ -365,8 +365,8 @@ typedef int32_t UChar32;
 #   ifdef XP_CPLUSPLUS
 #       define U_INLINE inline
 #   else
-#   define U_INLINE
-#endif
+#       define U_INLINE
+#   endif
 #endif
 
 #include "unicode/urename.h"

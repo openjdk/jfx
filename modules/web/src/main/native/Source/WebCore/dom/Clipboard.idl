@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2008, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,20 +25,20 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
 [
-    SkipVTableValidation
+    SkipVTableValidation,
 ] interface Clipboard {
-             [TreatReturnedNullStringAs=Undefined] attribute DOMString dropEffect;
-             [TreatReturnedNullStringAs=Undefined] attribute DOMString effectAllowed;
+    attribute DOMString dropEffect;
+    attribute DOMString effectAllowed;
+
     [CustomGetter] readonly attribute Array types;
-        readonly attribute FileList files;
+    readonly attribute FileList files;
 
     void clearData(optional DOMString type);
     DOMString getData(DOMString type);
     boolean setData(DOMString type, DOMString data);
-    [Custom] void setDragImage(HTMLImageElement image, long x, long y)
-            raises(DOMException);
+    void setDragImage(Element image, long x, long y);
 
     [Conditional=DATA_TRANSFER_ITEMS] readonly attribute DataTransferItemList items;
-    };
-
+};

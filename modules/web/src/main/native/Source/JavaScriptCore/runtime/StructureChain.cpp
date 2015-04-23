@@ -20,20 +20,20 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
 #include "config.h"
 #include "StructureChain.h"
 
 #include "JSObject.h"
-#include "Operations.h"
+#include "JSCInlines.h"
 #include "Structure.h"
 #include <wtf/RefPtr.h>
 
 namespace JSC {
-
-ClassInfo StructureChain::s_info = { "StructureChain", 0, 0, 0, CREATE_METHOD_TABLE(StructureChain) };
+    
+const ClassInfo StructureChain::s_info = { "StructureChain", 0, 0, 0, CREATE_METHOD_TABLE(StructureChain) };
 
 StructureChain::StructureChain(VM& vm, Structure* structure)
     : JSCell(vm, structure)
@@ -48,7 +48,7 @@ void StructureChain::destroy(JSCell* cell)
 void StructureChain::visitChildren(JSCell* cell, SlotVisitor& visitor)
 {
     StructureChain* thisObject = jsCast<StructureChain*>(cell);
-    ASSERT_GC_OBJECT_INHERITS(thisObject, &s_info);
+    ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     ASSERT(thisObject->structure()->typeInfo().overridesVisitChildren());
     size_t i = 0;
     while (thisObject->m_vector[i])

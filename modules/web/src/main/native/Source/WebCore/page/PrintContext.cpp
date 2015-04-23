@@ -26,6 +26,7 @@
 #include "FrameView.h"
 #include "RenderView.h"
 #include "StyleInheritedData.h"
+#include "StyleResolver.h"
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -103,7 +104,7 @@ void PrintContext::computePageRectsWithPageSizeInternal(const FloatSize& pageSiz
     int pageWidth = pageSizeInPixels.width();
     int pageHeight = pageSizeInPixels.height();
 
-    bool isHorizontal = view->style()->isHorizontalWritingMode();
+    bool isHorizontal = view->style().isHorizontalWritingMode();
 
     int docLogicalHeight = isHorizontal ? docRect.height() : docRect.width();
     int pageLogicalHeight = isHorizontal ? pageHeight : pageWidth;
@@ -114,25 +115,25 @@ void PrintContext::computePageRectsWithPageSizeInternal(const FloatSize& pageSiz
     int blockDirectionStart;
     int blockDirectionEnd;
     if (isHorizontal) {
-        if (view->style()->isFlippedBlocksWritingMode()) {
+        if (view->style().isFlippedBlocksWritingMode()) {
             blockDirectionStart = docRect.maxY();
             blockDirectionEnd = docRect.y();
         } else {
             blockDirectionStart = docRect.y();
             blockDirectionEnd = docRect.maxY();
         }
-        inlineDirectionStart = view->style()->isLeftToRightDirection() ? docRect.x() : docRect.maxX();
-        inlineDirectionEnd = view->style()->isLeftToRightDirection() ? docRect.maxX() : docRect.x();
+        inlineDirectionStart = view->style().isLeftToRightDirection() ? docRect.x() : docRect.maxX();
+        inlineDirectionEnd = view->style().isLeftToRightDirection() ? docRect.maxX() : docRect.x();
     } else {
-        if (view->style()->isFlippedBlocksWritingMode()) {
+        if (view->style().isFlippedBlocksWritingMode()) {
             blockDirectionStart = docRect.maxX();
             blockDirectionEnd = docRect.x();
         } else {
             blockDirectionStart = docRect.x();
             blockDirectionEnd = docRect.maxX();
         }
-        inlineDirectionStart = view->style()->isLeftToRightDirection() ? docRect.y() : docRect.maxY();
-        inlineDirectionEnd = view->style()->isLeftToRightDirection() ? docRect.maxY() : docRect.y();
+        inlineDirectionStart = view->style().isLeftToRightDirection() ? docRect.y() : docRect.maxY();
+        inlineDirectionEnd = view->style().isLeftToRightDirection() ? docRect.maxY() : docRect.y();
     }
 
     unsigned pageCount = ceilf((float)docLogicalHeight / pageLogicalHeight);
@@ -179,7 +180,7 @@ float PrintContext::computeAutomaticScaleFactor(const FloatSize& availablePaperS
 
     bool useViewWidth = true;
     if (m_frame->document() && m_frame->document()->renderView())
-        useViewWidth = m_frame->document()->renderView()->style()->isHorizontalWritingMode();
+        useViewWidth = m_frame->document()->renderView()->style().isHorizontalWritingMode();
 
     float viewLogicalWidth = useViewWidth ? m_frame->view()->contentsWidth() : m_frame->view()->contentsHeight();
     if (viewLogicalWidth < 1)
@@ -187,7 +188,7 @@ float PrintContext::computeAutomaticScaleFactor(const FloatSize& availablePaperS
 
     float maxShrinkToFitScaleFactor = 1 / printingMaximumShrinkFactor;
     float shrinkToFitScaleFactor = (useViewWidth ? availablePaperSize.width() : availablePaperSize.height()) / viewLogicalWidth;
-    return max(maxShrinkToFitScaleFactor, shrinkToFitScaleFactor);
+    return std::max(maxShrinkToFitScaleFactor, shrinkToFitScaleFactor);
 }
 
 void PrintContext::spoolPage(GraphicsContext& ctx, int pageNumber, float width)
@@ -235,13 +236,13 @@ int PrintContext::pageNumberForElement(Element* element, const FloatSize& pageSi
 {
     // Make sure the element is not freed during the layout.
     RefPtr<Element> elementRef(element);
-    element->document()->updateLayout();
+    element->document().updateLayout();
 
     RenderBoxModelObject* box = enclosingBoxModelObject(element->renderer());
     if (!box)
         return -1;
 
-    Frame* frame = element->document()->frame();
+    Frame* frame = element->document().frame();
     FloatRect pageRect(FloatPoint(0, 0), pageSizeInPixels);
     PrintContext printContext(frame);
     printContext.begin(pageRect.width(), pageRect.height());
@@ -266,7 +267,7 @@ String PrintContext::pageProperty(Frame* frame, const char* propertyName, int pa
     PrintContext printContext(frame);
     printContext.begin(800); // Any width is OK here.
     document->updateLayout();
-    RefPtr<RenderStyle> style = document->styleForPage(pageNumber);
+    RefPtr<RenderStyle> style = document->ensureStyleResolver().styleForPage(pageNumber);
 
     // Implement formatters for properties we care about.
     if (!strcmp(propertyName, "margin-left")) {
@@ -316,7 +317,7 @@ int PrintContext::numberOfPages(Frame* frame, const FloatSize& pageSizeInPixels)
 
 void PrintContext::spoolAllPagesWithBoundaries(Frame* frame, GraphicsContext& graphicsContext, const FloatSize& pageSizeInPixels)
 {
-    if (!frame->document() || !frame->view() || !frame->document()->renderer())
+    if (!frame->document() || !frame->view() || !frame->document()->renderView())
         return;
 
     frame->document()->updateLayout();

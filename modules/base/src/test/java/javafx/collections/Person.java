@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,11 +25,15 @@
 
 package javafx.collections;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+import javafx.beans.Observable;
 import javafx.beans.property.StringProperty;
 import javafx.beans.property.StringPropertyBase;
 
-class Person {
-    StringProperty name = new StringPropertyBase("foo") {
+public class Person implements Comparable<Person> {
+    public StringProperty name = new StringPropertyBase("foo") {
 
         @Override
         public Object getBean() {
@@ -75,7 +79,28 @@ class Person {
     public String toString() {
         return "Person[" + name.get() + "]";
     }
-    
-    
 
+    @Override
+    public int compareTo(Person o) {
+        return this.name.get().compareTo(o.name.get());
+    }
+    
+    public static ObservableList<Person> createPersonsList(Person... persons) {
+        ObservableList<Person> list = FXCollections.observableArrayList(
+                (Person p) -> new Observable[]{p.name});
+        list.addAll(persons);
+        return list;
+    }
+
+    public static List<Person> createPersonsFromNames(String... names) {
+        return Arrays.asList(names).stream().
+                map(name -> new Person(name)).collect(Collectors.toList());
+    }
+
+    public static ObservableList<Person> createPersonsList(String... names) {
+        ObservableList<Person> list = FXCollections.observableArrayList(
+                (Person p) -> new Observable[]{p.name});
+        list.addAll(createPersonsFromNames(names));
+        return list;
+    }
 }

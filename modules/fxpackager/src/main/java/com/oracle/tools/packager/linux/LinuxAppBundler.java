@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,7 @@
 
 package com.oracle.tools.packager.linux;
 
-import com.oracle.tools.packager.AbstractBundler;
+import com.oracle.tools.packager.AbstractImageBundler;
 import com.oracle.tools.packager.BundlerParamInfo;
 import com.oracle.tools.packager.JreUtils;
 import com.oracle.tools.packager.JreUtils.Rule;
@@ -37,6 +37,7 @@ import com.oracle.tools.packager.RelativeFileSet;
 import com.oracle.tools.packager.UnsupportedPlatformException;
 import com.sun.javafx.tools.packager.bundlers.BundleParams;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -48,7 +49,7 @@ import java.util.*;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
 
-public class LinuxAppBundler extends AbstractBundler {
+public class LinuxAppBundler extends AbstractImageBundler {
 
     private static final ResourceBundle I18N =
             ResourceBundle.getBundle(LinuxAppBundler.class.getName());
@@ -142,29 +143,12 @@ public class LinuxAppBundler extends AbstractBundler {
             throw new UnsupportedPlatformException();
         }
 
-        StandardBundlerParam.validateMainClassInfoFromAppResources(p);
-
-        Map<String, String> userJvmOptions = USER_JVM_OPTIONS.fetchFrom(p);
-        if (userJvmOptions != null) {
-            for (Map.Entry<String, String> entry : userJvmOptions.entrySet()) {
-                if (entry.getValue() == null || entry.getValue().isEmpty()) {
-                    throw new ConfigException(
-                            MessageFormat.format(I18N.getString("error.empty-user-jvm-option-value"), entry.getKey()),
-                            I18N.getString("error.empty-user-jvm-option-value.advice"));
-                }
-            }
-        }
+        imageBundleValidation(p);
 
         if (RAW_EXECUTABLE_URL.fetchFrom(p) == null) {
             throw new ConfigException(
                     I18N.getString("error.no-linux-resources"),
                     I18N.getString("error.no-linux-resources.advice"));
-        }
-
-        if (MAIN_JAR.fetchFrom(p) == null) {
-            throw new ConfigException(
-                    I18N.getString("error.no-application-jar"),
-                    I18N.getString("error.no-application-jar.advice"));
         }
 
         //validate required inputs
@@ -260,27 +244,36 @@ public class LinuxAppBundler extends AbstractBundler {
         executableFile.setExecutable(true, false);
         executableFile.setWritable(true, true); //for str
 
-        // Generate PkgInfo
-        writePkgInfo(p, rootDir);
+        // Generate launcher .cfg file
+        if (LAUNCHER_CFG_FORMAT.fetchFrom(p).equals(CFG_FORMAT_PROPERTIES)) {
+            writeCfgFile(p, rootDir);
+        } else {
+            writeCfgFile(p, new File(rootDir, getLauncherCfgName(p)), "$APPDIR/runtime");
+        }
     }
 
     private void copyApplication(Map<String, ? super Object> params, File appDirectory) throws IOException {
-        RelativeFileSet appResources = APP_RESOURCES.fetchFrom(params);
-        if (appResources == null) {
+        List<RelativeFileSet> appResourcesList = APP_RESOURCES_LIST.fetchFrom(params);
+        if (appResourcesList == null) {
             throw new RuntimeException("Null app resources?");
         }
-        File srcdir = appResources.getBaseDirectory();
-        for (String fname : appResources.getIncludedFiles()) {
-            IOUtils.copyFile(
-                    new File(srcdir, fname), new File(appDirectory, fname));
+        for (RelativeFileSet appResources : appResourcesList) {
+            if (appResources == null) {
+                throw new RuntimeException("Null app resources?");
+            }
+            File srcdir = appResources.getBaseDirectory();
+            for (String fname : appResources.getIncludedFiles()) {
+                IOUtils.copyFile(
+                        new File(srcdir, fname), new File(appDirectory, fname));
+            }
         }
     }
 
-    private void writePkgInfo(Map<String, ? super Object> params, File rootDir) throws FileNotFoundException {
-        File pkgInfoFile = new File(rootDir, getLauncherCfgName(params));
+    private void writeCfgFile(Map<String, ? super Object> params, File rootDir) throws FileNotFoundException {
+        File cfgFile = new File(rootDir, getLauncherCfgName(params));
 
-        pkgInfoFile.delete();
-        PrintStream out = new PrintStream(pkgInfoFile);
+        cfgFile.delete();
+        PrintStream out = new PrintStream(cfgFile);
         if (LINUX_RUNTIME.fetchFrom(params) == null) {
             out.println("app.runtime=");                    
         } else {
@@ -320,6 +313,7 @@ public class LinuxAppBundler extends AbstractBundler {
         
         //app.id required for setting user preferences (Java Preferences API)
         out.println("app.preferences.id=" + PREFERENCES_ID.fetchFrom(params));
+        out.println("app.identifier=" + IDENTIFIER.fetchFrom(params));
 
         Map<String, String> overridableJVMOptions = USER_JVM_OPTIONS.fetchFrom(params);
         idx = 1;
@@ -390,6 +384,7 @@ public class LinuxAppBundler extends AbstractBundler {
         return Arrays.asList(
                 APP_NAME,
                 APP_RESOURCES,
+                // APP_RESOURCES_LIST, // ??
                 ARGUMENTS,
                 CLASSPATH,
                 JVM_OPTIONS,
@@ -407,5 +402,41 @@ public class LinuxAppBundler extends AbstractBundler {
     @Override
     public File execute(Map<String, ? super Object> params, File outputParentDir) {
         return doBundle(params, outputParentDir, false);
+    }
+
+    @Override
+    protected String getCacheLocation(Map<String, ? super Object> params) {
+        return "$CACHEDIR/";
+    }
+
+    @Override
+    public void extractRuntimeFlags(Map<String, ? super Object> params) {
+        if (params.containsKey(".runtime.autodetect")) return;
+
+        params.put(".runtime.autodetect", "attempted");
+        RelativeFileSet runtime = LINUX_RUNTIME.fetchFrom(params);
+        String commandline;
+        if (runtime == null) {
+            //System JRE, report nothing useful
+            params.put(".runtime.autodetect", "systemjre");
+        } else {
+            File runtimePath = runtime.getBaseDirectory();
+            File launcherPath = new File(runtimePath, "bin/java");
+
+            ProcessBuilder pb = new ProcessBuilder(launcherPath.getAbsolutePath(), "-version");
+            try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                try (PrintStream pout = new PrintStream(baos)) {
+                    IOUtils.exec(pb, Log.isDebug(), true, pout);
+                }
+
+                commandline = baos.toString();
+            } catch (IOException e) {
+                e.printStackTrace();
+                params.put(".runtime.autodetect", "failed");
+                return;
+            }
+            AbstractImageBundler.extractFlagsFromVersion(params, commandline);
+            params.put(".runtime.autodetect", "succeeded");
+        }
     }
 }

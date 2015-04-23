@@ -35,9 +35,8 @@
 #include <math.h>
 #include <wtf/CurrentTime.h>
 #include <wtf/HashSet.h>
+#include <wtf/MainThread.h>
 #include <wtf/Vector.h>
-
-using namespace std;
 
 namespace WebCore {
 
@@ -108,7 +107,7 @@ inline void swap(TimerHeapReference a, TimerHeapReference b)
 
 // Class to represent iterators in the heap when calling the standard library heap algorithms.
 // Uses a custom pointer and reference type that update indices for pointers in the heap.
-class TimerHeapIterator : public iterator<random_access_iterator_tag, TimerBase*, ptrdiff_t, TimerHeapPointer, TimerHeapReference> {
+class TimerHeapIterator : public std::iterator<std::random_access_iterator_tag, TimerBase*, ptrdiff_t, TimerHeapPointer, TimerHeapReference> {
 public:
     explicit TimerHeapIterator(TimerBase** pointer) : m_pointer(pointer) { checkConsistency(); }
 
@@ -182,7 +181,7 @@ inline bool TimerHeapLessThanFunction::operator()(const TimerBase* a, const Time
     // We need to look at the difference of the insertion orders instead of comparing the two 
     // outright in case of overflow. 
     unsigned difference = a->m_heapInsertionOrder - b->m_heapInsertionOrder;
-    return difference < numeric_limits<unsigned>::max() / 2;
+    return difference < std::numeric_limits<unsigned>::max() / 2;
 }
 
 // ----------------
@@ -195,6 +194,7 @@ TimerBase::TimerBase()
     , m_cachedThreadGlobalTimerHeap(0)
 #ifndef NDEBUG
     , m_thread(currentThread())
+    , m_wasDeleted(false)
 #endif
 {
 }
@@ -203,11 +203,14 @@ TimerBase::~TimerBase()
 {
     stop();
     ASSERT(!inHeap());
+#ifndef NDEBUG
+    m_wasDeleted = true;
+#endif
 }
 
 void TimerBase::start(double nextFireInterval, double repeatInterval)
 {
-    ASSERT(m_thread == currentThread());
+    ASSERT(canAccessThreadLocalDataForThread(m_thread));
 
     m_repeatInterval = repeatInterval;
     setNextFireTime(monotonicallyIncreasingTime() + nextFireInterval);
@@ -215,7 +218,7 @@ void TimerBase::start(double nextFireInterval, double repeatInterval)
 
 void TimerBase::stop()
 {
-    ASSERT(m_thread == currentThread());
+    ASSERT(canAccessThreadLocalDataForThread(m_thread));
 
     m_repeatInterval = 0;
     setNextFireTime(0);
@@ -295,7 +298,7 @@ inline void TimerBase::heapPop()
 {
     // Temporarily force this timer to have the minimum key so we can pop it.
     double fireTime = m_nextFireTime;
-    m_nextFireTime = -numeric_limits<double>::infinity();
+    m_nextFireTime = -std::numeric_limits<double>::infinity();
     heapDecreaseKey();
     heapPopMin();
     m_nextFireTime = fireTime;
@@ -366,7 +369,8 @@ void TimerBase::updateHeapIfNeeded(double oldTime)
 
 void TimerBase::setNextFireTime(double newUnalignedTime)
 {
-    ASSERT(m_thread == currentThread());
+    ASSERT(canAccessThreadLocalDataForThread(m_thread));
+    ASSERT(!m_wasDeleted);
 
     if (m_unalignedNextFireTime != newUnalignedTime)
         m_unalignedNextFireTime = newUnalignedTime;
@@ -410,7 +414,7 @@ void TimerBase::didChangeAlignmentInterval()
 double TimerBase::nextUnalignedFireInterval() const
 {
     ASSERT(isActive());
-    return max(m_unalignedNextFireTime - monotonicallyIncreasingTime(), 0.0);
+    return std::max(m_unalignedNextFireTime - monotonicallyIncreasingTime(), 0.0);
 }
 
 } // namespace WebCore

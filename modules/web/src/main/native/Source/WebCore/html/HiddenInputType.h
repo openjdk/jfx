@@ -37,23 +37,22 @@ namespace WebCore {
 
 class HiddenInputType : public InputType {
 public:
-    static PassOwnPtr<InputType> create(HTMLInputElement*);
+    explicit HiddenInputType(HTMLInputElement& element) : InputType(element) { }
 
 private:
-    HiddenInputType(HTMLInputElement* element) : InputType(element) { }
-    virtual const AtomicString& formControlType() const OVERRIDE;
-    virtual FormControlState saveFormControlState() const OVERRIDE;
-    virtual void restoreFormControlState(const FormControlState&) OVERRIDE;
-    virtual bool supportsValidation() const OVERRIDE;
-    virtual RenderObject* createRenderer(RenderArena*, RenderStyle*) const OVERRIDE;
-    virtual void accessKeyAction(bool sendMouseEvents) OVERRIDE;
-    virtual bool rendererIsNeeded() OVERRIDE;
-    virtual bool storesValueSeparateFromAttribute() OVERRIDE;
-    virtual bool isHiddenType() const OVERRIDE;
-    virtual bool supportLabels() const OVERRIDE { return false; }
-    virtual bool shouldRespectHeightAndWidthAttributes() OVERRIDE;
-    virtual void setValue(const String&, bool, TextFieldEventBehavior) OVERRIDE;
-    virtual bool appendFormData(FormDataList&, bool) const OVERRIDE;
+    virtual const AtomicString& formControlType() const override;
+    virtual FormControlState saveFormControlState() const override;
+    virtual void restoreFormControlState(const FormControlState&) override;
+    virtual bool supportsValidation() const override;
+    virtual RenderPtr<RenderElement> createInputRenderer(PassRef<RenderStyle>) override;
+    virtual void accessKeyAction(bool sendMouseEvents) override;
+    virtual bool rendererIsNeeded() override;
+    virtual bool storesValueSeparateFromAttribute() override;
+    virtual bool isHiddenType() const override;
+    virtual bool supportLabels() const override { return false; }
+    virtual bool shouldRespectHeightAndWidthAttributes() override;
+    virtual void setValue(const String&, bool, TextFieldEventBehavior) override;
+    virtual bool appendFormData(FormDataList&, bool) const override;
 };
 
 } // namespace WebCore

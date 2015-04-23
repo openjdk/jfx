@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2014, 2015, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -39,9 +39,11 @@
 #include "Package.h"
 #include "Helpers.h"
 #include "PlatformString.h"
+#include "Macros.h"
 
 #include <map>
 #include <vector>
+#include <regex>
 
 
 //--------------------------------------------------------------------------------------------------
@@ -160,11 +162,11 @@ TString WindowsPlatform::GetPackageRootDirectory() {
 TString WindowsPlatform::GetAppDataDirectory() {
     TString result;
     TCHAR path[MAX_PATH];
-    
+
     if (SHGetFolderPath(NULL, CSIDL_APPDATA, NULL, 0, path) == S_OK) {
         result = path;
     }
-    
+
     return result;
 }
 
@@ -177,6 +179,11 @@ TString WindowsPlatform::GetAppDataDirectory() {
 // return TRUE if found, and path is set in lpszJavaHome
 // return FALSE otherwise
 TString WindowsPlatform::GetSystemJRE() {
+    if (GetAppCDSState() == cdsOn || GetAppCDSState() == cdsGenCache) {
+        //TODO throw exception
+        return _T("");
+    }
+
     TString result;
     Registry registry(HKEY_LOCAL_MACHINE);
 
@@ -197,33 +204,49 @@ TString WindowsPlatform::GetSystemJRE() {
     return result;
 }
 
-void WindowsPlatform::ShowError(TString title, TString description) {
+void WindowsPlatform::ShowMessage(TString title, TString description) {
     MessageBox(NULL, description.data(), !title.empty() ? title.data() : description.data(), MB_ICONERROR | MB_OK);
 }
 
-void WindowsPlatform::ShowError(TString description) {
+void WindowsPlatform::ShowMessage(TString description) {
     TString appname = GetModuleFileName();
     appname = FilePath::ExtractFileName(appname);
-    MessageBox(NULL, appname.data(), description.data(), MB_ICONERROR | MB_OK);
+    MessageBox(NULL, description.data(), appname.data(), MB_ICONERROR | MB_OK);
 }
+
+MessageResponse WindowsPlatform::ShowResponseMessage(TString title, TString description) {
+    MessageResponse result = mrCancel;
+
+    if (::MessageBox(NULL, description.data(), title.data(), MB_OKCANCEL) == IDOK) {
+        result = mrOK;
+    }
+
+    return result;
+}
+
+//MessageResponse WindowsPlatform::ShowResponseMessage(TString description) {
+//    TString appname = GetModuleFileName();
+//    appname = FilePath::ExtractFileName(appname);
+//    return ShowResponseMessage(appname, description);
+//}
 
 TString WindowsPlatform::GetBundledJVMLibraryFileName(TString RuntimePath) {
 
-    TString result = FilePath::IncludeTrailingSlash(RuntimePath) +
+    TString result = FilePath::IncludeTrailingSeparater(RuntimePath) +
         _T("jre\\bin\\client\\jvm.dll");
 
     if (FilePath::FileExists(result) == false) {
-        result = FilePath::IncludeTrailingSlash(RuntimePath) +
+        result = FilePath::IncludeTrailingSeparater(RuntimePath) +
             _T("jre\\bin\\server\\jvm.dll");
     }
 
     if (FilePath::FileExists(result) == false) {
-        result = FilePath::IncludeTrailingSlash(RuntimePath) +
+        result = FilePath::IncludeTrailingSeparater(RuntimePath) +
             _T("bin\\client\\jvm.dll");
     }
 
     if (FilePath::FileExists(result) == false) {
-        result = FilePath::IncludeTrailingSlash(RuntimePath) +
+        result = FilePath::IncludeTrailingSeparater(RuntimePath) +
             _T("bin\\server\\jvm.dll");
     }
 
@@ -241,8 +264,15 @@ TString WindowsPlatform::GetSystemJVMLibraryFileName() {
     return result;
 }
 
-PropertyContainer* WindowsPlatform::GetConfigFile(TString FileName) {
-    return new PropertyFile(FileName);
+ISectionalPropertyContainer* WindowsPlatform::GetConfigFile(TString FileName) {
+    IniFile *result = new IniFile();
+
+    if (result->LoadFromFile(FileName) == false) {
+        // New property file format was not found, attempt to load old property file format.
+        Helpers::LoadOldConfigFile(FileName, result);
+    }
+
+    return result;
 }
 
 TString WindowsPlatform::GetModuleFileName() {
@@ -284,14 +314,68 @@ TPlatformNumber WindowsPlatform::GetMemorySize() {
     return result;
 }
 
+std::vector<TString> WindowsPlatform::GetLibraryImports(const TString FileName) {
+ std::vector<TString> result;
+    WindowsLibrary library(FileName);
+    result = library.GetImports();
+ return result;
+}
+
+std::vector<TString> FilterList(std::vector<TString> &Items, std::wregex Pattern) {
+    std::vector<TString> result;
+
+    for (std::vector<TString>::iterator it = Items.begin(); it != Items.end(); ++it) {
+        TString item = *it;
+        std::wsmatch match;
+
+        if (std::regex_search(item, match, Pattern)) {
+            result.push_back(item);
+        }
+    }
+    return result;
+}
+
+std::vector<TString> WindowsPlatform::FilterOutRuntimeDependenciesForPlatform(std::vector<TString> Imports) {
+ std::vector<TString> result;
+
+    Package& package = Package::GetInstance();
+    Macros& macros = Macros::GetInstance();
+    TString runtimeDir = macros.ExpandMacros(package.GetJVMRuntimeDirectory());
+    std::vector<TString> filelist = FilterList(Imports, std::wregex(_T("MSVCR.*.DLL"), std::regex_constants::icase));
+
+    for (std::vector<TString>::iterator it = filelist.begin(); it != filelist.end(); ++it) {
+        TString filename = *it;
+        TString msvcr100FileName = FilePath::IncludeTrailingSeparater(runtimeDir) + _T("jre\\bin\\") + filename;
+
+        if (FilePath::FileExists(msvcr100FileName) == true) {
+            result.push_back(msvcr100FileName);
+            break;
+        }
+        else {
+            msvcr100FileName = FilePath::IncludeTrailingSeparater(runtimeDir) + _T("bin\\") + filename;
+
+            if (FilePath::FileExists(msvcr100FileName) == true) {
+                result.push_back(msvcr100FileName);
+                break;
+            }
+        }
+    }
+
+ return result;
+}
+
+Process* WindowsPlatform::CreateProcess() {
+    return new WindowsProcess();
+}
+
 #ifdef DEBUG
 bool WindowsPlatform::IsNativeDebuggerPresent() {
     bool result = false;
-    
+
     if (IsDebuggerPresent() == TRUE) {
         result = true;
     }
-    
+
     return result;
 }
 
@@ -322,7 +406,7 @@ TString ConvertStringToJavaEcodedString(TString Value) {
             case '\\':
                 result += _T("//");
                 break;
-        
+
             case '/':
                 result += '\\';
                 break;
@@ -348,16 +432,16 @@ TString ConvertStringToJavaEcodedString(TString Value) {
 // See WindowsPreferences.java toJavaName()
 TString ConvertJavaEcodedStringToString(TString Value) {
     TString result;
-    
+
     for (size_t index = 0; index < Value.length(); index++) {
         TCHAR c = Value[index];
-        
+
         switch (c) {
             case '/':
                 if ((index + 1) < Value.length()) {
                     index++;
                     TCHAR nextc = Value[index];
-                    
+
                     if (nextc >= 'A' && nextc <= 'Z') {
                         result += nextc;
                     }
@@ -374,7 +458,7 @@ TString ConvertJavaEcodedStringToString(TString Value) {
                 break;
         }
     }
-    
+
     return result;
 }
 
@@ -387,8 +471,7 @@ bool WindowsJavaUserPreferences::Load(TString Appid) {
 
     if (registry.Open(registryKey) == true) {
         std::list<TString> keys = registry.GetKeys();
-        TOrderedMap mapOfKeysAndValues;
-        int index = 1;
+        OrderedMap<TString, TString> mapOfKeysAndValues;
 
         for (std::list<TString>::const_iterator iterator = keys.begin(); iterator != keys.end(); iterator++) {
             TString key = *iterator;
@@ -397,13 +480,8 @@ bool WindowsJavaUserPreferences::Load(TString Appid) {
             value = ConvertJavaEcodedStringToString(value);
 
             if (key.empty() == false) {
-                TValueIndex item;
-                item.value = value;
-                item.index = index;
-
-                mapOfKeysAndValues.insert(TOrderedMap::value_type(key, item));
+                mapOfKeysAndValues.Append(key, value);
                 result = true;
-                index++;
             }
         }
 
@@ -414,5 +492,304 @@ bool WindowsJavaUserPreferences::Load(TString Appid) {
 }
 
 //--------------------------------------------------------------------------------------------------
+
+FileHandle::FileHandle(std::wstring FileName) {
+    FHandle = ::CreateFile(FileName.data(), GENERIC_READ, FILE_SHARE_READ, NULL,
+                            OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+}
+
+FileHandle::~FileHandle() {
+    if (IsValid() == true) {
+        ::CloseHandle(FHandle);
+    }
+}
+
+bool FileHandle::IsValid() {
+    return FHandle != INVALID_HANDLE_VALUE;
+}
+
+HANDLE FileHandle::GetHandle() {
+    return FHandle;
+}
+
+FileMappingHandle::FileMappingHandle(HANDLE FileHandle) {
+    FHandle = ::CreateFileMapping(FileHandle, NULL, PAGE_READONLY, 0, 0, NULL);
+}
+
+bool FileMappingHandle::IsValid() {
+    return FHandle != NULL;
+}
+
+FileMappingHandle::~FileMappingHandle() {
+    if (IsValid() == true) {
+        ::CloseHandle(FHandle);
+    }
+}
+
+HANDLE FileMappingHandle::GetHandle() {
+    return FHandle;
+}
+
+FileData::FileData(HANDLE Handle) {
+    FBaseAddress = ::MapViewOfFile(Handle, FILE_MAP_READ, 0, 0, 0);
+}
+
+FileData::~FileData() {
+    if (IsValid() == true) {
+        ::UnmapViewOfFile(FBaseAddress);
+    }
+}
+
+bool FileData::IsValid() {
+    return FBaseAddress != NULL;
+}
+
+LPVOID FileData::GetBaseAddress() {
+    return FBaseAddress;
+}
+
+
+WindowsLibrary::WindowsLibrary(std::wstring FileName) {
+    FFileName = FileName;
+}
+
+std::vector<TString> WindowsLibrary::GetImports() {
+    std::vector<TString> result;
+    FileHandle library(FFileName);
+
+    if (library.IsValid() == true) {
+        FileMappingHandle mapping(library.GetHandle());
+
+        if (mapping.IsValid() == true) {
+            FileData fileData(mapping.GetHandle());
+
+            if (fileData.IsValid() == true) {
+                PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)fileData.GetBaseAddress();
+                PIMAGE_FILE_HEADER pImgFileHdr = (PIMAGE_FILE_HEADER)fileData.GetBaseAddress();
+
+                if (dosHeader->e_magic == IMAGE_DOS_SIGNATURE) {
+                    result = DumpPEFile(dosHeader);
+                }
+            }
+        }
+    }
+
+    return result;
+}
+
+// Given an RVA, look up the section header that encloses it and return a
+// pointer to its IMAGE_SECTION_HEADER
+PIMAGE_SECTION_HEADER WindowsLibrary::GetEnclosingSectionHeader(DWORD rva,
+                                                PIMAGE_NT_HEADERS pNTHeader) {
+    PIMAGE_SECTION_HEADER result = 0;
+    PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION(pNTHeader);
+
+    for (unsigned index = 0; index < pNTHeader->FileHeader.NumberOfSections; index++, section++) {
+        // Is the RVA is within this section?
+        if ((rva >= section->VirtualAddress) &&
+            (rva < (section->VirtualAddress + section->Misc.VirtualSize))) {
+            result = section;
+        }
+    }
+
+    return result;
+}
+
+LPVOID WindowsLibrary::GetPtrFromRVA(DWORD rva, PIMAGE_NT_HEADERS pNTHeader, DWORD imageBase) {
+    LPVOID result = 0;
+    PIMAGE_SECTION_HEADER pSectionHdr = GetEnclosingSectionHeader(rva, pNTHeader);
+
+    if (pSectionHdr != NULL) {
+        INT delta = (INT)(pSectionHdr->VirtualAddress-pSectionHdr->PointerToRawData);
+        result = (PVOID)(imageBase + rva - delta);
+    }
+
+    return result;
+}
+
+std::vector<TString> WindowsLibrary::GetImportsSection(DWORD base, PIMAGE_NT_HEADERS pNTHeader) {
+    std::vector<TString> result;
+
+    // Look up where the imports section is located. Normally in the .idata section,
+    // but not necessarily so. Therefore, grab the RVA from the data dir.
+    DWORD importsStartRVA = pNTHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress;
+
+    if (importsStartRVA != NULL) {
+        // Get the IMAGE_SECTION_HEADER that contains the imports. This is
+        // usually the .idata section, but doesn't have to be.
+        PIMAGE_SECTION_HEADER pSection = GetEnclosingSectionHeader(importsStartRVA, pNTHeader);
+
+        if (pSection != NULL) {
+            PIMAGE_IMPORT_DESCRIPTOR importDesc = (PIMAGE_IMPORT_DESCRIPTOR)GetPtrFromRVA(importsStartRVA, pNTHeader,base);
+
+            if (importDesc != NULL) {
+                while (true)
+                {
+                    // See if we've reached an empty IMAGE_IMPORT_DESCRIPTOR
+                    if ((importDesc->TimeDateStamp == 0) && (importDesc->Name == 0))
+                        break;
+
+                    std::string filename = (char*)GetPtrFromRVA(importDesc->Name, pNTHeader, base);
+                    result.push_back(PlatformString(filename));
+                    importDesc++;   // advance to next IMAGE_IMPORT_DESCRIPTOR
+                }
+            }
+        }
+    }
+
+    return result;
+}
+
+std::vector<TString> WindowsLibrary::DumpPEFile(PIMAGE_DOS_HEADER dosHeader) {
+    std::vector<TString> result;
+    PIMAGE_NT_HEADERS pNTHeader = (PIMAGE_NT_HEADERS)((DWORD)(dosHeader) + (DWORD)(dosHeader->e_lfanew));
+
+    // Verify that the e_lfanew field gave us a reasonable
+    // pointer and the PE signature.
+    if (pNTHeader->Signature == IMAGE_NT_SIGNATURE) {
+        DWORD base = (DWORD)dosHeader;
+        result = GetImportsSection(base, pNTHeader);
+    }
+
+    return result;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+#include <TlHelp32.h>
+
+WindowsJob::WindowsJob() {
+    FHandle = NULL;
+}
+
+WindowsJob::~WindowsJob() {
+    if (FHandle != NULL) {
+        CloseHandle(FHandle);
+    }
+}
+
+HANDLE WindowsJob::GetHandle() {
+    if (FHandle == NULL) {
+        FHandle = CreateJobObject(NULL, NULL); // GLOBAL
+
+        if (FHandle == NULL)
+        {
+            ::MessageBox( 0, _T("Could not create job object"), _T("TEST"), MB_OK);
+        }
+        else
+        {
+            JOBOBJECT_EXTENDED_LIMIT_INFORMATION jeli = { 0 };
+
+            // Configure all child processes associated with the job to terminate when the
+            jeli.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+            if (0 == SetInformationJobObject(FHandle, JobObjectExtendedLimitInformation, &jeli, sizeof(jeli)))
+            {
+                ::MessageBox( 0, _T("Could not SetInformationJobObject"), _T("TEST"), MB_OK);
+            }
+        }
+    }
+
+    return FHandle;
+}
+
+// Initialize static member of WindowsProcess
+WindowsJob WindowsProcess::FJob;
+
+WindowsProcess::WindowsProcess() : Process() {
+    FRunning = false;
+}
+
+WindowsProcess::~WindowsProcess() {
+    Terminate();
+}
+
+void WindowsProcess::Cleanup() {
+    CloseHandle(FProcessInfo.hProcess);
+    CloseHandle(FProcessInfo.hThread);
+}
+
+bool WindowsProcess::IsRunning() {
+    bool result = false;
+
+    HANDLE handle = ::CreateToolhelp32Snapshot(TH32CS_SNAPALL, 0);
+    PROCESSENTRY32 process = { 0 };
+    process.dwSize = sizeof(process);
+
+    if (::Process32First(handle, &process)) {
+        do {
+            if (process.th32ProcessID == FProcessInfo.dwProcessId) {
+                result = true;
+                break;
+            }
+        }
+        while (::Process32Next(handle, &process));
+    }
+
+    CloseHandle(handle);
+
+    return result;
+}
+
+bool WindowsProcess::Terminate() {
+    bool result = false;
+
+    if (IsRunning() == true && FRunning == true) {
+        FRunning = false;
+    }
+
+    return result;
+}
+
+bool WindowsProcess::Execute(const TString Application, const std::vector<TString> Arguments, bool AWait) {
+    bool result = false;
+
+    if (FRunning == false) {
+        FRunning = true;
+
+        STARTUPINFO startupInfo;
+        ZeroMemory(&startupInfo, sizeof(startupInfo));
+        startupInfo.cb = sizeof(startupInfo);
+        ZeroMemory(&FProcessInfo, sizeof(FProcessInfo));
+
+        TString command = Application;
+
+        for (std::vector<TString>::const_iterator iterator = Arguments.begin(); iterator != Arguments.end(); iterator++) {
+            command += TString(_T(" ")) + *iterator;
+        }
+
+        if (::CreateProcess(Application.data(), (wchar_t*)command.data(), NULL,
+            NULL, FALSE, 0, NULL, NULL, &startupInfo, &FProcessInfo) == FALSE) {
+            TString message = PlatformString::Format(_T("Error: Unable to create process %s"), Application.data());
+            throw Exception(message);
+        }
+        else {
+            if (FJob.GetHandle() != NULL) {
+                if (::AssignProcessToJobObject(FJob.GetHandle(), FProcessInfo.hProcess) == 0) {
+                    // Failed to assign process to job. It doesn't prevent anything from continuing so continue.
+                }
+            }
+
+            // Wait until child process exits.
+            if (AWait == true) {
+                Wait();
+                // Close process and thread handles.
+                Cleanup();
+            }
+        }
+    }
+
+    return result;
+}
+
+bool WindowsProcess::Wait() {
+    bool result = false;
+
+    WaitForSingleObject(FProcessInfo.hProcess, INFINITE);
+    return result;
+}
+
+TProcessID WindowsProcess::GetProcessID() {
+    return FProcessInfo.dwProcessId;
+}
 
 #endif //WINDOWS

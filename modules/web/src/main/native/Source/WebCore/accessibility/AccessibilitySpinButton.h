@@ -47,11 +47,11 @@ public:
 private:
     AccessibilitySpinButton();
 
-    virtual AccessibilityRole roleValue() const { return SpinButtonRole; }
-    virtual bool isSpinButton() const { return true; }
-    virtual bool isNativeSpinButton() const { return true; }
-    virtual void addChildren();
-    virtual LayoutRect elementRect() const;
+    virtual AccessibilityRole roleValue() const override { return SpinButtonRole; }
+    virtual bool isSpinButton() const override { return true; }
+    virtual bool isNativeSpinButton() const override { return true; }
+    virtual void addChildren() override;
+    virtual LayoutRect elementRect() const override;
     
     SpinButtonElement* m_spinButtonElement;
 }; 
@@ -68,23 +68,14 @@ private:
     AccessibilitySpinButtonPart();
     bool m_isIncrementor : 1;
     
-    virtual bool press() const;
-    virtual AccessibilityRole roleValue() const { return ButtonRole; }
-    virtual bool isSpinButtonPart() const { return true; }
-    virtual LayoutRect elementRect() const;
+    virtual bool press() const override;
+    virtual AccessibilityRole roleValue() const override { return ButtonRole; }
+    virtual bool isSpinButtonPart() const override { return true; }
+    virtual LayoutRect elementRect() const override;
 };
-    
-inline AccessibilitySpinButton* toAccessibilitySpinButton(AccessibilityObject* object)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isNativeSpinButton());
-    return static_cast<AccessibilitySpinButton*>(object);
-}
-    
-inline AccessibilitySpinButtonPart* toAccessibilitySpinButtonPart(AccessibilityObject* object)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isSpinButtonPart());
-    return static_cast<AccessibilitySpinButtonPart*>(object);
-}
+
+ACCESSIBILITY_OBJECT_TYPE_CASTS(AccessibilitySpinButton, isNativeSpinButton())
+ACCESSIBILITY_OBJECT_TYPE_CASTS(AccessibilitySpinButtonPart, isSpinButtonPart())
     
 } // namespace WebCore 
 

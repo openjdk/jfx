@@ -75,7 +75,7 @@ inline bool fastCheckSingleSelector(const CSSSelector*& selector, const Element*
 
 inline bool checkClassValue(const Element* element, const CSSSelector* selector)
 {
-    return element->hasClass() && static_cast<const StyledElement*>(element)->classNames().contains(selector->value().impl());
+    return element->hasClass() && element->classNames().contains(selector->value());
 }
 
 inline bool checkIDValue(const Element* element, const CSSSelector* selector)
@@ -85,7 +85,7 @@ inline bool checkIDValue(const Element* element, const CSSSelector* selector)
 
 inline bool checkExactAttributeValue(const Element* element, const CSSSelector* selector)
 {
-    return SelectorChecker::checkExactAttribute(element, selector->attribute(), selector->value().impl());
+    return SelectorChecker::checkExactAttribute(element, selector, selector->attribute(), selector->value().impl());
 }
 
 inline bool checkTagValue(const Element* element, const CSSSelector* selector)

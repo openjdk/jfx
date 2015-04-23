@@ -18,8 +18,6 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SVG)
 #include "SVGTextLayoutAttributes.h"
 
 #include <stdio.h>
@@ -27,7 +25,7 @@
 
 namespace WebCore {
 
-SVGTextLayoutAttributes::SVGTextLayoutAttributes(RenderSVGInlineText* context)
+SVGTextLayoutAttributes::SVGTextLayoutAttributes(RenderSVGInlineText& context)
     : m_context(context)
 {
 }
@@ -59,7 +57,7 @@ static inline void dumpSVGCharacterDataMapValue(const char* identifier, float va
 
 void SVGTextLayoutAttributes::dump() const
 {
-    fprintf(stderr, "context: %p\n", m_context);
+    fprintf(stderr, "context: %p\n", &m_context);
     const SVGCharacterDataMap::const_iterator end = m_characterDataMap.end();
     for (SVGCharacterDataMap::const_iterator it = m_characterDataMap.begin(); it != end; ++it) {
         const SVGCharacterData& data = it->value;
@@ -74,5 +72,3 @@ void SVGTextLayoutAttributes::dump() const
 }
 
 }
-
-#endif // ENABLE(SVG)

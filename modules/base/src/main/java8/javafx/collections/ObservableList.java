@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package javafx.collections;
 
+import java.text.Collator;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
@@ -116,7 +117,7 @@ public interface ObservableList<E> extends List<E>, Observable {
     /**
      * Creates a {@link SortedList} wrapper of this list using
      * the specified comparator.
-     * @param comparator the comparator to use or null for the natural order
+     * @param comparator the comparator to use or null for unordered List
      * @return new {@code SortedList}
      * @since JavaFX 8.0
      */
@@ -131,6 +132,27 @@ public interface ObservableList<E> extends List<E>, Observable {
      * @since JavaFX 8.0
      */
     public default SortedList<E> sorted() {
-        return sorted(null);
+        Comparator naturalOrder = new Comparator<E>() {
+
+            @Override
+            public int compare(E o1, E o2) {
+                if (o1 == null && o2 == null) {
+                    return 0;
+                }
+                if (o1 == null) {
+                    return -1;
+                }
+                if (o2 == null) {
+                    return 1;
+                }
+
+                if (o1 instanceof Comparable) {
+                    return ((Comparable) o1).compareTo(o2);
+                }
+
+                return Collator.getInstance().compare(o1.toString(), o2.toString());
+            }
+        };
+        return sorted(naturalOrder);
     }
 }

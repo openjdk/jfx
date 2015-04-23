@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -94,6 +94,7 @@ public class TestBuilder {
     //Variables used by "HelloMenu" section
     private CheckMenuItem showMessagesItem;
     private final Label sysMenuLabel = new Label("Using System Menu");
+    private Popup screenShot;
 
     //Variables used by "HelloComboBox" section
     private final ObservableList<String> strings = FXCollections.observableArrayList(
@@ -1292,13 +1293,20 @@ public class TestBuilder {
                 stage1.setScene(s1);
                 stage1.setX(WindowsStage.getX()+300);
                 stage1.setY(WindowsStage.getY()+150);
-		 stage1.setAlwaysOnTop(true);
+		stage1.setAlwaysOnTop(true);
                 stage1.show();
                 setMini.setDisable(false);
                 resVerBtn.setDisable(false);
                 resHorBtn.setDisable(false);
                 resDiaBtn.setDisable(false);
             }
+        });
+
+        stage1.setOnCloseRequest(event -> {
+            setMini.setDisable(true);
+            resVerBtn.setDisable(true);
+            resHorBtn.setDisable(true);
+            resDiaBtn.setDisable(true);
         });
 
         resVerBtn.setDisable(true);
@@ -1516,7 +1524,7 @@ public class TestBuilder {
      */
     public void robotTest(final Scene globalScene, final VBox mainBox,
                           final Stage robotStage){
-	
+
         Label l = new Label("Robot features Demo");
         Group lGroup = new Group(l);
         lGroup.setLayoutX(400);
@@ -1546,7 +1554,7 @@ public class TestBuilder {
         Button screenTestBtn = new Button("Robot Get Screen Capture Test");
         screenTestBtn.setOnAction(new EventHandler<ActionEvent>() {
             @Override public void handle(ActionEvent e) {
-               robotScreenTest(result1, robotStage);
+               screenShot = robotScreenTest(result1, robotStage);
             }
         });
 
@@ -1620,6 +1628,9 @@ public class TestBuilder {
         Button btn = new Button("Back");
         btn.setOnAction(new EventHandler<ActionEvent>() {
             @Override public void handle(ActionEvent e) {
+                if (screenShot.isShowing()) {
+                    screenShot.hide();
+                }
                 globalScene.setRoot(mainBox);
             }
         });
@@ -1753,11 +1764,7 @@ public class TestBuilder {
         int pixel = robot.getPixelColor(x, y);
         robot.destroy();
         int expectedPixel = colorToRGB(expected);
-        if (pixel == expectedPixel) {
-            System.out.println("Expected color been found, at (" + x + "," + y + ")");
-            return 1;
-        } else if (pixel == (expectedPixel & 0xfff8fcf8)) {
-            System.out.println("Expected color been found, in 565, at (" + x + "," + y + ")");
+        if (checkColor(pixel, expected)) {
             return 1;
         } else {
             System.out.println("Expected color 0x" + Integer.toHexString(expectedPixel) +
@@ -1766,26 +1773,37 @@ public class TestBuilder {
         return 0;
     }
 
-    private boolean checkColor(int value, int expected) {
-        if (value == expected) {
+    private boolean checkColor(int value, Color expected) {
+
+        double tolerance = 0.07;
+        double ered = expected.getRed();
+        double egrn = expected.getGreen();
+        double eblu = expected.getBlue();
+
+        double vred = ((value & 0xff0000) >> 16) / 255.0;
+        double vgrn = ((value & 0x00ff00) >> 8) / 255.0;
+        double vblu = ((value & 0x0000ff)) / 255.0;
+
+        double dred = Math.abs(ered - vred);
+        double dgrn = Math.abs(egrn - vgrn);
+        double dblu = Math.abs(eblu - vblu);
+
+        if (dred <= tolerance && dgrn <= tolerance && dblu <= tolerance) {
             return true;
         }
-        if (value == (expected & 0xfff8fcf8)) {
-            // fuzzy match with 565
-            return true;
-        }
+
         return false;
     }
        
-    public void robotScreenTest(final TextField result, Stage stage){
+    public Popup robotScreenTest(final TextField result, Stage stage){
 	
-		Bounds bounds = rec1.localToScreen(new BoundingBox(0, 0, 
-            rec1.getBoundsInParent().getWidth(),
-            rec1.getBoundsInParent().getHeight()));
+        Bounds bounds = rec1.localToScreen(new BoundingBox(0, 0,
+                rec1.getBoundsInParent().getWidth(),
+                rec1.getBoundsInParent().getHeight()));
 
-		int x = 50 + (int) bounds.getMinX();
-		int y = 50 + (int) bounds.getMinY();
-		int []intArr = null;
+        int x = 50 + (int) bounds.getMinX();
+        int y = 50 + (int) bounds.getMinY();
+        int[] intArr = null;
         boolean correct = true;
         Robot robot = com.sun.glass.ui.Application.GetApplication().createRobot();
         int width = 160;
@@ -1807,22 +1825,34 @@ public class TestBuilder {
 
         for (int i = width; i <= height*(height-1); i += width) {
             for (int j = 1; j <= 38; j ++){
-                if (!checkColor(intArr[j+i],colorToRGB(Color.RED))) {
+                if (!checkColor(intArr[j+i],Color.RED)) {
+                    System.out.println(" pixel("+j+","+(i/width)+") "+
+                            Integer.toHexString(intArr[j+i])+" != "+
+                            Integer.toHexString(colorToRGB(Color.RED)));
                     correct = false;
                 }
              }
             for (int j = 41; j <= 78; j ++){
-                if (!checkColor(intArr[j+i],colorToRGB(Color.BLUE))) {
+                if (!checkColor(intArr[j+i],Color.BLUE)) {
+                    System.out.println(" pixel("+j+","+(i/width)+") "+
+                            Integer.toHexString(intArr[j+i])+" != "+
+                            Integer.toHexString(colorToRGB(Color.BLUE)));
                     correct = false;
                 }
              }
             for (int j = 81; j <= 118; j ++){
-                if (!checkColor(intArr[j+i],colorToRGB(Color.YELLOW))) {
+                if (!checkColor(intArr[j+i],Color.YELLOW)) {
+                    System.out.println(" pixel("+j+","+(i/width)+") "+
+                            Integer.toHexString(intArr[j+i])+" != "+
+                            Integer.toHexString(colorToRGB(Color.YELLOW)));
                     correct = false;
                 }
              }
             for (int j = 121; j <= 158; j ++){
-                if (!checkColor(intArr[j+i],colorToRGB(Color.GREEN))) {
+                if (!checkColor(intArr[j+i],Color.GREEN)) {
+                    System.out.println(" pixel("+j+","+(i/width)+") "+
+                            Integer.toHexString(intArr[j+i])+" != "+
+                            Integer.toHexString(colorToRGB(Color.GREEN)));
                     correct = false;
                 }
             }
@@ -1833,10 +1863,10 @@ public class TestBuilder {
         } else {
             result.setText("Failed");
         }
-        showImage(stage, width, height, result);
+        return showImage(stage, width, height, result);
     }
 
-    private void showImage(Stage stage, int width, int height, TextField tf) {
+    private Popup showImage(Stage stage, int width, int height, TextField tf) {
 
         int frame = 70;
         Rectangle rec = new Rectangle(width + frame, height + frame);
@@ -1868,6 +1898,7 @@ public class TestBuilder {
         popup.setY(stage.getY() + 430);
         popup.getContent().addAll(popupPane);
         popup.show(stage);
+        return popup;
     }
 
     /**

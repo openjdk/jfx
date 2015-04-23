@@ -30,50 +30,46 @@
  */
 
 [
-        Conditional=BLOB,
-        ActiveDOMObject,
-        Constructor,
-        CallWith=ScriptExecutionContext,
-        EventTarget,
-        JSNoStaticTables
+    GlobalContext=DOMWindow&WorkerGlobalScope,
+    Conditional=BLOB,
+    ActiveDOMObject,
+    Constructor,
+    ConstructorCallWith=ScriptExecutionContext,
+    EventTarget,
+    JSNoStaticTables,
 ] interface FileReader {
-        // ready states
-        const unsigned short EMPTY = 0;
-        const unsigned short LOADING = 1;
-        const unsigned short DONE = 2;
-        readonly attribute unsigned short readyState;
+    // ready states
+    const unsigned short EMPTY = 0;
+    const unsigned short LOADING = 1;
+    const unsigned short DONE = 2;
+    readonly attribute unsigned short readyState;
 
-        // async read methods
-    void readAsArrayBuffer(Blob blob)
-            raises(DOMException);
-    void readAsBinaryString(Blob blob)
-            raises(DOMException);
-    void readAsText(Blob blob, optional DOMString encoding)
-            raises(DOMException);
-    void readAsDataURL(Blob blob)
-            raises(DOMException);
+    // async read methods
+    [RaisesException] void readAsArrayBuffer(Blob blob);
+    [RaisesException] void readAsBinaryString(Blob blob);
+    [RaisesException] void readAsText(Blob blob, optional DOMString encoding);
+    [RaisesException] void readAsDataURL(Blob blob);
 
-        void abort();
+    void abort();
 
-        // file data
+    // file data
     [Custom] readonly attribute any result;
 
-        readonly attribute FileError error;
+    readonly attribute FileError error;
 
-        // EventTarget interface
+    // EventTarget interface
     void addEventListener(DOMString type,
                           EventListener listener,
                           optional boolean useCapture);
     void removeEventListener(DOMString type,
                              EventListener listener,
                              optional boolean useCapture);
-    boolean dispatchEvent(Event evt)
-            raises(EventException);
+    [RaisesException] boolean dispatchEvent(Event evt);
 
-        attribute EventListener onloadstart;
-        attribute EventListener onprogress;
-        attribute EventListener onload;
-        attribute EventListener onabort;
-        attribute EventListener onerror;
-        attribute EventListener onloadend;
-    };
+    attribute EventListener onloadstart;
+    attribute EventListener onprogress;
+    attribute EventListener onload;
+    attribute EventListener onabort;
+    attribute EventListener onerror;
+    attribute EventListener onloadend;
+};

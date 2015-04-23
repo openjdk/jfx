@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -163,7 +163,8 @@ public class WinExeBundler extends AbstractBundler {
 //                STOP_ON_UNINSTALL,
                 SYSTEM_WIDE,
                 TITLE,
-                VENDOR
+                VENDOR,
+                INSTALLDIR_CHOOSER
         );
     }
 
@@ -248,17 +249,20 @@ public class WinExeBundler extends AbstractBundler {
 
             // validate license file, if used, exists in the proper place
             if (p.containsKey(LICENSE_FILE.getID())) {
-                RelativeFileSet appResources = APP_RESOURCES.fetchFrom(p);
+                List<RelativeFileSet> appResourcesList = APP_RESOURCES_LIST.fetchFrom(p);
                 for (String license : LICENSE_FILE.fetchFrom(p)) {
-                    if (!appResources.contains(license)) {
+                    boolean found = false;
+                    for (RelativeFileSet appResources : appResourcesList) {
+                        found = found || appResources.contains(license);
+                    }
+                    if (!found) {
                         throw new ConfigException(
                                 I18N.getString("error.license-missing"),
                                 MessageFormat.format(I18N.getString("error.license-missing.advice"),
-                                        license, appResources.getBaseDirectory().toString()));
+                                        license));
                     }
                 }
             }
-
 
             if (SERVICE_HINT.fetchFrom(p)) {
                 SERVICE_BUNDLER.fetchFrom(p).validate(p);
@@ -292,13 +296,19 @@ public class WinExeBundler extends AbstractBundler {
         if (appOutputDir == null) {
             return false;
         }
+        
         List<String> licenseFiles = LICENSE_FILE.fetchFrom(params);
         if (licenseFiles != null) {
-            RelativeFileSet appRoot = APP_RESOURCES.fetchFrom(params);
-            //need to copy license file to the root of win-app.image
-            for (String s : licenseFiles) {
-                File lfile = new File(appRoot.getBaseDirectory(), s);
-                IOUtils.copyFile(lfile, new File(imageDir, lfile.getName()));
+            //need to copy license file to the root of win.app.image
+            outerLoop:
+            for (RelativeFileSet rfs : APP_RESOURCES_LIST.fetchFrom(params)) {
+                for (String s : licenseFiles) {
+                    if (rfs.contains(s)) {
+                        File lfile = new File(rfs.getBaseDirectory(), s);
+                        IOUtils.copyFile(lfile, new File(imageDir, lfile.getName()));
+                        break outerLoop;
+                    }
+                }
             }
         }
 
@@ -456,6 +466,7 @@ public class WinExeBundler extends AbstractBundler {
         validateValueAndPut(data, "APPLICATION_COPYRIGHT", COPYRIGHT, params);
 
         data.put("APPLICATION_LICENSE_FILE", innosetupEscape(getLicenseFile(params)));
+        data.put("DISABLE_DIR_PAGE", INSTALLDIR_CHOOSER.fetchFrom(params) ? "No" : "Yes");
 
         Boolean isSystemWide = EXE_SYSTEM_WIDE.fetchFrom(params);
         
@@ -481,6 +492,12 @@ public class WinExeBundler extends AbstractBundler {
         validateValueAndPut(data, "APPLICATION_DESCRIPTION", DESCRIPTION, params);
         data.put("APPLICATION_SERVICE", SERVICE_HINT.fetchFrom(params) ? "returnTrue" : "returnFalse");
         data.put("APPLICATION_NOT_SERVICE", SERVICE_HINT.fetchFrom(params) ? "returnFalse" : "returnTrue");
+        data.put("APPLICATION_APP_CDS_INSTALL", 
+                (UNLOCK_COMMERCIAL_FEATURES.fetchFrom(params) && ENABLE_APP_CDS.fetchFrom(params) 
+                        && ("install".equals(APP_CDS_CACHE_MODE.fetchFrom(params))
+                            || "auto+install".equals(APP_CDS_CACHE_MODE.fetchFrom(params))))
+                ? "returnTrue"
+                : "returnFalse");
         data.put("START_ON_INSTALL", START_ON_INSTALL.fetchFrom(params) ? "-startOnInstall" : "");
         data.put("STOP_ON_UNINSTALL", STOP_ON_UNINSTALL.fetchFrom(params) ? "-stopOnUninstall" : "");
         data.put("RUN_AT_STARTUP", RUN_AT_STARTUP.fetchFrom(params) ? "-runAtStartup" : "");

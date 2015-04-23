@@ -20,14 +20,19 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
 #ifndef OpaqueJSString_h
 #define OpaqueJSString_h
 
+#include <atomic>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/text/WTFString.h>
+
+#if PLATFORM(JAVA) // tav todo temp
+#include <JSExportMacros.h>
+#endif
 
 namespace JSC {
     class Identifier;
@@ -35,8 +40,7 @@ namespace JSC {
 }
 
 struct OpaqueJSString : public ThreadSafeRefCounted<OpaqueJSString> {
-
-    static PassRefPtr<OpaqueJSString> create() // null
+    static PassRefPtr<OpaqueJSString> create()
     {
         return adoptRef(new OpaqueJSString);
     }
@@ -53,42 +57,50 @@ struct OpaqueJSString : public ThreadSafeRefCounted<OpaqueJSString> {
 
     JS_EXPORT_PRIVATE static PassRefPtr<OpaqueJSString> create(const String&);
 
-    const UChar* characters() { return !!this ? m_string.characters() : 0; }
-    unsigned length() { return !!this ? m_string.length() : 0; }
+    JS_EXPORT_PRIVATE ~OpaqueJSString();
+
+    bool is8Bit() { return this ? m_string.is8Bit() : false; }
+    const LChar* characters8() { return this ? m_string.characters8() : nullptr; }
+    const UChar* characters16() { return this ? m_string.characters16() : nullptr; }
+    unsigned length() { return this ? m_string.length() : 0; }
+
+    const UChar* characters();
 
     JS_EXPORT_PRIVATE String string() const;
     JSC::Identifier identifier(JSC::VM*) const;
-#if PLATFORM(QT)
-    QString qString() const { return m_string; }
-#endif
+
+    static bool equal(const OpaqueJSString*, const OpaqueJSString*);
 
 private:
     friend class WTF::ThreadSafeRefCounted<OpaqueJSString>;
 
     OpaqueJSString()
+        : m_characters(nullptr)
     {
     }
 
     OpaqueJSString(const String& string)
+        : m_string(string.isolatedCopy())
+        , m_characters(m_string.impl() && m_string.is8Bit() ? nullptr : const_cast<UChar*>(m_string.characters16()))
     {
-        // Make a copy of the source string.
-        if (string.is8Bit())
-            m_string = String(string.characters8(), string.length());
-        else
-            m_string = String(string.characters16(), string.length());
     }
 
     OpaqueJSString(const LChar* characters, unsigned length)
+        : m_string(characters, length)
+        , m_characters(nullptr)
     {
-        m_string = String(characters, length);
     }
 
     OpaqueJSString(const UChar* characters, unsigned length)
+        : m_string(characters, length)
+        , m_characters(m_string.impl() && m_string.is8Bit() ? nullptr : const_cast<UChar*>(m_string.characters16()))
     {
-        m_string = String(characters, length);
     }
 
     String m_string;
+
+    // This will be initialized on demand when characters() is called if the string needs up-conversion.
+    std::atomic<UChar*> m_characters;
 };
 
 #endif

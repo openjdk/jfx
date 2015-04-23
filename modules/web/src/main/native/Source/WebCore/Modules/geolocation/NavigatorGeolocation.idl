@@ -18,8 +18,8 @@
  */
 
 [
-        Conditional=GEOLOCATION,
+    Conditional=GEOLOCATION,
 ] partial interface Navigator {
     readonly attribute Geolocation geolocation;
-    };
+};
 

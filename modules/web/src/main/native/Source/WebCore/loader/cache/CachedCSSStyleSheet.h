@@ -36,36 +36,38 @@ namespace WebCore {
     class TextResourceDecoder;
     struct CSSParserContext;
 
-    class CachedCSSStyleSheet : public CachedResource {
+    class CachedCSSStyleSheet final : public CachedResource {
     public:
         CachedCSSStyleSheet(const ResourceRequest&, const String& charset);
         virtual ~CachedCSSStyleSheet();
 
         const String sheetText(bool enforceMIMEType = true, bool* hasValidMIMEType = 0) const;
 
-        virtual void didAddClient(CachedResourceClient*);
-        
-        virtual void setEncoding(const String&);
-        virtual String encoding() const;
-        virtual void data(PassRefPtr<ResourceBuffer> data, bool allDataReceived);
-        virtual void destroyDecodedData() OVERRIDE;
-
         PassRefPtr<StyleSheetContents> restoreParsedStyleSheet(const CSSParserContext&);
-        void saveParsedStyleSheet(PassRefPtr<StyleSheetContents>);
-    
+        void saveParsedStyleSheet(PassRef<StyleSheetContents>);
+
     private:
         bool canUseSheet(bool enforceMIMEType, bool* hasValidMIMEType) const;
-        virtual PurgePriority purgePriority() const { return PurgeLast; }
-        virtual bool mayTryReplaceEncodedData() const OVERRIDE { return true; }
+        virtual PurgePriority purgePriority() const override { return PurgeLast; }
+        virtual bool mayTryReplaceEncodedData() const override { return true; }
+
+        virtual void didAddClient(CachedResourceClient*) override;
+
+        virtual void setEncoding(const String&) override;
+        virtual String encoding() const override;
+        virtual void finishLoading(ResourceBuffer*) override;
+        virtual void destroyDecodedData() override;
 
     protected:
-        virtual void checkNotify();
+        virtual void checkNotify() override;
 
         RefPtr<TextResourceDecoder> m_decoder;
         String m_decodedSheetText;
 
         RefPtr<StyleSheetContents> m_parsedStyleSheetCache;
     };
+
+CACHED_RESOURCE_TYPE_CASTS(CachedCSSStyleSheet, CachedResource, CachedResource::CSSStyleSheet)
 
 }
 

@@ -36,17 +36,16 @@ class RuntimeObject : public JSDestructibleObject {
 public:
     typedef JSDestructibleObject Base;
 
-    static RuntimeObject* create(ExecState* exec, JSGlobalObject* globalObject, Structure* structure, PassRefPtr<Instance> instance)
+    static RuntimeObject* create(VM& vm, Structure* structure, PassRefPtr<Instance> instance)
     {
-        RuntimeObject* object = new (NotNull, allocateCell<RuntimeObject>(*exec->heap())) RuntimeObject(exec, globalObject, structure, instance);
-        object->finishCreation(globalObject);
+        RuntimeObject* object = new (NotNull, allocateCell<RuntimeObject>(vm.heap)) RuntimeObject(vm, structure, instance);
+        object->finishCreation(vm);
         return object;
     }
 
     static void destroy(JSCell*);
 
-    static bool getOwnPropertySlot(JSCell*, ExecState*, PropertyName, PropertySlot&);
-    static bool getOwnPropertyDescriptor(JSObject*, ExecState*, PropertyName, PropertyDescriptor&);
+    static bool getOwnPropertySlot(JSObject*, ExecState*, PropertyName, PropertySlot&);
     static void put(JSCell*, ExecState*, PropertyName, JSValue, PutPropertySlot&);
     static bool deleteProperty(JSCell*, ExecState*, PropertyName);
     static JSValue defaultValue(const JSObject*, ExecState*, PreferredPrimitiveType);
@@ -61,27 +60,27 @@ public:
 
     static JSObject* throwInvalidAccessError(ExecState*);
 
-    static const ClassInfo s_info;
+    DECLARE_INFO;
 
-    static ObjectPrototype* createPrototype(ExecState*, JSGlobalObject* globalObject)
+    static ObjectPrototype* createPrototype(VM&, JSGlobalObject* globalObject)
     {
         return globalObject->objectPrototype();
     }
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), &s_info);
+        return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
     }
 
 protected:
-    RuntimeObject(ExecState*, JSGlobalObject*, Structure*, PassRefPtr<Instance>);
-    void finishCreation(JSGlobalObject*);
+    RuntimeObject(VM&, Structure*, PassRefPtr<Instance>);
+    void finishCreation(VM&);
     static const unsigned StructureFlags = OverridesGetOwnPropertySlot | OverridesGetPropertyNames | Base::StructureFlags;
 
 private:
-    static JSValue fallbackObjectGetter(ExecState*, JSValue, PropertyName);
-    static JSValue fieldGetter(ExecState*, JSValue, PropertyName);
-    static JSValue methodGetter(ExecState*, JSValue, PropertyName);
+    static EncodedJSValue fallbackObjectGetter(ExecState*, JSObject*, EncodedJSValue, PropertyName);
+    static EncodedJSValue fieldGetter(ExecState*, JSObject*, EncodedJSValue, PropertyName);
+    static EncodedJSValue methodGetter(ExecState*, JSObject*, EncodedJSValue, PropertyName);
 
     RefPtr<Instance> m_instance;
 };

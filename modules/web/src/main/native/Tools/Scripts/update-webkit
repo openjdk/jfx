@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-# Copyright (C) 2005, 2006, 2007, 2008, 2009 Apple Inc. All rights reserved.
+# Copyright (C) 2005, 2006, 2007, 2008, 2009, 2013 Apple Inc. All rights reserved.
 # Copyright (C) 2009 Google Inc. All rights reserved.
 # Copyright (C) 2011 Brent Fulgham. All rights reserved.
 #
@@ -45,9 +45,7 @@ sub runGitUpdate();
 # Handle options
 my $quiet = '';
 my $showHelp;
-my $useGYP = 0;
 
-determineIsQt();
 determineIsWinCairo();
 
 chdirWebKit();
@@ -55,7 +53,6 @@ chdirWebKit();
 my $getOptionsResult = GetOptions(
     'h|help'  => \$showHelp,
     'q|quiet' => \$quiet,
-    'gyp' => \$useGYP,
 ); 
 
 if (!$getOptionsResult || $showHelp) {
@@ -63,7 +60,6 @@ if (!$getOptionsResult || $showHelp) {
 Usage: @{[ basename($0) ]} [options]
   -h|--help           show the help message
   -q|--quiet          pass -q to svn update for quiet updates
-  --gyp               generate project files from gyp after update
   --wincairo          also update dependencies of the WinCairo port
 __END__
     exit 1;
@@ -93,11 +89,6 @@ if (-d "../Internal") {
 }
 
 setupAppleWinEnv() if isAppleWinWebKit();
-
-if ($useGYP) {
-    print "Generating Project Files\n";
-    system("perl", "Tools/Scripts/generate-project-files") == 0 or die "Failed to run generate-project-files";
-}
 
 exit 0;
 

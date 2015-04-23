@@ -48,11 +48,11 @@ namespace LLInt {
 class Data {
 public:
     static void performAssertions(VM&);
-    
+
 private:
     static Instruction* s_exceptionInstructions;
     static Opcode* s_opcodeMap;
-    
+
     friend void initialize();
 
     friend Instruction* exceptionInstructions();
@@ -64,14 +64,14 @@ private:
 void initialize();
 
 inline Instruction* exceptionInstructions()
-    {
+{
     return Data::s_exceptionInstructions;
-    }
+}
     
 inline Opcode* opcodeMap()
-    {
+{
     return Data::s_opcodeMap;
-    }
+}
 
 inline Opcode getOpcode(OpcodeID id)
 {

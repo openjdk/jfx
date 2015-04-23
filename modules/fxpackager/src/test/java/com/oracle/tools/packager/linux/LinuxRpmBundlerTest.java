@@ -52,6 +52,7 @@ import java.util.TreeMap;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
 import static com.oracle.tools.packager.linux.LinuxAppBundler.ICON_PNG;
+import static com.oracle.tools.packager.linux.LinuxAppBundler.LINUX_RUNTIME;
 import static com.oracle.tools.packager.linux.LinuxRpmBundler.BUNDLE_NAME;
 import static org.junit.Assert.*;
 
@@ -61,6 +62,8 @@ public class LinuxRpmBundlerTest {
     static File workDir;
     static File appResourcesDir;
     static File fakeMainJar;
+    static String runtimeJdk;
+    static String runtimeJre;
     static Set<File> appResources;
     static boolean retain = false;
 
@@ -68,6 +71,9 @@ public class LinuxRpmBundlerTest {
     public static void prepareApp() {
         // only run on linux
         Assume.assumeTrue(System.getProperty("os.name").toLowerCase().startsWith("linux"));
+
+        runtimeJdk = System.getenv("PACKAGER_JDK_ROOT");
+        runtimeJre = System.getenv("PACKAGER_JRE_ROOT");
 
         Assume.assumeTrue(LinuxRpmBundler.testTool(LinuxRpmBundler.TOOL_RPMBUILD, LinuxRpmBundler.TOOL_RPMBUILD_MIN_VERSION));
 
@@ -521,4 +527,36 @@ public class LinuxRpmBundlerTest {
         assertNotNull(result);
         assertTrue(result.exists());
     }
+
+    /**
+     * Turn on AppCDS
+     */
+    @Test
+    public void testAppCDS() throws IOException, ConfigException, UnsupportedPlatformException {
+        Bundler bundler = new LinuxRpmBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        // not part of the typical setup, for testing
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+        bundleParams.put(VERBOSE.getID(), true);
+        if (runtimeJdk != null) {
+            bundleParams.put(LINUX_RUNTIME.getID(), runtimeJdk);
+        }
+
+        bundleParams.put(APP_NAME.getID(), "AppCDS");
+        bundleParams.put(IDENTIFIER.getID(), "com.example.appcds.rpm.Test");
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(UNLOCK_COMMERCIAL_FEATURES.getID(), true);
+        bundleParams.put(ENABLE_APP_CDS.getID(), true);
+
+        boolean valid = bundler.validate(bundleParams);
+        assertTrue(valid);
+
+        File output = bundler.execute(bundleParams, new File(workDir, "CDSTest"));
+        System.err.println("Bundle at - " + output);
+        assertNotNull(output);
+        assertTrue(output.exists());
+    }
+    
 }

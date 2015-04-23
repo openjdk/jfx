@@ -31,29 +31,28 @@ namespace JSC {
     public:
         typedef ErrorInstance Base;
 
-        static ErrorPrototype* create(ExecState* exec, JSGlobalObject* globalObject, Structure* structure)
+        static ErrorPrototype* create(VM& vm, JSGlobalObject* globalObject, Structure* structure)
         {
-            ErrorPrototype* prototype = new (NotNull, allocateCell<ErrorPrototype>(*exec->heap())) ErrorPrototype(exec, structure);
-            prototype->finishCreation(exec, globalObject);
+            ErrorPrototype* prototype = new (NotNull, allocateCell<ErrorPrototype>(vm.heap)) ErrorPrototype(vm, structure);
+            prototype->finishCreation(vm, globalObject);
             return prototype;
         }
-
-        static const ClassInfo s_info;
+        
+        DECLARE_INFO;
 
         static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
         {
-            return Structure::create(vm, globalObject, prototype, TypeInfo(ErrorInstanceType, StructureFlags), &s_info);
+            return Structure::create(vm, globalObject, prototype, TypeInfo(ErrorInstanceType, StructureFlags), info());
         }
 
     protected:
-        ErrorPrototype(ExecState*, Structure*);
-        void finishCreation(ExecState*, JSGlobalObject*);
+        ErrorPrototype(VM&, Structure*);
+        void finishCreation(VM&, JSGlobalObject*);
 
         static const unsigned StructureFlags = OverridesGetOwnPropertySlot | ErrorInstance::StructureFlags;
 
     private:
-        static bool getOwnPropertySlot(JSCell*, ExecState*, PropertyName, PropertySlot&);
-        static bool getOwnPropertyDescriptor(JSObject*, ExecState*, PropertyName, PropertyDescriptor&);
+        static bool getOwnPropertySlot(JSObject*, ExecState*, PropertyName, PropertySlot&);
     };
 
 } // namespace JSC

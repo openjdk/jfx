@@ -24,10 +24,10 @@
  */
 
 [
-        Conditional=SVG&FILTERS
+    Conditional=FILTERS
 ] interface SVGFEPointLightElement : SVGElement {
-        readonly attribute SVGAnimatedNumber x;
-        readonly attribute SVGAnimatedNumber y;
-        readonly attribute SVGAnimatedNumber z;
-    };
+    readonly attribute SVGAnimatedNumber x;
+    readonly attribute SVGAnimatedNumber y;
+    readonly attribute SVGAnimatedNumber z;
+};
 

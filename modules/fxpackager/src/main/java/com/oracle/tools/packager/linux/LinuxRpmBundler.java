@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -188,13 +188,17 @@ public class LinuxRpmBundler extends AbstractBundler {
 
             // validate license file, if used, exists in the proper place
             if (p.containsKey(LICENSE_FILE.getID())) {
-                RelativeFileSet appResources = APP_RESOURCES.fetchFrom(p);
+                List<RelativeFileSet> appResourcesList = APP_RESOURCES_LIST.fetchFrom(p);
                 for (String license : LICENSE_FILE.fetchFrom(p)) {
-                    if (!appResources.contains(license)) {
+                    boolean found = false;
+                    for (RelativeFileSet appResources : appResourcesList) {
+                        found = found || appResources.contains(license);
+                    }
+                    if (!found) {
                         throw new ConfigException(
                                 I18N.getString("error.license-missing"),
                                 MessageFormat.format(I18N.getString("error.license-missing.advice"),
-                                        license, appResources.getBaseDirectory().toString()));
+                                        license));
                     }
                 }
             }
@@ -435,6 +439,20 @@ public class LinuxRpmBundler extends AbstractBundler {
         data.put("SECONDARY_LAUNCHERS_INSTALL", installScripts.toString());
         data.put("SECONDARY_LAUNCHERS_REMOVE", removeScripts.toString());
 
+        StringBuilder cdsScript = new StringBuilder();
+        if (UNLOCK_COMMERCIAL_FEATURES.fetchFrom(params) && ENABLE_APP_CDS.fetchFrom(params)
+                && ("install".equals(APP_CDS_CACHE_MODE.fetchFrom(params))
+                || "auto+install".equals(APP_CDS_CACHE_MODE.fetchFrom(params))))
+        {
+            cdsScript.append("/opt/");
+            cdsScript.append(data.get("APPLICATION_FS_NAME"));
+            cdsScript.append("/");
+            cdsScript.append(data.get("APPLICATION_LAUNCHER_FILENAME"));
+            cdsScript.append(" -Xappcds:generatecache\n");
+        }
+        
+        data.put("APP_CDS_CACHE", cdsScript.toString());
+        
         List<Map<String, ? super Object>> associations = FILE_ASSOCIATIONS.fetchFrom(params);
         data.put("FILE_ASSOCIATION_INSTALL", "");
         data.put("FILE_ASSOCIATION_REMOVE", "");

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -77,7 +77,7 @@ import java.nio.FloatBuffer;
  * sw loops.
  */
 public class BoxRenderState extends LinearConvolveRenderState {
-    public static final int MAX_BOX_SIZES[] = {
+    private static final int MAX_BOX_SIZES[] = {
         getMaxSizeForKernelSize(MAX_KERNEL_SIZE, 0),
         getMaxSizeForKernelSize(MAX_KERNEL_SIZE, 1),
         getMaxSizeForKernelSize(MAX_KERNEL_SIZE, 2),

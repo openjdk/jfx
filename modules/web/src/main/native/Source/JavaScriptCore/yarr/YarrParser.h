@@ -29,7 +29,6 @@
 #include "Yarr.h"
 #include <wtf/ASCIICType.h>
 #include <wtf/text/WTFString.h>
-#include <wtf/unicode/Unicode.h>
 
 namespace JSC { namespace Yarr {
 
@@ -119,6 +118,7 @@ private:
                     return;
                 }
                 // Otherwise just fall through - cached character so treat this as Empty.
+                FALLTHROUGH;
 
             case Empty:
                 m_character = ch;
@@ -168,7 +168,7 @@ private:
             case CachedCharacter:
                 // Flush the currently cached character, then fall through.
                 m_delegate.atomCharacterClassAtom(m_character);
-
+                FALLTHROUGH;
             case Empty:
             case AfterCharacterClass:
                 m_state = AfterCharacterClass;
@@ -186,7 +186,7 @@ private:
             case CachedCharacterHyphen:
                 m_delegate.atomCharacterClassAtom(m_character);
                 m_delegate.atomCharacterClassAtom('-');
-                // fall through
+                FALLTHROUGH;
             case AfterCharacterClassHyphen:
                 m_delegate.atomCharacterClassBuiltIn(classID, invert);
                 m_state = Empty;
@@ -232,7 +232,7 @@ private:
         : m_delegate(delegate)
         , m_backReferenceLimit(backReferenceLimit)
         , m_err(NoError)
-        , m_data(pattern.getCharacters<CharType>())
+        , m_data(pattern.characters<CharType>())
         , m_size(pattern.length())
         , m_index(0)
         , m_parenthesesNestingDepth(0)
@@ -349,6 +349,7 @@ private:
             }
 
             // Fall-through to handle this as an octal escape.
+            FALLTHROUGH;
         }
 
         // Octal escape
@@ -656,7 +657,9 @@ private:
                 }
 
                 restoreState(state);
-            } // if we did not find a complete quantifer, fall through to the default case.
+            }
+            // if we did not find a complete quantifer, fall through to the default case.
+            FALLTHROUGH;
 
             default:
                 m_delegate.atomPatternCharacter(consume());

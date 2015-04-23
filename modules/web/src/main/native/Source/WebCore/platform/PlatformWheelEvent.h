@@ -28,8 +28,8 @@
 
 #include "IntPoint.h"
 #include "PlatformEvent.h"
-#if OS(WINDOWS) && !PLATFORM(JAVA)
-#include "WindowsExtras.h"
+#if !PLATFORM(JAVA)
+#include <wtf/WindowsExtras.h>
 #endif
 
 #if PLATFORM(GTK)
@@ -55,7 +55,7 @@ namespace WebCore {
         ScrollByPixelWheelEvent,
     };
 
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
     enum PlatformWheelEventPhase {
         PlatformWheelEventPhaseNone        = 0,
         PlatformWheelEventPhaseBegan       = 1 << 0,
@@ -77,7 +77,7 @@ namespace WebCore {
             , m_wheelTicksY(0)
             , m_granularity(ScrollByPixelWheelEvent)
             , m_directionInvertedFromDevice(false)
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
             , m_hasPreciseScrollingDeltas(false)
             , m_phase(PlatformWheelEventPhaseNone)
             , m_momentumPhase(PlatformWheelEventPhaseNone)
@@ -98,7 +98,7 @@ namespace WebCore {
             , m_wheelTicksY(wheelTicksY)
             , m_granularity(granularity)
             , m_directionInvertedFromDevice(false)
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
             , m_hasPreciseScrollingDeltas(false)
            , m_phase(PlatformWheelEventPhaseNone)
             , m_momentumPhase(PlatformWheelEventPhaseNone)
@@ -118,6 +118,20 @@ namespace WebCore {
             copy.m_wheelTicksX = copy.m_wheelTicksY;
             copy.m_wheelTicksY = 0;
 
+            return copy;
+        }
+
+        PlatformWheelEvent copyIgnoringHorizontalDelta() const
+        {
+            PlatformWheelEvent copy = *this;
+            copy.m_deltaX = 0;
+            return copy;
+        }
+
+        PlatformWheelEvent copyIgnoringVerticalDelta() const
+        {
+            PlatformWheelEvent copy = *this;
+            copy.m_deltaY = 0;
             return copy;
         }
 
@@ -142,17 +156,35 @@ namespace WebCore {
         explicit PlatformWheelEvent(const Evas_Event_Mouse_Wheel*);
 #endif
 
-#if PLATFORM(MAC)
-       bool hasPreciseScrollingDeltas() const { return m_hasPreciseScrollingDeltas; }
+#if PLATFORM(COCOA)
+        bool hasPreciseScrollingDeltas() const { return m_hasPreciseScrollingDeltas; }
         void setHasPreciseScrollingDeltas(bool b) { m_hasPreciseScrollingDeltas = b; }
         PlatformWheelEventPhase phase() const { return m_phase; }
         PlatformWheelEventPhase momentumPhase() const { return m_momentumPhase; }
         unsigned scrollCount() const { return m_scrollCount; }
         float unacceleratedScrollingDeltaX() const { return m_unacceleratedScrollingDeltaX; }
         float unacceleratedScrollingDeltaY() const { return m_unacceleratedScrollingDeltaY; }
-        bool useLatchedEventNode() const { return m_momentumPhase == PlatformWheelEventPhaseBegan || m_momentumPhase == PlatformWheelEventPhaseChanged; }
+        bool useLatchedEventElement() const
+        {
+            return m_phase == PlatformWheelEventPhaseBegan || m_phase == PlatformWheelEventPhaseChanged
+                || m_momentumPhase == PlatformWheelEventPhaseBegan || m_momentumPhase == PlatformWheelEventPhaseChanged;
+        }
+        bool shouldConsiderLatching() const
+        {
+            return m_phase == PlatformWheelEventPhaseBegan || m_phase == PlatformWheelEventPhaseMayBegin;
+        }
+        bool shouldResetLatching() const
+        {
+            if (m_phase == PlatformWheelEventPhaseCancelled || m_phase == PlatformWheelEventPhaseMayBegin)
+                return true;
+            
+            if (m_phase == PlatformWheelEventPhaseNone && m_momentumPhase == PlatformWheelEventPhaseEnded)
+                return true;
+            
+            return false;
+        }
 #else
-        bool useLatchedEventNode() const { return false; }
+        bool useLatchedEventElement() const { return false; }
 #endif
 
 #if PLATFORM(WIN)
@@ -175,7 +207,7 @@ namespace WebCore {
         float m_wheelTicksY;
         PlatformWheelEventGranularity m_granularity;
         bool m_directionInvertedFromDevice;
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
         bool m_hasPreciseScrollingDeltas;
          PlatformWheelEventPhase m_phase;
         PlatformWheelEventPhase m_momentumPhase;

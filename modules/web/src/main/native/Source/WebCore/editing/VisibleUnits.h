@@ -26,10 +26,9 @@
 #ifndef VisibleUnits_h
 #define VisibleUnits_h
 
-#include "EditingBehaviorTypes.h"
 #include "EditingBoundary.h"
-#include "TextBreakIterator.h"
 #include "TextDirection.h"
+#include "VisibleSelection.h"
 
 namespace WebCore {
 
@@ -97,6 +96,15 @@ VisiblePosition startOfEditableContent(const VisiblePosition&);
 VisiblePosition endOfEditableContent(const VisiblePosition&);
 bool isEndOfEditableOrNonEditableContent(const VisiblePosition&);
 
+#if PLATFORM(IOS)
+bool atBoundaryOfGranularity(const VisiblePosition&, TextGranularity, SelectionDirection);
+bool withinTextUnitOfGranularity(const VisiblePosition&, TextGranularity, SelectionDirection);
+VisiblePosition positionOfNextBoundaryOfGranularity(const VisiblePosition&, TextGranularity, SelectionDirection);
+PassRefPtr<Range> enclosingTextUnitOfGranularity(const VisiblePosition&, TextGranularity, SelectionDirection);
+int distanceBetweenPositions(const VisiblePosition&, const VisiblePosition&);
+PassRefPtr<Range> wordRangeFromPosition(const VisiblePosition& position);
+VisiblePosition closestWordBoundaryForPosition(const VisiblePosition& position);
+#endif
 } // namespace WebCore
 
 #endif // VisibleUnits_h

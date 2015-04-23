@@ -24,9 +24,9 @@
  */
 
 [
-        Conditional=SVG&FILTERS
-] interface SVGFEComponentTransferElement : SVGStyledElement,
-                                                                SVGFilterPrimitiveStandardAttributes {
-        readonly attribute SVGAnimatedString in1;
-    };
+    Conditional=FILTERS
+] interface SVGFEComponentTransferElement : SVGElement {
+    readonly attribute SVGAnimatedString in1;
+};
 
+SVGFEComponentTransferElement implements SVGFilterPrimitiveStandardAttributes;

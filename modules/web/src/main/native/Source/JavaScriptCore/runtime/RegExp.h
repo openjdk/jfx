@@ -70,17 +70,17 @@ namespace JSC {
         }
 
         void invalidateCode();
-
+        
 #if ENABLE(REGEXP_TRACING)
         void printTraceData();
 #endif
 
         static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
         {
-            return Structure::create(vm, globalObject, prototype, TypeInfo(LeafType, 0), &s_info);
+            return Structure::create(vm, globalObject, prototype, TypeInfo(LeafType, 0), info());
         }
-
-        static const ClassInfo s_info;
+        
+        DECLARE_INFO;
 
         RegExpKey key() { return RegExpKey(m_flags, m_patternString); }
 

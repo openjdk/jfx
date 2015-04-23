@@ -20,7 +20,6 @@
 #ifndef SVGListPropertyTearOff_h
 #define SVGListPropertyTearOff_h
 
-#if ENABLE(SVG)
 #include "SVGListProperty.h"
 
 namespace WebCore {
@@ -56,7 +55,7 @@ public:
         ASSERT(size == m_values->size());
         for (size_t i = 0; i < size; ++i) {
             if (item == m_wrappers->at(i))
-            return i;
+                return i;
         }
 
         return -1;
@@ -121,7 +120,7 @@ protected:
     {
     }
 
-    virtual bool isReadOnly() const
+    virtual bool isReadOnly() const override
     {
         if (m_role == AnimValRole)
             return true;
@@ -130,7 +129,7 @@ protected:
         return false;
     }
 
-    virtual void commitChange()
+    virtual void commitChange() override
     {
         ASSERT(m_values);
         ASSERT(m_wrappers);
@@ -149,13 +148,13 @@ protected:
         m_animatedProperty->commitChange();
     }
 
-    virtual bool processIncomingListItemValue(const ListItemType&, unsigned*)
+    virtual bool processIncomingListItemValue(const ListItemType&, unsigned*) override
     {
         ASSERT_NOT_REACHED();
         return true;
     }
 
-    virtual bool processIncomingListItemWrapper(RefPtr<ListItemTearOff>& newItem, unsigned* indexToModify)
+    virtual bool processIncomingListItemWrapper(RefPtr<ListItemTearOff>& newItem, unsigned* indexToModify) override
     {
         SVGAnimatedProperty* animatedPropertyOfItem = newItem->animatedProperty();
 
@@ -210,5 +209,4 @@ protected:
 
 }
 
-#endif // ENABLE(SVG)
 #endif // SVGListPropertyTearOff_h

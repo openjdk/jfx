@@ -30,10 +30,8 @@
 #include <wtf/HashMap.h>
 #include <wtf/text/StringHash.h>
 
-#if !USE(QXMLQUERY)
 #include <libxml/parserInternals.h>
 #include <libxslt/documents.h>
-#endif
 
 namespace WebCore {
 
@@ -47,7 +45,7 @@ public:
     ~XSLTProcessor();
 
     void setXSLStyleSheet(PassRefPtr<XSLStyleSheet> styleSheet) { m_stylesheet = styleSheet; }
-    bool transformToString(Node* source, String& resultMIMEType, String& resultString, String& resultEncoding);
+    bool transformToString(Node& source, String& resultMIMEType, String& resultString, String& resultEncoding);
     PassRefPtr<Document> createDocumentFromSource(const String& source, const String& sourceEncoding, const String& sourceMIMEType, Node* sourceNode, Frame* frame);
     
     // DOM methods
@@ -66,13 +64,11 @@ public:
 
     void reset();
 
-#if !USE(QXMLQUERY)
     static void parseErrorFunc(void* userData, xmlError*);
     static void genericErrorFunc(void* userData, const char* msg, ...);
     
     // Only for libXSLT callbacks
     XSLStyleSheet* xslStylesheet() const { return m_stylesheet.get(); }
-#endif
 
     typedef HashMap<String, String> ParameterMap;
 

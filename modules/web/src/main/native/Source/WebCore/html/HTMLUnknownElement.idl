@@ -27,6 +27,6 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-    interface HTMLUnknownElement : HTMLElement {
-    };
+interface HTMLUnknownElement : HTMLElement {
+};
 

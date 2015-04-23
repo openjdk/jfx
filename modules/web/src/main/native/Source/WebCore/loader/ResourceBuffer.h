@@ -32,7 +32,7 @@
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 
-#if PLATFORM(MAC)
+#if USE(FOUNDATION)
 OBJC_CLASS NSData;
 #endif
 
@@ -45,7 +45,7 @@ class ResourceBuffer : public RefCounted<ResourceBuffer> {
 public:
 
     static PassRefPtr<ResourceBuffer> create() { return adoptRef(new ResourceBuffer); }
-    static PassRefPtr<ResourceBuffer> create(const char* data, int size) { return adoptRef(new ResourceBuffer(data, size)); }
+    static PassRefPtr<ResourceBuffer> create(const char* data, unsigned size) { return adoptRef(new ResourceBuffer(data, size)); }
     static PassRefPtr<ResourceBuffer> adoptSharedBuffer(PassRefPtr<SharedBuffer> shared) { return shared ? adoptRef(new ResourceBuffer(shared)) : 0; }
 
     virtual ~ResourceBuffer();
@@ -64,29 +64,37 @@ public:
     unsigned getSomeData(const char*& data, unsigned position = 0) const;
     
     SharedBuffer* sharedBuffer() const;
-#if PLATFORM(MAC)
+#if USE(FOUNDATION)
     void tryReplaceSharedBufferContents(SharedBuffer*);
 #endif
     PassRefPtr<ResourceBuffer> copy() const;
 
     bool hasPurgeableBuffer() const;
     void createPurgeableBuffer() const;
-    
+
+#if PLATFORM(IOS)
+    // FIXME: Remove PLATFORM(IOS)-guard once we upstream the iOS changes to SharedBuffer.{cpp, h} and SharedBufferCF.cpp.
+    void setShouldUsePurgeableMemory(bool);
+#endif
+
     // Ensure this buffer has no other clients before calling this.
     PassOwnPtr<PurgeableBuffer> releasePurgeableBuffer();
 
-#if PLATFORM(MAC)
-    NSData *createNSData();
+#if USE(FOUNDATION)
+    SharedBuffer::NSDataRetainPtrWithoutImplicitConversionOperator createNSData();
 #endif
 #if USE(CF)
-    CFDataRef createCFData();
+    RetainPtr<CFDataRef> createCFData();
+#endif
+#if ENABLE(DISK_IMAGE_CACHE)
+    bool isUsingDiskImageCache() const;
 #endif
 
 protected:
     ResourceBuffer();
 
 private:
-    ResourceBuffer(const char*, int);
+    ResourceBuffer(const char*, unsigned);
     ResourceBuffer(PassRefPtr<SharedBuffer>);
 
     RefPtr<SharedBuffer> m_sharedBuffer;

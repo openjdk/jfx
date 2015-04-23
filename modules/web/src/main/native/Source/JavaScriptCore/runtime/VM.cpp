@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2011, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2008, 2011, 2013, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,36 +30,57 @@
 #include "VM.h"
 
 #include "ArgList.h"
+#include "ArityCheckFailReturnThunks.h"
+#include "ArrayBufferNeuteringWatchpoint.h"
+#include "BuiltinExecutables.h"
+#include "CodeBlock.h"
 #include "CodeCache.h"
 #include "CommonIdentifiers.h"
+#include "CommonSlowPaths.h"
 #include "DFGLongLivedState.h"
+#include "DFGWorklist.h"
 #include "DebuggerActivation.h"
+#include "ErrorInstance.h"
+#include "FTLThunks.h"
 #include "FunctionConstructor.h"
 #include "GCActivityCallback.h"
 #include "GetterSetter.h"
 #include "Heap.h"
+#include "HeapIterationScope.h"
 #include "HostCallReturnValue.h"
+#include "Identifier.h"
 #include "IncrementalSweeper.h"
 #include "Interpreter.h"
-#include "JSActivation.h"
+#include "JITCode.h"
 #include "JSAPIValueWrapper.h"
+#include "JSActivation.h"
 #include "JSArray.h"
+#include "JSCInlines.h"
 #include "JSFunction.h"
+#include "JSGlobalObjectFunctions.h"
 #include "JSLock.h"
 #include "JSNameScope.h"
 #include "JSNotAnObject.h"
+#include "JSPromiseDeferred.h"
+#include "JSPromiseReaction.h"
 #include "JSPropertyNameIterator.h"
 #include "JSWithScope.h"
 #include "Lexer.h"
 #include "Lookup.h"
+#include "MapData.h"
 #include "Nodes.h"
+#include "Parser.h"
 #include "ParserArena.h"
+#include "PropertyMapHashTable.h"
 #include "RegExpCache.h"
 #include "RegExpObject.h"
+#include "SimpleTypedArrayController.h"
 #include "SourceProviderCache.h"
 #include "StrictEvalActivation.h"
 #include "StrongInlines.h"
+#include "StructureInlines.h"
 #include "UnlinkedCodeBlock.h"
+#include "WeakMapData.h"
 #include <wtf/ProcessID.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/StringPrintStream.h>
@@ -86,11 +107,11 @@ extern const HashTable arrayConstructorTable;
 extern const HashTable arrayPrototypeTable;
 extern const HashTable booleanPrototypeTable;
 extern const HashTable jsonTable;
+extern const HashTable dataViewTable;
 extern const HashTable dateTable;
 extern const HashTable dateConstructorTable;
 extern const HashTable errorPrototypeTable;
 extern const HashTable globalObjectTable;
-extern const HashTable mathTable;
 extern const HashTable numberConstructorTable;
 extern const HashTable numberPrototypeTable;
 JS_EXPORTDATA extern const HashTable objectConstructorTable;
@@ -99,6 +120,10 @@ extern const HashTable regExpTable;
 extern const HashTable regExpConstructorTable;
 extern const HashTable regExpPrototypeTable;
 extern const HashTable stringConstructorTable;
+#if ENABLE(PROMISES)
+extern const HashTable promisePrototypeTable;
+extern const HashTable promiseConstructorTable;
+#endif
 
 // Note: Platform.h will enforce that ENABLE(ASSEMBLER) is true if either
 // ENABLE(JIT) or ENABLE(YARR_JIT) or both are enabled. The code below
@@ -107,8 +132,14 @@ extern const HashTable stringConstructorTable;
 #if ENABLE(ASSEMBLER)
 static bool enableAssembler(ExecutableAllocator& executableAllocator)
 {
-    if (!executableAllocator.isValid() || (!Options::useJIT() && !Options::useRegExpJIT()))
+    if (!Options::useJIT() && !Options::useRegExpJIT())
         return false;
+
+    if (!executableAllocator.isValid()) {
+        if (Options::crashIfCantAllocateJITMemory())
+            CRASH();
+        return false;
+    }
 
 #if USE(CF)
 #if COMPILER(GCC) && !COMPILER(CLANG)
@@ -142,44 +173,42 @@ VM::VM(VMType vmType, HeapType heapType)
     , vmType(vmType)
     , clientData(0)
     , topCallFrame(CallFrame::noCaller())
-    , arrayConstructorTable(fastNew<HashTable>(JSC::arrayConstructorTable))
-    , arrayPrototypeTable(fastNew<HashTable>(JSC::arrayPrototypeTable))
-    , booleanPrototypeTable(fastNew<HashTable>(JSC::booleanPrototypeTable))
-    , dateTable(fastNew<HashTable>(JSC::dateTable))
-    , dateConstructorTable(fastNew<HashTable>(JSC::dateConstructorTable))
-    , errorPrototypeTable(fastNew<HashTable>(JSC::errorPrototypeTable))
-    , globalObjectTable(fastNew<HashTable>(JSC::globalObjectTable))
-    , jsonTable(fastNew<HashTable>(JSC::jsonTable))
-    , mathTable(fastNew<HashTable>(JSC::mathTable))
-    , numberConstructorTable(fastNew<HashTable>(JSC::numberConstructorTable))
-    , numberPrototypeTable(fastNew<HashTable>(JSC::numberPrototypeTable))
-    , objectConstructorTable(fastNew<HashTable>(JSC::objectConstructorTable))
-    , privateNamePrototypeTable(fastNew<HashTable>(JSC::privateNamePrototypeTable))
-    , regExpTable(fastNew<HashTable>(JSC::regExpTable))
-    , regExpConstructorTable(fastNew<HashTable>(JSC::regExpConstructorTable))
-    , regExpPrototypeTable(fastNew<HashTable>(JSC::regExpPrototypeTable))
-    , stringConstructorTable(fastNew<HashTable>(JSC::stringConstructorTable))
+    , arrayConstructorTable(adoptPtr(new HashTable(JSC::arrayConstructorTable)))
+    , arrayPrototypeTable(adoptPtr(new HashTable(JSC::arrayPrototypeTable)))
+    , booleanPrototypeTable(adoptPtr(new HashTable(JSC::booleanPrototypeTable)))
+    , dataViewTable(adoptPtr(new HashTable(JSC::dataViewTable)))
+    , dateTable(adoptPtr(new HashTable(JSC::dateTable)))
+    , dateConstructorTable(adoptPtr(new HashTable(JSC::dateConstructorTable)))
+    , errorPrototypeTable(adoptPtr(new HashTable(JSC::errorPrototypeTable)))
+    , globalObjectTable(adoptPtr(new HashTable(JSC::globalObjectTable)))
+    , jsonTable(adoptPtr(new HashTable(JSC::jsonTable)))
+    , numberConstructorTable(adoptPtr(new HashTable(JSC::numberConstructorTable)))
+    , numberPrototypeTable(adoptPtr(new HashTable(JSC::numberPrototypeTable)))
+    , objectConstructorTable(adoptPtr(new HashTable(JSC::objectConstructorTable)))
+    , privateNamePrototypeTable(adoptPtr(new HashTable(JSC::privateNamePrototypeTable)))
+    , regExpTable(adoptPtr(new HashTable(JSC::regExpTable)))
+    , regExpConstructorTable(adoptPtr(new HashTable(JSC::regExpConstructorTable)))
+    , regExpPrototypeTable(adoptPtr(new HashTable(JSC::regExpPrototypeTable)))
+    , stringConstructorTable(adoptPtr(new HashTable(JSC::stringConstructorTable)))
+#if ENABLE(PROMISES)
+    , promisePrototypeTable(adoptPtr(new HashTable(JSC::promisePrototypeTable)))
+    , promiseConstructorTable(adoptPtr(new HashTable(JSC::promiseConstructorTable)))
+#endif
     , identifierTable(vmType == Default ? wtfThreadData().currentIdentifierTable() : createIdentifierTable())
     , propertyNames(new CommonIdentifiers(this))
     , emptyList(new MarkedArgumentBuffer)
     , parserArena(adoptPtr(new ParserArena))
-    , keywords(adoptPtr(new Keywords(this)))
+    , keywords(adoptPtr(new Keywords(*this)))
     , interpreter(0)
-    , jsArrayClassInfo(&JSArray::s_info)
-    , jsFinalObjectClassInfo(&JSFinalObject::s_info)
-#if ENABLE(DFG_JIT)
+    , jsArrayClassInfo(JSArray::info())
+    , jsFinalObjectClassInfo(JSFinalObject::info())
     , sizeOfLastScratchBuffer(0)
-#endif
-    , dynamicGlobalObject(0)
-    , cachedUTCOffset(QNaN)
-    , m_enabledProfiler(0)
+    , entryScope(0)
     , m_regExpCache(new RegExpCache(this))
 #if ENABLE(REGEXP_TRACING)
     , m_rtTraceList(new RTTraceList())
 #endif
-#ifndef NDEBUG
     , exclusiveThread(0)
-#endif
     , m_newStringsSinceLastHashCons(0)
 #if ENABLE(ASSEMBLER)
     , m_canUseAssembler(enableAssembler(executableAllocator))
@@ -193,10 +222,27 @@ VM::VM(VMType vmType, HeapType heapType)
 #if ENABLE(GC_VALIDATION)
     , m_initializingObjectClass(0)
 #endif
+    , m_stackPointerAtVMEntry(0)
+    , m_stackLimit(0)
+#if ENABLE(LLINT_C_LOOP)
+    , m_jsStackLimit(0)
+#endif
+#if ENABLE(FTL_JIT)
+    , m_ftlStackLimit(0)
+    , m_largestFTLStackSize(0)
+#endif
     , m_inDefineOwnProperty(false)
-    , m_codeCache(CodeCache::create(CodeCache::GlobalCodeCache))
+    , m_codeCache(CodeCache::create())
+    , m_enabledProfiler(nullptr)
+    , m_builtinExecutables(BuiltinExecutables::create(*this))
 {
     interpreter = new Interpreter(*this);
+    StackBounds stack = wtfThreadData().stack();
+    updateReservedZoneSize(Options::reservedZoneSize());
+#if ENABLE(LLINT_C_LOOP)
+    interpreter->stack().setReservedZoneSize(Options::reservedZoneSize());
+#endif
+    setLastStackTop(stack.origin());
 
     // Need to be careful to keep everything consistent here
     JSLockHolder lock(this);
@@ -217,23 +263,34 @@ VM::VM(VMType vmType, HeapType heapType)
     programExecutableStructure.set(*this, ProgramExecutable::createStructure(*this, 0, jsNull()));
     functionExecutableStructure.set(*this, FunctionExecutable::createStructure(*this, 0, jsNull()));
     regExpStructure.set(*this, RegExp::createStructure(*this, 0, jsNull()));
-    sharedSymbolTableStructure.set(*this, SharedSymbolTable::createStructure(*this, 0, jsNull()));
+    symbolTableStructure.set(*this, SymbolTable::createStructure(*this, 0, jsNull()));
     structureChainStructure.set(*this, StructureChain::createStructure(*this, 0, jsNull()));
     sparseArrayValueMapStructure.set(*this, SparseArrayValueMap::createStructure(*this, 0, jsNull()));
+    arrayBufferNeuteringWatchpointStructure.set(*this, ArrayBufferNeuteringWatchpoint::createStructure(*this));
     withScopeStructure.set(*this, JSWithScope::createStructure(*this, 0, jsNull()));
     unlinkedFunctionExecutableStructure.set(*this, UnlinkedFunctionExecutable::createStructure(*this, 0, jsNull()));
     unlinkedProgramCodeBlockStructure.set(*this, UnlinkedProgramCodeBlock::createStructure(*this, 0, jsNull()));
     unlinkedEvalCodeBlockStructure.set(*this, UnlinkedEvalCodeBlock::createStructure(*this, 0, jsNull()));
     unlinkedFunctionCodeBlockStructure.set(*this, UnlinkedFunctionCodeBlock::createStructure(*this, 0, jsNull()));
     propertyTableStructure.set(*this, PropertyTable::createStructure(*this, 0, jsNull()));
+    mapDataStructure.set(*this, MapData::createStructure(*this, 0, jsNull()));
+    weakMapDataStructure.set(*this, WeakMapData::createStructure(*this, 0, jsNull()));
+    promiseDeferredStructure.set(*this, JSPromiseDeferred::createStructure(*this, 0, jsNull()));
+    promiseReactionStructure.set(*this, JSPromiseReaction::createStructure(*this, 0, jsNull()));
+    iterationTerminator.set(*this, JSFinalObject::create(*this, JSFinalObject::createStructure(*this, 0, jsNull(), 1)));
     smallStrings.initializeCommonStrings(*this);
 
     wtfThreadData().setCurrentIdentifierTable(existingEntryIdentifierTable);
 
 #if ENABLE(JIT)
     jitStubs = adoptPtr(new JITThunks());
-    performPlatformSpecificJITAssertions(this);
+    arityCheckFailReturnThunks = std::make_unique<ArityCheckFailReturnThunks>();
 #endif
+    arityCheckData = std::make_unique<CommonSlowPaths::ArityCheckData>();
+
+#if ENABLE(FTL_JIT)
+    ftlThunks = std::make_unique<FTL::Thunks>();
+#endif // ENABLE(FTL_JIT)
     
     interpreter->initialize(this->canUseJIT());
     
@@ -242,7 +299,7 @@ VM::VM(VMType vmType, HeapType heapType)
 #endif
 
     heap.notifyIsSafeToCollect();
-
+    
     LLInt::Data::performAssertions(*this);
     
     if (Options::enableProfiler()) {
@@ -260,12 +317,30 @@ VM::VM(VMType vmType, HeapType heapType)
 
 #if ENABLE(DFG_JIT)
     if (canUseJIT())
-        m_dfgState = adoptPtr(new DFG::LongLivedState());
+        dfgState = adoptPtr(new DFG::LongLivedState());
 #endif
+    
+    // Initialize this last, as a free way of asserting that VM initialization itself
+    // won't use this.
+    m_typedArrayController = adoptRef(new SimpleTypedArrayController());
 }
 
 VM::~VM()
 {
+    // Never GC, ever again.
+    heap.incrementDeferralDepth();
+    
+#if ENABLE(DFG_JIT)
+    // Make sure concurrent compilations are done, but don't install them, since there is
+    // no point to doing so.
+    for (unsigned i = DFG::numberOfWorklists(); i--;) {
+        if (DFG::Worklist* worklist = DFG::worklistForIndexOrNull(i)) {
+            worklist->waitUntilAllPlansForVMAreReady(*this);
+            worklist->removeAllReadyPlansForVM(*this);
+        }
+    }
+#endif // ENABLE(DFG_JIT)
+    
     // Clear this first to ensure that nobody tries to remove themselves from it.
     m_perBytecodeProfiler.clear();
     
@@ -281,12 +356,12 @@ VM::~VM()
     arrayPrototypeTable->deleteTable();
     arrayConstructorTable->deleteTable();
     booleanPrototypeTable->deleteTable();
+    dataViewTable->deleteTable();
     dateTable->deleteTable();
     dateConstructorTable->deleteTable();
     errorPrototypeTable->deleteTable();
     globalObjectTable->deleteTable();
     jsonTable->deleteTable();
-    mathTable->deleteTable();
     numberConstructorTable->deleteTable();
     numberPrototypeTable->deleteTable();
     objectConstructorTable->deleteTable();
@@ -295,24 +370,10 @@ VM::~VM()
     regExpConstructorTable->deleteTable();
     regExpPrototypeTable->deleteTable();
     stringConstructorTable->deleteTable();
-
-    fastDelete(const_cast<HashTable*>(arrayConstructorTable));
-    fastDelete(const_cast<HashTable*>(arrayPrototypeTable));
-    fastDelete(const_cast<HashTable*>(booleanPrototypeTable));
-    fastDelete(const_cast<HashTable*>(dateTable));
-    fastDelete(const_cast<HashTable*>(dateConstructorTable));
-    fastDelete(const_cast<HashTable*>(errorPrototypeTable));
-    fastDelete(const_cast<HashTable*>(globalObjectTable));
-    fastDelete(const_cast<HashTable*>(jsonTable));
-    fastDelete(const_cast<HashTable*>(mathTable));
-    fastDelete(const_cast<HashTable*>(numberConstructorTable));
-    fastDelete(const_cast<HashTable*>(numberPrototypeTable));
-    fastDelete(const_cast<HashTable*>(objectConstructorTable));
-    fastDelete(const_cast<HashTable*>(privateNamePrototypeTable));
-    fastDelete(const_cast<HashTable*>(regExpTable));
-    fastDelete(const_cast<HashTable*>(regExpConstructorTable));
-    fastDelete(const_cast<HashTable*>(regExpPrototypeTable));
-    fastDelete(const_cast<HashTable*>(stringConstructorTable));
+#if ENABLE(PROMISES)
+    promisePrototypeTable->deleteTable();
+    promiseConstructorTable->deleteTable();
+#endif
 
     delete emptyList;
 
@@ -342,9 +403,11 @@ PassRefPtr<VM> VM::create(HeapType heapType)
     return adoptRef(new VM(Default, heapType));
 }
 
-PassRefPtr<VM> VM::createLeaked(HeapType heapType)
+PassRefPtr<VM> VM::createLeakedForMainThread(HeapType heapType)
 {
-    return create(heapType);
+    VM* vm = new VM(Default, heapType);
+    vm->jsStringWeakOwner = adoptPtr(new JSString::WeakOwner);
+    return adoptRef(vm);
 }
 
 bool VM::sharedInstanceExists()
@@ -397,6 +460,10 @@ static ThunkGenerator thunkGeneratorForIntrinsic(Intrinsic intrinsic)
         return logThunkGenerator;
     case IMulIntrinsic:
         return imulThunkGenerator;
+    case ArrayIteratorNextKeyIntrinsic:
+        return arrayIteratorNextKeyThunkGenerator;
+    case ArrayIteratorNextValueIntrinsic:
+        return arrayIteratorNextValueThunkGenerator;
     default:
         return 0;
     }
@@ -413,10 +480,15 @@ NativeExecutable* VM::getHostFunction(NativeFunction function, Intrinsic intrins
 }
 
 #else // !ENABLE(JIT)
+
 NativeExecutable* VM::getHostFunction(NativeFunction function, NativeFunction constructor)
 {
-    return NativeExecutable::create(*this, function, constructor);
+    return NativeExecutable::create(*this,
+        adoptRef(new NativeJITCode(MacroAssemblerCodeRef::createLLIntCodeRef(llint_native_call_trampoline), JITCode::HostCallThunk)), function,
+        adoptRef(new NativeJITCode(MacroAssemblerCodeRef::createLLIntCodeRef(llint_native_construct_trampoline), JITCode::HostCallThunk)), constructor,
+        NoIntrinsic);
 }
+
 #endif // !ENABLE(JIT)
 
 VM::ClientData::~ClientData()
@@ -425,8 +497,7 @@ VM::ClientData::~ClientData()
 
 void VM::resetDateCache()
 {
-    cachedUTCOffset = QNaN;
-    dstOffsetCache.reset();
+    localTimeOffsetCache.reset();
     cachedDateString = String();
     cachedDateStringValue = QNaN;
     dateInstanceCache.reset();
@@ -442,8 +513,19 @@ void VM::stopSampling()
     interpreter->stopSampling();
 }
 
+void VM::prepareToDiscardCode()
+{
+#if ENABLE(DFG_JIT)
+    for (unsigned i = DFG::numberOfWorklists(); i--;) {
+        if (DFG::Worklist* worklist = DFG::worklistForIndexOrNull(i))
+            worklist->completeAllPlansForVM(*this);
+    }
+#endif // ENABLE(DFG_JIT)
+}
+
 void VM::discardAllCode()
 {
+    prepareToDiscardCode();
     m_codeCache->clear();
     heap.deleteAllCompiledCode();
     heap.reportAbandonedObjectGraph();
@@ -459,7 +541,7 @@ void VM::dumpSampleData(ExecState* exec)
 
 SourceProviderCache* VM::addSourceProviderCache(SourceProvider* sourceProvider)
 {
-    SourceProviderCacheMap::AddResult addResult = sourceProviderCacheMap.add(sourceProvider, 0);
+    auto addResult = sourceProviderCacheMap.add(sourceProvider, nullptr);
     if (addResult.isNewEntry)
         addResult.iterator->value = adoptRef(new SourceProviderCache);
     return addResult.iterator->value.get();
@@ -474,7 +556,7 @@ struct StackPreservingRecompiler : public MarkedBlock::VoidFunctor {
     HashSet<FunctionExecutable*> currentlyExecutingFunctions;
     void operator()(JSCell* cell)
     {
-        if (!cell->inherits(&FunctionExecutable::s_info))
+        if (!cell->inherits(FunctionExecutable::info()))
             return;
         FunctionExecutable* executable = jsCast<FunctionExecutable*>(cell);
         if (currentlyExecutingFunctions.contains(executable))
@@ -485,41 +567,221 @@ struct StackPreservingRecompiler : public MarkedBlock::VoidFunctor {
 
 void VM::releaseExecutableMemory()
 {
-    if (dynamicGlobalObject) {
+    prepareToDiscardCode();
+    
+    if (entryScope) {
         StackPreservingRecompiler recompiler;
+        HeapIterationScope iterationScope(heap);
         HashSet<JSCell*> roots;
-        heap.canonicalizeCellLivenessData();
         heap.getConservativeRegisterRoots(roots);
         HashSet<JSCell*>::iterator end = roots.end();
         for (HashSet<JSCell*>::iterator ptr = roots.begin(); ptr != end; ++ptr) {
             ScriptExecutable* executable = 0;
             JSCell* cell = *ptr;
-            if (cell->inherits(&ScriptExecutable::s_info))
+            if (cell->inherits(ScriptExecutable::info()))
                 executable = static_cast<ScriptExecutable*>(*ptr);
-            else if (cell->inherits(&JSFunction::s_info)) {
+            else if (cell->inherits(JSFunction::info())) {
                 JSFunction* function = jsCast<JSFunction*>(*ptr);
                 if (function->isHostFunction())
                     continue;
                 executable = function->jsExecutable();
             } else
                 continue;
-            ASSERT(executable->inherits(&ScriptExecutable::s_info));
+            ASSERT(executable->inherits(ScriptExecutable::info()));
             executable->unlinkCalls();
-            if (executable->inherits(&FunctionExecutable::s_info))
+            if (executable->inherits(FunctionExecutable::info()))
                 recompiler.currentlyExecutingFunctions.add(static_cast<FunctionExecutable*>(executable));
                 
         }
-        heap.objectSpace().forEachLiveCell<StackPreservingRecompiler>(recompiler);
+        heap.objectSpace().forEachLiveCell<StackPreservingRecompiler>(iterationScope, recompiler);
     }
     m_regExpCache->invalidateCode();
     heap.collectAllGarbage();
 }
 
-void VM::clearExceptionStack()
+static void appendSourceToError(CallFrame* callFrame, ErrorInstance* exception, unsigned bytecodeOffset)
+{
+    exception->clearAppendSourceToMessage();
+    
+    if (!callFrame->codeBlock()->hasExpressionInfo())
+        return;
+    
+    int startOffset = 0;
+    int endOffset = 0;
+    int divotPoint = 0;
+    unsigned line = 0;
+    unsigned column = 0;
+    
+    CodeBlock* codeBlock = callFrame->codeBlock();
+    codeBlock->expressionRangeForBytecodeOffset(bytecodeOffset, divotPoint, startOffset, endOffset, line, column);
+    
+    int expressionStart = divotPoint - startOffset;
+    int expressionStop = divotPoint + endOffset;
+    
+    const String& sourceString = codeBlock->source()->source();
+    if (!expressionStop || expressionStart > static_cast<int>(sourceString.length()))
+        return;
+    
+    VM* vm = &callFrame->vm();
+    JSValue jsMessage = exception->getDirect(*vm, vm->propertyNames->message);
+    if (!jsMessage || !jsMessage.isString())
+        return;
+    
+    String message = asString(jsMessage)->value(callFrame);
+    
+    if (expressionStart < expressionStop)
+        message =  makeString(message, " (evaluating '", codeBlock->source()->getRange(expressionStart, expressionStop), "')");
+    else {
+        // No range information, so give a few characters of context.
+        const StringImpl* data = sourceString.impl();
+        int dataLength = sourceString.length();
+        int start = expressionStart;
+        int stop = expressionStart;
+        // Get up to 20 characters of context to the left and right of the divot, clamping to the line.
+        // Then strip whitespace.
+        while (start > 0 && (expressionStart - start < 20) && (*data)[start - 1] != '\n')
+            start--;
+        while (start < (expressionStart - 1) && isStrWhiteSpace((*data)[start]))
+            start++;
+        while (stop < dataLength && (stop - expressionStart < 20) && (*data)[stop] != '\n')
+            stop++;
+        while (stop > expressionStart && isStrWhiteSpace((*data)[stop - 1]))
+            stop--;
+        message = makeString(message, " (near '...", codeBlock->source()->getRange(start, stop), "...')");
+    }
+    
+    exception->putDirect(*vm, vm->propertyNames->message, jsString(vm, message));
+}
+    
+JSValue VM::throwException(ExecState* exec, JSValue error)
+{
+    if (Options::breakOnThrow()) {
+        dataLog("In call frame ", RawPointer(exec), " for code block ", *exec->codeBlock(), "\n");
+        CRASH();
+    }
+    
+    ASSERT(exec == topCallFrame || exec == exec->lexicalGlobalObject()->globalExec() || exec == exec->vmEntryGlobalObject()->globalExec());
+    
+    Vector<StackFrame> stackTrace;
+    interpreter->getStackTrace(stackTrace);
+    m_exceptionStack = RefCountedArray<StackFrame>(stackTrace);
+    m_exception = error;
+    
+    if (stackTrace.isEmpty() || !error.isObject())
+        return error;
+    JSObject* exception = asObject(error);
+    
+    StackFrame stackFrame;
+    for (unsigned i = 0 ; i < stackTrace.size(); ++i) {
+        stackFrame = stackTrace.at(i);
+        if (stackFrame.bytecodeOffset)
+            break;
+    }
+    unsigned bytecodeOffset = stackFrame.bytecodeOffset;
+    if (!hasErrorInfo(exec, exception)) {
+        // FIXME: We should only really be adding these properties to VM generated exceptions,
+        // but the inspector currently requires these for all thrown objects.
+        unsigned line;
+        unsigned column;
+        stackFrame.computeLineAndColumn(line, column);
+        exception->putDirect(*this, Identifier(this, "line"), jsNumber(line), ReadOnly | DontDelete);
+        exception->putDirect(*this, Identifier(this, "column"), jsNumber(column), ReadOnly | DontDelete);
+        if (!stackFrame.sourceURL.isEmpty())
+            exception->putDirect(*this, Identifier(this, "sourceURL"), jsString(this, stackFrame.sourceURL), ReadOnly | DontDelete);
+    }
+    if (exception->isErrorInstance() && static_cast<ErrorInstance*>(exception)->appendSourceToMessage()) {
+        unsigned stackIndex = 0;
+        CallFrame* callFrame;
+        for (callFrame = exec; callFrame && !callFrame->codeBlock(); ) {
+            stackIndex++;
+            callFrame = callFrame->callerFrameSkippingVMEntrySentinel();
+        }
+        if (callFrame && callFrame->codeBlock()) {
+            stackFrame = stackTrace.at(stackIndex);
+            bytecodeOffset = stackFrame.bytecodeOffset;
+            appendSourceToError(callFrame, static_cast<ErrorInstance*>(exception), bytecodeOffset);
+        }
+    }
+
+    if (exception->hasProperty(exec, this->propertyNames->stack))
+        return error;
+    
+    exception->putDirect(*this, propertyNames->stack, interpreter->stackTraceAsString(topCallFrame, stackTrace), DontEnum);
+    return error;
+}
+    
+JSObject* VM::throwException(ExecState* exec, JSObject* error)
+{
+    return asObject(throwException(exec, JSValue(error)));
+}
+void VM::getExceptionInfo(JSValue& exception, RefCountedArray<StackFrame>& exceptionStack)
+{
+    exception = m_exception;
+    exceptionStack = m_exceptionStack;
+}
+void VM::setExceptionInfo(JSValue& exception, RefCountedArray<StackFrame>& exceptionStack)
+{
+    m_exception = exception;
+    m_exceptionStack = exceptionStack;
+}
+
+void VM::clearException()
+{
+    m_exception = JSValue();
+}
+void VM:: clearExceptionStack()
 {
     m_exceptionStack = RefCountedArray<StackFrame>();
 }
-    
+
+void VM::setStackPointerAtVMEntry(void* sp)
+{
+    m_stackPointerAtVMEntry = sp;
+    updateStackLimit();
+}
+
+size_t VM::updateReservedZoneSize(size_t reservedZoneSize)
+{
+    size_t oldReservedZoneSize = m_reservedZoneSize;
+    m_reservedZoneSize = reservedZoneSize;
+
+    updateStackLimit();
+
+    return oldReservedZoneSize;
+}
+
+inline void VM::updateStackLimit()
+{
+    if (m_stackPointerAtVMEntry) {
+        ASSERT(wtfThreadData().stack().isGrowingDownward());
+        char* startOfStack = reinterpret_cast<char*>(m_stackPointerAtVMEntry);
+#if ENABLE(FTL_JIT)
+        m_stackLimit = wtfThreadData().stack().recursionLimit(startOfStack, Options::maxPerThreadStackUsage(), m_reservedZoneSize + m_largestFTLStackSize);
+        m_ftlStackLimit = wtfThreadData().stack().recursionLimit(startOfStack, Options::maxPerThreadStackUsage(), m_reservedZoneSize + 2 * m_largestFTLStackSize);
+#else
+        m_stackLimit = wtfThreadData().stack().recursionLimit(startOfStack, Options::maxPerThreadStackUsage(), m_reservedZoneSize);
+#endif
+    } else {
+#if ENABLE(FTL_JIT)
+        m_stackLimit = wtfThreadData().stack().recursionLimit(m_reservedZoneSize + m_largestFTLStackSize);
+        m_ftlStackLimit = wtfThreadData().stack().recursionLimit(m_reservedZoneSize + 2 * m_largestFTLStackSize);
+#else
+        m_stackLimit = wtfThreadData().stack().recursionLimit(m_reservedZoneSize);
+#endif
+    }
+
+}
+
+#if ENABLE(FTL_JIT)
+void VM::updateFTLLargestStackSize(size_t stackSize)
+{
+    if (stackSize > m_largestFTLStackSize) {
+        m_largestFTLStackSize = stackSize;
+        updateStackLimit();
+    }
+}
+#endif
+
 void releaseExecutableMemory(VM& vm)
 {
     vm.releaseExecutableMemory();
@@ -537,6 +799,18 @@ void VM::gatherConservativeRoots(ConservativeRoots& conservativeRoots)
     }
 }
 #endif
+
+void logSanitizeStack(VM* vm)
+{
+    if (Options::verboseSanitizeStack() && vm->topCallFrame) {
+        int dummy;
+        dataLog(
+            "Sanitizing stack with top call frame at ", RawPointer(vm->topCallFrame),
+            ", current stack pointer at ", RawPointer(&dummy), ", in ",
+            pointerDump(vm->topCallFrame->codeBlock()), " and last code origin = ",
+            vm->topCallFrame->codeOrigin(), "\n");
+    }
+}
 
 #if ENABLE(REGEXP_TRACING)
 void VM::addRegExpToTrace(RegExp* regExp)
@@ -570,5 +844,48 @@ void VM::dumpRegExpTrace()
 {
 }
 #endif
+
+void VM::registerWatchpointForImpureProperty(const Identifier& propertyName, Watchpoint* watchpoint)
+{
+    auto result = m_impurePropertyWatchpointSets.add(propertyName.string(), nullptr);
+    if (result.isNewEntry)
+        result.iterator->value = adoptRef(new WatchpointSet(IsWatched));
+    result.iterator->value->add(watchpoint);
+}
+
+void VM::addImpureProperty(const String& propertyName)
+{
+    if (RefPtr<WatchpointSet> watchpointSet = m_impurePropertyWatchpointSets.take(propertyName))
+        watchpointSet->fireAll();
+}
+
+class SetEnabledProfilerFunctor {
+public:
+    bool operator()(CodeBlock* codeBlock)
+    {
+        if (JITCode::isOptimizingJIT(codeBlock->jitType()))
+            codeBlock->jettison(Profiler::JettisonDueToLegacyProfiler);
+        return false;
+    }
+};
+
+void VM::setEnabledProfiler(LegacyProfiler* profiler)
+{
+    m_enabledProfiler = profiler;
+    if (m_enabledProfiler) {
+        SetEnabledProfilerFunctor functor;
+        heap.forEachCodeBlock(functor);
+    }
+}
+
+void sanitizeStackForVM(VM* vm)
+{
+    logSanitizeStack(vm);
+#if ENABLE(LLINT_C_LOOP)
+    vm->interpreter->stack().sanitizeStack();
+#else
+    //    sanitizeStackForVMImpl(vm);
+#endif
+}
 
 } // namespace JSC

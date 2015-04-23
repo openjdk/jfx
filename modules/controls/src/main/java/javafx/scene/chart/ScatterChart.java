@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -107,6 +107,11 @@ public class ScatterChart<X,Y> extends XYChart<X,Y> {
     /** @inheritDoc */
     @Override protected  void dataItemRemoved(final Data<X,Y> item, final Series<X,Y> series) {
         final Node symbol = item.getNode();
+
+        if (symbol != null) {
+            symbol.focusTraversableProperty().unbind();
+        }
+
         if (shouldAnimate()) {
             // fade out old symbol
             FadeTransition ft = new FadeTransition(Duration.millis(500),symbol);

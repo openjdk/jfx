@@ -22,5 +22,5 @@
     [TreatReturnedNullStringAs=Null] readonly attribute DOMString publicId;
     [TreatReturnedNullStringAs=Null] readonly attribute DOMString systemId;
     [TreatReturnedNullStringAs=Null] readonly attribute DOMString notationName;
-    };
+};
 

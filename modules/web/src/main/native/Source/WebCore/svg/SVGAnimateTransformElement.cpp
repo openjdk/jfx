@@ -21,8 +21,6 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SVG)
 #include "SVGAnimateTransformElement.h"
 
 #include "Attribute.h"
@@ -31,14 +29,14 @@
 
 namespace WebCore {
 
-inline SVGAnimateTransformElement::SVGAnimateTransformElement(const QualifiedName& tagName, Document* document)
+inline SVGAnimateTransformElement::SVGAnimateTransformElement(const QualifiedName& tagName, Document& document)
     : SVGAnimateElement(tagName, document)
     , m_type(SVGTransform::SVG_TRANSFORM_UNKNOWN)
 {
     ASSERT(hasTagName(SVGNames::animateTransformTag));
 }
 
-PassRefPtr<SVGAnimateTransformElement> SVGAnimateTransformElement::create(const QualifiedName& tagName, Document* document)
+PassRefPtr<SVGAnimateTransformElement> SVGAnimateTransformElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(new SVGAnimateTransformElement(tagName, document));
 }
@@ -49,6 +47,9 @@ bool SVGAnimateTransformElement::hasValidAttributeType()
     if (!targetElement)
         return false;
 
+    if (attributeType() == AttributeTypeCSS)
+        return false;
+
     return m_animatedPropertyType == AnimatedTransformList;
 }
 
@@ -57,7 +58,7 @@ bool SVGAnimateTransformElement::isSupportedAttribute(const QualifiedName& attrN
     DEFINE_STATIC_LOCAL(HashSet<QualifiedName>, supportedAttributes, ());
     if (supportedAttributes.isEmpty())
         supportedAttributes.add(SVGNames::typeAttr);
-    return supportedAttributes.contains<QualifiedName, SVGAttributeHashTranslator>(attrName);
+    return supportedAttributes.contains<SVGAttributeHashTranslator>(attrName);
 }
 
 void SVGAnimateTransformElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
@@ -78,5 +79,3 @@ void SVGAnimateTransformElement::parseAttribute(const QualifiedName& name, const
 }
 
 }
-
-#endif // ENABLE(SVG)

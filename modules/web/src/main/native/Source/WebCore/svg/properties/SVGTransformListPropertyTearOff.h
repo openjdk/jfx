@@ -20,7 +20,6 @@
 #ifndef SVGTransformListPropertyTearOff_h
 #define SVGTransformListPropertyTearOff_h
 
-#if ENABLE(SVG)
 #include "SVGListPropertyTearOff.h"
 #include "SVGTransformList.h"
 
@@ -32,13 +31,13 @@ public:
     typedef SVGAnimatedListPropertyTearOff<SVGTransformList> AnimatedListPropertyTearOff;
     typedef SVGAnimatedListPropertyTearOff<SVGTransformList>::ListWrapperCache ListWrapperCache;
 
-    static PassRefPtr<SVGListPropertyTearOff<SVGTransformList> > create(AnimatedListPropertyTearOff* animatedProperty, SVGPropertyRole role, SVGTransformList& values, ListWrapperCache& wrappers)
+    static PassRefPtr<SVGListPropertyTearOff<SVGTransformList>> create(AnimatedListPropertyTearOff* animatedProperty, SVGPropertyRole role, SVGTransformList& values, ListWrapperCache& wrappers)
     {
         ASSERT(animatedProperty);
         return adoptRef(new SVGTransformListPropertyTearOff(animatedProperty, role, values, wrappers));
     }
 
-    PassRefPtr<SVGPropertyTearOff<SVGTransform> > createSVGTransformFromMatrix(SVGPropertyTearOff<SVGMatrix>* matrix, ExceptionCode& ec)
+    PassRefPtr<SVGPropertyTearOff<SVGTransform>> createSVGTransformFromMatrix(SVGPropertyTearOff<SVGMatrix>* matrix, ExceptionCode& ec)
     {
         ASSERT(m_values);
         if (!matrix) {
@@ -48,7 +47,7 @@ public:
         return SVGPropertyTearOff<SVGTransform>::create(m_values->createSVGTransformFromMatrix(matrix->propertyReference()));
     }
 
-    PassRefPtr<SVGPropertyTearOff<SVGTransform> > consolidate(ExceptionCode& ec)
+    PassRefPtr<SVGPropertyTearOff<SVGTransform>> consolidate(ExceptionCode& ec)
     {
         ASSERT(m_values);
         ASSERT(m_wrappers);
@@ -62,7 +61,7 @@ public:
             return 0;
 
         detachListWrappers(0);
-        RefPtr<SVGPropertyTearOff<SVGTransform> > wrapper = SVGPropertyTearOff<SVGTransform>::create(m_values->consolidate());
+        RefPtr<SVGPropertyTearOff<SVGTransform>> wrapper = SVGPropertyTearOff<SVGTransform>::create(m_values->consolidate());
         m_wrappers->append(wrapper);
 
         ASSERT(m_values->size() == m_wrappers->size());
@@ -78,5 +77,4 @@ private:
 
 }
 
-#endif // ENABLE(SVG)
 #endif // SVGListPropertyTearOff_h

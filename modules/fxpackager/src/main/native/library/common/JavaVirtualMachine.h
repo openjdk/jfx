@@ -67,4 +67,6 @@ public:
     void ShutdownJVM();
 };
 
+bool RunVM();
+
 #endif //JAVAVIRTUALMACHINE_H

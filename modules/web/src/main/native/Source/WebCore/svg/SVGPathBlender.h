@@ -20,9 +20,7 @@
 #ifndef SVGPathBlender_h
 #define SVGPathBlender_h
 
-#if ENABLE(SVG)
 #include "SVGPathConsumer.h"
-#include "SVGPathSource.h"
 
 namespace WebCore {
 
@@ -30,6 +28,8 @@ enum FloatBlendMode {
     BlendHorizontal,
     BlendVertical
 };
+
+class SVGPathSource;
 
 class SVGPathBlender {
     WTF_MAKE_NONCOPYABLE(SVGPathBlender); WTF_MAKE_FAST_ALLOCATED;
@@ -70,5 +70,4 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(SVG)
 #endif // SVGPathBlender_h

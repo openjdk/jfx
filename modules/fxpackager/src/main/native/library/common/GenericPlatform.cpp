@@ -33,7 +33,6 @@
 
 #include "GenericPlatform.h"
 
-
 #include <fstream>
 #include <locale>
 
@@ -51,32 +50,32 @@ GenericPlatform::~GenericPlatform(void) {
 TString GenericPlatform::GetConfigFileName() {
     TString result;
     TString basedir = GetPackageAppDirectory();
-    
+
     if (basedir.empty() == false) {
-        basedir = FilePath::IncludeTrailingSlash(basedir);
+        basedir = FilePath::IncludeTrailingSeparater(basedir);
         TString appConfig = basedir + GetAppName() + _T(".cfg");
-        
+
         if (FilePath::FileExists(appConfig) == true) {
             result = appConfig;
         }
         else {
             result = basedir + _T("package.cfg");
-            
+
             if (FilePath::FileExists(result) == false) {
                 result = _T("");
             }
         }
     }
-    
+
     return result;
 }
 
 TString GenericPlatform::GetPackageAppDirectory() {
 #if defined(WINDOWS) || defined(LINUX)
-    return FilePath::IncludeTrailingSlash(GetPackageRootDirectory()) + _T("app");
+    return FilePath::IncludeTrailingSeparater(GetPackageRootDirectory()) + _T("app");
 #endif //WINDOWS || LINUX
 #ifdef MAC
-    return FilePath::IncludeTrailingSlash(GetPackageRootDirectory()) + _T("Java");
+    return FilePath::IncludeTrailingSeparater(GetPackageRootDirectory()) + _T("Java");
 #endif
 }
 
@@ -85,7 +84,7 @@ TString GenericPlatform::GetPackageLauncherDirectory() {
     return GetPackageRootDirectory();
 #endif //WINDOWS || LINUX
 #ifdef MAC
-    return FilePath::IncludeTrailingSlash(GetPackageRootDirectory()) + _T("MacOS");
+    return FilePath::IncludeTrailingSeparater(GetPackageRootDirectory()) + _T("MacOS");
 #endif
 }
 
@@ -163,26 +162,37 @@ TString GenericPlatform::GetAppName() {
 
 std::map<TString, TString> GenericPlatform::GetKeys() {
     std::map<TString, TString> keys;
+    keys.insert(std::map<TString, TString>::value_type(CONFIG_VERSION,           _T("app.version")));
     keys.insert(std::map<TString, TString>::value_type(CONFIG_MAINJAR_KEY,       _T("app.mainjar")));
     keys.insert(std::map<TString, TString>::value_type(CONFIG_MAINCLASSNAME_KEY, _T("app.mainclass")));
     keys.insert(std::map<TString, TString>::value_type(CONFIG_CLASSPATH_KEY,     _T("app.classpath")));
     keys.insert(std::map<TString, TString>::value_type(APP_NAME_KEY,             _T("app.name")));
-    keys.insert(std::map<TString, TString>::value_type(CONFIG_SPLASH_KEY,        _T("app.splash")));
     keys.insert(std::map<TString, TString>::value_type(CONFIG_APP_ID_KEY,        _T("app.preferences.id")));
-    keys.insert(std::map<TString, TString>::value_type(CONFIG_APP_MEMORY,        _T("app.memory")));
     keys.insert(std::map<TString, TString>::value_type(JVM_RUNTIME_KEY,          _T("app.runtime")));
-    keys.insert(std::map<TString, TString>::value_type(PACKAGER_APP_DATA_DIR,    _T("app.preferences.id")));
+    keys.insert(std::map<TString, TString>::value_type(PACKAGER_APP_DATA_DIR,    _T("app.identifier")));
+
+    keys.insert(std::map<TString, TString>::value_type(CONFIG_APP_MEMORY,        _T("app.memory")));
+    keys.insert(std::map<TString, TString>::value_type(CONFIG_SPLASH_KEY,        _T("app.splash")));
+
+    keys.insert(std::map<TString, TString>::value_type(CONFIG_SECTION_APPLICATION,    _T("Application")));
+    keys.insert(std::map<TString, TString>::value_type(CONFIG_SECTION_JVMOPTIONS,     _T("JVMOptions")));
+    keys.insert(std::map<TString, TString>::value_type(CONFIG_SECTION_JVMUSEROPTIONS, _T("JVMUserOptions")));
+    keys.insert(std::map<TString, TString>::value_type(CONFIG_SECTION_JVMUSEROVERRIDESOPTIONS, _T("JVMUserOverrideOptions")));
+    keys.insert(std::map<TString, TString>::value_type(CONFIG_SECTION_APPCDSJVMOPTIONS, _T("AppCDSJVMOptions")));
+    keys.insert(std::map<TString, TString>::value_type(CONFIG_SECTION_APPCDSGENERATECACHEJVMOPTIONS, _T("AppCDSGenerateCacheJVMOptions")));
+    keys.insert(std::map<TString, TString>::value_type(CONFIG_SECTION_ARGOPTIONS,     _T("ArgOptions")));
+
     return keys;
 }
 
 #ifdef DEBUG
-Platform::DebugState GenericPlatform::GetDebugState() {
-    Platform::DebugState result = Platform::dsNone;
-    
+DebugState GenericPlatform::GetDebugState() {
+    DebugState result = dsNone;
+
     if (IsNativeDebuggerPresent() == true) {
-        result = Platform::dsNative;
+        result = dsNative;
     }
-    
+
     return result;
 }
 #endif //DEBUG

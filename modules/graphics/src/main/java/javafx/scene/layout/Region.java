@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,7 @@
 
 package javafx.scene.layout;
 
-import com.sun.javafx.Utils;
+import com.sun.javafx.util.Utils;
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
@@ -61,8 +61,8 @@ import java.util.Collections;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
-import com.sun.javafx.Logging;
-import com.sun.javafx.TempState;
+import com.sun.javafx.util.Logging;
+import com.sun.javafx.util.TempState;
 import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.InsetsConverter;
@@ -3209,7 +3209,7 @@ public class
                      Border.getClassCssMetaData()) {
 
                  @Override public boolean isSettable(Region node) {
-                     return !node.background.isBound();
+                     return !node.border.isBound();
                  }
 
                  @Override public StyleableProperty<Border> getStyleableProperty(Region node) {

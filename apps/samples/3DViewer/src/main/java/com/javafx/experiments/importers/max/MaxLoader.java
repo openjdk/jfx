@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -48,9 +48,9 @@ import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Mesh;
 import javafx.scene.shape.MeshView;
 import javafx.scene.shape.TriangleMesh;
+import javafx.scene.transform.Affine;
 import javafx.scene.transform.NonInvertibleTransformException;
 import javafx.scene.transform.Transform;
-import com.sun.javafx.scene.transform.TransformUtils;
 
 /** Max ASCII file loader */
 public class MaxLoader extends Importer {
@@ -120,10 +120,11 @@ public class MaxLoader extends Importer {
     }
 
     private static Transform loadNodeTM(MaxData.NodeTM tm) {
-        return TransformUtils.immutableTransform(
+        return new Affine(
                 tm.tm[0].getX(), tm.tm[1].getX(), tm.tm[2].getX(), tm.pos.getX(),
                 tm.tm[0].getY(), tm.tm[1].getY(), tm.tm[2].getY(), tm.pos.getY(),
                 tm.tm[0].getZ(), tm.tm[1].getZ(), tm.tm[2].getZ(), tm.pos.getZ());
+
     }
 
     private Material[] materials;

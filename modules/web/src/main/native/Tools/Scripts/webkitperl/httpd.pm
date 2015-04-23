@@ -105,7 +105,7 @@ sub getDefaultConfigForTestDirectory
 
     my $httpdConfig = getHTTPDConfigPathForTestDirectory($testDirectory);
     my $documentRoot = "$testDirectory/http/tests";
-    my $jsTestResourcesDirectory = $testDirectory . "/fast/js/resources";
+    my $jsTestResourcesDirectory = $testDirectory . "/resources";
     my $mediaResourcesDirectory = $testDirectory . "/media";
     my $typesConfig = "$testDirectory/http/conf/mime.types";
     my $httpdLockFile = File::Spec->catfile($httpdPidDir, "httpd.lock");
@@ -156,7 +156,7 @@ sub getHTTPDConfigPathForTestDirectory
         }
         $httpdConfig = "cygwin-httpd.conf";  # This is an apache 1.3 config.
     } elsif (isDebianBased()) {
-        $httpdConfig = "apache2-debian-httpd.conf";
+        $httpdConfig = "debian-httpd-$apacheVersion.conf";
     } elsif (isFedoraBased()) {
         $httpdConfig = "fedora-httpd-$apacheVersion.conf";
     } else {

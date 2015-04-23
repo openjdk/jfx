@@ -17,11 +17,12 @@
  * Boston, MA 02110-1301, USA.
  */
 
-    interface DocumentFragment : Node {
-        // NodeSelector - Selector API
-    Element querySelector(DOMString selectors)
-            raises(DOMException);
-    NodeList querySelectorAll(DOMString selectors)
-            raises(DOMException);
-    };
+ [
+    Constructor,
+    ConstructorCallWith=ScriptExecutionContext
+ ] interface DocumentFragment : Node {
+    // NodeSelector - Selector API
+    [RaisesException] Element querySelector(DOMString selectors);
+    [RaisesException] NodeList querySelectorAll(DOMString selectors);
+};
 

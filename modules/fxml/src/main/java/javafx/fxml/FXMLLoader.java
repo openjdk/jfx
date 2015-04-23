@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,7 @@
 
 package javafx.fxml;
 
-import com.sun.javafx.Logging;
+import com.sun.javafx.util.Logging;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -95,13 +95,17 @@ import sun.reflect.Reflection;
 import sun.reflect.misc.ConstructorUtil;
 import sun.reflect.misc.MethodUtil;
 import sun.reflect.misc.ReflectUtil;
-import sun.security.util.SecurityConstants;
 
 /**
  * Loads an object hierarchy from an XML document.
  * @since JavaFX 2.0
  */
 public class FXMLLoader {
+
+    // Indicates permission to get the ClassLoader
+    private static final RuntimePermission GET_CLASSLOADER_PERMISSION =
+        new RuntimePermission("getClassLoader");
+
     // Abstract base class for elements
     private abstract class Element {
         public final Element parent;
@@ -2395,14 +2399,6 @@ public class FXMLLoader {
      * Loads an object hierarchy from a FXML document. The location from which
      * the document will be loaded must have been set by a prior call to
      * {@link #setLocation(URL)}.
-     * <p>
-     * When the "template" flag is set to <tt>false</tt> (the default), this
-     * method will clear the imports before loading the document's content.
-     * When "template" is <tt>true</tt>, the imports will not be cleared, and
-     * the root value will be set to <tt>null</tt> before the content is
-     * loaded. This helps improve performance on subsequent loads by
-     * eliminating the overhead of loading the classes referred to by the
-     * document.
      *
      * @return
      * The loaded object hierarchy.
@@ -3051,7 +3047,7 @@ public class FXMLLoader {
                         caller.getClassLoader() :
                         null;
                 if (needsClassLoaderPermissionCheck(callerClassLoader, FXMLLoader.class.getClassLoader())) {
-                    sm.checkPermission(SecurityConstants.GET_CLASSLOADER_PERMISSION);
+                    sm.checkPermission(GET_CLASSLOADER_PERMISSION);
                 }
             }
             return Thread.currentThread().getContextClassLoader();

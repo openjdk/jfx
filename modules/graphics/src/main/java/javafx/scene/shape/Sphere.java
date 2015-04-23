@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -341,13 +341,13 @@ public class Sphere extends Shape3D {
 
         float textureDelta = 1.f / 256;
         for (int i = 0; i < div; ++i) {
-            tPoints[tPos + 0] = rDiv * (0.5f + i);
+            tPoints[tPos + 0] = 1.0f - rDiv * (0.5f + i);
             tPoints[tPos + 1] = textureDelta;
             tPos += 2;
         }
 
         for (int i = 0; i < div; ++i) {
-            tPoints[tPos + 0] = rDiv * (0.5f + i);
+            tPoints[tPos + 0] = 1.0f - rDiv * (0.5f + i);
             tPoints[tPos + 1] = 1 - textureDelta;
             tPos += 2;
         }

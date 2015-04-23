@@ -28,17 +28,19 @@ namespace WebCore {
 
 const float textCombineMargin = 1.15f; // Allow em + 15% margin
 
-RenderCombineText::RenderCombineText(Node* node, PassRefPtr<StringImpl> string)
-     : RenderText(node, string)
-     , m_combinedTextWidth(0)
-     , m_isCombined(false)
-     , m_needsFontUpdate(false)
+RenderCombineText::RenderCombineText(Text& textNode, PassRefPtr<StringImpl> string)
+    : RenderText(textNode, string)
+    , m_combinedTextWidth(0)
+    , m_isCombined(false)
+    , m_needsFontUpdate(false)
 {
 }
 
 void RenderCombineText::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
-    setStyleInternal(RenderStyle::clone(style()));
+    // FIXME: This is pretty hackish.
+    m_combineFontStyle = RenderStyle::clone(&style());
+
     RenderText::styleDidChange(diff, oldStyle);
 
     if (m_isCombined) {
@@ -49,7 +51,7 @@ void RenderCombineText::styleDidChange(StyleDifference diff, const RenderStyle* 
     m_needsFontUpdate = true;
 }
 
-void RenderCombineText::setTextInternal(PassRefPtr<StringImpl> text)
+void RenderCombineText::setTextInternal(const String& text)
 {
     RenderText::setTextInternal(text);
 
@@ -58,7 +60,7 @@ void RenderCombineText::setTextInternal(PassRefPtr<StringImpl> text)
 
 float RenderCombineText::width(unsigned from, unsigned length, const Font& font, float xPosition, HashSet<const SimpleFontData*>* fallbackFonts, GlyphOverflow* glyphOverflow) const
 {
-    if (!characters())
+    if (!deprecatedCharacters())
         return 0;
 
     if (m_isCombined)
@@ -70,7 +72,7 @@ float RenderCombineText::width(unsigned from, unsigned length, const Font& font,
 void RenderCombineText::adjustTextOrigin(FloatPoint& textOrigin, const FloatRect& boxRect) const
 {
     if (m_isCombined)
-        textOrigin.move(boxRect.height() / 2 - ceilf(m_combinedTextWidth) / 2, style()->font().pixelSize());
+        textOrigin.move(boxRect.height() / 2 - ceilf(m_combinedTextWidth) / 2, style().font().pixelSize());
 }
 
 void RenderCombineText::getStringToRender(int start, String& string, int& length) const
@@ -95,7 +97,7 @@ void RenderCombineText::combineText()
     m_needsFontUpdate = false;
 
     // CSS3 spec says text-combine works only in vertical writing mode.
-    if (style()->isHorizontalWritingMode())
+    if (style().isHorizontalWritingMode())
         return;
 
     TextRun run = RenderBlock::constructTextRun(this, originalFont(), this, style());
@@ -107,16 +109,16 @@ void RenderCombineText::combineText()
     m_combinedTextWidth = originalFont().width(run);
     m_isCombined = m_combinedTextWidth <= emWidth;
 
-    FontSelector* fontSelector = style()->font().fontSelector();
+    FontSelector* fontSelector = style().font().fontSelector();
 
     if (m_isCombined)
-        shouldUpdateFont = style()->setFontDescription(description); // Need to change font orientation to horizontal.
+        shouldUpdateFont = m_combineFontStyle->setFontDescription(description); // Need to change font orientation to horizontal.
     else {
         // Need to try compressed glyphs.
         static const FontWidthVariant widthVariants[] = { HalfWidth, ThirdWidth, QuarterWidth };
         for (size_t i = 0 ; i < WTF_ARRAY_LENGTH(widthVariants) ; ++i) {
             description.setWidthVariant(widthVariants[i]);
-            Font compressedFont = Font(description, style()->font().letterSpacing(), style()->font().wordSpacing());
+            Font compressedFont = Font(description, style().font().letterSpacing(), style().font().wordSpacing());
             compressedFont.update(fontSelector);
             float runWidth = compressedFont.width(run);
             if (runWidth <= emWidth) {
@@ -124,17 +126,17 @@ void RenderCombineText::combineText()
                 m_isCombined = true;
 
                 // Replace my font with the new one.
-                shouldUpdateFont = style()->setFontDescription(description);
+                shouldUpdateFont = m_combineFontStyle->setFontDescription(description);
                 break;
             }
         }
     }
 
     if (!m_isCombined)
-        shouldUpdateFont = style()->setFontDescription(originalFont().fontDescription());
+        shouldUpdateFont = m_combineFontStyle->setFontDescription(originalFont().fontDescription());
 
     if (shouldUpdateFont)
-        style()->font().update(fontSelector);
+        m_combineFontStyle->font().update(fontSelector);
 
     if (m_isCombined) {
         DEFINE_STATIC_LOCAL(String, objectReplacementCharacterString, (&objectReplacementCharacter, 1));

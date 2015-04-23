@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2011, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,9 +30,12 @@
 #include "HandleTypes.h"
 #include "Heap.h"
 #include "SamplingCounter.h"
-#include <wtf/TypeTraits.h>
 
 namespace JSC {
+
+namespace DFG {
+class DesiredWriteBarrier;
+}
 
 class JSCell;
 class VM;
@@ -43,11 +46,11 @@ template<> class WriteBarrierBase<JSValue>;
 
 JS_EXPORT_PRIVATE void slowValidateCell(JSCell*);
 JS_EXPORT_PRIVATE void slowValidateCell(JSGlobalObject*);
-
+    
 #if ENABLE(GC_VALIDATION)
 template<class T> inline void validateCell(T cell)
 {
-    ASSERT_GC_OBJECT_INHERITS(cell, &WTF::RemovePointer<T>::Type::s_info);
+    ASSERT_GC_OBJECT_INHERITS(cell, std::remove_pointer<T>::type::info());
 }
 
 template<> inline void validateCell<JSCell*>(JSCell* cell)
@@ -68,12 +71,7 @@ template<class T> inline void validateCell(T)
 // We have a separate base class with no constructors for use in Unions.
 template <typename T> class WriteBarrierBase {
 public:
-    void set(VM& vm, const JSCell* owner, T* value)
-    {
-        ASSERT(value);
-        validateCell(value);
-        setEarlyValue(vm, owner, value);
-    }
+    void set(VM&, const JSCell* owner, T* value);
     
     // This is meant to be used like operator=, but is called copyFrom instead, in
     // order to kindly inform the C++ compiler that its advice is not appreciated.
@@ -82,21 +80,12 @@ public:
         m_cell = other.m_cell;
     }
 
-    void setMayBeNull(VM& vm, const JSCell* owner, T* value)
-    {
-        if (value)
-            validateCell(value);
-        setEarlyValue(vm, owner, value);
-    }
+    void setMayBeNull(VM&, const JSCell* owner, T* value);
 
     // Should only be used by JSCell during early initialisation
     // when some basic types aren't yet completely instantiated
-    void setEarlyValue(VM&, const JSCell* owner, T* value)
-    {
-        this->m_cell = reinterpret_cast<JSCell*>(value);
-        Heap::writeBarrier(owner, this->m_cell);
-    }
-
+    void setEarlyValue(VM&, const JSCell* owner, T* value);
+    
     T* get() const
     {
         // Copy m_cell to a local to avoid multiple-read issues. (See <http://webkit.org/b/110854>)
@@ -121,12 +110,12 @@ public:
     }
 
     void clear() { m_cell = 0; }
-
-    JSCell** slot() { return &m_cell; }
-
+    
+    T** slot() { return reinterpret_cast<T**>(&m_cell); }
+    
     typedef T* (WriteBarrierBase::*UnspecifiedBoolType);
     operator UnspecifiedBoolType*() const { return m_cell ? reinterpret_cast<UnspecifiedBoolType*>(1) : 0; }
-
+    
     bool operator!() const { return !m_cell; }
 
     void setWithoutWriteBarrier(T* value)
@@ -147,12 +136,7 @@ private:
 
 template <> class WriteBarrierBase<Unknown> {
 public:
-    void set(VM&, const JSCell* owner, JSValue value)
-    {
-        m_value = JSValue::encode(value);
-        Heap::writeBarrier(owner, value);
-    }
-
+    void set(VM&, const JSCell* owner, JSValue);
     void setWithoutWriteBarrier(JSValue value)
     {
         m_value = JSValue::encode(value);
@@ -168,9 +152,9 @@ public:
     bool isObject() const { return get().isObject(); }
     bool isNull() const { return get().isNull(); }
     bool isGetterSetter() const { return get().isGetterSetter(); }
-
+    
     JSValue* slot()
-    {
+    { 
         union {
             EncodedJSValue* v;
             JSValue* slot;
@@ -178,19 +162,20 @@ public:
         u.v = &m_value;
         return u.slot;
     }
-
+    
     int32_t* tagPointer() { return &bitwise_cast<EncodedValueDescriptor*>(&m_value)->asBits.tag; }
     int32_t* payloadPointer() { return &bitwise_cast<EncodedValueDescriptor*>(&m_value)->asBits.payload; }
     
     typedef JSValue (WriteBarrierBase::*UnspecifiedBoolType);
     operator UnspecifiedBoolType*() const { return get() ? reinterpret_cast<UnspecifiedBoolType*>(1) : 0; }
-    bool operator!() const { return !get(); }
-
+    bool operator!() const { return !get(); } 
+    
 private:
     EncodedJSValue m_value;
 };
 
 template <typename T> class WriteBarrier : public WriteBarrierBase<T> {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     WriteBarrier()
     {
@@ -200,6 +185,12 @@ public:
     WriteBarrier(VM& vm, const JSCell* owner, T* value)
     {
         this->set(vm, owner, value);
+    }
+
+    WriteBarrier(DFG::DesiredWriteBarrier&, T* value)
+    {
+        ASSERT(isCompilationThread());
+        this->setWithoutWriteBarrier(value);
     }
 
     enum MayBeNullTag { MayBeNull };
@@ -220,23 +211,17 @@ public:
     {
         this->set(vm, owner, value);
     }
+
+    WriteBarrier(DFG::DesiredWriteBarrier&, JSValue value)
+    {
+        ASSERT(isCompilationThread());
+        this->setWithoutWriteBarrier(value);
+    }
 };
 
 template <typename U, typename V> inline bool operator==(const WriteBarrierBase<U>& lhs, const WriteBarrierBase<V>& rhs)
 {
     return lhs.get() == rhs.get();
-}
-
-// SlotVisitor functions
-
-template<typename T> inline void SlotVisitor::append(WriteBarrierBase<T>* slot)
-{
-    internalAppend(*slot->slot());
-}
-
-ALWAYS_INLINE void SlotVisitor::appendValues(WriteBarrierBase<Unknown>* barriers, size_t count)
-{
-    append(barriers->slot(), count);
 }
 
 } // namespace JSC

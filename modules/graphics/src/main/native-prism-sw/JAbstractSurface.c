@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -73,9 +73,15 @@ Java_com_sun_pisces_AbstractSurface_getRGBImpl(JNIEnv* env, jobject objectHandle
     CORRECT_DIMS(surface, x, y, width, height, dstX, dstY);
 
     if ((width > 0) && (height > 0)) {
-        jint* dstData = (jint*)(*env)->GetPrimitiveArrayCritical(env, 
-                                                                 arrayHandle,
-                                                                 NULL);
+        jint* dstData;
+        jsize dstDataLength = (*env)->GetArrayLength(env, arrayHandle);
+        jint dstStart = offset + dstY * scanLength + dstX;
+        jint dstEnd = dstStart + height * scanLength - 1;
+        if ((dstStart < 0) || (dstStart >= dstDataLength) || (dstEnd < 0) || (dstEnd >= dstDataLength)) {
+            JNI_ThrowNew(env, "java/lang/IllegalArgumentException", "Out of range access of buffer");
+            return;
+        }
+        dstData = (jint*)(*env)->GetPrimitiveArrayCritical(env, arrayHandle, NULL);
         if (dstData != NULL) {
             jint* src;
             jint* dst;
@@ -84,7 +90,7 @@ Java_com_sun_pisces_AbstractSurface_getRGBImpl(JNIEnv* env, jobject objectHandle
 
             ACQUIRE_SURFACE(surface, env, objectHandle);
             src = (jint*)surface->data + y * surface->width + x;
-            dst = dstData + offset + dstY * scanLength + dstX;
+            dst = dstData + dstStart;
             for (; height > 0; --height) {
                 jint w2 = width;
                 for (; w2 > 0; --w2) {
@@ -123,14 +129,20 @@ Java_com_sun_pisces_AbstractSurface_setRGBImpl(JNIEnv* env, jobject objectHandle
     CORRECT_DIMS(surface, x, y, width, height, srcX, srcY);
 
     if ((width > 0) && (height > 0)) {
-        jint* srcData = (jint*)(*env)->GetPrimitiveArrayCritical(env, 
-                                                                 arrayHandle,
-                                                                 NULL);
+        jint* srcData;
+        jsize srcDataLength = (*env)->GetArrayLength(env, arrayHandle);
+        jint srcStart = offset + srcY * scanLength + srcX;
+        jint srcEnd = srcStart + height * scanLength - 1;
+        if ((srcStart < 0) || (srcStart >= srcDataLength) || (srcEnd < 0) || (srcEnd >= srcDataLength)) {
+            JNI_ThrowNew(env, "java/lang/IllegalArgumentException", "out of range access of buffer");
+            return;
+        }
+        srcData = (jint*)(*env)->GetPrimitiveArrayCritical(env, arrayHandle, NULL);
         if (srcData != NULL) {
             jint* src;
 
             ACQUIRE_SURFACE(surface, env, objectHandle);
-            src = srcData + offset + srcY * scanLength + srcX;
+            src = srcData + srcStart;
             surface_setRGB(surface, x, y, width, height, src, scanLength);
             RELEASE_SURFACE(surface, env, objectHandle);
 

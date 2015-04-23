@@ -106,7 +106,7 @@ bool EditorClientEfl::shouldChangeSelectedRange(Range* fromRange, Range* toRange
     return true;
 }
 
-bool EditorClientEfl::shouldApplyStyle(StylePropertySet* style, Range* range)
+bool EditorClientEfl::shouldApplyStyle(StyleProperties* style, Range* range)
 {
     Ewk_Should_Apply_Style_Event shouldApplyStyleEvent = { style, range };
     evas_object_smart_callback_call(m_view, "editorclient,style,apply", &shouldApplyStyleEvent);
@@ -167,11 +167,6 @@ void EditorClientEfl::willWriteSelectionToPasteboard(WebCore::Range*)
 
 void EditorClientEfl::getClientPasteboardDataForRange(WebCore::Range*, Vector<String>&, Vector<RefPtr<WebCore::SharedBuffer> >&)
 {
-}
-
-void EditorClientEfl::didSetSelectionTypesForPasteboard()
-{
-    notImplemented();
 }
 
 void EditorClientEfl::registerUndoStep(WTF::PassRefPtr<UndoStep> step)
@@ -249,7 +244,7 @@ bool EditorClientEfl::smartInsertDeleteEnabled()
     WebCore::Page* corePage = EWKPrivate::corePage(m_view);
     if (!corePage)
         return false;
-    return corePage->settings()->smartInsertDeleteEnabled();
+    return corePage->settings().smartInsertDeleteEnabled();
 }
 
 bool EditorClientEfl::isSelectTrailingWhitespaceEnabled()
@@ -257,7 +252,7 @@ bool EditorClientEfl::isSelectTrailingWhitespaceEnabled()
     WebCore::Page* corePage = EWKPrivate::corePage(m_view);
     if (!corePage)
         return false;
-    return corePage->settings()->selectTrailingWhitespaceEnabled();
+    return corePage->settings().selectTrailingWhitespaceEnabled();
 }
 
 void EditorClientEfl::toggleContinuousSpellChecking()
@@ -284,39 +279,36 @@ bool EditorClientEfl::handleEditingKeyboardEvent(KeyboardEvent* event)
 {
     Node* node = event->target()->toNode();
     ASSERT(node);
-    Frame* frame = node->document()->frame();
+    Frame* frame = node->document().frame();
     ASSERT(frame);
 
     const PlatformKeyboardEvent* keyEvent = event->keyEvent();
     if (!keyEvent)
         return false;
 
-    if (!frame->settings())
-        return false;
-
-    bool caretBrowsing = frame->settings()->caretBrowsingEnabled();
+    bool caretBrowsing = frame->settings().caretBrowsingEnabled();
     if (caretBrowsing) {
         switch (keyEvent->windowsVirtualKeyCode()) {
         case VK_LEFT:
-            frame->selection()->modify(keyEvent->shiftKey() ? FrameSelection::AlterationExtend : FrameSelection::AlterationMove,
+            frame->selection().modify(keyEvent->shiftKey() ? FrameSelection::AlterationExtend : FrameSelection::AlterationMove,
                                        DirectionLeft,
                                        keyEvent->ctrlKey() ? WordGranularity : CharacterGranularity,
                                        UserTriggered);
             return true;
         case VK_RIGHT:
-            frame->selection()->modify(keyEvent->shiftKey() ? FrameSelection::AlterationExtend : FrameSelection::AlterationMove,
+            frame->selection().modify(keyEvent->shiftKey() ? FrameSelection::AlterationExtend : FrameSelection::AlterationMove,
                                        DirectionRight,
                                        keyEvent->ctrlKey() ? WordGranularity : CharacterGranularity,
                                        UserTriggered);
             return true;
         case VK_UP:
-            frame->selection()->modify(keyEvent->shiftKey() ? FrameSelection::AlterationExtend : FrameSelection::AlterationMove,
+            frame->selection().modify(keyEvent->shiftKey() ? FrameSelection::AlterationExtend : FrameSelection::AlterationMove,
                                        DirectionBackward,
                                        keyEvent->ctrlKey() ? ParagraphGranularity : LineGranularity,
                                        UserTriggered);
             return true;
         case VK_DOWN:
-            frame->selection()->modify(keyEvent->shiftKey() ? FrameSelection::AlterationExtend : FrameSelection::AlterationMove,
+            frame->selection().modify(keyEvent->shiftKey() ? FrameSelection::AlterationExtend : FrameSelection::AlterationMove,
                                        DirectionForward,
                                        keyEvent->ctrlKey() ? ParagraphGranularity : LineGranularity,
                                        UserTriggered);
@@ -417,7 +409,7 @@ void EditorClientEfl::learnWord(const String&)
     notImplemented();
 }
 
-void EditorClientEfl::checkSpellingOfString(const UChar*, int, int*, int*)
+void EditorClientEfl::checkSpellingOfString(StringView, int*, int*)
 {
     notImplemented();
 }
@@ -428,7 +420,7 @@ String EditorClientEfl::getAutoCorrectSuggestionForMisspelledWord(const String&)
     return String();
 }
 
-void EditorClientEfl::checkGrammarOfString(const UChar*, int, Vector<GrammarDetail>&, int*, int*)
+void EditorClientEfl::checkGrammarOfString(StringView, Vector<GrammarDetail>&, int*, int*)
 {
     notImplemented();
 }

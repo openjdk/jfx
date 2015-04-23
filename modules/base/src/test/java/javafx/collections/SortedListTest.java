@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,26 +27,20 @@ package javafx.collections;
 
 import com.sun.javafx.collections.NonIterableChange.SimplePermutationChange;
 import com.sun.javafx.collections.ObservableListWrapper;
-import java.text.Collator;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
-import javafx.collections.ListChangeListener.Change;
 import java.util.Collections;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.Date;
 import java.util.Map;
 
 import javafx.beans.Observable;
-import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.transformation.SortedList;
 import javafx.collections.transformation.TransformationList;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.Ignore;
 import static org.junit.Assert.* ;
 import static org.junit.Assert.assertEquals;
 
@@ -59,33 +53,11 @@ public class SortedListTest {
     private MockListObserver<String> mockListObserver;
     private SortedList<String> sortedList;
 
-    private static class NaturalElementComparator<E> implements Comparator<E> {
-
-        @Override
-        public int compare(E o1, E o2) {
-            if (o1 == null && o2 == null) {
-                return 0;
-            }
-            if (o1 == null) {
-                return -1;
-            }
-            if (o2 == null) {
-                return 1;
-            }
-
-            if (o1 instanceof Comparable) {
-                return ((Comparable) o1).compareTo(o2);
-            }
-
-            return Collator.getInstance().compare(o1.toString(), o2.toString());
-        }
-    }
-
     @Before
     public void setUp() {
         list = FXCollections.observableArrayList();
         list.addAll("a", "c", "d", "c");
-        sortedList = new SortedList<String>(list, new NaturalElementComparator<>());
+        sortedList = list.sorted();
         mockListObserver = new MockListObserver<String>();
         sortedList.addListener(mockListObserver);
     }
@@ -161,12 +133,13 @@ public class SortedListTest {
 
     @Test
     public void testChangeComparator() {
-        //ObjectProperty<Comparator<String>> op = new SimpleObjectProperty<>(new NaturalElementComparator<>());
-        SimpleObjectProperty<Comparator<String>> op = new SimpleObjectProperty<Comparator<String>>();
-        op.set(new NaturalElementComparator<String>());
+        SimpleObjectProperty<Comparator<String>> op =
+                new SimpleObjectProperty<>(Comparator.naturalOrder());
 
         sortedList = new SortedList<>(list);
+        assertEquals(Arrays.asList("a", "c", "d", "c"), sortedList);
         sortedList.comparatorProperty().bind(op);
+        assertEquals(Arrays.asList("a", "c", "c", "d"), sortedList);
         sortedList.addListener(mockListObserver);
 
         op.set((Comparator<String>) (String o1, String o2) -> -o1.compareTo(o2));
@@ -190,7 +163,7 @@ public class SortedListTest {
       );
       sourceList.addAll(other);
       // wrap into a sorted list and add a listener to the sorted
-      final SortedList<Double> sorted = new SortedList<Double>(sourceList, new NaturalElementComparator<>());
+      final SortedList<Double> sorted = sourceList.sorted();
       ListChangeListener<Double> listener = c -> {
           assertEquals(Arrays.<Double>asList(400.0, 600.0, 1300.0), c.getList());
 
@@ -215,37 +188,65 @@ public class SortedListTest {
 
     @Test
     public void testMutableElement() {
-        ArrayList<Person> backingList = new ArrayList<>();
-        backingList.addAll(Arrays.asList(new Person("c"),
-                new Person("f"),
-                new Person("d"),
-                new Person("k"),
-                new Person("b")));
+        ObservableList<Person> list = createPersonsList();
 
-        ObservableList<Person> list = FXCollections.observableList(backingList, (Person p) -> new Observable[] {p.name});
-
-        SortedList<Person> sorted = new SortedList<Person>(list, new NaturalElementComparator<>());
-        ListChangeListener<Person> listener = c -> {
-            c.next();
-            assertTrue(c.wasPermutated());
-            assertArrayEquals(new int[] {0, 4, 1, 2, 3}, c.getPermutation());
-            assertTrue(c.next());
-            assertTrue(c.wasUpdated());
-            assertEquals(4, c.getFrom());
-            assertEquals(5, c.getTo());
-        };
-        assertEquals(Arrays.asList(new Person("b"),
-                new Person("c"),
-                new Person("d"),
-                new Person("f"),
-                new Person("k")), sorted);
+        SortedList<Person> sorted = list.sorted();
+        assertEquals(Arrays.asList(
+                new Person("five"), new Person("four"), new Person("one"),
+                new Person("three"), new Person("two")),
+                sorted);
+        MockListObserver<Person> listener = new MockListObserver<>();
         sorted.addListener(listener);
-        sorted.get(1).name.set("z");
-        assertEquals(Arrays.asList(new Person("b"),
-                new Person("d"),
-                new Person("f"),
-                new Person("k"),
-                new Person("z")), sorted);
+        list.get(3).name.set("zero"); // four -> zero
+        ObservableList<Person> expected = FXCollections.observableArrayList(
+                new Person("five"), new Person("one"), new Person("three"),
+                new Person("two"), new Person("zero"));
+        listener.checkPermutation(0, expected, 0, list.size(), new int[]{0, 4, 1, 2, 3});
+        listener.checkUpdate(1, expected, 4, 5);
+        assertEquals(expected, sorted);
+    }
+
+    @Test
+    public void testMutableElementUnsorted_rt39541() {
+        ObservableList<Person> list = createPersonsList();
+        SortedList<Person> unsorted = new SortedList<>(list);
+        MockListObserver<Person> listener = new MockListObserver<>();
+        unsorted.addListener(listener);
+        list.get(3).name.set("zero"); // four -> zero
+        ObservableList<Person> expected = FXCollections.observableArrayList(
+                new Person("one"), new Person("two"), new Person("three"),
+                new Person("zero"), new Person("five"));
+        listener.check1Update(expected, 3, 4);
+    }
+
+    @Test
+    public void testMutableElementUnsortedChain_rt39541() {
+        ObservableList<Person> items = createPersonsList();
+
+        SortedList<Person> sorted = items.sorted();
+        SortedList<Person> unsorted = new SortedList<>(sorted);
+
+        assertEquals(sorted, unsorted);
+
+        MockListObserver<Person> listener = new MockListObserver<>();
+        unsorted.addListener(listener);
+        items.get(3).name.set("zero"); // "four" -> "zero"
+        ObservableList<Person> expected = FXCollections.observableArrayList(
+                new Person("five"), new Person("one"), new Person("three"),
+                new Person("two"), new Person("zero"));
+        listener.checkPermutation(0, expected, 0, expected.size(), new int[] {0, 4, 1, 2, 3});
+        listener.checkUpdate(1, expected, 4, 5);
+        assertEquals(expected, sorted);
+        assertEquals(expected, unsorted);
+    }
+
+    private ObservableList<Person> createPersonsList() {
+        ObservableList<Person> list = FXCollections.observableArrayList(
+                (Person p) -> new Observable[]{p.name});
+        list.addAll(
+                new Person("one"), new Person("two"), new Person("three"),
+                new Person("four"), new Person("five"));
+        return list;
     }
 
     @Test
@@ -273,7 +274,7 @@ public class SortedListTest {
         };
         ObservableList<Object> list = FXCollections.observableArrayList(o1, o2, o3);
 
-        TransformationList<Object, Object> sorted = new SortedList<>(list, new NaturalElementComparator<>());
+        SortedList<Object> sorted = list.sorted();
         assertEquals(Arrays.asList(o2, o1, o3), sorted);
     }
 
@@ -281,7 +282,7 @@ public class SortedListTest {
     public void testCompareNulls() {
         ObservableList<String> list = FXCollections.observableArrayList( "g", "a", null, "z");
 
-        TransformationList<String, String> sorted = new SortedList<>(list, new NaturalElementComparator<>());
+        TransformationList<String, String> sorted = list.sorted();
         assertEquals(Arrays.asList(null, "a", "g", "z"), sorted);
     }
 
@@ -334,6 +335,11 @@ public class SortedListTest {
 
         assertEquals(sorted, list);
 
+    }
+
+    @Test
+    public void testSortedNaturalOrder() {
+        assertEquals(Arrays.asList("a", "c", "c", "d"), list.sorted());
     }
 
     @Test

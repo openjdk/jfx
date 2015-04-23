@@ -25,11 +25,11 @@
 #include "config.h"
 #include "HTMLFieldSetElement.h"
 
+#include "ElementIterator.h"
 #include "HTMLCollection.h"
 #include "HTMLLegendElement.h"
 #include "HTMLNames.h"
 #include "HTMLObjectElement.h"
-#include "NodeTraversal.h"
 #include "RenderFieldset.h"
 #include <wtf/StdLibExtras.h>
 
@@ -37,24 +37,22 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-inline HTMLFieldSetElement::HTMLFieldSetElement(const QualifiedName& tagName, Document* document, HTMLFormElement* form)
+inline HTMLFieldSetElement::HTMLFieldSetElement(const QualifiedName& tagName, Document& document, HTMLFormElement* form)
     : HTMLFormControlElement(tagName, document, form)
     , m_documentVersion(0)
 {
     ASSERT(hasTagName(fieldsetTag));
 }
 
-PassRefPtr<HTMLFieldSetElement> HTMLFieldSetElement::create(const QualifiedName& tagName, Document* document, HTMLFormElement* form)
+PassRefPtr<HTMLFieldSetElement> HTMLFieldSetElement::create(const QualifiedName& tagName, Document& document, HTMLFormElement* form)
 {
     return adoptRef(new HTMLFieldSetElement(tagName, document, form));
 }
 
 void HTMLFieldSetElement::invalidateDisabledStateUnder(Element* base)
 {
-    for (Element* element = ElementTraversal::firstWithin(base); element; element = ElementTraversal::next(element, base)) {
-        if (element->isFormControlElement())
-            static_cast<HTMLFormControlElement*>(element)->ancestorDisabledStateWasChanged();
-    }
+    for (auto& control : descendantsOfType<HTMLFormControlElement>(*base))
+        control.ancestorDisabledStateWasChanged();
 }
 
 void HTMLFieldSetElement::disabledAttributeChanged()
@@ -64,13 +62,12 @@ void HTMLFieldSetElement::disabledAttributeChanged()
     invalidateDisabledStateUnder(this);
 }
 
-void HTMLFieldSetElement::childrenChanged(bool changedByParser, Node* beforeChange, Node* afterChange, int childCountDelta)
+void HTMLFieldSetElement::childrenChanged(const ChildChange& change)
 {
-    HTMLFormControlElement::childrenChanged(changedByParser, beforeChange, afterChange, childCountDelta);
-    for (Element* element = ElementTraversal::firstWithin(this); element; element = ElementTraversal::nextSkippingChildren(element, this)) {
-        if (element->hasTagName(legendTag))
-            invalidateDisabledStateUnder(element);
-    }
+    HTMLFormControlElement::childrenChanged(change);
+
+    for (auto& legend : childrenOfType<HTMLLegendElement>(*this))
+        invalidateDisabledStateUnder(&legend);
 }
 
 bool HTMLFieldSetElement::supportsFocus() const
@@ -84,18 +81,14 @@ const AtomicString& HTMLFieldSetElement::formControlType() const
     return fieldset;
 }
 
-RenderObject* HTMLFieldSetElement::createRenderer(RenderArena* arena, RenderStyle*)
+RenderPtr<RenderElement> HTMLFieldSetElement::createElementRenderer(PassRef<RenderStyle> style)
 {
-    return new (arena) RenderFieldset(this);
+    return createRenderer<RenderFieldset>(*this, std::move(style));
 }
 
 HTMLLegendElement* HTMLFieldSetElement::legend() const
 {
-    for (Element* child = ElementTraversal::firstWithin(this); child; child = ElementTraversal::nextSkippingChildren(child, this)) {
-        if (child->hasTagName(legendTag))
-            return static_cast<HTMLLegendElement*>(child);
-    }
-    return 0;
+    return const_cast<HTMLLegendElement*>(descendantsOfType<HTMLLegendElement>(*this).first());
 }
 
 PassRefPtr<HTMLCollection> HTMLFieldSetElement::elements()
@@ -105,24 +98,19 @@ PassRefPtr<HTMLCollection> HTMLFieldSetElement::elements()
 
 void HTMLFieldSetElement::refreshElementsIfNeeded() const
 {
-    uint64_t docVersion = document()->domTreeVersion();
-    if (m_documentVersion == docVersion)
+    uint64_t documentVersion = document().domTreeVersion();
+    if (m_documentVersion == documentVersion)
         return;
 
-    m_documentVersion = docVersion;
+    m_documentVersion = documentVersion;
 
     m_associatedElements.clear();
 
-    for (Element* element = ElementTraversal::firstWithin(this); element; element = ElementTraversal::next(element, this)) {
-        if (element->hasTagName(objectTag)) {
-            m_associatedElements.append(static_cast<HTMLObjectElement*>(element));
-            continue;
-        }
-
-        if (!element->isFormControlElement())
-            continue;
-
-        m_associatedElements.append(static_cast<HTMLFormControlElement*>(element));
+    for (auto& element : descendantsOfType<Element>(const_cast<HTMLFieldSetElement&>(*this))) {
+        if (element.hasTagName(objectTag))
+            m_associatedElements.append(&toHTMLObjectElement(element));
+        else if (element.isFormControlElement())
+            m_associatedElements.append(&toHTMLFormControlElement(element));
     }
 }
 
@@ -135,11 +123,12 @@ const Vector<FormAssociatedElement*>& HTMLFieldSetElement::associatedElements() 
 unsigned HTMLFieldSetElement::length() const
 {
     refreshElementsIfNeeded();
-    unsigned len = 0;
-    for (unsigned i = 0; i < m_associatedElements.size(); ++i)
+    unsigned length = 0;
+    for (unsigned i = 0; i < m_associatedElements.size(); ++i) {
         if (m_associatedElements[i]->isEnumeratable())
-            ++len;
-    return len;
+            ++length;
+    }
+    return length;
 }
 
 } // namespace

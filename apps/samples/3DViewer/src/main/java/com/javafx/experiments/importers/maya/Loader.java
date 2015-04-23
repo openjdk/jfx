@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -56,8 +56,6 @@ import javafx.scene.Node;
 import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
-import javafx.scene.shape.CullFace;
-import javafx.scene.shape.Mesh;
 import javafx.scene.shape.MeshView;
 import javafx.scene.shape.TriangleMesh;
 import javafx.scene.transform.Affine;
@@ -81,7 +79,7 @@ import com.javafx.experiments.importers.maya.values.MString;
 import com.javafx.experiments.shape3d.PolygonMesh;
 import com.javafx.experiments.shape3d.PolygonMeshView;
 import com.javafx.experiments.shape3d.SkinningMesh;
-import com.sun.javafx.geom.Vec3f;
+import com.javafx.experiments.utils3d.geom.Vec3f;
 
 import java.util.HashSet;
 import java.util.Set;

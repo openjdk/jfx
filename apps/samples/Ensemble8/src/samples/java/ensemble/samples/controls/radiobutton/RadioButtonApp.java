@@ -32,10 +32,12 @@
 package ensemble.samples.controls.radiobutton;
 
 import javafx.application.Application;
+import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.ToggleGroup;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
@@ -51,9 +53,13 @@ import javafx.stage.Stage;
 public class RadioButtonApp extends Application {
 
     public Parent createContent() {
-        ToggleGroup tg = new ToggleGroup();
+        HBox hbox = new HBox(18);
+        hbox.setAlignment(Pos.CENTER);
         VBox vbox = new VBox();
         vbox.setSpacing(5);
+        vbox.setAlignment(Pos.CENTER_LEFT);
+        
+        ToggleGroup tg = new ToggleGroup();
         RadioButton rb1 = new RadioButton("Hello");
         rb1.setToggleGroup(tg);
 
@@ -67,7 +73,9 @@ public class RadioButtonApp extends Application {
         rb3.setDisable(true);
 
         vbox.getChildren().addAll(rb1, rb2, rb3);
-        return vbox;
+        hbox.getChildren().add(vbox);
+        
+        return hbox;
     }
 
     @Override

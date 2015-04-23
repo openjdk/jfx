@@ -18,15 +18,13 @@
  * Boston, MA 02110-1301, USA.
  */
 
-    // Introduced in DOM Level 2:
-    interface CSSMediaRule : CSSRule {
-        readonly attribute MediaList media;
-        readonly attribute CSSRuleList cssRules;
-        
-    [ObjCLegacyUnnamedParameters] unsigned long      insertRule([Default=Undefined] optional DOMString rule, 
-                                                 [Default=Undefined] optional unsigned long index)
-            raises(DOMException);
-    void               deleteRule([Default=Undefined] optional unsigned long index)
-            raises(DOMException);
-    };
+// Introduced in DOM Level 2:
+interface CSSMediaRule : CSSRule {
+    readonly attribute MediaList media;
+    readonly attribute CSSRuleList cssRules;
+    
+    [ObjCLegacyUnnamedParameters, RaisesException] unsigned long insertRule([Default=Undefined] optional DOMString rule, 
+                                                 [Default=Undefined] optional unsigned long index);
+    [RaisesException] void deleteRule([Default=Undefined] optional unsigned long index);
+};
 

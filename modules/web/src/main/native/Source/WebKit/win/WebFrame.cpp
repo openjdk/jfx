@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2008, 2009, 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2009, 2011, 2013 Apple Inc. All rights reserved.
  * Copyright (C) Research In Motion Limited 2009. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,7 +31,6 @@
 #include "CFDictionaryPropertyBag.h"
 #include "COMPropertyBag.h"
 #include "DOMCoreClasses.h"
-#include "DefaultPolicyDelegate.h"
 #include "HTMLFrameOwnerElement.h"
 #include "MarshallingHelpers.h"
 #include "WebActionPropertyBag.h"
@@ -41,7 +40,7 @@
 #include "WebDownload.h"
 #include "WebEditorClient.h"
 #include "WebError.h"
-#include "WebFrameNetworkingContext.h"
+#include "WebFrameLoaderClient.h"
 #include "WebFramePolicyListener.h"
 #include "WebHistory.h"
 #include "WebHistoryItem.h"
@@ -65,7 +64,6 @@
 #include <WebCore/Event.h>
 #include <WebCore/EventHandler.h>
 #include <WebCore/FormState.h>
-#include <WebCore/Frame.h>
 #include <WebCore/FrameLoader.h>
 #include <WebCore/FrameLoadRequest.h>
 #include <WebCore/FrameTree.h>
@@ -82,6 +80,7 @@
 #include <WebCore/HTMLPlugInElement.h>
 #include <WebCore/JSDOMWindow.h>
 #include <WebCore/KeyboardEvent.h>
+#include <WebCore/MainFrame.h>
 #include <WebCore/MouseRelatedEvent.h>
 #include <WebCore/NotImplemented.h>
 #include <WebCore/Page.h>
@@ -100,12 +99,12 @@
 #include <WebCore/TextIterator.h>
 #include <WebCore/JSDOMBinding.h>
 #include <WebCore/ScriptController.h>
-#include <WebCore/ScriptValue.h>
 #include <WebCore/SecurityOrigin.h>
 #include <JavaScriptCore/APICast.h>
 #include <JavaScriptCore/JSCJSValue.h>
 #include <JavaScriptCore/JSLock.h>
 #include <JavaScriptCore/JSObject.h>
+#include <bindings/ScriptValue.h>
 #include <wtf/MathExtras.h>
 
 #if USE(CG)
@@ -154,10 +153,9 @@ WebFrame* kit(Frame* frame)
     if (!frame)
         return 0;
 
-    FrameLoaderClient* frameLoaderClient = frame->loader()->client();
-    if (frameLoaderClient)
-        return static_cast<WebFrame*>(frameLoaderClient);  // eek, is there a better way than static cast?
-    return 0;
+    // FIXME: Doesn't this need to be aware of EmptyFrameLoaderClient?
+    FrameLoaderClient& frameLoaderClient = frame->loader().client();
+    return static_cast<WebFrameLoaderClient&>(frameLoaderClient).webFrame();
 }
 
 Frame* core(WebFrame* webFrame)
@@ -204,8 +202,8 @@ static HTMLFormElement *formElementFromDOMElement(IDOMElement *element)
         Element* ele;
         hr = elePriv->coreElement((void**)&ele);
         elePriv->Release();
-        if (SUCCEEDED(hr) && ele && ele->hasTagName(formTag))
-            return static_cast<HTMLFormElement*>(ele);
+        if (SUCCEEDED(hr) && ele && isHTMLFormElement(ele))
+            return toHTMLFormElement(ele);
     }
     return 0;
 }
@@ -221,8 +219,8 @@ static HTMLInputElement* inputElementFromDOMElement(IDOMElement* element)
         Element* ele;
         hr = elePriv->coreElement((void**)&ele);
         elePriv->Release();
-        if (SUCCEEDED(hr) && ele && ele->hasTagName(inputTag))
-            return static_cast<HTMLInputElement*>(ele);
+        if (SUCCEEDED(hr) && ele && isHTMLInputElement(ele))
+            return toHTMLInputElement(ele);
     }
     return 0;
 }
@@ -234,8 +232,7 @@ public:
     WebFramePrivate() 
         : frame(0)
         , webView(0)
-        , m_policyFunction(0)
-    { 
+    {
     }
 
     ~WebFramePrivate() { }
@@ -243,15 +240,12 @@ public:
 
     Frame* frame;
     WebView* webView;
-    FramePolicyFunction m_policyFunction;
-    COMPtr<WebFramePolicyListener> m_policyListener;
 };
 
 // WebFrame ----------------------------------------------------------------
 
 WebFrame::WebFrame()
-    : WebFrameLoaderClient(this)
-    , m_refCount(0)
+    : m_refCount(0)
     , d(new WebFrame::WebFramePrivate)
     , m_quickRedirectComing(false)
     , m_inPrintingMode(false)
@@ -316,7 +310,7 @@ HRESULT WebFrame::reloadFromOrigin()
     if (!coreFrame)
         return E_FAIL;
 
-    coreFrame->loader()->reload(true);
+    coreFrame->loader().reload(true);
     return S_OK;
 }
 
@@ -432,7 +426,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::name(
     if (!coreFrame)
         return E_FAIL;
 
-    *frameName = BString(coreFrame->tree()->uniqueName()).release();
+    *frameName = BString(coreFrame->tree().uniqueName()).release();
     return S_OK;
 }
 
@@ -518,7 +512,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::currentForm(
     *currentForm = 0;
 
     if (Frame* coreFrame = core(this)) {
-        if (HTMLFormElement* formElement = coreFrame->selection()->currentForm())
+        if (HTMLFormElement* formElement = coreFrame->selection().currentForm())
             *currentForm = DOMElement::createInstance(formElement);
     }
 
@@ -531,7 +525,7 @@ JSGlobalContextRef STDMETHODCALLTYPE WebFrame::globalContext()
     if (!coreFrame)
         return 0;
 
-    return toGlobalRef(coreFrame->script()->globalObject(mainThreadNormalWorld())->globalExec());
+    return toGlobalRef(coreFrame->script().globalObject(mainThreadNormalWorld())->globalExec());
 }
 
 JSGlobalContextRef WebFrame::globalContextForScriptWorld(IWebScriptWorld* iWorld)
@@ -544,7 +538,7 @@ JSGlobalContextRef WebFrame::globalContextForScriptWorld(IWebScriptWorld* iWorld
     if (!world)
         return 0;
 
-    return toGlobalRef(coreFrame->script()->globalObject(world->world())->globalExec());
+    return toGlobalRef(coreFrame->script().globalObject(world->world())->globalExec());
 }
 
 HRESULT STDMETHODCALLTYPE WebFrame::loadRequest( 
@@ -560,7 +554,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::loadRequest(
     if (!coreFrame)
         return E_FAIL;
 
-    coreFrame->loader()->load(FrameLoadRequest(coreFrame, requestImpl->resourceRequest()));
+    coreFrame->loader().load(FrameLoadRequest(coreFrame, requestImpl->resourceRequest()));
     return S_OK;
 }
 
@@ -573,18 +567,18 @@ void WebFrame::loadData(PassRefPtr<WebCore::SharedBuffer> data, BSTR mimeType, B
     String encodingString(textEncodingName, SysStringLen(textEncodingName));
 
     // FIXME: We should really be using MarshallingHelpers::BSTRToKURL here,
-    // but that would turn a null BSTR into a null KURL, and we crash inside of
-    // WebCore if we use a null KURL in constructing the ResourceRequest.
-    KURL baseKURL = KURL(KURL(), String(baseURL ? baseURL : L"", SysStringLen(baseURL)));
+    // but that would turn a null BSTR into a null URL, and we crash inside of
+    // WebCore if we use a null URL in constructing the ResourceRequest.
+    URL baseKURL = URL(URL(), String(baseURL ? baseURL : L"", SysStringLen(baseURL)));
 
-    KURL failingKURL = MarshallingHelpers::BSTRToKURL(failingURL);
+    URL failingKURL = MarshallingHelpers::BSTRToKURL(failingURL);
 
     ResourceRequest request(baseKURL);
     SubstituteData substituteData(data, mimeTypeString, encodingString, failingKURL);
 
     // This method is only called from IWebFrame methods, so don't ASSERT that the Frame pointer isn't null.
     if (Frame* coreFrame = core(this))
-        coreFrame->loader()->load(FrameLoadRequest(coreFrame, request, substituteData));
+        coreFrame->loader().load(FrameLoadRequest(coreFrame, request, substituteData));
 }
 
 
@@ -673,7 +667,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::dataSource(
     if (!coreFrame)
         return E_FAIL;
 
-    WebDataSource* webDataSource = getWebDataSource(coreFrame->loader()->documentLoader());
+    WebDataSource* webDataSource = getWebDataSource(coreFrame->loader().documentLoader());
 
     *source = webDataSource;
 
@@ -697,7 +691,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::provisionalDataSource(
     if (!coreFrame)
         return E_FAIL;
 
-    WebDataSource* webDataSource = getWebDataSource(coreFrame->loader()->provisionalDocumentLoader());
+    WebDataSource* webDataSource = getWebDataSource(coreFrame->loader().provisionalDocumentLoader());
 
     *source = webDataSource;
 
@@ -707,11 +701,11 @@ HRESULT STDMETHODCALLTYPE WebFrame::provisionalDataSource(
     return *source ? S_OK : E_FAIL;
 }
 
-KURL WebFrame::url() const
+URL WebFrame::url() const
 {
     Frame* coreFrame = core(this);
     if (!coreFrame)
-        return KURL();
+        return URL();
 
     return coreFrame->document()->url();
 }
@@ -719,7 +713,7 @@ KURL WebFrame::url() const
 HRESULT STDMETHODCALLTYPE WebFrame::stopLoading( void)
 {
     if (Frame* coreFrame = core(this))
-        coreFrame->loader()->stopAllLoaders();
+        coreFrame->loader().stopAllLoaders();
     return S_OK;
 }
 
@@ -729,7 +723,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::reload( void)
     if (!coreFrame)
         return E_FAIL;
 
-    coreFrame->loader()->reload();
+    coreFrame->loader().reload();
     return S_OK;
 }
 
@@ -748,7 +742,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::findFrameNamed(
     if (!coreFrame)
         return E_FAIL;
 
-    Frame* foundFrame = coreFrame->tree()->find(AtomicString(name, SysStringLen(name)));
+    Frame* foundFrame = coreFrame->tree().find(AtomicString(name, SysStringLen(name)));
     if (!foundFrame)
         return S_OK;
 
@@ -765,7 +759,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::parentFrame(
     HRESULT hr = S_OK;
     *frame = 0;
     if (Frame* coreFrame = core(this))
-        if (WebFrame* webFrame = kit(coreFrame->tree()->parent()))
+        if (WebFrame* webFrame = kit(coreFrame->tree().parent()))
             hr = webFrame->QueryInterface(IID_IWebFrame, (void**) frame);
 
     return hr;
@@ -774,7 +768,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::parentFrame(
 class EnumChildFrames : public IEnumVARIANT
 {
 public:
-    EnumChildFrames(Frame* f) : m_refCount(1), m_frame(f), m_curChild(f ? f->tree()->firstChild() : 0) { }
+    EnumChildFrames(Frame* f) : m_refCount(1), m_frame(f), m_curChild(f ? f->tree().firstChild() : 0) { }
 
     virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject)
     {
@@ -822,7 +816,7 @@ public:
         V_VT(rgVar) = VT_UNKNOWN;
         V_UNKNOWN(rgVar) = unknown;
 
-        m_curChild = m_curChild->tree()->nextSibling();
+        m_curChild = m_curChild->tree().nextSibling();
         if (pCeltFetched)
             *pCeltFetched = 1;
         return S_OK;
@@ -833,7 +827,7 @@ public:
         if (!m_frame)
             return S_FALSE;
         for (unsigned i = 0; i < celt && m_curChild; i++)
-            m_curChild = m_curChild->tree()->nextSibling();
+            m_curChild = m_curChild->tree().nextSibling();
         return m_curChild ? S_OK : S_FALSE;
     }
 
@@ -841,7 +835,7 @@ public:
     {
         if (!m_frame)
             return S_FALSE;
-        m_curChild = m_frame->tree()->firstChild();
+        m_curChild = m_frame->tree().firstChild();
         return S_OK;
     }
 
@@ -890,7 +884,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::pageNumberForElementById(
     // TODO: Please remove this function if not needed as this is LTC specific function
     // and has been moved to Internals.
     notImplemented();
-        return E_FAIL;
+    return E_FAIL;
 }
 
 HRESULT STDMETHODCALLTYPE WebFrame::numberOfPages(
@@ -901,7 +895,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::numberOfPages(
     // TODO: Please remove this function if not needed as this is LTC specific function
     // and has been moved to Internals.
     notImplemented();
-        return E_FAIL;
+    return E_FAIL;
 }
 
 HRESULT STDMETHODCALLTYPE WebFrame::scrollOffset(
@@ -952,7 +946,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::firstLayoutDone(
     if (!coreFrame)
         return E_FAIL;
 
-    *result = coreFrame->loader()->stateMachine()->firstLayoutDone();
+    *result = coreFrame->loader().stateMachine().firstLayoutDone();
     return S_OK;
 }
 
@@ -970,7 +964,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::loadType(
     if (!coreFrame)
         return E_FAIL;
 
-    *type = (WebFrameLoadType)coreFrame->loader()->loadType();
+    *type = (WebFrameLoadType)coreFrame->loader().loadType();
     return S_OK;
 }
 
@@ -1013,7 +1007,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::clearOpener()
 {
     HRESULT hr = S_OK;
     if (Frame* coreFrame = core(this))
-        coreFrame->loader()->setOpener(0);
+        coreFrame->loader().setOpener(0);
 
     return hr;
 }
@@ -1077,18 +1071,30 @@ HRESULT STDMETHODCALLTYPE WebFrame::deselectAll()
 
 // WebFrame ---------------------------------------------------------------
 
-PassRefPtr<Frame> WebFrame::init(IWebView* webView, Page* page, HTMLFrameOwnerElement* ownerElement)
+PassRefPtr<Frame> WebFrame::createSubframeWithOwnerElement(IWebView* webView, Page* page, HTMLFrameOwnerElement* ownerElement)
 {
     webView->QueryInterface(&d->webView);
     d->webView->Release(); // don't hold the extra ref
 
-    HWND viewWindow;
-    d->webView->viewWindow((OLE_HANDLE*)&viewWindow);
+    OLE_HANDLE viewWindow;
+    d->webView->viewWindow(&viewWindow);
 
     this->AddRef(); // We release this ref in frameLoaderDestroyed()
-    RefPtr<Frame> frame = Frame::create(page, ownerElement, this);
+    RefPtr<Frame> frame = Frame::create(page, ownerElement, new WebFrameLoaderClient(this));
     d->frame = frame.get();
     return frame.release();
+}
+
+void WebFrame::initWithWebView(IWebView* webView, Page* page)
+{
+    webView->QueryInterface(&d->webView);
+    d->webView->Release(); // don't hold the extra ref
+
+    OLE_HANDLE viewWindow;
+    d->webView->viewWindow(&viewWindow);
+
+    this->AddRef(); // We release this ref in frameLoaderDestroyed()
+    d->frame = &page->mainFrame();
 }
 
 Frame* WebFrame::impl()
@@ -1102,34 +1108,17 @@ void WebFrame::invalidate()
     ASSERT(coreFrame);
 
     if (Document* document = coreFrame->document())
-        document->recalcStyle(Node::Force);
+        document->recalcStyle(Style::Force);
 }
 
 HRESULT WebFrame::inViewSourceMode(BOOL* flag)
 {
-    if (!flag) {
-        ASSERT_NOT_REACHED();
-        return E_POINTER;
-    }
-
-    *flag = FALSE;
-
-    Frame* coreFrame = core(this);
-    if (!coreFrame)
-        return E_FAIL;
-
-    *flag = coreFrame->inViewSourceMode() ? TRUE : FALSE;
-    return S_OK;
+    return E_NOTIMPL;
 }
 
 HRESULT WebFrame::setInViewSourceMode(BOOL flag)
 {
-    Frame* coreFrame = core(this);
-    if (!coreFrame)
-        return E_FAIL;
-
-    coreFrame->setInViewSourceMode(!!flag);
-    return S_OK;
+    return E_NOTIMPL;
 }
 
 HRESULT WebFrame::elementWithName(BSTR name, IDOMElement* form, IDOMElement** element)
@@ -1144,7 +1133,7 @@ HRESULT WebFrame::elementWithName(BSTR name, IDOMElement* form, IDOMElement** el
         for (unsigned int i = 0; i < elements.size(); i++) {
             if (!elements[i]->isFormControlElement())
                 continue;
-            HTMLFormControlElement* elt = static_cast<HTMLFormControlElement*>(elements[i]);
+            HTMLFormControlElement* elt = toHTMLFormControlElement(elements[i]);
             // Skip option elements, other duds
             if (elt->name() == targetName) {
                 *element = DOMElement::createInstance(elt);
@@ -1193,7 +1182,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::resumeAnimations()
     if (!frame)
         return E_FAIL;
 
-    frame->animation()->resumeAnimations();
+    frame->animation().resumeAnimations();
     return S_OK;
 }
 
@@ -1203,7 +1192,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::suspendAnimations()
     if (!frame)
         return E_FAIL;
 
-    frame->animation()->suspendAnimations();
+    frame->animation().suspendAnimations();
     return S_OK;
 }
 
@@ -1218,15 +1207,11 @@ HRESULT WebFrame::pauseAnimation(BSTR animationName, IDOMNode* node, double seco
     if (!frame)
         return E_FAIL;
 
-    AnimationController* controller = frame->animation();
-    if (!controller)
-        return E_FAIL;
-
     COMPtr<DOMNode> domNode(Query, node);
     if (!domNode)
         return E_FAIL;
 
-    *animationWasRunning = controller->pauseAnimationAtTime(domNode->node()->renderer(), String(animationName, SysStringLen(animationName)), secondsFromNow);
+    *animationWasRunning = frame->animation().pauseAnimationAtTime(toRenderElement(domNode->node()->renderer()), String(animationName, SysStringLen(animationName)), secondsFromNow);
     return S_OK;
 }
 
@@ -1241,15 +1226,11 @@ HRESULT WebFrame::pauseTransition(BSTR propertyName, IDOMNode* node, double seco
     if (!frame)
         return E_FAIL;
 
-    AnimationController* controller = frame->animation();
-    if (!controller)
-        return E_FAIL;
-
     COMPtr<DOMNode> domNode(Query, node);
     if (!domNode)
         return E_FAIL;
 
-    *transitionWasRunning = controller->pauseTransitionAtTime(domNode->node()->renderer(), String(propertyName, SysStringLen(propertyName)), secondsFromNow);
+    *transitionWasRunning = frame->animation().pauseTransitionAtTime(toRenderElement(domNode->node()->renderer()), String(propertyName, SysStringLen(propertyName)), secondsFromNow);
     return S_OK;
 }
 
@@ -1282,11 +1263,7 @@ HRESULT WebFrame::numberOfActiveAnimations(UINT* number)
     if (!frame)
         return E_FAIL;
 
-    AnimationController* controller = frame->animation();
-    if (!controller)
-        return E_FAIL;
-
-    *number = controller->numberOfActiveAnimations(frame->document());
+    *number = frame->animation().numberOfActiveAnimations(frame->document());
     return S_OK;
 }
 
@@ -1342,7 +1319,7 @@ HRESULT WebFrame::controlsInForm(IDOMElement* form, IDOMElement** controls, int*
     const Vector<FormAssociatedElement*>& elements = formElement->associatedElements();
     for (int i = 0; i < count; i++) {
         if (elements.at(i)->isEnumeratable()) { // Skip option elements, other duds
-            controls[*cControls] = DOMElement::createInstance(toHTMLElement(elements.at(i)));
+            controls[*cControls] = DOMElement::createInstance(&elements.at(i)->asHTMLElement());
             (*cControls)++;
         }
     }
@@ -1389,7 +1366,7 @@ HRESULT WebFrame::searchForLabelsBeforeElement(const BSTR* labels, unsigned cLab
     bool resultIsInCellAbove;
     String label = coreFrame->searchForLabelsBeforeElement(labelStrings, coreElement, &resultDistance, &resultIsInCellAbove);
     
-    *result = SysAllocStringLen(label.characters(), label.length());
+    *result = SysAllocStringLen(label.deprecatedCharacters(), label.length());
     if (label.length() && !*result)
         return E_OUTOFMEMORY;
     if (outResultDistance)
@@ -1427,7 +1404,7 @@ HRESULT WebFrame::matchLabelsAgainstElement(const BSTR* labels, int cLabels, IDO
 
     String label = coreFrame->matchLabelsAgainstElement(labelStrings, coreElement);
     
-    *result = SysAllocStringLen(label.characters(), label.length());
+    *result = SysAllocStringLen(label.deprecatedCharacters(), label.length());
     if (label.length() && !*result)
         return E_OUTOFMEMORY;
     return S_OK;
@@ -1477,462 +1454,6 @@ void WebFrame::frameLoaderDestroyed()
     d->frame = 0;
 
     this->Release();
-}
-
-void WebFrame::makeRepresentation(DocumentLoader*)
-{
-    notImplemented();
-}
-
-void WebFrame::forceLayoutForNonHTML()
-{
-    notImplemented();
-}
-
-void WebFrame::setCopiesOnScroll()
-{
-    notImplemented();
-}
-
-void WebFrame::detachedFromParent2()
-{
-    notImplemented();
-}
-
-void WebFrame::detachedFromParent3()
-{
-    notImplemented();
-}
-
-void WebFrame::cancelPolicyCheck()
-{
-    if (d->m_policyListener) {
-        d->m_policyListener->invalidate();
-        d->m_policyListener = 0;
-    }
-
-    d->m_policyFunction = 0;
-}
-
-void WebFrame::dispatchWillSendSubmitEvent(PassRefPtr<WebCore::FormState>)
-{
-}
-
-void WebFrame::dispatchWillSubmitForm(FramePolicyFunction function, PassRefPtr<FormState> formState)
-{
-    Frame* coreFrame = core(this);
-    ASSERT(coreFrame);
-
-    COMPtr<IWebFormDelegate> formDelegate;
-
-    if (FAILED(d->webView->formDelegate(&formDelegate))) {
-        (coreFrame->loader()->policyChecker()->*function)(PolicyUse);
-        return;
-    }
-
-    COMPtr<IDOMElement> formElement(AdoptCOM, DOMElement::createInstance(formState->form()));
-
-    HashMap<String, String> formValuesMap;
-    const StringPairVector& textFieldValues = formState->textFieldValues();
-    size_t size = textFieldValues.size();
-    for (size_t i = 0; i < size; ++i)
-        formValuesMap.add(textFieldValues[i].first, textFieldValues[i].second);
-
-    COMPtr<IPropertyBag> formValuesPropertyBag(AdoptCOM, COMPropertyBag<String>::createInstance(formValuesMap));
-
-    COMPtr<WebFrame> sourceFrame(kit(formState->sourceDocument()->frame()));
-    if (SUCCEEDED(formDelegate->willSubmitForm(this, sourceFrame.get(), formElement.get(), formValuesPropertyBag.get(), setUpPolicyListener(function).get())))
-        return;
-
-    // FIXME: Add a sane default implementation
-    (coreFrame->loader()->policyChecker()->*function)(PolicyUse);
-}
-
-void WebFrame::revertToProvisionalState(DocumentLoader*)
-{
-    notImplemented();
-}
-
-void WebFrame::setMainFrameDocumentReady(bool)
-{
-    notImplemented();
-}
-
-void WebFrame::willChangeTitle(DocumentLoader*)
-{
-    notImplemented();
-}
-
-void WebFrame::didChangeTitle(DocumentLoader*)
-{
-    notImplemented();
-}
-
-void WebFrame::didChangeIcons(DocumentLoader*)
-{
-    notImplemented();
-}
-
-bool WebFrame::canHandleRequest(const ResourceRequest& request) const
-{
-    return WebView::canHandleRequest(request);
-}
-
-bool WebFrame::canShowMIMETypeAsHTML(const String& /*MIMEType*/) const
-{
-    notImplemented();
-    return true;
-}
-
-bool WebFrame::canShowMIMEType(const String& /*MIMEType*/) const
-{
-    notImplemented();
-    return true;
-}
-
-bool WebFrame::representationExistsForURLScheme(const String& /*URLScheme*/) const
-{
-    notImplemented();
-    return false;
-}
-
-String WebFrame::generatedMIMETypeForURLScheme(const String& /*URLScheme*/) const
-{
-    notImplemented();
-    ASSERT_NOT_REACHED();
-    return String();
-}
-
-void WebFrame::frameLoadCompleted()
-{
-}
-
-void WebFrame::restoreViewState()
-{
-}
-
-void WebFrame::provisionalLoadStarted()
-{
-    notImplemented();
-}
-
-bool WebFrame::shouldTreatURLAsSameAsCurrent(const KURL&) const
-{
-    notImplemented();
-    return false;
-}
-
-void WebFrame::addHistoryItemForFragmentScroll()
-{
-    notImplemented();
-}
-
-void WebFrame::didFinishLoad()
-{
-    notImplemented();
-}
-
-void WebFrame::prepareForDataSourceReplacement()
-{
-    notImplemented();
-}
-
-String WebFrame::userAgent(const KURL& url)
-{
-    return d->webView->userAgentForKURL(url);
-}
-
-void WebFrame::saveViewStateToItem(HistoryItem*)
-{
-}
-
-ResourceError WebFrame::cancelledError(const ResourceRequest& request)
-{
-    // FIXME: Need ChickenCat to include CFNetwork/CFURLError.h to get these values
-    // Alternatively, we could create our own error domain/codes.
-    return ResourceError(String(WebURLErrorDomain), -999, request.url().string(), String());
-}
-
-ResourceError WebFrame::blockedError(const ResourceRequest& request)
-{
-    // FIXME: Need to implement the String descriptions for errors in the WebKitErrorDomain and have them localized
-    return ResourceError(String(WebKitErrorDomain), WebKitErrorCannotUseRestrictedPort, request.url().string(), String());
-}
-
-ResourceError WebFrame::cannotShowURLError(const ResourceRequest& request)
-{
-    // FIXME: Need to implement the String descriptions for errors in the WebKitErrorDomain and have them localized
-    return ResourceError(String(WebKitErrorDomain), WebKitErrorCannotShowURL, request.url().string(), String());
-}
-
-ResourceError WebFrame::interruptedForPolicyChangeError(const ResourceRequest& request)
-{
-    // FIXME: Need to implement the String descriptions for errors in the WebKitErrorDomain and have them localized
-    return ResourceError(String(WebKitErrorDomain), WebKitErrorFrameLoadInterruptedByPolicyChange, request.url().string(), String());
-}
-
-ResourceError WebFrame::cannotShowMIMETypeError(const ResourceResponse&)
-{
-    notImplemented();
-    return ResourceError();
-}
-
-ResourceError WebFrame::fileDoesNotExistError(const ResourceResponse&)
-{
-    notImplemented();
-    return ResourceError();
-}
-
-ResourceError WebFrame::pluginWillHandleLoadError(const ResourceResponse& response)
-{
-    return ResourceError(String(WebKitErrorDomain), WebKitErrorPlugInWillHandleLoad, response.url().string(), String());
-}
-
-bool WebFrame::shouldFallBack(const ResourceError& error)
-{
-    if (error.errorCode() == WebURLErrorCancelled && error.domain() == String(WebURLErrorDomain))
-        return false;
-
-    if (error.errorCode() == WebKitErrorPlugInWillHandleLoad && error.domain() == String(WebKitErrorDomain))
-        return false;
-
-    return true;
-}
-
-COMPtr<WebFramePolicyListener> WebFrame::setUpPolicyListener(WebCore::FramePolicyFunction function)
-{
-    // FIXME: <rdar://5634381> We need to support multiple active policy listeners.
-
-    if (d->m_policyListener)
-        d->m_policyListener->invalidate();
-
-    Frame* coreFrame = core(this);
-    ASSERT(coreFrame);
-
-    d->m_policyListener.adoptRef(WebFramePolicyListener::createInstance(coreFrame));
-    d->m_policyFunction = function;
-
-    return d->m_policyListener;
-}
-
-void WebFrame::receivedPolicyDecision(PolicyAction action)
-{
-    ASSERT(d->m_policyListener);
-    ASSERT(d->m_policyFunction);
-
-    FramePolicyFunction function = d->m_policyFunction;
-
-    d->m_policyListener = 0;
-    d->m_policyFunction = 0;
-
-    Frame* coreFrame = core(this);
-    ASSERT(coreFrame);
-
-    (coreFrame->loader()->policyChecker()->*function)(action);
-}
-
-void WebFrame::dispatchDecidePolicyForResponse(FramePolicyFunction function, const ResourceResponse& response, const ResourceRequest& request)
-{
-    Frame* coreFrame = core(this);
-    ASSERT(coreFrame);
-
-    COMPtr<IWebPolicyDelegate> policyDelegate;
-    if (FAILED(d->webView->policyDelegate(&policyDelegate)))
-        policyDelegate = DefaultPolicyDelegate::sharedInstance();
-
-    COMPtr<IWebURLRequest> urlRequest(AdoptCOM, WebMutableURLRequest::createInstance(request));
-
-    if (SUCCEEDED(policyDelegate->decidePolicyForMIMEType(d->webView, BString(response.mimeType()), urlRequest.get(), this, setUpPolicyListener(function).get())))
-        return;
-
-    (coreFrame->loader()->policyChecker()->*function)(PolicyUse);
-}
-
-void WebFrame::dispatchDecidePolicyForNewWindowAction(FramePolicyFunction function, const NavigationAction& action, const ResourceRequest& request, PassRefPtr<FormState> formState, const String& frameName)
-{
-    Frame* coreFrame = core(this);
-    ASSERT(coreFrame);
-
-    COMPtr<IWebPolicyDelegate> policyDelegate;
-    if (FAILED(d->webView->policyDelegate(&policyDelegate)))
-        policyDelegate = DefaultPolicyDelegate::sharedInstance();
-
-    COMPtr<IWebURLRequest> urlRequest(AdoptCOM, WebMutableURLRequest::createInstance(request));
-    COMPtr<WebActionPropertyBag> actionInformation(AdoptCOM, WebActionPropertyBag::createInstance(action, formState ? formState->form() : 0, coreFrame));
-
-    if (SUCCEEDED(policyDelegate->decidePolicyForNewWindowAction(d->webView, actionInformation.get(), urlRequest.get(), BString(frameName), setUpPolicyListener(function).get())))
-        return;
-
-    (coreFrame->loader()->policyChecker()->*function)(PolicyUse);
-}
-
-void WebFrame::dispatchDecidePolicyForNavigationAction(FramePolicyFunction function, const NavigationAction& action, const ResourceRequest& request, PassRefPtr<FormState> formState)
-{
-    Frame* coreFrame = core(this);
-    ASSERT(coreFrame);
-
-    COMPtr<IWebPolicyDelegate> policyDelegate;
-    if (FAILED(d->webView->policyDelegate(&policyDelegate)))
-        policyDelegate = DefaultPolicyDelegate::sharedInstance();
-
-    COMPtr<IWebURLRequest> urlRequest(AdoptCOM, WebMutableURLRequest::createInstance(request));
-    COMPtr<WebActionPropertyBag> actionInformation(AdoptCOM, WebActionPropertyBag::createInstance(action, formState ? formState->form() : 0, coreFrame));
-
-    if (SUCCEEDED(policyDelegate->decidePolicyForNavigationAction(d->webView, actionInformation.get(), urlRequest.get(), this, setUpPolicyListener(function).get())))
-        return;
-
-    (coreFrame->loader()->policyChecker()->*function)(PolicyUse);
-}
-
-void WebFrame::dispatchUnableToImplementPolicy(const ResourceError& error)
-{
-    COMPtr<IWebPolicyDelegate> policyDelegate;
-    if (FAILED(d->webView->policyDelegate(&policyDelegate)))
-        policyDelegate = DefaultPolicyDelegate::sharedInstance();
-
-    COMPtr<IWebError> webError(AdoptCOM, WebError::createInstance(error));
-    policyDelegate->unableToImplementPolicyWithError(d->webView, webError.get(), this);
-}
-
-void WebFrame::convertMainResourceLoadToDownload(DocumentLoader* documentLoader, const ResourceRequest& request, const ResourceResponse& response)
-{
-    COMPtr<IWebDownloadDelegate> downloadDelegate;
-    COMPtr<IWebView> webView;
-    if (SUCCEEDED(this->webView(&webView))) {
-        if (FAILED(webView->downloadDelegate(&downloadDelegate))) {
-            // If the WebView doesn't successfully provide a download delegate we'll pass a null one
-            // into the WebDownload - which may or may not decide to use a DefaultDownloadDelegate
-            LOG_ERROR("Failed to get downloadDelegate from WebView");
-            downloadDelegate = 0;
-        }
-    }
-
-    // Its the delegate's job to ref the WebDownload to keep it alive - otherwise it will be destroyed
-    // when this method returns
-    COMPtr<WebDownload> download;
-    download.adoptRef(WebDownload::createInstance(documentLoader->mainResourceLoader()->handle(), request, response, downloadDelegate.get()));
-}
-
-bool WebFrame::dispatchDidLoadResourceFromMemoryCache(DocumentLoader*, const ResourceRequest&, const ResourceResponse&, int /*length*/)
-{
-    notImplemented();
-    return false;
-}
-
-void WebFrame::dispatchDidFailProvisionalLoad(const ResourceError& error)
-{
-    COMPtr<IWebFrameLoadDelegate> frameLoadDelegate;
-    if (SUCCEEDED(d->webView->frameLoadDelegate(&frameLoadDelegate))) {
-        COMPtr<IWebError> webError;
-        webError.adoptRef(WebError::createInstance(error));
-        frameLoadDelegate->didFailProvisionalLoadWithError(d->webView, webError.get(), this);
-    }
-}
-
-void WebFrame::dispatchDidFailLoad(const ResourceError& error)
-{
-    COMPtr<IWebFrameLoadDelegate> frameLoadDelegate;
-    if (SUCCEEDED(d->webView->frameLoadDelegate(&frameLoadDelegate))) {
-        COMPtr<IWebError> webError;
-        webError.adoptRef(WebError::createInstance(error));
-        frameLoadDelegate->didFailLoadWithError(d->webView, webError.get(), this);
-    }
-}
-
-void WebFrame::startDownload(const ResourceRequest& request, const String& /* suggestedName */)
-{
-    d->webView->downloadURL(request.url());
-}
-
-PassRefPtr<Widget> WebFrame::createJavaAppletWidget(const IntSize& pluginSize, HTMLAppletElement* element, const KURL& /*baseURL*/, const Vector<String>& paramNames, const Vector<String>& paramValues)
-{
-    RefPtr<PluginView> pluginView = PluginView::create(core(this), pluginSize, element, KURL(), paramNames, paramValues, "application/x-java-applet", false);
-
-    // Check if the plugin can be loaded successfully
-    if (pluginView->plugin() && pluginView->plugin()->load())
-        return pluginView;
-
-    COMPtr<IWebResourceLoadDelegate> resourceLoadDelegate;
-    if (FAILED(d->webView->resourceLoadDelegate(&resourceLoadDelegate)))
-        return pluginView;
-
-    COMPtr<CFDictionaryPropertyBag> userInfoBag = CFDictionaryPropertyBag::createInstance();
-
-    ResourceError resourceError(String(WebKitErrorDomain), WebKitErrorJavaUnavailable, String(), String());
-    COMPtr<IWebError> error(AdoptCOM, WebError::createInstance(resourceError, userInfoBag.get()));
-     
-    resourceLoadDelegate->plugInFailedWithError(d->webView, error.get(), getWebDataSource(d->frame->loader()->documentLoader()));
-
-    return pluginView;
-}
-
-ObjectContentType WebFrame::objectContentType(const KURL& url, const String& mimeType, bool shouldPreferPlugInsForImages)
-{
-    return WebCore::FrameLoader::defaultObjectContentType(url, mimeType, shouldPreferPlugInsForImages);
-}
-
-String WebFrame::overrideMediaType() const
-{
-    notImplemented();
-    return String();
-}
-
-void WebFrame::dispatchDidClearWindowObjectInWorld(DOMWrapperWorld* world)
-{
-    Frame* coreFrame = core(this);
-    ASSERT(coreFrame);
-
-    Settings* settings = coreFrame->settings();
-    if (!settings || !settings->isScriptEnabled())
-        return;
-
-    COMPtr<IWebFrameLoadDelegate> frameLoadDelegate;
-    if (FAILED(d->webView->frameLoadDelegate(&frameLoadDelegate)))
-        return;
-
-    COMPtr<IWebFrameLoadDelegatePrivate2> delegatePrivate(Query, frameLoadDelegate);
-    if (delegatePrivate && delegatePrivate->didClearWindowObjectForFrameInScriptWorld(d->webView, this, WebScriptWorld::findOrCreateWorld(world).get()) != E_NOTIMPL)
-        return;
-
-    if (world != mainThreadNormalWorld())
-        return;
-
-    JSContextRef context = toRef(coreFrame->script()->globalObject(world)->globalExec());
-    JSObjectRef windowObject = toRef(coreFrame->script()->globalObject(world));
-    ASSERT(windowObject);
-
-    if (FAILED(frameLoadDelegate->didClearWindowObject(d->webView, context, windowObject, this)))
-        frameLoadDelegate->windowScriptObjectAvailable(d->webView, context, windowObject);
-}
-
-void WebFrame::documentElementAvailable()
-{
-}
-
-void WebFrame::didPerformFirstNavigation() const
-{
-    COMPtr<IWebPreferences> preferences;
-    if (FAILED(d->webView->preferences(&preferences)))
-        return;
-
-    COMPtr<IWebPreferencesPrivate> preferencesPrivate(Query, preferences);
-    if (!preferencesPrivate)
-        return;
-    BOOL automaticallyDetectsCacheModel;
-    if (FAILED(preferencesPrivate->automaticallyDetectsCacheModel(&automaticallyDetectsCacheModel)))
-        return;
-
-    WebCacheModel cacheModel;
-    if (FAILED(preferences->cacheModel(&cacheModel)))
-        return;
-
-    if (automaticallyDetectsCacheModel && cacheModel < WebCacheModelDocumentBrowser)
-        preferences->setCacheModel(WebCacheModelDocumentBrowser);
-}
-
-void WebFrame::registerForIconNotification(bool listen)
-{
-    d->webView->registerForIconNotification(listen);
 }
 
 static IntRect printerRect(HDC printDC)
@@ -2394,7 +1915,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::string(
     if (!coreFrame)
         return E_FAIL;
 
-    RefPtr<Range> allRange(rangeOfContents(coreFrame->document()));
+    RefPtr<Range> allRange(rangeOfContents(*coreFrame->document()));
     String allString = plainText(allRange.get());
     *result = BString(allString).release();
     return S_OK;
@@ -2474,7 +1995,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::frameBounds(
     if (!view)
         return E_FAIL;
 
-    FloatRect bounds = view->visibleContentRect(ScrollableArea::IncludeScrollbars);
+    FloatRect bounds = view->visibleContentRectIncludingScrollbars();
     result->bottom = (LONG) bounds.height();
     result->right = (LONG) bounds.width();
     return S_OK;
@@ -2493,7 +2014,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::isDescendantOfFrame(
     if (!ancestorWebFrame)
         return S_OK;
 
-    *result = (coreFrame && coreFrame->tree()->isDescendantOf(core(ancestorWebFrame.get()))) ? TRUE : FALSE;
+    *result = (coreFrame && coreFrame->tree().isDescendantOf(core(ancestorWebFrame.get()))) ? TRUE : FALSE;
     return S_OK;
 }
 
@@ -2514,7 +2035,7 @@ HRESULT WebFrame::stringByEvaluatingJavaScriptInScriptWorld(IWebScriptWorld* iWo
     String string = String(script, SysStringLen(script));
 
     // Start off with some guess at a frame and a global object, we'll try to do better...!
-    JSDOMWindow* anyWorldGlobalObject = coreFrame->script()->globalObject(mainThreadNormalWorld());
+    JSDOMWindow* anyWorldGlobalObject = coreFrame->script().globalObject(mainThreadNormalWorld());
 
     // The global object is probably a shell object? - if so, we know how to use this!
     JSC::JSObject* globalObjectObj = toJS(globalObjectRef);
@@ -2522,9 +2043,9 @@ HRESULT WebFrame::stringByEvaluatingJavaScriptInScriptWorld(IWebScriptWorld* iWo
         anyWorldGlobalObject = static_cast<JSDOMWindowShell*>(globalObjectObj)->window();
 
     // Get the frame frome the global object we've settled on.
-    Frame* frame = anyWorldGlobalObject->impl()->frame();
+    Frame* frame = anyWorldGlobalObject->impl().frame();
     ASSERT(frame->document());
-    JSValue result = frame->script()->executeScriptInWorld(world->world(), string, true).jsValue();
+    JSValue result = frame->script().executeScriptInWorld(world->world(), string, true).jsValue();
 
     if (!frame) // In case the script removed our frame from the page.
         return S_OK;
@@ -2546,24 +2067,24 @@ HRESULT WebFrame::stringByEvaluatingJavaScriptInScriptWorld(IWebScriptWorld* iWo
 void WebFrame::unmarkAllMisspellings()
 {
     Frame* coreFrame = core(this);
-    for (Frame* frame = coreFrame; frame; frame = frame->tree()->traverseNext(coreFrame)) {
+    for (Frame* frame = coreFrame; frame; frame = frame->tree().traverseNext(coreFrame)) {
         Document *doc = frame->document();
         if (!doc)
             return;
 
-        doc->markers()->removeMarkers(DocumentMarker::Spelling);
+        doc->markers().removeMarkers(DocumentMarker::Spelling);
     }
 }
 
 void WebFrame::unmarkAllBadGrammar()
 {
     Frame* coreFrame = core(this);
-    for (Frame* frame = coreFrame; frame; frame = frame->tree()->traverseNext(coreFrame)) {
+    for (Frame* frame = coreFrame; frame; frame = frame->tree().traverseNext(coreFrame)) {
         Document *doc = frame->document();
         if (!doc)
             return;
 
-        doc->markers()->removeMarkers(DocumentMarker::Grammar);
+        doc->markers().removeMarkers(DocumentMarker::Grammar);
     }
 }
 
@@ -2590,7 +2111,7 @@ COMPtr<IAccessible> WebFrame::accessible() const
         // the Document renderer was destroyed and its wrapper was detached, or
         // the previous Document is in the page cache, and the current document
         // needs to be wrapped.
-        m_accessible = new AccessibleDocument(currentDocument);
+        m_accessible = new AccessibleDocument(currentDocument, webView()->viewWindow());
     }
     return m_accessible.get();
 }
@@ -2606,7 +2127,3 @@ void WebFrame::updateBackground()
     coreFrame->view()->updateBackgroundRecursively(backgroundColor, webView()->transparent());
 }
 
-PassRefPtr<FrameNetworkingContext> WebFrame::createNetworkingContext()
-{
-    return WebFrameNetworkingContext::create(core(this), userAgent(url()));
-}

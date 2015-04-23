@@ -30,5 +30,5 @@
     [ImplementedAs=indexedDB] readonly attribute IDBFactory webkitIndexedDB;
 
     readonly attribute IDBFactory indexedDB;
-    };
+};
 

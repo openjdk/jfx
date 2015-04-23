@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,28 +25,18 @@
 
 package com.sun.javafx.scene.control.skin;
 
-// Note: The TextField code is in sync with ComboBoxListViewSkin 4945:f3dcad659452
-
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.chrono.HijrahChronology;
 import java.time.format.DateTimeParseException;
 
-import com.sun.javafx.scene.input.ExtendedInputMethodRequests;
-import com.sun.javafx.scene.traversal.Algorithm;
-import com.sun.javafx.scene.traversal.Direction;
-import com.sun.javafx.scene.traversal.ParentTraversalEngine;
-import com.sun.javafx.scene.traversal.TraversalContext;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
-import javafx.css.PseudoClass;
 import javafx.event.ActionEvent;
 import javafx.geometry.Insets;
-import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.TextField;
-import javafx.scene.input.*;
 import javafx.util.StringConverter;
 
 import com.sun.javafx.scene.control.behavior.DatePickerBehavior;
@@ -56,21 +46,11 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
     private DatePicker datePicker;
     private TextField displayNode;
     private DatePickerContent datePickerContent;
-    private TextField textField;
 
     public DatePickerSkin(final DatePicker datePicker) {
         super(datePicker, new DatePickerBehavior(datePicker));
 
         this.datePicker = datePicker;
-        this.textField = getEditableInputNode();
-
-        // Fix for RT-29565. Without this the textField does not have a correct
-        // pref width at startup, as it is not part of the scenegraph (and therefore
-        // has no pref width until after the first measurements have been taken).
-        if (this.textField != null) {
-            getChildren().add(textField);
-        }
-
 
         // The "arrow" is actually a rectangular svg icon resembling a calendar.
         // Round the size of the icon to whole integers to get sharp edges.
@@ -90,129 +70,6 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
                 }
             }
         });
-
-        // Move fake focus in to the textfield.
-        // Note: DatePicker uses TextField for both editable and non-editable modes
-        datePicker.focusedProperty().addListener((ov, t, hasFocus) -> {
-            //if (datePicker.isEditable()) {
-                // Fix for the regression noted in a comment in RT-29885.
-                ((ComboBoxListViewSkin.FakeFocusTextField)textField).setFakeFocus(hasFocus);
-            //}
-        });
-
-        datePicker.addEventFilter(KeyEvent.ANY, ke -> {
-            if (textField == null) return;
-
-            // This prevents a stack overflow from our rebroadcasting of the
-            // event to the textfield that occurs in the final else statement
-            // of the conditions below.
-            if (ke.getTarget().equals(textField)) return;
-
-            // When the user hits the enter or F4 keys, we respond before
-            // ever giving the event to the TextField.
-            if (ke.getCode() == KeyCode.ENTER) {
-                setTextFromTextFieldIntoComboBoxValue();
-                /*
-                ** don't consume this if we're on an embedded
-                ** platform that supports 5-button navigation
-                */
-                if (!Utils.isTwoLevelFocus()) {
-                    ke.consume();
-                }
-                return;
-            } else if (ke.getCode() == KeyCode.F4 && ke.getEventType() == KeyEvent.KEY_RELEASED) {
-                if (datePicker.isShowing()) datePicker.hide();
-                else datePicker.show();
-                ke.consume();
-                return;
-            } else if (ke.getCode() == KeyCode.F10 || ke.getCode() == KeyCode.ESCAPE) {
-                // RT-23275: The TextField fires F10 and ESCAPE key events
-                // up to the parent, which are then fired back at the
-                // TextField, and this ends up in an infinite loop until
-                // the stack overflows. So, here we consume these two
-                // events and stop them from going any further.
-                ke.consume();
-                return;
-            } else {
-                // Fix for the regression noted in a comment in RT-29885.
-                // This forwards the event down into the TextField when
-                // the key event is actually received by the ComboBox.
-                textField.fireEvent(ke.copyFor(textField, textField));
-                ke.consume();
-            }
-        });
-
-        // RT-38978: Forward input method events to TextField.
-        if (datePicker.getOnInputMethodTextChanged() == null) {
-            datePicker.setOnInputMethodTextChanged(event -> {
-                if (datePicker.getScene().getFocusOwner() == datePicker) {
-                    if (textField.getOnInputMethodTextChanged() != null) {
-                        textField.getOnInputMethodTextChanged().handle(event);
-                    }
-                }
-            });
-        }
-
-        // Fix for RT-31093 - drag events from the textfield were not surfacing
-        // properly for the DatePicker.
-        if (textField != null) {
-            textField.addEventFilter(MouseEvent.DRAG_DETECTED, event -> {
-                if (event.getTarget().equals(datePicker)) return;
-                datePicker.fireEvent(event.copyFor(datePicker, datePicker));
-                event.consume();
-            });
-            textField.addEventFilter(DragEvent.ANY, event -> {
-                if (event.getTarget().equals(datePicker)) return;
-                datePicker.fireEvent(event.copyFor(datePicker, datePicker));
-                event.consume();
-            });
-
-            // RT-38978: Forward input method requests to TextField.
-            datePicker.setInputMethodRequests(new ExtendedInputMethodRequests() {
-                @Override public Point2D getTextLocation(int offset) {
-                    return textField.getInputMethodRequests().getTextLocation(offset);
-                }
-
-                @Override public int getLocationOffset(int x, int y) {
-                    return textField.getInputMethodRequests().getLocationOffset(x, y);
-                }
-
-                @Override public void cancelLatestCommittedText() {
-                    textField.getInputMethodRequests().cancelLatestCommittedText();
-                }
-
-                @Override public String getSelectedText() {
-                    return textField.getInputMethodRequests().getSelectedText();
-                }
-
-                @Override public int getInsertPositionOffset() {
-                    return ((ExtendedInputMethodRequests)textField.getInputMethodRequests()).getInsertPositionOffset();
-                }
-
-                @Override public String getCommittedText(int begin, int end) {
-                    return ((ExtendedInputMethodRequests)textField.getInputMethodRequests()).getCommittedText(begin, end);
-                }
-
-                @Override public int getCommittedTextLength() {
-                    return ((ExtendedInputMethodRequests)textField.getInputMethodRequests()).getCommittedTextLength();
-                }
-            });
-        }
-
-        // Fix for RT-36902, where focus traversal was getting stuck inside the DatePicker
-        datePicker.setImpl_traversalEngine(new ParentTraversalEngine(datePicker, new Algorithm() {
-            @Override public Node select(Node owner, Direction dir, TraversalContext context) {
-                return null;
-            }
-
-            @Override public Node selectFirst(TraversalContext context) {
-                return null;
-            }
-
-            @Override public Node selectLast(TraversalContext context) {
-                return null;
-            }
-        }));
 
         registerChangeListener(datePicker.chronologyProperty(), "CHRONOLOGY");
         registerChangeListener(datePicker.converterProperty(), "CONVERTER");
@@ -293,102 +150,25 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
         }
     }
 
+    @Override protected TextField getEditor() {
+        // Use getSkinnable() here because this method is called from
+        // the super constructor before datePicker is initialized.
+        return ((DatePicker)getSkinnable()).getEditor();
+    }
+
+    @Override protected StringConverter<LocalDate> getConverter() {
+        return ((DatePicker)getSkinnable()).getConverter();
+    }
+
     @Override public Node getDisplayNode() {
         if (displayNode == null) {
             displayNode = getEditableInputNode();
             displayNode.getStyleClass().add("date-picker-display-node");
-
-//             if (displayNode.getOnMouseReleased() == null) {
-//                 displayNode.setOnMouseReleased(new EventHandler<MouseEvent>() {
-//                     @Override public void handle(MouseEvent e) {
-//                         ((DatePickerBehavior)getBehavior()).mouseReleased(e, true);
-//                     }
-//                 });
-//             }
-
             updateDisplayNode();
-//             datePicker.addEventHandler(ActionEvent.ACTION, new EventHandler<ActionEvent>() {
-//                 @Override public void handle(ActionEvent t) {
-//                     updateDisplayNode();
-//                 }
-//             });
-
-//             if (displayNode.getOnMouseReleased() == null) {
-//                 displayNode.setOnMouseReleased(new EventHandler<MouseEvent>() {
-//                     @Override public void handle(MouseEvent e) {
-//                         ((DatePickerBehavior)getBehavior()).mouseReleased(e, false);
-//                         e.consume();
-//                     }
-//                 });
-//             }
         }
-        textField.setEditable(datePicker.isEditable());
+        displayNode.setEditable(datePicker.isEditable());
 
         return displayNode;
-    }
-
-    private TextField getEditableInputNode() {
-        if (textField != null) return textField;
-
-        textField = datePicker.getEditor();
-        textField.focusTraversableProperty().bindBidirectional(datePicker.focusTraversableProperty());
-        textField.promptTextProperty().bind(datePicker.promptTextProperty());
-
-        textField.focusedProperty().addListener((ov, t, hasFocus) -> {
-            // Note: DatePicker uses TextField for both editable and non-editable
-            // modes, so don't perform this test here.
-            // if (!datePicker.isEditable()) return;
-
-            // Fix for RT-29885
-            datePicker.getProperties().put("FOCUSED", hasFocus);
-            // --- end of RT-29885
-
-            // RT-21454 starts here
-            if (! hasFocus) {
-                setTextFromTextFieldIntoComboBoxValue();
-                pseudoClassStateChanged(CONTAINS_FOCUS_PSEUDOCLASS_STATE, false);
-            } else {
-                pseudoClassStateChanged(CONTAINS_FOCUS_PSEUDOCLASS_STATE, true);
-            }
-            // --- end of RT-21454
-        });
-
-        return textField;
-    }
-
-
-    private void updateDisplayNode() {
-        if (displayNode != null) {
-            LocalDate date = datePicker.getValue();
-            StringConverter<LocalDate> c = datePicker.getConverter();
-
-            if (date != null && c != null) {
-                displayNode.setText(c.toString(date));
-            } else {
-                displayNode.setText("");
-            }
-        }
-    }
-
-    private void setTextFromTextFieldIntoComboBoxValue() {
-        StringConverter<LocalDate> c = datePicker.getConverter();
-        if (c != null) {
-            LocalDate oldValue = datePicker.getValue();
-            LocalDate value = oldValue;
-            String text = textField.getText();
-
-            if (text == null || text.isEmpty()) {
-                value = null;
-            } else {
-                try {
-                    value = c.fromString(text);
-                } catch (DateTimeParseException ex) {
-                }
-            }
-
-            datePicker.setValue(value);
-            updateDisplayNode();
-        }
     }
 
     public void syncWithAutoUpdate() {
@@ -398,14 +178,4 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
             datePicker.hide();
         }
     }
-
-
-
-    /***************************************************************************
-     *                                                                         *
-     * Stylesheet Handling                                                     *
-     *                                                                         *
-     **************************************************************************/
-
-    private static PseudoClass CONTAINS_FOCUS_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("contains-focus");
 }

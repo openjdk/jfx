@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -77,7 +77,7 @@ public class CLITest {
                 "-outdir", workDir.getCanonicalPath(),
                 "-outfile", "SimpleTest",
                 "-appclass", "hello.HelloRectangle",
-                "-native",
+                "-native", "jnlp",
                 "-name", "SimpleTest");
     }
 
@@ -103,6 +103,7 @@ public class CLITest {
                     "-paramFile", f.getPath(),
                     "-native", "image",
                     "-name", "SmokeParams",
+                    "-Blauncher-cfg-format=prop",
                     "-BOptionThatWillNeverExist=true",
                     "-BuserJvmOptions=-Xmx=1g",
                     "-BuserJvmOptions=-Xms=512m",
@@ -185,7 +186,7 @@ public class CLITest {
                     "-name", "UserJvmArgNoValue",
                     "-BuserJvmOptions=-Xmx1g",
                     "-BuserJvmOptions=-Xms512m");
-            ResourceBundle I18N = ResourceBundle.getBundle(LinuxAppBundler.class.getName());
+            ResourceBundle I18N = ResourceBundle.getBundle(AbstractImageBundler.class.getName());
             
             outStr.flush();
             oldOut.println(baos);

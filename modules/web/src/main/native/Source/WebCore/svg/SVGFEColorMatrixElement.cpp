@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#if ENABLE(SVG) && ENABLE(FILTERS)
+#if ENABLE(FILTERS)
 #include "SVGFEColorMatrixElement.h"
 
 #include "Attribute.h"
@@ -43,7 +43,7 @@ BEGIN_REGISTER_ANIMATED_PROPERTIES(SVGFEColorMatrixElement)
     REGISTER_PARENT_ANIMATED_PROPERTIES(SVGFilterPrimitiveStandardAttributes)
 END_REGISTER_ANIMATED_PROPERTIES
 
-inline SVGFEColorMatrixElement::SVGFEColorMatrixElement(const QualifiedName& tagName, Document* document)
+inline SVGFEColorMatrixElement::SVGFEColorMatrixElement(const QualifiedName& tagName, Document& document)
     : SVGFilterPrimitiveStandardAttributes(tagName, document)
     , m_type(FECOLORMATRIX_TYPE_MATRIX)
 {
@@ -51,7 +51,7 @@ inline SVGFEColorMatrixElement::SVGFEColorMatrixElement(const QualifiedName& tag
     registerAnimatedPropertiesForSVGFEColorMatrixElement();
 }
 
-PassRefPtr<SVGFEColorMatrixElement> SVGFEColorMatrixElement::create(const QualifiedName& tagName, Document* document)
+PassRefPtr<SVGFEColorMatrixElement> SVGFEColorMatrixElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(new SVGFEColorMatrixElement(tagName, document));
 }
@@ -64,7 +64,7 @@ bool SVGFEColorMatrixElement::isSupportedAttribute(const QualifiedName& attrName
         supportedAttributes.add(SVGNames::valuesAttr);
         supportedAttributes.add(SVGNames::inAttr);
     }
-    return supportedAttributes.contains<QualifiedName, SVGAttributeHashTranslator>(attrName);
+    return supportedAttributes.contains<SVGAttributeHashTranslator>(attrName);
 }
 
 void SVGFEColorMatrixElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
@@ -174,4 +174,4 @@ PassRefPtr<FilterEffect> SVGFEColorMatrixElement::build(SVGFilterBuilder* filter
 
 } // namespace WebCore
 
-#endif // ENABLE(SVG)
+#endif // ENABLE(FILTERS)

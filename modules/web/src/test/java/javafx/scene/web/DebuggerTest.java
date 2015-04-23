@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -49,9 +49,9 @@ public class DebuggerTest extends TestBase {
             });
             debugger.setEnabled(true);
             debugger.sendMessage(q(
-                    "{'method':'Debugger.causesRecompilation','id':16}"));
+                    "{'method':'Debugger.pause','id':16}"));
             assertEquals(
-                    Arrays.asList(q("{'result':{'result':true},'id':16}")),
+                    Arrays.asList(q("{'result':{},'id':16}")),
                     callbackMessages);
         });
     }

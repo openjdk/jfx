@@ -50,12 +50,12 @@ Storage::Storage(Frame* frame, PassRefPtr<StorageArea> storageArea)
     ASSERT(m_frame);
     ASSERT(m_storageArea);
 
-        m_storageArea->incrementAccessCount();
+    m_storageArea->incrementAccessCount();
 }
 
 Storage::~Storage()
 {
-        m_storageArea->decrementAccessCount();
+    m_storageArea->decrementAccessCount();
 }
 
 unsigned Storage::length(ExceptionCode& ec) const
@@ -135,7 +135,7 @@ void Storage::clear(ExceptionCode& ec)
     if (!m_storageArea->canAccessStorage(m_frame)) {
         ec = SECURITY_ERR;
         return;
-}
+    }
 
     if (isDisabledByPrivateBrowsing())
         return;
@@ -158,13 +158,13 @@ bool Storage::contains(const String& key, ExceptionCode& ec) const
 
 bool Storage::isDisabledByPrivateBrowsing() const
 {
-    if (!m_frame->page()->settings()->privateBrowsingEnabled())
+    if (!m_frame->page()->settings().privateBrowsingEnabled())
         return false;
 
     if (m_storageArea->storageType() == LocalStorage) {
         if (SchemeRegistry::allowsLocalStorageAccessInPrivateBrowsing(m_frame->document()->securityOrigin()->protocol()))
             return false;
-}
+    }
 
     return true;
 }

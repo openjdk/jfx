@@ -21,7 +21,6 @@
 #ifndef SVGScriptElement_h
 #define SVGScriptElement_h
 
-#if ENABLE(SVG)
 #include "SVGAnimatedBoolean.h"
 #include "SVGAnimatedString.h"
 #include "SVGElement.h"
@@ -31,62 +30,64 @@
 
 namespace WebCore {
 
-class SVGScriptElement FINAL : public SVGElement
-                       , public SVGURIReference
-                       , public SVGExternalResourcesRequired
-                       , public ScriptElement {
+class SVGScriptElement final : public SVGElement
+                             , public SVGURIReference
+                             , public SVGExternalResourcesRequired
+                             , public ScriptElement {
 public:
-    static PassRefPtr<SVGScriptElement> create(const QualifiedName&, Document*, bool wasInsertedByParser);
-
-    String type() const;
-    void setType(const String&);
+    static PassRefPtr<SVGScriptElement> create(const QualifiedName&, Document&, bool wasInsertedByParser);
 
 private:
-    SVGScriptElement(const QualifiedName&, Document*, bool wasInsertedByParser, bool alreadyStarted);
+    SVGScriptElement(const QualifiedName&, Document&, bool wasInsertedByParser, bool alreadyStarted);
 
     bool isSupportedAttribute(const QualifiedName&);
-    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
-    virtual InsertionNotificationRequest insertedInto(ContainerNode*) OVERRIDE;
-    virtual void childrenChanged(bool changedByParser = false, Node* beforeChange = 0, Node* afterChange = 0, int childCountDelta = 0);
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
+    virtual InsertionNotificationRequest insertedInto(ContainerNode&) override;
+    virtual void childrenChanged(const ChildChange&) override;
 
-    virtual void svgAttributeChanged(const QualifiedName&);
-    virtual bool isURLAttribute(const Attribute&) const OVERRIDE;
-    virtual void finishParsingChildren();
+    virtual void svgAttributeChanged(const QualifiedName&) override;
+    virtual bool isURLAttribute(const Attribute&) const override;
+    virtual void finishParsingChildren() override;
 
-    virtual void addSubresourceAttributeURLs(ListHashSet<KURL>&) const;
+    virtual void addSubresourceAttributeURLs(ListHashSet<URL>&) const override;
 
-    virtual bool haveLoadedRequiredResources() { return SVGExternalResourcesRequired::haveLoadedRequiredResources(); }
+    virtual bool haveLoadedRequiredResources() override { return SVGExternalResourcesRequired::haveLoadedRequiredResources(); }
 
-    virtual String sourceAttributeValue() const;
-    virtual String charsetAttributeValue() const;
-    virtual String typeAttributeValue() const;
-    virtual String languageAttributeValue() const;
-    virtual String forAttributeValue() const;
-    virtual String eventAttributeValue() const;
-    virtual bool asyncAttributeValue() const;
-    virtual bool deferAttributeValue() const;
-    virtual bool hasSourceAttribute() const;
+    virtual String sourceAttributeValue() const override;
+    virtual String charsetAttributeValue() const override;
+    virtual String typeAttributeValue() const override;
+    virtual String languageAttributeValue() const override;
+    virtual String forAttributeValue() const override;
+    virtual String eventAttributeValue() const override;
+    virtual bool asyncAttributeValue() const override;
+    virtual bool deferAttributeValue() const override;
+    virtual bool hasSourceAttribute() const override;
 
-    virtual void dispatchLoadEvent() { SVGExternalResourcesRequired::dispatchLoadEvent(this); }
+    virtual void dispatchLoadEvent() override { SVGExternalResourcesRequired::dispatchLoadEvent(this); }
 
-    virtual PassRefPtr<Element> cloneElementWithoutAttributesAndChildren();
+    virtual PassRefPtr<Element> cloneElementWithoutAttributesAndChildren() override;
+    virtual bool rendererIsNeeded(const RenderStyle&) override { return false; }
 
     // SVGExternalResourcesRequired
-    virtual void setHaveFiredLoadEvent(bool haveFiredLoadEvent) { ScriptElement::setHaveFiredLoadEvent(haveFiredLoadEvent); }
-    virtual bool isParserInserted() const { return ScriptElement::isParserInserted(); }
-    virtual bool haveFiredLoadEvent() const { return ScriptElement::haveFiredLoadEvent(); }
-    virtual Timer<SVGElement>* svgLoadEventTimer() OVERRIDE { return &m_svgLoadEventTimer; }
+    virtual void setHaveFiredLoadEvent(bool haveFiredLoadEvent) override { ScriptElement::setHaveFiredLoadEvent(haveFiredLoadEvent); }
+    virtual bool isParserInserted() const override { return ScriptElement::isParserInserted(); }
+    virtual bool haveFiredLoadEvent() const override { return ScriptElement::haveFiredLoadEvent(); }
+    virtual Timer<SVGElement>* svgLoadEventTimer() override { return &m_svgLoadEventTimer; }
+
+#ifndef NDEBUG
+    virtual bool filterOutAnimatableAttribute(const QualifiedName&) const override;
+#endif
 
     BEGIN_DECLARE_ANIMATED_PROPERTIES(SVGScriptElement)
         DECLARE_ANIMATED_STRING(Href, href)
         DECLARE_ANIMATED_BOOLEAN(ExternalResourcesRequired, externalResourcesRequired)
     END_DECLARE_ANIMATED_PROPERTIES
 
-    String m_type;
     Timer<SVGElement> m_svgLoadEventTimer;
 };
 
+NODE_TYPE_CASTS(SVGScriptElement)
+
 } // namespace WebCore
 
-#endif // ENABLE(SVG)
 #endif

@@ -66,6 +66,13 @@ print GPERF << "EOF";
 #include \"HashTools.h\"
 #include <string.h>
 
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored \"-Wunknown-pragmas\"
+#pragma clang diagnostic ignored \"-Wdeprecated-register\"
+#pragma clang diagnostic ignored \"-Wimplicit-fallthrough\"
+#endif
+
 namespace WebCore {
 %}
 %struct-type
@@ -102,7 +109,7 @@ print GPERF << "EOF";
     0
 };
 
-const Value* findValue(register const char* str, register unsigned int len)
+const Value* findValue(const char* str, unsigned int len)
 {
     return CSSValueKeywordsHash::findValueImpl(str, len);
 }
@@ -115,6 +122,10 @@ const char* getValueName(unsigned short id)
 }
 
 } // namespace WebCore
+
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 EOF
 close GPERF;
 

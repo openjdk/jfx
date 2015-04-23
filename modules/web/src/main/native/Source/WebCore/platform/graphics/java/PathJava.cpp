@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
 
@@ -23,7 +23,7 @@ namespace WebCore
 
 static GraphicsContext* scratchContext()
 {
-    static OwnPtr<ImageBuffer> img(ImageBuffer::create(IntSize(1, 1)));
+    static OwnPtr<ImageBuffer> img = adoptPtr(ImageBuffer::create(IntSize(1, 1)).release());
     static GraphicsContext *context = img->context();
     return context;
 }

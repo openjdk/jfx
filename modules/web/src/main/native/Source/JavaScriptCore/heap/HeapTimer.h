@@ -29,26 +29,25 @@
 #include <wtf/RetainPtr.h>
 #include <wtf/Threading.h>
 
+#if PLATFORM(JAVA) // tav todo temp
+#include <JSExportMacros.h>
+#endif
+
 #if USE(CF)
 #include <CoreFoundation/CoreFoundation.h>
-#elif PLATFORM(BLACKBERRY)
-#include <BlackBerryPlatformTimer.h>
-#elif PLATFORM(QT)
-#include <QBasicTimer>
-#include <QMutex>
-#include <QObject>
-#include <QThread>
+#elif PLATFORM(EFL)
+#if USE(EO)
+typedef struct _Eo_Opaque Ecore_Timer;
+#else
+typedef struct _Ecore_Timer Ecore_Timer;
+#endif
 #endif
 
 namespace JSC {
 
 class VM;
-    
-#if PLATFORM(QT) && !USE(CF)
-class HeapTimer : public QObject {
-#else
+
 class HeapTimer {
-#endif
 public:
 #if USE(CF)
     HeapTimer(VM*, CFRunLoopRef);
@@ -57,7 +56,7 @@ public:
     HeapTimer(VM*);
 #endif
     
-    virtual ~HeapTimer();
+    JS_EXPORT_PRIVATE virtual ~HeapTimer();
     virtual void doWork() = 0;
     
 protected:
@@ -71,16 +70,11 @@ protected:
     CFRunLoopTimerContext m_context;
 
     Mutex m_shutdownMutex;
-#elif PLATFORM(BLACKBERRY)
-    void timerDidFire();
-
-    BlackBerry::Platform::Timer<HeapTimer> m_timer;
-#elif PLATFORM(QT)
-    void timerEvent(QTimerEvent*);
-    void customEvent(QEvent*);
-    QBasicTimer m_timer;
-    QThread* m_newThread;
-    QMutex m_mutex;
+#elif PLATFORM(EFL)
+    static bool timerEvent(void*);
+    Ecore_Timer* add(double delay, void* agent);
+    void stop();
+    Ecore_Timer* m_timer;
 #endif
     
 private:

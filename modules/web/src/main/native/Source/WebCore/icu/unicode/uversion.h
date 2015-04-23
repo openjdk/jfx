@@ -101,14 +101,14 @@ typedef uint8_t UVersionInfo[U_MAX_VERSION_LENGTH];
 /* Define namespace symbols if the compiler supports it. */
 #ifdef XP_CPLUSPLUS
 #if U_HAVE_NAMESPACE
-#if U_DISABLE_RENAMING
-#define U_ICU_NAMESPACE icu
-namespace U_ICU_NAMESPACE { }
-#else
+#   if U_DISABLE_RENAMING
+#       define U_ICU_NAMESPACE icu
+        namespace U_ICU_NAMESPACE { }
+#   else
 #       define U_ICU_NAMESPACE U_ICU_ENTRY_POINT_RENAME(icu)
-namespace U_ICU_NAMESPACE { }
-namespace icu = U_ICU_NAMESPACE;
-#endif
+        namespace U_ICU_NAMESPACE { }
+        namespace icu = U_ICU_NAMESPACE;
+#   endif
 
 #   define U_NAMESPACE_BEGIN extern "C++" { namespace U_ICU_NAMESPACE {
 #   define U_NAMESPACE_END } }
@@ -119,8 +119,8 @@ namespace icu = U_ICU_NAMESPACE;
 #       define U_USING_ICU_NAMESPACE 1
 #   endif
 #   if U_USING_ICU_NAMESPACE
-U_NAMESPACE_USE
-#endif
+        U_NAMESPACE_USE
+#   endif
 #else
 #   define U_NAMESPACE_BEGIN extern "C++" {
 #   define U_NAMESPACE_END }

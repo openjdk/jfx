@@ -32,17 +32,9 @@
 #if ENABLE(INPUT_TYPE_WEEK)
 #include "WeekInputType.h"
 
-#include "DateComponents.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
 #include "InputTypeNames.h"
-#include <wtf/PassOwnPtr.h>
-
-#if ENABLE(INPUT_MULTIPLE_FIELDS_UI)
-#include "DateTimeFieldsState.h"
-#include "LocalizedStrings.h"
-#include <wtf/text/WTFString.h>
-#endif
 
 namespace WebCore {
 
@@ -51,11 +43,6 @@ using namespace HTMLNames;
 static const int weekDefaultStepBase = -259200000; // The first day of 1970-W01.
 static const int weekDefaultStep = 1;
 static const int weekStepScaleFactor = 604800000;
-
-PassOwnPtr<InputType> WeekInputType::create(HTMLInputElement* element)
-{
-    return adoptPtr(new WeekInputType(element));
-}
 
 void WeekInputType::attach()
 {
@@ -76,10 +63,10 @@ StepRange WeekInputType::createStepRange(AnyStepHandling anyStepHandling) const
 {
     DEFINE_STATIC_LOCAL(const StepRange::StepDescription, stepDescription, (weekDefaultStep, weekDefaultStepBase, weekStepScaleFactor, StepRange::ParsedStepValueShouldBeInteger));
 
-    const Decimal stepBase = parseToNumber(element()->fastGetAttribute(minAttr), weekDefaultStepBase);
-    const Decimal minimum = parseToNumber(element()->fastGetAttribute(minAttr), Decimal::fromDouble(DateComponents::minimumWeek()));
-    const Decimal maximum = parseToNumber(element()->fastGetAttribute(maxAttr), Decimal::fromDouble(DateComponents::maximumWeek()));
-    const Decimal step = StepRange::parseStep(anyStepHandling, stepDescription, element()->fastGetAttribute(stepAttr));
+    const Decimal stepBase = parseToNumber(element().fastGetAttribute(minAttr), weekDefaultStepBase);
+    const Decimal minimum = parseToNumber(element().fastGetAttribute(minAttr), Decimal::fromDouble(DateComponents::minimumWeek()));
+    const Decimal maximum = parseToNumber(element().fastGetAttribute(maxAttr), Decimal::fromDouble(DateComponents::maximumWeek()));
+    const Decimal step = StepRange::parseStep(anyStepHandling, stepDescription, element().fastGetAttribute(stepAttr));
     return StepRange(stepBase, minimum, maximum, step, stepDescription);
 }
 
@@ -100,32 +87,6 @@ bool WeekInputType::isWeekField() const
 {
     return true;
 }
-
-
-#if ENABLE(INPUT_MULTIPLE_FIELDS_UI)
-String WeekInputType::formatDateTimeFieldsState(const DateTimeFieldsState& dateTimeFieldsState) const
-{
-    if (!dateTimeFieldsState.hasYear() || !dateTimeFieldsState.hasWeekOfYear())
-        return emptyString();
-    return String::format("%04u-W%02u", dateTimeFieldsState.year(), dateTimeFieldsState.weekOfYear());
-}
-
-void WeekInputType::setupLayoutParameters(DateTimeEditElement::LayoutParameters& layoutParameters, const DateComponents&) const
-{
-    layoutParameters.dateTimeFormat = weekFormatInLDML();
-    layoutParameters.fallbackDateTimeFormat = "yyyy-'W'ww";
-    if (!parseToDateComponents(element()->fastGetAttribute(minAttr), &layoutParameters.minimum))
-        layoutParameters.minimum = DateComponents();
-    if (!parseToDateComponents(element()->fastGetAttribute(maxAttr), &layoutParameters.maximum))
-        layoutParameters.maximum = DateComponents();
-    layoutParameters.placeholderForYear = "----";
-}
-
-bool WeekInputType::isValidFormat(bool hasYear, bool hasMonth, bool hasWeek, bool hasDay, bool hasAMPM, bool hasHour, bool hasMinute, bool hasSecond) const
-{
-    return hasYear && hasWeek;
-}
-#endif
 
 } // namespace WebCore
 

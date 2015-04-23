@@ -30,10 +30,9 @@
 #endif
 #include "Filter.h"
 #include "GraphicsContext.h"
-#include "RenderTreeAsText.h"
 #include "TextStream.h"
 
-#include <wtf/Uint8ClampedArray.h>
+#include <runtime/Uint8ClampedArray.h>
 
 namespace WebCore {
 
@@ -183,6 +182,7 @@ static inline void computeArithmeticPixelsUnclamped(unsigned char* source, unsig
     }
 }
 
+#if !HAVE(ARM_NEON_INTRINSICS)
 static inline void arithmeticSoftware(unsigned char* source, unsigned char* destination, int pixelArrayLength, float k1, float k2, float k3, float k4)
 {
     float upperLimit = std::max(0.0f, k1) + std::max(0.0f, k2) + std::max(0.0f, k3) + k4;
@@ -214,6 +214,7 @@ static inline void arithmeticSoftware(unsigned char* source, unsigned char* dest
             computeArithmeticPixels<0, 0>(source, destination, pixelArrayLength, k1, k2, k3, k4);
     }
 }
+#endif
 
 inline void FEComposite::platformArithmeticSoftware(Uint8ClampedArray* source, Uint8ClampedArray* destination,
     float k1, float k2, float k3, float k4)

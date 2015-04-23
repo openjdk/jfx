@@ -27,19 +27,25 @@
 
 namespace WebCore {
 
-class CDATASection FINAL : public Text {
+class CDATASection final : public Text {
 public:
-    static PassRefPtr<CDATASection> create(Document*, const String&);
+    static PassRefPtr<CDATASection> create(Document&, const String&);
 
 private:
-    CDATASection(Document*, const String&);
+    CDATASection(Document&, const String&);
 
-    virtual String nodeName() const;
-    virtual NodeType nodeType() const;
-    virtual PassRefPtr<Node> cloneNode(bool deep);
-    virtual bool childTypeAllowed(NodeType) const;
-    virtual PassRefPtr<Text> virtualCreate(const String&);
+    virtual String nodeName() const override;
+    virtual NodeType nodeType() const override;
+    virtual PassRefPtr<Node> cloneNode(bool deep) override;
+    virtual bool childTypeAllowed(NodeType) const override;
+    virtual PassRefPtr<Text> virtualCreate(const String&) override;
 };
+
+inline bool isCDATASection(const Node& node) { return node.nodeType() == Node::CDATA_SECTION_NODE; }
+void isCDATASection(const CDATASection&); // Catch unnecessary runtime check of type known at compile time.
+void isCDATASection(const ContainerNode&); // Catch unnecessary runtime check of type known at compile time.
+
+NODE_TYPE_CASTS(CDATASection)
 
 } // namespace WebCore
 

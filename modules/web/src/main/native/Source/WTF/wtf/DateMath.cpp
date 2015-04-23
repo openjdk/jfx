@@ -102,22 +102,11 @@
 #include <sys/timeb.h>
 #endif
 
-#if OS(QNX)
-// qnx6 defines timegm in nbutil.h
-#include <nbutil.h>
-#endif
-
 using namespace WTF;
 
 namespace WTF {
 
 /* Constants */
-
-static const double minutesPerDay = 24.0 * 60.0;
-static const double secondsPerDay = 24.0 * 60.0 * 60.0;
-static const double secondsPerYear = 24.0 * 60.0 * 60.0 * 365.0;
-
-static const double usecPerSec = 1000000.0;
 
 static const double maxUnixTime = 2145859200.0; // 12/31/2037
 // ECMAScript asks not to support for a date of which total
@@ -185,12 +174,12 @@ double msToDays(double ms)
     return floor(ms / msPerDay);
 }
 
-static String twoDigitStringFromNumber(int number)
+static void appendTwoDigitNumber(StringBuilder& builder, int number)
 {
-    ASSERT(number >= 0 && number < 100);
-    if (number > 9)
-        return String::number(number);
-    return makeString("0", String::number(number));
+    ASSERT(number >= 0);
+    ASSERT(number < 100);
+    builder.append(static_cast<LChar>('0' + number / 10));
+    builder.append(static_cast<LChar>('0' + number % 10));
 }
 
 int msToYear(double ms)
@@ -374,7 +363,9 @@ int equivalentYearForDST(int year)
     return year;
 }
 
-int32_t calculateUTCOffset()
+#if !HAVE(TM_GMTOFF)
+
+static int32_t calculateUTCOffset()
 {
 #if OS(WINDOWS)
     TIME_ZONE_INFORMATION timeZoneInformation;
@@ -402,7 +393,7 @@ int32_t calculateUTCOffset()
 #if HAVE(TM_ZONE)
     localt.tm_zone = 0;
 #endif
-    
+
 #if HAVE(TIMEGM)
     time_t utcOffset = timegm(&localt) - mktime(&localt);
 #else
@@ -415,30 +406,51 @@ int32_t calculateUTCOffset()
 #endif
 }
 
+#if OS(WINDOWS)
+// Code taken from http://support.microsoft.com/kb/167296
+static void UnixTimeToFileTime(time_t t, LPFILETIME pft)
+{
+    // Note that LONGLONG is a 64-bit value
+    LONGLONG ll;
+
+    ll = Int32x32To64(t, 10000000) + 116444736000000000;
+    pft->dwLowDateTime = (DWORD)ll;
+    pft->dwHighDateTime = ll >> 32;
+}
+#endif
+
 /*
  * Get the DST offset for the time passed in.
  */
-static double calculateDSTOffsetSimple(double localTimeSeconds, double utcOffset)
+static double calculateDSTOffset(time_t localTime, double utcOffset)
 {
 #if OS(WINCE)
-    UNUSED_PARAM(localTimeSeconds);
+    UNUSED_PARAM(localTime);
     UNUSED_PARAM(utcOffset);
     return 0;
-#else
-    if (localTimeSeconds > maxUnixTime)
-        localTimeSeconds = maxUnixTime;
-    else if (localTimeSeconds < 0) // Go ahead a day to make localtime work (does not work with 0)
-        localTimeSeconds += secondsPerDay;
+#elif OS(WINDOWS)
+    FILETIME utcFileTime;
+    UnixTimeToFileTime(localTime, &utcFileTime);
+    SYSTEMTIME utcSystemTime, localSystemTime;
+    FileTimeToSystemTime(&utcFileTime, &utcSystemTime);
+    SystemTimeToTzSpecificLocalTime(0, &utcSystemTime, &localSystemTime);
 
-    //input is UTC so we have to shift back to local time to determine DST thus the + getUTCOffset()
-    double offsetTime = (localTimeSeconds * msPerSecond) + utcOffset;
+    double offsetTime = (localTime * msPerSecond) + utcOffset;
 
     // Offset from UTC but doesn't include DST obviously
     int offsetHour =  msToHours(offsetTime);
     int offsetMinute =  msToMinutes(offsetTime);
 
-    // FIXME: time_t has a potential problem in 2038
-    time_t localTime = static_cast<time_t>(localTimeSeconds);
+    double diff = ((localSystemTime.wHour - offsetHour) * secondsPerHour) + ((localSystemTime.wMinute - offsetMinute) * 60);
+
+    return diff * msPerSecond;
+#else
+    //input is UTC so we have to shift back to local time to determine DST thus the + getUTCOffset()
+    double offsetTime = (localTime * msPerSecond) + utcOffset;
+
+    // Offset from UTC but doesn't include DST obviously
+    int offsetHour =  msToHours(offsetTime);
+    int offsetMinute =  msToMinutes(offsetTime);
 
     tm localTM;
     getLocalTime(&localTime, &localTM);
@@ -452,10 +464,12 @@ static double calculateDSTOffsetSimple(double localTimeSeconds, double utcOffset
 #endif
 }
 
-// Get the DST offset, given a time in UTC
-double calculateDSTOffset(double ms, double utcOffset)
+#endif
+
+// Returns combined offset in millisecond (UTC + DST).
+LocalTimeOffset calculateLocalTimeOffset(double ms)
 {
-    // On Mac OS X, the call to localtime (see calculateDSTOffsetSimple) will return historically accurate
+    // On Mac OS X, the call to localtime (see calculateDSTOffset) will return historically accurate
     // DST information (e.g. New Zealand did not have DST from 1946 to 1974) however the JavaScript
     // standard explicitly dictates that historical information should not be considered when
     // determining DST. For this reason we shift away from years that localtime can handle but would
@@ -471,7 +485,23 @@ double calculateDSTOffset(double ms, double utcOffset)
         ms = (day * msPerDay) + msToMilliseconds(ms);
     }
 
-    return calculateDSTOffsetSimple(ms / msPerSecond, utcOffset);
+    double localTimeSeconds = ms / msPerSecond;
+    if (localTimeSeconds > maxUnixTime)
+        localTimeSeconds = maxUnixTime;
+    else if (localTimeSeconds < 0) // Go ahead a day to make localtime work (does not work with 0).
+        localTimeSeconds += secondsPerDay;
+    // FIXME: time_t has a potential problem in 2038.
+    time_t localTime = static_cast<time_t>(localTimeSeconds);
+
+#if HAVE(TM_GMTOFF)
+    tm localTM;
+    getLocalTime(&localTime, &localTM);
+    return LocalTimeOffset(localTM.tm_isdst, localTM.tm_gmtoff * msPerSecond);
+#else
+    double utcOffset = calculateUTCOffset();
+    double dstOffset = calculateDSTOffset(localTime, utcOffset);
+    return LocalTimeOffset(dstOffset, utcOffset + dstOffset);
+#endif
 }
 
 void initializeDates()
@@ -1062,11 +1092,9 @@ double parseDateFromNullTerminatedCharacters(const char* dateString)
         return std::numeric_limits<double>::quiet_NaN();
 
     // fall back to local timezone
-    if (!haveTZ) {
-        double utcOffset = calculateUTCOffset();
-        double dstOffset = calculateDSTOffset(ms, utcOffset);
-        offset = (utcOffset + dstOffset) / msPerMinute;
-    }
+    if (!haveTZ)
+        offset = calculateLocalTimeOffset(ms).offset / msPerMinute;
+
     return ms - (offset * msPerMinute);
 }
 
@@ -1092,17 +1120,17 @@ String makeRFC2822DateString(unsigned dayOfWeek, unsigned day, unsigned month, u
     stringBuilder.appendNumber(year);
     stringBuilder.append(' ');
 
-    stringBuilder.append(twoDigitStringFromNumber(hours));
+    appendTwoDigitNumber(stringBuilder, hours);
     stringBuilder.append(':');
-    stringBuilder.append(twoDigitStringFromNumber(minutes));
+    appendTwoDigitNumber(stringBuilder, minutes);
     stringBuilder.append(':');
-    stringBuilder.append(twoDigitStringFromNumber(seconds));
+    appendTwoDigitNumber(stringBuilder, seconds);
     stringBuilder.append(' ');
 
     stringBuilder.append(utcOffset > 0 ? '+' : '-');
     int absoluteUTCOffset = abs(utcOffset);
-    stringBuilder.append(twoDigitStringFromNumber(absoluteUTCOffset / 60));
-    stringBuilder.append(twoDigitStringFromNumber(absoluteUTCOffset % 60));
+    appendTwoDigitNumber(stringBuilder, absoluteUTCOffset / 60);
+    appendTwoDigitNumber(stringBuilder, absoluteUTCOffset % 60);
 
     return stringBuilder.toString();
 }

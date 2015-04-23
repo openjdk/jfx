@@ -28,6 +28,7 @@
 
 #include "DFGDoubleFormatState.h"
 #include "DFGVariableAccessData.h"
+#include "DFGVariableAccessDataDump.h"
 #include "SpeculatedType.h"
 
 namespace JSC { namespace DFG {
@@ -47,6 +48,20 @@ public:
         m_variables.append(variable);
     }
     
+    VariableAccessData* someVariable() const
+    {
+        if (m_variables.isEmpty())
+            return 0;
+        return m_variables[0]->find();
+    }
+    
+    FlushFormat flushFormat() const
+    {
+        if (VariableAccessData* variable = someVariable())
+            return variable->flushFormat();
+        return DeadFlush;
+    }
+    
     bool mergeShouldNeverUnbox(bool shouldNeverUnbox)
     {
         return checkAndSet(m_shouldNeverUnbox, m_shouldNeverUnbox | shouldNeverUnbox);
@@ -56,17 +71,19 @@ public:
     {
         bool changed = false;
         for (unsigned i = 0; i < m_variables.size(); ++i) {
-            changed |= mergeSpeculation(m_prediction, m_variables[i]->argumentAwarePrediction());
-            changed |= mergeDoubleFormatState(m_doubleFormatState, m_variables[i]->doubleFormatState());
-            changed |= mergeShouldNeverUnbox(m_variables[i]->shouldNeverUnbox());
+            VariableAccessData* variable = m_variables[i]->find();
+            changed |= mergeSpeculation(m_prediction, variable->argumentAwarePrediction());
+            changed |= mergeDoubleFormatState(m_doubleFormatState, variable->doubleFormatState());
+            changed |= mergeShouldNeverUnbox(variable->shouldNeverUnbox());
         }
         if (!changed)
             return false;
         changed = false;
         for (unsigned i = 0; i < m_variables.size(); ++i) {
-            changed |= m_variables[i]->mergeArgumentAwarePrediction(m_prediction);
-            changed |= m_variables[i]->mergeDoubleFormatState(m_doubleFormatState);
-            changed |= m_variables[i]->mergeShouldNeverUnbox(m_shouldNeverUnbox);
+            VariableAccessData* variable = m_variables[i]->find();
+            changed |= variable->mergeArgumentAwarePrediction(m_prediction);
+            changed |= variable->mergeDoubleFormatState(m_doubleFormatState);
+            changed |= variable->mergeShouldNeverUnbox(m_shouldNeverUnbox);
         }
         return changed;
     }
@@ -74,13 +91,17 @@ public:
     bool mergeArgumentUnboxingAwareness()
     {
         bool changed = false;
-        for (unsigned i = 0; i < m_variables.size(); ++i)
-            changed |= checkAndSet(m_isProfitableToUnbox, m_isProfitableToUnbox | m_variables[i]->isProfitableToUnbox());
+        for (unsigned i = 0; i < m_variables.size(); ++i) {
+            VariableAccessData* variable = m_variables[i]->find();
+            changed |= checkAndSet(m_isProfitableToUnbox, m_isProfitableToUnbox | variable->isProfitableToUnbox());
+        }
         if (!changed)
             return false;
         changed = false;
-        for (unsigned i = 0; i < m_variables.size(); ++i)
-            changed |= m_variables[i]->mergeIsProfitableToUnbox(m_isProfitableToUnbox);
+        for (unsigned i = 0; i < m_variables.size(); ++i) {
+            VariableAccessData* variable = m_variables[i]->find();
+            changed |= variable->mergeIsProfitableToUnbox(m_isProfitableToUnbox);
+        }
         return changed;
     }
     
@@ -91,6 +112,23 @@ public:
     bool shouldUseDoubleFormat() const
     {
         return doubleFormatState() == UsingDoubleFormat && shouldUnboxIfPossible();
+    }
+    
+    void dump(PrintStream& out, Graph* graph)
+    {
+        for (unsigned i = 0; i < m_variables.size(); ++i) {
+            VariableAccessData* variable = m_variables[i]->find();
+            VirtualRegister operand = variable->local();
+
+            if (i)
+                out.print(" ");
+
+            if (operand.isArgument())
+                out.print("arg", operand.toArgument(), "(", VariableAccessDataDump(*graph, variable), ")");
+            else
+                out.print("r", operand.toLocal(), "(", VariableAccessDataDump(*graph, variable), ")");
+        }
+        out.print("\n");
     }
     
 private:

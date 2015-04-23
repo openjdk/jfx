@@ -31,61 +31,68 @@
 #include "HTMLCanvasElement.h"
 #include "InspectorCanvasInstrumentation.h"
 #include "JSCanvasRenderingContext2D.h"
-#include "ScriptObject.h"
+#include <bindings/ScriptObject.h>
+#include <wtf/GetPtr.h>
+
 #if ENABLE(WEBGL)
+#include "JSDictionary.h"
 #include "JSWebGLRenderingContext.h"
 #include "WebGLContextAttributes.h"
 #endif
-#include <wtf/GetPtr.h>
 
 using namespace JSC;
 
 namespace WebCore {
 
+#if ENABLE(WEBGL)
+static void get3DContextAttributes(ExecState* exec, RefPtr<CanvasContextAttributes>& attrs)
+{
+    JSValue initializerValue = exec->argument(1);
+    if (initializerValue.isUndefinedOrNull())
+        return;
+    
+    JSObject* initializerObject = initializerValue.toObject(exec);
+    JSDictionary dictionary(exec, initializerObject);
+    
+    GraphicsContext3D::Attributes graphicsAttrs;
+    
+    dictionary.tryGetProperty("alpha", graphicsAttrs.alpha);
+    dictionary.tryGetProperty("depth", graphicsAttrs.depth);
+    dictionary.tryGetProperty("stencil", graphicsAttrs.stencil);
+    dictionary.tryGetProperty("antialias", graphicsAttrs.antialias);
+    dictionary.tryGetProperty("premultipliedAlpha", graphicsAttrs.premultipliedAlpha);
+    dictionary.tryGetProperty("preserveDrawingBuffer", graphicsAttrs.preserveDrawingBuffer);
+    
+    attrs = WebGLContextAttributes::create(graphicsAttrs);
+}
+#endif
+
 JSValue JSHTMLCanvasElement::getContext(ExecState* exec)
 {
-    HTMLCanvasElement* canvas = static_cast<HTMLCanvasElement*>(impl());
+    HTMLCanvasElement& canvas = impl();
     const String& contextId = exec->argument(0).toString(exec)->value(exec);
+    
     RefPtr<CanvasContextAttributes> attrs;
 #if ENABLE(WEBGL)
-    if (contextId == "experimental-webgl" || contextId == "webkit-3d") {
-        attrs = WebGLContextAttributes::create();
-        WebGLContextAttributes* webGLAttrs = static_cast<WebGLContextAttributes*>(attrs.get());
-        if (exec->argumentCount() > 1 && exec->argument(1).isObject()) {
-            JSObject* jsAttrs = exec->argument(1).getObject();
-            Identifier alpha(exec, "alpha");
-            if (jsAttrs->hasProperty(exec, alpha))
-                webGLAttrs->setAlpha(jsAttrs->get(exec, alpha).toBoolean(exec));
-            Identifier depth(exec, "depth");
-            if (jsAttrs->hasProperty(exec, depth))
-                webGLAttrs->setDepth(jsAttrs->get(exec, depth).toBoolean(exec));
-            Identifier stencil(exec, "stencil");
-            if (jsAttrs->hasProperty(exec, stencil))
-                webGLAttrs->setStencil(jsAttrs->get(exec, stencil).toBoolean(exec));
-            Identifier antialias(exec, "antialias");
-            if (jsAttrs->hasProperty(exec, antialias))
-                webGLAttrs->setAntialias(jsAttrs->get(exec, antialias).toBoolean(exec));
-            Identifier premultipliedAlpha(exec, "premultipliedAlpha");
-            if (jsAttrs->hasProperty(exec, premultipliedAlpha))
-                webGLAttrs->setPremultipliedAlpha(jsAttrs->get(exec, premultipliedAlpha).toBoolean(exec));
-            Identifier preserveDrawingBuffer(exec, "preserveDrawingBuffer");
-            if (jsAttrs->hasProperty(exec, preserveDrawingBuffer))
-                webGLAttrs->setPreserveDrawingBuffer(jsAttrs->get(exec, preserveDrawingBuffer).toBoolean(exec));
-        }
+    if (HTMLCanvasElement::is3dType(contextId)) {
+        get3DContextAttributes(exec, attrs);
+        if (exec->hadException())
+            return jsUndefined();
     }
 #endif
-    CanvasRenderingContext* context = canvas->getContext(contextId, attrs.get());
+    
+    CanvasRenderingContext* context = canvas.getContext(contextId, attrs.get());
     if (!context)
         return jsNull();
     JSValue jsValue = toJS(exec, globalObject(), WTF::getPtr(context));
-    if (InspectorInstrumentation::canvasAgentEnabled(canvas->document())) {
-        ScriptObject contextObject(exec, jsValue.getObject());
-        ScriptObject wrapped;
+    if (InspectorInstrumentation::canvasAgentEnabled(&canvas.document())) {
+        Deprecated::ScriptObject contextObject(exec, jsValue.getObject());
+        Deprecated::ScriptObject wrapped;
         if (context->is2d())
-            wrapped = InspectorInstrumentation::wrapCanvas2DRenderingContextForInstrumentation(canvas->document(), contextObject);
+            wrapped = InspectorInstrumentation::wrapCanvas2DRenderingContextForInstrumentation(&canvas.document(), contextObject);
 #if ENABLE(WEBGL)
         else if (context->is3d())
-            wrapped = InspectorInstrumentation::wrapWebGLRenderingContextForInstrumentation(canvas->document(), contextObject);
+            wrapped = InspectorInstrumentation::wrapWebGLRenderingContextForInstrumentation(&canvas.document(), contextObject);
 #endif
         if (!wrapped.hasNoValue())
             return wrapped.jsValue();
@@ -93,23 +100,44 @@ JSValue JSHTMLCanvasElement::getContext(ExecState* exec)
     return jsValue;
 }
 
+JSValue JSHTMLCanvasElement::probablySupportsContext(ExecState* exec)
+{
+    HTMLCanvasElement& canvas = impl();
+    if (!exec->argumentCount())
+        return jsBoolean(false);
+    const String& contextId = exec->uncheckedArgument(0).toString(exec)->value(exec);
+    if (exec->hadException())
+        return jsUndefined();
+    
+    RefPtr<CanvasContextAttributes> attrs;
+#if ENABLE(WEBGL)
+    if (HTMLCanvasElement::is3dType(contextId)) {
+        get3DContextAttributes(exec, attrs);
+        if (exec->hadException())
+            return jsUndefined();
+    }
+#endif
+    
+    return jsBoolean(canvas.probablySupportsContext(contextId, attrs.get()));
+}
+
 JSValue JSHTMLCanvasElement::toDataURL(ExecState* exec)
 {
-    HTMLCanvasElement* canvas = static_cast<HTMLCanvasElement*>(impl());
+    HTMLCanvasElement& canvas = impl();
     ExceptionCode ec = 0;
 
     const String& type = valueToStringWithUndefinedOrNullCheck(exec, exec->argument(0));
     double quality;
     double* qualityPtr = 0;
     if (exec->argumentCount() > 1) {
-        JSValue v = exec->argument(1);
+        JSValue v = exec->uncheckedArgument(1);
         if (v.isNumber()) {
             quality = v.toNumber(exec);
             qualityPtr = &quality;
         }
     }
 
-    JSValue result = JSC::jsString(exec, canvas->toDataURL(type, qualityPtr, ec));
+    JSValue result = JSC::jsString(exec, canvas.toDataURL(type, qualityPtr, ec));
     setDOMException(exec, ec);
     return result;
 }

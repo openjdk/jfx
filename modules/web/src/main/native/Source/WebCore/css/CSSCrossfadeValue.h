@@ -37,27 +37,27 @@ namespace WebCore {
 
 class CachedImage;
 class CrossfadeSubimageObserverProxy;
-class RenderObject;
+class RenderElement;
 class Document;
 
 class CSSCrossfadeValue : public CSSImageGeneratorValue {
     friend class CrossfadeSubimageObserverProxy;
 public:
-    static PassRefPtr<CSSCrossfadeValue> create(PassRefPtr<CSSValue> fromValue, PassRefPtr<CSSValue> toValue)
+    static PassRef<CSSCrossfadeValue> create(PassRefPtr<CSSValue> fromValue, PassRefPtr<CSSValue> toValue)
     {
-        return adoptRef(new CSSCrossfadeValue(fromValue, toValue));
+        return adoptRef(*new CSSCrossfadeValue(fromValue, toValue));
     }
 
     ~CSSCrossfadeValue();
 
-    String customCssText() const;
+    String customCSSText() const;
 
-    PassRefPtr<Image> image(RenderObject*, const IntSize&);
+    PassRefPtr<Image> image(RenderElement*, const IntSize&);
     bool isFixedSize() const { return true; }
-    IntSize fixedSize(const RenderObject*);
+    IntSize fixedSize(const RenderElement*);
 
     bool isPending() const;
-    bool knownToBeOpaque(const RenderObject*) const;
+    bool knownToBeOpaque(const RenderElement*) const;
 
     void loadSubimages(CachedResourceLoader*);
 
@@ -65,7 +65,11 @@ public:
 
     bool hasFailedOrCanceledSubresources() const;
 
+    PassRefPtr<CSSCrossfadeValue> blend(const CSSCrossfadeValue&, double) const;
+
     bool equals(const CSSCrossfadeValue&) const;
+
+    bool equalInputImages(const CSSCrossfadeValue&) const;
 
 private:
     CSSCrossfadeValue(PassRefPtr<CSSValue> fromValue, PassRefPtr<CSSValue> toValue)
@@ -79,13 +83,13 @@ private:
     class CrossfadeSubimageObserverProxy : public CachedImageClient {
     public:
         CrossfadeSubimageObserverProxy(CSSCrossfadeValue* ownerValue)
-        : m_ownerValue(ownerValue)
+            : m_ownerValue(ownerValue)
             , m_ready(false)
         {
         }
 
         virtual ~CrossfadeSubimageObserverProxy() { }
-        virtual void imageChanged(CachedImage*, const IntRect* = 0) OVERRIDE;
+        virtual void imageChanged(CachedImage*, const IntRect* = 0) override;
         void setReady(bool ready) { m_ready = ready; }
     private:
         CSSCrossfadeValue* m_ownerValue;
@@ -105,6 +109,8 @@ private:
 
     CrossfadeSubimageObserverProxy m_crossfadeSubimageObserver;
 };
+
+CSS_VALUE_TYPE_CASTS(CSSCrossfadeValue, isCrossfadeValue())
 
 } // namespace WebCore
 

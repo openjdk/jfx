@@ -22,23 +22,21 @@
 
 #if ENABLE(SVG_FONTS)
 #include "SimpleFontData.h"
-#include "SVGFontFaceElement.h"
 
 namespace WebCore {
 
+class SVGFontElement;
+class SVGFontFaceElement;
+
 class SVGFontData : public SimpleFontData::AdditionalFontData {
 public:
-    static PassOwnPtr<SVGFontData> create(SVGFontFaceElement* element)
-    {
-        return adoptPtr(new SVGFontData(element));
-    }
-
+    explicit SVGFontData(SVGFontFaceElement*);
     virtual ~SVGFontData() { }
 
-    virtual void initializeFontData(SimpleFontData*, float fontSize);
-    virtual float widthForSVGGlyph(Glyph, float fontSize) const;
-    virtual bool fillSVGGlyphPage(GlyphPage*, unsigned offset, unsigned length, UChar* buffer, unsigned bufferLength, const SimpleFontData*) const;
-    virtual bool applySVGGlyphSelection(WidthIterator&, GlyphData&, bool mirror, int currentCharacter, unsigned& advanceLength) const;
+    virtual void initializeFontData(SimpleFontData*, float fontSize) override;
+    virtual float widthForSVGGlyph(Glyph, float fontSize) const override;
+    virtual bool fillSVGGlyphPage(GlyphPage*, unsigned offset, unsigned length, UChar* buffer, unsigned bufferLength, const SimpleFontData*) const override;
+    virtual bool applySVGGlyphSelection(WidthIterator&, GlyphData&, bool mirror, int currentCharacter, unsigned& advanceLength) const override;
 
     SVGFontFaceElement* svgFontFaceElement() const { return m_svgFontFaceElement; }
 
@@ -51,8 +49,6 @@ public:
     float verticalAdvanceY() const { return m_verticalAdvanceY; }
 
 private:
-    SVGFontData(SVGFontFaceElement*);
-
     bool fillBMPGlyphs(SVGFontElement*, GlyphPage* , unsigned offset, unsigned length, UChar* buffer, const SimpleFontData*) const;
     bool fillNonBMPGlyphs(SVGFontElement*, GlyphPage* , unsigned offset, unsigned length, UChar* buffer, const SimpleFontData*) const;
 

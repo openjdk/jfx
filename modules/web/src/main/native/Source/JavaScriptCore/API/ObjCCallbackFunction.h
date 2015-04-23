@@ -34,35 +34,45 @@
 #if defined(__OBJC__)
 JSObjectRef objCCallbackFunctionForMethod(JSContext *, Class, Protocol *, BOOL isInstanceMethod, SEL, const char* types);
 JSObjectRef objCCallbackFunctionForBlock(JSContext *, id);
+JSObjectRef objCCallbackFunctionForInit(JSContext *, Class, Protocol *, SEL, const char* types);
 
-id tryUnwrapBlock(JSObjectRef);
+id tryUnwrapConstructor(JSObjectRef);
 #endif
 
 namespace JSC {
 
 class ObjCCallbackFunctionImpl;
 
-class ObjCCallbackFunction : public JSCallbackFunction {
+class ObjCCallbackFunction : public InternalFunction {
+    friend struct APICallbackFunction;
 public:
-    typedef JSCallbackFunction Base;
+    typedef InternalFunction Base;
 
-    static ObjCCallbackFunction* create(ExecState*, JSGlobalObject*, const String& name, PassOwnPtr<ObjCCallbackFunctionImpl>);
+    static ObjCCallbackFunction* create(VM&, JSGlobalObject*, const String& name, PassOwnPtr<ObjCCallbackFunctionImpl>);
     static void destroy(JSCell*);
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
         ASSERT(globalObject);
-        return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), &s_info);
+        return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
     }
 
-    static JS_EXPORTDATA const ClassInfo s_info;
+    DECLARE_EXPORT_INFO;
 
-    ObjCCallbackFunctionImpl* impl() { return m_impl.get(); }
+    ObjCCallbackFunctionImpl* impl() const { return m_impl.get(); }
 
 protected:
-    ObjCCallbackFunction(JSGlobalObject*, JSObjectCallAsFunctionCallback, PassOwnPtr<ObjCCallbackFunctionImpl>);
+    ObjCCallbackFunction(VM&, JSGlobalObject*, JSObjectCallAsFunctionCallback, JSObjectCallAsConstructorCallback, PassOwnPtr<ObjCCallbackFunctionImpl>);
 
 private:
+    static CallType getCallData(JSCell*, CallData&);
+    static ConstructType getConstructData(JSCell*, ConstructData&);
+
+    JSObjectCallAsFunctionCallback functionCallback() { return m_functionCallback; }
+    JSObjectCallAsConstructorCallback constructCallback() { return m_constructCallback; }
+
+    JSObjectCallAsFunctionCallback m_functionCallback;
+    JSObjectCallAsConstructorCallback m_constructCallback;
     OwnPtr<ObjCCallbackFunctionImpl> m_impl;
 };
 

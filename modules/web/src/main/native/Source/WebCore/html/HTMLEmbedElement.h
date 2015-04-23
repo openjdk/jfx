@@ -27,35 +27,32 @@
 
 namespace WebCore {
 
-class HTMLEmbedElement FINAL : public HTMLPlugInImageElement {
+class HTMLEmbedElement final : public HTMLPlugInImageElement {
 public:
-    static PassRefPtr<HTMLEmbedElement> create(const QualifiedName&, Document*, bool createdByParser);
+    static PassRefPtr<HTMLEmbedElement> create(const QualifiedName&, Document&, bool createdByParser);
 
 private:
-    HTMLEmbedElement(const QualifiedName&, Document*, bool createdByParser);
+    HTMLEmbedElement(const QualifiedName&, Document&, bool createdByParser);
 
-    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
-    virtual bool isPresentationAttribute(const QualifiedName&) const OVERRIDE;
-    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStylePropertySet*) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
+    virtual bool isPresentationAttribute(const QualifiedName&) const override;
+    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStyleProperties&) override;
 
-    virtual bool rendererIsNeeded(const NodeRenderingContext&);
+    virtual bool rendererIsNeeded(const RenderStyle&) override;
 
-    virtual bool isURLAttribute(const Attribute&) const OVERRIDE;
-    virtual const AtomicString& imageSourceURL() const OVERRIDE;
+    virtual bool isURLAttribute(const Attribute&) const override;
+    virtual const AtomicString& imageSourceURL() const override;
 
-    virtual RenderWidget* renderWidgetForJSBindings() const;
+    virtual RenderWidget* renderWidgetForJSBindings() const override;
 
-    virtual void updateWidget(PluginCreationOption);
+    virtual void updateWidget(PluginCreationOption) override;
 
-    virtual void addSubresourceAttributeURLs(ListHashSet<KURL>&) const;
+    virtual void addSubresourceAttributeURLs(ListHashSet<URL>&) const override;
 
     void parametersForPlugin(Vector<String>& paramNames, Vector<String>& paramValues);
-
-#if ENABLE(MICRODATA)
-    virtual String itemValueText() const OVERRIDE;
-    virtual void setItemValueText(const String&, ExceptionCode&) OVERRIDE;
-#endif
 };
+
+NODE_TYPE_CASTS(HTMLEmbedElement)
 
 }
 
