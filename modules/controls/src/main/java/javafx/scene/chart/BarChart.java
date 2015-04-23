@@ -241,6 +241,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             dataRemoveTimeline.play();
         } else {
             processDataRemove(series, item);
+            removeDataItemFromDisplay(series, item);
         }
     }
 
