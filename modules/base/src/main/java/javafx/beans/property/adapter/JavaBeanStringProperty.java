@@ -26,6 +26,7 @@
 package javafx.beans.property.adapter;
 
 import com.sun.javafx.binding.ExpressionHelper;
+import com.sun.javafx.property.adapter.Disposer;
 import com.sun.javafx.property.adapter.PropertyDescriptor;
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.StringProperty;
@@ -34,7 +35,6 @@ import javafx.beans.value.ObservableValue;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.UndeclaredThrowableException;
-import sun.misc.Cleaner;
 
 import java.security.AccessController;
 import java.security.AccessControlContext;
@@ -77,7 +77,7 @@ public final class JavaBeanStringProperty extends StringProperty implements Java
         this.descriptor = descriptor;
         this.listener = descriptor.new Listener<String>(bean, this);
         descriptor.addListener(listener);
-        Cleaner.create(this, new DescriptorListenerCleaner(descriptor, listener));
+        Disposer.addRecord(this, new DescriptorListenerCleaner(descriptor, listener));
     }
 
     /**
