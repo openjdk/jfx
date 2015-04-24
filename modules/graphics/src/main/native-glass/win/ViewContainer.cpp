@@ -645,6 +645,35 @@ void ViewContainer::HandleViewTypedEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
 
                 default:     comp[1] = static_cast<wchar_t>(m_deadKeyWParam); break;
             }
+        } else if (HIWORD(m_kbLayout) == 0xF0B1 && LOBYTE(m_idLang) == LANG_LATVIAN) {
+            // The Latvian (Standard) keyboard, available in Win 8.1 and later.
+            switch (m_deadKeyWParam) {
+                case L'\'':
+                case L'"':
+                    // Note: " is Shift-' and automatically capitalizes the typed
+                    // character in native Win 8.1 apps. We don't do this, so the user
+                    // needs to keep the Shift key down. This is probably the common use
+                    // case anyway.
+                    switch (wParam) {
+                        case L'A': case L'a':
+                        case L'E': case L'e':
+                        case L'I': case L'i':
+                        case L'U': case L'u':
+                             comp[1] = 0x304; break; // macron
+                        case L'C': case L'c':
+                        case L'S': case L's':
+                        case L'Z': case L'z':
+                             comp[1] = 0x30c; break; // caron
+                        case L'G': case L'g':
+                        case L'K': case L'k':
+                        case L'L': case L'l':
+                        case L'N': case L'n':
+                             comp[1] = 0x327; break; // cedilla
+                        default:
+                             comp[1] = static_cast<wchar_t>(m_deadKeyWParam); break;
+                    } break;
+                default:     comp[1] = static_cast<wchar_t>(m_deadKeyWParam); break;
+            }
         } else {
             switch (m_deadKeyWParam) {
                 case L'`':   comp[1] = 0x300; break;
@@ -658,6 +687,7 @@ void ViewContainer::HandleViewTypedEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
                 case 0x02D9: comp[1] = 0x307; break;
                 case L'"':   comp[1] = 0x308; break;
                 case 0x00A8: comp[1] = 0x308; break;
+                case 0x00B0: comp[1] = 0x30A; break;
                 case 0x02DA: comp[1] = 0x30A; break;
                 case 0x02DD: comp[1] = 0x30B; break;
                 case 0x02C7: comp[1] = 0x30C; break;
