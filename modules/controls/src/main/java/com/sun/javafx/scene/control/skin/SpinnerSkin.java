@@ -25,12 +25,17 @@
 package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.scene.control.behavior.SpinnerBehavior;
+import com.sun.javafx.scene.traversal.Algorithm;
+import com.sun.javafx.scene.traversal.Direction;
+import com.sun.javafx.scene.traversal.ParentTraversalEngine;
+import com.sun.javafx.scene.traversal.TraversalContext;
 import javafx.collections.ListChangeListener;
 import javafx.css.PseudoClass;
 import javafx.geometry.HPos;
 import javafx.geometry.VPos;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleRole;
+import javafx.scene.Node;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
@@ -177,6 +182,24 @@ public class SpinnerSkin<T> extends BehaviorSkinBase<Spinner<T>, SpinnerBehavior
         // end of comboBox-esque fixes
 
         textField.focusTraversableProperty().bind(spinner.editableProperty());
+
+
+        // Following code borrowed from ComboBoxPopupControl, to resolve the
+        // issue initially identified in RT-36902, but specifically (for Spinner)
+        // identified in RT-40625
+        spinner.setImpl_traversalEngine(new ParentTraversalEngine(spinner, new Algorithm() {
+            @Override public Node select(Node owner, Direction dir, TraversalContext context) {
+                return null;
+            }
+
+            @Override public Node selectFirst(TraversalContext context) {
+                return null;
+            }
+
+            @Override public Node selectLast(TraversalContext context) {
+                return null;
+            }
+        }));
     }
 
     private void updateStyleClass() {
