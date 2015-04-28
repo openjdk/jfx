@@ -335,7 +335,7 @@ public class HBox extends Pane {
 
     /**
      * Whether or not resizable children will be resized to fill the full height of the hbox
-     * or be kept to their preferred height and aligned according to the <code>alignment</code>
+     * or be resized to their preferred height and aligned according to the <code>alignment</code>
      * vpos value.   Note that if the hbox vertical alignment is set to BASELINE, then this
      * property will be ignored and children will be resized to their preferred heights.
      */

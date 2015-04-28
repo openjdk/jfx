@@ -498,7 +498,7 @@ public class GridPane extends Pane {
     /**
      * Sets the horizontal fill policy for the child when contained by a gridpane.
      * If set, the gridpane will use the policy to determine whether node
-     * should be expanded to fill the column or kept to it's preferred width.
+     * should be expanded to fill the column or resized to its preferred width.
      * Setting the value to null will remove the constraint.
      * If not value is specified for the node nor for the column, the default value is true.
      * @param child the child node of a gridpane
@@ -522,7 +522,7 @@ public class GridPane extends Pane {
     /**
      * Sets the vertical fill policy for the child when contained by a gridpane.
      * If set, the gridpane will use the policy to determine whether node
-     * should be expanded to fill the row or kept to it's preferred height.
+     * should be expanded to fill the row or resized to its preferred height.
      * Setting the value to null will remove the constraint.
      * If not value is specified for the node nor for the row, the default value is true.
      * @param child the child node of a gridpane
