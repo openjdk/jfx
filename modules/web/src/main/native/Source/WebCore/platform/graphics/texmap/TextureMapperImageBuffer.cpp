@@ -27,7 +27,7 @@
 namespace WebCore {
 
 #if PLATFORM(JAVA)
-static const int s_maximumAllowedImageBufferDimension = 2048;
+static const int s_maximumAllowedImageBufferDimension = 512;
 #else
 static const int s_maximumAllowedImageBufferDimension = 4096;
 #endif

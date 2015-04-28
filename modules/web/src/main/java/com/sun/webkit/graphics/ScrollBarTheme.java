@@ -63,4 +63,6 @@ public abstract class ScrollBarTheme extends Ref {
     protected abstract int getTrackPosition(int w, int h, int orientation);
 
     protected abstract int getTrackLength(int w, int h, int orientation);
+    
+    public abstract WCSize getWidgetSize(Ref widget);
 }

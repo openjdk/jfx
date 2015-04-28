@@ -58,4 +58,6 @@ public abstract class RenderTheme extends Ref {
     protected abstract int getRadioButtonSize();
 
     protected abstract int getSelectionColor(int index);
+    
+    public abstract WCSize getWidgetSize(Ref widget);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,7 @@
 
 package com.sun.javafx.webkit.prism;
 
-import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.prism.CompositeMode;
 import com.sun.prism.Graphics;
 import com.sun.prism.GraphicsPipeline;
 import com.sun.prism.Image;
@@ -35,7 +35,8 @@ import com.sun.prism.RTTexture;
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.ResourceFactoryListener;
 import com.sun.prism.Texture;
-import com.sun.webkit.Invoker;
+import com.sun.prism.paint.Color;
+import com.sun.prism.paint.Paint;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
@@ -66,7 +67,7 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
     @Override
     Graphics getGraphics() {
         Graphics g = getTexture().createGraphics();
-        g.scale(pixelScale, pixelScale);
+        g.transform(PrismGraphicsManager.getPixelScaleTransform());
         return g;
     }
 
@@ -86,13 +87,13 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
         }
         return txt;
     }
-
+    
     @Override
     void draw(Graphics g,
             int dstx1, int dsty1, int dstx2, int dsty2,
             int srcx1, int srcy1, int srcx2, int srcy2)
     {
-        if (txt == null) {
+        if (txt == null && g.getCompositeMode() == CompositeMode.SRC_OVER) {
             return;
         }
         if (g instanceof PrinterGraphics) {
@@ -112,10 +113,18 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
                     0, 0, w, h);
             t.dispose();
         } else {
-            g.drawTexture(getTexture(),
+            if (txt == null) {
+                Paint p = g.getPaint();
+                g.setPaint(Color.TRANSPARENT);
+                g.fillQuad(dstx1, dsty1, dstx2, dsty2);
+                g.setPaint(p);
+
+            } else {
+                g.drawTexture(txt,
                     dstx1, dsty1, dstx2, dsty2,
                     srcx1 * pixelScale, srcy1 * pixelScale,
                     srcx2 * pixelScale, srcy2 * pixelScale);
+            }
         }
     }
 
@@ -220,4 +229,9 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
 
     @Override public void factoryReleased() {
     }
+    
+    @Override
+    public float getPixelScale() {
+        return pixelScale;
+    }    
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -210,9 +210,9 @@ public final class WCGraphicsPerfLogger extends WCGraphicsContext {
     }
 
     @Override
-    public void drawPolygon(float [] pnts, boolean shouldAntialias) {
+    public void drawPolygon(WCPath path, boolean shouldAntialias) {
         logger.resumeCount("DRAWPOLYGON");
-        gc.drawPolygon(pnts, shouldAntialias);
+        gc.drawPolygon(path, shouldAntialias);
         logger.suspendCount("DRAWPOLYGON");
     }
 

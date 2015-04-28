@@ -45,6 +45,7 @@ import com.sun.javafx.webkit.theme.RenderThemeImpl.Pool;
 import com.sun.javafx.webkit.theme.RenderThemeImpl.ViewListener;
 import com.sun.javafx.webkit.theme.RenderThemeImpl.Widget;
 import com.sun.javafx.webkit.theme.RenderThemeImpl.WidgetType;
+import com.sun.webkit.graphics.WCSize;
 
 public final class ScrollBarThemeImpl extends ScrollBarTheme {
 
@@ -202,6 +203,14 @@ public final class ScrollBarThemeImpl extends ScrollBarTheme {
         g.translate(x, y);
         Renderer.getRenderer().render(sb, g);
         g.restoreState();
+    }
+    
+    @Override public WCSize getWidgetSize(Ref widget) {
+        ScrollBar sb = (ScrollBar)((ScrollBarRef)widget).asControl();
+        if (sb != null) {
+            return new WCSize((float)sb.getWidth(), (float)sb.getHeight());
+        }
+        return new WCSize(0, 0);
     }
 
     @Override protected int hitTest(int w, int h, int orientation, int value,

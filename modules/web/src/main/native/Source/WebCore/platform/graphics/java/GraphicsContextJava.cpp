@@ -194,12 +194,17 @@ void GraphicsContext::drawConvexPolygon(size_t npoints, const FloatPoint* points
     if (paintingDisabled() || npoints <= 1)
         return;
 
-    platformContext()->rq().freeSpace(12 + npoints*8)
-    << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWPOLYGON
-    << (jint)((shouldAntialias)?-1:0) << (jint)(npoints*2);
-    for (int i = 0; i < npoints; i++) {
-        platformContext()->rq() << points[i].x() << points[i].y();
+    Path path;
+    path.moveTo(FloatPoint(points[0].x(), points[0].y()));
+    for (int i = 1; i < npoints; i++) {
+        path.addLineTo(FloatPoint(points[i].x(), points[i].y()));
     }
+    path.closeSubpath();
+    platformContext()->rq().freeSpace(12)
+    << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWPOLYGON
+    << copyPath(path.platformPath())
+    << (jint)com_sun_webkit_graphics_WCPath_RULE_NONZERO // default rule for the path
+    << (jint)((shouldAntialias)?-1:0);
 }
 
 void GraphicsContext::fillRect(const FloatRect& rect, const Color& color, ColorSpace)

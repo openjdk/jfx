@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package com.sun.javafx.webkit.prism;
 
 import com.sun.glass.ui.Screen;
+import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.media.jfxmedia.MediaManager;
 import com.sun.prism.Graphics;
 import com.sun.webkit.perf.WCFontPerfLogger;
@@ -38,13 +39,22 @@ import java.nio.ByteOrder;
 
 public final class PrismGraphicsManager extends WCGraphicsManager {
 
-    private float highestPixelScale;
-    {
+    private final static float highestPixelScale;
+    private final static BaseTransform pixelScaleTransform;
+
+    static {
+        float ps = 1f;
         for (Screen s : Screen.getScreens()) {
-            highestPixelScale = Math.max(s.getScale(), highestPixelScale);
+            ps = Math.max(s.getScale(), ps);
         }
+        highestPixelScale = ps;
+        pixelScaleTransform = BaseTransform.getScaleInstance(ps, ps);
     }
-    
+
+    static BaseTransform getPixelScaleTransform() {
+        return pixelScaleTransform;
+    }
+
     @Override protected WCImageDecoder getImageDecoder() {
         return new WCImageDecoderImpl();
     }
