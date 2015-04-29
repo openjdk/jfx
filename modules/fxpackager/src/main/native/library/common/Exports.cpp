@@ -55,13 +55,6 @@ private:
             result.SetValue(index, item);
         }
 
-//        JavaStringArray result(env, map.Count());
-//
-//        for (map::  iterator = map.begin(); iterator != map.end(); iterator++) {
-//            jstring item = PlatformString(keys[index]).toJString(env);
-//            result.SetValue(index, item);
-//        }
-
         return result.GetData();
     }
 

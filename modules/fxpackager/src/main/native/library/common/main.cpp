@@ -89,8 +89,6 @@ extern "C" {
         Platform& platform = Platform::GetInstance();
 
         try {
-            platform.SetAppCDSState(cdsOn);
-
             for (int index = 0; index < argc; index++) {
                 TString argument = argv[index];
 
@@ -98,7 +96,7 @@ extern "C" {
                     platform.SetAppCDSState(cdsGenCache);
                 }
                 else if (argument == _T("-Xappcds:off")) {
-                    platform.SetAppCDSState(cdsNone);
+                    platform.SetAppCDSState(cdsDisabled);
                 }
                 else if (argument == _T("-Xapp:child")) {
                     parentProcess = false;
@@ -123,6 +121,12 @@ extern "C" {
             platform.SetCurrentDirectory(package.GetPackageAppDirectory());
 
             switch (platform.GetAppCDSState()) {
+                case cdsDisabled:
+                case cdsUninitialized:
+                case cdsEnabled: {
+                    break;
+                }
+
                 case cdsGenCache: {
                         TString cacheDirectory = package.GetAppCDSCacheDirectory();
 
@@ -136,7 +140,6 @@ extern "C" {
                                 FilePath::DeleteFile(cacheFileName);
                             }
                         }
-
 
                         break;
                     }
@@ -154,7 +157,7 @@ extern "C" {
                         if (FilePath::FileExists(cacheFileName) == false) {
                             // Cache does not exist after trying to generate it,
                             // so run without cache.
-                            platform.SetAppCDSState(cdsNone);
+                            platform.SetAppCDSState(cdsDisabled);
                             package.Clear();
                             package.Initialize();
                         }
@@ -162,18 +165,18 @@ extern "C" {
 
                     break;
                 }
-
-                case cdsNone:
-                case cdsOn: {
-                    break;
-                }
             }
 
             // Validation
-            AutoFreePtr<ISectionalPropertyContainer> config = platform.GetConfigFile(platform.GetConfigFileName());
-            if (config->ContainsSection(_T("AppCDSJVMOptions"))) {
+            {
                 switch (platform.GetAppCDSState()) {
-                    case cdsOn:
+                    case cdsDisabled:
+                    case cdsGenCache: {
+                        // Do nothing.
+                        break;
+                    }
+
+                    case cdsEnabled:
                     case cdsAuto: {
                             TString cacheFileName = package.GetAppCDSCacheFileName();
 
@@ -184,10 +187,12 @@ extern "C" {
                             }
                             break;
                         }
+
+                    case cdsUninitialized: {
+                        throw Exception(_T("Internal Error"));
                 }
             }
-
-            TString logFileName = FilePath::IncludeTrailingSeparater(platform.GetAppDataDirectory().data()) + _T("log.txt");
+            }
 
             // Run App
             result = RunVM();

@@ -173,27 +173,6 @@ OrderedMap<TString, TString> Helpers::GetJVMUserArgsFromConfig(IPropertyContaine
     return result;
 }
 
-/*OrderedMap<TString, TString> Helpers::GetConfigFromJVMUserArgs(OrderedMap<TString, TString> Map) {
-    OrderedMap<TString, TString> result;
-    std::vector<TString> keys = Map.GetKeys();
-
-    for (unsigned int index = 0; index < keys.size(); index++) {
-        TString key = keys[index];
-        TString value;
-
-        if (Map.GetValue(key, value) == true) {
-            TString prefix = TString(_T("jvmuserarg.")) + PlatformString(index + 1).toString();
-            TString argname = prefix + _T(".name");
-            TString argvalue = prefix + _T(".value");
-
-            result.Append(argname, key);
-            result.Append(argvalue, value);
-        }
-    }
-
-    return result;
-}*/
-
 std::list<TString> Helpers::GetArgsFromConfig(IPropertyContainer* config) {
     std::list<TString> result;
 

@@ -77,13 +77,6 @@ void Package::Initialize() {
     // Read from configure.cfg/Info.plist
     AutoFreePtr<ISectionalPropertyContainer> config = platform.GetConfigFile(platform.GetConfigFileName());
 
-//    //config->SaveToFile("/Users/cbensen/Desktop/foo.txt");
-//    OrderedMap<TString, TString> m;
-//    IniFile temp;
-//    //temp.Append("Foo", m);
-//    temp.SaveToFile("/Users/cbensen/Desktop/foo.txt");
-
-
     config->GetValue(keys[CONFIG_SECTION_APPLICATION], keys[CONFIG_APP_ID_KEY], FBootFields->FAppID);
     config->GetValue(keys[CONFIG_SECTION_APPLICATION], keys[PACKAGER_APP_DATA_DIR], FBootFields->FPackageAppDataDirectory);
     FBootFields->FPackageAppDataDirectory = FilePath::FixPathForPlatform(FBootFields->FPackageAppDataDirectory);
@@ -129,18 +122,9 @@ void Package::Initialize() {
         FBootFields->FJVMRuntimeDirectory = platform.GetSystemJRE();
     }
 
-    // Special
-    // If running with AppCDS on, and the configuration has been setup so "auto" is enabled, then
-    // the launcher will attempt to generate the cache file automatically and run the application. If the app fails
-    // to launch, this is saved and AppCDS is disabled for subsequent runs.
-    if (platform.GetAppCDSState() == cdsOn) {
-        TString appCDSCacheValue;
-
-        if (config->GetValue(keys[CONFIG_SECTION_APPLICATION], _T("app.appcds.cache"), appCDSCacheValue) == true &&
-            appCDSCacheValue == _T("auto")) {
-            platform.SetAppCDSState(cdsAuto);
-        }
-    }
+    // Read jvmargs.
+    PromoteAppCDSState(config);
+    ReadJVMArgs(config);
 
     // Read args if none were passed in.
     if (FBootFields->FArgs.size() == 0) {
@@ -150,10 +134,6 @@ void Package::Initialize() {
             FBootFields->FArgs = Helpers::MapToNameValueList(args);
         }
     }
-
-    // Read jvmargs.
-
-    ReadJVMArgs(config);
 
     // Read jvmuserarg defaults.
     config->GetSection(keys[CONFIG_SECTION_JVMUSEROPTIONS], FDefaultJVMUserArgs);
@@ -214,17 +194,66 @@ void Package::Clear() {
     FInitialized = false;
 }
 
+// This is the only location that the AppCDS state should be modified except
+// by command line arguments provided by the user.
+//
+// The state of AppCDS is as follows:
+//
+// -> cdsUninitialized
+//    -> cdsGenCache If -Xappcds:generatecache
+//    -> cdsDisabled If -Xappcds:off
+//    -> cdsEnabled If "AppCDSJVMOptions" section is present
+//    -> cdsAuto If "AppCDSJVMOptions" section is present and app.appcds.cache=auto
+//    -> cdsDisabled Default
+//
+void Package::PromoteAppCDSState(ISectionalPropertyContainer* Config) {
+    Platform& platform = Platform::GetInstance();
+    std::map<TString, TString> keys = platform.GetKeys();
+
+    // The AppCDS state can change at this point.
+    switch (platform.GetAppCDSState()) {
+        case cdsEnabled:
+        case cdsAuto:
+        case cdsDisabled:
+        case cdsGenCache: {
+            // Do nothing.
+            break;
+        }
+
+        case cdsUninitialized: {
+            if (Config->ContainsSection(keys[CONFIG_SECTION_APPCDSJVMOPTIONS]) == true) {
+                // If the AppCDS section is present then enable AppCDS.
+                TString appCDSCacheValue;
+
+                // If running with AppCDS enabled, and the configuration has been setup so "auto" is enabled, then
+                // the launcher will attempt to generate the cache file automatically and run the application.
+                if (Config->GetValue(keys[CONFIG_SECTION_APPLICATION], _T("app.appcds.cache"), appCDSCacheValue) == true &&
+                    appCDSCacheValue == _T("auto")) {
+                    platform.SetAppCDSState(cdsAuto);
+                }
+                else {
+                    platform.SetAppCDSState(cdsEnabled);
+                }
+            }
+            else {
+
+                platform.SetAppCDSState(cdsDisabled);
+            }
+        }
+    }
+}
+
 void Package::ReadJVMArgs(ISectionalPropertyContainer* Config) {
     Platform& platform = Platform::GetInstance();
     std::map<TString, TString> keys = platform.GetKeys();
 
-    if (Config->ContainsSection(keys[CONFIG_SECTION_APPCDSJVMOPTIONS]) == false) {
-        // If the AppCDS section is not present then disable AppCDS.
-        platform.SetAppCDSState(cdsNone);
+    // Evaluate based on the current AppCDS state.
+    switch (platform.GetAppCDSState()) {
+        case cdsUninitialized: {
+            throw Exception(_T("Internal Error"));
     }
 
-    switch (platform.GetAppCDSState()) {
-        case cdsNone: {
+        case cdsDisabled: {
             Config->GetSection(keys[CONFIG_SECTION_JVMOPTIONS], FBootFields->FJVMArgs);
             break;
         }
@@ -235,7 +264,7 @@ void Package::ReadJVMArgs(ISectionalPropertyContainer* Config) {
         }
 
         case cdsAuto:
-        case cdsOn: {
+        case cdsEnabled: {
             if (Config->GetValue(keys[CONFIG_SECTION_APPCDSJVMOPTIONS],
                                  _T( "-XX:SharedArchiveFile"), FBootFields->FAppCDSCacheFileName) == true) {
                 // File names may contain the incorrect path separators. The cache file name must be

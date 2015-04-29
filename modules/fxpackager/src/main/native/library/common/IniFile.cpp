@@ -116,15 +116,12 @@ bool IniFile::LoadFromFile(const TString FileName) {
 bool IniFile::SaveToFile(const TString FileName, bool ownerOnly) {
     bool result = false;
 
-    //if (GetReadOnly() == false && IsModified()) {
         std::list<TString> contents;
         std::vector<TString> keys = FMap.GetKeys();
 
         for (unsigned int index = 0; index < keys.size(); index++) {
             TString name = keys[index];
-
-            //try {
-                IniSectionData *section;// = FMap[index];
+        IniSectionData *section;
 
                 if (FMap.GetValue(name, section) == true) {
                     contents.push_back(_T("[") + name + _T("]"));
@@ -132,18 +129,11 @@ bool IniFile::SaveToFile(const TString FileName, bool ownerOnly) {
                     contents.insert(contents.end(), lines.begin(), lines.end());
                     contents.push_back(_T(""));
                 }
-//            }
-//            catch (std::out_of_range) {
-//            }
         }
 
         Platform& platform = Platform::GetInstance();
         platform.SaveToFile(FileName, contents, ownerOnly);
-
-        //SetModified(false);
         result = true;
-    //}
-
     return result;
 }
 

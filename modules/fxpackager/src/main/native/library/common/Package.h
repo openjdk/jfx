@@ -99,6 +99,7 @@ private:
     TString GetMainJar();
     void SaveJVMUserArgOverrides(OrderedMap<TString, TString> Data);
     void ReadJVMArgs(ISectionalPropertyContainer* Config);
+    void PromoteAppCDSState(ISectionalPropertyContainer* Config);
 
 public:
     static Package& GetInstance();
