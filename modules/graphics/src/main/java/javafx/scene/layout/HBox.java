@@ -371,7 +371,7 @@ public class HBox extends Pane {
     public final boolean isFillHeight() { return fillHeight == null ? true : fillHeight.get(); }
 
     private boolean shouldFillHeight() {
-        return isFillHeight();
+        return isFillHeight() && getAlignmentInternal().getVpos() != VPos.BASELINE;
     }
 
     /**
