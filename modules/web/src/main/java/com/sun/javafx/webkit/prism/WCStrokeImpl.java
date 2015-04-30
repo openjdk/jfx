@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,13 +27,26 @@ package com.sun.javafx.webkit.prism;
 
 import com.sun.prism.BasicStroke;
 import com.sun.prism.Graphics;
-import com.sun.prism.paint.Color;
 import com.sun.prism.paint.Paint;
 import com.sun.webkit.graphics.WCStroke;
 
 final class WCStrokeImpl extends WCStroke<Paint, BasicStroke> {
 
     private BasicStroke stroke;
+    
+    public WCStrokeImpl() {
+    }
+    
+    public WCStrokeImpl(float width, int cap, int join, float miterLimit,
+                        float[] dash, float dashOffset)
+    {
+        setThickness(width);
+        setLineCap(cap);
+        setLineJoin(join);
+        setMiterLimit(miterLimit);
+        setDashSizes(dash);
+        setDashOffset(dashOffset);
+    }            
 
     protected void invalidate() {
         this.stroke = null;
@@ -61,18 +74,19 @@ final class WCStrokeImpl extends WCStroke<Paint, BasicStroke> {
         }
         return this.stroke;
     }
+    
+    boolean isApplicable() {
+        return getPaint() != null && getPlatformStroke() != null;
+    }
 
     boolean apply(Graphics graphics) {
-        Paint paint = getPaint();
-        if (paint == null) {
-            return false;
+        if (isApplicable()) {
+            Paint _paint = getPaint();
+            BasicStroke _stroke = getPlatformStroke();
+            graphics.setPaint(_paint);
+            graphics.setStroke(_stroke);
+            return true;
         }
-        BasicStroke stroke = getPlatformStroke();
-        if (stroke == null) {
-            return false;
-        }
-        graphics.setPaint(paint);
-        graphics.setStroke(stroke);
-        return true;
+        return false;
     }
 }

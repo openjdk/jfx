@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,7 @@ package com.sun.javafx.webkit.prism;
 
 import com.sun.glass.ui.Screen;
 import com.sun.javafx.font.FontStrike;
+import com.sun.javafx.font.Metrics;
 import com.sun.javafx.font.PGFont;
 import com.sun.javafx.geom.*;
 import com.sun.javafx.geom.transform.Affine2D;
@@ -35,6 +36,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.text.GlyphList;
 import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.sg.prism.*;
+import com.sun.javafx.text.TextRun;
 import com.sun.prism.*;
 import com.sun.prism.paint.Color;
 import com.sun.prism.paint.Gradient;
@@ -55,7 +57,6 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import static com.sun.javafx.webkit.prism.TextUtilities.getLayoutWidth;
 import static com.sun.scenario.effect.Blend.Mode.*;
 
 class WCGraphicsPrismContext extends WCGraphicsContext {
@@ -66,7 +67,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
             AccessController.doPrivileged((PrivilegedAction<String>) () ->
             System.getProperty("com.sun.webkit.debugDrawClipShape", "false")));
 
-    private Graphics baseGraphics;
+    Graphics baseGraphics;
     private BaseTransform baseTransform;
 
     private final List<ContextState> states = new ArrayList<ContextState>();
@@ -80,20 +81,18 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     private boolean isRootLayerValid = false;
 
     WCGraphicsPrismContext(Graphics g) {
-        init(g, true);
+        state.setClip(g.getClipRect());
+        state.setAlpha(g.getExtraAlpha());
+        baseGraphics = g;
+        initBaseTransform(g.getTransformNoClone());
     }
 
     WCGraphicsPrismContext() {
     }
 
-    final void init(Graphics g, boolean inherit) {
-        if (g != null && inherit) {
-            state.setClip(g.getClipRect());
-            state.setAlpha(g.getExtraAlpha());
-        }
-        baseGraphics = g;
-        baseTransform = new Affine3D(g.getTransformNoClone());
-        state.setTransform(new Affine3D(baseTransform));
+    final void initBaseTransform(BaseTransform t) {
+        baseTransform = new Affine3D(t);
+        state.setTransform((Affine3D)baseTransform);
     }
 
     private void resetCachedGraphics() {
@@ -266,7 +265,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         }
         states.clear();
 
-        if (state.getLayerNoClone() != null) {
+        if (state != null && state.getLayerNoClone() != null) {
             state.getLayerNoClone().dispose();
         }
         state = null;
@@ -425,6 +424,14 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         Rectangle r = state.getClipNoClone();
         return r == null ? null : new WCRectangle(r.x, r.y, r.width, r.height);
     }
+    
+    protected Rectangle getClipRectNoClone() {
+        return state.getClipNoClone();
+    }
+    
+    protected Affine3D getTransformNoClone() {
+        return state.getTransformNoClone();
+    }
 
     public void translate(float x, float y) {
         if (log.isLoggable(Level.FINE)) {
@@ -455,6 +462,23 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
             cachedGraphics.setTransform(state.getTransformNoClone());
         }
     }
+    
+    // overriden in WCBufferedContext
+    protected boolean shouldRenderRect(float x, float y, float w, float h,
+                                       DropShadow shadow, BasicStroke stroke)
+    {
+        return true;
+    }
+
+    // overriden in WCBufferedContext
+    protected boolean shouldRenderShape(Shape shape, DropShadow shadow, BasicStroke stroke) {
+        return true;
+    }
+    
+    // overriden in WCBufferedContext
+    protected boolean shouldCalculateIntersection() {
+        return false;
+    }
 
     @Override
     public void fillRect(final float x, final float y, final float w, final float h, final Integer rgba) {
@@ -464,7 +488,9 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                     : "fillRect(%f, %f, %f, %f, null)";
             log.fine(String.format(format, x, y, w, h, rgba));
         }
-
+        if (!shouldRenderRect(x, y, w, h, state.getShadowNoClone(), null)) {
+            return;
+        }
         new Composite() {
             @Override void doPaint(Graphics g) {
                 Paint paint = (rgba != null) ? createColor(rgba) : state.getPaintNoClone();
@@ -481,17 +507,21 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         }.paint();
     }
 
-    @Override public void fillRoundedRect(final float x, final float y, final float w, final float h,
-            final float topLeftW, final float topLeftH, final float topRightW, final float topRightH,
-            final float bottomLeftW, final float bottomLeftH, final float bottomRightW, final float bottomRightH,
-            final int rgba) {
+    @Override
+    public void fillRoundedRect(final float x, final float y, final float w, final float h,
+        final float topLeftW, final float topLeftH, final float topRightW, final float topRightH,
+        final float bottomLeftW, final float bottomLeftH, final float bottomRightW, final float bottomRightH,
+        final int rgba)
+    {
         if (log.isLoggable(Level.FINE)) {
             log.fine(String.format("fillRoundedRect(%f, %f, %f, %f, "
                     + "%f, %f, %f, %f, %f, %f, %f, %f, 0x%x)",
                     x, y, w, h, topLeftW, topLeftH, topRightW, topRightH,
                     bottomLeftW, bottomLeftH, bottomRightW, bottomRightH, rgba));
         }
-
+        if (!shouldRenderRect(x, y, w, h, state.getShadowNoClone(), null)) {
+            return;
+        }
         new Composite() {
             @Override void doPaint(Graphics g) {
                 // Prism only supports single arcWidth/Height.
@@ -519,7 +549,10 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         if (log.isLoggable(Level.FINE)) {
             log.fine(String.format("clearRect(%f, %f, %f, %f)", x, y, w, h));
         }
-
+        if (shouldCalculateIntersection()) {
+            // No intersection is applicable for clearRect.
+            return;
+        }
         new Composite() {
             @Override void doPaint(Graphics g) {
                 g.clearQuad(x, y, x + w, y + h);
@@ -653,29 +686,19 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     }
 
     @Override
-    public void drawPolygon(final float [] pnts, final boolean shouldAntialias) {
+    public void drawPolygon(final WCPath path, final boolean shouldAntialias) {
         if (log.isLoggable(Level.FINE)) {
-            StringBuilder s = new StringBuilder("[");
-            for (int i=0; i < pnts.length; i++) {
-                s.append(pnts[i]).append(',');
-            }
-            s.append(']');
-            log.log(Level.FINE, "drawPolygon({0},{1})",
-                    new Object[] { s, shouldAntialias});
+            log.log(Level.FINE, "drawPolygon({0})",
+                    new Object[] {shouldAntialias});
         }
-
+        if (!shouldRenderShape(((WCPathImpl)path).getPlatformPath(), null,
+                                state.getStrokeNoClone().getPlatformStroke()))
+        {
+            return;
+        }
         new Composite() {
             @Override void doPaint(Graphics g) {
-                Path2D p2d = new Path2D();
-                if (pnts != null && pnts.length != 0 && pnts.length % 2 == 0) {
-                    p2d.moveTo(pnts[0], pnts[1]);
-                    for (int i = 1; i < pnts.length / 2; i++) {
-                        float px = pnts[i * 2 + 0];
-                        float py = pnts[i * 2 + 1];
-                        p2d.lineTo(px, py);
-                    }
-                    p2d.closePath();
-                }
+                Path2D p2d = (Path2D) path.getPlatformPath();
                 g.setPaint(state.getPaintNoClone());
                 g.fill(p2d);
                 if (state.getStrokeNoClone().apply(g)) {
@@ -691,7 +714,10 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
             log.log(Level.FINE, "drawLine({0}, {1}, {2}, {3})",
                     new Object[] {x0, y0, x1, y1});
         }
-
+        Line2D line = new Line2D(x0, y0, x1, y1);
+        if (!shouldRenderShape(line, null, state.getStrokeNoClone().getPlatformStroke())) {
+            return;
+        }
         new Composite() {
             @Override void doPaint(Graphics g) {
                 if (state.getStrokeNoClone().apply(g)) {
@@ -715,7 +741,11 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                                   destRect.getIntWidth(),
                                   destRect.getIntHeight()});
         }
-
+        if (!shouldRenderRect(destRect.getX(), destRect.getY(),
+                              destRect.getWidth(), destRect.getHeight(), null, null))
+        {
+            return;
+        }
         if (texture != null) {
             new Composite() {
                 @Override void doPaint(Graphics g) {
@@ -764,7 +794,9 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                     new Object[] {dstx, dsty, dstw, dsth,
                                   srcx, srcy, srcw, srch});
         }
-
+        if (!shouldRenderRect(dstx, dsty, dstw, dsth, state.getShadowNoClone(), null)) {
+            return;
+        }
         if (img instanceof PrismImage) {
             new Composite() {
                 @Override void doPaint(Graphics g) {
@@ -792,6 +824,9 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
 
     @Override
     public void drawBitmapImage(final ByteBuffer image, final int x, final int y, final int w, final int h) {
+        if (!shouldRenderRect(x, y, w, h, null, null)) {
+            return;
+        }                
         new Composite() {
             @Override void doPaint(Graphics g) {
                 image.order(ByteOrder.nativeOrder());
@@ -812,12 +847,17 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         }
     }
 
+    @Override
     public void drawRect(final int x, final int y, final int w, final int h) {
         if (log.isLoggable(Level.FINE)) {
             log.log(Level.FINE, "drawRect({0}, {1}, {2}, {3})",
                     new Object[]{x, y, w, h});
         }
-
+        if (!shouldRenderRect(x, y, w, h,
+                              null, state.getStrokeNoClone().getPlatformStroke()))
+        {
+            return;
+        }
         new Composite() {
             @Override void doPaint(Graphics g) {
                 Paint c = state.getPaintNoClone();
@@ -833,25 +873,36 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         }.paint();
     }
 
-    @Override public void drawString(final WCFont f, final int[] glyphs,
-            final float[] advances, final float x, final float y)
+    @Override
+    public void drawString(final WCFont f, final int[] glyphs,
+                           final float[] advances, final float x, final float y)
     {
         if (log.isLoggable(Level.FINE)) {
             log.fine(String.format(
                     "Drawing %d glyphs @(%.1f, %.1f)",
                     glyphs.length, x, y));
         }
+        PGFont font = (PGFont)f.getPlatformFont();
+        TextRun gl = TextUtilities.createGlyphList(glyphs, advances, x, y);
+        
+        DropShadow shadow = state.getShadowNoClone();
+        BasicStroke stroke = state.isTextStroke()
+                ? state.getStrokeNoClone().getPlatformStroke()
+                : null;
+        
+        final FontStrike strike = font.getStrike(getTransformNoClone(), getFontSmoothingType());
+        if (shouldCalculateIntersection()) {
+            Metrics m = strike.getMetrics();
+            gl.setMetrics(m.getAscent(), m.getDescent(), m.getLineGap());            
+            if (!shouldRenderRect(x, y, gl.getWidth(), gl.getHeight(), shadow, stroke)) {
+                return;
+            }
+        }
         new Composite() {
             @Override void doPaint(Graphics g) {
-                PGFont font = (PGFont) f.getPlatformFont();
-                GlyphList gl = TextUtilities.createGlyphList(glyphs, advances, x, y);
                 Paint paint = state.isTextFill()
                         ? state.getPaintNoClone()
                         : null;
-                BasicStroke stroke = state.isTextStroke()
-                        ? state.getStrokeNoClone().getPlatformStroke()
-                        : null;
-                DropShadow shadow = state.getShadowNoClone();
                 if (shadow != null) {
                     final NGText span = new NGText();
                     span.setGlyphs(new GlyphList[] {gl});
@@ -859,7 +910,6 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                     span.setFontSmoothingType(fontSmoothingType);
                     render(g, shadow, paint, stroke, span);
                 } else {
-                    FontStrike strike = font.getStrike(g.getTransformNoClone(), fontSmoothingType);
                     if (paint != null) {
                         g.setPaint(paint);
                         g.drawString(gl, strike, x, y, null, 0, 0);
@@ -907,24 +957,31 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
 
         // adjust x coordinate (see RT-29908)
         if (rtl) {
-            x += (getLayoutWidth(str.substring(from), f.getPlatformFont()) -
+            x += (TextUtilities.getLayoutWidth(str.substring(from), f.getPlatformFont()) -
                   layout.getBounds().getWidth());
         } else {
-            x += getLayoutWidth(str.substring(0, from), f.getPlatformFont());
+            x += TextUtilities.getLayoutWidth(str.substring(0, from), f.getPlatformFont());
         }
         drawString(f, glyphs, adv, x, y);
     }
 
+    @Override
     public void setComposite(int composite) {
         log.log(Level.FINE, "setComposite({0})", composite);
         state.setCompositeOperation(composite);
     }
 
+    @Override
     public void drawEllipse(final int x, final int y, final int w, final int h) {
         if (log.isLoggable(Level.FINE)) {
             log.log(Level.FINE, "drawEllipse({0}, {1}, {2}, {3})",
                     new Object[] { x, y, w, h});
         }
+        if (!shouldRenderRect(x, y, w, h,
+                              null, state.getStrokeNoClone().getPlatformStroke()))
+        {
+            return;
+        }                
         new Composite() {
             @Override void doPaint(Graphics g) {
                 g.setPaint(state.getPaintNoClone());
@@ -936,19 +993,21 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         }.paint();
     }
 
-
     private final static BasicStroke focusRingStroke =
         new BasicStroke(1.1f, BasicStroke.CAP_BUTT,
-                        BasicStroke.JOIN_ROUND, 0.0f,
-                        new float[] {1.0f}, 0.0f);
+                         BasicStroke.JOIN_ROUND, 0.0f,
+                         new float[] {1.0f}, 0.0f);
 
+    @Override
     public void drawFocusRing(final int x, final int y, final int w, final int h, final int rgba) {
         if (log.isLoggable(Level.FINE)) {
             log.log(Level.FINE,
                     String.format("drawFocusRing: %d, %d, %d, %d, 0x%x",
                                   x, y, w, h, rgba));
         }
-
+        if (!shouldRenderRect(x, y, w, h, null, focusRingStroke)) {
+            return;
+        }
         new Composite() {
             @Override void doPaint(Graphics g) {
                 g.setPaint(createColor(rgba));
@@ -973,7 +1032,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     public float getAlpha() {
         return state.getAlpha();
     }
-
+    
     @Override public void beginTransparencyLayer(float opacity) {
         TransparencyLayer layer = new TransparencyLayer(
                 getGraphics(false), state.getClipNoClone(), opacity);
@@ -999,6 +1058,10 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
 
     @Override
     public void drawWidget(final RenderTheme theme, final Ref widget, final int x, final int y) {
+        WCSize s = theme.getWidgetSize(widget);
+        if (!shouldRenderRect(x, y, s.getWidth(), s.getHeight(), null, null)) {
+            return;
+        }                
         new Composite() {
             @Override void doPaint(Graphics g) {
                 theme.drawWidget(WCGraphicsPrismContext.this, widget, x, y);
@@ -1556,40 +1619,52 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         }
     }
 
-    @Override public void strokeArc(final int x, final int y, final int w, final int h,
-                                    final int startAngle, final int angleSpan)
+    @Override
+    public void strokeArc(final int x, final int y, final int w, final int h,
+                          final int startAngle, final int angleSpan)
     {
         if (log.isLoggable(Level.FINE)) {
             log.fine(String.format("strokeArc(%d, %d, %d, %d, %d, %d)",
                                    x, y, w, h, startAngle, angleSpan));
         }
+        Arc2D arc = new Arc2D(x, y, w, h, startAngle, angleSpan, Arc2D.OPEN);
+        if (state.getStrokeNoClone().isApplicable() &&
+            !shouldRenderShape(arc, null, state.getStrokeNoClone().getPlatformStroke()))
+        {
+            return;
+        }        
         new Composite() {
             @Override void doPaint(Graphics g) {
                 if (state.getStrokeNoClone().apply(g)) {
-                    g.draw(new Arc2D(x, y, w, h, startAngle, angleSpan, Arc2D.OPEN));
+                    g.draw(arc);
                 }
             }
         }.paint();
     }
 
+    @Override
     public WCImage getImage() {
         return null;
     }
 
+    @Override
     public void strokeRect(final float x, final float y, final float w, final float h,
                            final float lineWidth) {
         if (log.isLoggable(Level.FINE)) {
             log.fine(String.format("strokeRect_FFFFF(%f, %f, %f, %f, %f)",
                                    x, y, w, h, lineWidth));
         }
-
+        BasicStroke stroke = new BasicStroke(
+            lineWidth,
+            BasicStroke.CAP_BUTT,
+            BasicStroke.JOIN_MITER,
+            Math.max(1.0f, lineWidth));        
+        if (!shouldRenderRect(x, y, w, h, null, stroke)) {
+            return;
+        }
         new Composite() {
             @Override void doPaint(Graphics g) {
-                g.setStroke(new BasicStroke(
-                        lineWidth,
-                        BasicStroke.CAP_BUTT,
-                        BasicStroke.JOIN_MITER,
-                        Math.max(1.0f, lineWidth)));
+                g.setStroke(stroke);
                 Paint paint = state.getStrokeNoClone().getPaint();
                 if (paint == null) {
                     paint = state.getPaintNoClone();
@@ -1600,14 +1675,21 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         }.paint();
     }
 
+    @Override
     public void strokePath(final WCPath path) {
         log.fine("strokePath");
         if (path != null) {
+            final BasicStroke stroke = state.getStrokeNoClone().getPlatformStroke();
+            final DropShadow shadow = state.getShadowNoClone();            
+            final Path2D p2d = (Path2D)path.getPlatformPath();
+            
+            if ((stroke == null && shadow == null) ||
+                !shouldRenderShape(p2d, shadow, stroke))
+            {
+                return;
+            }        
             new Composite() {
                 @Override void doPaint(Graphics g) {
-                    Path2D p2d = (Path2D) path.getPlatformPath();
-                    BasicStroke stroke = state.getStrokeNoClone().getPlatformStroke();
-                    DropShadow shadow = state.getShadowNoClone();
                     if (shadow != null) {
                         final NGPath node = new NGPath();
                         node.updateWithPath2d(p2d);
@@ -1626,9 +1708,15 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         }
     }
 
+    @Override
     public void fillPath(final WCPath path) {
         log.fine("fillPath");
         if (path != null) {
+            if (!shouldRenderShape(((WCPathImpl)path).getPlatformPath(),
+                                   state.getShadowNoClone(), null))
+            {
+                return;
+            }        
             new Composite() {
                 @Override void doPaint(Graphics g) {
                     Path2D p2d = (Path2D) path.getPlatformPath();
@@ -1684,5 +1772,5 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     @Override
     public WCGradient createRadialGradient(WCPoint p1, float r1, WCPoint p2, float r2) {
         return new WCRadialGradient(p1, r1, p2, r2);
-    }
+    }    
 }

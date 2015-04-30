@@ -179,7 +179,7 @@ TString WindowsPlatform::GetAppDataDirectory() {
 // return TRUE if found, and path is set in lpszJavaHome
 // return FALSE otherwise
 TString WindowsPlatform::GetSystemJRE() {
-    if (GetAppCDSState() == cdsOn || GetAppCDSState() == cdsGenCache) {
+    if (GetAppCDSState() != cdsDisabled) {
         //TODO throw exception
         return _T("");
     }

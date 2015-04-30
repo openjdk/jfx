@@ -230,7 +230,7 @@ public:
 
 enum DebugState {dsNone, dsNative, dsJava};
 enum MessageResponse {mrOK, mrCancel};
-enum AppCDSState {cdsNone, cdsOn, cdsGenCache, cdsAuto, cdsInteractive};
+enum AppCDSState {cdsUninitialized, cdsDisabled, cdsEnabled, cdsAuto, cdsGenCache};
 
 class Platform {
 private:
@@ -238,7 +238,7 @@ private:
 
 protected:
     Platform(void) {
-        FAppCDSState = cdsNone;
+        FAppCDSState = cdsUninitialized;
     }
 
 public:

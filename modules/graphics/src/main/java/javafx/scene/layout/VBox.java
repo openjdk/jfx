@@ -320,7 +320,7 @@ public class VBox extends Pane {
 
     /**
      * Whether or not resizable children will be resized to fill the full width of the vbox
-     * or be kept to their preferred width and aligned according to the <code>alignment</code>
+     * or be resized to their preferred width and aligned according to the <code>alignment</code>
      * hpos value.
      */
     public final BooleanProperty fillWidthProperty() {

@@ -211,6 +211,16 @@ public:
         throw std::invalid_argument("Key not found");
     }
 
+    OrderedMap& operator= (OrderedMap &Value) {
+        Append(Value);
+        return *this;
+    }
+    
+    OrderedMap& operator= (const OrderedMap &Value) {
+        Append(Value);
+        return *this;
+    }
+
     size_t Count() {
         return FList.size();
     }

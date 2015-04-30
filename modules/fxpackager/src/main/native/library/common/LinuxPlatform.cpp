@@ -148,7 +148,7 @@ TString LinuxPlatform::GetBundledJVMLibraryFileName(TString RuntimePath) {
 }
 
 TString LinuxPlatform::GetSystemJRE() {
-    if (GetAppCDSState() == cdsOn || GetAppCDSState() == cdsGenCache) {
+    if (GetAppCDSState() != cdsDisabled) {
         //TODO throw exception
         return _T("");
     }

@@ -170,12 +170,7 @@ public final class GraphicsDecoder  {
                     gc.setMiterLimit(buf.getFloat());
                     break;
                 case DRAWPOLYGON:
-                    boolean shouldAA = buf.getInt() == -1;
-                    int n = buf.getInt();
-                    float pnts[] = new float[n];
-                    buf.asFloatBuffer().get(pnts);
-                    buf.position(buf.position() + n*4);
-                    gc.drawPolygon(pnts, shouldAA);
+                    gc.drawPolygon(getPath(gm, buf), buf.getInt() == -1);
                     break;
                 case DRAWLINE:
                     gc.drawLine(
@@ -354,8 +349,8 @@ public final class GraphicsDecoder  {
                             buf.getInt(),   // width
                             buf.getInt());  // height
                     break;
-                case RENDERMEDIA_TIMETRACK:
-                    n = buf.getInt();   // number of timeRange pairs
+                case RENDERMEDIA_TIMETRACK: {
+                    int n = buf.getInt();   // number of timeRange pairs
                     float[] buffered = new float[n*2];
                     buf.asFloatBuffer().get(buffered);
                     buf.position(buf.position() + n*4 *2);
@@ -368,6 +363,7 @@ public final class GraphicsDecoder  {
                             buf.getInt(),   // width
                             buf.getInt());  // height
                      break;
+                }
                 case RENDERMEDIA_VOLUMETRACK:
                     RenderMediaControls.paintVolumeTrack(gc,
                             buf.getFloat(), // curVolume

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -68,7 +68,7 @@ public abstract class WCGraphicsContext {
     public abstract void setLineJoin(int lineJoin);
     public abstract void setMiterLimit(float miterLimit);
 
-    public abstract void drawPolygon(float [] pnts, boolean shouldAntialias);
+    public abstract void drawPolygon(WCPath path, boolean shouldAntialias);
     public abstract void drawLine(int x0, int y0, int x1, int y1);
 
     public abstract void drawImage(WCImage img,

@@ -183,7 +183,7 @@ TString MacPlatform::GetBundledJVMLibraryFileName(TString RuntimePath) {
 
 
 TString MacPlatform::GetSystemJRE() {
-    if (GetAppCDSState() == cdsOn || GetAppCDSState() == cdsGenCache) {
+    if (GetAppCDSState() != cdsDisabled) {
         //TODO throw exception
         return _T("");
     }
@@ -282,39 +282,6 @@ ISectionalPropertyContainer* MacPlatform::GetConfigFile(TString FileName) {
 
     return result;
 }
-/*
-#include <mach-o/dyld.h>
-#include <mach-o/getsect.h>
-#include <dlfcn.h>
-#include <string>
-
-std::string GetModuleFileName(const void *module)
-{
-    if (!module) { return std::string(); }
-    uint32_t count = _dyld_image_count();
-    for (uint32_t i = 0; i < count; ++i) {
-        const mach_header *header = _dyld_get_image_header(i);
-        if (!header) { break; }
-        char *code_ptr = NULL;
-        if ((header->magic & MH_MAGIC_64) == MH_MAGIC_64) {
-            uint64_t size;
-            code_ptr = getsectdatafromheader_64((const mach_header_64 *)header, SEG_TEXT, SECT_TEXT, &size);
-        } else {
-            uint32_t size;
-            code_ptr = getsectdatafromheader(header, SEG_TEXT, SECT_TEXT, &size);
-        }
-        if (!code_ptr) { continue; }
-        const uintptr_t slide = _dyld_get_image_vmaddr_slide(i);
-        const uintptr_t start = (const uintptr_t)code_ptr + slide;
-        Dl_info info;
-        if (dladdr((const void *)start, &info)) {
-            if (dlopen(info.dli_fname, RTLD_NOW) == module) {
-                return std::string(info.dli_fname);
-            }
-        }
-    }
-    return std::string();
-}*/
 
 TString GetModuleFileNameOSX() {
     Dl_info module_info;
