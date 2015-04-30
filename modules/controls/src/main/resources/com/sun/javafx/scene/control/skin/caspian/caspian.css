@@ -3510,7 +3510,9 @@ Only the properties with values that are different from the TextBox are specifie
 }
 
 .custom-color-dialog .controls-pane #settings-pane .settings-unit {
-    -fx-max-width: 1em;
+    -fx-max-width: 1.5em;
+    -fx-min-width: 1.5em;
+    -fx-pref-width: 1.5em;
 }
 
 .custom-color-dialog .controls-pane #settings-pane .slider {
