@@ -26,6 +26,7 @@
 package javafx.beans.property.adapter;
 
 import com.sun.javafx.binding.ExpressionHelper;
+import com.sun.javafx.property.adapter.Disposer;
 import com.sun.javafx.property.adapter.PropertyDescriptor;
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.FloatProperty;
@@ -34,7 +35,6 @@ import javafx.beans.value.ObservableValue;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.UndeclaredThrowableException;
-import sun.misc.Cleaner;
 
 import java.security.AccessControlContext;
 import java.security.AccessController;
@@ -77,7 +77,7 @@ public final class JavaBeanFloatProperty extends FloatProperty implements JavaBe
         this.descriptor = descriptor;
         this.listener = descriptor.new Listener<Number>(bean, this);
         descriptor.addListener(listener);
-        Cleaner.create(this, new DescriptorListenerCleaner(descriptor, listener));
+        Disposer.addRecord(this, new DescriptorListenerCleaner(descriptor, listener));
     }
 
     /**
