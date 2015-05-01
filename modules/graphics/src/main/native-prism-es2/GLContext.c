@@ -1771,8 +1771,10 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nSetDeviceParametersFor3
     }
     // Note: projViewTx and camPos are handled above in the Java layer
 
-    glDisable(GL_BLEND);
-    glBlendFunc(GL_ONE, GL_ZERO);
+    // This setting matches 2D ((1,1-alpha); premultiplied alpha case.    
+    // Will need to evaluate when support proper 3D blending (alpha,1-alpha). 
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
     if (ctxInfo->state.scissorEnabled) {
         ctxInfo->state.scissorEnabled = JNI_FALSE;

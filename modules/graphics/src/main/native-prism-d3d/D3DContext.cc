@@ -607,9 +607,11 @@ HRESULT D3DContext::setDeviceParametersFor3D() {
     if (res == S_OK) {
         SUCCEEDED(res = pd3dDevice->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE)) &&
         SUCCEEDED(res = pd3dDevice->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID)) &&
+        // This setting matches 2D ((1,1-alpha); premultiplied alpha case.
+        // Will need to evaluate when support proper 3D blending (alpha,1-alpha).       
         SUCCEEDED(res = pd3dDevice->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ONE)) &&
-        SUCCEEDED(res = pd3dDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ZERO)) &&
-        SUCCEEDED(res = pd3dDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE)) &&
+        SUCCEEDED(res = pd3dDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA)) &&
+        SUCCEEDED(res = pd3dDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE)) &&
         SUCCEEDED(res = pd3dDevice->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE)) &&
         SUCCEEDED(res = pd3dDevice->SetRenderState(D3DRS_LIGHTING, TRUE)) &&
         // TODO: 3D - RT-34415: [D3D 3D] Need a robust 3D states management for texture 
