@@ -33,6 +33,9 @@ import java.util.Map;
  * iOS View platform implementation.
  */
 final class IosView extends View {
+
+    private long nativePtr;
+
     public IosView() {
         super();
     }

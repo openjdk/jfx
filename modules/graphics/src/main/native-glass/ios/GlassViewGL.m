@@ -33,7 +33,7 @@
 #import "com_sun_glass_events_MouseEvent.h"
 #import "com_sun_glass_ui_View_Capability.h"
 
-//shared EAGLContext created in prism-es2n pipeline
+//shared EAGLContext created in prism-es2 pipeline
 //and passed to glass
 static EAGLContext *clientContext = nil;
 

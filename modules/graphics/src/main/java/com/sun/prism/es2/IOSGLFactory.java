@@ -63,8 +63,11 @@ class IOSGLFactory extends GLFactory {
 
         // NOTE: glassCtx isn't the prism rendering context. This glassCtx is created
         // and passed to Glass; prism never needs to switch or access it.
+        // NOTE: By Prism design, we should pass in glassCtx to glass. However due to IOS
+        // native code was done differently then its MacOS implementation. We will need to pass
+        // in prismCtx since we don't have the resources to make the corresponding IOS change.
         HashMap devDetails = (HashMap) ES2Pipeline.getInstance().getDeviceDetails();
-        devDetails.put("contextPtr", glassCtx.getNativeHandle());
+        devDetails.put("contextPtr", prismCtx.getNativeHandle());
 
         return prismCtx;
     }
