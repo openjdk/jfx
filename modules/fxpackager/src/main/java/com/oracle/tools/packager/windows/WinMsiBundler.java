@@ -31,6 +31,8 @@ import com.oracle.tools.packager.UnsupportedPlatformException;
 import com.sun.javafx.tools.packager.bundlers.BundleParams;
 
 import java.io.*;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
 import java.text.MessageFormat;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -158,7 +160,7 @@ public class WinMsiBundler  extends AbstractBundler {
 
     public static final BundlerParamInfo<String> TOOL_LIGHT_EXECUTABLE = new WindowsBundlerParam<>(
             I18N.getString("param.light-path.name"),
-            I18N.getString("param.light-path.descrption"),
+            I18N.getString("param.light-path.description"),
             "win.msi.light.exe",
             String.class,
             params -> {
@@ -428,7 +430,9 @@ public class WinMsiBundler  extends AbstractBundler {
                 for (String s : licenseFiles) {
                     if (rfs.contains(s)) {
                         File lfile = new File(rfs.getBaseDirectory(), s);
-                        IOUtils.copyFile(lfile, new File(appDir, lfile.getName()));
+                        File destFile = new File(appDir, lfile.getName());
+                        IOUtils.copyFile(lfile, destFile);
+                        ensureByMutationFileIsRTF(destFile);
                         break outerLoop;
                     }
                 }
@@ -825,17 +829,16 @@ public class WinMsiBundler  extends AbstractBundler {
         if (launcherSet) {
             List<Map<String, ? super Object>> fileAssociations = FILE_ASSOCIATIONS.fetchFrom(params);
             String regName = APP_REGISTRY_NAME.fetchFrom(params);
-            Set<String> defaultedMimes = new TreeSet<String>();
+            Set<String> defaultedMimes = new TreeSet<>();
             int count = 0;
-            for (int i = 0; i < fileAssociations.size(); i++) {
-                Map<String, ? super Object> fileAssociation = fileAssociations.get(i);
+            for (Map<String, ? super Object> fileAssociation : fileAssociations) {
                 String description = FA_DESCRIPTION.fetchFrom(fileAssociation);
                 List<String> extensions = FA_EXTENSIONS.fetchFrom(fileAssociation);
                 List<String> mimeTypes = FA_CONTENT_TYPE.fetchFrom(fileAssociation);
                 File icon = FA_ICON.fetchFrom(fileAssociation); //TODO FA_ICON_ICO
-                
+
                 String mime = (mimeTypes == null || mimeTypes.isEmpty()) ? null : mimeTypes.get(0);
-                
+
                 if (extensions == null) {
                     Log.info(I18N.getString("message.creating-association-with-null-extension"));
 
@@ -1064,7 +1067,7 @@ public class WinMsiBundler  extends AbstractBundler {
         boolean enableLicenseUI = (getLicenseFile(params) != null);
         boolean enableInstalldirUI = INSTALLDIR_CHOOSER.fetchFrom(params);
 
-        List<String> commandLine = new ArrayList<String>();
+        List<String> commandLine = new ArrayList<>();
 
         commandLine.add(TOOL_LIGHT_EXECUTABLE.fetchFrom(params));        
         if (enableLicenseUI) {
@@ -1093,5 +1096,72 @@ public class WinMsiBundler  extends AbstractBundler {
         IOUtils.deleteRecursive(tmpDir);
 
         return msiOut;
+    }
+    
+    public static void ensureByMutationFileIsRTF(File f) {        
+        if (f == null || !f.isFile()) return;
+
+        try {
+            boolean existingLicenseIsRTF = false;
+            
+            try (FileInputStream fin = new FileInputStream(f)) {
+                byte[] firstBits = new byte[7];
+                
+                if (fin.read(firstBits) == firstBits.length) {
+                    String header = new String(firstBits);
+                    existingLicenseIsRTF = "{\\rtf1\\".equals(header);
+                }
+            }
+        
+            if (!existingLicenseIsRTF) {
+                List<String> oldLicense = Files.readAllLines(f.toPath());
+                try (Writer w = Files.newBufferedWriter(f.toPath(), Charset.forName("Windows-1252"))) {
+                    w.write("{\\rtf1\\ansi\\ansicpg1252\\deff0\\deflang1033{\\fonttbl{\\f0\\fnil\\fcharset0 Arial;}}\n" +
+                            "\\viewkind4\\uc1\\pard\\sa200\\sl276\\slmult1\\lang9\\fs20 ");
+                    oldLicense.forEach(l -> {
+                        try {
+                            for (char c : l.toCharArray()) {
+                                //0x00 <= ch < 0x20	Escaped (\'hh)
+                                //0x20 <= ch < 0x80 Raw(non - escaped) character
+                                //0x80 <= ch <= 0xFF Escaped(\ 'hh)
+                                //0x5C, 0x7B, 0x7D (special RTF characters\,{,})Escaped(\'hh)
+                                // ch > 0xff Escaped (\\ud###?) 
+                                if (c < 0x10) {
+                                    w.write("\\'0");
+                                    w.write(Integer.toHexString(c));
+                                } else if (c > 0xff) {
+                                    w.write("\\ud");
+                                    w.write(Integer.toString(c));
+                                    // \\uc1 is in the header and in effect
+                                    // so we trail with a replacement character if
+                                    // the font lacks that character - '?'
+                                    w.write("?");
+                                } else if ((c < 0x20)
+                                        || (c >= 0x80)
+                                        || (c == 0x5C) || (c == 0x7B) || (c == 0x7D)) {
+                                    w.write("\\'");
+                                    w.write(Integer.toHexString(c));
+                                } else {
+                                    w.write(c);
+                                }
+                            }
+                            // blank lines are interpreted as paragraph breaks
+                            if (l.length() < 1) {
+                                w.write("\\par");
+                            } else {
+                                w.write(" ");
+                            }
+                            w.write("\r\n");
+                        } catch (IOException e) {
+                            Log.verbose(e);
+                        }
+                    });
+                    w.write("}\r\n");
+                }
+            }
+        } catch (IOException e) {
+            Log.verbose(e);
+        }
+
     }
 }

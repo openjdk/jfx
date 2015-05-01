@@ -32,11 +32,7 @@ import com.oracle.tools.packager.ConfigException;
 import com.oracle.tools.packager.Log;
 import com.oracle.tools.packager.RelativeFileSet;
 import com.oracle.tools.packager.UnsupportedPlatformException;
-import org.junit.After;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -90,8 +86,8 @@ public class WinMsiBundlerTest {
         fakeMainJar = new File(appResourcesDir, "mainApp.jar");
 
         appResources = new HashSet<>(Arrays.asList(fakeMainJar,
-                new File(appResourcesDir, "LICENSE"),
-                new File(appResourcesDir, "LICENSE2")
+                new File(appResourcesDir, "LICENSE-RTF.rtf"),
+                new File(appResourcesDir, "LICENSE")
         ));
     }
 
@@ -157,7 +153,7 @@ public class WinMsiBundlerTest {
         );
         bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
-        bundleParams.put(LICENSE_FILE.getID(), Arrays.asList("LICENSE", "LICENSE2"));
+        bundleParams.put(LICENSE_FILE.getID(), Arrays.asList("LICENSE", "LICENSE-RTF.rtf"));
         bundleParams.put(VERBOSE.getID(), true);
 
         boolean valid = bundler.validate(bundleParams);
@@ -328,7 +324,7 @@ public class WinMsiBundlerTest {
         bundleParams.put(WIN_RUNTIME.getID(), System.getProperty("java.home"));
 
         bundleParams.put(DESCRIPTION.getID(), "Everything Description");
-        bundleParams.put(LICENSE_FILE.getID(), "LICENSE");
+        bundleParams.put(LICENSE_FILE.getID(), "LICENSE-RTF.rtf");
         bundleParams.put(MENU_GROUP.getID(), "EverythingMenuGroup");
         bundleParams.put(MENU_HINT.getID(), true);
 //                RUN_AT_STARTUP,
@@ -435,7 +431,7 @@ public class WinMsiBundlerTest {
         Assume.assumeTrue(Boolean.parseBoolean(System.getProperty("FULL_TEST")));
 
         testFileAssociation("FASmoke 1", "Bogus File", "bogus", "application/x-vnd.test-bogus",
-    	                    new File(appResourcesDir, "small.ico"));
+                            new File(appResourcesDir, "small.ico"));
     }
 
     @Test
@@ -543,7 +539,7 @@ public class WinMsiBundlerTest {
         File result = bundler.execute(bundleParams, new File(workDir, APP_FS_NAME.fetchFrom(bundleParams)));
         System.err.println("Bundle at - " + result);
         assertNotNull(result);
-        assertTrue(result.exists());    	
+        assertTrue(result.exists());
     }
 
 
