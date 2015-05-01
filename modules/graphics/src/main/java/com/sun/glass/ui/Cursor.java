@@ -47,6 +47,7 @@ public abstract class Cursor {
     public final static int CURSOR_RESIZE_NORTHWEST = 17;
     public final static int CURSOR_RESIZE_NORTHEAST = 18;
     public final static int CURSOR_MOVE = 19;
+    private final static int CURSOR_MAX = 19;
 
     private final int type;
 
