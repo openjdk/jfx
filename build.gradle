@@ -1661,6 +1661,9 @@ project(":swing") {
     dependencies {
         compile BUILD_SRC, project(":base"), project(":graphics")
     }
+    test {
+        enabled = IS_FULL_TEST && IS_AWT_TEST
+    }
 }
 
 project(":swt") {
