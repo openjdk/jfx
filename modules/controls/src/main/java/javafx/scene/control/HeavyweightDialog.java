@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,9 +30,11 @@ import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.StringProperty;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.Region;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
@@ -62,6 +64,7 @@ class HeavyweightDialog extends FXDialog {
 
     private Scene scene;
 
+    private final Parent DUMMY_ROOT = new Region();
     private final Dialog<?> dialog;
     private DialogPane dialogPane;
 
@@ -148,11 +151,13 @@ class HeavyweightDialog extends FXDialog {
     }
 
     @Override public void show() {
+        scene.setRoot(dialogPane);
         stage.centerOnScreen();
         stage.show();
     }
 
     @Override public void showAndWait() {
+        scene.setRoot(dialogPane);
         stage.centerOnScreen();
         stage.showAndWait();
     }
@@ -160,6 +165,11 @@ class HeavyweightDialog extends FXDialog {
     @Override public void close() {
         if (stage.isShowing()) {
             stage.hide();
+        }
+
+        // Refer to RT-40687 for more context
+        if (scene != null) {
+            scene.setRoot(DUMMY_ROOT);
         }
     }
 
