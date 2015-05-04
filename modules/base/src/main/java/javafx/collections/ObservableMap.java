@@ -43,8 +43,8 @@ public interface ObservableMap<K, V> extends Map<K, V>, Observable {
      */
     public void addListener(MapChangeListener<? super K, ? super V> listener);
     /**
-     * Tries to removed a listener from this observable list. If the listener is not
-     * attached to this list, nothing happens.
+     * Tries to removed a listener from this observable map. If the listener is not
+     * attached to this map, nothing happens.
      * @param listener a listener to remove
      */
     public void removeListener(MapChangeListener<? super K, ? super V> listener);
