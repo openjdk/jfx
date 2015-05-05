@@ -125,9 +125,10 @@ public final class PrismSettings {
         // The maximum number of dirty regions to use. The absolute max that we can
         // support at present is 15.
         dirtyRegionCount = Utils.clamp(0, getInt(systemProperties, "prism.dirtyregioncount", 6, null), 15);
-        
+
         // Scrolling cache optimization
-        scrollCacheOpt = getBoolean(systemProperties, "prism.scrollcacheopt", true);
+        // Disabled as a workaround for RT-39755.
+        scrollCacheOpt = getBoolean(systemProperties, "prism.scrollcacheopt", false);
 
         /* Dirty region optimizations */
         threadCheck = getBoolean(systemProperties, "prism.threadcheck", false);
