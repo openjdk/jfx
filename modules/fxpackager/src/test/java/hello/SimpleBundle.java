@@ -85,7 +85,17 @@ public class SimpleBundle {
                     // userJVM Args
                     params.put(StandardBundlerParam.USER_JVM_OPTIONS.getID(), "-Duser.arg.1\\==bundlerargs\n-Duser.arg.2=\\=bundlerargs\n-Dcollide=\\=userjvmoptions\n-Dcollide\\=jvmoptions=AWESOME");
                     // arguments
-                    params.put(StandardBundlerParam.ARGUMENTS.getID(), "argument1\nargument2");
+                    params.put(StandardBundlerParam.ARGUMENTS.getID(), "argument1\n" +
+                            "argument2\n" +
+                            "argument3=value\n" +
+                            "arg4=with=embedded\n" +
+                            "arg5=with=equals=at=end=\n" +
+                            "one_equal_at_end=\n" +
+                            "=\n" +
+                            "\"Prev Arg was just an equals\"\n" +
+                            "argument1\n" +
+                            "argument1\n" +
+                            "argument1");
                     break;
 
                 default:

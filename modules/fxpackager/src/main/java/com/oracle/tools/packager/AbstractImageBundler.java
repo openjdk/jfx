@@ -193,7 +193,12 @@ public abstract class AbstractImageBundler extends AbstractBundler {
         out.println("[ArgOptions]");
         List<String> args = ARGUMENTS.fetchFrom(params);
         for (String arg : args) {
-            out.println(arg);
+            if (arg.endsWith("=") && (arg.indexOf("=") == arg.lastIndexOf("="))) {
+                out.print(arg.substring(0, arg.length() - 1));
+                out.println("\\=");
+            } else {
+                out.println(arg);
+            }
         }
 
         

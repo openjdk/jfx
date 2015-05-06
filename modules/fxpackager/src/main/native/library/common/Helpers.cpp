@@ -267,12 +267,15 @@ std::list<TString> Helpers::MapToNameValueList(OrderedMap<TString, TString> Map)
     std::list<TString> result;
     std::vector<TString> keys = Map.GetKeys();
 
-    for (size_t index = 0; index < keys.size(); index++) {
-        TString key = keys[index];
-        TString value;
-
-        if (Map.GetValue(key, value) == true) {
-            result.push_back(key + _T('=') + value);
+    for (OrderedMap<TString, TString>::const_iterator iterator = Map.begin(); iterator != Map.end(); iterator++) {
+       pair<TString, TString> *item = *iterator;
+       TString key = item->first;
+       TString value = item->second;
+       
+       if (value.length() == 0) {
+           result.push_back(key);
+       } else {
+           result.push_back(key + _T('=') + value);
         }
     }
 

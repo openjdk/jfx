@@ -40,19 +40,9 @@ IniFile::IniFile() : ISectionalPropertyContainer() {
 }
 
 IniFile::~IniFile() {
-    std::vector<TString> keys = FMap.GetKeys();
-
-    for (size_t index = 0; index < keys.size(); index++) {
-        TString key = keys[index];
-
-        IniSectionData* item;
-
-        if (FMap.GetValue(key, item) == true) {
-            if (item != NULL) {
-                delete item;
-                item = NULL;
-            }
-        }
+    for (OrderedMap<TString, IniSectionData*>::iterator iterator = FMap.begin(); iterator != FMap.end(); iterator++) {
+        pair<TString, IniSectionData*> *item = *iterator;
+        delete item->second;
     }
 }
 
@@ -201,6 +191,7 @@ bool IniFile::GetSection(const TString SectionName, OrderedMap<TString, TString>
         if (FMap.GetValue(SectionName, section) == true && section != NULL) {
             OrderedMap<TString, TString> data = section->GetData();
             Data.Append(data);
+            result = true;
         }
     }
 
@@ -214,6 +205,7 @@ bool IniFile::ContainsSection(const TString SectionName) {
 //--------------------------------------------------------------------------------------------------
 
 IniSectionData::IniSectionData() {
+    FMap.SetAllowDuplicates(true);
 }
 
 IniSectionData::IniSectionData(OrderedMap<TString, TString> Values) {

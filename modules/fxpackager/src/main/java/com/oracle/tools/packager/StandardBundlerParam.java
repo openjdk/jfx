@@ -241,7 +241,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     "arguments",
                     (Class<List<String>>) (Object) List.class,
                     params -> Collections.emptyList(),
-                    (s, p) -> Arrays.asList(s.split("\\s+"))
+                    (s, p) -> splitStringWithEscapes(s)
             );
 
     @SuppressWarnings("unchecked")
@@ -740,4 +740,27 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
             }
         }
     }
+
+
+    private static List<String> splitStringWithEscapes(String s) {
+        List<String> l = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        boolean quoted = false;
+        boolean escaped = false;
+        for (char c : s.toCharArray()) {
+            if (escaped) {
+                current.append(c);
+            } else if ('"' == c) {
+                quoted = !quoted;
+            } else if (!quoted && Character.isWhitespace(c)) {
+                l.add(current.toString());
+                current = new StringBuilder();
+            } else {
+                current.append(c);
+            }
+        }
+        l.add(current.toString());
+        return l;
+    }
+
 }
