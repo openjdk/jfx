@@ -107,7 +107,7 @@ public class GIFImageLoader2 extends ImageLoaderImpl {
                 byte subBlock[] = readBytes(new byte[subBlockSize]);
                 int subBlockId = subBlock[0];
                 if (subBlockSize == 3 && subBlockId == 1) { // loop count extension
-                    loopCount = subBlock[1] + (subBlock[2] << 8);
+                    loopCount = (subBlock[1] & 0xff) | ((subBlock[2] & 0xff) << 8);
                 }
             }
         } else {
