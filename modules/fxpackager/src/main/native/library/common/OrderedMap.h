@@ -63,17 +63,16 @@ public:
     typedef TKey key_type;
     typedef TValue mapped_type;
     typedef pair<key_type, mapped_type> container_type;
+    typedef typename std::vector<container_type*>::iterator iterator;
+    typedef typename std::vector<container_type*>::const_iterator const_iterator;
 
 private:
     typedef std::map<key_type, container_type*> map_type;
     typedef std::vector<container_type*> list_type;
 
-public:
-    typedef typename list_type::const_iterator const_iterator;
-
-private:
     map_type FMap;
     list_type FList;
+    bool FAllowDuplicates;
 
     typename list_type::iterator FindListItem(const key_type Key) {
         typename list_type::iterator result = FList.end();
@@ -92,6 +91,7 @@ private:
 
 public:
     OrderedMap() {
+        FAllowDuplicates = false;
     }
 
     OrderedMap(const OrderedMap<key_type, mapped_type> &Value) {
@@ -102,6 +102,26 @@ public:
         Clear();
     }
 
+    void SetAllowDuplicates(bool Value) {
+        FAllowDuplicates = Value;
+    }
+    
+    iterator begin() {
+        return FList.begin();
+    }
+    
+    const_iterator begin() const {
+        return FList.begin();
+    }
+    
+    iterator end() {
+        return FList.end();
+    }
+    
+    const_iterator end() const {
+        return FList.end();
+    }
+    
     void Clear() {
         for (typename list_type::iterator iterator = FList.begin(); iterator != FList.end(); iterator++) {
             container_type *item = *iterator;
@@ -184,7 +204,7 @@ public:
     bool SetValue(key_type Key, mapped_type &Value) {
         bool result = false;
 
-        if (ContainsKey(Key) == true) {
+        if ((FAllowDuplicates == false) && (ContainsKey(Key) == true)) {
             container_type *item = FMap[Key];
 
             if (item != NULL) {
@@ -223,14 +243,6 @@ public:
 
     size_t Count() {
         return FList.size();
-    }
-
-    typename OrderedMap::const_iterator begin() {
-        return FList.begin();
-    }
-
-    typename OrderedMap::const_iterator end() {
-        return FList.end();
     }
 };
 

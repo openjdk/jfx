@@ -149,11 +149,6 @@ ext.MC = cygpath("$winSdkBinDir/mt.exe")
 ext.MSVCR = cygpath("${WINDOWS_VS_MSVCDIR}/redist/${IS_64 ? 'x64' : 'x86'}/Microsoft.VC${WINDOWS_VS_VER}.CRT/msvcr${WINDOWS_VS_VER}.dll")
 ext.MSVCP = cygpath("${WINDOWS_VS_MSVCDIR}/redist/${IS_64 ? 'x64' : 'x86'}/Microsoft.VC${WINDOWS_VS_VER}.CRT/msvcp${WINDOWS_VS_VER}.dll")
 
-// Set up path to redistributable MS VC libraries if we are using a different
-// version of Visual Studio than the JDK
-def msvcrtDir = WINDOWS_VS_VER == "100" ? "" : cygpath("${WINDOWS_VS_MSVCDIR}/redist/${IS_64 ? 'x64' : 'x86'}/Microsoft.VC${WINDOWS_VS_VER}.CRT")
-WIN.MSVCRTDIR = msvcrtDir
-
 if (!file(RC).exists()) throw new GradleException("FAIL: cannot find RC: " + RC)
 if (!file(FXC).exists()) throw new GradleException("FAIL: cannot find FXC: " + FXC)
 
