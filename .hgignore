@@ -12,6 +12,7 @@
 ^.idea/inspectionProfiles/*
 ^.idea/copyright/profile_settings.xml$
 ^\.gradle/
+^\.nb-gradle/
 ^buildSrc/\.gradle/
 ^.idea/out/
 ^build/
