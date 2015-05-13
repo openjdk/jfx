@@ -89,11 +89,23 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
                 // of the conditions below.
                 if (ke.getTarget().equals(textField)) return;
 
-                // Fix for the regression noted in a comment in RT-29885.
-                // This forwards the event down into the TextField when
-                // the key event is actually received by the ComboBox.
-                textField.fireEvent(ke.copyFor(textField, textField));
-                ke.consume();
+                switch (ke.getCode()) {
+                  case ESCAPE:
+                  case F10:
+                      // Allow to bubble up.
+                      break;
+
+                  case ENTER:
+                    handleKeyEvent(ke, true);
+                    break;
+
+                  default:
+                    // Fix for the regression noted in a comment in RT-29885.
+                    // This forwards the event down into the TextField when
+                    // the key event is actually received by the ComboBox.
+                    textField.fireEvent(ke.copyFor(textField, textField));
+                    ke.consume();
+                }
             }
         });
 
@@ -317,11 +329,6 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
      *                                                                         *
      **************************************************************************/
     
-    private EventHandler<KeyEvent> textFieldKeyEventHandler = event -> {
-        if (getEditor() != null && textField != null) {
-            handleKeyEvent(event, true);
-        }
-    };
     private EventHandler<MouseEvent> textFieldMouseEventHandler = event -> {
         ComboBoxBase<T> comboBoxBase = getSkinnable();
         if (!event.getTarget().equals(comboBoxBase)) {
@@ -357,28 +364,13 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
     protected TextField getEditableInputNode() {
         if (textField == null && getEditor() != null) {
             textField = getEditor();
-            textField.focusTraversableProperty().bindBidirectional(comboBoxBase.focusTraversableProperty());
+            textField.setFocusTraversable(false);
             textField.promptTextProperty().bind(comboBoxBase.promptTextProperty());
             textField.tooltipProperty().bind(comboBoxBase.tooltipProperty());
 
             // Fix for RT-21406: ComboBox do not show initial text value
             initialTextFieldValue = textField.getText();
             // End of fix (see updateDisplayNode below for the related code)
-
-            textField.focusedProperty().addListener((ov, t, hasFocus) -> {
-                if (getEditor() != null) {
-                    // Fix for RT-29885
-                    comboBoxBase.getProperties().put("FOCUSED", hasFocus);
-                    // --- end of RT-29885
-
-                    // RT-21454 starts here
-                    if (!hasFocus) {
-                        setTextFromTextFieldIntoComboBoxValue();
-                    }
-                    pseudoClassStateChanged(CONTAINS_FOCUS_PSEUDOCLASS_STATE, hasFocus);
-                    // --- end of RT-21454
-                }
-            });
         }
 
         return textField;
@@ -441,23 +433,25 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         if (ke.getCode() == KeyCode.ENTER) {
             setTextFromTextFieldIntoComboBoxValue();
 
-            if (doConsume) ke.consume();
+            if (doConsume && comboBoxBase.getOnAction() != null) {
+                ke.consume();
+            } else {
+                forwardToParent(ke);
+            }
         } else if (ke.getCode() == KeyCode.F4) {
             if (ke.getEventType() == KeyEvent.KEY_RELEASED) {
                 if (comboBoxBase.isShowing()) comboBoxBase.hide();
                 else comboBoxBase.show();
             }
             ke.consume(); // we always do a consume here (otherwise unit tests fail)
-        } else if (ke.getCode() == KeyCode.F10 || ke.getCode() == KeyCode.ESCAPE) {
-            // RT-23275: The TextField fires F10 and ESCAPE key events
-            // up to the parent, which are then fired back at the
-            // TextField, and this ends up in an infinite loop until
-            // the stack overflows. So, here we consume these two
-            // events and stop them from going any further.
-            if (doConsume) ke.consume();
         }
     }
 
+    private void forwardToParent(KeyEvent event) {
+        if (comboBoxBase.getParent() != null) {
+            comboBoxBase.getParent().fireEvent(event);
+        }
+    }
 
     protected void updateEditable() {
         TextField newTextField = getEditor();
@@ -465,7 +459,6 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         if (getEditor() == null) {
             // remove event filters
             if (textField != null) {
-                textField.removeEventFilter(KeyEvent.ANY, textFieldKeyEventHandler);
                 textField.removeEventFilter(MouseEvent.DRAG_DETECTED, textFieldMouseEventHandler);
                 textField.removeEventFilter(DragEvent.ANY, textFieldDragEventHandler);
 
@@ -473,7 +466,6 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
             }
         } else if (newTextField != null) {
             // add event filters
-            newTextField.addEventFilter(KeyEvent.ANY, textFieldKeyEventHandler);
 
             // Fix for RT-31093 - drag events from the textfield were not surfacing
             // properly for the ComboBox.
@@ -522,6 +514,12 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
      **************************************************************************/
 
     public static final class FakeFocusTextField extends TextField {
+
+        @Override public void requestFocus() {
+            if (getParent() != null) {
+                getParent().requestFocus();
+            }
+        }
 
         public void setFakeFocus(boolean b) {
             setFocused(b);

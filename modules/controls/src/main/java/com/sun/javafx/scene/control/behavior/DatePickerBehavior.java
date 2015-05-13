@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,43 +57,9 @@ public class DatePickerBehavior extends ComboBoxBaseBehavior<LocalDate> {
      *                                                                         *
      **************************************************************************/
 
-    /**
-     * Opens the Date Picker Popup
-     */
-    protected static final String OPEN_ACTION = "Open";
-
-    /**
-     * Closes the Date Picker Popup
-     */
-    protected static final String CLOSE_ACTION = "Close";
-
-
     protected static final List<KeyBinding> DATE_PICKER_BINDINGS = new ArrayList<KeyBinding>();
     static {
-        DATE_PICKER_BINDINGS.add(new KeyBinding(F4, KEY_RELEASED, "togglePopup"));
-        DATE_PICKER_BINDINGS.add(new KeyBinding(UP, "togglePopup").alt());
-        DATE_PICKER_BINDINGS.add(new KeyBinding(DOWN, "togglePopup").alt());
-    }
-
-    @Override protected void callAction(String name) {
-        switch (name) {
-          case OPEN_ACTION:
-              show(); break;
-
-          case CLOSE_ACTION:
-              hide(); break;
-
-          case "togglePopup":
-              if (getControl().isShowing()) {
-                  hide();
-              } else {
-                  show();
-              }
-              break;
-
-          default:
-            super.callAction(name);
-        }
+        DATE_PICKER_BINDINGS.addAll(COMBO_BOX_BASE_BINDINGS);
     }
 
     @Override public void onAutoHide() {

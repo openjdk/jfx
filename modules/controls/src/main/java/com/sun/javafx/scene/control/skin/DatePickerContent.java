@@ -266,7 +266,6 @@ public class DatePickerContent extends VBox {
             // Consume all key events except those that control
             // showing the popup and traversal.
             switch (e.getCode()) {
-              case ESCAPE:
               case F4:
               case F10:
               case UP:
@@ -275,6 +274,11 @@ public class DatePickerContent extends VBox {
               case RIGHT:
               case TAB:
                     break;
+
+              case ESCAPE:
+                datePicker.hide();
+                e.consume();
+                break;
 
               default:
                 e.consume();
