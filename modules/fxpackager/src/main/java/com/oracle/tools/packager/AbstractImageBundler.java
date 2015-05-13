@@ -181,7 +181,7 @@ public abstract class AbstractImageBundler extends AbstractBundler {
             if (arg.getKey() == null || arg.getValue() == null) {
                 Log.info(I18N.getString("message.jvm-user-arg-is-null"));
             } else {
-                out.println(arg.getKey().replaceAll("([\\=])", "\\$1") + "=" + arg.getValue());
+                out.println(arg.getKey().replaceAll("([\\=])", "\\\\$1") + "=" + arg.getValue());
             }
         }
 

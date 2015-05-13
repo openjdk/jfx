@@ -225,6 +225,9 @@ std::list<TString> IniSectionData::GetLines() {
         TString value;
 
         if (FMap.GetValue(name, value) == true) {
+            name = Helpers::ReplaceString(name, _T("="), _T("\\="));
+            value = Helpers::ReplaceString(value, _T("="), _T("\\="));
+
             TString line = name + _T('=') + value;
             result.push_back(line);
         }

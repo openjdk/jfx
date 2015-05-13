@@ -373,9 +373,10 @@ std::vector<TString> GetKeysThatAreNotDuplicates(OrderedMap<TString, TString> &D
         TString overridesValue;
         TString defaultValue;
 
-        if (Defaults.GetValue(overridesKey, defaultValue) == true &&
+        if ((Defaults.ContainsKey(overridesKey) == false) ||
+           (Defaults.GetValue(overridesKey, defaultValue) == true &&
             Overrides.GetValue(overridesKey, overridesValue) == true &&
-            defaultValue != overridesValue) {
+            defaultValue != overridesValue)) {
             result.push_back(overridesKey);
         }
     }
