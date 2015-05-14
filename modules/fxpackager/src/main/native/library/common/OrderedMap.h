@@ -232,11 +232,13 @@ public:
     }
 
     OrderedMap& operator= (OrderedMap &Value) {
+        Clear();
         Append(Value);
         return *this;
     }
     
     OrderedMap& operator= (const OrderedMap &Value) {
+        Clear();
         Append(Value);
         return *this;
     }

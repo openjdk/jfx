@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,7 +27,10 @@ package com.sun.javafx.scene.control.behavior;
 
 import javafx.event.EventTarget;
 import javafx.scene.Node;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.ComboBoxBase;
+import javafx.scene.control.DatePicker;
+import javafx.scene.control.TextField;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
@@ -35,7 +38,9 @@ import java.util.ArrayList;
 import java.util.List;
 import static javafx.scene.input.KeyCode.DOWN;
 import static javafx.scene.input.KeyCode.ENTER;
+import static javafx.scene.input.KeyCode.ESCAPE;
 import static javafx.scene.input.KeyCode.F4;
+import static javafx.scene.input.KeyCode.F10;
 import static javafx.scene.input.KeyCode.SPACE;
 import static javafx.scene.input.KeyCode.UP;
 import static javafx.scene.input.KeyEvent.KEY_PRESSED;
@@ -51,6 +56,12 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
 
     private TwoLevelFocusComboBehavior tlFocus;
     
+    /**
+     * Used to keep track of the most recent key event. This is used when
+     * the event needs to be forwarded to the parent for bubbling up.
+     */
+    private KeyEvent lastEvent;
+
     /**
      * 
      */
@@ -112,10 +123,15 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
 
         COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(ENTER, KEY_PRESSED, PRESS_ACTION));
         COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(ENTER, KEY_RELEASED, RELEASE_ACTION));
+
+        // The following keys are forwarded to the parent container
+        COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(ESCAPE, "Cancel"));
+        COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(F10, "ToParent"));
     }
 
     @Override protected void callActionForEvent(KeyEvent e) {
         // If popup is shown, KeyEvent causes popup to close
+        lastEvent = e;
         showPopupOnMouseRelease = true;
         super.callActionForEvent(e);
     }
@@ -130,6 +146,10 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
         } else if ("togglePopup".equals(name)) {
             if (getControl().isShowing()) hide();
             else show();
+        } else if ("Cancel".equals(name)) {
+            cancelEdit(lastEvent);
+        } else if ("ToParent".equals(name)) {
+            forwardToParent(lastEvent);
         } else {
             super.callAction(name);
         }
@@ -170,8 +190,32 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
         }
     }
     
-    
-    
+    protected void forwardToParent(KeyEvent event) {
+        if (getControl().getParent() != null) {
+            getControl().getParent().fireEvent(event);
+        }
+    }
+
+    protected void cancelEdit(KeyEvent event) {
+        /**
+         * This can be cleaned up if the editor property is moved up
+         * to ComboBoxBase.
+         */
+        ComboBoxBase comboBoxBase = getControl();
+        TextField textField = null;
+        if (comboBoxBase instanceof DatePicker) {
+            textField = ((DatePicker)comboBoxBase).getEditor();
+        } else if (comboBoxBase instanceof ComboBox) {
+            textField = comboBoxBase.isEditable() ? ((ComboBox)comboBoxBase).getEditor() : null;
+        }
+
+        if (textField != null && textField.getTextFormatter() != null) {
+            textField.cancelEdit();
+        } else {
+            forwardToParent(event);
+        }
+    }
+
     /**************************************************************************
      *                                                                        *
      * Mouse Events                                                           *

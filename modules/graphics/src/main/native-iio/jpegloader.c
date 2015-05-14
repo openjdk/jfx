@@ -587,10 +587,15 @@ sun_jpeg_output_message(j_common_ptr cinfo) {
     imageIODataPtr data = (imageIODataPtr) cinfo->client_data;
     JNIEnv *env = (JNIEnv *) GetEnv(jvm, JNI_VERSION_1_2);
     jobject theObject;
+    j_decompress_ptr dinfo;
 
     /* Create the message */
     (*cinfo->err->format_message) (cinfo, buffer);
 
+    if (cinfo->is_decompressor) {
+        dinfo = (j_decompress_ptr)cinfo;
+        RELEASE_ARRAYS(env, data, dinfo->src->next_input_byte);
+    }
     // Create a new java string from the message
     string = (*env)->NewStringUTF(env, buffer);
 
@@ -601,6 +606,9 @@ sun_jpeg_output_message(j_common_ptr cinfo) {
                 JPEGImageLoader_emitWarningID,
                 string);
         checkAndClearException(env);
+        if (!GET_ARRAYS(env, data, &(dinfo->src->next_input_byte))) {
+            cinfo->err->error_exit(cinfo);
+        }
     }
 }
 

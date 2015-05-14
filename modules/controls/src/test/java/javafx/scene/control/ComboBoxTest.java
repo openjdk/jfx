@@ -1208,9 +1208,9 @@ public class ComboBoxTest {
 
         StageLoader sl = new StageLoader(cb);
 
-        cb.getEditor().requestFocus();
+        cb.requestFocus();
         cb.getEditor().setText("Test");
-        KeyEventFirer keyboard = new KeyEventFirer(cb.getEditor());
+        KeyEventFirer keyboard = new KeyEventFirer(cb);
         keyboard.doKeyPress(KeyCode.ENTER);
 
         assertEquals(1, test_rt35586_count);
@@ -1654,8 +1654,12 @@ public class ComboBoxTest {
         cb1Keyboard.doKeyPress(KeyCode.TAB, KeyModifier.SHIFT);
         assertTrue("Expect cb2 to be focused, but actual focus owner is: " + scene.getFocusOwner(),
                 cb2.isFocused());
-        assertEquals("Expect cb2 TextField to be focused, but actual focus owner is: " + scene.getFocusOwner(),
-                cb2.getEditor(), scene.getFocusOwner());
+        // Updated with fix for RT-34602: The TextField now never gets
+        // focus (it's just faking it).
+        // assertEquals("Expect cb2 TextField to be focused, but actual focus owner is: " + scene.getFocusOwner(),
+        //         cb2.getEditor(), scene.getFocusOwner());
+        assertEquals("Expect cb2 to be focused, but actual focus owner is: " + scene.getFocusOwner(),
+                     cb2, scene.getFocusOwner());
 
         // This is where the second half of the bug appears, as we are stuck in
         // the FakeFocusTextField of cb2, we never make it to cb1
