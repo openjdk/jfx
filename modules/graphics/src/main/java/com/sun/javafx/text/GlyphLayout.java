@@ -71,6 +71,8 @@ import com.sun.javafx.font.FontStrike;
 import com.sun.javafx.font.PGFont;
 import com.sun.javafx.font.PrismFontFactory;
 import com.sun.javafx.scene.text.TextSpan;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 
 public abstract class GlyphLayout {
 
@@ -95,6 +97,23 @@ public abstract class GlyphLayout {
     public static final int LAYOUT_NO_LIMIT_CONTEXT = 1 << 3;
 
     public static final int HINTING = 1 << 4;
+
+    /**
+     * Android versions that still run a dalvik based on JDK 6 (API level 18 and
+     * before) don't have the method Character.isIdeographic.
+     * On devices with a JVM that does not have Character.isIdeographic, there will
+     * be non-optimal line breaking for CJKV.
+     * The reflection-based approach should be removed in a later version,
+     * when the Android base version moves to API level 19.
+     */
+    private static Method isIdeographicMethod = null;
+    static {
+        try {
+            isIdeographicMethod = Character.class.getMethod("isIdeographic", int.class);
+        } catch (NoSuchMethodException | SecurityException e) {
+            isIdeographicMethod = null;
+        }
+    }
 
     protected TextRun addTextRun(PrismTextLayout layout, char[] chars,
                                  int start, int length,
@@ -210,7 +229,7 @@ public abstract class GlyphLayout {
                         }
                     }
 
-                    if (Character.isIdeographic(codePoint)) {
+                    if (isIdeographic(codePoint)) {
                         flags |= FLAGS_HAS_CJK;
                     }
 
@@ -385,4 +404,16 @@ public abstract class GlyphLayout {
             inUse = false;
         }
     }
+
+    private static boolean isIdeographic(int codePoint) {
+        if (isIdeographicMethod != null) {
+            try {
+                return (boolean) isIdeographicMethod.invoke(null, codePoint);
+            } catch (IllegalAccessException | InvocationTargetException ex) {
+                return false;
+            }
+        }
+        return false;
+    }
+
 }
