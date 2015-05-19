@@ -107,7 +107,6 @@ def linkFlags = ["-shared", commonFlags].flatten()
 
 // Specify the compilation parameters and link parameters
 def extraCFlags = [
-        "-I", "-L",
         ccFlags,
         "-mthumb", "-march=armv7-a", "-mfloat-abi=hard", "-mfpu=vfp",
         "-I$sdk/usr/include",
@@ -123,7 +122,6 @@ if (imxHeader.exists()) {
 }
 
 def extraLFlags = [
-        "-I", "-L",
         linkFlags,
         "-L$sdk/lib/arm-linux-gnueabihf",
         "-L$sdk/usr/lib",
