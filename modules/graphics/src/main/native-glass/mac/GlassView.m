@@ -659,7 +659,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1exitFullscreen
  * Signature: (JLjava/nio/Buffer;II)V
  */
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1uploadPixelsDirect
-(JNIEnv *env, jobject jView, jlong jPtr, jobject jBuffer, jint jWidth, jint jHeight)
+(JNIEnv *env, jobject jView, jlong jPtr, jobject jBuffer, jint jWidth, jint jHeight, jfloat jScale)
 {
     LOG("Java_com_sun_glass_ui_mac_MacView__1uploadPixelsDirect");
     if (!jPtr) return;
@@ -676,7 +676,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1uploadPixelsDirect
     // must be in the middle of begin/end
     if ((jWidth > 0) && (jHeight > 0))
     {
-        [view pushPixels:pixels withWidth:(GLuint)jWidth withHeight:(GLuint)jHeight withEnv:env];
+        [view pushPixels:pixels withWidth:(GLuint)jWidth withHeight:(GLuint)jHeight withScale:(GLfloat)jScale withEnv:env];
     }
 }
 
@@ -686,7 +686,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1uploadPixelsDirect
  * Signature: (J[BIII)V
  */
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1uploadPixelsByteArray
-(JNIEnv *env, jobject jView, jlong jPtr, jbyteArray jArray, jint jOffset, jint jWidth, jint jHeight)
+(JNIEnv *env, jobject jView, jlong jPtr, jbyteArray jArray, jint jOffset, jint jWidth, jint jHeight, jfloat jScale)
 {
     LOG("Java_com_sun_glass_ui_mac_MacView__1uploadPixelsByteArray");
     if (!jPtr) return;
@@ -709,7 +709,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1uploadPixelsByteArray
         // must be in the middle of begin/end
         if ((jWidth > 0) && (jHeight > 0))
         {
-            [view pushPixels:pixels withWidth:(GLuint)jWidth withHeight:(GLuint)jHeight withEnv:env];
+            [view pushPixels:pixels withWidth:(GLuint)jWidth withHeight:(GLuint)jHeight withScale:(GLfloat)jScale withEnv:env];
         }
     }
     (*env)->ReleasePrimitiveArrayCritical(env, jArray, data, JNI_ABORT);
@@ -721,7 +721,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1uploadPixelsByteArray
  * Signature: (J[IIII)V
  */
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1uploadPixelsIntArray
-(JNIEnv *env, jobject jView, jlong jPtr, jintArray jArray, jint jOffset, jint jWidth, jint jHeight)
+(JNIEnv *env, jobject jView, jlong jPtr, jintArray jArray, jint jOffset, jint jWidth, jint jHeight, jfloat jScale)
 {
     LOG("Java_com_sun_glass_ui_mac_MacView__1uploadPixelsIntArray");
     if (!jPtr) return;
@@ -744,7 +744,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1uploadPixelsIntArray
         // must be in the middle of begin/end
         if ((jWidth > 0) && (jHeight > 0))
         {
-            [view pushPixels:pixels withWidth:(GLuint)jWidth withHeight:(GLuint)jHeight withEnv:env];
+            [view pushPixels:pixels withWidth:(GLuint)jWidth withHeight:(GLuint)jHeight withScale:(GLfloat)jScale withEnv:env];
         }
     }
     (*env)->ReleasePrimitiveArrayCritical(env, jArray, data, JNI_ABORT);

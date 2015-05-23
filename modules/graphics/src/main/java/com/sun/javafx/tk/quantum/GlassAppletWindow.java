@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,6 +35,7 @@ import com.sun.javafx.tk.TKStage;
 import java.lang.ref.WeakReference;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import javafx.stage.Stage;
 
@@ -118,6 +119,13 @@ class GlassAppletWindow implements AppletWindow {
         final AtomicInteger y = new AtomicInteger(0);
         Application.invokeAndWait(() -> y.set(glassWindow.getY()));
         return y.get();
+    }
+
+    @Override
+    public float getUIScale() {
+        final AtomicReference<Float> uiScale = new AtomicReference<Float>(0.0f);
+        Application.invokeAndWait(() -> uiScale.set(glassWindow.getPlatformScale()));
+        return uiScale.get();
     }
 
     void dispose() {

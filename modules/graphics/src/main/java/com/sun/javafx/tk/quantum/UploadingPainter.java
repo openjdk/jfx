@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,7 +47,6 @@ final class UploadingPainter extends ViewPainter implements Runnable {
 
     private QueuedPixelSource pixelSource = new QueuedPixelSource(true);
     private float penScale;
-    private volatile float pixScaleFactor = 1.0f;
 
     UploadingPainter(GlassScene view) {
         super(view);
@@ -63,15 +62,11 @@ final class UploadingPainter extends ViewPainter implements Runnable {
             resolveRTT = null;
         }
     }
-    
-    public void setPixelScaleFactor(float scale) {
-        pixScaleFactor = scale;
-    }
-    
+
     @Override
     public float getPixelScaleFactor() {
-        return pixScaleFactor;
-    }    
+        return sceneState.getRenderScale();
+    }
 
     @Override public void run() {
         renderLock.lock();
@@ -93,14 +88,20 @@ final class UploadingPainter extends ViewPainter implements Runnable {
                 return;
             }
 
-            float scale = pixScaleFactor;
-            int bufWidth = Math.round(viewWidth * scale);
-            int bufHeight = Math.round(viewHeight * scale);
+            float scale = getPixelScaleFactor();
+            int bufWidth = sceneState.getRenderWidth();
+            int bufHeight = sceneState.getRenderHeight();
 
+            // Repaint everything on pen scale or view size change because
+            // texture contents are no longer correct.
+            // Repaint everything on new texture dimensions because otherwise
+            // our upload logic below may fail with index out of bounds.
             boolean needsReset = (penScale != scale ||
                                   penWidth != viewWidth ||
                                   penHeight != viewHeight ||
-                                  rttexture == null);
+                                  rttexture == null ||
+                                  rttexture.getContentWidth() != bufWidth ||
+                                  rttexture.getContentHeight() != bufHeight);
 
             if (!needsReset) {
                 rttexture.lock();
@@ -133,17 +134,24 @@ final class UploadingPainter extends ViewPainter implements Runnable {
             paintImpl(g);
             freshBackBuffer = false;
 
-            Pixels pix = pixelSource.getUnusedPixels(bufWidth, bufHeight, scale);
+            int outWidth = sceneState.getOutputWidth();
+            int outHeight = sceneState.getOutputHeight();
+            float outScale = sceneState.getOutputScale();
+            RTTexture rtt;
+            if (rttexture.isMSAA() || outWidth != bufWidth || outHeight != bufHeight) {
+                rtt = resolveRenderTarget(g, outWidth, outHeight);
+            } else {
+                rtt = rttexture;
+            }
+
+            Pixels pix = pixelSource.getUnusedPixels(outWidth, outHeight, outScale);
             IntBuffer bits = (IntBuffer) pix.getPixels();
 
-            int rawbits[] = rttexture.getPixels();
-            
-            if (rawbits != null) {
-                bits.put(rawbits, 0, bufWidth * bufHeight);
-            } else {
-                RTTexture rtt = rttexture.isMSAA() ?
-                    resolveRenderTarget(g) : rttexture;
+            int rawbits[] = rtt.getPixels();
 
+            if (rawbits != null) {
+                bits.put(rawbits, 0, outWidth * outHeight);
+            } else {
                 if (!rtt.readPixels(bits)) {
                     /* device lost */
                     sceneState.getScene().entireSceneNeedsRepaint();
@@ -187,25 +195,26 @@ final class UploadingPainter extends ViewPainter implements Runnable {
         }
     }
 
-    private RTTexture resolveRenderTarget(Graphics g) {
-        int width = rttexture.getContentWidth();
-        int height = rttexture.getContentHeight();
-        if (resolveRTT != null &&
-                (resolveRTT.getContentWidth() != width ||
-                (resolveRTT.getContentHeight() != height)))
-        {
-            // If msaa rtt is not the same size than resolve buffer, then dispose
-            resolveRTT.dispose();
-            resolveRTT = null;
+    private RTTexture resolveRenderTarget(Graphics g, int width, int height) {
+        if (resolveRTT != null) {
+            resolveRTT.lock();
+            if (resolveRTT.isSurfaceLost() ||
+                resolveRTT.getContentWidth() != width ||
+                resolveRTT.getContentHeight() != height)
+            {
+                resolveRTT.unlock();
+                resolveRTT.dispose();
+                resolveRTT = null;
+            }
         }
-        if (resolveRTT == null || resolveRTT.isSurfaceLost()) {
+        if (resolveRTT == null) {
             resolveRTT = g.getResourceFactory().createRTTexture(
                     width, height,
                     WrapMode.CLAMP_NOT_NEEDED, false);
-        } else {
-            resolveRTT.lock();
         }
-        g.blit(rttexture, resolveRTT, 0, 0, width, height, 0, 0, width, height);
+        int srcw = rttexture.getContentWidth();
+        int srch = rttexture.getContentHeight();
+        g.blit(rttexture, resolveRTT, 0, 0, srcw, srch, 0, 0, width, height);
         return resolveRTT;
     }
 }

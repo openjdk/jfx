@@ -138,22 +138,23 @@ public class NGExternalNode extends NGNode {
         final Rectangle srcbounds;
         
         // source image user space (logical) size
-        final int usrwidth;
-        final int usrheight;
+        final float usrwidth;
+        final float usrheight;
         
         // source image scale factor
         final int scale;
         
         BufferData(Buffer srcbuffer, int linestride,
                    int x, int y, int width, int height,
+                   float usrWidth, float usrHeight,
                    int scale)
         {
             this.srcbuffer = srcbuffer;
             this.scale = scale;
             this.linestride = linestride;
             this.srcbounds = scale(new Rectangle(x, y, width, height));
-            this.usrwidth = width;
-            this.usrheight = height;
+            this.usrwidth = usrWidth;
+            this.usrheight = usrHeight;
         }
         
         Rectangle scale(Rectangle r) {
@@ -164,9 +165,12 @@ public class NGExternalNode extends NGNode {
             return r;
         }        
         
-        BufferData copyWithBounds(int x, int y, int width, int height) {            
+        BufferData copyWithBounds(int x, int y, int width, int height,
+                                  float usrWidth, float usrHeight)
+        {
             return new BufferData(this.srcbuffer, this.linestride,
-                                  x, y, width, height, this.scale);
+                                  x, y, width, height,
+                                  usrWidth, usrHeight, this.scale);
         }
     }
     
@@ -204,18 +208,21 @@ public class NGExternalNode extends NGNode {
     
     public void setImageBuffer(Buffer buffer,
                                int x, int y, int width, int height,
+                               float usrWidth, float usrHeight,
                                int linestride,
                                int scale)
     {
-        bufferData = new BufferData(buffer, linestride, x, y, width, height, scale);
+        bufferData = new BufferData(buffer, linestride, x, y, width, height, usrWidth, usrHeight, scale);
         renderData.set(new RenderData(bufferData, x, y, width, height, true));
     }
 
-    public void setImageBounds(final int x, final int y, final int width, final int height) {
+    public void setImageBounds(final int x, final int y, final int width, final int height,
+                               final float usrWidth, final float usrHeight)
+    {
         
         final boolean shrinked = width < bufferData.usrwidth || height < bufferData.usrheight;
         
-        bufferData = bufferData.copyWithBounds(x, y, width, height);
+        bufferData = bufferData.copyWithBounds(x, y, width, height, usrWidth, usrHeight);
         renderData.updateAndGet(prev -> {
             boolean clearTarget = (prev != null ? prev.clearTarget : false);
             return new RenderData(bufferData, x, y, width, height, clearTarget | shrinked);

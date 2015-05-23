@@ -355,7 +355,7 @@ public class NGCanvas extends NGNode {
         ScreenConfigurationAccessor screenAccessor = tk.getScreenConfigurationAccessor();
         float hPS = 1.0f;
         for (Object screen : tk.getScreens()) {
-            hPS = Math.max(screenAccessor.getScale(screen), hPS);
+            hPS = Math.max(screenAccessor.getRenderScale(screen), hPS);
         }
         highestPixelScale = hPS;
 

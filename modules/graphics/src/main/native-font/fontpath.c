@@ -741,7 +741,10 @@ Java_com_sun_javafx_font_PrismFontFactory_getSystemFontSizeNative(JNIEnv *env, j
     NONCLIENTMETRICSW ncmetrics;
 
     if (getSysParams(&ncmetrics)) {
-        return -ncmetrics.lfMessageFont.lfHeight;
+        HDC hDC = CreateDC(TEXT("DISPLAY"), NULL, NULL, NULL);
+        UINT resy = GetDeviceCaps(hDC, LOGPIXELSY);
+        DeleteDC(hDC);
+        return -ncmetrics.lfMessageFont.lfHeight * 96 / resy;
     } else {
         return 12;
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -251,6 +251,11 @@ public class JFXPanel extends JComponent {
     // Initialize FX runtime when the JFXPanel instance is constructed
     private synchronized static void initFx() {
         // Note that calling PlatformImpl.startup more than once is OK
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            System.setProperty("glass.win.uiScale", "100%");
+            System.setProperty("glass.win.renderScale", "100%");
+            return null;
+        });
         PlatformImpl.startup(() -> {
             // No need to do anything here
         });

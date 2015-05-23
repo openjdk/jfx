@@ -2700,7 +2700,7 @@ public class Scene implements EventTarget {
         @Override
         public void touchEventNext(
                 TouchPoint.State state, long touchId,
-                int x, int y, int xAbs, int yAbs) {
+                double x, double y, double screenX, double screenY) {
 
             inMousePick = true;
             if (nextTouchEvent == null) {
@@ -2733,7 +2733,7 @@ public class Scene implements EventTarget {
             }
 
             TouchPoint tp = new TouchPoint(id, state,
-                    x, y, xAbs, yAbs, pickedTarget, pickRes);
+                    x, y, screenX, screenY, pickedTarget, pickRes);
 
             touchPoints[order] = tp;
 

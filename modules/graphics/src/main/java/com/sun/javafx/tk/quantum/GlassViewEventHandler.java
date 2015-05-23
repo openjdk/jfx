@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -346,8 +346,11 @@ class GlassViewEventHandler extends View.EventHandler {
                     boolean primaryButtonDown = (modifiers & KeyEvent.MODIFIER_BUTTON_PRIMARY) != 0;
                     boolean middleButtonDown = (modifiers & KeyEvent.MODIFIER_BUTTON_MIDDLE) != 0;
                     boolean secondaryButtonDown = (modifiers & KeyEvent.MODIFIER_BUTTON_SECONDARY) != 0;
-
-                    scene.sceneListener.mouseEvent(mouseEventType(type), x, y, xAbs, yAbs,
+                    Window w = view.getWindow();
+                    double pScale = (w == null) ? 1.0 : w.getPlatformScale();
+ 
+                    scene.sceneListener.mouseEvent(mouseEventType(type),
+                            x / pScale, y / pScale, xAbs / pScale, yAbs / pScale,
                             mouseEventButton(button), isPopupTrigger, isSynthesized,
                             shiftDown, controlDown, altDown, metaDown,
                             primaryButtonDown, middleButtonDown, secondaryButtonDown);
@@ -401,7 +404,11 @@ class GlassViewEventHandler extends View.EventHandler {
             QuantumToolkit.runWithoutRenderLock(() -> {
                 return AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
                     if (scene.sceneListener != null) {
-                        scene.sceneListener.menuEvent(x, y, xAbs, yAbs, isKeyboardTrigger);
+                        Window w = view.getWindow();
+                        double pScale = (w == null) ? 1.0 : w.getPlatformScale();
+                        scene.sceneListener.menuEvent(x / pScale, y / pScale,
+                                                      xAbs / pScale, yAbs / pScale,
+                                                      isKeyboardTrigger);
                     }
                     return null;
                 }, scene.getAccessControlContext());
@@ -434,12 +441,14 @@ class GlassViewEventHandler extends View.EventHandler {
             QuantumToolkit.runWithoutRenderLock(() -> {
                 return AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
                     if (scene.sceneListener != null) {
+                        Window w = view.getWindow();
+                        double pScale = (w == null) ? 1.0 : w.getPlatformScale();
                         scene.sceneListener.scrollEvent(ScrollEvent.SCROLL,
-                            deltaX, deltaY, 0, 0,
+                            deltaX / pScale, deltaY / pScale, 0, 0,
                             xMultiplier, yMultiplier,
                             0, // touchCount
                             chars, lines, defaultChars, defaultLines,
-                            x, y, xAbs, yAbs,
+                            x / pScale, y / pScale, xAbs / pScale, yAbs / pScale,
                             (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
                             (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
                             (modifiers & KeyEvent.MODIFIER_ALT) != 0,
@@ -765,7 +774,9 @@ class GlassViewEventHandler extends View.EventHandler {
                 }
                 case ViewEvent.RESIZE: {
                     Window w = view.getWindow();
-                    scene.sceneListener.changedSize(view.getWidth(), view.getHeight());
+                    float pScale = (w == null) ? 1.0f : w.getPlatformScale();
+                    scene.sceneListener.changedSize(view.getWidth()  / pScale,
+                                                    view.getHeight() / pScale);
                     scene.entireSceneNeedsRepaint();
                     QuantumToolkit.runWithRenderLock(() -> {
                         scene.updateSceneState();
@@ -779,9 +790,15 @@ class GlassViewEventHandler extends View.EventHandler {
                     }
                     break;
                 }
-                case ViewEvent.MOVE:
-                    scene.sceneListener.changedLocation(view.getX(), view.getY());
+                case ViewEvent.MOVE: {
+                    // MOVE events can be "synthesized" and the window will
+                    // be null if this is synthesized during a "REMOVE" event
+                    Window w = view.getWindow();
+                    float pScale = (w == null) ? 1.0f : w.getPlatformScale();
+                    scene.sceneListener.changedLocation(view.getX() / pScale,
+                                                        view.getY() / pScale);
                     break;
+                }
                 case ViewEvent.FULLSCREEN_ENTER:
                 case ViewEvent.FULLSCREEN_EXIT:
                     if (scene.getWindowStage() != null) {
@@ -849,14 +866,17 @@ class GlassViewEventHandler extends View.EventHandler {
                             default:
                                 throw new RuntimeException("Unknown scroll event type: " + type);
                         }
-                        scene.sceneListener.scrollEvent(eventType, dx, dy, totaldx, totaldy,
+                        Window w = view.getWindow();
+                        double pScale = (w == null) ? 1.0 : w.getPlatformScale();
+                        scene.sceneListener.scrollEvent(eventType,
+                                dx / pScale, dy / pScale, totaldx / pScale, totaldy / pScale,
                                 multiplierX, multiplierY,
                                 touchCount,
                                 0, 0, 0, 0,
-                                x == View.GESTURE_NO_VALUE ? Double.NaN : x,
-                                y == View.GESTURE_NO_VALUE ? Double.NaN : y,
-                                xAbs == View.GESTURE_NO_VALUE ? Double.NaN : xAbs,
-                                yAbs == View.GESTURE_NO_VALUE ? Double.NaN : yAbs,
+                                x == View.GESTURE_NO_VALUE ? Double.NaN : x / pScale,
+                                y == View.GESTURE_NO_VALUE ? Double.NaN : y / pScale,
+                                xAbs == View.GESTURE_NO_VALUE ? Double.NaN : xAbs / pScale,
+                                yAbs == View.GESTURE_NO_VALUE ? Double.NaN : yAbs / pScale,
                                 (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
                                 (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
                                 (modifiers & KeyEvent.MODIFIER_ALT) != 0,
@@ -909,11 +929,14 @@ class GlassViewEventHandler extends View.EventHandler {
                             default:
                                 throw new RuntimeException("Unknown scroll event type: " + type);
                         }
+                        Window w = view.getWindow();
+                        double pScale = (w == null) ? 1.0 : w.getPlatformScale();
+                        // REMIND: Scale the [total]scale params too?
                         scene.sceneListener.zoomEvent(eventType, scale, totalscale,
-                                originx == View.GESTURE_NO_VALUE ? Double.NaN : originx,
-                                originy == View.GESTURE_NO_VALUE ? Double.NaN : originy,
-                                originxAbs == View.GESTURE_NO_VALUE ? Double.NaN : originxAbs,
-                                originyAbs == View.GESTURE_NO_VALUE ? Double.NaN : originyAbs,
+                                originx == View.GESTURE_NO_VALUE ? Double.NaN : originx / pScale,
+                                originy == View.GESTURE_NO_VALUE ? Double.NaN : originy / pScale,
+                                originxAbs == View.GESTURE_NO_VALUE ? Double.NaN : originxAbs / pScale,
+                                originyAbs == View.GESTURE_NO_VALUE ? Double.NaN : originyAbs / pScale,
                                 (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
                                 (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
                                 (modifiers & KeyEvent.MODIFIER_ALT) != 0,
@@ -965,11 +988,13 @@ class GlassViewEventHandler extends View.EventHandler {
                             default:
                                 throw new RuntimeException("Unknown scroll event type: " + type);
                         }
+                        Window w = view.getWindow();
+                        double pScale = (w == null) ? 1.0 : w.getPlatformScale();
                         scene.sceneListener.rotateEvent(eventType, dangle, totalangle,
-                                originx == View.GESTURE_NO_VALUE ? Double.NaN : originx,
-                                originy == View.GESTURE_NO_VALUE ? Double.NaN : originy,
-                                originxAbs == View.GESTURE_NO_VALUE ? Double.NaN : originxAbs,
-                                originyAbs == View.GESTURE_NO_VALUE ? Double.NaN : originyAbs,
+                                originx == View.GESTURE_NO_VALUE ? Double.NaN : originx / pScale,
+                                originy == View.GESTURE_NO_VALUE ? Double.NaN : originy / pScale,
+                                originxAbs == View.GESTURE_NO_VALUE ? Double.NaN : originxAbs / pScale,
+                                originyAbs == View.GESTURE_NO_VALUE ? Double.NaN : originyAbs / pScale,
                                 (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
                                 (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
                                 (modifiers & KeyEvent.MODIFIER_ALT) != 0,
@@ -1023,11 +1048,13 @@ class GlassViewEventHandler extends View.EventHandler {
                             default:
                                 throw new RuntimeException("Unknown swipe event direction: " + dir);
                         }
+                        Window w = view.getWindow();
+                        double pScale = (w == null) ? 1.0 : w.getPlatformScale();
                         scene.sceneListener.swipeEvent(eventType, touchCount,
-                                x == View.GESTURE_NO_VALUE ? Double.NaN : x,
-                                y == View.GESTURE_NO_VALUE ? Double.NaN : y,
-                                xAbs == View.GESTURE_NO_VALUE ? Double.NaN : xAbs,
-                                yAbs == View.GESTURE_NO_VALUE ? Double.NaN : yAbs,
+                                x == View.GESTURE_NO_VALUE ? Double.NaN : x / pScale,
+                                y == View.GESTURE_NO_VALUE ? Double.NaN : y / pScale,
+                                xAbs == View.GESTURE_NO_VALUE ? Double.NaN : xAbs / pScale,
+                                yAbs == View.GESTURE_NO_VALUE ? Double.NaN : yAbs / pScale,
                                 (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
                                 (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
                                 (modifiers & KeyEvent.MODIFIER_ALT) != 0,
@@ -1116,7 +1143,10 @@ class GlassViewEventHandler extends View.EventHandler {
                             default:
                                 throw new RuntimeException("Unknown touch state: " + type);
                         }
-                        scene.sceneListener.touchEventNext(state, touchId, x, y, xAbs, yAbs);
+                        Window w = view.getWindow();
+                        double pScale = (w == null) ? 1.0 : w.getPlatformScale();
+                        scene.sceneListener.touchEventNext(state, touchId,
+                                x / pScale, y / pScale, xAbs / pScale, yAbs / pScale);
                     }
                     return null;
                 }, scene.getAccessControlContext());

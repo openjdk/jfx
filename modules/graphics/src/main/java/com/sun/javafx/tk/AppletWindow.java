@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -55,7 +55,9 @@ public interface AppletWindow {
     public void setPosition(int x, int y);
     public int getPositionX();
     public int getPositionY();
-    
+
+    public float getUIScale();
+
     // returns CARemoteLayer id (only used on Mac)
     public int getRemoteLayerId();
     // dispatchEvent (only used on Mac)

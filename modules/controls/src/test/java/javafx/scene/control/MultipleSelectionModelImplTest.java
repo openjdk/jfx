@@ -31,9 +31,11 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.*;
 
+import com.sun.javafx.scene.control.infrastructure.StageLoader;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -1165,5 +1167,25 @@ public class MultipleSelectionModelImplTest {
         tableView.getItems().clear();
         treeView.setRoot(null);
         treeTableView.setRoot(null);
+    }
+
+    @Test public void test_rt40804() {
+        final Thread.UncaughtExceptionHandler exceptionHandler = Thread.currentThread().getUncaughtExceptionHandler();
+        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> {
+            e.printStackTrace();
+            fail("We don't expect any exceptions in this test!");
+        });
+
+        StageLoader sl = new StageLoader(currentControl);
+        model.setSelectionMode(SelectionMode.MULTIPLE);
+        model.select(0);
+        model.select(1);
+        model.clearSelection();
+        model.select(3); // this is where the test failed
+
+        sl.dispose();
+
+        // reset the exception handler
+        Thread.currentThread().setUncaughtExceptionHandler(exceptionHandler);
     }
 }

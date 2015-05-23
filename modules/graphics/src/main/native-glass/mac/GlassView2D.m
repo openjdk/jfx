@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -372,7 +372,7 @@
     CGContextRestoreGState(cgContext);
 }
 
-- (void)pushPixels:(void*)pixels withWidth:(GLuint)width withHeight:(GLuint)height withEnv:(JNIEnv *)env
+- (void)pushPixels:(void*)pixels withWidth:(GLuint)width withHeight:(GLuint)height withScale:(GLfloat)scale withEnv:(JNIEnv *)env
 {
     assert([NSGraphicsContext currentContext] != nil);
     
@@ -397,7 +397,7 @@
                         CGContextTranslateCTM(cgContext, 0, size.height);
                         CGContextScaleCTM(cgContext, 1, -1);
                         CGContextSetBlendMode(cgContext, kCGBlendModeCopy);
-                        CGContextDrawImage(cgContext, CGRectMake(0, 0, width, height), cgImage);
+                        CGContextDrawImage(cgContext, CGRectMake(0, 0, width/scale, height/scale), cgImage);
                     }
                     CGContextRestoreGState(cgContext);
                 }

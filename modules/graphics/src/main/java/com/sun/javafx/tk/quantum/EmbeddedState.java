@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -69,9 +69,9 @@ final class EmbeddedState extends SceneState {
      *
      * May be called on any thread.
      */
+    @Override
     public boolean isValid() {
-        EmbeddedScene escene = (EmbeddedScene) scene;
-        return escene != null && getWidth() > 0 && getHeight() > 0;
+        return scene != null && getWidth() > 0 && getHeight() > 0;
     }
 
     /** Updates the state of this object based on the current state of its
@@ -79,8 +79,11 @@ final class EmbeddedState extends SceneState {
      *
      * May only be called from the event thread.
      */
+    @Override
     public void update() {
         super.update();
+        float scale = ((EmbeddedScene) scene).getRenderScale();
+        update(1.0f, scale, scale);
         if (scene != null) {
             // These variables and others from the super class need be kept up to date to
             // minimize rendering.  For now, claim that the embedded scene is always visible

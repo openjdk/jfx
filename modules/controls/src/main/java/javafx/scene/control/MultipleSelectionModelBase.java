@@ -407,7 +407,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         stopAtomic();
 
         if (! isAtomic()) {
-            int changeIndex = selectedIndicesSeq.indexOf(row);
+            int changeIndex = Math.max(0, selectedIndicesSeq.indexOf(row));
             selectedIndicesSeq.callObservers(new NonIterableChange.SimpleAddChange<Integer>(changeIndex, changeIndex+1, selectedIndicesSeq));
         }
         

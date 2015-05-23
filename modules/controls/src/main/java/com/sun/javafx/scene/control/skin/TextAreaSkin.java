@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -352,6 +352,21 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
                     // Force layout of viewRect in ScrollPaneSkin
                     getParent().requestLayout();
                 }
+            }
+
+            // RT-36454: Fit to width/height only if smaller than viewport.
+            // That is, grow to fit but don't shrink to fit.
+            Bounds viewportBounds = scrollPane.getViewportBounds();
+            boolean wasFitToWidth = scrollPane.isFitToWidth();
+            boolean wasFitToHeight = scrollPane.isFitToHeight();
+            boolean setFitToWidth = textArea.isWrapText() || computePrefWidth(-1) <= viewportBounds.getWidth();
+            boolean setFitToHeight = computePrefHeight(width) <= viewportBounds.getHeight();
+            if (wasFitToWidth != setFitToWidth || wasFitToHeight != setFitToHeight) {
+                Platform.runLater(() -> {
+                    scrollPane.setFitToWidth(setFitToWidth);
+                    scrollPane.setFitToHeight(setFitToHeight);
+                });
+                getParent().requestLayout();
             }
         }
     }

@@ -36,7 +36,7 @@ public final class ScreenHelper {
     private static ScreenAccessor screenAccessor;
 
     public static interface ScreenAccessor {
-        public float getScale(Screen screen);
+        public float getRenderScale(Screen screen);
     }
 
     public static void setScreenAccessor(ScreenAccessor a) {

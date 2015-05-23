@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,13 +39,14 @@ final class SWPresentable extends SWRTTexture implements Presentable {
     private QueuedPixelSource pixelSource = new QueuedPixelSource(false);
 
     public SWPresentable(PresentableState pState, SWResourceFactory factory) {
-        super(factory, pState.getWidth(), pState.getHeight());
+        super(factory, pState.getRenderWidth(), pState.getRenderHeight());
         this.pState = pState;
     }
 
+    @Override
     public boolean lockResources(PresentableState pState) {
-        return (getPhysicalWidth() != pState.getWidth() ||
-                getPhysicalHeight() != pState.getHeight());
+        return (getPhysicalWidth() != pState.getRenderWidth() ||
+                getPhysicalHeight() != pState.getRenderHeight());
     }
 
     public boolean prepare(Rectangle dirtyregion) {
@@ -75,15 +76,15 @@ final class SWPresentable extends SWRTTexture implements Presentable {
     }
 
     public float getPixelScaleFactor() {
-        return 1.0f;
+        return pState.getRenderScale();
     }
 
     public int getContentWidth() {
-        return pState.getWidth();
+        return pState.getOutputWidth();
     }
 
     public int getContentHeight() {
-        return pState.getHeight();
+        return pState.getOutputHeight();
     }
 
     @Override public boolean isMSAA() {

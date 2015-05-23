@@ -93,7 +93,8 @@ public final class Screen {
     private final int resolutionX;
     private final int resolutionY;
 
-    private final float scale;
+    private final float uiScale;
+    private final float renderScale;
 
     protected Screen(
             long nativePtr,
@@ -112,7 +113,34 @@ public final class Screen {
             int resolutionX,
             int resolutionY,
 
-            float scale
+            float renderScale
+            ) {
+        this(nativePtr,
+             depth, x, y, width, height,
+             visibleX, visibleY, visibleWidth, visibleHeight,
+             resolutionX, resolutionY,
+             1.0f, renderScale);
+    }
+
+    protected Screen(
+            long nativePtr,
+
+            int depth,
+            int x,
+            int y,
+            int width,
+            int height,
+
+            int visibleX,
+            int visibleY,
+            int visibleWidth,
+            int visibleHeight,
+
+            int resolutionX,
+            int resolutionY,
+
+            float uiScale,
+            float renderScale
             ) {
         this.ptr = nativePtr;
 
@@ -135,7 +163,8 @@ public final class Screen {
             this.resolutionY = resolutionY;
         }
 
-        this.scale = scale;
+        this.uiScale = uiScale;
+        this.renderScale = renderScale;
     }
 
     /**
@@ -216,10 +245,21 @@ public final class Screen {
     }
 
     /**
+     * Returns the scaling of the UI (window sizes and event coordinates)
+     * on the screen.
      * Could be called from any thread
      */
-    public float getScale() {
-        return this.scale;
+    public float getUIScale() {
+        return this.uiScale;
+    }
+
+    /**
+     * Returns the recommended scaling for rendering an image for this
+     * screen, potentially larger than {@link #getUIScale()}.
+     * Could be called from any thread
+     */
+    public float getRenderScale() {
+        return this.renderScale;
     }
 
     /**
@@ -305,7 +345,8 @@ public final class Screen {
                 "    visibleY:"+getVisibleY()+"\n"+
                 "    visibleWidth:"+getVisibleWidth()+"\n"+
                 "    visibleHeight:"+getVisibleHeight()+"\n"+
-                "    scale:"+getScale()+"\n"+
+                "    uiScale:"+getUIScale()+"\n"+
+                "    RenderScale:"+getRenderScale()+"\n"+
                 "    resolutionX:"+getResolutionX()+"\n"+
                 "    resolutionY:"+getResolutionY()+"\n";
     }
@@ -328,7 +369,8 @@ public final class Screen {
                 && visibleHeight == screen.visibleHeight
                 && resolutionX == screen.resolutionX
                 && resolutionY == screen.resolutionY
-                && Float.compare(screen.scale, scale) == 0;
+                && Float.compare(screen.uiScale, uiScale) == 0
+                && Float.compare(screen.renderScale, renderScale) == 0;
     }
 
     @Override public int hashCode() {
@@ -346,7 +388,8 @@ public final class Screen {
         result = 31 * result + visibleHeight;
         result = 31 * result + resolutionX;
         result = 31 * result + resolutionY;
-        result = 31 * result + (scale != +0.0f ? Float.floatToIntBits(scale) : 0);
+        result = 31 * result + (uiScale != +0.0f ? Float.floatToIntBits(uiScale) : 0);
+        result = 31 * result + (renderScale != +0.0f ? Float.floatToIntBits(renderScale) : 0);
         return result;
     }
 }

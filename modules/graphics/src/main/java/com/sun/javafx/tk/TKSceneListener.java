@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -114,7 +114,7 @@ public interface TKSceneListener {
 
     public void touchEventNext(
             TouchPoint.State state, long touchId,
-            int x, int y, int xAbs, int yAbs);
+            double x, double y, double xAbs, double yAbs);
 
     public void touchEventEnd();
 

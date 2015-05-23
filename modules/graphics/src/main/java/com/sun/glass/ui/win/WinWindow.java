@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,8 +29,6 @@ import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 /**
  * MS Windows platform implementation class for Window.
@@ -44,9 +42,19 @@ class WinWindow extends Window {
 
     protected WinWindow(Window owner, Screen screen, int styleMask) {
         super(owner, screen, styleMask);
+        setPlatformScale(screen.getUIScale());
+        setRenderScale(screen.getRenderScale());
     }
+
     protected WinWindow(long parent) {
         super(parent);
+        setPlatformScale(getScreen().getUIScale());
+        setRenderScale(getScreen().getRenderScale());
+    }
+
+    protected void notifyScaleChanged(float newUIScale, float newRenderScale) {
+        setPlatformScale(newUIScale);
+        setRenderScale(newRenderScale);
     }
 
     @Override native protected long _createWindow(long ownerPtr, long screenPtr, int mask);

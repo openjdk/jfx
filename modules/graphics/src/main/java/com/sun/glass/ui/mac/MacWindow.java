@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,8 +31,6 @@ import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 import java.util.Map;
 
@@ -48,9 +46,25 @@ final class MacWindow extends Window {
 
     protected MacWindow(Window owner, Screen screen, int styleMask) {
         super(owner, screen, styleMask);
+        setPlatformScale(screen.getUIScale());
+        setRenderScale(screen.getRenderScale());
     }
     protected MacWindow(long parent) {
         super(parent);
+    }
+
+    @Override
+    protected void setScreen(Screen screen) {
+        // SceneState will be called to update with new scale values
+        // before we return from super.setScreen()...
+        setRenderScale(screen.getUIScale());
+        setRenderScale(screen.getRenderScale());
+        super.setScreen(screen);
+    }
+
+    @Override
+    public float getOutputScale() {
+        return getRenderScale();
     }
 
     @Override native protected long _createWindow(long ownerPtr, long screenPtr, int mask);

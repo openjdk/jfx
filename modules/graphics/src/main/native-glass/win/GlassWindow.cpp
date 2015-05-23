@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,6 +53,7 @@ static LPCTSTR szGlassWindowClassName = TEXT("GlassWindowClass");
 static jmethodID midNotifyClose;
 static jmethodID midNotifyMove;
 static jmethodID midNotifyResize;
+static jmethodID midNotifyScaleChanged;
 static jmethodID midNotifyMoveToAnotherScreen;
 
 unsigned int GlassWindow::sm_instanceCounter = 0;
@@ -236,10 +237,94 @@ LRESULT CALLBACK GlassWindow::CBTFilter(int nCode, WPARAM wParam, LPARAM lParam)
     return ::CallNextHookEx(GlassWindow::sm_hCBTFilter, nCode, wParam, lParam);
 }
 
+#ifndef WM_DPICHANGED
+#define WM_DPICHANGED       0x02E0
+#endif
+
+char *StringForMsg(UINT msg) {
+    switch (msg) {
+        case WM_DPICHANGED: return "WM_DPICHANGED";
+        case WM_ERASEBKGND: return "WM_ERASEBKGND";
+        case WM_WINDOWPOSCHANGING: return "WM_WINDOWPOSCHANGING";
+        case WM_NCPAINT: return "WM_NCPAINT";
+        case WM_SETCURSOR: return "WM_SETCURSOR";
+        case WM_NCMOUSEMOVE: return "WM_NCMOUSEMOVE";
+        case WM_NCHITTEST: return "WM_NCHITTEST";
+        case WM_NCMOUSELEAVE: return "WM_NCMOUSELEAVE";
+        case WM_EXITSIZEMOVE: return "WM_EXITSIZEMOVE";
+        case WM_CREATE: return "WM_CREATE";
+        case WM_NCDESTROY: return "WM_NCDESTROY";
+        case WM_STYLECHANGED: return "WM_STYLECHANGED";
+        case WM_STYLECHANGING: return "WM_STYLECHANGING";
+        case WM_GETICON: return "WM_GETICON";
+        case WM_SETICON: return "WM_SETICON";
+        case WM_ACTIVATEAPP: return "WM_ACTIVATEAPP";
+        case WM_NCACTIVATE: return "WM_NCACTIVATE";
+        case WM_IME_SETCONTEXT: return "WM_IME_SETCONTEXT";
+        case WM_SETTEXT: return "WM_SETTEXT";
+        case WM_DWMNCRENDERINGCHANGED: return "WM_DWMNCRENDERINGCHANGED";
+        case WM_SYSCOMMAND: return "WM_SYSCOMMAND";
+
+        case WM_SHOWWINDOW: return "WM_SHOWWINDOW";
+        case WM_DWMCOMPOSITIONCHANGED: return "WM_DWMCOMPOSITIONCHANGED";
+        case WM_SIZE: return "WM_SIZE";
+        case WM_MOVING: return "WM_MOVING";
+        case WM_MOVE: return "WM_MOVE";
+        case WM_WINDOWPOSCHANGED: return "WM_WINDOWPOSCHANGED";
+        case WM_CLOSE: return "WM_CLOSE";
+        case WM_DESTROY: return "WM_DESTROY";
+        case WM_ACTIVATE: return "WM_ACTIVATE";
+        case WM_MOUSEACTIVATE: return "WM_MOUSEACTIVATE";
+        case WM_SETFOCUS: return "WM_SETFOCUS";
+        case WM_KILLFOCUS: return "WM_KILLFOCUS";
+        case WM_GETMINMAXINFO: return "WM_GETMINMAXINFO";
+        case WM_COMMAND: return "WM_COMMAND";
+        case WM_INPUTLANGCHANGE: return "WM_INPUTLANGCHANGE";
+        case WM_NCCALCSIZE: return "WM_NCCALCSIZE";
+        case WM_PAINT: return "WM_PAINT";
+        case WM_CONTEXTMENU: return "WM_CONTEXTMENU";
+        case WM_LBUTTONDOWN: return "WM_LBUTTONDOWN";
+        case WM_RBUTTONDOWN: return "WM_RBUTTONDOWN";
+        case WM_MBUTTONDOWN: return "WM_MBUTTONDOWN";
+        case WM_LBUTTONUP: return "WM_LBUTTONUP";
+        case WM_LBUTTONDBLCLK: return "WM_LBUTTONDBLCLK";
+        case WM_RBUTTONUP: return "WM_RBUTTONUP";
+        case WM_RBUTTONDBLCLK: return "WM_RBUTTONDBLCLK";
+        case WM_MBUTTONUP: return "WM_MBUTTONUP";
+        case WM_MBUTTONDBLCLK: return "WM_MBUTTONDBLCLK";
+        case WM_MOUSEWHEEL: return "WM_MOUSEWHEEL";
+        case WM_MOUSEHWHEEL: return "WM_MOUSEHWHEEL";
+        case WM_MOUSELEAVE: return "WM_MOUSELEAVE";
+        case WM_MOUSEMOVE: return "WM_MOUSEMOVE";
+        case WM_CAPTURECHANGED: return "WM_CAPTURECHANGED";
+        case WM_SYSKEYDOWN: return "WM_SYSKEYDOWN";
+        case WM_SYSKEYUP: return "WM_SYSKEYUP";
+        case WM_KEYDOWN: return "WM_KEYDOWN";
+        case WM_KEYUP: return "WM_KEYUP";
+        case WM_DEADCHAR: return "WM_DEADCHAR";
+        case WM_CHAR: return "WM_CHAR";
+        case WM_IME_CHAR: return "WM_IME_CHAR";
+        case WM_IME_COMPOSITION: return "WM_IME_COMPOSITION";
+        case WM_IME_ENDCOMPOSITION: return "WM_IME_ENDCOMPOSITION";
+        case WM_IME_NOTIFY: return "WM_IME_NOTIFY";
+        case WM_IME_STARTCOMPOSITION: return "WM_IME_STARTCOMPOSITION";
+        case WM_NCLBUTTONDOWN: return "WM_NCLBUTTONDOWN";
+        case WM_NCMBUTTONDOWN: return "WM_NCMBUTTONDOWN";
+        case WM_NCRBUTTONDOWN: return "WM_NCRBUTTONDOWN";
+        case WM_NCXBUTTONDOWN: return "WM_NCXBUTTONDOWN";
+        case WM_TOUCH: return "WM_TOUCH";
+        case WM_TIMER: return "WM_TIMER";
+        case WM_GETOBJECT: return "WM_GETOBJECT";
+    }
+    return "Unknown";
+}
+
 LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
 {
+//    fprintf(stderr, "msg = 0x%04x (%s)\n", msg, StringForMsg(msg));
     MessageResult commonResult = BaseWnd::CommonWindowProc(msg, wParam, lParam);
     if (commonResult.processed) {
+//        fprintf(stderr, "   (handled by CommonWindowProc)\n");
         return commonResult.result;
     }
 
@@ -302,6 +387,9 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
         case WM_WINDOWPOSCHANGED:
             HandleWindowPosChangedEvent();
             break;
+        case WM_DPICHANGED:
+            HandleDPIEvent(wParam, lParam);
+            return 0;
         case WM_CLOSE:
             HandleCloseEvent();
             return 0;
@@ -551,6 +639,41 @@ void GlassWindow::HandleSizeEvent(int type, RECT *pRect)
     CheckAndClearException(env);
 }
 
+void GlassWindow::HandleDPIEvent(WPARAM wParam, LPARAM lParam) {
+    UINT xDPI = LOWORD(wParam);
+    UINT yDPI = HIWORD(wParam);
+
+//    fprintf(stderr, "DPI Changed (=> %d, %d)!\n", yDPI, xDPI);
+    JNIEnv* env = GetEnv();
+    jfloat newUIScale = GlassApplication::GetUIScale(xDPI);
+    jfloat newRenderScale = GlassApplication::getRenderScale(newUIScale);
+    env->CallVoidMethod(m_grefThis, midNotifyScaleChanged, newUIScale, newRenderScale);
+    CheckAndClearException(env);
+
+    LPRECT lprcNewScale = (LPRECT) lParam;
+#if 0
+    RECT oldBounds, oldClient;
+    ::GetWindowRect(GetHWND(), &oldBounds);
+    ::GetClientRect(GetHWND(), &oldClient);
+    POINT cursor;
+    ::GetCursorPos(&cursor);
+    fprintf(stderr, "    @ %d, %d\n", cursor.x, cursor.y);
+    fprintf(stderr, "    (%d, %d, %d, %d) [%d x %d] in (%d, %d, %d, %d) [%d x %d] => (%d, %d, %d, %d) [%d x %d]\n",
+            oldClient.left, oldClient.top, oldClient.right, oldClient.bottom,
+            oldClient.right - oldClient.left, oldClient.bottom - oldClient.top,
+            oldBounds.left, oldBounds.top, oldBounds.right, oldBounds.bottom,
+            oldBounds.right - oldBounds.left, oldBounds.bottom - oldBounds.top,
+            lprcNewScale->left, lprcNewScale->top, lprcNewScale->right, lprcNewScale->bottom,
+            lprcNewScale->right - lprcNewScale->left, lprcNewScale->bottom - lprcNewScale->top);
+#endif
+    ::SetWindowPos(GetHWND(), HWND_TOP,
+                   lprcNewScale->left,
+                   lprcNewScale->top,
+                   lprcNewScale->right - lprcNewScale->left,
+                   lprcNewScale->bottom - lprcNewScale->top,
+                   SWP_NOZORDER | SWP_NOACTIVATE);
+}
+
 void GlassWindow::HandleWindowPosChangedEvent()
 {
     JNIEnv* env = GetEnv();
@@ -558,8 +681,9 @@ void GlassWindow::HandleWindowPosChangedEvent()
     HMONITOR toMonitor = ::MonitorFromWindow(GetHWND(), MONITOR_DEFAULTTOPRIMARY);
     HMONITOR fromMonitor = GetMonitor();
     if (toMonitor != fromMonitor) {
+//        fprintf(stderr, "Monitor changed!\n");
         env->CallVoidMethod(m_grefThis, midNotifyMoveToAnotherScreen,
-                            GlassScreen::CreateJavaMonitor(env, toMonitor));
+                            GlassScreen::GetJavaMonitor(env, toMonitor));
         CheckAndClearException(env);
         SetMonitor(toMonitor);
     }
@@ -965,6 +1089,10 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1initIDs
      ASSERT(midNotifyResize);
      if (env->ExceptionCheck()) return;
 
+     midNotifyScaleChanged = env->GetMethodID(cls, "notifyScaleChanged", "(FF)V");
+     ASSERT(midNotifyScaleChanged);
+     if (env->ExceptionCheck()) return;
+
      javaIDs.Window.notifyFocus = env->GetMethodID(cls, "notifyFocus", "(I)V");
      ASSERT(javaIDs.Window.notifyFocus);
      if (env->ExceptionCheck()) return;
@@ -1107,6 +1235,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_win_WinWindow__1createChildWindow
         if (!hWnd) {
             delete pWindow;
         }
+        pWindow->HandleWindowPosChangedEvent();
 
         return (jlong)hWnd;
     }
