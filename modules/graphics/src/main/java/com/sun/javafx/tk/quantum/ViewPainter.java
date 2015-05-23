@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -175,6 +175,9 @@ abstract class ViewPainter implements Runnable {
         Graphics g = backBufferGraphics;
         // Take into account the pixel scale factor for retina displays
         final float pixelScale = getPixelScaleFactor();
+        // Cache pixelScale in Graphics for use in 3D shaders such as camera and light positions.
+        g.setPixelScaleFactor(pixelScale);
+
         // Initialize renderEverything based on various conditions that will cause us to render
         // the entire scene every time.
         boolean renderEverything = overlayRoot != null ||

@@ -25,19 +25,18 @@
 
 package com.sun.prism.es2;
 
-import java.util.HashMap;
 import com.sun.glass.ui.Screen;
-import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.transform.Affine2D;
+import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGDefaultCamera;
 import com.sun.prism.CompositeMode;
+import com.sun.prism.Graphics;
 import com.sun.prism.Material;
-import com.sun.prism.PixelFormat;
 import com.sun.prism.RTTexture;
 import com.sun.prism.RenderTarget;
 import com.sun.prism.Texture;
@@ -51,6 +50,7 @@ class ES2Context extends BaseShaderContext {
     // Temporary variables
     private static GeneralTransform3D scratchTx = new GeneralTransform3D();
     private static final GeneralTransform3D flipTx = new GeneralTransform3D();
+    private static final Affine3D scratchAffine3DTx = new Affine3D();
     // contains the combined projection/modelview matrix (elements 0-15)
     private static float rawMatrix[] = new float[GLContext.NUM_MATRIX_ELEMENTS];
 
@@ -221,7 +221,7 @@ class ES2Context extends BaseShaderContext {
         } else {
             projViewTx.set(scratchTx);
         }
-
+        
         // update camera position; this will be uploaded to the shader
         // when we switch to 3D state
         cameraPos = camera.getPositionInWorld(cameraPos);
@@ -446,17 +446,36 @@ class ES2Context extends BaseShaderContext {
                           dstX0, dstY0, dstX1, dstY1);
     }
 
-    void renderMeshView(long nativeHandle, BaseTransform xform, ES2MeshView meshView) {
+    void renderMeshView(long nativeHandle, Graphics g, ES2MeshView meshView) {
 
         ES2Shader shader = (ES2Shader) getPhongShader(meshView);
         setShaderProgram(shader.getProgramObject());
 
-        updateRawMatrix(projViewTx);
+        // Support retina display by scaling the projViewTx and pass it to the shader.
+        float pixelScaleFactor = g.getPixelScaleFactor();
+        if (pixelScaleFactor != 1.0) {
+            scratchTx = scratchTx.set(projViewTx);
+            scratchTx.scale(pixelScaleFactor, pixelScaleFactor, 1.0);
+            updateRawMatrix(scratchTx);
+        } else { 
+            updateRawMatrix(projViewTx);
+        }
         shader.setMatrix("viewProjectionMatrix", rawMatrix);
         shader.setConstant("camPos", (float) cameraPos.x,
                 (float) cameraPos.y, (float)cameraPos.z);
 
-        updateWorldTransform(xform);
+        // Undo the SwapChain scaling done in createGraphics() because 3D needs
+        // this information in the shader (via projViewTx)
+        BaseTransform xform = g.getTransformNoClone();
+        if (pixelScaleFactor != 1.0) {
+            float invPSF = 1/pixelScaleFactor;
+            scratchAffine3DTx.setToIdentity();
+            scratchAffine3DTx.scale(invPSF, invPSF);
+            scratchAffine3DTx.concatenate(xform);
+            updateWorldTransform(scratchAffine3DTx);
+        } else {
+            updateWorldTransform(xform);
+        }
         updateRawMatrix(worldTx);
 
         shader.setMatrix("worldMatrix", rawMatrix);

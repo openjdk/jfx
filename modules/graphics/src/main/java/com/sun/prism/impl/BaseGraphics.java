@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -81,6 +81,7 @@ public abstract class BaseGraphics implements RectShadowGraphics {
     private final BaseContext context;
     private final RenderTarget renderTarget;
     private boolean state3D = false;
+    private float pixelScale = 1.0f;
 
     protected BaseGraphics(BaseContext context, RenderTarget target) {
         this.context = context;
@@ -270,6 +271,16 @@ public abstract class BaseGraphics implements RectShadowGraphics {
 
     public boolean isAntialiasedShape() {
         return antialiasedShape;
+    }
+
+    @Override
+    public void setPixelScaleFactor(float pixelScale) {
+        this.pixelScale = pixelScale;
+    }
+
+    @Override
+    public float getPixelScaleFactor() {
+        return pixelScale;
     }
 
     public void setCamera(NGCamera camera) {

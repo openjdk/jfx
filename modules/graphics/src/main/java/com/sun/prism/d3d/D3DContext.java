@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,11 +28,13 @@ package com.sun.prism.d3d;
 import com.sun.glass.ui.Screen;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.Vec3d;
+import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGDefaultCamera;
 import com.sun.prism.CompositeMode;
+import com.sun.prism.Graphics;
 import com.sun.prism.MeshView;
 import com.sun.prism.RTTexture;
 import com.sun.prism.RenderTarget;
@@ -76,8 +78,8 @@ class D3DContext extends BaseShaderContext {
     }
 
     // Temp. variables (Not Thread Safe)
-    private static GeneralTransform3D tempTx = new GeneralTransform3D();
-    private static Vec3d tempVec3d = new Vec3d();
+    private static GeneralTransform3D scratchTx = new GeneralTransform3D();
+    private static final Affine3D scratchAffine3DTx = new Affine3D();
     private static double[] tempAdjustClipSpaceMat = new double[16];
 
     private State state;
@@ -85,7 +87,8 @@ class D3DContext extends BaseShaderContext {
 
     private final long pContext;
 
-    NGCamera camera = null;
+    private Vec3d cameraPos = new Vec3d();
+    private GeneralTransform3D projViewTx = new GeneralTransform3D();
     private int targetWidth = 0, targetHeight = 0;
 
     private final D3DResourceFactory factory;
@@ -215,36 +218,34 @@ class D3DContext extends BaseShaderContext {
             resetLastClip(state);
         }
 
-        this.camera = camera;
         targetWidth = target.getPhysicalWidth();
         targetHeight = target.getPhysicalHeight();
 
         // Need to validate the camera before getting its computed data.
         if (camera instanceof NGDefaultCamera) {
             ((NGDefaultCamera) camera).validate(targetWidth, targetHeight);
-            tempTx = adjustClipSpace(camera.getProjViewTx(tempTx));
+            projViewTx = adjustClipSpace(camera.getProjViewTx(projViewTx));
         } else {
-            tempTx = adjustClipSpace(camera.getProjViewTx(tempTx));
+            projViewTx = adjustClipSpace(camera.getProjViewTx(projViewTx));
             // TODO: verify that this is the right solution. There may be
             // other use-cases where rendering needs different viewport size.
             double vw = camera.getViewWidth();
             double vh = camera.getViewHeight();
             if (targetWidth != vw || targetHeight != vh) {
-                tempTx.scale(vw / targetWidth, vh / targetHeight, 1.0);
+                projViewTx.scale(vw / targetWidth, vh / targetHeight, 1.0);
             }
         }
 
         // Set projection view matrix
         res = nSetProjViewMatrix(pContext, depthTest,
-            tempTx.get(0),  tempTx.get(1),  tempTx.get(2),  tempTx.get(3),
-            tempTx.get(4),  tempTx.get(5),  tempTx.get(6),  tempTx.get(7),
-            tempTx.get(8),  tempTx.get(9),  tempTx.get(10), tempTx.get(11),
-            tempTx.get(12), tempTx.get(13), tempTx.get(14), tempTx.get(15));
+            projViewTx.get(0),  projViewTx.get(1),  projViewTx.get(2),  projViewTx.get(3),
+            projViewTx.get(4),  projViewTx.get(5),  projViewTx.get(6),  projViewTx.get(7),
+            projViewTx.get(8),  projViewTx.get(9),  projViewTx.get(10), projViewTx.get(11),
+            projViewTx.get(12), projViewTx.get(13), projViewTx.get(14), projViewTx.get(15));
         validate(res);
 
-        tempVec3d = camera.getPositionInWorld(tempVec3d);
-//        System.err.println("Camera position in world = " + tempVec3d);
-        res = nSetCameraPosition(pContext, tempVec3d.x, tempVec3d.y, tempVec3d.z);
+        cameraPos = camera.getPositionInWorld(cameraPos);
+//        System.err.println("Camera position in world = " + cameraPos);
 
         return state;
     }
@@ -544,8 +545,39 @@ class D3DContext extends BaseShaderContext {
         nSetPointLight(pContext, nativeMeshView, index, x, y, z, r, g, b, w);
     }
 
-    void renderMeshView(long nativeMeshView, BaseTransform transformNoClone) {
-        updateWorldTransform(transformNoClone);
+    void renderMeshView(long nativeMeshView, Graphics g) {
+
+        // Support retina display by scaling the projViewTx and pass it to the shader.
+        scratchTx = scratchTx.set(projViewTx);
+        float pixelScaleFactor = g.getPixelScaleFactor();
+        if (pixelScaleFactor != 1.0) {
+            scratchTx.scale(pixelScaleFactor, pixelScaleFactor, 1.0);
+        }
+
+        // Set projection view matrix
+        int res = nSetProjViewMatrix(pContext, g.isDepthTest(),
+                scratchTx.get(0), scratchTx.get(1), scratchTx.get(2), scratchTx.get(3),
+                scratchTx.get(4), scratchTx.get(5), scratchTx.get(6), scratchTx.get(7),
+                scratchTx.get(8), scratchTx.get(9), scratchTx.get(10), scratchTx.get(11),
+                scratchTx.get(12), scratchTx.get(13), scratchTx.get(14), scratchTx.get(15));
+        validate(res);
+
+        res = nSetCameraPosition(pContext, cameraPos.x, cameraPos.y, cameraPos.z);
+        validate(res);
+
+        // Undo the SwapChain scaling done in createGraphics() because 3D needs
+        // this information in the shader (via projViewTx)
+        BaseTransform xform = g.getTransformNoClone();
+        if (pixelScaleFactor != 1.0) {
+            float invPSF = 1 / pixelScaleFactor;
+            scratchAffine3DTx.setToIdentity();
+            scratchAffine3DTx.scale(invPSF, invPSF);
+            scratchAffine3DTx.concatenate(xform);
+            updateWorldTransform(scratchAffine3DTx);
+        } else {
+            updateWorldTransform(xform);
+        }
+
         nRenderMeshView(pContext, nativeMeshView);
     }
 

@@ -582,24 +582,11 @@ HRESULT D3DContext::setDeviceParametersFor3D() {
     
     RETURN_STATUS_IF_NULL(pd3dDevice, S_FALSE);
 
-    D3DMATRIX mat;
     HRESULT res = S_OK;
-    float cPos[4];
 
     if (!phongShader) {
         phongShader = new D3DPhongShader(pd3dDevice);
     }
-
-    D3DUtils_MatrixTransposed(mat, projection);
-    cPos[0] = camPos.x;
-    cPos[1] = camPos.y;
-    cPos[2] = camPos.z;
-    cPos[3] = 0;
-
-//    std::cout << "Camera Position: " << camPos.x << ", " << camPos.y << ", " << camPos.z << std::endl;
-    // Use D3DPhongShader.h -- VSR_VIEWPROJMATRIX, VSR_CAMERAPOS
-    SUCCEEDED(res = pd3dDevice->SetVertexShaderConstantF(VSR_VIEWPROJMATRIX, (float*) mat.m, 4)) &&
-    SUCCEEDED(res = pd3dDevice->SetVertexShaderConstantF(VSR_CAMERAPOS, cPos, 1));
 
     // Reset 3D states
     state.wireframe = false;
@@ -684,10 +671,7 @@ HRESULT D3DContext::InitDevice(IDirect3DDevice9 *pd3dDevice)
 
     D3DUtils_SetIdentityMatrix(&world);
     D3DUtils_SetIdentityMatrix(&projection);
-    camPos.x = 0.0f;
-    camPos.y = 0.0f;
-    camPos.z = 0.0f;
-
+    depthTest = FALSE;
     pixadjustx = pixadjusty = 0.0f;
 
     if (pVertexDecl == NULL) {
@@ -996,16 +980,23 @@ D3DContext::SetRenderTarget(IDirect3DSurface9 *pSurface,
 HRESULT
 D3DContext::SetCameraPosition(jdouble camPosX, jdouble camPosY, jdouble camPosZ)
 {
+    float cPos[4];
+    HRESULT res = S_OK;
     TraceLn(NWT_TRACE_INFO, "D3DContext::SetCameraPosition");
 
     RETURN_STATUS_IF_NULL(pd3dDevice, E_FAIL);
-    
-    camPos.x = (float) camPosX;
-    camPos.y = (float) camPosY;
-    camPos.z = (float) camPosZ;
-    return D3D_OK;
-}
 
+    cPos[0] = (float) camPosX;
+    cPos[1] = (float) camPosY;
+    cPos[2] = (float) camPosZ;
+    cPos[3] = 0;
+
+    if (phongShader) {
+        //    std::cerr << "Camera Position: " << cPos[0] << ", " << cPos[1] << ", " << cPos[2] << std::endl;
+        SUCCEEDED(res = pd3dDevice->SetVertexShaderConstantF(VSR_CAMERAPOS, cPos, 1));
+    }
+    return res;
+}
 
 HRESULT
 D3DContext::SetProjViewMatrix(BOOL depthTest,
@@ -1014,6 +1005,9 @@ D3DContext::SetProjViewMatrix(BOOL depthTest,
                               jdouble m20, jdouble m21, jdouble m22, jdouble m23,
                               jdouble m30, jdouble m31, jdouble m32, jdouble m33)
 {
+    D3DMATRIX mat;
+    HRESULT res = S_OK;
+
     TraceLn(NWT_TRACE_INFO, "D3DContext::SetProjViewMatrix");
     TraceLn1(NWT_TRACE_VERBOSE, "  depthTest=%d", depthTest);
     
@@ -1053,16 +1047,23 @@ D3DContext::SetProjViewMatrix(BOOL depthTest,
 //    fprintf(stderr, "  %5f %5f %5f %5f\n", projection._21, projection._22, projection._23, projection._24);
 //    fprintf(stderr, "  %5f %5f %5f %5f\n", projection._31, projection._32, projection._33, projection._34);
 //    fprintf(stderr, "  %5f %5f %5f %5f\n", projection._41, projection._42, projection._43, projection._44);
-    if (depthTest) {
+
+    if (depthTest && !this->depthTest) {
         pd3dDevice->SetRenderState(D3DRS_ZENABLE, D3DZB_TRUE);
         pd3dDevice->SetRenderState(D3DRS_ZWRITEENABLE, D3DZB_TRUE);
         pd3dDevice->SetRenderState(D3DRS_ZFUNC, D3DCMP_LESSEQUAL);
-    } else {
+    } else if (!depthTest && this->depthTest) {
         pd3dDevice->SetRenderState(D3DRS_ZENABLE, D3DZB_FALSE);
         pd3dDevice->SetRenderState(D3DRS_ZWRITEENABLE, D3DZB_FALSE);
     }
+    this->depthTest = depthTest;
 
-    return D3D_OK;
+    if (phongShader) {
+        D3DUtils_MatrixTransposed(mat, projection);
+        SUCCEEDED(res = pd3dDevice->SetVertexShaderConstantF(VSR_VIEWPROJMATRIX, (float*) mat.m, 4));
+    }
+
+    return res;
 }
 
 void

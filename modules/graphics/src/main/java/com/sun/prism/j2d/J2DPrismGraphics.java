@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -116,6 +116,7 @@ public class J2DPrismGraphics
         new java.awt.geom.AffineTransform();
     private int clipRectIndex;
     private boolean hasPreCullingBits = false;
+    private float pixelScale = 1.0f;
 
     static java.awt.Color toJ2DColor(Color c) {
         return new java.awt.Color(c.getRed(),
@@ -1379,6 +1380,16 @@ public class J2DPrismGraphics
     }
 
     public void setup3DRendering() {
+    }
+
+    @Override
+    public void setPixelScaleFactor(float pixelScale) {
+        this.pixelScale = pixelScale;
+    }
+
+    @Override
+    public float getPixelScaleFactor() {
+        return pixelScale;
     }
 
     @Override
