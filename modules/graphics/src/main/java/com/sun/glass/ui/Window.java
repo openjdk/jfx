@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@ package com.sun.glass.ui;
 
 import com.sun.glass.events.MouseEvent;
 import com.sun.glass.events.WindowEvent;
+import com.sun.prism.impl.PrismSettings;
 
 import java.util.Collections;
 import java.util.LinkedList;
@@ -205,6 +206,8 @@ public abstract class Window {
     private int width = 0;
     private int height = 0;
     private float alpha = 1.0f;
+    private float platformScale = 1.0f;
+    private float renderScale = 1.0f;
 
     // This is a workaround for RT-15970: as for embedded windows we don't
     // receive any MOVE notifications from the native platform, we poll
@@ -398,7 +401,7 @@ public abstract class Window {
         return this.screen;
     }
 
-    void setScreen(Screen screen) {
+    protected void setScreen(Screen screen) {
         Application.checkEventThread();
 
         final Screen old = this.screen;
@@ -461,6 +464,40 @@ public abstract class Window {
         checkNotClosed();
         _maximize(ptr, maximize, isMaximized());
         return isMaximized();
+    }
+
+    public void setPlatformScale(float platformScale) {
+        if (!PrismSettings.allowHiDPIScaling) return;
+        this.platformScale = platformScale;
+    }
+
+    /**
+     * Return the scale used to communicate window locations, sizes, and event
+     * coordinates to/from the platform.
+     * @return the platform scaling for screen locations
+     */
+    public final float getPlatformScale() {
+        return platformScale;
+    }
+
+    public void setRenderScale(float renderScale) {
+        if (!PrismSettings.allowHiDPIScaling) return;
+        this.renderScale = renderScale;
+    }
+
+    /**
+     * Return the scale that should be used to render content on this window.
+     * This is usually similar to the platform scale, but may be different
+     * depending on how the platform manages events vs. rendering buffers
+     * and/or whether the system can handle non-integer rendering scales.
+     * @return the pixel scaling to be used during rendering
+     */
+    public final float getRenderScale() {
+        return renderScale;
+    }
+
+    public float getOutputScale() {
+        return platformScale;
     }
 
     protected abstract int _getEmbeddedX(long ptr);

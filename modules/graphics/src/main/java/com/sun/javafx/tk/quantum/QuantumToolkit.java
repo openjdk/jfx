@@ -649,8 +649,11 @@ public final class QuantumToolkit extends Toolkit {
             @Override public float getDPI(Object obj) {
                 return ((Screen)obj).getResolutionX();
             }
-            @Override public float getScale(Object obj) {
-                return ((Screen)obj).getScale();
+            @Override public float getUIScale(Object obj) {
+                return ((Screen)obj).getUIScale();
+            }
+            @Override public float getRenderScale(Object obj) {
+                return ((Screen)obj).getRenderScale();
             }
         };
 
@@ -699,17 +702,17 @@ public final class QuantumToolkit extends Toolkit {
         return new PerformanceTrackerImpl();
     }
 
-    public float getMaxPixelScale() {
+    public float getMaxRenderScale() {
         if (_maxPixelScale == 0) {
             for (Object o : getScreens()) {
-                _maxPixelScale = Math.max(_maxPixelScale, ((Screen) o).getScale());
+                _maxPixelScale = Math.max(_maxPixelScale, ((Screen) o).getRenderScale());
             }
         }
         return _maxPixelScale;
     }
 
     @Override public ImageLoader loadImage(String url, int width, int height, boolean preserveRatio, boolean smooth) {
-        return new PrismImageLoader2(url, width, height, preserveRatio, getMaxPixelScale(), smooth);
+        return new PrismImageLoader2(url, width, height, preserveRatio, getMaxRenderScale(), smooth);
     }
 
     @Override public ImageLoader loadImage(InputStream stream, int width, int height,

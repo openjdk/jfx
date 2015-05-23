@@ -32,6 +32,10 @@ import org.junit.Test;
  */
 public class RegionBackgroundFillUITest extends RegionUITestBase {
 
+    static {
+        System.setProperty("glass.win.uiScale", "100%");
+    }
+
     /**************************************************************************
      *                                                                        *
      * Tests for background fills. We start with a series of simple tests     *

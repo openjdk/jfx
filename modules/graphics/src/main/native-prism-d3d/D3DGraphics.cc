@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -192,7 +192,7 @@ void D3DContext::stretchRect(IDirect3DSurface9* pSrcSurface,
     IDirect3DSurface9* pDst = (pDstSurface == NULL) ? currentSurface : pDstSurface;
     RECT srcRect = {srcX0, srcY0, srcX1, srcY1};
     RECT dstRect = {dstX0, dstY0, dstX1, dstY1};
-    res = pd3dDevice->StretchRect(pSrcSurface, &srcRect, pDst, &dstRect, D3DTEXF_NONE);
+    res = pd3dDevice->StretchRect(pSrcSurface, &srcRect, pDst, &dstRect, D3DTEXF_LINEAR);
     if (FAILED(res)) {
         DebugPrintD3DError(res, "D3DContext::stretchRect: error StretchRect");
     }

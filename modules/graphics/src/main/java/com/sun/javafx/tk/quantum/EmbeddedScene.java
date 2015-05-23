@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,6 +58,7 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
 
     private UploadingPainter        painter;
     private PaintRenderJob          paintRenderJob;
+    private float                   renderScale;
     
     private final EmbeddedSceneDnD embeddedDnD;
 
@@ -130,8 +131,12 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
     
     @Override
     public void setPixelScaleFactor(float scale) {
-        painter.setPixelScaleFactor(scale);
+        renderScale = scale;
         entireSceneNeedsRepaint();
+    }
+
+    public float getRenderScale() {
+        return renderScale;
     }
 
     // Called by EmbeddedPainter on the render thread under renderLock
@@ -188,7 +193,7 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
             int scaledHeight = height;
 
             // The dest buffer scale factor is expected to match painter.getPixelScaleFactor().
-            if (painter.getPixelScaleFactor() != texScaleFactor || texBits == null) {
+            if (getRenderScale() != texScaleFactor || texBits == null) {
                 return false;
             }
             scaledWidth = (int)Math.round(scaledWidth * texScaleFactor);

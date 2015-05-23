@@ -328,15 +328,15 @@ class D3DResourceFactory extends BaseShaderFactory {
                                           PrismSettings.isVsyncEnabled);
 
         if (pResource != 0L) {
-            int width = D3DResourceFactory.nGetTextureWidth(pResource);
-            int height = D3DResourceFactory.nGetTextureHeight(pResource);
+            int width = pState.getRenderWidth();
+            int height = pState.getRenderHeight();
             D3DRTTexture rtt = createRTTexture(width, height, WrapMode.CLAMP_NOT_NEEDED, pState.isMSAA());
             if (PrismSettings.dirtyOptsEnabled) {
                 rtt.contentsUseful();
             }
 
             if (rtt != null) {
-                return new D3DSwapChain(context, pResource, rtt);
+                return new D3DSwapChain(context, pResource, rtt, pState.getRenderScale());
             }
 
             D3DResourceFactory.nReleaseResource(context.getContextHandle(), pResource);

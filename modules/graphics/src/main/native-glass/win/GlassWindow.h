@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -103,6 +103,7 @@ public:
     virtual void ExitFullScreenMode(BOOL animate);
 
     void SetIcon(HICON hIcon);
+    void HandleWindowPosChangedEvent();
 
 protected:
     virtual LRESULT WindowProc(UINT msg, WPARAM wParam, LPARAM lParam);
@@ -175,7 +176,7 @@ private:
     void HandleMoveEvent(RECT *pRect);
     // if pRect == NULL => get position/size by GetWindowRect
     void HandleSizeEvent(int type, RECT *pRect);
-    void HandleWindowPosChangedEvent();
+    void HandleDPIEvent(WPARAM wParam, LPARAM lParam);
     bool HandleCommand(WORD cmdID);
     void HandleFocusDisabledEvent();
 };

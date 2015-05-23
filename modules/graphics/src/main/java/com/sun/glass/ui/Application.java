@@ -636,8 +636,8 @@ public abstract class Application {
         for (Screen s : Screen.getScreens()) {
             final int sx = s.getX(), sy = s.getY(), sw = s.getWidth(), sh = s.getHeight();
             if (x < (sx + sw) && (x + w) > sx && y < (sy + sh) && (y + h) > sy) {
-                if (scale < s.getScale()) {
-                    scale = s.getScale();
+                if (scale < s.getRenderScale()) {
+                    scale = s.getRenderScale();
                 }
             }
         }

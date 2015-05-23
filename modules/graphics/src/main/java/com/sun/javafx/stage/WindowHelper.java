@@ -79,6 +79,9 @@ public final class WindowHelper {
 
         void notifyScreenChanged(Window window, Object from, Object to);
 
+        float getUIScale(Window window);
+        float getRenderScale(Window window);
+
         ReadOnlyObjectProperty<Screen> screenProperty(Window window);
 
         AccessControlContext getAccessControlContext(Window window);

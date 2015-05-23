@@ -84,16 +84,10 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
         }
     }
 
-    static float getScale(PresentableState pState) {
-        return PrismSettings.allowHiDPIScaling
-               ? pState.getScale() //TODO fix getScale
-               : 1.0f;
-    }
-
     ES2SwapChain(ES2Context context, PresentableState pState) {
         this.context = context;
         this.pState = pState;
-        this.pixelScaleFactor = getScale(pState);
+        this.pixelScaleFactor = pState.getRenderScale();
         this.msaa = pState.isMSAA();
         long nativeWindow = pState.getNativeWindow();
         drawable = ES2Pipeline.glFactory.createGLDrawable(
@@ -101,10 +95,10 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
     }
 
     public boolean lockResources(PresentableState pState) {
-        if (this.pState != pState || pixelScaleFactor != getScale(pState)) {
+        if (this.pState != pState || pixelScaleFactor != pState.getRenderScale()) {
             return true;
         }
-        needsResize = (w != getPhysicalWidth() || h != getPhysicalHeight());
+        needsResize = (w != pState.getRenderWidth() || h != pState.getRenderHeight());
         // the stableBackbuffer will be used as the render target
         if (stableBackbuffer != null && !needsResize) {
             stableBackbuffer.lock();
@@ -131,25 +125,21 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
                 }
                 // Copy (not blend) the stableBackbuffer into place.
                 //TODO: Determine why w/h is needed here
-                w = getPhysicalWidth();
-                h = getPhysicalHeight();
-                Rectangle rectDST = new Rectangle(0, 0, w, h);
-                if (clip != null && !copyFullBuffer) {
-                    rectDST.intersectWith(clip);
-                }
+                w = pState.getRenderWidth();
+                h = pState.getRenderHeight();
+                int sw = w;
+                int sh = h;
+                int dw = pState.getOutputWidth();
+                int dh = pState.getOutputHeight();
                 copyFullBuffer = false;
-                int x0 = rectDST.x;
-                int y0 = rectDST.y;
-                int x1 = x0 + rectDST.width;
-                int y1 = y0 + rectDST.height;
                 if (isMSAA()) {
                     context.flushVertexBuffer();
                     // Note must flip the z axis during blit
-                    g.blit(stableBackbuffer, null, x0, y0, x1, y1,
-                            x0, y1, x1, y0);
+                    g.blit(stableBackbuffer, null,
+                            0, 0, sw, sh, 0, 0, dw, dh);
                 } else {
-                    drawTexture(g, stableBackbuffer, x0, y0, x1, y1,
-                            x0, y0, x1, y1);
+                    drawTexture(g, stableBackbuffer,
+                                0, 0, dw, dh, 0, 0, sw, sh);
                 }
                 stableBackbuffer.unlock();
             }
@@ -197,7 +187,7 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
             nativeDestHandle = glContext.getBoundFBO();
         }
 
-        needsResize = (w != getPhysicalWidth() || h != getPhysicalHeight());
+        needsResize = (w != pState.getRenderWidth() || h != pState.getRenderHeight());
         // the stableBackbuffer will be used as the render target
         if (stableBackbuffer == null || needsResize) {
             // note that we will take care of calling
@@ -214,8 +204,8 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
                 // RTTexture "backbuffer"...
                 ES2Graphics.create(context, this);
             }
-            w = getPhysicalWidth();
-            h = getPhysicalHeight();
+            w = pState.getRenderWidth();
+            h = pState.getRenderHeight();
             ResourceFactory factory = context.getResourceFactory();
             stableBackbuffer = factory.createRTTexture(w, h,
                                                        WrapMode.CLAMP_NOT_NEEDED,
@@ -239,11 +229,11 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
     }
 
     public int getPhysicalWidth() {
-        return (int) (pState.getWidth() * pixelScaleFactor);
+        return pState.getOutputWidth();
     }
 
     public int getPhysicalHeight() {
-        return (int) (pState.getHeight() * pixelScaleFactor);
+        return pState.getOutputHeight();
     }
 
     public int getContentX() {
@@ -261,18 +251,18 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
         // for the x/y offset to use
         if (PlatformUtil.useEGL()) {
             return pState.getScreenHeight() -
-                   pState.getHeight() - pState.getWindowY();
+                   pState.getOutputHeight() - pState.getWindowY();
         } else {
             return 0;
         }
     }
 
     public int getContentWidth() {
-        return (int) (pState.getWidth() * pixelScaleFactor);
+        return pState.getOutputWidth();
     }
 
     public int getContentHeight() {
-        return (int) (pState.getHeight() * pixelScaleFactor);
+        return pState.getOutputHeight();
     }
 
     public float getPixelScaleFactor() {

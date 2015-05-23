@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -49,6 +49,11 @@ jobject GlassApplication::sm_glassClassLoader;
 HINSTANCE GlassApplication::hInstace = NULL;
 unsigned int GlassApplication::sm_mouseLLHookCounter = 0;
 HHOOK GlassApplication::sm_hMouseLLHook = NULL;
+
+jfloat GlassApplication::overrideUIScale = -1.0f;
+jfloat GlassApplication::overrideRenderScale = -1.0f;
+jfloat GlassApplication::minDPIScale = 1.0f;
+jboolean GlassApplication::forceIntegerRenderScale = JNI_TRUE;
 
 /* static */
 void GlassApplication::SetGlassClassLoader(JNIEnv *env, jobject classLoader)
@@ -365,8 +370,14 @@ BOOL WINAPI DllMain(HANDLE hinstDLL, DWORD dwReason, LPVOID lpvReserved)
  * Signature: ()V
  */
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinApplication_initIDs
-  (JNIEnv *env, jclass cls)
+  (JNIEnv *env, jclass cls,
+   jfloat overrideUIScale, jfloat overrideRenderScale, jfloat minDPIScale, jboolean forceIntegerRenderScale)
 {
+    GlassApplication::overrideUIScale = overrideUIScale;
+    GlassApplication::overrideRenderScale = overrideRenderScale;
+    GlassApplication::minDPIScale = minDPIScale;
+    GlassApplication::forceIntegerRenderScale = forceIntegerRenderScale;
+
     javaIDs.Application.reportExceptionMID =
         env->GetStaticMethodID(cls, "reportException", "(Ljava/lang/Throwable;)V");
     ASSERT(javaIDs.Application.reportExceptionMID);
@@ -389,15 +400,19 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinApplication_initIDs
 /*
  * Class:     com_sun_glass_ui_win_WinApplication
  * Method:    _init
- * Signature: ()J
+ * Signature: (I)J
  */
 JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_win_WinApplication__1init
-  (JNIEnv *env, jobject _this)
+  (JNIEnv *env, jobject _this, jint awareRequested)
 {
     // TODO: if/when we introduce JavaFX launcher, DPI awareness should
     // be specified in its manifest instead of this call below
+    // Specifying awareness in the manifest ensures that it happens before
+    // any system calls that might depend on it.  The downside is losing
+    // the ability to control the awareness level programmatically via
+    // property settings.
     if (IS_WINVISTA) {
-        ::SetProcessDPIAware();
+        GlassScreen::LoadDPIFuncs(awareRequested);
     }
 
     GlassApplication *pApp = new GlassApplication(_this);

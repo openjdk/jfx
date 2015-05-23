@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,10 +38,12 @@ class D3DSwapChain
     implements D3DRenderTarget, Presentable, D3DContextSource {
 
     private final D3DRTTexture texBackBuffer;
+    private final float pixelScaleFactor;
 
-    D3DSwapChain(D3DContext context, long pResource, D3DRTTexture rtt) {
+    D3DSwapChain(D3DContext context, long pResource, D3DRTTexture rtt, float pixelScale) {
         super(new D3DRecord(context, pResource));
         texBackBuffer = rtt;
+        pixelScaleFactor = pixelScale;
     }
 
     @Override
@@ -50,27 +52,24 @@ class D3DSwapChain
         super.dispose();
     }
 
-    public boolean prepare(Rectangle clip) {
+    @Override
+    public boolean prepare(Rectangle dirtyregion) {
         D3DContext context = getContext();
         context.flushVertexBuffer();
         D3DGraphics g = (D3DGraphics) D3DGraphics.create(this, context);
         if (g == null) {
             return false;
         }
-        Rectangle rectDST = new Rectangle(0, 0, this.getContentWidth(), this.getContentHeight());
-        if (clip != null) {
-            rectDST.intersectWith(clip);
-        }
-        int x0 = rectDST.x;
-        int y0 = rectDST.y;
-        int x1 = x0 + rectDST.width;
-        int y1 = y0 + rectDST.height;
+        int sw = texBackBuffer.getContentWidth();
+        int sh = texBackBuffer.getContentHeight();
+        int dw = this.getContentWidth();
+        int dh = this.getContentHeight();
         if (isMSAA()) {
             context.flushVertexBuffer();
-            g.blit(texBackBuffer, null, x0, y0, x1, y1, x0, y0, x1, y1);
+            g.blit(texBackBuffer, null, 0, 0, sw, sh, 0, 0, dw, dh);
         } else {
             g.setCompositeMode(CompositeMode.SRC);
-            g.drawTexture(texBackBuffer, x0, y0, x1, y1);
+            g.drawTexture(texBackBuffer, 0, 0, dw, dh, 0, 0, sw, sh);
         }
         context.flushVertexBuffer();
         texBackBuffer.unlock();
@@ -118,8 +117,9 @@ class D3DSwapChain
     }
 
     public boolean lockResources(PresentableState pState) {
-        if (pState.getWidth() != getPhysicalWidth() ||
-            pState.getHeight() != getPhysicalHeight())
+        if (pState.getRenderWidth() != texBackBuffer.getContentWidth() ||
+            pState.getRenderHeight() != texBackBuffer.getContentHeight() ||
+            pState.getRenderScale() != pixelScaleFactor)
         {
             return true;
         }
@@ -128,7 +128,9 @@ class D3DSwapChain
     }
 
     public Graphics createGraphics() {
-        return D3DGraphics.create(texBackBuffer, getContext());
+        Graphics g = D3DGraphics.create(texBackBuffer, getContext());
+        g.scale(pixelScaleFactor, pixelScaleFactor);
+        return g;
     }
 
     public RTTexture getRTTBackBuffer() {
@@ -140,7 +142,7 @@ class D3DSwapChain
     }
 
     public float getPixelScaleFactor() {
-        return 1.0f;
+        return pixelScaleFactor;
     }
 
     public boolean isOpaque() {

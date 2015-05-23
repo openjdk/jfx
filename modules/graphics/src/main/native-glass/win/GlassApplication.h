@@ -104,6 +104,25 @@ public:
     static ULONG DecrementAccessibility();
     static ULONG GetAccessibilityCount();
 
+    static jfloat overrideUIScale;
+    static jfloat overrideRenderScale;
+    static jfloat minDPIScale;
+    static jboolean forceIntegerRenderScale;
+
+    inline static jfloat GetUIScale(UINT dpi)
+    {
+        if (overrideUIScale > 0.0f) return overrideUIScale;
+        jfloat uiScale = dpi / 96.0f;
+        if (uiScale < minDPIScale) return 1.0f;
+        return uiScale;
+    }
+
+    inline static jfloat getRenderScale(jfloat uiScale) {
+        if (overrideRenderScale > 0.0f) return overrideRenderScale;
+        if (forceIntegerRenderScale) return ceil(uiScale);
+        return uiScale;
+    }
+
 protected:
     virtual LRESULT WindowProc(UINT msg, WPARAM wParam, LPARAM lParam);
     virtual LPCTSTR GetWindowClassNameSuffix();

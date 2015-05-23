@@ -131,6 +131,16 @@ public class StubStage implements TKStage {
         }
     }
 
+    @Override
+    public float getUIScale() {
+        return 1.0f;
+    }
+
+    @Override
+    public float getRenderScale() {
+        return 1.0f;
+    }
+
     // Just a helper method
     public void setSize(float w, float h) {
         setBounds(0, 0, false, false, w, h, 0, 0, 0, 0);

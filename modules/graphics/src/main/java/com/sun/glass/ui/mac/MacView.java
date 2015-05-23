@@ -81,23 +81,26 @@ final class MacView extends View {
     @Override protected void _uploadPixels(long ptr, Pixels pixels) {
         Buffer data = pixels.getPixels();
         if (data.isDirect() == true) {
-            _uploadPixelsDirect(ptr, data, pixels.getWidth(), pixels.getHeight());
+            _uploadPixelsDirect(ptr, data, pixels.getWidth(), pixels.getHeight(), pixels.getScale());
         } else if (data.hasArray() == true) {
             if (pixels.getBytesPerComponent() == 1) {
                 ByteBuffer bytes = (ByteBuffer)data;
-                _uploadPixelsByteArray(ptr, bytes.array(), bytes.arrayOffset(), pixels.getWidth(), pixels.getHeight());
+                _uploadPixelsByteArray(ptr, bytes.array(), bytes.arrayOffset(),
+                                       pixels.getWidth(), pixels.getHeight(), pixels.getScale());
             } else {
                 IntBuffer ints = (IntBuffer)data;
-                _uploadPixelsIntArray(ptr, ints.array(), ints.arrayOffset(), pixels.getWidth(), pixels.getHeight());
+                _uploadPixelsIntArray(ptr, ints.array(), ints.arrayOffset(),
+                                      pixels.getWidth(), pixels.getHeight(), pixels.getScale());
             }
         } else {
             // gznote: what are the circumstances under which this can happen?
-            _uploadPixelsDirect(ptr, pixels.asByteBuffer(), pixels.getWidth(), pixels.getHeight());
+            _uploadPixelsDirect(ptr, pixels.asByteBuffer(),
+                                pixels.getWidth(), pixels.getHeight(), pixels.getScale());
         }
     }
-    native void _uploadPixelsDirect(long viewPtr, Buffer pixels, int width, int height);
-    native void _uploadPixelsByteArray(long viewPtr, byte[] pixels, int offset, int width, int height);
-    native void _uploadPixelsIntArray(long viewPtr, int[] pixels, int offset, int width, int height);
+    native void _uploadPixelsDirect(long viewPtr, Buffer pixels, int width, int height, float scale);
+    native void _uploadPixelsByteArray(long viewPtr, byte[] pixels, int offset, int width, int height, float scale);
+    native void _uploadPixelsIntArray(long viewPtr, int[] pixels, int offset, int width, int height, float scale);
     
     @Override protected long _getNativeView(long ptr) {
         return ptr;

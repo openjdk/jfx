@@ -28,17 +28,62 @@ import com.sun.glass.ui.*;
 import com.sun.glass.ui.CommonDialogs.ExtensionFilter;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
 import com.sun.glass.utils.NativeLibLoader;
+import com.sun.prism.impl.PrismSettings;
 
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.List;
 
 final class WinApplication extends Application implements InvokeLaterDispatcher.InvokeLaterSubmitter {
+    static float   overrideUIScale;
+    static float   overrideRenderScale;
+    static float   minDPIScale;
+    static boolean forceIntegerRenderScale;
 
-    private static native void initIDs();
+    private static boolean getBoolean(String propname, boolean defval, String description) {
+        String str = System.getProperty(propname);
+        if (str == null) {
+            str = System.getenv(propname);
+        }
+        if (str == null) {
+            return defval;
+        }
+        Boolean ret = Boolean.parseBoolean(str);
+        if (PrismSettings.verbose) {
+            System.out.println((ret ? "" : "not ")+description);
+        }
+        return ret;
+    }
+
+    private static float getFloat(String propname, float defval, String description) {
+        String str = System.getProperty(propname);
+        if (str == null) {
+            str = System.getenv(propname);
+        }
+        if (str == null) {
+            return defval;
+        }
+        str = str.trim();
+        float val;
+        if (str.endsWith("%")) {
+            val = Integer.parseInt(str.substring(0, str.length()-1)) / 100.0f;
+        } else if (str.endsWith("DPI") || str.endsWith("dpi")) {
+            val = Integer.parseInt(str.substring(0, str.length()-3)) / 96.0f;
+        } else {
+            val = Float.parseFloat(str);
+        }
+        if (PrismSettings.verbose) {
+            System.out.println(description+val);
+        }
+        return val;
+    }
+
+    private static native void initIDs(float overrideUIScale,
+                                       float overrideRenderScale,
+                                       float minDPIScale,
+                                       boolean forceIntegerRenderScale);
     static {
         // This loading of msvcr120.dll and msvcp120.dll (VS2013) is required when run with Java 8
         // since it was build with VS2010 and doesn't include msvcr120.dll in its JRE.
@@ -46,6 +91,16 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
         AccessController.doPrivileged(new PrivilegedAction<Void>() {
             public Void run() {
                 verbose = Boolean.getBoolean("javafx.verbose");
+                if (PrismSettings.allowHiDPIScaling) {
+                    overrideUIScale = getFloat("glass.win.uiScale", -1.0f, "Forcing UI scaling factor: ");
+                    overrideRenderScale = getFloat("glass.win.renderScale", -1.0f, "Forcing Rendering scaling factor: ");
+                    minDPIScale = getFloat("glass.win.minHiDPI", 1.0f, "Threshold to enable UI scaling factor: ");
+                    forceIntegerRenderScale = getBoolean("glass.win.forceIntegerRenderScale", true, "forcing integer rendering scale");
+                } else {
+                    overrideUIScale = overrideRenderScale = 1.0f;
+                    minDPIScale = Float.MAX_VALUE;
+                    forceIntegerRenderScale = false;
+                }
                 try {
                     NativeLibLoader.loadLibrary("msvcr120");
                 } catch (Throwable t) {
@@ -64,7 +119,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
                 return null;
             }
         });
-        initIDs();
+        initIDs(overrideUIScale, overrideRenderScale, minDPIScale, forceIntegerRenderScale);
     }
 
     private final InvokeLaterDispatcher invokeLaterDispatcher;
@@ -83,28 +138,56 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
     private static boolean verbose;
 
     // returng toolkit window HWND
-    private native long _init();
+    private native long _init(int awarenessRequested);
     private native void _setClassLoader(ClassLoader classLoader);
     private native void _runLoop(Runnable launchable);
     private native void _terminateLoop();
+
+    private static final int Process_DPI_Unaware            = 0;
+    private static final int Process_System_DPI_Aware       = 1;
+    private static final int Process_Per_Monitor_DPI_Aware  = 2;
+
+    private static int getDesiredAwarenesslevel() {
+        if (!PrismSettings.allowHiDPIScaling) {
+            return Process_DPI_Unaware;
+        }
+        String awareRequested = AccessController
+            .doPrivileged((PrivilegedAction<String>) () ->
+                          System.getProperty("javafx.glass.winDPIawareness"));
+        if (awareRequested != null) {
+            awareRequested = awareRequested.toLowerCase();
+            if (awareRequested.equals("aware")) {
+                return Process_System_DPI_Aware;
+            } else if (awareRequested.equals("permonitor")) {
+                return Process_Per_Monitor_DPI_Aware;
+            } else {
+                if (!awareRequested.equals("unaware")) {
+                    System.err.println("unrecognized DPI awareness request, defaulting to unaware: "+awareRequested);
+                }
+                return Process_DPI_Unaware;
+            }
+        }
+        return Process_Per_Monitor_DPI_Aware;
+    }
 
     @Override
     protected void runLoop(final Runnable launchable) {
         boolean isEventThread = AccessController
             .doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.embed.isEventThread"));
+        int awareness = getDesiredAwarenesslevel();
 
         ClassLoader classLoader = WinApplication.class.getClassLoader();
         _setClassLoader(classLoader);
 
         if (isEventThread) {
-            _init();
+            _init(awareness);
             setEventThread(Thread.currentThread());
             launchable.run();
             return;
         }
         final Thread toolkitThread =
             AccessController.doPrivileged((PrivilegedAction<Thread>) () -> new Thread(() -> {
-                _init();
+                _init(awareness);
                 _runLoop(launchable);
             }, "WindowsNativeRunloopThread"));
         setEventThread(toolkitThread);

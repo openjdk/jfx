@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +25,11 @@
 
 package javafx.embed.swing;
 
+import com.sun.glass.ui.Robot;
+import static com.sun.javafx.application.PlatformImpl.runAndWait;
 import com.sun.javafx.tk.TKPulseListener;
 import java.awt.AWTException;
 import java.awt.Color;
-import java.awt.Robot;
 import javafx.animation.AnimationTimer;
 import javafx.scene.Scene;
 
@@ -105,25 +106,22 @@ public class RT30650GUI extends Application {
             });
         });        
     }
-    
+
     public boolean testColor(Stage stage) {
-        Robot r = null;
-        try {
-            r = new Robot();
-        } catch (AWTException ex) {
-            System.err.println("unexpected error: couldn't create java.awt.Robot: " + ex);
-            return false;
-        }
-        
         int x = (int)stage.getX();
         int y = (int)stage.getY();
+
+        final int rgb[] = new int[1];
+        runAndWait(() -> {
+            Robot r = com.sun.glass.ui.Application.GetApplication().createRobot();
+            rgb[0] = r.getPixelColor(x + SIZE/2, y + SIZE/2);
+        });
         
-        Color color = r.getPixelColor(x + SIZE/2, y + SIZE/2);
-        System.out.println("detected color: " + color);
+        System.out.println("detected color: " + Integer.toHexString(rgb[0]));
 
         // On MacOSX the robot returns the color affected by the color profile.
         // And so the resulting color may differ from the requested one.
         // Here we have to check that the color is close to red rather than to green.
-        return color.getRed() > 200 && color.getGreen() < 100;
+        return ((rgb[0] >> 16) & 0xff) > 200 && ((rgb[0] >> 8) & 0xff) < 100;
     }
 }

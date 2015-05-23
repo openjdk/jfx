@@ -285,7 +285,7 @@ public class ImageStorage {
      */
     public static ImageFrame[] loadAll(String input, ImageLoadListener listener,
             int width, int height, boolean preserveAspectRatio,
-            float pixelScale, boolean smooth) throws ImageStorageException {
+            float devPixelScale, boolean smooth) throws ImageStorageException {
 
         if (input == null || input.isEmpty()) {
             throw new ImageStorageException("URL can't be null or empty");
@@ -296,18 +296,19 @@ public class ImageStorage {
         ImageLoader loader = null;
 
         try {
+            float imgPixelScale = 1.0f;
             try {
-                if (pixelScale > 1.9f) {
-                    // Use Mac Retina conventions for > 1.9f
+                if (devPixelScale >= 1.5f) {
+                    // Use Mac Retina conventions for >= 1.5f
                     try {
                         String name2x = ImageTools.getScaledImageName(input);
                         theStream = ImageTools.createInputStream(name2x);
+                        imgPixelScale = 2.0f;
                     } catch (IOException e) {
                     }
                 }
                 if (theStream == null) {
                     theStream = ImageTools.createInputStream(input);
-                    pixelScale = 1.0f;
                 }
 
                 if (isIOS) {
@@ -320,7 +321,7 @@ public class ImageStorage {
             }
 
             if (loader != null) {
-                images = loadAll(loader, width, height, preserveAspectRatio, pixelScale, smooth);
+                images = loadAll(loader, width, height, preserveAspectRatio, imgPixelScale, smooth);
             } else {
                 throw new ImageStorageException("No loader for image data");
             }

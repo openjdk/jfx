@@ -110,6 +110,18 @@ public class Window implements EventTarget {
                     }
 
                     @Override
+                    public float getUIScale(Window window) {
+                        TKStage peer = window.impl_peer;
+                        return peer == null ? 1.0f : peer.getUIScale();
+                    }
+
+                    @Override
+                    public float getRenderScale(Window window) {
+                        TKStage peer = window.impl_peer;
+                        return peer == null ? 1.0f : peer.getRenderScale();
+                    }
+
+                    @Override
                     public ReadOnlyObjectProperty<Screen> screenProperty(Window window) {
                         return window.screenProperty();
                     }
@@ -1180,7 +1192,7 @@ public class Window implements EventTarget {
     private ReadOnlyObjectProperty<Screen> screenProperty() { return screen.getReadOnlyProperty(); }
 
     private void notifyScreenChanged(Object from, Object to) {
-        screen.set(getWindowScreen());
+        screen.set(Screen.getScreenForNative(to));
     }
 
     /**

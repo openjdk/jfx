@@ -86,6 +86,9 @@ public interface TKStage {
                           float w, float h, float cw, float ch,
                           float xGravity, float yGravity);
 
+    public float getUIScale();
+    public float getRenderScale();
+
     public void setIcons(java.util.List icons);
 
     public void setTitle(String title);

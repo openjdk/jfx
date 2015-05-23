@@ -532,7 +532,7 @@ public class CacheFilter {
                 }
             }
         }
-        float pixelScale = g.getAssociatedScreen().getScale();
+        float pixelScale = g.getAssociatedScreen().getRenderScale();
         if (needToRenderCache(xform, xformInfo, pixelScale)) {
             if (PulseLogger.PULSE_LOGGING_ENABLED) {
                 PulseLogger.incrementCounter("CacheFilter rebuilding");

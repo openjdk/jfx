@@ -266,6 +266,8 @@ public class FXCanvas extends Canvas {
     private static void initFx() {
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             System.setProperty("javafx.embed.isEventThread", "true");
+            System.setProperty("glass.win.uiScale", "100%");
+            System.setProperty("glass.win.renderScale", "100%");
             return null;
         });
         Map map = Application.getDeviceDetails();

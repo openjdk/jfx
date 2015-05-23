@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,11 +24,13 @@
  */
 
 #include "common.h"
+#include "math.h"
 
 #include "KeyTable.h"
 
 #include "com_sun_glass_ui_Robot.h"
 #include "com_sun_glass_ui_win_WinRobot.h"
+#include "GlassScreen.h"
 
 
 static BOOL KeyEvent(JNIEnv *env, int code, bool isPress) {
@@ -104,6 +106,12 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinRobot__1mouseMove
     INT_PTR oldSpeed, newSpeed;
     BOOL bResult;
 
+    jfloat fx = (jfloat) x + 0.5f;
+    jfloat fy = (jfloat) y + 0.5f;
+    GlassScreen::FX2Win(&fx, &fy);
+    x = (jint) fx;
+    y = (jint) fy;
+
     // The following values set mouse ballistics to 1 mickey/pixel.
     newAccel[0] = 0;
     newAccel[1] = 0;
@@ -143,7 +151,10 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_win_WinRobot__1getMouseX
 {
     POINT curPos;
     ::GetCursorPos(&curPos);
-    return curPos.x;
+    jfloat fx = (jfloat) curPos.x + 0.5f;
+    jfloat fy = (jfloat) curPos.y + 0.5f;
+    GlassScreen::Win2FX(&fx, &fy);
+    return (jint) fx;
 }
 
 /*
@@ -156,7 +167,10 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_win_WinRobot__1getMouseY
 {
     POINT curPos;
     ::GetCursorPos(&curPos);
-    return curPos.y;
+    jfloat fx = (jfloat) curPos.x + 0.5f;
+    jfloat fy = (jfloat) curPos.y + 0.5f;
+    GlassScreen::Win2FX(&fx, &fy);
+    return (jint) fy;
 }
 
 /*
@@ -254,6 +268,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinRobot__1mouseWheel
     ::mouse_event(MOUSEEVENTF_WHEEL, 0, 0, wheelAmt * -1 * WHEEL_DELTA, 0);
 }
 
+void GetScreenCapture(jint x, jint y, jint devw, jint devh,
+                      jint *pixelData, jint retw, jint reth);
+
 /*
  * Class:     com_sun_glass_ui_win_WinRobot
  * Method:    _getPixelColor
@@ -261,21 +278,17 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinRobot__1mouseWheel
  */
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_win_WinRobot__1getPixelColor
     (JNIEnv *env, jobject jrobot, jint x, jint y)
-{    
+{
+    jfloat fx = (jfloat) x + 0.5f;
+    jfloat fy = (jfloat) y + 0.5f;
+    GlassScreen::FX2Win(&fx, &fy);
+    jint dx = (jint) fx;
+    jint dy = (jint) fy;
+
     jint val = 0;
     //NOTE: we don't use the ::GetPixel() on the screen DC because it's not capable of
     //      getting the correct colors when non-opaque windows are present
-    jintArray ia = (jintArray)env->NewIntArray(1);
-    if (ia) {
-        Java_com_sun_glass_ui_win_WinRobot__1getScreenCapture(env, jrobot, x, y, 1, 1, ia);
-
-        jint * elems = env->GetIntArrayElements(ia, NULL);
-        if (elems) {
-            val = elems[0];
-        }
-        env->ReleaseIntArrayElements(ia, elems, 0);
-        env->DeleteLocalRef(ia);
-    }
+    GetScreenCapture(dx, dy, 1, 1, &val, 1, 1);
     return val;
 }
 
@@ -287,6 +300,35 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_win_WinRobot__1getPixelColor
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinRobot__1getScreenCapture
     (JNIEnv *env, jobject jrobot, jint x, jint y, jint width, jint height, jintArray pixelArray)
 {
+    jfloat fx = (jfloat) x;
+    jfloat fy = (jfloat) y;
+    GlassScreen::FX2Win(&fx, &fy);
+    jint dx = (jint) ceil(fx - 0.5f);
+    jint dy = (jint) ceil(fy - 0.5f);
+    fx = (jfloat) (x + width);
+    fy = (jfloat) (y + height);
+    GlassScreen::FX2Win(&fx, &fy);
+    jint dw = ((jint) ceil(fx - 0.5f)) - dx;
+    jint dh = ((jint) ceil(fy - 0.5f)) - dy;
+
+    int numPixels = width * height;
+    int pixelDataSize = sizeof(jint) * numPixels;
+    ASSERT(pixelDataSize > 0 && pixelDataSize % 4 == 0);
+
+    jint * pixelData = (jint *)(new BYTE[pixelDataSize]);
+
+    if (pixelData) {
+        GetScreenCapture(dx, dy, dw, dh, pixelData, width, height);
+
+        // copy pixels into Java array
+        env->SetIntArrayRegion(pixelArray, 0, numPixels, pixelData);
+        delete pixelData;
+    }
+}
+
+void GetScreenCapture(jint x, jint y, jint devw, jint devh,
+                      jint *pixelData, jint retw, jint reth)
+{
     HDC hdcScreen = ::CreateDC(TEXT("DISPLAY"), NULL, NULL, NULL);
     HDC hdcMem = ::CreateCompatibleDC(hdcScreen);
     HBITMAP hbitmap;
@@ -294,7 +336,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinRobot__1getScreenCapture
     HPALETTE hOldPalette = NULL;
 
     // create an offscreen bitmap
-    hbitmap = ::CreateCompatibleBitmap(hdcScreen, width, height);
+    hbitmap = ::CreateCompatibleBitmap(hdcScreen, retw, reth);
     if (hbitmap == NULL) {
         //TODO: OOM might be better?
         //throw std::bad_alloc();
@@ -312,61 +354,48 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinRobot__1getScreenCapture
     // copy screen image to offscreen bitmap
     // CAPTUREBLT flag is required to capture WS_EX_LAYERED windows' contents
     // correctly on Win2K/XP
-    ::BitBlt(hdcMem, 0, 0, width, height, hdcScreen, x, y,
-                                                SRCCOPY|CAPTUREBLT);
+    static const DWORD dwRop = SRCCOPY|CAPTUREBLT;
+    if (retw == devw && reth == devh) {
+        ::BitBlt(hdcMem, 0, 0, retw, reth, hdcScreen, x, y, dwRop);
+    } else {
+        ::StretchBlt(hdcMem, 0, 0, retw, reth, hdcScreen, x, y, devw, devh, dwRop);
+    }
 
     static const int BITS_PER_PIXEL = 32;
-    static const int BYTES_PER_PIXEL = BITS_PER_PIXEL/8;
 
-    int numPixels = width*height;
-    int pixelDataSize = BYTES_PER_PIXEL*numPixels;
-    ASSERT(pixelDataSize > 0 && pixelDataSize % 4 == 0);
-    // allocate memory for BITMAPINFO + pixel data
-    // 4620932: When using BI_BITFIELDS, GetDIBits expects an array of 3
-    // RGBQUADS to follow the BITMAPINFOHEADER, but we were only allocating the
-    // 1 that is included in BITMAPINFO.  Thus, GetDIBits was writing off the
-    // end of our block of memory.  Now we allocate sufficient memory.
-    // See MSDN docs for BITMAPINFOHEADER -bchristi
+    struct {
+        BITMAPINFOHEADER bmiHeader;
+        RGBQUAD          bmiColors[3];
+    } BitmapInfo;
 
-    BITMAPINFO * pinfo = (BITMAPINFO *)(new BYTE[sizeof(BITMAPINFOHEADER) + 3 * sizeof(RGBQUAD) + pixelDataSize]);
+    // prepare BITMAPINFO for a 32-bit RGB bitmap
+    ::memset(&BitmapInfo, 0, sizeof(BitmapInfo));
+    BitmapInfo.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    BitmapInfo.bmiHeader.biWidth = retw;
+    BitmapInfo.bmiHeader.biHeight = -reth; // negative height means a top-down DIB
+    BitmapInfo.bmiHeader.biPlanes = 1;
+    BitmapInfo.bmiHeader.biBitCount = BITS_PER_PIXEL;
+    BitmapInfo.bmiHeader.biCompression = BI_BITFIELDS;
 
-    if (pinfo) {
-        // pixel data starts after 3 RGBQUADS for color masks
-        RGBQUAD *pixelData = &pinfo->bmiColors[3];
+    // Setup up color masks
+    static const RGBQUAD redMask =   {0, 0, 0xFF, 0};
+    static const RGBQUAD greenMask = {0, 0xFF, 0, 0};
+    static const RGBQUAD blueMask =  {0xFF, 0, 0, 0};
 
-        // prepare BITMAPINFO for a 32-bit RGB bitmap
-        ::memset(pinfo, 0, sizeof(*pinfo));
-        pinfo->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-        pinfo->bmiHeader.biWidth = width;
-        pinfo->bmiHeader.biHeight = -height; // negative height means a top-down DIB
-        pinfo->bmiHeader.biPlanes = 1;
-        pinfo->bmiHeader.biBitCount = BITS_PER_PIXEL;
-        pinfo->bmiHeader.biCompression = BI_BITFIELDS;
+    BitmapInfo.bmiColors[0] = redMask;
+    BitmapInfo.bmiColors[1] = greenMask;
+    BitmapInfo.bmiColors[2] = blueMask;
 
-        // Setup up color masks
-        static const RGBQUAD redMask =   {0, 0, 0xFF, 0};
-        static const RGBQUAD greenMask = {0, 0xFF, 0, 0};
-        static const RGBQUAD blueMask =  {0xFF, 0, 0, 0};
+    // Get the bitmap data in device-independent, 32-bit packed pixel format
+    ::GetDIBits(hdcMem, hbitmap, 0, reth, pixelData, (BITMAPINFO *)&BitmapInfo, DIB_RGB_COLORS);
 
-        pinfo->bmiColors[0] = redMask;
-        pinfo->bmiColors[1] = greenMask;
-        pinfo->bmiColors[2] = blueMask;
-
-        // Get the bitmap data in device-independent, 32-bit packed pixel format
-        ::GetDIBits(hdcMem, hbitmap, 0, height, pixelData, pinfo, DIB_RGB_COLORS);
-
-        // convert Win32 pixel format (BGRX) to Java format (ARGB)
-        ASSERT(sizeof(jint) == sizeof(RGBQUAD));
-        for(int nPixel = 0; nPixel < numPixels; nPixel++) {
-            RGBQUAD * prgbq = &pixelData[nPixel];
-            jint jpixel = WinToJavaPixel(prgbq->rgbRed, prgbq->rgbGreen, prgbq->rgbBlue);
-            // stuff the 32-bit pixel back into the 32-bit RGBQUAD
-            *prgbq = *( (RGBQUAD *)(&jpixel) );
-        }
-
-        // copy pixels into Java array
-        env->SetIntArrayRegion(pixelArray, 0, numPixels, (jint *)pixelData);
-        delete pinfo;
+    // convert Win32 pixel format (BGRX) to Java format (ARGB)
+    ASSERT(sizeof(jint) == sizeof(RGBQUAD));
+    jint numPixels = retw * reth;
+    jint *pPixel = pixelData;
+    for(int nPixel = 0; nPixel < numPixels; nPixel++) {
+        RGBQUAD * prgbq = (RGBQUAD *) pPixel;
+        *pPixel++ = WinToJavaPixel(prgbq->rgbRed, prgbq->rgbGreen, prgbq->rgbBlue);
     }
 
     // free all the GDI objects we made

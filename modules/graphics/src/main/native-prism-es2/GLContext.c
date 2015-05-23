@@ -385,7 +385,7 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nBlit
     ctxInfo->glBindFramebuffer(GL_DRAW_FRAMEBUFFER, (GLuint)dstFBO);
     ctxInfo->glBlitFramebuffer(jsrcX0, jsrcY0, srcX1, srcY1,
                                jdstX0, jdstY0, dstX1, dstY1,
-                               GL_COLOR_BUFFER_BIT, GL_NEAREST);
+                               GL_COLOR_BUFFER_BIT, GL_LINEAR);
     /* TODO: iOS MSAA support:
      * We are using glBlitFramebuffer to "resolve" the mutlisample buffer,
      * to a color destination. iOS does things differently, it uses

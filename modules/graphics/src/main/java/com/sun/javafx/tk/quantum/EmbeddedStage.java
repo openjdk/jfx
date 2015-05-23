@@ -78,6 +78,20 @@ final class EmbeddedStage extends GlassStage implements EmbeddedStageInterface {
         }
     }
 
+    @Override
+    public float getUIScale() {
+        return 1.0f;
+    }
+
+    @Override
+    public float getRenderScale() {
+        TKScene scene = getScene();
+        if (scene instanceof EmbeddedScene) {
+            return ((EmbeddedScene) scene).getRenderScale();
+        }
+        return 1.0f;
+    }
+
     @Override public void setMinimumSize(int minWidth, int minHeight) {
         // This is a no-op for embedded stages
     }
