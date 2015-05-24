@@ -382,7 +382,7 @@ public abstract class TableRowSkinBase<T,
                     if (disclosureVisible) {
                         double ph = disclosureNode.prefHeight(disclosureWidth);
 
-                        if (width < (disclosureWidth + leftMargin)) {
+                        if (width > 0 && width < (disclosureWidth + leftMargin)) {
                             fadeOut(disclosureNode);
                         } else {
                             fadeIn(disclosureNode);
@@ -404,7 +404,7 @@ public abstract class TableRowSkinBase<T,
                         graphicWidth = graphic.prefWidth(-1) + 3;
                         double ph = graphic.prefHeight(graphicWidth);
 
-                        if (width < disclosureWidth + leftMargin + graphicWidth) {
+                        if (width > 0 && width < disclosureWidth + leftMargin + graphicWidth) {
                             fadeOut(graphic);
                         } else {
                             fadeIn(graphic);
