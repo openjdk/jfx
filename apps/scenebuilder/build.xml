@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project default="jar" basedir=".">
 
+    <!-- usually set by the build -->
+    <property name="platforms.JDK_1.8.home" location="${java.home}/../"/>
+
     <target name="jar" depends="jar-sb, jar-sb-samples">
     </target>
 
@@ -18,6 +21,19 @@
     <target name="jar-sb">
         <ant dir="SceneBuilderKit" target="jar" inheritAll="true"/>
         <ant dir="SceneBuilderApp" target="jar" inheritAll="true"/>
+    </target>
+
+    <target name="run" depends="jar-sb">
+        <java classname="com.oracle.javafx.scenebuilder.app.SceneBuilderApp"
+            fork="true"
+            failonerror="true"
+            >
+        <classpath>
+            <pathelement location="../../build/sdk/rt/lib/ext/jfxrt.jar"/>
+            <pathelement location="SceneBuilderApp/dist/SceneBuilderApp.jar"/>
+            <pathelement location="SceneBuilderKit/dist/SceneBuilderKit.jar"/>
+         </classpath>
+       </java>
     </target>
 
     <target name="clean-sb">
