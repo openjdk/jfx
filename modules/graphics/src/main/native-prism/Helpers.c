@@ -24,6 +24,9 @@
  */
 
 #include <jni.h>
+#ifdef ANDROID_NDK
+#include <stddef.h>
+#endif
 
 #include "math.h"
 #include "Helpers.h"

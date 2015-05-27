@@ -25,6 +25,7 @@
 package com.sun.glass.ui.android;
 
 import javafx.application.Platform;
+import javafx.scene.Node;
 
 public class DalvikInput {
 
@@ -48,6 +49,18 @@ public class DalvikInput {
             }
         });
     };
+
+    private static Node activeNode;
+
+    public static void onGlobalLayoutChanged() {
+        if (activeNode != null) {
+            Platform.runLater(() -> activeNode.getParent().requestFocus());
+        }
+    }
+
+    public static void setActiveNode (Node n) {
+        activeNode = n;
+    }
 
     private static native void onKeyEventNative(int action, int keycode, String characters);
 
