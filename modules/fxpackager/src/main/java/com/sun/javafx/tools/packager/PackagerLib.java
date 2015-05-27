@@ -162,6 +162,17 @@ public class PackagerLib {
                         createJarParams.classpath =
                                 attrs.getValue(Attributes.Name.CLASS_PATH);
                     }
+                    if (createJarParams.codebase == null) {
+                        createJarParams.codebase = 
+                                attrs.getValue(new Attributes.Name("Codebase"));
+                    }
+                    if (createJarParams.allPermissions == null) {
+                        String value  = 
+                                attrs.getValue(new Attributes.Name("Permissions"));
+                        if (value != null) {
+                            createJarParams.allPermissions = Boolean.valueOf(value);
+                        }
+                    }
                 }
             } catch (IOException ex) {
                 throw new PackagerException(
@@ -216,14 +227,26 @@ public class PackagerLib {
             // Allow comma or semicolon as delimeter (turn them into spaces)
             String cp = createJarParams.classpath;
             cp = cp.replace(';', ' ').replace(',', ' ');
-            attr.put(new Attributes.Name("Class-Path"), cp);
+            attr.put(Attributes.Name.CLASS_PATH, cp);
         }
 
-        attr.put(new Attributes.Name("Permissions"),
-                 createJarParams.allPermissions ? "all-permissions" : "sandbox");
-        
-        if (createJarParams.codebase != null) {
-            attr.put(new Attributes.Name("Codebase"), createJarParams.codebase);
+        String existingSetting = attr.getValue("Permissions"); 
+        if (existingSetting == null) {
+            attr.put(new Attributes.Name("Permissions"),
+                    Boolean.TRUE.equals(createJarParams.allPermissions) ? "all-permissions" : "sandbox");
+        } else if (!Boolean.valueOf(existingSetting).equals(createJarParams.allPermissions)) { 
+            throw new PackagerException(
+                "ERR_ContradictorySetting", "Permissions"); 
+        }
+
+        existingSetting = attr.getValue("Codebase");
+        if (existingSetting == null) {
+            if (createJarParams.codebase != null) {
+                attr.put(new Attributes.Name("Codebase"), createJarParams.codebase);
+            }
+        } else if (!existingSetting.equals(createJarParams.codebase)) {
+            throw new PackagerException(
+                    "ERR_ContradictorySetting", "Codebase");
         }
         
         attr.put(new Attributes.Name("JavaFX-Version"), createJarParams.fxVersion);

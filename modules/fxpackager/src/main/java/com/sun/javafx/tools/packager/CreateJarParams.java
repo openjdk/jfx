@@ -44,7 +44,7 @@ public class CreateJarParams extends CommonParams {
     boolean css2bin = true;
     String outfile;
     String fxVersion = PackagerLib.JAVAFX_VERSION;
-    boolean allPermissions = false;
+    Boolean allPermissions = false;
     String codebase;
 
     List<String> arguments;
@@ -100,7 +100,7 @@ public class CreateJarParams extends CommonParams {
         this.fxVersion = fxVersion;
     }
     
-    public void setAllPermissions(boolean allPermissions) {
+    public void setAllPermissions(Boolean allPermissions) {
         this.allPermissions = allPermissions;
     }
     
