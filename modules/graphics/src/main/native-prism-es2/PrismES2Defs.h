@@ -61,7 +61,7 @@
 
 #ifdef IS_EGL
 #include <EGL/egl.h>
-#include "eglfb/wrapped_egl.h"
+#include "eglWrapper/eglWrapper.h"
 #endif
 
 #endif /* SOLARIS || LINUX */

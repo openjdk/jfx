@@ -56,7 +56,7 @@
 #endif
 
 #define WRAPPEDAPI
-#include "wrapped_egl.h"
+#include "eglWrapper.h"
 
 int load_wrapped_gles_symbols(void);
 void *libglesv2;

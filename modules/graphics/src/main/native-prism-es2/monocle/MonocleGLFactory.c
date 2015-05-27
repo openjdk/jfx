@@ -90,7 +90,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_MonocleGLFactory_nPopulateNativeC
     free(glExtensions);
     //free(eglExtensions);
 
-    // from the wrapped_egl.c
+    // from the eglWrapper.c
     void *handle = asPtr(libraryHandle);
 
     /* set function pointers */

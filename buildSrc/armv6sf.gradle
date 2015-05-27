@@ -471,6 +471,7 @@ ARMV6SF.prismES2.eglfb = [:]
 ARMV6SF.prismES2.eglfb.nativeSource = [
     file("modules/graphics/src/main/native-prism-es2"),
     file("modules/graphics/src/main/native-prism-es2/GL"),
+    file("modules/graphics/src/main/native-prism-es2/eglWrapper"),
     file("modules/graphics/src/main/native-prism-es2/eglfb")
 ]
 ARMV6SF.prismES2.eglfb.compiler = compiler
