@@ -185,6 +185,11 @@ class X11Screen implements NativeScreen {
     }
 
     @Override
+    public float getScale() {
+        return 1.0f;
+    }
+
+    @Override
     public long getNativeHandle() {
         return nativeHandle;
     }

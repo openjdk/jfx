@@ -93,6 +93,11 @@ class HeadlessScreen implements NativeScreen {
     }
 
     @Override
+    public float getScale() {
+        return 1.0f;
+    }
+
+    @Override
     public long getNativeHandle() {
         return 1l;
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,42 +23,33 @@
  * questions.
  */
 
-package com.sun.glass.ui.monocle;
-import com.sun.glass.utils.NativeLibLoader;
+#ifndef DALVIKCONST_H
+#define	DALVIKCONST_H
 
-class AndroidPlatform extends NativePlatform {
+#ifdef	__cplusplus
+extern "C" {
+#endif 
 
-    AndroidPlatform() {
-        NativeLibLoader.loadLibrary("glass_monocle");
-    }
+#define RGBA_8888 1
+#define RGBX_8888 2
+#define RGB_888   3
+#define RGB_565   4
 
-    @Override
-    protected InputDeviceRegistry createInputDeviceRegistry() {
-        return AndroidInputDeviceRegistry.getInstance();
-    }
+#define TOUCH_ACTION_STILL         -1
+#define TOUCH_ACTION_DOWN           0
+#define TOUCH_ACTION_UP             1
+#define TOUCH_ACTION_MOVE           2
+#define TOUCH_ACTION_CANCEL         3
+#define TOUCH_ACTION_OUTSIDE		4
+#define TOUCH_ACTION_POINTER_DOWN	5
+#define TOUCH_ACTION_POINTER_UP     6
 
-    @Override
-    protected NativeCursor createCursor() {
-        return new NullCursor();
-    }
-
-    @Override
-    protected NativeScreen createScreen() {
-        return new AndroidScreen();
-    }
-
-    /** Create the accelerated screen for this platform
-     *
-     * @param attributes a sequence of pairs (GLAttibute, value)
-     * @throws GLException
-     */
-    @Override
-    public synchronized AcceleratedScreen getAcceleratedScreen(
-            int[] attributes) throws GLException {
-        if (accScreen == null) {
-            accScreen = new AndroidAcceleratedScreen(attributes);
-        }
-        return accScreen;
-    }
-
+#define KEY_ACTION_DOWN     0
+#define KEY_ACTION_UP       1
+#define KEY_ACTION_MULTIPLE 2   
+    
+#ifdef	__cplusplus
 }
+#endif
+
+#endif	/* DALVIKCONST_H */

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,42 +23,35 @@
  * questions.
  */
 
-package com.sun.glass.ui.monocle;
-import com.sun.glass.utils.NativeLibLoader;
+#include "com_sun_glass_ui_monocle_Udev.h"
+#include "Monocle.h"
 
-class AndroidPlatform extends NativePlatform {
+ JNIEXPORT jlong JNICALL
+ Java_com_sun_glass_ui_monocle_Udev__1open
+ (JNIEnv *env, jobject UNUSED(jUdev)) {
+     return 0l;
+ }
 
-    AndroidPlatform() {
-        NativeLibLoader.loadLibrary("glass_monocle");
-    }
-
-    @Override
-    protected InputDeviceRegistry createInputDeviceRegistry() {
-        return AndroidInputDeviceRegistry.getInstance();
-    }
-
-    @Override
-    protected NativeCursor createCursor() {
-        return new NullCursor();
-    }
-
-    @Override
-    protected NativeScreen createScreen() {
-        return new AndroidScreen();
-    }
-
-    /** Create the accelerated screen for this platform
-     *
-     * @param attributes a sequence of pairs (GLAttibute, value)
-     * @throws GLException
-     */
-    @Override
-    public synchronized AcceleratedScreen getAcceleratedScreen(
-            int[] attributes) throws GLException {
-        if (accScreen == null) {
-            accScreen = new AndroidAcceleratedScreen(attributes);
-        }
-        return accScreen;
-    }
-
+JNIEXPORT jint JNICALL
+Java_com_sun_glass_ui_monocle_Udev__1readEvent
+(JNIEnv *env, jobject UNUSED(jUdev), jlong fdL, jobject bufferObj) {
+    return 0;
 }
+
+JNIEXPORT void JNICALL
+Java_com_sun_glass_ui_monocle_Udev__1close
+(JNIEnv *env, jobject UNUSED(jUdev), jlong fdL) {
+}
+
+JNIEXPORT jint JNICALL
+Java_com_sun_glass_ui_monocle_Udev__1getPropertiesOffset
+(JNIEnv *env, jobject UNUSED(jUdev), jobject bufferObj) {
+    return -1;
+}
+
+JNIEXPORT jint JNICALL
+Java_com_sun_glass_ui_monocle_Udev__1getPropertiesLength
+(JNIEnv *env, jobject UNUSED(jUdev), jobject bufferObj) {
+    return -1;
+}
+

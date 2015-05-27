@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -101,6 +101,7 @@ ext.DALVIK = [:]
 DALVIK.compileSwing = false;
 DALVIK.compileSWT = false;
 DALVIK.compileFXPackager = false;
+DALVIK.compileDesignTime = false;
 DALVIK.glassPlatform = "android"
 DALVIK.armArch = armArchs[0]
 DALVIK.libDest = "lib/${DALVIK.armArch}"
@@ -231,7 +232,7 @@ allprojects() {
             classdirs.eachDir{t -> 
                 javaexec {
                     inputdir = t
-                    basecp = files(lf, "modules/base/build/classes/main", "modules/graphics/build/classes/main").asPath
+                    basecp = files(lf, "modules/base/build/classes/main", "modules/graphics/build/classes/main", "modules/controls/build/classes/main").asPath
                     myconfig = configurations.retroconfig;
                     lambdaloc = myconfig.resolve().toArray()[0];
                     classpath = configurations.retroconfig
@@ -250,11 +251,81 @@ allprojects() {
 
 
 project(":base") {
-
     apply plugin: 'java'
+    jar.dependsOn("retroClass");
+}
+
+project(":web") {
+    apply plugin: 'java'
+    jar.dependsOn("retroClass");
+    compileJava.dependsOn(":graphics:assemble");
+    sourceSets.main.java.srcDirs = ['src/android/java'];
+    sourceSets {
+        main {
+            java {
+                srcDirs= ['src/android/java']
+            }
+        }
+    }
+    dependencies {
+         compile files("../graphics/build/classes/dalvik");
+    }
+
+    afterEvaluate {
+    sourceSets.main.java.srcDirs = ['src/android/java'];
+        def compileWebJavaAndroid = task("compileWebJavaAndroid",
+            type: JavaCompile, group: "Build") {
+
+            dependsOn(project(":graphics").classes, project(":base").classes)
+            description = "Task compiles web component for Android."
+            classpath = files(
+                project(":controls").sourceSets.main.output.classesDir,
+                project(":graphics").sourceSets.main.output.classesDir,
+                project(":base").sourceSets.main.output.classesDir,
+                "modules/graphics/build/classes/dalvik"
+            )
+            destinationDir = file("modules/web/build/classes/android")
+            dependencyCacheDir = file("modules/web/build/dependency-cache")
+            source file("modules/web/src/android/java")
+        }
+
+        def jarWebJavaAndroid = task("jarWebJavaAndroid",
+            type: Jar, group: "Build") {
+            description = "Creates web.jar for Android."
+            dependsOn(compileWebJavaAndroid)
+            archiveName = "web.jar"
+            includeEmptyDirs = false
+            destinationDir = project.file("build/libs/android")
+            from("build/classes/android")
+        }
+        addNative(project, "webview")
+        // addNative(project, "dvkwebview")
+        javahDalvikWebview.dependsOn(compileWebJavaAndroid)
+        // javahDalvikDvkwebview.dependsOn(compileWebJavaAndroid)
+
+        jfxrtDalvik {
+            from "modules/web/build/classes/android"
+        }
+
+  sdkDalvik  {
+            dependsOn(jarWebJavaAndroid)
+            doLast {
+                def props = project.ext["DALVIK"]
+                copy {
+                    from ("modules/web/build/libs/webview/dalvik/${props.library(props.webview.lib)}")
+                    into ("build/dalvik-sdk/rt/${props.libDest}")
+                }
+            }
+        }
+    }
+
 
     jar.dependsOn("retroClass");
+}
 
+project(":media") {
+    apply plugin: 'java'
+    jar.dependsOn("retroClass");
 }
 
 
@@ -273,7 +344,7 @@ project(":graphics") {
         classpath = files("build/classes/dalvik", "build/classes/main")
         destinationDir = file("build/classes/dalvik")
         dependencyCacheDir = file("build/dependency-cache")
-        source fileTree(dir: 'src/dalvik/java').matching { include 'javafxports/**' }
+        source fileTree(dir: 'src/dalvik/java').matching { include '**' }
     }
 
     task jarDalvikLibs(type: Jar, group: "Build", dependsOn: compileDalvikLibs) {
@@ -282,6 +353,7 @@ project(":graphics") {
         includeEmptyDirs = false
         from("build/classes/dalvik")
         include("javafxports/**/*")
+        include("com/oracle/**/*")
         dependsOn(compileDalvikLibs)
     }
     
@@ -345,37 +417,35 @@ project(":graphics") {
 project(":controls") {
 
     apply plugin: 'java'
+/*
+    compileJava {
+         options.bootClasspath="/home/johan/open-jfx/bitbucket/8u-dev-build/compat/build/libs/compat-1.0.0.jar:$sdk/platforms/$sdk_target/android.jar"
+     }
+*/
 
-    assemble.dependsOn("compileControlsJavaDalvik","retroClass");
 
+    sourceSets.main.java.srcDir('src/android/java')
+/*
     sourceSets.main.java {
         exclude 'javafx/scene/control/Date*.java'
         exclude 'com/sun/javafx/scene/control/skin/Date*.java'
         exclude 'com/sun/javafx/scene/control/behavior/Date*.java'
     }
-    task compileControlsJavaDalvik(type: JavaCompile, group: "Build", dependsOn: [":graphics:compileJava", ":controls:compileJava"]) << {
-        description = "Task compiles controls for Android"
-        classpath = files("modules/base/build/classes/main",
-            "modules/graphics/build/classes/main",
-            "modules/controls/build/classes/main"
-        )
-        destinationDir = file("modules/controls/build/classes/dalvik")
-        dependencyCacheDir = file("modules/controls/build/dependency-cache")
-        source file("modules/controls/src/android/java")
-    }
-    afterEvaluate {
-
-       task processControlsResourcesDalvik() {
-           copy {
-               from ("modules/controls/src/android/resources")
-               into ("modules/controls/build/resources/dalvik")
-           }
+*/
+    task copyResources() << {
+        copy {
+            from ("src/android/resources")
+            into ("build/resources/dalvik")
         }
+    }
+
+    assemble.dependsOn("copyResources","retroClass");
+
+    afterEvaluate {
 
         jfxrtDalvik {
             from ("modules/controls/build/classes/dalvik",
                   "modules/controls/build/resources/dalvik")
-            dependsOn(compileControlsJavaDalvik, processControlsResourcesDalvik)
         }
 
     }
@@ -403,18 +473,19 @@ DALVIK.jfxrtJarExcludes = [
     "com/sun/glass/ui/ios",
     "com/sun/glass/ui/swt", // SWT glass
     "com/oracle/dalvik",
-    "javafx/scene/media", //exclude all media for now
-    "com/sun/media",
-    "com/sun/javafx/media",
+    // "javafx/scene/media", //exclude all media for now
+    // "com/sun/media",
+    // "com/sun/javafx/media",
     "com/sun/javafx/font/directwrite", //exclude non freetype font support
     "com/sun/javafx/font/coretext",
     "com/sun/javafx/font/freetype/Pango*",
     "com/sun/javafx/font/freetype/OSPango*",
-    "com/sun/webkit",   //exclude all WebView for now
-    "com/sun/javafx/webkit",
-    "com/sun/javafx/scene/web",
-    "javafx/scene/web",
-    "com/sun/javafx/sg/prism/NGWeb*",
+    // "com/sun/webkit",   //exclude all WebView for now
+    // "com/sun/javafx/webkit",
+    // "com/sun/javafx/scene/web",
+    // "javafx/scene/web",
+    // "com/sun/javafx/sg/prism/NGWeb*",
+    // "com/sun/javafx/sg/prism/web*",
     "javafx/print", //exclude printing
     "com/sun/javafx/print",
     "com/sun/javafx/tk/Print*"
@@ -424,20 +495,28 @@ def text = (compileNativeText) ? "native" : "t2k"
 
 DALVIK.javafxPlatformProperties = """
 javafx.platform=android
+android.javax.xml.stream.XMLInputFactory=com.sun.xml.stream.ZephyrParserFactory
+android.javax.xml.stream.XMLOutputFactory=com.sun.xml.stream.ZephyrWriterFactory
+android.javax.xml.stream.XMLEventFactory=com.sun.xml.stream.events.ZephyrEventFactory
 android.glass.platform=Monocle
 android.glass.lens=eglfb
 android.log.lens=FINEST
+android.prism.verbose=true
+DALVIK.prism.verbose=true
 android.prism.glDepthSize=16
 android.prism.lcdtext=false
 android.prism.debugfonts=true
 android.prism.text=$text
-android.embedded=eglfb
-android.prism.allowhidpi=false
+android.embedded=monocle
+android.prism.allowhidpi=true
 android.prism.maxTextureSize=2048
 android.prism.dirtyopts=true
 android.prism.vsync=false
 android.use.egl=true
 android.com.sun.javafx.isEmbedded=true
+com.sun.javafx.gestures.zoom=true
+com.sun.javafx.gestures.rotate=true
+com.sun.javafx.gestures.scroll=true
 """
 def sysroot = "$ndk/platforms/$ndk_target/arch-arm"
 
@@ -469,13 +548,14 @@ DALVIK.activity.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
 DALVIK.activity.linkFlags = [linkFlags, "-landroid", "-llog"].flatten()
 
 DALVIK.webview = [:]
-DALVIK.webview.javahSource = files("modules/web/build/classes/dalvik")
-DALVIK.webview.javahClasspath = files("modules/web/build/classes/dalvik")
+DALVIK.webview.javahSource = files("modules/web/build/classes/android")
+DALVIK.webview.javahClasspath = files("modules/web/build/classes/android")
 DALVIK.webview.javahInclude = [
     "com/sun/webkit/NativeWebView.class"
 ]
 DALVIK.webview.nativeSource = [
-    file("modules/web/src/android/native/native_webview.c")
+    files("modules/web/src/android/native/native_webview.c",
+"modules/web/src/android/native/android_webview.c")
 ]
 DALVIK.webview.compiler = compiler
 DALVIK.webview.linker = linker
@@ -485,8 +565,8 @@ DALVIK.webview.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
 DALVIK.webview.linkFlags = [linkFlags, "-ldl", "-llog"].flatten()
 
 DALVIK.dvkwebview = [:]
-DALVIK.dvkwebview.javahSource = files("modules/web/build/classes/dalvik")
-DALVIK.dvkwebview.javahClasspath = files("modules/web/build/classes/dalvik")
+DALVIK.dvkwebview.javahSource = files("modules/web/build/classes/android")
+DALVIK.dvkwebview.javahClasspath = files("modules/web/build/classes/android")
 DALVIK.dvkwebview.javahInclude = [
     "com/sun/webkit/NativeWebView.class"
 ]
@@ -522,7 +602,7 @@ DALVIK.glass.javahInclude = [
 DALVIK.glass.lensport = [:]
 DALVIK.glass.lensport.nativeSource = [
     file("modules/graphics/src/main/native-glass/lens/lensport/initPlatform.c"),
-    file("modules/graphics/src/main/native-glass/lens/lensport/wrapped_functions.c")    
+    file("modules/graphics/src/main/native-glass/lens/wrapped/wrapped_functions.c")    
 ]
 DALVIK.glass.lensport.compiler = compiler
 DALVIK.glass.lensport.linker = linker
@@ -534,7 +614,8 @@ DALVIK.glass.lensport.linkFlags = [linkFlags, "-ldl", "-llog"].flatten()
 
 def monocleCFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
     ccDebugFlags, ccDefaultIncludeFlags, "-DISEGLFB",
-    "-I", file("modules/graphics/src/main/native-glass/monocle/")
+    "-I", file("modules/graphics/src/main/native-glass/monocle/"),
+    "-I", file("modules/graphics/src/dalvik/native/")
 ].flatten()
 
 DALVIK.glass.monocle = [:]
@@ -545,8 +626,30 @@ DALVIK.glass.monocle.nativeSource = [
 DALVIK.glass.monocle.compiler = compiler
 DALVIK.glass.monocle.ccFlags = monocleCFlags
 DALVIK.glass.monocle.linker = linker
-DALVIK.glass.monocle.linkFlags =  [linkFlags, "-ldl", "-llog", "-lGLESv2", "-lEGL"].flatten()
+DALVIK.glass.monocle.linkFlags =  [linkFlags, "-ldl", "-llog", "-landroid", "-lGLESv2", "-lEGL"].flatten()
+
 DALVIK.glass.monocle.lib = "glass_monocle"
+
+DALVIK.javafxPlatformDefault="eglfb"
+
+def monoclePlatformAdditions = """
+monocle.glass.platform=Monocle
+monocle.prism.order=es2,sw
+monocle.prism.eglfb=true
+monocle.prism.lcdtext=false
+monocle.prism.maxvram=128m
+monocle.prism.targetvram=112m
+monocle.use.egl=true
+monocle.use.gles2=true
+monocle.embedded=monocle
+monocle.com.sun.javafx.isEmbedded=true
+monocle.doNativeComposite=true
+monocle.com.sun.javafx.scene.control.skin.FXVK.cache=true
+monocle.prism.glDepthSize=0
+monocle.com.sun.javafx.gestures.zoom=true
+monocle.com.sun.javafx.gestures.rotate=true
+monocle.com.sun.javafx.gestures.scroll=true"""
+
 
 
 DALVIK.glass.eglfb = [:]
@@ -604,13 +707,28 @@ DALVIK.iio.linkFlags = [linkFlags].flatten()
 DALVIK.iio.lib = "javafx_iio"
 
 DALVIK.prismES2 = [:]
-DALVIK.prismES2.variants = ["eglfb"]
+DALVIK.prismES2.variants = ["eglfb", "monocle"]
 DALVIK.prismES2.javahInclude = ["com/sun/prism/es2/**/*"]
+
+DALVIK.prismES2.monocle= [:]
+DALVIK.prismES2.monocle.nativeSource = [
+    file("modules/graphics/src/main/native-prism-es2"),
+    file("modules/graphics/src/main/native-prism-es2/GL"),
+    file("modules/graphics/src/main/native-prism-es2/eglWrapped"),
+    file("modules/graphics/src/main/native-prism-es2/monocle")
+]
+DALVIK.prismES2.monocle.compiler = compiler
+DALVIK.prismES2.monocle.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
+    ccDebugFlags, ccDefaultIncludeFlags, "-DIS_EGLFB"].flatten()
+DALVIK.prismES2.monocle.linker = linker
+DALVIK.prismES2.monocle.linkFlags = [linkFlags, "-ldl", "-llog", "-lGLESv2", "-lEGL"].flatten()
+DALVIK.prismES2.monocle.lib = "prism_es2_monocle"
 
 DALVIK.prismES2.eglfb = [:]
 DALVIK.prismES2.eglfb.nativeSource = [
     file("modules/graphics/src/main/native-prism-es2"),
     file("modules/graphics/src/main/native-prism-es2/GL"),
+    file("modules/graphics/src/main/native-prism-es2/wrapped"),
     file("modules/graphics/src/main/native-prism-es2/eglfb")]
 DALVIK.prismES2.eglfb.compiler = compiler
 DALVIK.prismES2.eglfb.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,

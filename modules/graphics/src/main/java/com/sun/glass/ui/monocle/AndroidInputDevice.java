@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,41 +24,53 @@
  */
 
 package com.sun.glass.ui.monocle;
-import com.sun.glass.utils.NativeLibLoader;
 
-class AndroidPlatform extends NativePlatform {
+import java.io.IOException;
 
-    AndroidPlatform() {
-        NativeLibLoader.loadLibrary("glass_monocle");
-    }
+/**
+ *
+ */
+class AndroidInputDevice implements Runnable, InputDevice {
 
-    @Override
-    protected InputDeviceRegistry createInputDeviceRegistry() {
-        return AndroidInputDeviceRegistry.getInstance();
-    }
+    private AndroidInputProcessor inputProcessor;
 
     @Override
-    protected NativeCursor createCursor() {
-        return new NullCursor();
-    }
-
-    @Override
-    protected NativeScreen createScreen() {
-        return new AndroidScreen();
-    }
-
-    /** Create the accelerated screen for this platform
-     *
-     * @param attributes a sequence of pairs (GLAttibute, value)
-     * @throws GLException
-     */
-    @Override
-    public synchronized AcceleratedScreen getAcceleratedScreen(
-            int[] attributes) throws GLException {
-        if (accScreen == null) {
-            accScreen = new AndroidAcceleratedScreen(attributes);
+    public void run() {
+        if (inputProcessor == null) {
+            System.err.println("Error: no input processor");
+            return;
         }
-        return accScreen;
+       // read from the android device (change this into push)
+        // and process the events
     }
 
+    @Override
+    public boolean isTouch() {
+        return true;
+    }
+
+    @Override
+    public boolean isMultiTouch() {
+        return true;
+    }
+
+    @Override
+    public boolean isRelative() {
+        return false;
+    }
+
+    @Override
+    public boolean is5Way() {
+        return false;
+    }
+
+    @Override
+    public boolean isFullKeyboard() {
+// if we return false, the JavaFX virtual keyboard will be used instead of the android built-in one
+        return true;
+    }
+     
+    void setInputProcessor(AndroidInputProcessor inputProcessor) {
+        this.inputProcessor = inputProcessor;
+    }
 }

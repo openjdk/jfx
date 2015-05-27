@@ -64,7 +64,7 @@ class LinuxKeyProcessor implements LinuxInputProcessor {
         }
     }
 
-    private int getVirtualKeyCode(int linuxKeyCode) {
+    static int getVirtualKeyCode(int linuxKeyCode) {
         if (linuxKeyCode >= LinuxInput.KEY_1 && linuxKeyCode <= LinuxInput.KEY_9) {
             return linuxKeyCode - LinuxInput.KEY_1 + KeyEvent.VK_1;
         } else if (linuxKeyCode >= LinuxInput.KEY_NUMERIC_0 && linuxKeyCode <= LinuxInput.KEY_NUMERIC_9) {

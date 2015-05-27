@@ -24,41 +24,35 @@
  */
 
 package com.sun.glass.ui.monocle;
-import com.sun.glass.utils.NativeLibLoader;
 
-class AndroidPlatform extends NativePlatform {
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 
-    AndroidPlatform() {
-        NativeLibLoader.loadLibrary("glass_monocle");
+/** 
+ * Provide Android implementation of AcceleratedScreen
+ *
+ */
+class AndroidAcceleratedScreen extends AcceleratedScreen {
+
+
+    AndroidAcceleratedScreen(int[] attributes) throws GLException {
+        super(attributes);
+    }
+
+    boolean initPlatformLibraries() {
+        return super.initPlatformLibraries();
     }
 
     @Override
-    protected InputDeviceRegistry createInputDeviceRegistry() {
-        return AndroidInputDeviceRegistry.getInstance();
+    protected long platformGetNativeDisplay() {
+        return 0;
     }
 
     @Override
-    protected NativeCursor createCursor() {
-        return new NullCursor();
-    }
-
-    @Override
-    protected NativeScreen createScreen() {
-        return new AndroidScreen();
-    }
-
-    /** Create the accelerated screen for this platform
-     *
-     * @param attributes a sequence of pairs (GLAttibute, value)
-     * @throws GLException
-     */
-    @Override
-    public synchronized AcceleratedScreen getAcceleratedScreen(
-            int[] attributes) throws GLException {
-        if (accScreen == null) {
-            accScreen = new AndroidAcceleratedScreen(attributes);
-        }
-        return accScreen;
+    protected long platformGetNativeWindow() {
+        long answer = NativePlatformFactory.getNativePlatform()
+                .getScreen().getNativeHandle();
+        return answer;
     }
 
 }

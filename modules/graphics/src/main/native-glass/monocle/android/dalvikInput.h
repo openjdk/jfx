@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,42 +23,33 @@
  * questions.
  */
 
-package com.sun.glass.ui.monocle;
-import com.sun.glass.utils.NativeLibLoader;
+#ifndef DALVIKINPUT_H
+#define	DALVIKINPUT_H
 
-class AndroidPlatform extends NativePlatform {
+#include <jni.h>
+#include <android/native_window_jni.h>
+#include <android/log.h>
+#include <linux/input.h>
 
-    AndroidPlatform() {
-        NativeLibLoader.loadLibrary("glass_monocle");
-    }
+#ifdef	__cplusplus
+extern "C" {
+#endif 
 
-    @Override
-    protected InputDeviceRegistry createInputDeviceRegistry() {
-        return AndroidInputDeviceRegistry.getInstance();
-    }
+    
+ANativeWindow   *android_getNativeWindow(JNIEnv *env);
+const char      *android_getDataDir(JNIEnv *env);
+jfloat android_getDensity();
 
-    @Override
-    protected NativeCursor createCursor() {
-        return new NullCursor();
-    }
-
-    @Override
-    protected NativeScreen createScreen() {
-        return new AndroidScreen();
-    }
-
-    /** Create the accelerated screen for this platform
-     *
-     * @param attributes a sequence of pairs (GLAttibute, value)
-     * @throws GLException
-     */
-    @Override
-    public synchronized AcceleratedScreen getAcceleratedScreen(
-            int[] attributes) throws GLException {
-        if (accScreen == null) {
-            accScreen = new AndroidAcceleratedScreen(attributes);
-        }
-        return accScreen;
-    }
-
+#ifdef	__cplusplus
 }
+#endif
+
+ 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+#include <jni.h>
+
+#endif
