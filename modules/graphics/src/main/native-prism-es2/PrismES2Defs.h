@@ -75,6 +75,7 @@
 #if TARGET_OS_IPHONE /* iOS */
 #include <GL/gl.h>
 #include <GL/glext.h>
+#include "ios/ios-window-system.h"
 #define IS_EGL
 
 #elif TARGET_OS_MAC /* MacOSX */
