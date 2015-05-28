@@ -25,22 +25,27 @@
 
 package com.sun.webkit;
 
+import java.io.StringReader;
 import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.LinkedList;
 import java.util.List;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 import javafx.scene.Scene;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
 import javafx.stage.Window;
 import org.w3c.dom.Document;
+import org.xml.sax.InputSource;
 
 public final class WebPage {
 
     static {
         AccessController.doPrivileged(new PrivilegedAction<Void>() {
             public Void run() {
+System.out.println ("[JVDBG] I will load the webview system library");
                 System.loadLibrary("webview");
                 return null;
             }
@@ -97,7 +102,8 @@ public final class WebPage {
     }
 
     public void dropRenderFrames() {
-        System.out.println("--> dropRenderFrames");
+        // this should not be called if webview is not shown
+        // System.out.println("--> dropRenderFrames");
     }
 
     public boolean isDragConfirmed() {
@@ -152,7 +158,17 @@ public final class WebPage {
     }
 
     public Document getDocument(long mainFrame) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        String xmlString = getNativePeer().getHtmlContent();
+        try {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = factory.newDocumentBuilder();
+            Document document = builder.parse(new InputSource(new StringReader(xmlString)));  
+            return document;
+        }
+        catch (Exception e) {
+            System.err.println ("Cannot parse "+xmlString+" due to "+e);
+            return null;
+        }
     }
 
     public void setDeveloperExtrasEnabled(boolean b) {

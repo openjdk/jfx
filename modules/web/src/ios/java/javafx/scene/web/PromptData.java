@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,29 +23,45 @@
  * questions.
  */
 
-#ifndef ANDROID_WEBVIEW_H
-#define	ANDROID_WEBVIEW_H
+package javafx.scene.web;
 
-#ifdef	__cplusplus
-extern "C" {
-#endif
-
-    void init_ids(JNIEnv *);
-
-    void init_functions(JNIEnv *);
-
-    int create_android_webview(JNIEnv *);
-
-    void move_and_resize(int id, jint x, int y, int w, int h);
-
-    void set_visible(int id, int visible);
-
-    void move_to_top(int id);
+import javafx.beans.NamedArg;
 
 
-#ifdef	__cplusplus
+/**
+ * This class encapsulates data passed into JavaScript {@code prompt()} function:
+ * a message and a default value. Instances are passed into {@code prompt}
+ * handlers registered on a {@code WebEngine} using
+ * {@link WebEngine#setPromptHandler} method.
+ * 
+ * @see WebEngine
+ * @see WebEngine#setPromptHandler
+ * @since JavaFX 2.0
+ */
+public final class PromptData {
+
+    private final String message;
+    private final String defaultValue;
+
+    /**
+     * Creates a new instance.
+     */
+    public PromptData(@NamedArg("message") String message, @NamedArg("defaultValue") String defaultValue) {
+        this.message = message;
+        this.defaultValue = defaultValue;
+    }
+
+    /**
+     * Returns message carried by this data object.
+     */
+    public final String getMessage() {
+        return message;
+    }
+
+    /**
+     * Returns default value carried by this data object.
+     */
+    public final String getDefaultValue() {
+        return defaultValue;
+    }
 }
-#endif
-
-#endif	/* ANDROID_WEBVIEW_H */
-

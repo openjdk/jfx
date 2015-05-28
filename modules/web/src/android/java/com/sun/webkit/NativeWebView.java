@@ -27,8 +27,11 @@ package com.sun.webkit;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
+import com.oracle.dalvik.InternalWebView;
 
-class NativeWebView {
+public class NativeWebView {
 
     private static List<NativeWebView> views = new ArrayList<NativeWebView>();
     private int id;
@@ -69,6 +72,10 @@ class NativeWebView {
         views.remove(this);
     }
 
+    String getHtmlContent() {
+        return InternalWebView.getHtmlContent(this.id);
+    }
+
     private static NativeWebView getViewByID(int id) {
         for (NativeWebView wvp : views) {
             if (id == wvp.id) {
@@ -79,7 +86,7 @@ class NativeWebView {
         return null;
     }
 
-    static void fire_load_event(final int id, final int frameID, final int state,
+    public static void fire_load_event(final int id, final int frameID, final int state,
             final String url, final String contenType,
             final int progress, final int errorCode) {
         final NativeWebView nwv = NativeWebView.getViewByID(id);
@@ -95,19 +102,48 @@ class NativeWebView {
         });
     }
 
-    private native void _moveAndResize(int id, int x, int y, int width, int height);
+    static Map<Integer, InternalWebView> webViews = new HashMap<>();
 
-    private native void _setVisible(int id, boolean visible);
+    // private native void _moveAndResize(int id, int x, int y, int width, int height);
+    private void _moveAndResize(int id, int x, int y, int width, int height) {
+        InternalWebView.moveAndResize(id, x, y, width, height);
+    }
 
-    private native int _createAndroidWebView();
+    // private native void _setVisible(int id, boolean visible);
+    private void _setVisible(int id, boolean visible) {
+        InternalWebView.setVisible(id, visible);
+    }
 
-    private native void _moveToTop(int id);
+    // private native int _createAndroidWebView();
+    private int _createAndroidWebView() {
+        InternalWebView internalWebView = new InternalWebView();
+        int id = internalWebView.getInternalID();
+        webViews.put(id, internalWebView);
+        return id;
+    }
 
-    private native void _loadUrl(int id, String url);
 
-    private native void _dispose(int id);
+    // private native void _moveToTop(int id);
+    private void _moveToTop(int id) {
+    }
 
-    private native void _loadContent(int id, String content, String contentType);
+    // private native void _loadUrl(int id, String url);
+    private void _loadUrl(int id, String url) {
+        InternalWebView.loadUrl(id, url);
+        // InternalWebView target = webViews.get(id);
+        // target.loadUrl(url);
+
+    }
+
+    // private native void _dispose(int id);
+    private void _dispose(int id) {
+        InternalWebView.dispose(id);
+    }
+
+    // private native void _loadContent(int id, String content, String contentType);
+    private void _loadContent(int id, String content, String contentType) {
+        InternalWebView.loadContent(id, content, contentType);
+    }
 
     private native void _setEncoding(int id, String encoding);
 }

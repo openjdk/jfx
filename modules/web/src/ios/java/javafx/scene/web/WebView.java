@@ -63,7 +63,7 @@ import javafx.scene.text.FontSmoothingType;
  * afterwards. {@code WebView} handles mouse and some keyboard events, and
  * manages scrolling automatically, so there's no need to put it into a
  * {@code ScrollPane}.
- * 
+ *
  * <p>{@code WebView} objects must be created and accessed solely from the
  * FX thread.
  * @since JavaFX 2.0
@@ -200,27 +200,17 @@ final public class WebView extends Parent {
      */
     private DoubleProperty fontScale;
 
-    /**
-     * Sets scale factor applied to font.
-     */
     public final void setFontScale(double value) {
         WebEngine.checkThread();
         fontScaleProperty().set(value);
     }
 
-    /**
-     * Returns scale factor applied to font.
-     */
     public final double getFontScale() {
         return (this.fontScale != null)
                 ? this.fontScale.get()
                 : DEFAULT_FONT_SCALE;
     }
 
-    /**
-     * Scale factor applied to font. This property can be used to make text
-     * larger or smaller but does not affect images and fixed size elements.
-     */
     public DoubleProperty fontScaleProperty() {
         if (fontScale == null) {
             fontScale = new StyleableDoubleProperty(DEFAULT_FONT_SCALE) {
@@ -252,17 +242,10 @@ final public class WebView extends Parent {
         engine = new WebEngine();
         engine.setView(this);
 
-        stagePulseListener = new TKPulseListener() {
-            @Override public void pulse() {
-                handleStagePulse();
-            }
+        stagePulseListener = () -> {
+            handleStagePulse();
         };
-        focusedProperty().addListener(new ChangeListener<Boolean>() {
-
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-
-            }
+        focusedProperty().addListener((ov, t, t1) -> {
         });
         Toolkit.getToolkit().addStageTkPulseListener(stagePulseListener);
         
@@ -422,7 +405,7 @@ final public class WebView extends Parent {
         return minWidth;
     }
     private DoubleProperty minWidth;
-    
+
     /**
      * Sets minimum width.
      */
@@ -430,7 +413,7 @@ final public class WebView extends Parent {
         minWidthProperty().set(value);
         _setWidth(handle, value);
     }
-    
+
     /**
      * Returns minimum width.
      */
@@ -469,7 +452,7 @@ final public class WebView extends Parent {
         return minHeight;
     }
     private DoubleProperty minHeight;
-    
+
     /**
      * Sets minimum height.
      */
@@ -477,7 +460,7 @@ final public class WebView extends Parent {
         minHeightProperty().set(value);
         _setHeight(handle, value);
     }
-    
+
     /**
      * Sets minimum height.
      */
@@ -526,7 +509,7 @@ final public class WebView extends Parent {
         return prefWidth;
     }
     private DoubleProperty prefWidth;
-    
+
     /**
      * Sets preferred width.
      */
@@ -573,7 +556,7 @@ final public class WebView extends Parent {
         return prefHeight;
     }
     private DoubleProperty prefHeight;
-    
+
     /**
      * Sets preferred height.
      */
@@ -581,7 +564,7 @@ final public class WebView extends Parent {
         prefHeightProperty().set(value);
         _setHeight(handle, value);
     }
-    
+
     /**
      * Returns preferred height.
      */
@@ -630,7 +613,7 @@ final public class WebView extends Parent {
         return maxWidth;
     }
     private DoubleProperty maxWidth;
-    
+
     /**
      * Sets maximum width.
      */
@@ -638,7 +621,7 @@ final public class WebView extends Parent {
         maxWidthProperty().set(value);
         _setWidth(handle, value);
     }
-    
+
     /**
      * Returns maximum width.
      */
@@ -677,7 +660,7 @@ final public class WebView extends Parent {
         return maxHeight;
     }
     private DoubleProperty maxHeight;
-    
+
     /**
      * Sets maximum height.
      */
@@ -685,7 +668,7 @@ final public class WebView extends Parent {
         maxHeightProperty().set(value);
         _setHeight(handle, value);
     }
-    
+
     /**
      * Returns maximum height.
      */
@@ -704,7 +687,8 @@ final public class WebView extends Parent {
         _setWidth(handle, maxWidth);
         _setHeight(handle, maxHeight);
     }
-    
+
+
     /**
      * Specifies a requested font smoothing type : gray or LCD.
      *
@@ -721,7 +705,7 @@ final public class WebView extends Parent {
     public final void setFontSmoothingType(FontSmoothingType value) {
         fontSmoothingTypeProperty().set(value);
     }
-    
+
     public final FontSmoothingType getFontSmoothingType() {
         return (this.fontSmoothingType != null)
                 ? this.fontSmoothingType.get()
@@ -792,7 +776,7 @@ final public class WebView extends Parent {
         }
         return contextMenuEnabled;
     }
-    
+
     /**
      * Super-lazy instantiation pattern from Bill Pugh.
      */
@@ -981,7 +965,7 @@ final public class WebView extends Parent {
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
-    
+
     // event handling
 
     private void handleStagePulse() {
@@ -1003,13 +987,15 @@ final public class WebView extends Parent {
                 && getScene() != null
                 && getScene().getWindow() != null
                 && getScene().getWindow().isShowing();
-        
+
         if (reallyVisible) {
             if (impl_isDirty(DirtyBits.WEBVIEW_VIEW)) {
                 Scene.impl_setAllowPGAccess(true);
                 //getPGWebView().update(); // creates new render queues
                 Scene.impl_setAllowPGAccess(false);
             }
+        } else {
+            _setVisible(handle, false);
         }
     }
 
@@ -1025,7 +1011,7 @@ final public class WebView extends Parent {
     @Override protected ObservableList<Node> getChildren() {
         return super.getChildren();
     }
-    
+
     // Node stuff
 
     /**
@@ -1096,8 +1082,8 @@ final public class WebView extends Parent {
     private void notifyLoadStarted() {
         engine.notifyLoadStarted();
     }
-    private void notifyLoadFinished() {
-        engine.notifyLoadFinished();
+    private void notifyLoadFinished(String loc, String content) {
+        engine.notifyLoadFinished(loc, content);
     }
     private void notifyLoadFailed() {
         engine.notifyLoadFailed();
