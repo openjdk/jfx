@@ -47,6 +47,10 @@ class ViewContainer {
         LPARAM m_lastMouseMovePosition; // or -1
         unsigned int m_mouseButtonDownCounter;
 
+        UINT m_lastTouchInputCount;
+        std::vector<TOUCHINPUT> m_lastTouchInputBuf;
+        std::vector<TOUCHINPUT> m_thisTouchInputBuf;
+
         void WmImeComposition(HWND hwnd, WPARAM wParam, LPARAM lParam);
         void WmImeNotify(HWND hwnd, WPARAM wParam, LPARAM lParam);
         void SendInputMethodEvent(jstring text,
@@ -67,7 +71,6 @@ class ViewContainer {
         void HandleViewTypedEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
         BOOL HandleViewMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
         BOOL HandleViewInputMethodEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
-        void HandleViewTouchEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
         LRESULT HandleViewGetAccessible(HWND hwnd, WPARAM wParam, LPARAM lParam);
     
         virtual void HandleViewTimerEvent(HWND hwnd, UINT_PTR timerID);
@@ -100,6 +103,8 @@ class ViewContainer {
         jobject GetView();
 
         void ResetMouseTracking(HWND hwnd);
+
+        unsigned int HandleViewTouchEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
         void NotifyViewSize(HWND hwnd);
         
