@@ -227,6 +227,7 @@ void CGstVideoFrame::SetFrameCaps(GstCaps *newCaps)
     m_pulPlaneSize[0] = m_pulPlaneSize[1] = m_pulPlaneSize[2] = m_pulPlaneSize[3] = 0;
     m_piPlaneStrides[0] = m_piPlaneStrides[1] = m_piPlaneStrides[2] = m_piPlaneStrides[3] = 0;
 
+    unsigned long expectedSize = 0;
     switch (m_typeFrame) {
         case YCbCr_420p: {
             int offset;
@@ -246,6 +247,7 @@ void CGstVideoFrame::SetFrameCaps(GstCaps *newCaps)
             gst_structure_get_int(str, "offset-y", &offset);
             m_pulPlaneSize[0] = m_piPlaneStrides[0] * m_iEncodedHeight;
             m_pvPlaneData[0] = (void*)((intptr_t)m_pvBufferBaseAddress + offset);
+            expectedSize += m_pulPlaneSize[0];
 
             //
             // Chroma offsets assume YV12 ordering
@@ -254,11 +256,13 @@ void CGstVideoFrame::SetFrameCaps(GstCaps *newCaps)
             gst_structure_get_int(str, "offset-v", &offset);
             m_pulPlaneSize[1] = m_piPlaneStrides[1] * (m_iEncodedHeight/2);
             m_pvPlaneData[1] = (void*)((intptr_t)m_pvBufferBaseAddress + offset);
+            expectedSize += m_pulPlaneSize[1];
 
             offset += m_pulPlaneSize[1];
             gst_structure_get_int(str, "offset-u", &offset);
             m_pulPlaneSize[2] = m_piPlaneStrides[2] * (m_iEncodedHeight/2);
             m_pvPlaneData[2] = (void*)((intptr_t)m_pvBufferBaseAddress + offset);
+            expectedSize += m_pulPlaneSize[2];
 
             // process alpha channel (before we potentially swap Cb/Cr)
             if (m_bHasAlpha) {
@@ -271,6 +275,7 @@ void CGstVideoFrame::SetFrameCaps(GstCaps *newCaps)
                 gst_structure_get_int(str, "offset-a", &offset);
                 m_pulPlaneSize[3] = m_piPlaneStrides[3] * m_iEncodedHeight;
                 m_pvPlaneData[3] = (void*)((intptr_t)m_pvBufferBaseAddress + offset);
+                expectedSize += m_pulPlaneSize[3];
             }
 
             //
@@ -294,8 +299,11 @@ void CGstVideoFrame::SetFrameCaps(GstCaps *newCaps)
             }
             m_pulPlaneSize[0] = m_piPlaneStrides[0] * m_iEncodedHeight;
             m_pvPlaneData[0] = m_pvBufferBaseAddress;
+            expectedSize += m_pulPlaneSize[0];
             break;
     }
+
+    m_bIsValid = m_bIsValid && (expectedSize <= m_ulBufferSize);
 
     bufCaps = GST_BUFFER_CAPS(m_pBuffer);
     if (bufCaps != newCaps) {
