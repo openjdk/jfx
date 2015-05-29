@@ -26,10 +26,14 @@
 package com.sun.glass.ui.monocle;
 
 import com.sun.glass.events.WindowEvent;
+import com.sun.glass.ui.Screen;
+import com.sun.javafx.tk.Toolkit;
+
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import javafx.application.Platform;
 
 final class MonocleWindowManager {
 
@@ -164,6 +168,19 @@ final class MonocleWindowManager {
                 view.notifyRepaint();
             }
         }
+    }
+
+    static void repaintFromNative () {
+        Platform.runLater(new Runnable () {
+
+            @Override
+            public void run() {
+                Screen.notifySettingsChanged();
+                instance.getFocusedWindow().setFullScreen(true);
+                instance.repaintAll();
+                Toolkit.getToolkit().requestNextPulse();
+            }
+        });
     }
 
 }

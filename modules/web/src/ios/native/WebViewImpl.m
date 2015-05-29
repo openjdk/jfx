@@ -110,7 +110,8 @@ jstring createJString(JNIEnv *env, NSString *nsStr) {
     jObject = (*env)->NewGlobalRef(env, object);
     jclass cls = (*env)->GetObjectClass(env, object);
     jmidLoadStarted = (*env)->GetMethodID(env, cls, "notifyLoadStarted", "()V");
-    jmidLoadFinished = (*env)->GetMethodID(env, cls, "notifyLoadFinished", "()V");
+    // jmidLoadFinished = (*env)->GetMethodID(env, cls, "notifyLoadFinished", "()V");
+    jmidLoadFinished = (*env)->GetMethodID(env, cls, "notifyLoadFinished", "(Ljava/lang/String;Ljava/lang/String;)V");
     jmidLoadFailed = (*env)->GetMethodID(env, cls, "notifyLoadFailed", "()V");
     jmidJavaCall = (*env)->GetMethodID(env, cls, "notifyJavaCall", "(Ljava/lang/String;)V");
     if (jmidLoadStarted == 0 || jmidLoadFinished == 0 || jmidLoadFailed == 0 || jmidJavaCall == 0) {
@@ -187,7 +188,6 @@ jstring createJString(JNIEnv *env, NSString *nsStr) {
 - (BOOL)webView:(UIWebView *)wv shouldStartLoadWithRequest:(NSURLRequest *)request
         navigationType:(UIWebViewNavigationType)navigationType {
     NSString *url = [[request URL] absoluteString];
-    //NSLog(@"WebViewImpl request load: %@", url);
     if ([url hasPrefix:JAVA_CALL_PREFIX]) {
         JNIEnv *env = [self getJNIEnv];
         if (env != NULL) {
@@ -214,6 +214,10 @@ jstring createJString(JNIEnv *env, NSString *nsStr) {
 }
 
 - (void)webViewDidFinishLoad:(UIWebView *)wv{
+    NSString *inner = [wv stringByEvaluatingJavaScriptFromString: 
+                                         @"document.documentElement.innerHTML"];
+    NSString *currentUrl = wv.request.URL.absoluteString;
+
     loadingLabel.hidden = YES;
     [UIApplication sharedApplication].networkActivityIndicatorVisible = NO;
     if (windowView) {
@@ -224,12 +228,16 @@ jstring createJString(JNIEnv *env, NSString *nsStr) {
 
     JNIEnv *env = [self getJNIEnv];
     if (env != NULL) {
-        (*env)->CallVoidMethod(env, jObject, jmidLoadFinished);
+        jstring jInner = createJString(env, inner);
+        jstring jUrl = createJString(env, currentUrl);
+        (*env)->CallVoidMethod(env, jObject, jmidLoadFinished, jUrl, jInner);
         [self releaseJNIEnv:env];
     }
 }
 
 - (void)webView:(UIWebView *)wv didFailLoadWithError:(NSError *)error {
+    NSLog(@"WebViewImpl ERROR: didFailLoadWithError");
+    NSLog(@" this error => %@ ", [error userInfo] );
     JNIEnv *env = [self getJNIEnv];
     if (env != NULL) {
         (*env)->CallVoidMethod(env, jObject, jmidLoadFailed);

@@ -40,11 +40,15 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.concurrent.Worker;
 import javafx.event.EventHandler;
 import javafx.util.Callback;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.w3c.dom.Document;
+import org.xml.sax.InputSource;
 
 import com.sun.javafx.tk.TKPulseListener;
 import com.sun.javafx.tk.Toolkit;
+import java.io.StringReader;
 import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -392,20 +396,16 @@ final public class WebEngine {
     public final ObjectProperty<EventHandler<WebEvent<Boolean>>> onVisibilityChangedProperty() { return onVisibilityChanged; }
 
     
-    private ObjectProperty<Callback> createPopupHandler
-            = new SimpleObjectProperty<Callback>(this, "createPopupHandler",
-                new Callback() {
-                    public WebEngine call(Object o) {
-                        return WebEngine.this;
-                    }
-                });
+    private final ObjectProperty<Callback<PopupFeatures, WebEngine>> createPopupHandler
+            = new SimpleObjectProperty<Callback<PopupFeatures, WebEngine>>(this, "createPopupHandler",
+            p -> WebEngine.this);
     
     /**
      * Returns the JavaScript popup handler.
      * @see #createPopupHandlerProperty
      * @see #setCreatePopupHandler
      */
-    public final Callback getCreatePopupHandler() { return createPopupHandler.get(); }
+    public final Callback<PopupFeatures, WebEngine> getCreatePopupHandler() { return createPopupHandler.get(); }
 
     /**
      * Sets the JavaScript popup handler.
@@ -413,7 +413,7 @@ final public class WebEngine {
      * @see #getCreatePopupHandler
      * @see PopupFeatures
      */
-    public final void setCreatePopupHandler(Callback handler) { createPopupHandler.set(handler); }
+    public final void setCreatePopupHandler(Callback<PopupFeatures, WebEngine> handler) { createPopupHandler.set(handler); }
     
     /**
      * JavaScript popup handler property. This handler is invoked when a script
@@ -427,10 +427,10 @@ final public class WebEngine {
      * 
      * @see PopupFeatures
      */
-    public final ObjectProperty<Callback> createPopupHandlerProperty() { return createPopupHandler; }
+    public final ObjectProperty<Callback<PopupFeatures, WebEngine>> createPopupHandlerProperty() { return createPopupHandler; }
 
     
-    private ObjectProperty<Callback<String, Boolean>> confirmHandler
+    private final ObjectProperty<Callback<String, Boolean>> confirmHandler
             = new SimpleObjectProperty<Callback<String, Boolean>>(this, "confirmHandler");
     
     /**
@@ -456,8 +456,8 @@ final public class WebEngine {
     public final ObjectProperty<Callback<String, Boolean>> confirmHandlerProperty() { return confirmHandler; }
 
     
-    private ObjectProperty<Callback> promptHandler
-            = new SimpleObjectProperty<Callback>(this, "promptHandler");
+    private final ObjectProperty<Callback<PromptData, String>> promptHandler
+            = new SimpleObjectProperty<Callback<PromptData, String>>(this, "promptHandler");
     
     /**
      * Returns the JavaScript {@code prompt} handler.
@@ -465,7 +465,7 @@ final public class WebEngine {
      * @see #setPromptHandler
      * @see PromptData
      */
-    public final Callback getPromptHandler() { return promptHandler.get(); }
+    public final Callback<PromptData, String> getPromptHandler() { return promptHandler.get(); }
 
     /**
      * Sets the JavaScript {@code prompt} handler.
@@ -473,7 +473,7 @@ final public class WebEngine {
      * @see #getPromptHandler
      * @see PromptData
      */
-    public final void setPromptHandler(Callback handler) { promptHandler.set(handler); }
+    public final void setPromptHandler(Callback<PromptData, String> handler) { promptHandler.set(handler); }
     
     /**
      * JavaScript {@code prompt} handler property. This handler is invoked
@@ -483,7 +483,29 @@ final public class WebEngine {
      *
      * @see PromptData
      */
-    public final ObjectProperty<Callback> promptHandlerProperty() { return promptHandler; }
+    public final ObjectProperty<Callback<PromptData, String>> promptHandlerProperty() { return promptHandler; }
+
+    /**
+     * The event handler called when an error occurs.
+     *
+     * @defaultValue {@code null}
+     * @since JavaFX 8.0
+     */
+    private final ObjectProperty<EventHandler<WebErrorEvent>> onError =
+            new SimpleObjectProperty<>(this, "onError");
+
+    public final EventHandler<WebErrorEvent> getOnError() {
+        return onError.get();
+    }
+
+    public final void setOnError(EventHandler<WebErrorEvent> handler) {
+        onError.set(handler);
+    }
+
+    public final ObjectProperty<EventHandler<WebErrorEvent>> onErrorProperty() {
+        return onError;
+    }
+
 
     /**
      * Creates a new engine.
@@ -627,31 +649,29 @@ final public class WebEngine {
     /**
      * Drives the {@code Timer} when {@code Timer.Mode.PLATFORM_TICKS} is set.
      */
-    private static class PulseTimer {
+    private static final class PulseTimer {
 
         // Used just to guarantee constant pulse activity. See RT-14433.
-        private static AnimationTimer animation =
+        private static final AnimationTimer animation =
             new AnimationTimer() {
                 @Override public void handle(long l) {}
             };
 
-        private static TKPulseListener listener =
-            new TKPulseListener() {
-                public void pulse() {
+        private static final TKPulseListener listener =
+                () -> {
                     // Note, the timer event is executed right in the notifyTick(),
                     // that is during the pulse event. This makes the timer more
                     // repsonsive, though prolongs the pulse. So far it causes no
                     // problems but nevertheless it should be kept in mind.
                     //Timer.getTimer().notifyTick();
-                }
-            };
+                };
 
-        public static void start(){
+        private static void start(){
             Toolkit.getToolkit().addSceneTkPulseListener(listener);
             animation.start();
         }
 
-        public static void stop() {
+        private static void stop() {
             Toolkit.getToolkit().removeSceneTkPulseListener(listener);
             animation.stop();
         }
@@ -661,12 +681,12 @@ final public class WebEngine {
         Toolkit.getToolkit().checkFxUserThread();
     }
     
-    private class LoadWorker implements Worker<Void> {
+    private final class LoadWorker implements Worker<Void> {
         
         private final ReadOnlyObjectWrapper<State> state = new ReadOnlyObjectWrapper<State>(this, "state", State.READY);
         @Override public final State getState() { checkThread(); return state.get(); }
         @Override public final ReadOnlyObjectProperty<State> stateProperty() { checkThread(); return state.getReadOnlyProperty(); }
-        private final void updateState(State value) {
+        private void updateState(State value) {
             checkThread();
             this.state.set(value);
             running.set(value == State.SCHEDULED || value == State.RUNNING);
@@ -758,7 +778,8 @@ final public class WebEngine {
         }
 
         private void dispatchLoadEvent(long frame, int state,
-                String url, String contentType, double workDone, int errorCode) {
+                String url, String contentType, double workDone, int errorCode)
+        {
         }
 
         Throwable describeError(int errorCode) {
@@ -767,7 +788,8 @@ final public class WebEngine {
             return new Throwable(reason);
         }
     }
-    
+
+
     private final class DocumentProperty
             extends ReadOnlyObjectPropertyBase<Document> {
 
@@ -786,11 +808,12 @@ final public class WebEngine {
             if (!this.available) {
                 return null;
             }
-            if (this.document == null) {
-                if (this.document == null) {
-                    this.available = false;
-                }
-            }
+            this.document = getCurrentDocument();
+            // if (this.document == null) {
+                // if (this.document == null) {
+                    // this.available = false;
+                // }
+            // }
             return this.document;
         }
 
@@ -862,11 +885,29 @@ final public class WebEngine {
         }
     }
 
-    void notifyLoadFinished() {
+    private String pageContent;
+
+    Document getCurrentDocument () {
+        Document document = null;
+        try {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = factory.newDocumentBuilder();
+            document = builder.parse(new InputSource(new StringReader(pageContent)));
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+        return document;
+    }
+
+    void notifyLoadFinished(String loc, String content) {
         synchronized (loadedLock) {
+            this.pageContent = "<html>"+content+"</html>";
             loaded = true;
             updateProgress(1.0);
             updateState(Worker.State.SUCCEEDED);
+            location.set(loc);
+            document.invalidate(true);
             if (pageListener != null) {
                 pageListener.onLoadFinished();
             }

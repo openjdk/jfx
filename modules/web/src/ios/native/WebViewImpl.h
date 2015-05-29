@@ -29,8 +29,13 @@
 
 #include <jni.h>
 
+#ifdef  __LP64__
+#define jlong_to_ptr(a) ((void*)(a))
+#define ptr_to_jlong(a) ((jlong)(a))
+#else
 #define jlong_to_ptr(a) ((void*)(int)(a))
 #define ptr_to_jlong(a) ((jlong)(int)(a))
+#endif
 
 @interface WebViewImpl : NSObject<UIWebViewDelegate> {
     UIWebView *webView;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,25 +24,41 @@
  */
 
 package com.sun.glass.ui.monocle;
+import com.sun.glass.utils.NativeLibLoader;
 
-/** AndroidPlatform matches any Linux system */
 class AndroidPlatform extends NativePlatform {
 
     AndroidPlatform() {
+        NativeLibLoader.loadLibrary("glass_monocle");
     }
 
     @Override
     protected InputDeviceRegistry createInputDeviceRegistry() {
-        return new InputDeviceRegistry();
+        return AndroidInputDeviceRegistry.getInstance();
     }
 
     @Override
     protected NativeCursor createCursor() {
-        return null;
+        return new NullCursor();
     }
 
     @Override
     protected NativeScreen createScreen() {
-        return null;
+        return new AndroidScreen();
     }
+
+    /** Create the accelerated screen for this platform
+     *
+     * @param attributes a sequence of pairs (GLAttibute, value)
+     * @throws GLException
+     */
+    @Override
+    public synchronized AcceleratedScreen getAcceleratedScreen(
+            int[] attributes) throws GLException {
+        if (accScreen == null) {
+            accScreen = new AndroidAcceleratedScreen(attributes);
+        }
+        return accScreen;
+    }
+
 }

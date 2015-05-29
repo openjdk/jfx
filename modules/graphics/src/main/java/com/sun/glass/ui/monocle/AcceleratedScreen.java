@@ -36,8 +36,10 @@ public class AcceleratedScreen {
     private long eglSurface;
     private long eglContext;
     private long eglDisplay;
+    private long nativeWindow;
     protected static final LinuxSystem ls = LinuxSystem.getLinuxSystem();
     private EGL egl;
+    long eglConfigs[] = {0};
 
     /** Returns a platform-specific native display handle suitable for use with
      * eglGetDisplay.
@@ -93,7 +95,6 @@ public class AcceleratedScreen {
                                   "Error binding OPENGL API");
         }
 
-        long eglConfigs[] = {0};
         int configCount[] = {0};
 
         if (!egl.eglChooseConfig(eglDisplay, attributes, eglConfigs,
@@ -118,6 +119,13 @@ public class AcceleratedScreen {
                                   "Could not get EGL context");
         }
     }
+
+    private void createSurface() {
+        nativeWindow = platformGetNativeWindow();
+        eglSurface = egl._eglCreateWindowSurface(eglDisplay, eglConfigs[0],
+                                                   nativeWindow, null);
+    }
+
 
     /** Make the EGL drawing surface current or not
      *
@@ -171,10 +179,17 @@ public class AcceleratedScreen {
      * @return success or failure
      */
     public boolean swapBuffers() {
+        boolean result = false;
         synchronized(NativeScreen.framebufferSwapLock) {
-            egl.eglSwapBuffers(eglDisplay, eglSurface);
+            result = egl.eglSwapBuffers(eglDisplay, eglSurface);
+// TODO this shouldn't happen. In case the surface is invalid, we need to have recreated it before this method is called
+            if (!result) {
+                createSurface();
+                result = egl.eglSwapBuffers(eglDisplay, eglSurface);
+            }
         }
-        return true;
+        return result;
+
     }
 
 }

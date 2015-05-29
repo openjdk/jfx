@@ -36,7 +36,7 @@
 
 #include "eglUtils.h"
 
-#include "eglfb/wrapped_egl.h"
+#include "eglWrapper/eglWrapper.h"
 
 #ifdef EGL_X11_FB_CONTAINER
 #include "X11/Xlib.h"
@@ -225,7 +225,7 @@ ContextInfo *eglContextFromConfig(EGLDisplay *dpy, EGLConfig config) {
     free(glExtensions);
     free(eglExtensions);
 
-    // from the wrapped_egl.c
+    // from the eglWrapper.c
     void *handle = getLibGLEShandle();
 
     /* set function pointers */

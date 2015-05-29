@@ -105,6 +105,11 @@ class FBDevScreen implements NativeScreen {
     }
 
     @Override
+    public float getScale() {
+        return 1.0f;
+    }
+
+    @Override
     public int getDPI() {
         return 96; // no way to read DPI from sysfs and ioctl returns junk values
     }

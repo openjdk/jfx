@@ -25,7 +25,7 @@
 
 #include <jni.h>
 #ifdef ANDROID_NDK
-#include <linux/stddef.h>
+#include <stddef.h>
 #endif
 #include "com_sun_prism_impl_shape_NativePiscesRasterizer.h"
 

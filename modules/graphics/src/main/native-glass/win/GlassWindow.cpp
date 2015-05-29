@@ -59,6 +59,7 @@ static jmethodID midNotifyMoveToAnotherScreen;
 unsigned int GlassWindow::sm_instanceCounter = 0;
 HHOOK GlassWindow::sm_hCBTFilter = NULL;
 HWND GlassWindow::sm_grabWindow = NULL;
+static HWND activeTouchWindow = NULL;
 
 GlassWindow::GlassWindow(jobject jrefThis, bool isTransparent, bool isDecorated, bool isUnified, bool isChild, HWND parentOrOwner)
     : BaseWnd(parentOrOwner),
@@ -575,7 +576,13 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
             break;
         case WM_TOUCH:
             if (IsEnabled()) {
-                HandleViewTouchEvent(GetHWND(), msg, wParam, lParam);
+                if (activeTouchWindow == 0 || activeTouchWindow == GetHWND()) {
+                    if(HandleViewTouchEvent(GetHWND(), msg, wParam, lParam) > 0) {
+                        activeTouchWindow = GetHWND();
+                    } else {
+                        activeTouchWindow = 0;
+                    }
+                } 
                 return 0;
             }
             break;
@@ -1278,6 +1285,10 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinWindow__1setView
     ENTER_MAIN_THREAD()
     {
         GlassWindow *pWindow = GlassWindow::FromHandle(hWnd);
+
+        if (activeTouchWindow == hWnd) {
+            activeTouchWindow = 0;
+        }
         pWindow->ResetMouseTracking(hWnd);
         pWindow->SetGlassView(view);
         // The condition below may be restricted to WS_POPUP windows
@@ -1564,7 +1575,13 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinWindow__1setVisible
             if (pWindow) {
                 pWindow->UngrabFocus();
             }
+
+            if (activeTouchWindow == hWnd) {
+                pWindow->HandleViewTouchEvent(hWnd, 0, 0, 0);
+                activeTouchWindow = 0;
+            }
         }
+
         
         ::ShowWindow(hWnd, visible ? SW_SHOW : SW_HIDE);
         

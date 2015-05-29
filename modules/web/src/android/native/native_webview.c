@@ -23,12 +23,13 @@
  * questions.
  */
 
+// WARNING: WE ARE REPLACING THESE CALLS WITH JAVA CALLS
 #include "com_sun_webkit_NativeWebView.h" 
 #include "symbol.h"
 
 #define LIBANDROID_WEBVIEW_SO "libandroid_webview.so"
 
-static jint(*_ANDROID_create_android_webview)();
+static jint(*_ANDROID_create_android_webview)(JNIEnv *);
 static void (*_ANDROID_move_and_resize)(int id, int x, int y, int w, int h);
 static void (*_ANDROID_set_visible)(int id, int visible);
 static void (*_ANDROID_move_to_top)(int id);
@@ -109,7 +110,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_NativeWebView__1setVisible
  */
 JNIEXPORT jint JNICALL Java_com_sun_webkit_NativeWebView__1createAndroidWebView
 (JNIEnv *env, jobject view) {
-    return (*_ANDROID_create_android_webview)();
+    return (*_ANDROID_create_android_webview)(env);
 }
 
 /*

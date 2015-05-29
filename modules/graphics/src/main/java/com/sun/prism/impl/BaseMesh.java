@@ -156,9 +156,11 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
                     numberOfVertices * VERTEX_SIZE_VB, indexBufferShort, nFaces * 3);
         }        
     }
-    
-    private float[] tangents;
-    private float[] bitangents;
+
+    private boolean[] dirtyVertices;
+    private float[] cachedNormals;
+    private float[] cachedTangents;
+    private float[] cachedBitangents;
     private float[] vertexBuffer;
     private int[] indexBuffer;
     private short[] indexBufferShort;
@@ -270,6 +272,45 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
         }                
     }
 
+    private void convertNormalsToQuats(MeshTempState instance, int numberOfVertices,
+            float[] normals, float[] tangents, float[] bitangents,
+            float[] vertexBuffer, boolean[] dirtys) {
+
+        Vec3f normal = instance.vec3f1;
+        Vec3f tangent = instance.vec3f2;
+        Vec3f bitangent = instance.vec3f3;
+        for (int i = 0, vbIndex = 0; i < numberOfVertices; i++, vbIndex += VERTEX_SIZE_VB) {
+            // Note: If dirtys isn't null, dirtys.length == numberOfVertices is true
+            if (dirtys == null || dirtys[i]) {
+                int index = i * NORMAL_SIZE;
+
+                normal.x = normals[index];
+                normal.y = normals[index + 1];
+                normal.z = normals[index + 2];
+                normal.normalize();
+
+                // tangent and bitangent have been normalized.
+                tangent.x = tangents[index];
+                tangent.y = tangents[index + 1];
+                tangent.z = tangents[index + 2];
+                bitangent.x = bitangents[index];
+                bitangent.y = bitangents[index + 1];
+                bitangent.z = bitangents[index + 2];
+
+                instance.triNormals[0].set(normal);
+                instance.triNormals[1].set(tangent);
+                instance.triNormals[2].set(bitangent);
+                MeshUtil.fixTSpace(instance.triNormals);
+                buildVSQuat(instance.triNormals, instance.quat);
+
+                vertexBuffer[vbIndex + 5] = instance.quat.x;
+                vertexBuffer[vbIndex + 6] = instance.quat.y;
+                vertexBuffer[vbIndex + 7] = instance.quat.z;
+                vertexBuffer[vbIndex + 8] = instance.quat.w;
+            }
+        }
+    }
+
     // Build PointNormalTexCoordGeometry
     private boolean doBuildPNTGeometry(float[] points, float[] normals,
             float[] texCoords, int[] faces) {
@@ -307,14 +348,23 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
         BaseMesh.MeshGeomComp2VB mn2vb;
         BaseMesh.MeshGeomComp2VB mt2vb;
         // Allocate an initial size, may grow as we process the faces array.
-        tangents =  new float[numPoints * NORMAL_SIZE];
-        bitangents = new float[numPoints * NORMAL_SIZE];
+        cachedNormals = new float[numPoints * NORMAL_SIZE];
+        cachedTangents =  new float[numPoints * NORMAL_SIZE];
+        cachedBitangents = new float[numPoints * NORMAL_SIZE];
         vertexBuffer = new float[numPoints * VERTEX_SIZE_VB];
         indexBuffer = new int[numFaces * 3];
         int ibCount = 0;
         int vbCount = 0;
 
         MeshTempState instance = MeshTempState.getInstance();
+        for (int i = 0; i < 3; i++) {
+            if (instance.triPoints[i] == null) {
+                instance.triPoints[i] = new Vec3f();
+            }
+            if (instance.triTexCoords[i] == null) {
+                instance.triTexCoords[i] = new Vec2f();
+            }
+        }
         
         for (int faceCount = 0; faceCount < numFaces; faceCount++) {
             int faceIndex = faceCount * faceIndexSize;
@@ -331,13 +381,16 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
                     float[] temp = new float[incrementedSize * VERTEX_SIZE_VB]; 
                     System.arraycopy(vertexBuffer, 0, temp, 0, vertexBuffer.length);
                     vertexBuffer = temp;
-                    // Enlarge tangents and bitangents too
+                    // Enlarge cachedNormals, cachedTangents and cachedBitangents too
                     temp = new float[incrementedSize * 3];
-                    System.arraycopy(tangents, 0, temp, 0, tangents.length);
-                    tangents = temp;
+                    System.arraycopy(cachedNormals, 0, temp, 0, cachedNormals.length);
+                    cachedNormals = temp;
                     temp = new float[incrementedSize * 3];
-                    System.arraycopy(bitangents, 0, temp, 0, bitangents.length);
-                    bitangents = temp;                        
+                    System.arraycopy(cachedTangents, 0, temp, 0, cachedTangents.length);
+                    cachedTangents = temp;
+                    temp = new float[incrementedSize * 3];
+                    System.arraycopy(cachedBitangents, 0, temp, 0, cachedBitangents.length);
+                    cachedBitangents = temp;                        
                 }
                 int pointOffset = faces[pointIndex] * POINT_SIZE;
                 int normalOffset = faces[normalIndex] * NORMAL_SIZE;
@@ -353,11 +406,11 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
                 vertexBuffer[vbCount + 2] = points[pointOffset + 2];
                 vertexBuffer[vbCount + 3] = texCoords[texCoordOffset];
                 vertexBuffer[vbCount + 4] = texCoords[texCoordOffset + 1];
-                // Temporarily store the normal in the quaterion slot
-                vertexBuffer[vbCount + 5] = normals[normalOffset];
-                vertexBuffer[vbCount + 6] = normals[normalOffset + 1];
-                vertexBuffer[vbCount + 7] = normals[normalOffset + 2];
-                vertexBuffer[vbCount + 8] = 0;
+                // Store the normal in the cachedNormals array
+                int index = instance.triVerts[i] * NORMAL_SIZE;
+                cachedNormals[index] = normals[normalOffset];
+                cachedNormals[index + 1] = normals[normalOffset + 1];
+                cachedNormals[index + 2] = normals[normalOffset + 2];
 
                 vbCount += VERTEX_SIZE_VB;
 
@@ -398,15 +451,9 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
             // This is the best time to compute the tangent and bitangent for each
             // of the vertex. Go thro. the 3 vertices of a triangle
             for (int i = 0; i < 3; i++) {
-                if (instance.triPoints[i] == null) {
-                    instance.triPoints[i] = new Vec3f();
-                }
                 instance.triPoints[i].x = points[instance.triPointIndex[i]];
                 instance.triPoints[i].y = points[instance.triPointIndex[i] + 1];
                 instance.triPoints[i].z = points[instance.triPointIndex[i] + 2];
-                if (instance.triTexCoords[i] == null) {
-                    instance.triTexCoords[i] = new Vec2f();
-                }
                 instance.triTexCoords[i].x = texCoords[instance.triTexCoordIndex[i]];
                 instance.triTexCoords[i].y = texCoords[instance.triTexCoordIndex[i] + 1];
             }
@@ -418,47 +465,20 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
 
             for (int i = 0; i < 3; i++) {
                 int index = instance.triVerts[i] * NORMAL_SIZE;
-                tangents[index] = instance.triNormals[1].x;
-                tangents[index + 1] = instance.triNormals[1].y;
-                tangents[index + 2] = instance.triNormals[1].z;
-                bitangents[index] = instance.triNormals[2].x;
-                bitangents[index + 1] = instance.triNormals[2].y;
-                bitangents[index + 2] = instance.triNormals[2].z;
+                cachedTangents[index] = instance.triNormals[1].x;
+                cachedTangents[index + 1] = instance.triNormals[1].y;
+                cachedTangents[index + 2] = instance.triNormals[1].z;
+                cachedBitangents[index] = instance.triNormals[2].x;
+                cachedBitangents[index + 1] = instance.triNormals[2].y;
+                cachedBitangents[index + 2] = instance.triNormals[2].z;
             }
 
         }
 
         numberOfVertices = vbCount / VERTEX_SIZE_VB;
 
-        Vec3f normal = instance.vec3f1;
-        Vec3f tangent = instance.vec3f2;
-        Vec3f bitangent = instance.vec3f3;
-        for (int i = 0, vbIndex = 0; i < numberOfVertices; i++, vbIndex += VERTEX_SIZE_VB) {
-            normal.x = vertexBuffer[vbIndex + 5];
-            normal.y = vertexBuffer[vbIndex + 6];
-            normal.z = vertexBuffer[vbIndex + 7];
-            normal.normalize();
-
-            int index = i * NORMAL_SIZE;
-            // tangent and bitangent have been normalized.
-            tangent.x = tangents[index];
-            tangent.y = tangents[index + 1];
-            tangent.z = tangents[index + 2];
-            bitangent.x = bitangents[index];
-            bitangent.y = bitangents[index + 1];
-            bitangent.z = bitangents[index + 2];
-
-            instance.triNormals[0].set(normal);
-            instance.triNormals[1].set(tangent);
-            instance.triNormals[2].set(bitangent);
-            MeshUtil.fixTSpace(instance.triNormals);
-            buildVSQuat(instance.triNormals, instance.quat);
-
-            vertexBuffer[vbIndex + 5] = instance.quat.x;
-            vertexBuffer[vbIndex + 6] = instance.quat.y;
-            vertexBuffer[vbIndex + 7] = instance.quat.z;
-            vertexBuffer[vbIndex + 8] = instance.quat.w;
-        }
+        convertNormalsToQuats(instance, numberOfVertices, 
+                cachedNormals, cachedTangents, cachedBitangents, vertexBuffer, null);
 
         indexBufferSize = numFaces * 3;
 
@@ -486,6 +506,14 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
     private boolean updatePNTGeometry(float[] points, int[] pointsFromAndLengthIndices,
             float[] normals, int[] normalsFromAndLengthIndices,
             float[] texCoords, int[] texCoordsFromAndLengthIndices) {
+
+        if (dirtyVertices == null) {
+            // Create a dirty array of size equal to number of vertices in vertexBuffer.
+            dirtyVertices = new boolean[numberOfVertices];
+        }
+        // Clear dirty array before use.
+        Arrays.fill(dirtyVertices, false);
+
         // Find out the list of modified points
         int startPoint = pointsFromAndLengthIndices[0] / POINT_SIZE;
         int numPoints = (pointsFromAndLengthIndices[1] / POINT_SIZE);
@@ -507,14 +535,16 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
                             int vbIndex = locs[j] * VERTEX_SIZE_VB;
                             vertexBuffer[vbIndex] = points[pointOffset];
                             vertexBuffer[vbIndex + 1] = points[pointOffset + 1];
-                            vertexBuffer[vbIndex + 2] = points[pointOffset + 2];
+                            vertexBuffer[vbIndex + 2] = points[pointOffset + 2];                   
+                            dirtyVertices[locs[j]] = true;
                         }
                     } else {
                         int loc = mp2vb.getLoc();
                         int vbIndex = loc * VERTEX_SIZE_VB;
                         vertexBuffer[vbIndex] = points[pointOffset];
                         vertexBuffer[vbIndex + 1] = points[pointOffset + 1];
-                        vertexBuffer[vbIndex + 2] = points[pointOffset + 2];
+                        vertexBuffer[vbIndex + 2] = points[pointOffset + 2];                    
+                        dirtyVertices[loc] = true;
                     }
                 }
             }
@@ -541,12 +571,14 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
                             int vbIndex = (locs[j] * VERTEX_SIZE_VB) + POINT_SIZE_VB;
                             vertexBuffer[vbIndex] = texCoords[texCoordOffset];
                             vertexBuffer[vbIndex + 1] = texCoords[texCoordOffset + 1];
+                            dirtyVertices[locs[j]] = true;
                         }
                     } else {
                         int loc = mt2vb.getLoc();
                         int vbIndex = (loc * VERTEX_SIZE_VB) + POINT_SIZE_VB;
                         vertexBuffer[vbIndex] = texCoords[texCoordOffset];
                         vertexBuffer[vbIndex + 1] = texCoords[texCoordOffset + 1];
+                        dirtyVertices[loc] = true;
                     }
                 }
             }
@@ -571,51 +603,70 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
                     int validLocs = mn2vb.getValidLocs();
                     if (locs != null) {
                         for (int j = 0; j < validLocs; j++) {
-                            int vbIndex = (locs[j] * VERTEX_SIZE_VB)
-                                    + POINT_SIZE_VB + TEXCOORD_SIZE_VB;
-
-                            instance.triNormals[0].x = normals[normalOffset];
-                            instance.triNormals[0].y = normals[normalOffset + 1];
-                            instance.triNormals[0].z = normals[normalOffset + 2];
-                            instance.triNormals[0].normalize();
-                            instance.triNormals[1].x = tangents[normalOffset];
-                            instance.triNormals[1].y = tangents[normalOffset + 1];
-                            instance.triNormals[1].z = tangents[normalOffset + 2];
-                            instance.triNormals[2].x = bitangents[normalOffset];
-                            instance.triNormals[2].y = bitangents[normalOffset + 1];
-                            instance.triNormals[2].z = bitangents[normalOffset + 2];
-                            MeshUtil.fixTSpace(instance.triNormals);
-                            buildVSQuat(instance.triNormals, instance.quat);
-                            vertexBuffer[vbIndex] = instance.quat.x;
-                            vertexBuffer[vbIndex + 1] = instance.quat.y;
-                            vertexBuffer[vbIndex + 2] = instance.quat.z;
-                            vertexBuffer[vbIndex + 3] = instance.quat.w;
+                            int index = locs[j] * NORMAL_SIZE;
+                            cachedNormals[index] = normals[normalOffset];
+                            cachedNormals[index + 1] = normals[normalOffset + 1];
+                            cachedNormals[index + 2] = normals[normalOffset + 2];
+                            dirtyVertices[locs[j]] = true;
                         }
                     } else {
                         int loc = mn2vb.getLoc();
-                        int vbIndex = (loc * VERTEX_SIZE_VB)
-                                + POINT_SIZE_VB + TEXCOORD_SIZE_VB;
-
-                        instance.triNormals[0].x = normals[normalOffset];
-                        instance.triNormals[0].y = normals[normalOffset + 1];
-                        instance.triNormals[0].z = normals[normalOffset + 2];
-                        instance.triNormals[0].normalize();
-                        instance.triNormals[1].x = tangents[normalOffset];
-                        instance.triNormals[1].y = tangents[normalOffset + 1];
-                        instance.triNormals[1].z = tangents[normalOffset + 2];
-                        instance.triNormals[2].x = bitangents[normalOffset];
-                        instance.triNormals[2].y = bitangents[normalOffset + 1];
-                        instance.triNormals[2].z = bitangents[normalOffset + 2];
-                        MeshUtil.fixTSpace(instance.triNormals);                            
-                        buildVSQuat(instance.triNormals, instance.quat);
-                        vertexBuffer[vbIndex] = instance.quat.x;
-                        vertexBuffer[vbIndex + 1] = instance.quat.y;
-                        vertexBuffer[vbIndex + 2] = instance.quat.z;
-                        vertexBuffer[vbIndex + 3] = instance.quat.w;
+                        int index = loc * NORMAL_SIZE;
+                            cachedNormals[index] = normals[normalOffset];
+                            cachedNormals[index + 1] = normals[normalOffset + 1];
+                            cachedNormals[index + 2] = normals[normalOffset + 2];
+                            dirtyVertices[loc] = true;
                     }
                 }
             }
         }
+
+        // Prepare process all dirty vertices
+        MeshTempState instance = MeshTempState.getInstance();
+        for (int i = 0; i < 3; i++) {
+            if (instance.triPoints[i] == null) {
+                instance.triPoints[i] = new Vec3f();        
+            }
+            if (instance.triTexCoords[i] == null) {
+                instance.triTexCoords[i] = new Vec2f();
+            }
+        }
+        // Every 3 vertices form a triangle
+        for (int j = 0; j < numberOfVertices; j += 3) {
+            // Only process the triangle that has one of more dirty vertices
+            if (dirtyVertices[j] || dirtyVertices[j+1] || dirtyVertices[j+2]) {                    
+                int vbIndex = j * VERTEX_SIZE_VB;
+                // Go thro. the 3 vertices of a triangle
+                for (int i = 0; i < 3; i++) {
+                    instance.triPoints[i].x = vertexBuffer[vbIndex];
+                    instance.triPoints[i].y = vertexBuffer[vbIndex + 1];
+                    instance.triPoints[i].z = vertexBuffer[vbIndex + 2];
+                    instance.triTexCoords[i].x = vertexBuffer[vbIndex + POINT_SIZE_VB];
+                    instance.triTexCoords[i].y = vertexBuffer[vbIndex + POINT_SIZE_VB + 1];
+                    vbIndex += VERTEX_SIZE_VB;
+                }
+
+                MeshUtil.computeTBNNormalized(instance.triPoints[0], instance.triPoints[1],
+                        instance.triPoints[2], instance.triTexCoords[0],
+                        instance.triTexCoords[1], instance.triTexCoords[2],
+                        instance.triNormals);
+
+                int index = j * NORMAL_SIZE;
+                for (int i = 0; i < 3; i++) {
+                    cachedTangents[index] = instance.triNormals[1].x;
+                    cachedTangents[index + 1] = instance.triNormals[1].y;
+                    cachedTangents[index + 2] = instance.triNormals[1].z;
+                    cachedBitangents[index] = instance.triNormals[2].x;
+                    cachedBitangents[index + 1] = instance.triNormals[2].y;
+                    cachedBitangents[index + 2] = instance.triNormals[2].z;
+                    index += NORMAL_SIZE;
+                }
+
+            }
+        }
+
+        convertNormalsToQuats(instance, numberOfVertices, 
+                cachedNormals, cachedTangents, cachedBitangents, vertexBuffer, dirtyVertices);
 
         if (indexBuffer != null) {
             return buildNativeGeometry(vertexBuffer,

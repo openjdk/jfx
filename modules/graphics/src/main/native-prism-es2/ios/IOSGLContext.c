@@ -33,6 +33,8 @@
 #include "PrismES2Defs.h"
 #include "com_sun_prism_es2_IOSGLContext.h"
 
+extern void printAndReleaseResources(jlong pf, jlong ctx, const char *message);
+
 /*
  * Class:     com_sun_prism_es2_IOSGLContext
  * Method:    nInitialize

@@ -34,7 +34,7 @@ extern "C" {
 
     void init_functions(JNIEnv *);
 
-    int create_android_webview();
+    int create_android_webview(JNIEnv *);
 
     void move_and_resize(int id, jint x, int y, int w, int h);
 

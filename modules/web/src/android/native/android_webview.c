@@ -50,6 +50,8 @@ static void (*_VM_fire_load_event)(int id, int frameId, int state,
 
 jint JNI_OnLoad(JavaVM *vm, void *reserved) {
     JNIEnv *env;
+LOGV(TAG, "ONLOAD WEB");
+LOGI("ONLOAD WEB");
     if ((*vm)->GetEnv(vm, (void **) &env, JNI_VERSION_1_6)) {
         return JNI_ERR; /* JNI version not supported */
     }
@@ -60,8 +62,10 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved) {
 }
 
 void init_ids(JNIEnv *env) {
+LOGI("INIT IDS");
     jInternalWebViewClass = (*env)->NewGlobalRef(env,
             (*env)->FindClass(env, "com/oracle/dalvik/InternalWebView"));
+LOGI("Got webviewclass: %p",jInternalWebViewClass);
     CHECK_EXCEPTION(env);
 
     jInternalWebView_init = (*env)->GetMethodID(env, jInternalWebViewClass, "<init>", "()V");
@@ -140,19 +144,27 @@ void init_functions(JNIEnv *env) {
     free(fullpath);
 }
 
-int create_android_webview() {
-    JNIEnv *env;
+/*
+int create_android_webview(JNIEnv *env) {
+    LOGI("CREATE_ANDROID_WEBVIEW1A");
+    //JNIEnv *env;
+    LOGI("CREATE_ANDROID_WEBVIEW1B");
     int internalID = -1;
-    (*jvm)->AttachCurrentThread(jvm, &env, 0);
+    LOGI("CREATE_ANDROID_WEBVIEW1C");
+    //(*jvm)->AttachCurrentThread(jvm, &env, 0);
+    LOGI("CREATE_ANDROID_WEBVIEW2a\n");
     jobject jInternalWebView = (*env)->NewGlobalRef(env,
             (*env)->NewObject(env, jInternalWebViewClass, jInternalWebView_init));
+    LOGI(TAG,"CREATE_ANDROID_WEBVIEW3\n");
     CHECK_EXCEPTION(env);
 
     internalID = (*env)->CallIntMethod(env, jInternalWebView, jInternalWebView_getInternalID);
+    LOGI(TAG, "CREATE_ANDROID_WEBVIEW4\n");
     CHECK_EXCEPTION(env);
     
     return internalID;
 }
+*/
 
 void move_and_resize(int id, int x, int y, int w, int h) {
     JNIEnv *env;
@@ -161,6 +173,7 @@ void move_and_resize(int id, int x, int y, int w, int h) {
             jInternalWebView_moveAndResize, id, x, y, w, h);
 }
 
+/*
 void set_visible(int id, int visible) {
     JNIEnv *env;
     (*jvm)->AttachCurrentThread(jvm, &env, 0);
@@ -168,12 +181,13 @@ void set_visible(int id, int visible) {
             jInternalWebView_setVisible,
             id, visible == 1 ? JNI_TRUE : JNI_FALSE);
 }
-
+*/
 void move_to_top(int id) {
     JNIEnv *env;
     (*jvm)->AttachCurrentThread(jvm, &env, 0);
 }
 
+/*
 void load_url(int id, const char *curl) {
     JNIEnv *env;
     if (!curl) {
@@ -184,6 +198,7 @@ void load_url(int id, const char *curl) {
     (*env)->CallStaticVoidMethod(env, jInternalWebViewClass, jInternalWebView_loadUrl, id, jurl);
     CHECK_EXCEPTION(env);
 }
+*/
 
 void load_content(int id, const char *content, const char *content_type) {
     JNIEnv *env;
@@ -221,7 +236,7 @@ void dispose(int id) {
 /*
  * Class:     com_oracle_dalvik_InternalWebView
  * Method:    _fireLoadEvent
- * Signature: (IIILjava/lang/String;Ljava/lang/String;DI)V
+ * Signature: (IIILjava/lang/String;Ljava/lang/String;II)V
  */
 JNIEXPORT void JNICALL Java_com_oracle_dalvik_InternalWebView__1fireLoadEvent
 (JNIEnv *env, jobject view, jint id, jint frameID, jint state, jstring url,

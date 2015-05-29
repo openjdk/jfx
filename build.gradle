@@ -1485,46 +1485,54 @@ project(":graphics") {
         def target = t.name
         def upperTarget = t.upper
         def capitalTarget = t.capital
-        def properties = rootProject.ext[upperTarget];
-        def library = properties.library
-        def ccOutput = file("$nativeRootDir/$target");
+        def targetProperties = rootProject.ext[upperTarget];
+        def library = targetProperties.library
+        def properties = targetProperties.get('decora')
+        def nativeDir = file("$nativeRootDir/$target");
 
-        def ccTask = task("compileDecoraNativeShaders$capitalTarget", type: CCTask, dependsOn: generateDecoraNativeHeaders) {
-            description = "Compiles Decora SSE natives"
-            matches = ".*\\.cc"
-            source file("$buildDir/generated-src/jsl-decora")
-            source file("modules/graphics/src/main/native-decora")
-            headers = headerDir
-            params.addAll(properties.decora.ccFlags)
-            output(ccOutput)
-            compiler = properties.decora.compiler
-            cleanNativeDecora.delete ccOutput
-        }
+        def variants = properties.containsKey("variants") ? properties.variants : [""];
+        variants.each { variant ->
+            def variantProperties = variant == "" ? properties : properties.get(variant)
+            def capitalVariant = variant.capitalize()
+            def ccOutput = variant == "" ? nativeDir : file("$nativeDir/$variant")
 
-        def linkTask = task("linkDecoraNativeShaders$capitalTarget", type: LinkTask, dependsOn: ccTask) {
-            description = "Creates native dynamic library for Decora SSE"
-            objectDir = file("$nativeRootDir/$target")
-            linkParams.addAll(properties.decora.linkFlags)
-            lib = file("$libRootDir/$t.name/${library(properties.decora.lib)}")
-            linker = properties.decora.linker
-            cleanNativeDecora.delete "$libRootDir/$t.name/"
-        }
-
-        if (IS_WINDOWS && target == "win") {
-            def rcTask = project.task("rcDecoraNativeShaders$capitalTarget", type: CompileResourceTask, dependsOn: generateDecoraNativeHeaders) {
-                description = "Compiles native sources for Decora SSE"
-                matches = ".*\\.rc"
-                compiler = properties.decora.rcCompiler
-                source(properties.decora.rcSource)
-                if (properties.decora.rcFlags) {
-                    rcParams.addAll(properties.decora.rcFlags)
-                }
+            def ccTask = task("compileDecoraNativeShaders$capitalTarget$capitalVariant", type: CCTask, dependsOn: generateDecoraNativeHeaders) {
+                description = "Compiles Decora SSE natives for ${t.name}${capitalVariant != '' ? ' for variant ' + capitalVariant : ''}"
+                matches = ".*\\.cc"
+                source file("$buildDir/generated-src/jsl-decora")
+                source file("modules/graphics/src/main/native-decora")
+                headers = headerDir
+                params.addAll(variantProperties.ccFlags)
                 output(ccOutput)
+                compiler = variantProperties.compiler
+                cleanNativeDecora.delete ccOutput
             }
-            linkTask.dependsOn rcTask;
-        }
 
-        nativeDecora.dependsOn(linkTask)
+            def linkTask = task("linkDecoraNativeShaders$capitalTarget$capitalVariant", type: LinkTask, dependsOn: ccTask) {
+                description = "Creates native dynamic library for Decora SSE ${t.name}${capitalVariant != '' ? ' for variant ' + capitalVariant : ''}"
+                objectDir = ccOutput
+                linkParams.addAll(variantProperties.linkFlags)
+                lib = file("$libRootDir/$t.name/${library(variantProperties.lib)}")
+                linker = variantProperties.linker
+                cleanNativeDecora.delete "$libRootDir/$t.name/"
+            }
+
+            if (IS_WINDOWS && target == "win") {
+                def rcTask = project.task("rcDecoraNativeShaders$capitalTarget$capitalVariant", type: CompileResourceTask, dependsOn: generateDecoraNativeHeaders) {
+                    description = "Compiles native sources for Decora SSE"
+                    matches = ".*\\.rc"
+                    compiler = variantProperties.rcCompiler
+                    source(variantProperties.rcSource)
+                    if (variantProperties.rcFlags) {
+                        rcParams.addAll(variantProperties.rcFlags)
+                    }
+                    output(ccOutput)
+                }
+                linkTask.dependsOn rcTask;
+            }
+
+            nativeDecora.dependsOn(linkTask)
+        }
     }
 
     // Prism JSL
@@ -3050,7 +3058,7 @@ compileTargets { t ->
                 if (IS_COMPILE_WEBKIT) {
                     from ("modules/web/build/libs/${t.name}/${library('jfxwebkit')}")
                 } else {
-                    if (t.name != "android" && t.name != "ios") {
+                    if (t.name != "android" && t.name != "ios" && t.name != "dalvik") {
                         from ("$LIBRARY_STUB/${library('jfxwebkit')}")
                     }
                 }
@@ -3068,8 +3076,10 @@ compileTargets { t ->
                         from("modules/media/build/native/${t.name}/${mediaBuildType}") { include "libavplugin*.so" }
                     } else from ("modules/media/build/native/${t.name}/${mediaBuildType}/${library("glib-lite")}")
                 } else {
-                    [ "fxplugins", "gstreamer-lite", "jfxmedia" ].each { name ->
-                        from ("$LIBRARY_STUB/${library(name)}") }
+                    if (t.name != "android"  && t.name != "dalvik" ) {
+                        [ "fxplugins", "gstreamer-lite", "jfxmedia" ].each { name ->
+                            from ("$LIBRARY_STUB/${library(name)}") }
+                    }
 
                     if (t.name == "mac") {
                         // copy libjfxmedia_{avf,qtkit}.dylib if they exist
@@ -3078,7 +3088,9 @@ compileTargets { t ->
                     } else if (t.name == "linux") {
                         from(LIBRARY_STUB) { include "libavplugin*.so" }
                     }
-                    else from ("$LIBRARY_STUB/${library("glib-lite")}")
+                    else if (t.name != "android"  && t.name != "dalvik" ) {
+                        from ("$LIBRARY_STUB/${library("glib-lite")}")
+                    }
                 }
                 
                 def libDest = targetProperties.libDest

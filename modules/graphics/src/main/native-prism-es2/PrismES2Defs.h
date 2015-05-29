@@ -61,7 +61,7 @@
 
 #ifdef IS_EGL
 #include <EGL/egl.h>
-#include "eglfb/wrapped_egl.h"
+#include "eglWrapper/eglWrapper.h"
 #endif
 
 #endif /* SOLARIS || LINUX */
@@ -75,6 +75,7 @@
 #if TARGET_OS_IPHONE /* iOS */
 #include <GL/gl.h>
 #include <GL/glext.h>
+#include "ios/ios-window-system.h"
 #define IS_EGL
 
 #elif TARGET_OS_MAC /* MacOSX */

@@ -98,4 +98,10 @@ public interface NativeScreen {
      */
     public static final Object framebufferSwapLock = new Object();
 
+    /**
+     * Return the scale factor between the physical pixels and the logical pixels
+     * e.g. hdpi = 1.5, xhdpi = 2.0
+     */
+    public float getScale();
+
 }

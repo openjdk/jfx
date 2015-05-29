@@ -9,6 +9,7 @@
 <!-- in the project's Project Properties dialog box.-->
 <project name="SceneBuilderApp" default="default" basedir=".">
     <description>Builds, tests, and runs the project SceneBuilderApp.</description>
+    <property name="platforms.JDK_1.8.home" location="${java.home}/../"/>
     <import file="nbproject/build-impl.xml"/>
     <!--
 

@@ -77,13 +77,16 @@ public class TouchInputSupport
                                       int touchEventCount) {
 
         if (curView != null && view != curView && touchCount != 0 && touch != null) {
-            // Release the currently pressed touch points
-            curView.notifyBeginTouchEvent(0, true, touchCount);
-            for (Map.Entry<Long, TouchCoord> e : touch.entrySet()) {
-                TouchCoord coord = e.getValue();
-                curView.notifyNextTouchEvent(TouchEvent.TOUCH_RELEASED, e.getKey(), coord.x, coord.y, coord.xAbs, coord.yAbs);
-            }
-            curView.notifyEndTouchEvent();
+            if (!curView.isClosed()) {
+                // Release the currently pressed touch points
+                curView.notifyBeginTouchEvent(0, true, touchCount);
+                for (Map.Entry<Long, TouchCoord> e : touch.entrySet()) {
+                    TouchCoord coord = e.getValue();
+                    curView.notifyNextTouchEvent(TouchEvent.TOUCH_RELEASED, e.getKey(), coord.x, coord.y, coord.xAbs, coord.yAbs);
+                }
+                curView.notifyEndTouchEvent();
+            } 
+            touch.clear();
             touchCount = 0;
             if (listener != null ) {
                 listener.touchCountChanged(this, curView, 0, true);

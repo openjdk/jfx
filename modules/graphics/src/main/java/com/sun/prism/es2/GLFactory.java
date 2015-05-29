@@ -80,7 +80,9 @@ abstract class GLFactory {
         } else if (PlatformUtil.isAndroid()) {
             if ("eglfb".equals(PlatformUtil.getEmbeddedType())) {
                 factoryClassName = "com.sun.prism.es2.EGLFBGLFactory";
-            } else {
+            } else if ("monocle".equals(PlatformUtil.getEmbeddedType()))
+                 factoryClassName = "com.sun.prism.es2.MonocleGLFactory";
+            else {
                 factoryClassName = null;
                 System.err.println("GLFactory.static - Only eglfb supported for Android!");
             }

@@ -29,7 +29,6 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.util.Log;
 import dalvik.system.DexClassLoader;
-import java.io.BufferedInputStream;
 
 import java.io.File;
 import java.io.IOException;
@@ -37,6 +36,8 @@ import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.util.Map.Entry;
 import java.util.Properties;
+import com.sun.javafx.application.PlatformImpl;
+import com.sun.javafx.application.PlatformImpl.FinishListener;
 
 public class DalvikLauncher implements Launcher {
 
@@ -46,6 +47,8 @@ public class DalvikLauncher implements Launcher {
     private static final String LAUNCH_APPLICATION_METHOD = "launchApplication";
     private static final String MAIN_METHOD = "main";
     private static final String ANDROID_PROPERTY_PREFIX = "android.";
+    private static final String JAVAFX_PLATFORM_PROPERTIES = "javafx.platform.properties";
+    private static final String JAVA_CUSTOM_PROPERTIES = "java.custom.properties";
 
     private static final Class[] LAUNCH_APPLICATION_ARGS = new Class[]{
         Class.class, Class.class, (new String[0]).getClass()};
@@ -58,39 +61,69 @@ public class DalvikLauncher implements Launcher {
 
     private Activity activity;
     private String preloaderClassName, mainClassName;
+    private FXDalvikEntity fxDalvikEntity;
 
-    public void launchApp(Activity a, String mainClassName, String preloaderClassName) {
-        this.activity = a;
+    @Override
+    public void launchApp(FXDalvikEntity fxDalvikEntity, String mainClassName, String preloaderClassName) {
+        this.fxDalvikEntity = fxDalvikEntity;
+        this.activity = fxDalvikEntity.getActivity();
         this.preloaderClassName = preloaderClassName;
         this.mainClassName = mainClassName;
 
-        InputStream is = null;
-        Properties userProperties = new Properties();
+        InputStream isJavafxPlatformProperties = null;
         try {
-            is = new BufferedInputStream(this.activity.getAssets().open("javafx.platform.properties"));
-            userProperties.load(is);
-            String key = null;
-            for (Entry<Object, Object> e : userProperties.entrySet()) {
-                key = (String) e.getKey();
+            isJavafxPlatformProperties = DalvikLauncher.class.getResourceAsStream("/" + JAVAFX_PLATFORM_PROPERTIES);
+            if (isJavafxPlatformProperties == null) {
+                throw new RuntimeException("Could not find /" + JAVAFX_PLATFORM_PROPERTIES + " on classpath.");
+            }
+
+            Properties javafxPlatformProperties = new Properties();
+            javafxPlatformProperties.load(isJavafxPlatformProperties);
+            for (Entry<Object, Object> e : javafxPlatformProperties.entrySet()) {
+                String key = (String) e.getKey();
                 System.setProperty(key.startsWith(ANDROID_PROPERTY_PREFIX)
                         ? key.substring(ANDROID_PROPERTY_PREFIX.length()) : key,
                         (String) e.getValue());
             }
-            System.getProperties().list(System.out);
-
         } catch (IOException e) {
-            Log.v(TAG, "Can't load properties");
-            throw new RuntimeException("Can't load properties", e);
+            Log.v(TAG, "Can't load " + JAVAFX_PLATFORM_PROPERTIES);
+            throw new RuntimeException("Can't load " + JAVAFX_PLATFORM_PROPERTIES, e);
         } finally {
             try {
-                is.close();
+                if (isJavafxPlatformProperties != null) {
+                    isJavafxPlatformProperties.close();
+                }
             } catch (Exception e) {
-                 Log.v(TAG, "Exception closing properties InputStream");
+                 Log.v(TAG, "Exception closing " + JAVAFX_PLATFORM_PROPERTIES + " InputStream");
             }
-
         }
 
-        Log.v(TAG, "Launch JavaFX application on dalvik vm.");
+        // try loading java custom properties
+        InputStream isJavaCustomProperties = null;
+        try {
+            isJavaCustomProperties = DalvikLauncher.class.getResourceAsStream("/" + JAVA_CUSTOM_PROPERTIES);
+            if (isJavaCustomProperties != null) {
+                Properties javaCustomProperties = new Properties();
+                javaCustomProperties.load(isJavaCustomProperties);
+                for (Entry<Object, Object> entry : javaCustomProperties.entrySet()) {
+                    System.setProperty((String) entry.getKey(), (String) entry.getValue());
+                }
+            }
+        } catch (IOException e) {
+            Log.e(TAG, "Can't load " + JAVA_CUSTOM_PROPERTIES, e);
+        } finally {
+            if (isJavaCustomProperties != null) {
+                try {
+                    isJavaCustomProperties.close();
+                } catch (IOException e) {
+                    Log.v(TAG, "Exception closing " + JAVA_CUSTOM_PROPERTIES + " InputStream", e);
+                }
+            }
+        }
+
+        System.getProperties().list(System.out);
+
+        Log.v(TAG, "Launch JavaFX application on DALVIK vm.");
         try {
             initMethodHandles();
         } catch (Exception e) {
@@ -147,32 +180,47 @@ public class DalvikLauncher implements Launcher {
     private static ClassLoader applicationClassLoader;
 
     private ClassLoader getApplicationClassLoader() {
-        if (applicationClassLoader == null) {
-            // Internal storage where the DexClassLoader writes the optimized dex file to.
-            final File optimizedDexOutputPath = activity.getDir("outdex", Context.MODE_PRIVATE);
-
-            // Initialize the class loader with the secondary dex file.
-            // This includes the javafx, compatibility and application classes
-            ClassLoader cl = new DexClassLoader(FXActivity.dexClassPath,
-                    optimizedDexOutputPath.getAbsolutePath(),
-                    FXActivity.getInstance().getApplicationInfo().nativeLibraryDir,
-                    activity.getClassLoader());
-            Thread.currentThread().setContextClassLoader(cl);
-            applicationClassLoader = cl;
-            Log.v(TAG, "Application classloader initialized: " + applicationClassLoader);
-        }
-        return applicationClassLoader;
+        return this.getClass().getClassLoader();
     }
 
     private void initMethodHandles() throws ClassNotFoundException, NoSuchMethodException, SecurityException {
+        Class<?> androidInputDeviceRegistry = getApplicationClassLoader().loadClass("com.sun.glass.ui.monocle.AndroidInputDeviceRegistry");
+        Method registerDevice = androidInputDeviceRegistry.getMethod("registerDevice");
+        fxDalvikEntity.setInitializeMonocleMethod(registerDevice);
         Class<?> dalvikInputClass = getApplicationClassLoader().loadClass("com.sun.glass.ui.android.DalvikInput");
-        FXActivity.getInstance().setOnMultiTouchEventMethod(dalvikInputClass.getMethod("onMultiTouchEvent", int.class, int[].class, int[].class, int[].class, int[].class));
-        FXActivity.getInstance().setOnKeyEventMethod(dalvikInputClass.getMethod("onKeyEvent", int.class, int.class, String.class));
-        FXActivity.getInstance().setOnSurfaceChangedNativeMethod1(dalvikInputClass.getMethod("onSurfaceChangedNative"));
-        FXActivity.getInstance().setOnSurfaceChangedNativeMethod2(dalvikInputClass.getMethod("onSurfaceChangedNative", int.class, int.class, int.class));
-        FXActivity.getInstance().setOnSurfaceRedrawNeededNativeMethod(dalvikInputClass.getMethod("onSurfaceRedrawNeededNative"));
-        FXActivity.getInstance().setOnConfigurationChangedNativeMethod(dalvikInputClass.getMethod("onConfigurationChangedNative", int.class));
+        fxDalvikEntity.setOnMultiTouchEventMethod(dalvikInputClass.getMethod("onMultiTouchEvent", int.class, int[].class, int[].class, int[].class, int[].class));
+        fxDalvikEntity.setOnKeyEventMethod(dalvikInputClass.getMethod("onKeyEvent", int.class, int.class, String.class));
+        fxDalvikEntity.setOnGlobalLayoutChangedMethod(dalvikInputClass.getMethod("onGlobalLayoutChanged"));
+        fxDalvikEntity.setOnSurfaceChangedNativeMethod1(dalvikInputClass.getMethod("onSurfaceChangedNative"));
+        fxDalvikEntity.setOnSurfaceChangedNativeMethod2(dalvikInputClass.getMethod("onSurfaceChangedNative", int.class, int.class, int.class));
+        fxDalvikEntity.setOnSurfaceRedrawNeededNativeMethod(dalvikInputClass.getMethod("onSurfaceRedrawNeededNative"));
+        fxDalvikEntity.setOnConfigurationChangedNativeMethod(dalvikInputClass.getMethod("onConfigurationChangedNative", int.class));
+        boolean hasAccessToFXClasses = false;
+        try {
+            // this.getClass().getClassLoader().loadClass("com.sun.javafx.application.PlatformImpl.FinishListener");
+            registerExitListener();
+            Log.v(TAG, "We have JavaFX on our current (base) classpath, registered exit listener");
+        }
+        catch (Throwable t) {
+            Log.v(TAG, "No JavaFX on our current (base) classpath, don't register exit listener");
+            t.printStackTrace();
+        }
     }
+
+    private void registerExitListener() {
+        FinishListener l = new FinishListener() {
+            public void idle(boolean implicitExit) {
+                Log.v (TAG, "FinishListener idle called with exit = "+implicitExit);
+                activity.finish();
+            }
+            public void exitCalled() {
+                Log.v (TAG, "FinishListener exit called");
+                activity.finish();
+            }
+        };
+        PlatformImpl.addListener(l);
+    }
+
 
     private Class resolveApplicationClass()
             throws PackageManager.NameNotFoundException, ClassNotFoundException {
