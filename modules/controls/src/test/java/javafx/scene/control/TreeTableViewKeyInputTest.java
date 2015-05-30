@@ -38,6 +38,7 @@ import java.util.function.Function;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.util.Utils;
 import com.sun.javafx.scene.control.behavior.TreeTableViewAnchorRetriever;
+import com.sun.javafx.scene.control.infrastructure.ControlTestUtils;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import com.sun.javafx.scene.control.infrastructure.StageLoader;
@@ -4001,14 +4002,6 @@ public class TreeTableViewKeyInputTest {
     }
 
     private void test_rt36800(boolean cellSelection) {
-        // get the current exception handler before replacing with our own,
-        // as ListListenerHelp intercepts the exception otherwise
-        final Thread.UncaughtExceptionHandler exceptionHandler = Thread.currentThread().getUncaughtExceptionHandler();
-        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> {
-            e.printStackTrace();
-            fail("We don't expect any exceptions in this test!");
-        });
-
         final int items = 10;
         root.getChildren().clear();
         root.setExpanded(true);
@@ -4041,7 +4034,10 @@ public class TreeTableViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // 2
         keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // 1
         keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // 0
-        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // bug time?
+
+        ControlTestUtils.runWithExceptionHandler(() -> {
+            keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // bug time?
+        });
 
         if (cellSelection) {
             assertEquals(0, getAnchor().getRow());
@@ -4063,9 +4059,6 @@ public class TreeTableViewKeyInputTest {
             assertFalse(sm.isSelected(4));
             assertFalse(sm.isSelected(5));
         }
-
-        // reset the exception handler
-        Thread.currentThread().setUncaughtExceptionHandler(exceptionHandler);
     }
 
     @Test public void test_rt_37130_pageUpAtTop() {

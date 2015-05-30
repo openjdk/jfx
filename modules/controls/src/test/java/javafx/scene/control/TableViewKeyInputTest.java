@@ -40,6 +40,7 @@ import java.util.function.Function;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.util.Utils;
 import com.sun.javafx.scene.control.behavior.TableViewAnchorRetriever;
+import com.sun.javafx.scene.control.infrastructure.ControlTestUtils;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import com.sun.javafx.scene.control.infrastructure.StageLoader;
@@ -3474,11 +3475,6 @@ public class TableViewKeyInputTest {
     }
 
     private void test_rt36800(boolean cellSelection) {
-        // get the current exception handler before replacing with our own,
-        // as ListListenerHelp intercepts the exception otherwise
-        final Thread.UncaughtExceptionHandler exceptionHandler = Thread.currentThread().getUncaughtExceptionHandler();
-        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> fail("We don't expect any exceptions in this test!"));
-
         final int items = 10;
         tableView.getItems().clear();
         for (int i = 0; i < items; i++) {
@@ -3510,7 +3506,10 @@ public class TableViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // 2
         keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // 1
         keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // 0
-        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // bug time?
+
+        ControlTestUtils.runWithExceptionHandler(() -> {
+            keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // bug time?
+        });
 
         if (cellSelection) {
             assertEquals(0, getAnchor().getRow());
@@ -3532,17 +3531,9 @@ public class TableViewKeyInputTest {
             assertFalse(sm.isSelected(4));
             assertFalse(sm.isSelected(5));
         }
-
-        // reset the exception handler
-        Thread.currentThread().setUncaughtExceptionHandler(exceptionHandler);
     }
 
     @Test public void test_rt_36942() {
-        // get the current exception handler before replacing with our own,
-        // as ListListenerHelp intercepts the exception otherwise
-        final Thread.UncaughtExceptionHandler exceptionHandler = Thread.currentThread().getUncaughtExceptionHandler();
-        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> fail("We don't expect any exceptions in this test!"));
-
         final int items = 3;
         tableView.getItems().clear();
         for (int i = 0; i < items; i++) {
@@ -3567,12 +3558,12 @@ public class TableViewKeyInputTest {
         sm.select(0);
         keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT); // 0,1
         keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT); // 0,1,2
-        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT); // 0,1,2,Exception?
+
+        ControlTestUtils.runWithExceptionHandler(() -> {
+            keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT); // 0,1,2,Exception?
+        });
 
         sl.dispose();
-
-        // reset the exception handler
-        Thread.currentThread().setUncaughtExceptionHandler(exceptionHandler);
     }
 
     @Test public void test_rt_37130_pageUpAtTop() {

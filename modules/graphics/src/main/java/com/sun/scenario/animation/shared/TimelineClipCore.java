@@ -225,7 +225,7 @@ public class TimelineClipCore {
                 try {
                     onFinished.handle(new ActionEvent(kf, null));
                 } catch (Throwable ex) {
-                    ex.printStackTrace();
+                    Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), ex);
                 }
             }
         }

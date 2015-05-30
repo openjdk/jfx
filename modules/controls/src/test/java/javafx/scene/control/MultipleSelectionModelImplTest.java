@@ -25,6 +25,7 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.scene.control.infrastructure.ControlTestUtils;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -1170,22 +1171,15 @@ public class MultipleSelectionModelImplTest {
     }
 
     @Test public void test_rt40804() {
-        final Thread.UncaughtExceptionHandler exceptionHandler = Thread.currentThread().getUncaughtExceptionHandler();
-        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> {
-            e.printStackTrace();
-            fail("We don't expect any exceptions in this test!");
-        });
-
         StageLoader sl = new StageLoader(currentControl);
         model.setSelectionMode(SelectionMode.MULTIPLE);
         model.select(0);
         model.select(1);
         model.clearSelection();
-        model.select(3); // this is where the test failed
+        ControlTestUtils.runWithExceptionHandler(() -> {
+            model.select(3); // this is where the test failed
+        });
 
         sl.dispose();
-
-        // reset the exception handler
-        Thread.currentThread().setUncaughtExceptionHandler(exceptionHandler);
     }
 }

@@ -67,6 +67,7 @@ public abstract class ChartTestBase {
         stage = new Stage();
         stage.setScene(scene);
         stage.show();
+        toolkit.setAnimationTime(0);
         pulse();
     }
     

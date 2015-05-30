@@ -691,7 +691,7 @@ public class StubToolkit extends Toolkit {
             try {
                 animationRunnable.run();
             } catch (Throwable t) {
-                t.printStackTrace();
+                Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), t);
             }
         }
     }

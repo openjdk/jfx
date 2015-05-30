@@ -26,6 +26,7 @@
 package javafx.scene.chart;
 
 
+import com.sun.javafx.scene.control.infrastructure.ControlTestUtils;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
@@ -429,35 +430,18 @@ public class StackedAreaChartTest extends XYChartTestBase {
         assertEquals(15, yAxis.dataMaxValue, 1e-100);
     }
     
-    boolean writeWasCalled = false;
     @Test
     public void testDataWithoutSymbolsAddWithAnimation_rt_39353() {
         startApp();
+        ac.getData().addAll(series1);
         ac.setAnimated(true);
         ac.setCreateSymbols(false);
-        ac.getData().addAll(series1);
         series1.getData().add(new XYChart.Data(40d,10d));
-        final PrintStream defaultErrorStream = System.err;
-        final PrintStream errChecker = new PrintStream(new OutputStream() {
-            @Override
-            public void write(int b) throws IOException {
-                writeWasCalled = true;
-            }
+        ControlTestUtils.runWithExceptionHandler(() -> {
+            toolkit.setAnimationTime(0);
+            // check remove just in case
+            series1.getData().remove(0);
+            toolkit.setAnimationTime(800);
         });
-        try {
-            System.setErr(errChecker);
-        } catch (SecurityException ex) {
-            // ignore
-        }
-        toolkit.setAnimationTime(0);
-        // check remove just in case
-        series1.getData().remove(0);
-        toolkit.setAnimationTime(800);
-        try {
-            System.setErr(defaultErrorStream);
-        } catch (SecurityException ex) {
-            // ignore
-        }
-        assertTrue(!writeWasCalled);
     }
 }

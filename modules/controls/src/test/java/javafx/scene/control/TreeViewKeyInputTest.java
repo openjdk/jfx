@@ -35,6 +35,7 @@ import java.util.List;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.util.Utils;
 import com.sun.javafx.scene.control.behavior.TreeViewAnchorRetriever;
+import com.sun.javafx.scene.control.infrastructure.ControlTestUtils;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import com.sun.javafx.scene.control.infrastructure.StageLoader;
@@ -2192,11 +2193,6 @@ public class TreeViewKeyInputTest {
     }
 
     @Test public void test_rt36800() {
-        // get the current exception handler before replacing with our own,
-        // as ListListenerHelp intercepts the exception otherwise
-        final Thread.UncaughtExceptionHandler exceptionHandler = Thread.currentThread().getUncaughtExceptionHandler();
-        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> fail("We don't expect any exceptions in this test!"));
-
         final int items = 10;
         root.getChildren().clear();
         root.setExpanded(true);
@@ -2216,7 +2212,10 @@ public class TreeViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // 2
         keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // 1
         keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // 0
-        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // bug time?
+
+        ControlTestUtils.runWithExceptionHandler(() -> {
+            keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // bug time?
+        });
 
         assertEquals(0, getAnchor());
         assertTrue(fm.isFocused(0));
@@ -2226,9 +2225,6 @@ public class TreeViewKeyInputTest {
         assertFalse(sm.isSelected(3));
         assertFalse(sm.isSelected(4));
         assertFalse(sm.isSelected(5));
-
-        // reset the exception handler
-        Thread.currentThread().setUncaughtExceptionHandler(exceptionHandler);
     }
 
     @Test public void test_rt_37130_pageUpAtTop() {
