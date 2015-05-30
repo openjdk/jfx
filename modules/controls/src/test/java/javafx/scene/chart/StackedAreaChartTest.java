@@ -25,23 +25,15 @@
 
 package javafx.scene.chart;
 
-
 import com.sun.javafx.scene.control.infrastructure.ControlTestUtils;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PrintStream;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import javafx.collections.*;
-
-
-import javafx.scene.Node;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.scene.Group;
-import javafx.scene.shape.*;
-import static org.junit.Assert.assertTrue;
-
+import javafx.scene.Node;
+import javafx.scene.shape.Path;
+import static org.junit.Assert.assertEquals;
 import org.junit.Ignore;
-
+import org.junit.Test;
 
 public class StackedAreaChartTest extends XYChartTestBase {
     StackedAreaChart<Number,Number> ac;
@@ -106,20 +98,52 @@ public class StackedAreaChartTest extends XYChartTestBase {
         assertEquals("L219.0 58.0 L263.0 173.0 L438.0 173.0 L700.0 289.0 ", sb.toString());
     
     }
-    
+
     @Test
     public void testSeriesRemove() {
         startApp();
         ac.getData().addAll(series1);
         pulse();
-        if (!ac.getData().isEmpty()) {
-            ac.getData().remove(0);
-            pulse();
-            StringBuffer sb = getSeriesLineFromPlot();
-            assertEquals(sb.toString(), "");
-        }
+        // 5 symbols and 1 area group
+        assertEquals(6, ac.getPlotChildren().size());
+        ac.getData().remove(0);
+        pulse();
+        assertEquals(0, ac.getPlotChildren().size());
     }
-    
+
+    @Test
+    public void testSeriesRemoveWithoutSymbols() {
+        startApp();
+        ac.setCreateSymbols(false);
+        ac.getData().addAll(series1);
+        pulse();
+        // 1 area group
+        assertEquals(1, ac.getPlotChildren().size());
+        ac.getData().remove(0);
+        pulse();
+        assertEquals(0, ac.getPlotChildren().size());
+    }
+
+    @Test
+    public void testSeriesRemoveWithoutSymbolsAnimated_rt_22124() {
+        startApp();
+        ac.setCreateSymbols(false);
+        ac.getData().addAll(series1);
+        pulse();
+        // 1 area group
+        assertEquals(1, ac.getPlotChildren().size());
+
+        ac.setAnimated(true);
+        ControlTestUtils.runWithExceptionHandler(() -> {
+            ac.getData().remove(0);
+        });
+        toolkit.setAnimationTime(200);
+        assertEquals(1, ac.getPlotChildren().size());
+        assertEquals(0.5, ac.getPlotChildren().get(0).getOpacity(), 0.0);
+        toolkit.setAnimationTime(400);
+        assertEquals(0, ac.getPlotChildren().size());
+    }
+
     @Test @Ignore
     public void testDataItemRemove() {
         startApp();

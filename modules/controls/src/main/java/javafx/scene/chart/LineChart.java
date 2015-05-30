@@ -448,28 +448,7 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
         // remove all symbol nodes
         seriesYMultiplierMap.remove(series);
         if (shouldAnimate()) {
-            // create list of all nodes we need to fade out
-            final List<Node> nodes = new ArrayList<Node>();
-            nodes.add(series.getNode());
-            if (getCreateSymbols()) { // RT-22124 
-                // done need to fade the symbols if createSymbols is false
-                for (Data<X,Y> d: series.getData()) nodes.add(d.getNode());
-            }
-            // fade out old and symbols
-            KeyValue[] startValues = new KeyValue[nodes.size()];
-            KeyValue[] endValues = new KeyValue[nodes.size()];
-            for (int j=0; j < nodes.size(); j++) {
-                startValues[j]   = new KeyValue(nodes.get(j).opacityProperty(),1);
-                endValues[j]       = new KeyValue(nodes.get(j).opacityProperty(),0);
-            }
-            seriesRemoveTimeline = new Timeline();
-            seriesRemoveTimeline.getKeyFrames().addAll(
-                new KeyFrame(Duration.ZERO,startValues),
-                new KeyFrame(Duration.millis(900), actionEvent -> {
-                    getPlotChildren().removeAll(nodes);
-                    removeSeriesFromDisplay(series);
-                },endValues)
-            );
+            seriesRemoveTimeline = new Timeline(createSeriesRemoveTimeLine(series, 900));
             seriesRemoveTimeline.play();
         } else {
             getPlotChildren().remove(series.getNode());

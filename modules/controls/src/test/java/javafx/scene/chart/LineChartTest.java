@@ -25,31 +25,16 @@
 
 package javafx.scene.chart;
 
-/**
- *
- * @author paru
- */
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import javafx.collections.*;
-
-import com.sun.javafx.pgstub.StubToolkit;
-import com.sun.javafx.tk.Toolkit;
-
+import com.sun.javafx.scene.control.infrastructure.ControlTestUtils;
+import javafx.collections.ObservableList;
 import javafx.scene.Node;
-import javafx.scene.Scene;
-import javafx.scene.Group;
-import javafx.stage.Stage;
-import javafx.scene.shape.*;
-
+import javafx.scene.shape.Path;
+import static org.junit.Assert.assertEquals;
 import org.junit.Ignore;
-
+import org.junit.Test;
 
 public class LineChartTest extends XYChartTestBase {
 
-    private Scene scene;
-    private StubToolkit toolkit;
-    private Stage stage;
     LineChart<Number,Number> lineChart;
     final XYChart.Series<Number, Number> series1 = new XYChart.Series<Number, Number>();
     
@@ -81,38 +66,69 @@ public class LineChartTest extends XYChartTestBase {
         }
         return sb;
     }
-    
-     @Test
-    public void testSeriesRemoveWithCreateSymbolsFalse() {
+
+    @Test
+    public void testSeriesRemove() {
         startApp();
         lineChart.getData().addAll(series1);
         pulse();
-        lineChart.setCreateSymbols(false);
-        System.out.println("Line Path = "+getSeriesLineFromPlot());
-        if (!lineChart.getData().isEmpty()) {
-            lineChart.getData().remove(0);
-            pulse();
-            StringBuffer sb = getSeriesLineFromPlot();
-            assertEquals(sb.toString(), "");
-        }
+        // 5 symbols and 1 line node
+        assertEquals(6, lineChart.getPlotChildren().size());
+        lineChart.getData().remove(0);
+        pulse();
+        assertEquals(0, lineChart.getPlotChildren().size());
     }
-        
-     @Test public void testCreateSymbols() {
-         startApp();
-         lineChart.setCreateSymbols(false);
-         pulse();
-         lineChart.getData().addAll(series1);
-         pulse();
-         assertEquals(0, countSymbols(lineChart, "chart-line-symbol"));
-         
-         lineChart.getData().clear();
-         pulse();
-         lineChart.setCreateSymbols(true);
-         pulse();
-         lineChart.getData().addAll(series1);
-         assertEquals(5, countSymbols(lineChart, "chart-line-symbol"));
-     }
-     
+
+    @Test
+    public void testSeriesRemoveWithoutSymbols() {
+        startApp();
+        lineChart.setCreateSymbols(false);
+        lineChart.getData().addAll(series1);
+        pulse();
+        // 1 line node
+        assertEquals(1, lineChart.getPlotChildren().size());
+        lineChart.getData().remove(0);
+        pulse();
+        assertEquals(0, lineChart.getPlotChildren().size());
+    }
+
+    @Test
+    public void testSeriesRemoveWithoutSymbolsAnimated_rt_22124() {
+        startApp();
+        lineChart.setCreateSymbols(false);
+        lineChart.getData().addAll(series1);
+        pulse();
+        // 1 line node
+        assertEquals(1, lineChart.getPlotChildren().size());
+
+        lineChart.setAnimated(true);
+        ControlTestUtils.runWithExceptionHandler(() -> {
+            lineChart.getData().remove(0);
+        });
+        toolkit.setAnimationTime(450);
+        assertEquals(1, lineChart.getPlotChildren().size());
+        assertEquals(0.5, lineChart.getPlotChildren().get(0).getOpacity(), 0.0);
+        toolkit.setAnimationTime(900);
+        assertEquals(0, lineChart.getPlotChildren().size());
+    }
+
+    @Test
+    public void testCreateSymbols() {
+        startApp();
+        lineChart.setCreateSymbols(false);
+        pulse();
+        lineChart.getData().addAll(series1);
+        pulse();
+        assertEquals(0, countSymbols(lineChart, "chart-line-symbol"));
+
+        lineChart.getData().clear();
+        pulse();
+        lineChart.setCreateSymbols(true);
+        pulse();
+        lineChart.getData().addAll(series1);
+        assertEquals(5, countSymbols(lineChart, "chart-line-symbol"));
+    }
+
     @Test
     public void testDataItemAdd() {
         startApp();

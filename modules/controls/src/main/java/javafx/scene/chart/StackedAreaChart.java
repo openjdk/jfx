@@ -389,37 +389,8 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
         seriesYMultiplierMap.remove(series);
         // remove all symbol nodes
         if (shouldAnimate()) {
-            // create list of all nodes we need to fade out
-            final List<Node> nodes = new ArrayList<Node>();
-            nodes.add(series.getNode());
-            for (Data<X,Y> d: series.getData()) nodes.add(d.getNode());
-            // fade out old and symbols
-            if (getCreateSymbols()) {
-                KeyValue[] startValues = new KeyValue[nodes.size()];
-                KeyValue[] endValues = new KeyValue[nodes.size()];
-                for (int j=0; j < nodes.size(); j++) {
-                    startValues[j]   = new KeyValue(nodes.get(j).opacityProperty(),1);
-                    endValues[j]       = new KeyValue(nodes.get(j).opacityProperty(),0);
-                }
-                Timeline tl = new Timeline();
-                tl.getKeyFrames().addAll(
-                    new KeyFrame(Duration.ZERO,startValues),
-                    new KeyFrame(Duration.millis(400), actionEvent -> {
-                        getPlotChildren().removeAll(nodes);
-                        removeSeriesFromDisplay(series);
-                    },endValues)
-                );
-                tl.play();
-            } else {
-                Timeline tl = new Timeline();
-                tl.getKeyFrames().addAll(
-                    new KeyFrame(Duration.millis(400), actionEvent -> {
-                        getPlotChildren().removeAll(nodes);
-                        removeSeriesFromDisplay(series);
-                    })
-                );
-                tl.play();                
-            }
+            Timeline tl = new Timeline(createSeriesRemoveTimeLine(series, 400));
+            tl.play();
         } else {
             getPlotChildren().remove(series.getNode());
             for (Data<X,Y> d:series.getData()) getPlotChildren().remove(d.getNode());

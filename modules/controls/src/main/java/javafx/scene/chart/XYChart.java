@@ -925,6 +925,37 @@ public abstract class XYChart<X,Y> extends Chart {
     }
 
     /**
+     * Creates an array of KeyFrames for fading out nodes representing a series
+     *
+     * @param series The series to remove
+     * @param fadeOutTime Time to fade out, in milliseconds
+     * @return array of two KeyFrames from zero to fadeOutTime
+     */
+    final KeyFrame[] createSeriesRemoveTimeLine(Series<X, Y> series, long fadeOutTime) {
+        final List<Node> nodes = new ArrayList<>();
+        nodes.add(series.getNode());
+        for (Data<X, Y> d : series.getData()) {
+            if (d.getNode() != null) {
+                nodes.add(d.getNode());
+            }
+        }
+        // fade out series node and symbols
+        KeyValue[] startValues = new KeyValue[nodes.size()];
+        KeyValue[] endValues = new KeyValue[nodes.size()];
+        for (int j = 0; j < nodes.size(); j++) {
+            startValues[j] = new KeyValue(nodes.get(j).opacityProperty(), 1);
+            endValues[j] = new KeyValue(nodes.get(j).opacityProperty(), 0);
+        }
+        return new KeyFrame[] {
+            new KeyFrame(Duration.ZERO, startValues),
+            new KeyFrame(Duration.millis(fadeOutTime), actionEvent -> {
+                getPlotChildren().removeAll(nodes);
+                removeSeriesFromDisplay(series);
+            }, endValues)
+        };
+    }
+
+    /**
      * The current displayed data value plotted on the X axis. This may be the same as xValue or different. It is
      * used by XYChart to animate the xValue from the old value to the new value. This is what you should plot
      * in any custom XYChart implementations. Some XYChart chart implementations such as LineChart also use this
