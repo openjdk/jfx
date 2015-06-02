@@ -240,8 +240,8 @@ public class IosImageLoader extends ImageLoaderImpl {
                 null, // a palette index to be used as transparency
                 delayTime == 0 ? null : delayTime, // the amount of time to pause at the current image (milliseconds).
                 nImages > 1 ? loopCount : null, // number of loops
-                inWidth, // source width
-                inHeight, // source height
+                width, // image width
+                height, // image height
                 null, // image left offset
                 null, // image top offset
                 null); // disposal method

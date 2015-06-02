@@ -295,13 +295,6 @@ public final class PNGImageLoader2 extends ImageLoaderImpl {
     public void dispose() {
     }
 
-    private ImageMetadata updateMetadata() {
-        ImageMetadata metaData = new ImageMetadata(null, true,
-                null, null, null, null, null, width, height, null, null, null);
-        updateImageMetadata(metaData);
-        return metaData;
-    }
-
     private ImageStorage.ImageType getType() {
         switch (colorType) {
             case PNG_COLOR_GRAY:
@@ -647,9 +640,16 @@ public final class PNGImageLoader2 extends ImageLoaderImpl {
             return null;
         }
 
+        int[] outWH = ImageTools.computeDimensions(width, height, rWidth, rHeight, preserveAspectRatio);
+        rWidth = outWH[0];
+        rHeight = outWH[1];
+        
+        ImageMetadata metaData = new ImageMetadata(null, true,
+                null, null, null, null, null, rWidth, rHeight, null, null, null);
+        updateImageMetadata(metaData);
+
         int bpp = bpp();
         ByteBuffer bb = ByteBuffer.allocate(bpp * width * height);
-        ImageMetadata metadata = updateMetadata();
 
         PNGIDATChunkInputStream iDat = new PNGIDATChunkInputStream(stream, dataSize);
         Inflater inf = new Inflater();
@@ -666,31 +666,13 @@ public final class PNGImageLoader2 extends ImageLoaderImpl {
         }
 
         ImageFrame imgPNG = colorType == PNG_COLOR_PALETTE
-                ? decodePalette(bb.array(), metadata)
-                : new ImageFrame(getType(), bb, width, height, bpp * width, palette, metadata);
+                ? decodePalette(bb.array(), metaData)
+                : new ImageFrame(getType(), bb, width, height, bpp * width, palette, metaData);
 
-        // need remove scaler form loader
-        int[] outWH = ImageTools.computeDimensions(width, height, rWidth, rHeight, preserveAspectRatio);
-
-        if (width != outWH[0] || height != outWH[1]) {
-            imgPNG = scaleImage(imgPNG, outWH[0], outWH[1], smooth);
+        if (width != rWidth || height != rHeight) {
+            imgPNG = ImageTools.scaleImageFrame(imgPNG, rWidth, rHeight, smooth);
         }
 
         return imgPNG;
-    }
-
-    private ImageFrame scaleImage(ImageFrame imgPNG, int rWidth, int rHeight, boolean smooth) {
-        byte image[] = ((ByteBuffer) imgPNG.getImageData()).array();
-        int bpp = ImageStorage.getNumBands(imgPNG.getImageType());
-
-        PushbroomScaler scaler = ScalerFactory.createScaler(width, height, bpp,
-                rWidth, rHeight, smooth);
-
-        for (int y = 0; y != height; ++y) {
-            scaler.putSourceScanline(image, y * width * bpp);
-        }
-
-        return new ImageFrame(imgPNG.getImageType(), scaler.getDestination(),
-                rWidth, rHeight, rWidth * bpp, null, imgPNG.getMetadata());
     }
 }
