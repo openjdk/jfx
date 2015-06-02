@@ -274,7 +274,8 @@ public final class UIClientImpl implements UIClient {
             //Image need to be created by target request only.
             //QuantumClipboard.putContent have to be rewritten in Glass manner
             //with postponed data requests (DelayedCallback data object).
-            Object platformImage = image.getPlatformImage();
+            Object platformImage = image.getWidth() > 0 && image.getHeight() > 0 ?
+                    image.getPlatformImage() : null;
             if (platformImage != null) {
                 try {
                     File temp = File.createTempFile("jfx", ".png");
