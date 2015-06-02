@@ -246,7 +246,7 @@ public final class QuantumToolkit extends Toolkit {
      *                            that allows the system to perform some startup
      *                            functionality after the toolkit has been initialized.
      */
-    @Override public void startup(final Runnable userStartupRunnable) {
+    @Override public void startup(final String name, final Runnable userStartupRunnable) {
         // Save the context class loader of the launcher thread
         ccl = Thread.currentThread().getContextClassLoader();
 
@@ -254,7 +254,7 @@ public final class QuantumToolkit extends Toolkit {
             this.userRunnable = userStartupRunnable;
 
             // Ensure that the toolkit can only be started here
-            Application.run(() -> runToolkit());
+            Application.run(name, () -> runToolkit());
         } catch (RuntimeException ex) {
             if (verbose) {
                 ex.printStackTrace();

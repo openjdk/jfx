@@ -60,7 +60,8 @@ import javafx.stage.Stage;
 public class StringBindingApp extends Application {
 
     public Parent createContent() {
-        final SimpleDateFormat format = new SimpleDateFormat("mm/dd/yyyy");
+        final SimpleDateFormat format = new SimpleDateFormat("MM/dd/yyyy");
+        format.setLenient(false);
         final TextField dateField = new TextField();
         dateField.setPromptText("Enter a birth date");
         dateField.setMaxHeight(TextField.USE_PREF_SIZE);
@@ -83,15 +84,18 @@ public class StringBindingApp extends Application {
                     Date today = new Date();
                     Calendar c2 = Calendar.getInstance();
                     c2.setTime(today);
-
+                    
                     if (c.get(Calendar.DAY_OF_YEAR) == c2.get(Calendar.DAY_OF_YEAR) - 1
                             && c.get(Calendar.YEAR) == c2.get(Calendar.YEAR)) {
                         return "You were born yesterday";
+                    } else if (c.get(Calendar.DAY_OF_YEAR) == c2.get(Calendar.DAY_OF_YEAR)
+                               && c.get(Calendar.YEAR) == c2.get(Calendar.YEAR)) {
+                        return "You were born today";
                     } else {
                         return "You were born " + format.format(date);
                     }
                 } catch (Exception e) {
-                    return "Enter a valid birth date (mm/dd/yyyy)";
+                    return "Enter your valid birth date (mm/dd/yyyy)";
                 }
             }
         });

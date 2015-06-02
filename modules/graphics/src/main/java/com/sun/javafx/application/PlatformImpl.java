@@ -87,6 +87,7 @@ public class PlatformImpl {
     private static Boolean hasPointer;
     private static boolean isThreadMerged = false;
     private static BooleanProperty accessibilityActive = new SimpleBooleanProperty();
+    private static String startupApplicationName = null;
 
     /**
      * Set a flag indicating whether this application should show up in the
@@ -116,8 +117,18 @@ public class PlatformImpl {
      *
      * @param appClass the Application class.
      */
-    public static void setApplicationName(final Class appClass) {
+    public static void setApplicationClass(final Class appClass) {
         runLater(() -> com.sun.glass.ui.Application.GetApplication().setName(appClass.getName()));
+    }
+    
+    /*
+     * Some platforms like the Mac need the application prior to the running runLoop.
+     * Cache an initial value for them.
+     *
+     * @param appName the name of the started Application.
+     */
+    public static void setApplicationName(final String appName) {
+        startupApplicationName = appName;
     }
 
     /**
@@ -208,7 +219,7 @@ public class PlatformImpl {
         };
         Toolkit.getToolkit().addTkListener(toolkitListener);
 
-        Toolkit.getToolkit().startup(() -> {
+        Toolkit.getToolkit().startup(startupApplicationName, () -> {
             startupLatch.countDown();
             r.run();
         });

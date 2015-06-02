@@ -334,6 +334,7 @@ public class LauncherImpl {
             final String preloaderClassName, String[] args) {
 
         try {
+            PlatformImpl.setApplicationName(mainClassName);
             startToolkit();
         } catch (InterruptedException ex) {
             abort(ex, "Toolkit initialization error", mainClassName);
@@ -819,7 +820,7 @@ public class LauncherImpl {
                         app.set(c.newInstance());
                         // Set startup parameters
                         ParametersImpl.registerParameters(app.get(), new ParametersImpl(args));
-                        PlatformImpl.setApplicationName(appClass);
+                        PlatformImpl.setApplicationClass(appClass);
                     } catch (Throwable t) {
                         System.err.println("Exception in Application constructor");
                         constructorError = t;
