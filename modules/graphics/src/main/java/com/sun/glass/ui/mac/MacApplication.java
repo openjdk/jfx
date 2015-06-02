@@ -180,28 +180,6 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     @Override public void installDefaultMenus(MenuBar menubar) {
         installAppleMenu(menubar);
     }
-    
-    @Override public void setName(String name) {
-        if (_supportsSystemMenu()) {
-            /* 
-             * If JavaFX has control over the system menu, which stems from
-             * JavaFX / Glass not being embedded in AWT, SWT or elsewhere, 
-             * then assert JavaFX name as the dock and system menu name
-             */
-            try {
-                /* LauncherImpl path */
-                Class cl = Class.forName(name);
-                _setApplicationName(cl.getSimpleName());
-            } catch (ClassNotFoundException cnfe) {
-                /* GlassApplication NSBundle path */
-                _setApplicationName(name);
-            }
-            
-        }
-        super.setName(name);
-    }
-    
-    private native void _setApplicationName(String nane);
 
 
     // FACTORY METHODS

@@ -152,7 +152,7 @@ public class StubToolkit extends Toolkit {
     }
 
     @Override
-    public void startup(String name, Runnable runnable) {
+    public void startup(Runnable runnable) {
         runnable.run();
     }
 

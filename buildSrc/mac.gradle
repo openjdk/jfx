@@ -136,18 +136,9 @@ MAC.glass.javahInclude = [
     "com/sun/glass/ui/mac/*"]
 MAC.glass.nativeSource = file("modules/graphics/src/main/native-glass/mac")
 MAC.glass.compiler = compiler
-MAC.glass.ccFlags = [
-        ccFlags,
-        "-iframework$MACOSX_SDK_PATH/System/Library/Frameworks",
-        "-F$MACOSX_SDK_PATH/System/Library/Frameworks/JavaVM.framework/Frameworks"
-        ].flatten()
+MAC.glass.ccFlags = [ccFlags].flatten()
 MAC.glass.linker = linker
-MAC.glass.linkFlags = [
-        linkFlags,
-        "-iframework$MACOSX_SDK_PATH/System/Library/Frameworks",
-        "-F$MACOSX_SDK_PATH/System/Library/Frameworks/JavaVM.framework/Frameworks",
-        "-framework", "JavaRuntimeSupport"
-        ].flatten()
+MAC.glass.linkFlags = [linkFlags].flatten()
 MAC.glass.lib = "glass"
 
 MAC.decora = [:]

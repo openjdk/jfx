@@ -147,7 +147,7 @@ final public class DummyToolkit extends Toolkit {
     }
 
     @Override
-    public void startup(String name, Runnable runnable) {
+    public void startup(Runnable runnable) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

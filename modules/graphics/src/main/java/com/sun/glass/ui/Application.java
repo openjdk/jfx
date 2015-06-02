@@ -139,20 +139,17 @@ public abstract class Application {
     }
     
     // May be called on any thread.
-    public static void run(final String mainApplicationName, final Runnable launchable) {
+    public static void run(final Runnable launchable) {
         if (application != null) {
             throw new IllegalStateException("Application is already running");
         }
-        
         application = PlatformFactory.getPlatformFactory().createApplication();
         // each concrete Application should set the app name using its own platform mechanism:
         // on Mac OS X - use NSBundle info, which can be overriden by -Xdock:name
         // on Windows - TODO
         // on Linux - TODO
-        
+        //application.name = DEFAULT_NAME; // default
         try {
-            application.name = mainApplicationName;
-            
             application.runLoop(() -> {
                 Screen.initScreens();
                 launchable.run();

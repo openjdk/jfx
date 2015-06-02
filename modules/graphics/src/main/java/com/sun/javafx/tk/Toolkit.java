@@ -530,7 +530,7 @@ public abstract class Toolkit {
     // Subclasses may override this to provide a platform-specific default
     public boolean getDefaultImageSmooth() { return true; }
 
-    public abstract void startup(String name, Runnable runnable);
+    public abstract void startup(Runnable runnable);
     public abstract void defer(Runnable runnable);
     public void exit() {
         fxUserThread = null;

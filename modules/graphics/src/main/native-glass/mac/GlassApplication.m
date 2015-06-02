@@ -28,8 +28,8 @@
 #import "com_sun_glass_ui_mac_MacApplication.h"
 #import "com_sun_glass_events_KeyEvent.h"
 
+
 #import "GlassMacros.h"
-#import "GlassAccessible.h"
 #import "GlassApplication.h"
 #import "GlassHelper.h"
 #import "GlassKey.h"
@@ -39,7 +39,6 @@
 #import "RemoteLayerSupport.h"
 
 #import "ProcessInfo.h"
-#import <JavaRuntimeSupport/JavaRuntimeSupport.h>
 #import <Security/SecRequirement.h>
 
 //#define VERBOSE
@@ -493,16 +492,6 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 
             if (appName == nil) {
                 appName = [mainBundle objectForInfoDictionaryKey:@"CFBundleName"];
-            }
-            
-            if (appName == nil) {
-                jclass appCls = [GlassHelper ClassForName:"com.sun.glass.ui.Application" withEnv:jEnv];
-                GLASS_CHECK_EXCEPTION(jEnv);
-                jfieldID getNameStringField = (*jEnv)->GetFieldID(jEnv, appCls, "name", "Ljava/lang/String;");
-                GLASS_CHECK_EXCEPTION(jEnv);
-                jstring name = (jstring)(*jEnv)->GetObjectField(jEnv, glassApp->jApplication, getNameStringField);
-                GLASS_CHECK_EXCEPTION(jEnv);
-                appName = jStringToNSString(jEnv, name);
             }
 
             if (appName) {
@@ -1135,36 +1124,15 @@ JNIEXPORT jstring JNICALL Java_com_sun_glass_ui_mac_MacApplication__1getDataDire
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
-        NSArray *paths = NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES);
-        if (paths && [paths count] > 0) {
-            string = (*env)->NewStringUTF(jEnv, [[paths lastObject] UTF8String]);
-        }
+    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES);
+    if (paths && [paths count] > 0) {
+        string = (*env)->NewStringUTF(jEnv, [[paths lastObject] UTF8String]);
+    }
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
     
     return string;
-}
-
-/*
- * Class:     com_sun_glass_ui_mac_MacApplication
- * Method:    _setApplicationName
- * Signature: (Ljava/lang/String;)V;
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1setApplicationName
-(JNIEnv * env, jobject japplication, jstring name)
-{
-    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
-    GLASS_POOL_ENTER;
-    {
-        NSString *appName = jStringToNSString(env, name);
-        LOG("Java_com_sun_glass_ui_mac_MacApplication__1setApplicationName: %s", [appName UTF8String]);
-        NSDictionary *registrationOptions = [NSMutableDictionary dictionaryWithObject:appName forKey:@"JRSAppNameKey"];
-        [JRSAppKitAWT registerAWTAppWithOptions:registrationOptions];
-    }
-    GLASS_POOL_EXIT;
-    GLASS_CHECK_EXCEPTION(env);
-    
 }
 
 /*
