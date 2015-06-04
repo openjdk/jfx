@@ -297,7 +297,7 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
                     int last = dataListSize - 1;
                     item.setXValue(series.getData().get(last).getXValue());
                     item.setYValue(series.getData().get(last).getYValue());
-                } else {
+                } else if (symbol != null) {
                     // fade out symbol
                     symbol.setOpacity(0);
                     FadeTransition ft = new FadeTransition(Duration.millis(500),symbol);
