@@ -310,7 +310,7 @@ public class Stylesheet {
         }
 
         URI sourceURI = source.toURI();
-        Stylesheet stylesheet = CSSParser.getInstance().parse(sourceURI.toURL());
+        Stylesheet stylesheet = new CSSParser().parse(sourceURI.toURL());
 
         // first write all the css binary data into the buffer and collect strings on way
         ByteArrayOutputStream baos = new ByteArrayOutputStream();

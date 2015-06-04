@@ -120,6 +120,16 @@ import java.util.jar.JarFile;
 
 final public class StyleManager {
 
+    /**
+     * Global lock object for the StyleManager. StyleManager is a singleton,
+     * which loads CSS stylesheets and manages style caches for all scenes.
+     * It needs to be thread-safe since a Node or Scene can be constructed and
+     * load its stylesheets on an arbitrary thread, meaning that multiple Scenes
+     * can load or apply their stylesheets concurrently. The global lock is used
+     * to serialize access to the various state in the StyleManager.
+     */
+    private static final Object styleLock = new Object();
+
     private static PlatformLogger LOGGER;
     private static PlatformLogger getLogger() {
         if (LOGGER == null) {
@@ -174,16 +184,18 @@ final public class StyleManager {
 
         if (root == null) return null;
 
-        CacheContainer container = cacheContainerMap.get(root);
-        if (container == null) {
-            container = new CacheContainer();
-            cacheContainerMap.put(root, container);
+        synchronized (styleLock) {
+            CacheContainer container = cacheContainerMap.get(root);
+            if (container == null) {
+                container = new CacheContainer();
+                cacheContainerMap.put(root, container);
+            }
+
+            return container;
         }
-
-        return container;
-
     }
-    /** 
+
+    /**
      * StyleHelper uses this cache but it lives here so it can be cleared
      * when style-sheets change.
      */
@@ -203,11 +215,11 @@ final public class StyleManager {
 
         return sharedCache;
     }
-    
+
     public StyleMap getStyleMap(Styleable styleable, SubScene subScene, int smapId) {
 
         if (smapId == -1) return StyleMap.EMPTY_MAP;
-        
+
         CacheContainer container = getCacheContainer(styleable, subScene);
         if (container == null) return StyleMap.EMPTY_MAP;
 
@@ -420,52 +432,53 @@ final public class StyleManager {
 
         forget(scene.getRoot());
 
-        //
-        // if this scene has user-agent stylesheets, clean up the userAgentStylesheetContainers list
-        //
-        String sceneUserAgentStylesheet = null;
-        if ((scene.getUserAgentStylesheet() != null) &&
-                (!(sceneUserAgentStylesheet = scene.getUserAgentStylesheet().trim()).isEmpty())) {
+        synchronized (styleLock) {
+            //
+            // if this scene has user-agent stylesheets, clean up the userAgentStylesheetContainers list
+            //
+            String sceneUserAgentStylesheet = null;
+            if ((scene.getUserAgentStylesheet() != null) &&
+                    (!(sceneUserAgentStylesheet = scene.getUserAgentStylesheet().trim()).isEmpty())) {
 
-            for(int n=userAgentStylesheetContainers.size()-1; 0<=n; --n) {
-                StylesheetContainer container = userAgentStylesheetContainers.get(n);
-                if (sceneUserAgentStylesheet.equals(container.fname)) {
-                    container.parentUsers.remove(scene.getRoot());
-                    if (container.parentUsers.list.size() == 0) {
-                        userAgentStylesheetContainers.remove(n);
+                for(int n=userAgentStylesheetContainers.size()-1; 0<=n; --n) {
+                    StylesheetContainer container = userAgentStylesheetContainers.get(n);
+                    if (sceneUserAgentStylesheet.equals(container.fname)) {
+                        container.parentUsers.remove(scene.getRoot());
+                        if (container.parentUsers.list.size() == 0) {
+                            userAgentStylesheetContainers.remove(n);
+                        }
                     }
                 }
             }
-        }
 
-        //
-        // remove any parents belonging to this scene from the stylesheetContainerMap
-        //
-        Set<Entry<String,StylesheetContainer>> stylesheetContainers = stylesheetContainerMap.entrySet();
-        Iterator<Entry<String,StylesheetContainer>> iter = stylesheetContainers.iterator();
+            //
+            // remove any parents belonging to this scene from the stylesheetContainerMap
+            //
+            Set<Entry<String,StylesheetContainer>> stylesheetContainers = stylesheetContainerMap.entrySet();
+            Iterator<Entry<String,StylesheetContainer>> iter = stylesheetContainers.iterator();
 
-        while(iter.hasNext()) {
+            while(iter.hasNext()) {
 
-            Entry<String,StylesheetContainer> entry = iter.next();
-            StylesheetContainer container = entry.getValue();
+                Entry<String,StylesheetContainer> entry = iter.next();
+                StylesheetContainer container = entry.getValue();
 
-            Iterator<Reference<Parent>> parentIter = container.parentUsers.list.iterator();
-            while (parentIter.hasNext()) {
+                Iterator<Reference<Parent>> parentIter = container.parentUsers.list.iterator();
+                while (parentIter.hasNext()) {
 
-                Reference<Parent> ref = parentIter.next();
-                Parent _parent = ref.get();
+                    Reference<Parent> ref = parentIter.next();
+                    Parent _parent = ref.get();
 
-                if (_parent == null || _parent.getScene() == scene || _parent.getScene() == null) {
-                    ref.clear();
-                    parentIter.remove();
+                    if (_parent == null || _parent.getScene() == scene || _parent.getScene() == null) {
+                        ref.clear();
+                        parentIter.remove();
+                    }
+                }
+
+                if (container.parentUsers.list.isEmpty()) {
+                    iter.remove();
                 }
             }
-
-            if (container.parentUsers.list.isEmpty()) {
-                iter.remove();
-            }
         }
-
     }
 
     /**
@@ -473,32 +486,33 @@ final public class StyleManager {
      */
     public void stylesheetsChanged(Scene scene, Change<String> c) {
 
-        // Clear the cache so the cache will be rebuilt.
-        Set<Entry<Parent,CacheContainer>> entrySet = cacheContainerMap.entrySet();
-        for(Entry<Parent,CacheContainer> entry : entrySet) {
-            Parent parent = entry.getKey();
-            CacheContainer container = entry.getValue();
-            if (parent.getScene() == scene) {
-                container.clearCache();
+        synchronized (styleLock) {
+            // Clear the cache so the cache will be rebuilt.
+            Set<Entry<Parent,CacheContainer>> entrySet = cacheContainerMap.entrySet();
+            for(Entry<Parent,CacheContainer> entry : entrySet) {
+                Parent parent = entry.getKey();
+                CacheContainer container = entry.getValue();
+                if (parent.getScene() == scene) {
+                    container.clearCache();
+                }
+
             }
 
-        }
+            c.reset();
+            while(c.next()) {
+                if (c.wasRemoved()) {
+                    for (String fname : c.getRemoved()) {
+                        stylesheetRemoved(scene, fname);
 
-        c.reset();
-        while(c.next()) {
-            if (c.wasRemoved()) {
-                for (String fname : c.getRemoved()) {
-                    stylesheetRemoved(scene, fname);
+                        StylesheetContainer stylesheetContainer = stylesheetContainerMap.get(fname);
+                        if (stylesheetContainer != null) {
+                            stylesheetContainer.invalidateChecksum();
+                        }
 
-                    StylesheetContainer stylesheetContainer = stylesheetContainerMap.get(fname);
-                    if (stylesheetContainer != null) {
-                        stylesheetContainer.invalidateChecksum();
                     }
-
                 }
             }
         }
-
     }
 
     private void stylesheetRemoved(Scene scene, String fname) {
@@ -513,63 +527,67 @@ final public class StyleManager {
 
         if (parent == null) return;
 
-        // RT-34863 - clean up CSS cache when Parent is removed from scene-graph
-        Set<Entry<Parent, CacheContainer>> entrySet = cacheContainerMap.entrySet();
-        Iterator<Entry<Parent, CacheContainer>> iterator = entrySet.iterator();
-        while (iterator.hasNext()) {
-            Entry<Parent, CacheContainer> entry = iterator.next();
-            Parent key = entry.getKey();
-            CacheContainer container = entry.getValue();
-            if (parent == key) {
-                iterator.remove();
-                container.clearCache();
-            }
-        }
-
-        final List<String> stylesheets = parent.getStylesheets();
-        if (stylesheets != null && !stylesheets.isEmpty()) {
-            for (String fname : stylesheets) {
-                stylesheetRemoved(parent, fname);
-            }
-        }
-
-        Iterator<Entry<String,StylesheetContainer>> containerIterator = stylesheetContainerMap.entrySet().iterator();
-        while (containerIterator.hasNext()) {
-            Entry<String,StylesheetContainer> entry = containerIterator.next();
-            StylesheetContainer container = entry.getValue();
-            container.parentUsers.remove(parent);
-            if (container.parentUsers.list.isEmpty()) {
-
-                containerIterator.remove();
-
-                if (container.selectorPartitioning != null) {
-                    container.selectorPartitioning.reset();
+        synchronized (styleLock) {
+            // RT-34863 - clean up CSS cache when Parent is removed from scene-graph
+            Set<Entry<Parent, CacheContainer>> entrySet = cacheContainerMap.entrySet();
+            Iterator<Entry<Parent, CacheContainer>> iterator = entrySet.iterator();
+            while (iterator.hasNext()) {
+                Entry<Parent, CacheContainer> entry = iterator.next();
+                Parent key = entry.getKey();
+                CacheContainer container = entry.getValue();
+                if (parent == key) {
+                    iterator.remove();
+                    container.clearCache();
                 }
-
-
-                // clean up image cache by removing images from the cache that
-                // might have come from this stylesheet
-                final String fname = container.fname;
-                cleanUpImageCache(fname);
             }
-        }
 
-        // Do not iterate over children since this method will be called on each from Parent#scenesChanged
+            final List<String> stylesheets = parent.getStylesheets();
+            if (stylesheets != null && !stylesheets.isEmpty()) {
+                for (String fname : stylesheets) {
+                    stylesheetRemoved(parent, fname);
+                }
+            }
+
+            Iterator<Entry<String,StylesheetContainer>> containerIterator = stylesheetContainerMap.entrySet().iterator();
+            while (containerIterator.hasNext()) {
+                Entry<String,StylesheetContainer> entry = containerIterator.next();
+                StylesheetContainer container = entry.getValue();
+                container.parentUsers.remove(parent);
+                if (container.parentUsers.list.isEmpty()) {
+
+                    containerIterator.remove();
+
+                    if (container.selectorPartitioning != null) {
+                        container.selectorPartitioning.reset();
+                    }
+
+
+                    // clean up image cache by removing images from the cache that
+                    // might have come from this stylesheet
+                    final String fname = container.fname;
+                    cleanUpImageCache(fname);
+                }
+            }
+
+            // Do not iterate over children since this method will be called on each from Parent#scenesChanged
+        }
     }
 
     /**
      * called from Parent's stylesheets property's onChanged method
      */
     public void stylesheetsChanged(Parent parent, Change<String> c) {
-        c.reset();
-        while(c.next()) {
-            if (c.wasRemoved()) {
-                for (String fname : c.getRemoved()) {
-                    stylesheetRemoved(parent, fname);
+        synchronized (styleLock) {
+            c.reset();
+            while(c.next()) {
+                if (c.wasRemoved()) {
+                    for (String fname : c.getRemoved()) {
+                        stylesheetRemoved(parent, fname);
 
-                    StylesheetContainer stylesheetContainer = stylesheetContainerMap.get(fname);
-                    if (stylesheetContainer != null) {
-                        stylesheetContainer.invalidateChecksum();
+                        StylesheetContainer stylesheetContainer = stylesheetContainerMap.get(fname);
+                        if (stylesheetContainer != null) {
+                            stylesheetContainer.invalidateChecksum();
+                        }
                     }
                 }
             }
@@ -578,14 +596,16 @@ final public class StyleManager {
 
     private void stylesheetRemoved(Parent parent, String fname) {
 
-        StylesheetContainer stylesheetContainer = stylesheetContainerMap.get(fname);
+        synchronized (styleLock) {
+            StylesheetContainer stylesheetContainer = stylesheetContainerMap.get(fname);
 
-        if (stylesheetContainer == null) return;
+            if (stylesheetContainer == null) return;
 
-        stylesheetContainer.parentUsers.remove(parent);
+            stylesheetContainer.parentUsers.remove(parent);
 
-        if (stylesheetContainer.parentUsers.list.isEmpty()) {
-            removeStylesheetContainer(stylesheetContainer);
+            if (stylesheetContainer.parentUsers.list.isEmpty()) {
+                removeStylesheetContainer(stylesheetContainer);
+            }
         }
     }
 
@@ -600,62 +620,64 @@ final public class StyleManager {
         if (subSceneRoot == null) return;
         forget(subSceneRoot);
 
-        //
-        // if this scene has user-agent stylesheets, clean up the userAgentStylesheetContainers list
-        //
-        String sceneUserAgentStylesheet = null;
-        if ((subScene.getUserAgentStylesheet() != null) &&
-                (!(sceneUserAgentStylesheet = subScene.getUserAgentStylesheet().trim()).isEmpty())) {
+        synchronized (styleLock) {
+            //
+            // if this scene has user-agent stylesheets, clean up the userAgentStylesheetContainers list
+            //
+            String sceneUserAgentStylesheet = null;
+            if ((subScene.getUserAgentStylesheet() != null) &&
+                    (!(sceneUserAgentStylesheet = subScene.getUserAgentStylesheet().trim()).isEmpty())) {
 
-            Iterator<StylesheetContainer> iterator = userAgentStylesheetContainers.iterator();
-            while(iterator.hasNext()) {
-                StylesheetContainer container = iterator.next();
-                if (sceneUserAgentStylesheet.equals(container.fname)) {
-                    container.parentUsers.remove(subScene.getRoot());
-                    if (container.parentUsers.list.size() == 0) {
-                        iterator.remove();
-                    }
-                }
-            }
-        }
-
-        //
-        // remove any parents belonging to this SubScene from the stylesheetContainerMap
-        //
-        // copy the list to avoid concurrent mod.
-        List<StylesheetContainer> stylesheetContainers = new ArrayList<>(stylesheetContainerMap.values());
-
-        Iterator<StylesheetContainer> iter = stylesheetContainers.iterator();
-
-        while(iter.hasNext()) {
-
-            StylesheetContainer container = iter.next();
-
-            Iterator<Reference<Parent>> parentIter = container.parentUsers.list.iterator();
-            while (parentIter.hasNext()) {
-
-                final Reference<Parent> ref = parentIter.next();
-                final Parent _parent = ref.get();
-
-                if (_parent != null) {
-                    // if this stylesheet refererent is a child of this subscene, nuke it.
-                    Parent p = _parent;
-                    while (p != null) {
-                        if (subSceneRoot == p.getParent()) {
-                            ref.clear();
-                            parentIter.remove();
-                            forget(_parent); // _parent, not p!
-                            break;
+                Iterator<StylesheetContainer> iterator = userAgentStylesheetContainers.iterator();
+                while(iterator.hasNext()) {
+                    StylesheetContainer container = iterator.next();
+                    if (sceneUserAgentStylesheet.equals(container.fname)) {
+                        container.parentUsers.remove(subScene.getRoot());
+                        if (container.parentUsers.list.size() == 0) {
+                            iterator.remove();
                         }
-                        p = p.getParent();
                     }
                 }
             }
 
-            // forget(_parent) will remove the container if the parentUser's list is empty
-            // if (container.parentUsers.list.isEmpty()) {
-            //    iter.remove();
-            // }
+            //
+            // remove any parents belonging to this SubScene from the stylesheetContainerMap
+            //
+            // copy the list to avoid concurrent mod.
+            List<StylesheetContainer> stylesheetContainers = new ArrayList<>(stylesheetContainerMap.values());
+
+            Iterator<StylesheetContainer> iter = stylesheetContainers.iterator();
+
+            while(iter.hasNext()) {
+
+                StylesheetContainer container = iter.next();
+
+                Iterator<Reference<Parent>> parentIter = container.parentUsers.list.iterator();
+                while (parentIter.hasNext()) {
+
+                    final Reference<Parent> ref = parentIter.next();
+                    final Parent _parent = ref.get();
+
+                    if (_parent != null) {
+                        // if this stylesheet refererent is a child of this subscene, nuke it.
+                        Parent p = _parent;
+                        while (p != null) {
+                            if (subSceneRoot == p.getParent()) {
+                                ref.clear();
+                                parentIter.remove();
+                                forget(_parent); // _parent, not p!
+                                break;
+                            }
+                            p = p.getParent();
+                        }
+                    }
+                }
+
+                // forget(_parent) will remove the container if the parentUser's list is empty
+                // if (container.parentUsers.list.isEmpty()) {
+                //    iter.remove();
+                // }
+            }
         }
 
     }
@@ -664,64 +686,65 @@ final public class StyleManager {
 
         if (stylesheetContainer == null) return;
 
-        final String fname = stylesheetContainer.fname;
+        synchronized (styleLock) {
+            final String fname = stylesheetContainer.fname;
 
-        stylesheetContainerMap.remove(fname);
+            stylesheetContainerMap.remove(fname);
 
-        if (stylesheetContainer.selectorPartitioning != null) {
-            stylesheetContainer.selectorPartitioning.reset();
-        }
-
-        // if container has no references, then remove it
-        for(Entry<Parent,CacheContainer> entry : cacheContainerMap.entrySet()) {
-
-            CacheContainer container = entry.getValue();
-            if (container == null || container.cacheMap == null || container.cacheMap.isEmpty()) {
-                continue;
+            if (stylesheetContainer.selectorPartitioning != null) {
+                stylesheetContainer.selectorPartitioning.reset();
             }
 
-            List<List<String>> entriesToRemove = new ArrayList<>();
+            // if container has no references, then remove it
+            for(Entry<Parent,CacheContainer> entry : cacheContainerMap.entrySet()) {
 
-            for (Entry<List<String>, Map<Key,Cache>> cacheMapEntry : container.cacheMap.entrySet()) {
-                List<String> cacheMapKey = cacheMapEntry.getKey();
-                if (cacheMapKey != null ? cacheMapKey.contains(fname) : fname == null) {
-                    entriesToRemove.add(cacheMapKey);
+                CacheContainer container = entry.getValue();
+                if (container == null || container.cacheMap == null || container.cacheMap.isEmpty()) {
+                    continue;
                 }
-            }
 
-            if (!entriesToRemove.isEmpty()) {
-                for (List<String> cacheMapKey : entriesToRemove) {
-                    Map<Key,Cache> cacheEntry = container.cacheMap.remove(cacheMapKey);
-                    if (cacheEntry != null) {
-                        cacheEntry.clear();
+                List<List<String>> entriesToRemove = new ArrayList<>();
+
+                for (Entry<List<String>, Map<Key,Cache>> cacheMapEntry : container.cacheMap.entrySet()) {
+                    List<String> cacheMapKey = cacheMapEntry.getKey();
+                    if (cacheMapKey != null ? cacheMapKey.contains(fname) : fname == null) {
+                        entriesToRemove.add(cacheMapKey);
+                    }
+                }
+
+                if (!entriesToRemove.isEmpty()) {
+                    for (List<String> cacheMapKey : entriesToRemove) {
+                        Map<Key,Cache> cacheEntry = container.cacheMap.remove(cacheMapKey);
+                        if (cacheEntry != null) {
+                            cacheEntry.clear();
+                        }
                     }
                 }
             }
-        }
 
-        // clean up image cache by removing images from the cache that
-        // might have come from this stylesheet
-        cleanUpImageCache(fname);
+            // clean up image cache by removing images from the cache that
+            // might have come from this stylesheet
+            cleanUpImageCache(fname);
 
-        final List<Reference<Parent>> parentList = stylesheetContainer.parentUsers.list;
+            final List<Reference<Parent>> parentList = stylesheetContainer.parentUsers.list;
 
-        for (int n=parentList.size()-1; 0<=n; --n) {
+            for (int n=parentList.size()-1; 0<=n; --n) {
 
-            final Reference<Parent> ref = parentList.remove(n);
-            final Parent parent = ref.get();
-            ref.clear();
-            if (parent == null || parent.getScene() == null) {
-                continue;
+                final Reference<Parent> ref = parentList.remove(n);
+                final Parent parent = ref.get();
+                ref.clear();
+                if (parent == null || parent.getScene() == null) {
+                    continue;
+                }
+
+                //
+                // tell parent it needs to reapply css
+                // No harm is done if parent is in a scene that has had
+                // impl_reapplyCSS called on the root.
+                //
+                parent.impl_reapplyCSS();
             }
-
-            //
-            // tell parent it needs to reapply css
-            // No harm is done if parent is in a scene that has had
-            // impl_reapplyCSS called on the root.
-            //
-            parent.impl_reapplyCSS();
         }
-
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -730,84 +753,88 @@ final public class StyleManager {
     //
     ////////////////////////////////////////////////////////////////////////////
 
-    final Map<String,Image> imageCache = new HashMap<String,Image>();
+    private final Map<String,Image> imageCache = new HashMap<String,Image>();
 
     public Image getCachedImage(String url) {
 
-        Image image = null;
-        if (imageCache.containsKey(url)) {
+        synchronized (styleLock) {
+            Image image = null;
+            if (imageCache.containsKey(url)) {
 
-            image = imageCache.get(url);
+                image = imageCache.get(url);
 
-        } else {
+            } else {
 
-            try {
+                try {
 
-                image = new Image(url);
+                    image = new Image(url);
 
-                // RT-31865
-                if (image.isError()) {
+                    // RT-31865
+                    if (image.isError()) {
 
-                    final PlatformLogger logger = getLogger();
-                    if (logger != null && logger.isLoggable(Level.WARNING)) {
-                        logger.warning("Error loading image: " + url);
+                        final PlatformLogger logger = getLogger();
+                        if (logger != null && logger.isLoggable(Level.WARNING)) {
+                            logger.warning("Error loading image: " + url);
+                        }
+
+                        image = null;
                     }
 
-                    image = null;
-                }
+                    imageCache.put(url, image);
 
-                imageCache.put(url, image);
+                } catch (IllegalArgumentException iae) {
+                    // url was empty!
+                    final PlatformLogger logger = getLogger();
+                    if (logger != null && logger.isLoggable(Level.WARNING)) {
+                        logger.warning(iae.getLocalizedMessage());
+                    }
 
-            } catch (IllegalArgumentException iae) {
-                // url was empty!
-                final PlatformLogger logger = getLogger();
-                if (logger != null && logger.isLoggable(Level.WARNING)) {
-                    logger.warning(iae.getLocalizedMessage());
-                }
-
-            } catch (NullPointerException npe) {
-                // url was null!
-                final PlatformLogger logger = getLogger();
-                if (logger != null && logger.isLoggable(Level.WARNING)) {
-                    logger.warning(npe.getLocalizedMessage());
+                } catch (NullPointerException npe) {
+                    // url was null!
+                    final PlatformLogger logger = getLogger();
+                    if (logger != null && logger.isLoggable(Level.WARNING)) {
+                        logger.warning(npe.getLocalizedMessage());
+                    }
                 }
             }
-        }
 
-        return image;
+            return image;
+        }
     }
 
     private void cleanUpImageCache(String imgFname) {
 
-        if (imgFname == null && imageCache.isEmpty()) return;
+        synchronized (styleLock) {
+            if (imgFname == null && imageCache.isEmpty()) return;
 
-        final String fname = imgFname.trim();
-        if (fname.isEmpty()) return;
+            final String fname = imgFname.trim();
+            if (fname.isEmpty()) return;
 
-        int len = fname.lastIndexOf('/');
-        final String path = (len > 0) ? fname.substring(0,len) : fname;
-        final int plen = path.length();
+            int len = fname.lastIndexOf('/');
+            final String path = (len > 0) ? fname.substring(0,len) : fname;
+            final int plen = path.length();
 
-        final String[] entriesToRemove = new String[imageCache.size()];
-        int count = 0;
+            final String[] entriesToRemove = new String[imageCache.size()];
+            int count = 0;
 
-        final Set<Entry<String, Image>> entrySet = imageCache.entrySet();
-        for(Entry<String, Image> entry : entrySet) {
+            final Set<Entry<String, Image>> entrySet = imageCache.entrySet();
+            for(Entry<String, Image> entry : entrySet) {
 
-            final String key = entry.getKey();
-            len = key.lastIndexOf('/');
-            final String kpath = (len > 0) ? key.substring(0, len) : key;
-            final int klen = kpath.length();
+                final String key = entry.getKey();
+                len = key.lastIndexOf('/');
+                final String kpath = (len > 0) ? key.substring(0, len) : key;
+                final int klen = kpath.length();
 
-            // if the longer path begins with the shorter path,
-            // then assume the image came from this path.
-            boolean match = (klen > plen) ? kpath.startsWith(path) : path.startsWith(kpath);
-            if (match) entriesToRemove[count++] = key;
+                // if the longer path begins with the shorter path,
+                // then assume the image came from this path.
+                boolean match = (klen > plen) ? kpath.startsWith(path) : path.startsWith(kpath);
+                if (match) entriesToRemove[count++] = key;
+            }
+
+            for (int n=0; n<count; n++) {
+                Image img = imageCache.remove(entriesToRemove[n]);
+            }
         }
-
-        for (int n=0; n<count; n++) {
-           Image img = imageCache.remove(entriesToRemove[n]);
-       }
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -1005,115 +1032,117 @@ final public class StyleManager {
 
     private static Stylesheet loadStylesheetUnPrivileged(final String fname) {
 
-        Boolean parse = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
+        synchronized (styleLock) {
+            Boolean parse = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
 
-            final String bss = System.getProperty("binary.css");
-            // binary.css is true by default.
-            // parse only if the file is not a .bss
-            // and binary.css is set to false
-            return (!fname.endsWith(".bss") && bss != null) ?
-                !Boolean.valueOf(bss) : Boolean.FALSE;
-        });
+                final String bss = System.getProperty("binary.css");
+                // binary.css is true by default.
+                // parse only if the file is not a .bss
+                // and binary.css is set to false
+                return (!fname.endsWith(".bss") && bss != null) ?
+                    !Boolean.valueOf(bss) : Boolean.FALSE;
+            });
 
-        try {
-            final String ext = (parse) ? (".css") : (".bss");
-            java.net.URL url = null;
-            Stylesheet stylesheet = null;
-            // check if url has extension, if not then just url as is and always parse as css text
-            if (!(fname.endsWith(".css") || fname.endsWith(".bss"))) {
-                url = getURL(fname);
-                parse = true;
-            } else {
-                final String name = fname.substring(0, fname.length() - 4);
+            try {
+                final String ext = (parse) ? (".css") : (".bss");
+                java.net.URL url = null;
+                Stylesheet stylesheet = null;
+                // check if url has extension, if not then just url as is and always parse as css text
+                if (!(fname.endsWith(".css") || fname.endsWith(".bss"))) {
+                    url = getURL(fname);
+                    parse = true;
+                } else {
+                    final String name = fname.substring(0, fname.length() - 4);
 
-                url = getURL(name+ext);
-                if (url == null && (parse = !parse)) {
-                    // If we failed to get the URL for the .bss file,
-                    // fall back to the .css file.
-                    // Note that 'parse' is toggled in the test.
-                    url = getURL(name+".css");
-                }
-
-                if ((url != null) && !parse) {
-
-                    try {
-                        // RT-36332: if loadBinary throws an IOException, make sure to try .css
-                        stylesheet = Stylesheet.loadBinary(url);
-                    } catch (IOException ioe) {
-                        stylesheet = null;
-                    }
-
-                    if (stylesheet == null && (parse = !parse)) {
-                        // If we failed to load the .bss file,
+                    url = getURL(name+ext);
+                    if (url == null && (parse = !parse)) {
+                        // If we failed to get the URL for the .bss file,
                         // fall back to the .css file.
                         // Note that 'parse' is toggled in the test.
-                        url = getURL(fname);
+                        url = getURL(name+".css");
                     }
-                }
-            }
 
-            // either we failed to load the .bss file, or parse
-            // was set to true.
-            if ((url != null) && parse) {
-                stylesheet = CSSParser.getInstance().parse(url);
-            }
+                    if ((url != null) && !parse) {
 
-            if (stylesheet == null) {
-                if (errors != null) {
-                    CssError error =
-                        new CssError(
-                            "Resource \""+fname+"\" not found."
-                        );
-                    errors.add(error);
-                }
-                if (getLogger().isLoggable(Level.WARNING)) {
-                    getLogger().warning(
-                        String.format("Resource \"%s\" not found.", fname)
-                    );
-                }
-            }
+                        try {
+                            // RT-36332: if loadBinary throws an IOException, make sure to try .css
+                            stylesheet = Stylesheet.loadBinary(url);
+                        } catch (IOException ioe) {
+                            stylesheet = null;
+                        }
 
-            // load any fonts from @font-face
-            if (stylesheet != null) {
-                faceLoop: for(FontFace fontFace: stylesheet.getFontFaces()) {
-                    for(FontFace.FontFaceSrc src: fontFace.getSources()) {
-                        if (src.getType() == FontFace.FontFaceSrcType.URL) {
-                            Font loadedFont = Font.loadFont(src.getSrc(),10);
-                            if (loadedFont == null) {
-                                getLogger().info("Could not load @font-face font [" + src.getSrc() + "]");
-                            }
-                            continue faceLoop;
+                        if (stylesheet == null && (parse = !parse)) {
+                            // If we failed to load the .bss file,
+                            // fall back to the .css file.
+                            // Note that 'parse' is toggled in the test.
+                            url = getURL(fname);
                         }
                     }
                 }
-            }
 
-            return stylesheet;
+                // either we failed to load the .bss file, or parse
+                // was set to true.
+                if ((url != null) && parse) {
+                    stylesheet = new CSSParser().parse(url);
+                }
 
-        } catch (FileNotFoundException fnfe) {
-            if (errors != null) {
-                CssError error =
-                    new CssError(
-                        "Stylesheet \""+fname+"\" not found."
-                    );
-                errors.add(error);
-            }
-            if (getLogger().isLoggable(Level.INFO)) {
-                getLogger().info("Could not find stylesheet: " + fname);//, fnfe);
-            }
-        } catch (IOException ioe) {
+                if (stylesheet == null) {
+                    if (errors != null) {
+                        CssError error =
+                            new CssError(
+                                "Resource \""+fname+"\" not found."
+                            );
+                        errors.add(error);
+                    }
+                    if (getLogger().isLoggable(Level.WARNING)) {
+                        getLogger().warning(
+                            String.format("Resource \"%s\" not found.", fname)
+                        );
+                    }
+                }
+
+                // load any fonts from @font-face
+                if (stylesheet != null) {
+                    faceLoop: for(FontFace fontFace: stylesheet.getFontFaces()) {
+                        for(FontFace.FontFaceSrc src: fontFace.getSources()) {
+                            if (src.getType() == FontFace.FontFaceSrcType.URL) {
+                                Font loadedFont = Font.loadFont(src.getSrc(),10);
+                                if (loadedFont == null) {
+                                    getLogger().info("Could not load @font-face font [" + src.getSrc() + "]");
+                                }
+                                continue faceLoop;
+                            }
+                        }
+                    }
+                }
+
+                return stylesheet;
+
+            } catch (FileNotFoundException fnfe) {
                 if (errors != null) {
                     CssError error =
                         new CssError(
-                            "Could not load stylesheet: " + fname
+                            "Stylesheet \""+fname+"\" not found."
                         );
                     errors.add(error);
                 }
-            if (getLogger().isLoggable(Level.INFO)) {
-                getLogger().info("Could not load stylesheet: " + fname);//, ioe);
+                if (getLogger().isLoggable(Level.INFO)) {
+                    getLogger().info("Could not find stylesheet: " + fname);//, fnfe);
+                }
+            } catch (IOException ioe) {
+                    if (errors != null) {
+                        CssError error =
+                            new CssError(
+                                "Could not load stylesheet: " + fname
+                            );
+                        errors.add(error);
+                    }
+                if (getLogger().isLoggable(Level.INFO)) {
+                    getLogger().info("Could not load stylesheet: " + fname);//, ioe);
+                }
             }
+            return null;
         }
-        return null;
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -1134,58 +1163,59 @@ final public class StyleManager {
 
         if (urls == null || urls.size() == 0) return;
 
-        // Avoid resetting user agent stylesheets if they haven't changed.
-        if (urls.size() == platformUserAgentStylesheetContainers.size()) {
-            boolean isSame = true;
-            for (int n=0, nMax=urls.size(); n < nMax && isSame; n++) {
+        synchronized (styleLock) {
+            // Avoid resetting user agent stylesheets if they haven't changed.
+            if (urls.size() == platformUserAgentStylesheetContainers.size()) {
+                boolean isSame = true;
+                for (int n=0, nMax=urls.size(); n < nMax && isSame; n++) {
+
+                    final String url = urls.get(n);
+                    final String fname = (url != null) ? url.trim() : null;
+
+                    if (fname == null || fname.isEmpty()) break;
+
+                    StylesheetContainer container = platformUserAgentStylesheetContainers.get(n);
+                    // assignment in this conditional is intentional!
+                    if(isSame = fname.equals(container.fname)) {
+                        // don't use fname in calculateCheckSum since it is just the key to
+                        // find the StylesheetContainer. Rather, use the URL of the
+                        // stylesheet that was already loaded. For example, we could have
+                        // fname = "com/sun/javafx/scene/control/skin/modena/modena.css, but
+                        // the stylesheet URL could be jar:file://some/path/!com/sun/javafx/scene/control/skin/modena/modena.bss
+                        String stylesheetUrl = container.stylesheet.getUrl();
+                        byte[] checksum = calculateCheckSum(stylesheetUrl);
+                        isSame = Arrays.equals(checksum, container.checksum);
+                    }
+                }
+                if (isSame) return;
+            }
+
+            boolean modified = false;
+
+            for (int n=0, nMax=urls.size(); n < nMax; n++) {
 
                 final String url = urls.get(n);
                 final String fname = (url != null) ? url.trim() : null;
 
-                if (fname == null || fname.isEmpty()) break;
+                if (fname == null || fname.isEmpty()) continue;
 
-                StylesheetContainer container = platformUserAgentStylesheetContainers.get(n);
-                // assignment in this conditional is intentional!
-                if(isSame = fname.equals(container.fname)) {
-                    // don't use fname in calculateCheckSum since it is just the key to
-                    // find the StylesheetContainer. Rather, use the URL of the
-                    // stylesheet that was already loaded. For example, we could have
-                    // fname = "com/sun/javafx/scene/control/skin/modena/modena.css, but
-                    // the stylesheet URL could be jar:file://some/path/!com/sun/javafx/scene/control/skin/modena/modena.bss
-                    String stylesheetUrl = container.stylesheet.getUrl();
-                    byte[] checksum = calculateCheckSum(stylesheetUrl);
-                    isSame = Arrays.equals(checksum, container.checksum);
+                if (!modified) {
+                    // we have at least one non null or non-empty url
+                    platformUserAgentStylesheetContainers.clear();
+                    modified = true;
+                }
+
+                if (n==0) {
+                    _setDefaultUserAgentStylesheet(fname);
+                } else {
+                    _addUserAgentStylesheet(fname);
                 }
             }
-            if (isSame) return;
-        }
 
-        boolean modified = false;
-
-        for (int n=0, nMax=urls.size(); n < nMax; n++) {
-
-            final String url = urls.get(n);
-            final String fname = (url != null) ? url.trim() : null;
-
-            if (fname == null || fname.isEmpty()) continue;
-
-            if (!modified) {
-                // we have at least one non null or non-empty url
-                platformUserAgentStylesheetContainers.clear();
-                modified = true;
-            }
-
-            if (n==0) {
-                _setDefaultUserAgentStylesheet(fname);
-            } else {
-                _addUserAgentStylesheet(fname);
+            if (modified) {
+                userAgentStylesheetsChanged();
             }
         }
-
-        if (modified) {
-            userAgentStylesheetsChanged();
-        }
-
     }
 
     /**
@@ -1212,35 +1242,39 @@ final public class StyleManager {
             return;
         }
 
-        // RT-20643
-        CssError.setCurrentScene(scene);
+        synchronized (styleLock) {
+            // RT-20643
+            CssError.setCurrentScene(scene);
 
-        if (_addUserAgentStylesheet(fname)) {
-            userAgentStylesheetsChanged();
+            if (_addUserAgentStylesheet(fname)) {
+                userAgentStylesheetsChanged();
+            }
+
+            // RT-20643
+            CssError.setCurrentScene(null);
         }
-
-        // RT-20643
-        CssError.setCurrentScene(null);
     }
 
     // fname is assumed to be non null and non empty
     private boolean _addUserAgentStylesheet(String fname) {
 
-        // if we already have this stylesheet, bail
-        for (int n=0, nMax= platformUserAgentStylesheetContainers.size(); n < nMax; n++) {
-            StylesheetContainer container = platformUserAgentStylesheetContainers.get(n);
-            if (fname.equals(container.fname)) {
-                return false;
+        synchronized (styleLock) {
+            // if we already have this stylesheet, bail
+            for (int n=0, nMax= platformUserAgentStylesheetContainers.size(); n < nMax; n++) {
+                StylesheetContainer container = platformUserAgentStylesheetContainers.get(n);
+                if (fname.equals(container.fname)) {
+                    return false;
+                }
             }
+
+            final Stylesheet ua_stylesheet = loadStylesheet(fname);
+
+            if (ua_stylesheet == null) return false;
+
+            ua_stylesheet.setOrigin(StyleOrigin.USER_AGENT);
+            platformUserAgentStylesheetContainers.add(new StylesheetContainer(fname, ua_stylesheet));
+            return true;
         }
-
-        final Stylesheet ua_stylesheet = loadStylesheet(fname);
-
-        if (ua_stylesheet == null) return false;
-
-        ua_stylesheet.setOrigin(StyleOrigin.USER_AGENT);
-        platformUserAgentStylesheetContainers.add(new StylesheetContainer(fname, ua_stylesheet));
-        return true;
     }
 
     /**
@@ -1259,27 +1293,28 @@ final public class StyleManager {
         String url = ua_stylesheet.getUrl();
         final String fname = url != null ? url.trim() : "";
 
-        // if we already have this stylesheet, bail
-        for (int n=0, nMax= platformUserAgentStylesheetContainers.size(); n < nMax; n++) {
-            StylesheetContainer container = platformUserAgentStylesheetContainers.get(n);
-            if (fname.equals(container.fname)) {
-                return;
+        synchronized (styleLock) {
+            // if we already have this stylesheet, bail
+            for (int n=0, nMax= platformUserAgentStylesheetContainers.size(); n < nMax; n++) {
+                StylesheetContainer container = platformUserAgentStylesheetContainers.get(n);
+                if (fname.equals(container.fname)) {
+                    return;
+                }
             }
+
+            // RT-20643
+            CssError.setCurrentScene(scene);
+
+            platformUserAgentStylesheetContainers.add(new StylesheetContainer(fname, ua_stylesheet));
+
+            if (ua_stylesheet != null) {
+                ua_stylesheet.setOrigin(StyleOrigin.USER_AGENT);
+            }
+            userAgentStylesheetsChanged();
+
+            // RT-20643
+            CssError.setCurrentScene(null);
         }
-
-        // RT-20643
-        CssError.setCurrentScene(scene);
-
-        platformUserAgentStylesheetContainers.add(new StylesheetContainer(fname, ua_stylesheet));
-
-        if (ua_stylesheet != null) {
-            ua_stylesheet.setOrigin(StyleOrigin.USER_AGENT);
-        }
-        userAgentStylesheetsChanged();
-
-        // RT-20643
-        CssError.setCurrentScene(null);
-
     }
 
     /**
@@ -1303,57 +1338,62 @@ final public class StyleManager {
         if (fname == null || fname.isEmpty()) {
             return;
         }
-        // RT-20643
 
-        CssError.setCurrentScene(scene);
+        synchronized (styleLock) {
+            // RT-20643
 
-        if(_setDefaultUserAgentStylesheet(fname)) {
-            userAgentStylesheetsChanged();
+            CssError.setCurrentScene(scene);
+
+            if(_setDefaultUserAgentStylesheet(fname)) {
+                userAgentStylesheetsChanged();
+            }
+
+            // RT-20643
+            CssError.setCurrentScene(null);
         }
-
-        // RT-20643
-        CssError.setCurrentScene(null);
     }
 
     // fname is expected to be non null and non empty
     private boolean _setDefaultUserAgentStylesheet(String fname) {
 
-        // if we already have this stylesheet, make sure it is the first element
-        for (int n=0, nMax= platformUserAgentStylesheetContainers.size(); n < nMax; n++) {
-            StylesheetContainer container = platformUserAgentStylesheetContainers.get(n);
-            if (fname.equals(container.fname)) {
-                if (n > 0) {
-                    platformUserAgentStylesheetContainers.remove(n);
-                    if (hasDefaultUserAgentStylesheet) {
-                        platformUserAgentStylesheetContainers.set(0, container);
-                    } else {
-                        platformUserAgentStylesheetContainers.add(0, container);
+        synchronized (styleLock) {
+            // if we already have this stylesheet, make sure it is the first element
+            for (int n=0, nMax= platformUserAgentStylesheetContainers.size(); n < nMax; n++) {
+                StylesheetContainer container = platformUserAgentStylesheetContainers.get(n);
+                if (fname.equals(container.fname)) {
+                    if (n > 0) {
+                        platformUserAgentStylesheetContainers.remove(n);
+                        if (hasDefaultUserAgentStylesheet) {
+                            platformUserAgentStylesheetContainers.set(0, container);
+                        } else {
+                            platformUserAgentStylesheetContainers.add(0, container);
+                        }
                     }
+                    // return true only if platformUserAgentStylesheetContainers was modified
+                    return n > 0;
                 }
-                // return true only if platformUserAgentStylesheetContainers was modified
-                return n > 0;
             }
+
+            final Stylesheet ua_stylesheet = loadStylesheet(fname);
+
+            if (ua_stylesheet == null) return false;
+
+            ua_stylesheet.setOrigin(StyleOrigin.USER_AGENT);
+            final StylesheetContainer sc = new StylesheetContainer(fname, ua_stylesheet);
+
+            if (platformUserAgentStylesheetContainers.size() == 0) {
+                platformUserAgentStylesheetContainers.add(sc);
+            }
+            else if (hasDefaultUserAgentStylesheet) {
+                platformUserAgentStylesheetContainers.set(0,sc);
+            }
+            else {
+                platformUserAgentStylesheetContainers.add(0,sc);
+            }
+            hasDefaultUserAgentStylesheet = true;
+
+            return true;
         }
-
-        final Stylesheet ua_stylesheet = loadStylesheet(fname);
-
-        if (ua_stylesheet == null) return false;
-
-        ua_stylesheet.setOrigin(StyleOrigin.USER_AGENT);
-        final StylesheetContainer sc = new StylesheetContainer(fname, ua_stylesheet);
-
-        if (platformUserAgentStylesheetContainers.size() == 0) {
-            platformUserAgentStylesheetContainers.add(sc);
-        }
-        else if (hasDefaultUserAgentStylesheet) {
-            platformUserAgentStylesheetContainers.set(0,sc);
-        }
-        else {
-            platformUserAgentStylesheetContainers.add(0,sc);
-        }
-        hasDefaultUserAgentStylesheet = true;
-
-        return true;
     }
 
     /**
@@ -1367,24 +1407,26 @@ final public class StyleManager {
         if (fname == null || fname.isEmpty()) {
             return;
         }
- 
-        // if we already have this stylesheet, remove it!
-        boolean removed = false;
-        for (int n = platformUserAgentStylesheetContainers.size() - 1; n >= 0; n--) {
-            // don't remove the platform default user agent stylesheet
-            if (fname.equals(Application.getUserAgentStylesheet())) {
-                continue;
+
+        synchronized (styleLock) {
+            // if we already have this stylesheet, remove it!
+            boolean removed = false;
+            for (int n = platformUserAgentStylesheetContainers.size() - 1; n >= 0; n--) {
+                // don't remove the platform default user agent stylesheet
+                if (fname.equals(Application.getUserAgentStylesheet())) {
+                    continue;
+                }
+
+                StylesheetContainer container = platformUserAgentStylesheetContainers.get(n);
+                if (fname.equals(container.fname)) {
+                    platformUserAgentStylesheetContainers.remove(n);
+                    removed = true;
+                }
             }
- 
-            StylesheetContainer container = platformUserAgentStylesheetContainers.get(n);
-            if (fname.equals(container.fname)) {
-                platformUserAgentStylesheetContainers.remove(n);
-                removed = true;
+
+            if (removed) {
+                userAgentStylesheetsChanged();
             }
-        }
- 
-        if (removed) {
-            userAgentStylesheetsChanged();
         }
     }
 
@@ -1401,35 +1443,36 @@ final public class StyleManager {
         String url = ua_stylesheet.getUrl();
         final String fname = url != null ? url.trim() : "";
 
-        // if we already have this stylesheet, make sure it is the first element
-        for (int n=0, nMax= platformUserAgentStylesheetContainers.size(); n < nMax; n++) {
-            StylesheetContainer container = platformUserAgentStylesheetContainers.get(n);
-            if (fname.equals(container.fname)) {
-                if (n > 0) {
-                    platformUserAgentStylesheetContainers.remove(n);
-                    if (hasDefaultUserAgentStylesheet) {
-                        platformUserAgentStylesheetContainers.set(0, container);
-                    } else {
-                        platformUserAgentStylesheetContainers.add(0, container);
+        synchronized (styleLock) {
+            // if we already have this stylesheet, make sure it is the first element
+            for (int n=0, nMax= platformUserAgentStylesheetContainers.size(); n < nMax; n++) {
+                StylesheetContainer container = platformUserAgentStylesheetContainers.get(n);
+                if (fname.equals(container.fname)) {
+                    if (n > 0) {
+                        platformUserAgentStylesheetContainers.remove(n);
+                        if (hasDefaultUserAgentStylesheet) {
+                            platformUserAgentStylesheetContainers.set(0, container);
+                        } else {
+                            platformUserAgentStylesheetContainers.add(0, container);
+                        }
                     }
+                    return;
                 }
-                return;
             }
+
+            StylesheetContainer sc = new StylesheetContainer(fname, ua_stylesheet);
+            if (platformUserAgentStylesheetContainers.size() == 0) {
+                platformUserAgentStylesheetContainers.add(sc);
+            } else if (hasDefaultUserAgentStylesheet) {
+                platformUserAgentStylesheetContainers.set(0,sc);
+            } else {
+                platformUserAgentStylesheetContainers.add(0,sc);
+            }
+            hasDefaultUserAgentStylesheet = true;
+
+            ua_stylesheet.setOrigin(StyleOrigin.USER_AGENT);
+            userAgentStylesheetsChanged();
         }
-
-        StylesheetContainer sc = new StylesheetContainer(fname, ua_stylesheet);
-        if (platformUserAgentStylesheetContainers.size() == 0) {
-            platformUserAgentStylesheetContainers.add(sc);
-        } else if (hasDefaultUserAgentStylesheet) {
-            platformUserAgentStylesheetContainers.set(0,sc);
-        } else {
-            platformUserAgentStylesheetContainers.add(0,sc);
-        }
-        hasDefaultUserAgentStylesheet = true;
-
-        ua_stylesheet.setOrigin(StyleOrigin.USER_AGENT);
-        userAgentStylesheetsChanged();
-
     }
 
     /*
@@ -1437,18 +1480,21 @@ final public class StyleManager {
      */
     private void userAgentStylesheetsChanged() {
 
-        for (CacheContainer container : cacheContainerMap.values()) {
-            container.clearCache();
-        }
-
-        StyleConverterImpl.clearCache();
-
         List<Parent> parents = new ArrayList<>();
-        for (Parent root : cacheContainerMap.keySet()) {
-            if (root == null) {
-                continue;
+
+        synchronized (styleLock) {
+            for (CacheContainer container : cacheContainerMap.values()) {
+                container.clearCache();
             }
-            parents.add(root);
+
+            StyleConverterImpl.clearCache();
+
+            for (Parent root : cacheContainerMap.keySet()) {
+                if (root == null) {
+                    continue;
+                }
+                parents.add(root);
+            }
         }
 
         for (Parent root : parents) root.impl_reapplyCSS();
@@ -1456,54 +1502,56 @@ final public class StyleManager {
 
     private List<StylesheetContainer> processStylesheets(List<String> stylesheets, Parent parent) {
 
-        final List<StylesheetContainer> list = new ArrayList<StylesheetContainer>();
-        for (int n = 0, nMax = stylesheets.size(); n < nMax; n++) {
-            final String fname = stylesheets.get(n);
+        synchronized (styleLock) {
+            final List<StylesheetContainer> list = new ArrayList<StylesheetContainer>();
+            for (int n = 0, nMax = stylesheets.size(); n < nMax; n++) {
+                final String fname = stylesheets.get(n);
 
-            StylesheetContainer container = null;
-            if (stylesheetContainerMap.containsKey(fname)) {
-                container = stylesheetContainerMap.get(fname);
+                StylesheetContainer container = null;
+                if (stylesheetContainerMap.containsKey(fname)) {
+                    container = stylesheetContainerMap.get(fname);
 
-                if (!list.contains(container)) {
-                    // minor optimization: if existing checksum in byte[0], then don't bother recalculating
-                    if (container.checksumInvalid) {
-                        final byte[] checksum = calculateCheckSum(fname);
-                        if (!Arrays.equals(checksum, container.checksum)) {
-                            removeStylesheetContainer(container);
+                    if (!list.contains(container)) {
+                        // minor optimization: if existing checksum in byte[0], then don't bother recalculating
+                        if (container.checksumInvalid) {
+                            final byte[] checksum = calculateCheckSum(fname);
+                            if (!Arrays.equals(checksum, container.checksum)) {
+                                removeStylesheetContainer(container);
 
-                            // Stylesheet did change. Re-load the stylesheet and update the container map.
-                            Stylesheet stylesheet = loadStylesheet(fname);
-                            container = new StylesheetContainer(fname, stylesheet, checksum);
-                            stylesheetContainerMap.put(fname, container);
-                        } else {
-                            container.checksumInvalid = false;
+                                // Stylesheet did change. Re-load the stylesheet and update the container map.
+                                Stylesheet stylesheet = loadStylesheet(fname);
+                                container = new StylesheetContainer(fname, stylesheet, checksum);
+                                stylesheetContainerMap.put(fname, container);
+                            } else {
+                                container.checksumInvalid = false;
+                            }
                         }
+                        list.add(container);
                     }
+
+                    // RT-22565: remember that this parent or scene uses this stylesheet.
+                    // Later, if the cache is cleared, the parent or scene is told to
+                    // reapply css.
+                    container.parentUsers.add(parent);
+
+                } else {
+                    final Stylesheet stylesheet = loadStylesheet(fname);
+                    // stylesheet may be null which would mean that some IOException
+                    // was thrown while trying to load it. Add it to the
+                    // stylesheetContainerMap anyway as this will prevent further
+                    // attempts to parse the file
+                    container = new StylesheetContainer(fname, stylesheet);
+                    // RT-22565: remember that this parent or scene uses this stylesheet.
+                    // Later, if the cache is cleared, the parent or scene is told to
+                    // reapply css.
+                    container.parentUsers.add(parent);
+                    stylesheetContainerMap.put(fname, container);
+
                     list.add(container);
                 }
-
-                // RT-22565: remember that this parent or scene uses this stylesheet.
-                // Later, if the cache is cleared, the parent or scene is told to
-                // reapply css.
-                container.parentUsers.add(parent);
-
-            } else {
-                final Stylesheet stylesheet = loadStylesheet(fname);
-                // stylesheet may be null which would mean that some IOException
-                // was thrown while trying to load it. Add it to the
-                // stylesheetContainerMap anyway as this will prevent further
-                // attempts to parse the file
-                container = new StylesheetContainer(fname, stylesheet);
-                // RT-22565: remember that this parent or scene uses this stylesheet.
-                // Later, if the cache is cleared, the parent or scene is told to
-                // reapply css.
-                container.parentUsers.add(parent);
-                stylesheetContainerMap.put(fname, container);
-
-                list.add(container);
             }
+            return list;
         }
-        return list;
     }
 
     //
@@ -1524,15 +1572,17 @@ final public class StyleManager {
             return Collections.<StylesheetContainer>emptyList();
         }
 
-        // RT-20643
-        CssError.setCurrentScene(parent.getScene());
+        synchronized (styleLock) {
+            // RT-20643
+            CssError.setCurrentScene(parent.getScene());
 
-        final List<StylesheetContainer> list = processStylesheets(parentStylesheets, parent);
+            final List<StylesheetContainer> list = processStylesheets(parentStylesheets, parent);
 
-        // RT-20643
-        CssError.setCurrentScene(null);
+            // RT-20643
+            CssError.setCurrentScene(null);
 
-        return list;
+            return list;
+        }
     }
 
     //
@@ -1550,15 +1600,17 @@ final public class StyleManager {
             return Collections.<StylesheetContainer>emptyList();
         }
 
-        // RT-20643
-        CssError.setCurrentScene(scene);
+        synchronized (styleLock) {
+            // RT-20643
+            CssError.setCurrentScene(scene);
 
-        final List<StylesheetContainer> list = processStylesheets(sceneStylesheets, scene.getRoot());
+            final List<StylesheetContainer> list = processStylesheets(sceneStylesheets, scene.getRoot());
 
-        // RT-20643
-        CssError.setCurrentScene(null);
+            // RT-20643
+            CssError.setCurrentScene(null);
 
-        return list;
+            return list;
+        }
     }
 
     // reuse key to avoid creation of numerous small objects
@@ -1580,216 +1632,218 @@ final public class StyleManager {
             return StyleMap.EMPTY_MAP;
         }
 
-        final Parent parent =
-            (node instanceof Parent)
-                ? (Parent) node : node.getParent();
+        synchronized (styleLock) {
+            final Parent parent =
+                (node instanceof Parent)
+                    ? (Parent) node : node.getParent();
 
-        final List<StylesheetContainer> parentStylesheets =
-                    gatherParentStylesheets(parent);
+            final List<StylesheetContainer> parentStylesheets =
+                        gatherParentStylesheets(parent);
 
-        final boolean hasParentStylesheets = parentStylesheets.isEmpty() == false;
+            final boolean hasParentStylesheets = parentStylesheets.isEmpty() == false;
 
-        final List<StylesheetContainer> sceneStylesheets = gatherSceneStylesheets(scene);
+            final List<StylesheetContainer> sceneStylesheets = gatherSceneStylesheets(scene);
 
-        final boolean hasSceneStylesheets = sceneStylesheets.isEmpty() == false;
+            final boolean hasSceneStylesheets = sceneStylesheets.isEmpty() == false;
 
-        final String inlineStyle = node.getStyle();
-        final boolean hasInlineStyles = inlineStyle != null && inlineStyle.trim().isEmpty() == false;
+            final String inlineStyle = node.getStyle();
+            final boolean hasInlineStyles = inlineStyle != null && inlineStyle.trim().isEmpty() == false;
 
-        final String sceneUserAgentStylesheet = scene.getUserAgentStylesheet();
-        final boolean hasSceneUserAgentStylesheet =
-                sceneUserAgentStylesheet != null && sceneUserAgentStylesheet.trim().isEmpty() == false;
+            final String sceneUserAgentStylesheet = scene.getUserAgentStylesheet();
+            final boolean hasSceneUserAgentStylesheet =
+                    sceneUserAgentStylesheet != null && sceneUserAgentStylesheet.trim().isEmpty() == false;
 
-        final String subSceneUserAgentStylesheet =
-                (subScene != null) ? subScene.getUserAgentStylesheet() : null;
-        final boolean hasSubSceneUserAgentStylesheet =
-                subSceneUserAgentStylesheet != null && subSceneUserAgentStylesheet.trim().isEmpty() == false;
+            final String subSceneUserAgentStylesheet =
+                    (subScene != null) ? subScene.getUserAgentStylesheet() : null;
+            final boolean hasSubSceneUserAgentStylesheet =
+                    subSceneUserAgentStylesheet != null && subSceneUserAgentStylesheet.trim().isEmpty() == false;
 
-        String regionUserAgentStylesheet = null;
-        // is this node in a region that has its own stylesheet?
-        Node region = node;
-        while (region != null) {
-            regionUserAgentStylesheet = (region instanceof Region) ? ((Region) region).getUserAgentStylesheet() : null;
-            if (regionUserAgentStylesheet != null) {
-                // We want 'region' to be the node that has the user agent stylesheet.
-                // 'region' is used below - look for if (hasRegionUserAgentStylesheet) block
-                break;
-            }
-            region = region.getParent();
-        }
-
-
-        final boolean hasRegionUserAgentStylesheet =
-                regionUserAgentStylesheet != null && regionUserAgentStylesheet.trim().isEmpty() == false;
-
-        //
-        // Are there any stylesheets at all?
-        // If not, then there is nothing to match and the
-        // resulting StyleMap is going to end up empty
-        //
-        if (hasInlineStyles == false
-                && hasParentStylesheets == false
-                && hasSceneStylesheets == false
-                && hasSceneUserAgentStylesheet == false
-                && hasSubSceneUserAgentStylesheet == false
-                && hasRegionUserAgentStylesheet == false
-                && platformUserAgentStylesheetContainers.isEmpty()) {
-            return StyleMap.EMPTY_MAP;
-        }
-
-        final String cname = node.getTypeSelector();
-        final String id = node.getId();
-        final List<String> styleClasses = node.getStyleClass();
-
-        if (key == null) {
-            key = new Key();
-        }
-
-        key.className = cname;
-        key.id = id;
-        for(int n=0, nMax=styleClasses.size(); n<nMax; n++) {
-
-            final String styleClass = styleClasses.get(n);
-            if (styleClass == null || styleClass.isEmpty()) continue;
-
-            key.styleClasses.add(StyleClassSet.getStyleClass(styleClass));
-        }
-
-        Map<Key, Cache> cacheMap = cacheContainer.getCacheMap(parentStylesheets,regionUserAgentStylesheet);
-        Cache cache = cacheMap.get(key);
-
-        if (cache != null) {
-            // key will be reused, so clear the styleClasses for next use
-            key.styleClasses.clear();
-
-        } else {
-
-            // If the cache is null, then we need to create a new Cache and
-            // add it to the cache map
-
-            // Construct the list of Selectors that could possibly apply
-            final List<Selector> selectorData = new ArrayList<>();
-
-            // User agent stylesheets have lowest precedence and go first
-            if (hasSubSceneUserAgentStylesheet || hasSceneUserAgentStylesheet) {
-
-                // if has both, use SubScene
-                final String uaFileName = hasSubSceneUserAgentStylesheet ?
-                        subScene.getUserAgentStylesheet().trim() :
-                        scene.getUserAgentStylesheet().trim();
-
-
-                StylesheetContainer container = null;
-                for (int n=0, nMax=userAgentStylesheetContainers.size(); n<nMax; n++) {
-                    container = userAgentStylesheetContainers.get(n);
-                    if (uaFileName.equals(container.fname)) {
-                        break;
-                    }
-                    container = null;
+            String regionUserAgentStylesheet = null;
+            // is this node in a region that has its own stylesheet?
+            Node region = node;
+            while (region != null) {
+                regionUserAgentStylesheet = (region instanceof Region) ? ((Region) region).getUserAgentStylesheet() : null;
+                if (regionUserAgentStylesheet != null) {
+                    // We want 'region' to be the node that has the user agent stylesheet.
+                    // 'region' is used below - look for if (hasRegionUserAgentStylesheet) block
+                    break;
                 }
-
-                if (container == null) {
-                    Stylesheet stylesheet = loadStylesheet(uaFileName);
-                    if (stylesheet != null) {
-                        stylesheet.setOrigin(StyleOrigin.USER_AGENT);
-                    }
-                    container = new StylesheetContainer(uaFileName, stylesheet);
-                    userAgentStylesheetContainers.add(container);
-                }
-
-                if (container.selectorPartitioning != null) {
-
-                    final Parent root = hasSubSceneUserAgentStylesheet ? subScene.getRoot() : scene.getRoot();
-                    container.parentUsers.add(root);
-
-                    final List<Selector> matchingRules =
-                            container.selectorPartitioning.match(id, cname, key.styleClasses);
-                    selectorData.addAll(matchingRules);
-                }
-
-            } else if (platformUserAgentStylesheetContainers.isEmpty() == false) {
-                for(int n=0, nMax= platformUserAgentStylesheetContainers.size(); n<nMax; n++) {
-                    final StylesheetContainer container = platformUserAgentStylesheetContainers.get(n);
-                    if (container != null && container.selectorPartitioning != null) {
-                        final List<Selector> matchingRules =
-                                container.selectorPartitioning.match(id, cname, key.styleClasses);
-                        selectorData.addAll(matchingRules);
-                    }
-                }
+                region = region.getParent();
             }
 
-            if (hasRegionUserAgentStylesheet) {
-                // Unfortunate duplication of code from previous block. No time to refactor.
-                StylesheetContainer container = null;
-                for (int n=0, nMax=userAgentStylesheetContainers.size(); n<nMax; n++) {
-                    container = userAgentStylesheetContainers.get(n);
-                    if (regionUserAgentStylesheet.equals(container.fname)) {
-                        break;
-                    }
-                    container = null;
-                }
 
-                if (container == null) {
-                    Stylesheet stylesheet = loadStylesheet(regionUserAgentStylesheet);
-                    if (stylesheet != null) {
-                        stylesheet.setOrigin(StyleOrigin.USER_AGENT);
-                    }
-                    container = new StylesheetContainer(regionUserAgentStylesheet, stylesheet);
-                    userAgentStylesheetContainers.add(container);
-                }
+            final boolean hasRegionUserAgentStylesheet =
+                    regionUserAgentStylesheet != null && regionUserAgentStylesheet.trim().isEmpty() == false;
 
-                if (container.selectorPartitioning != null) {
-
-                    // Depending on RefList add method not allowing duplicates.
-                    container.parentUsers.add((Parent)region);
-
-                    final List<Selector> matchingRules =
-                            container.selectorPartitioning.match(id, cname, key.styleClasses);
-                    selectorData.addAll(matchingRules);
-                }
-
+            //
+            // Are there any stylesheets at all?
+            // If not, then there is nothing to match and the
+            // resulting StyleMap is going to end up empty
+            //
+            if (hasInlineStyles == false
+                    && hasParentStylesheets == false
+                    && hasSceneStylesheets == false
+                    && hasSceneUserAgentStylesheet == false
+                    && hasSubSceneUserAgentStylesheet == false
+                    && hasRegionUserAgentStylesheet == false
+                    && platformUserAgentStylesheetContainers.isEmpty()) {
+                return StyleMap.EMPTY_MAP;
             }
 
-            // Scene stylesheets come next since declarations from
-            // parent stylesheets should take precedence.
-            if (sceneStylesheets.isEmpty() == false) {
-                for(int n=0, nMax=sceneStylesheets.size(); n<nMax; n++) {
-                    final StylesheetContainer container = sceneStylesheets.get(n);
-                    if (container != null && container.selectorPartitioning != null) {
-                        final List<Selector> matchingRules =
-                                container.selectorPartitioning.match(id, cname, key.styleClasses);
-                        selectorData.addAll(matchingRules);
-                    }
-                }
+            final String cname = node.getTypeSelector();
+            final String id = node.getId();
+            final List<String> styleClasses = node.getStyleClass();
+
+            if (key == null) {
+                key = new Key();
             }
 
-            // lastly, parent stylesheets
-            if (hasParentStylesheets) {
-                final int nMax = parentStylesheets == null ? 0 : parentStylesheets.size();
-                for(int n=0; n<nMax; n++) {
-                    final StylesheetContainer container = parentStylesheets.get(n);
+            key.className = cname;
+            key.id = id;
+            for(int n=0, nMax=styleClasses.size(); n<nMax; n++) {
+
+                final String styleClass = styleClasses.get(n);
+                if (styleClass == null || styleClass.isEmpty()) continue;
+
+                key.styleClasses.add(StyleClassSet.getStyleClass(styleClass));
+            }
+
+            Map<Key, Cache> cacheMap = cacheContainer.getCacheMap(parentStylesheets,regionUserAgentStylesheet);
+            Cache cache = cacheMap.get(key);
+
+            if (cache != null) {
+                // key will be reused, so clear the styleClasses for next use
+                key.styleClasses.clear();
+
+            } else {
+
+                // If the cache is null, then we need to create a new Cache and
+                // add it to the cache map
+
+                // Construct the list of Selectors that could possibly apply
+                final List<Selector> selectorData = new ArrayList<>();
+
+                // User agent stylesheets have lowest precedence and go first
+                if (hasSubSceneUserAgentStylesheet || hasSceneUserAgentStylesheet) {
+
+                    // if has both, use SubScene
+                    final String uaFileName = hasSubSceneUserAgentStylesheet ?
+                            subScene.getUserAgentStylesheet().trim() :
+                            scene.getUserAgentStylesheet().trim();
+
+
+                    StylesheetContainer container = null;
+                    for (int n=0, nMax=userAgentStylesheetContainers.size(); n<nMax; n++) {
+                        container = userAgentStylesheetContainers.get(n);
+                        if (uaFileName.equals(container.fname)) {
+                            break;
+                        }
+                        container = null;
+                    }
+
+                    if (container == null) {
+                        Stylesheet stylesheet = loadStylesheet(uaFileName);
+                        if (stylesheet != null) {
+                            stylesheet.setOrigin(StyleOrigin.USER_AGENT);
+                        }
+                        container = new StylesheetContainer(uaFileName, stylesheet);
+                        userAgentStylesheetContainers.add(container);
+                    }
+
                     if (container.selectorPartitioning != null) {
+
+                        final Parent root = hasSubSceneUserAgentStylesheet ? subScene.getRoot() : scene.getRoot();
+                        container.parentUsers.add(root);
+
                         final List<Selector> matchingRules =
                                 container.selectorPartitioning.match(id, cname, key.styleClasses);
                         selectorData.addAll(matchingRules);
                     }
+
+                } else if (platformUserAgentStylesheetContainers.isEmpty() == false) {
+                    for(int n=0, nMax= platformUserAgentStylesheetContainers.size(); n<nMax; n++) {
+                        final StylesheetContainer container = platformUserAgentStylesheetContainers.get(n);
+                        if (container != null && container.selectorPartitioning != null) {
+                            final List<Selector> matchingRules =
+                                    container.selectorPartitioning.match(id, cname, key.styleClasses);
+                            selectorData.addAll(matchingRules);
+                        }
+                    }
                 }
+
+                if (hasRegionUserAgentStylesheet) {
+                    // Unfortunate duplication of code from previous block. No time to refactor.
+                    StylesheetContainer container = null;
+                    for (int n=0, nMax=userAgentStylesheetContainers.size(); n<nMax; n++) {
+                        container = userAgentStylesheetContainers.get(n);
+                        if (regionUserAgentStylesheet.equals(container.fname)) {
+                            break;
+                        }
+                        container = null;
+                    }
+
+                    if (container == null) {
+                        Stylesheet stylesheet = loadStylesheet(regionUserAgentStylesheet);
+                        if (stylesheet != null) {
+                            stylesheet.setOrigin(StyleOrigin.USER_AGENT);
+                        }
+                        container = new StylesheetContainer(regionUserAgentStylesheet, stylesheet);
+                        userAgentStylesheetContainers.add(container);
+                    }
+
+                    if (container.selectorPartitioning != null) {
+
+                        // Depending on RefList add method not allowing duplicates.
+                        container.parentUsers.add((Parent)region);
+
+                        final List<Selector> matchingRules =
+                                container.selectorPartitioning.match(id, cname, key.styleClasses);
+                        selectorData.addAll(matchingRules);
+                    }
+
+                }
+
+                // Scene stylesheets come next since declarations from
+                // parent stylesheets should take precedence.
+                if (sceneStylesheets.isEmpty() == false) {
+                    for(int n=0, nMax=sceneStylesheets.size(); n<nMax; n++) {
+                        final StylesheetContainer container = sceneStylesheets.get(n);
+                        if (container != null && container.selectorPartitioning != null) {
+                            final List<Selector> matchingRules =
+                                    container.selectorPartitioning.match(id, cname, key.styleClasses);
+                            selectorData.addAll(matchingRules);
+                        }
+                    }
+                }
+
+                // lastly, parent stylesheets
+                if (hasParentStylesheets) {
+                    final int nMax = parentStylesheets == null ? 0 : parentStylesheets.size();
+                    for(int n=0; n<nMax; n++) {
+                        final StylesheetContainer container = parentStylesheets.get(n);
+                        if (container.selectorPartitioning != null) {
+                            final List<Selector> matchingRules =
+                                    container.selectorPartitioning.match(id, cname, key.styleClasses);
+                            selectorData.addAll(matchingRules);
+                        }
+                    }
+                }
+
+                // create a new Cache from these selectors.
+                cache = new Cache(selectorData);
+                cacheMap.put(key, cache);
+
+                // cause a new Key to be created the next time this method is called
+                key = null;
             }
 
-            // create a new Cache from these selectors.
-            cache = new Cache(selectorData);
-            cacheMap.put(key, cache);
+            //
+            // Create a style helper for this node from the styles that match.
+            //
+            StyleMap smap = cache.getStyleMap(cacheContainer, node, triggerStates, hasInlineStyles);
 
-            // cause a new Key to be created the next time this method is called
-            key = null;
+            return smap;
         }
-
-        //
-        // Create a style helper for this node from the styles that match.
-        //
-        StyleMap smap = cache.getStyleMap(cacheContainer, node, triggerStates, hasInlineStyles);
-
-        return smap;
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -1802,6 +1856,12 @@ final public class StyleManager {
     /**
      * Errors that may have occurred during css processing.
      * This list is null until errorsProperty() is called.
+     *
+     * NOTE: this is not thread-safe, and cannot readily be made so given the
+     * nature of the API.
+     * Currently it is only used by SceneBuilder. If a public API is ever
+     * needed, then a new API should be designed.
+     *
      * @return
      */
     public static ObservableList<CssError> errorsProperty() {
@@ -1846,42 +1906,44 @@ final public class StyleManager {
                 cacheMap = new HashMap<List<String>,Map<Key,Cache>>();
             }
 
-            if ((parentStylesheets == null || parentStylesheets.isEmpty()) &&
-                    (regionUserAgentStylesheet == null || regionUserAgentStylesheet.isEmpty())) {
+            synchronized (styleLock) {
+                if ((parentStylesheets == null || parentStylesheets.isEmpty()) &&
+                        (regionUserAgentStylesheet == null || regionUserAgentStylesheet.isEmpty())) {
 
-                Map<Key,Cache> cmap = cacheMap.get(null);
-                if (cmap == null) {
-                    cmap = new HashMap<Key,Cache>();
-                    cacheMap.put(null, cmap);
-                }
-                return cmap;
+                    Map<Key,Cache> cmap = cacheMap.get(null);
+                    if (cmap == null) {
+                        cmap = new HashMap<Key,Cache>();
+                        cacheMap.put(null, cmap);
+                    }
+                    return cmap;
 
-            } else {
-
-                final int nMax = parentStylesheets.size();
-                if (cacheMapKey == null) {
-                    cacheMapKey = new ArrayList<String>(nMax);
-                }
-                for (int n=0; n<nMax; n++) {
-                    StylesheetContainer sc = parentStylesheets.get(n);
-                    if (sc == null || sc.fname == null || sc.fname.isEmpty()) continue;
-                    cacheMapKey.add(sc.fname);
-                }
-                if (regionUserAgentStylesheet != null) {
-                    cacheMapKey.add(regionUserAgentStylesheet);
-                }
-                Map<Key,Cache> cmap = cacheMap.get(cacheMapKey);
-                if (cmap == null) {
-                    cmap = new HashMap<Key,Cache>();
-                    cacheMap.put(cacheMapKey, cmap);
-                    // create a new cacheMapKey the next time this method is called
-                    cacheMapKey = null;
                 } else {
-                    // reuse cacheMapKey, but not the data, the next time this method is called
-                    cacheMapKey.clear();
-                }
-                return cmap;
 
+                    final int nMax = parentStylesheets.size();
+                    if (cacheMapKey == null) {
+                        cacheMapKey = new ArrayList<String>(nMax);
+                    }
+                    for (int n=0; n<nMax; n++) {
+                        StylesheetContainer sc = parentStylesheets.get(n);
+                        if (sc == null || sc.fname == null || sc.fname.isEmpty()) continue;
+                        cacheMapKey.add(sc.fname);
+                    }
+                    if (regionUserAgentStylesheet != null) {
+                        cacheMapKey.add(regionUserAgentStylesheet);
+                    }
+                    Map<Key,Cache> cmap = cacheMap.get(cacheMapKey);
+                    if (cmap == null) {
+                        cmap = new HashMap<Key,Cache>();
+                        cacheMap.put(cacheMapKey, cmap);
+                        // create a new cacheMapKey the next time this method is called
+                        cacheMapKey = null;
+                    } else {
+                        // reuse cacheMapKey, but not the data, the next time this method is called
+                        cacheMapKey.clear();
+                    }
+                    return cmap;
+
+                }
             }
 
         }
@@ -1946,7 +2008,7 @@ final public class StyleManager {
             }
 
             final Stylesheet inlineStylesheet =
-                    CSSParser.getInstance().parse("*{"+inlineStyle+"}");
+                    new CSSParser().parse("*{"+inlineStyle+"}");
 
             if (inlineStylesheet != null) {
 
@@ -2001,7 +2063,7 @@ final public class StyleManager {
         // cache and is no longer valid.
         private int baseStyleMapId = 0;
 
-            }
+    }
 
     /**
      * Creates and caches maps of styles, reusing them as often as practical.
