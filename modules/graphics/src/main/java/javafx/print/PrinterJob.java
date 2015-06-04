@@ -277,10 +277,19 @@ public final class PrinterJob {
      * <p>
      * The window <code>owner</code> may be null, but
      * if it is a visible Window, it will be used as the parent.
+     * <p>
+     * This method may be called from any thread. If it is called from the
+     * JavaFX application thread, then it must either be called from an input
+     * event handler or from the run method of a Runnable passed to
+     * {@link javafx.application.Platform#runLater Platform.runLater}.
+     * It must not be called during animation or layout processing.
+     *
      * @param owner to which to block input, or null.
      * @return false if the user opts to cancel printing, or the job
      * is not in the new state. That is if it has already started,
      * has failed, or has been cancelled, or ended.
+     * @throws IllegalStateException if this method is called during
+     * animation or layout processing.
      */
     public synchronized boolean showPrintDialog(Window owner) {
         // TBD handle owner
@@ -312,10 +321,19 @@ public final class PrinterJob {
      * <p>
      * The window <code>owner</code> may be null, but
      * if it is a visible Window, it will be used as the parent.
+     * <p>
+     * This method may be called from any thread. If it is called from the FX
+     * application thread, then it must either be called from an input event
+     * handler or from the run method of a Runnable passed to
+     * {@link javafx.application.Platform#runLater Platform.runLater}.
+     * It must not be called during animation or layout processing.
+     *
      * @param owner to block input, or null.
      * @return false if the user opts to cancel the dialog, or the job
      * is not in the new state. That is if it has already started,
      * has failed, or has been cancelled, or ended.
+     * @throws IllegalStateException if this method is called during
+     * animation or layout processing.
      */
     public synchronized boolean showPageSetupDialog(Window owner) {
         // TBD handle owner
@@ -352,10 +370,19 @@ public final class PrinterJob {
      * The page layout will override the job default for this page only.
      * If the job state is CANCELED, ERROR or DONE, this method will
      * return false.
+     * <p>
+     * This method may be called from any thread. If it is called from the FX
+     * application thread, then it must either be called from an input event
+     * handler or from the run method of a Runnable passed to
+     * {@link javafx.application.Platform#runLater Platform.runLater}.
+     * It must not be called during animation or layout processing.
+     *
      * @param pageLayout Layout for this page.
      * @param node The node to print.
      * @return whether rendering was successful.
      * @throws NullPointerException if either parameter is null.
+     * @throws IllegalStateException if this method is called during
+     * animation or layout processing.
      */
     public synchronized boolean printPage(PageLayout pageLayout, Node node) {
         if (jobStatus.get().ordinal() > JobStatus.PRINTING.ordinal()) {

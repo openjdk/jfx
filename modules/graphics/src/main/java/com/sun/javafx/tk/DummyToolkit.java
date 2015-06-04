@@ -82,6 +82,11 @@ final public class DummyToolkit extends Toolkit {
     }
 
     @Override
+    public boolean canStartNestedEventLoop() {
+        return false;
+    }
+
+    @Override
     public Object enterNestedEventLoop(Object key) {
         throw new UnsupportedOperationException("Not supported yet.");
     }

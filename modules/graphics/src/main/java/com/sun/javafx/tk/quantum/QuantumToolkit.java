@@ -194,7 +194,7 @@ public final class QuantumToolkit extends Toolkit {
     private AtomicBoolean           animationRunning = new AtomicBoolean(false);
     private AtomicBoolean           nextPulseRequested = new AtomicBoolean(false);
     private AtomicBoolean           pulseRunning = new AtomicBoolean(false);
-    private boolean                 inPulse = false;
+    private int                     inPulse = 0;
     private CountDownLatch          launchLatch = new CountDownLatch(1);
 
     final int                       PULSE_INTERVAL = (int)(TimeUnit.SECONDS.toMillis(1L) / getRefreshRate());
@@ -492,6 +492,7 @@ public final class QuantumToolkit extends Toolkit {
 
     void pulse(boolean collect) {
         try {
+            inPulse++;
             if (PULSE_LOGGING_ENABLED) {
                 PulseLogger.pulseStart();
             }
@@ -500,7 +501,6 @@ public final class QuantumToolkit extends Toolkit {
                 return;
             }
             nextPulseRequested.set(false);
-            inPulse = true;
             if (animationRunnable != null) {
                 animationRunning.set(true);
                 animationRunnable.run();
@@ -510,7 +510,7 @@ public final class QuantumToolkit extends Toolkit {
             firePulse();
             if (collect) collector.renderAll();
         } finally {
-            inPulse = false;
+            inPulse--;
             endPulseRunning();
             if (PULSE_LOGGING_ENABLED) {
                 PulseLogger.pulseEnd();
@@ -555,14 +555,19 @@ public final class QuantumToolkit extends Toolkit {
         return stage;
     }
 
+    @Override public boolean canStartNestedEventLoop() {
+        return inPulse == 0;
+    }
+
     @Override public Object enterNestedEventLoop(Object key) {
         checkFxUserThread();
 
         if (key == null) {
             throw new NullPointerException();
         }
-        if (inPulse) {
-            throw new IllegalStateException("Nested event loops are allowed only while handling system events");
+
+        if (!canStartNestedEventLoop()) {
+            throw new IllegalStateException("Cannot enter nested loop during animation or layout processing");
         }
 
         if (eventLoopMap == null) {

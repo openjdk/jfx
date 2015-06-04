@@ -433,12 +433,16 @@ public class Stage extends Window {
      * <p>
      * This method must not be called on the primary stage or on a stage that
      * is already visible.
+     * Additionally, it must either be called from an input event handler or
+     * from the run method of a Runnable passed to
+     * {@link javafx.application.Platform#runLater Platform.runLater}.
+     * It must not be called during animation or layout processing.
      * </p>
      *
      * @throws IllegalStateException if this method is called on a thread
      *     other than the JavaFX Application Thread.
-     * @throws java.lang.IllegalStateException if this method is called outside of
-     *     event handler. This includes animation callbacks, properties handlers and layout processing.
+     * @throws IllegalStateException if this method is called during
+     *     animation or layout processing.
      * @throws IllegalStateException if this method is called on the
      *     primary stage.
      * @throws IllegalStateException if this stage is already showing.
@@ -454,6 +458,10 @@ public class Stage extends Window {
 
         if (isShowing()) {
             throw new IllegalStateException("Stage already visible");
+        }
+
+        if (!Toolkit.getToolkit().canStartNestedEventLoop()) {
+            throw new IllegalStateException("showAndWait is not allowed during animation or layout processing");
         }
 
         // TODO: file a new bug; the following assertion can fail if this
