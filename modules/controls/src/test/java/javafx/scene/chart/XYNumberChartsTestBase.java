@@ -26,20 +26,36 @@
 package javafx.scene.chart;
 
 import com.sun.javafx.scene.control.infrastructure.ControlTestUtils;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import static org.junit.Assert.assertEquals;
 
 abstract public class XYNumberChartsTestBase extends XYChartTestBase {
     XYChart<Number, Number> chart;
+    ObservableList<XYChart.Data<Number, Number>> seriesData = FXCollections.observableArrayList(
+            new XYChart.Data<>(10, 10),
+            new XYChart.Data<>(20, 20)
+    );
+    XYChart.Series<Number, Number> series = new XYChart.Series<>(seriesData);
 
-    public void checkSeriesClearAnimated_rt_40632() {
-        startApp();
-        XYChart.Series<Number, Number> series = new XYChart.Series<>();
-        series.getData().add(new XYChart.Data<>(10, 10));
-        series.getData().add(new XYChart.Data<>(20, 20));
+    protected void startAppWithSeries() {
         chart.getData().addAll(series);
-        pulse();
+        startApp();
+    }
+
+    void checkSeriesClearAnimated_rt_40632() {
+        startAppWithSeries();
         chart.setAnimated(true);
         ControlTestUtils.runWithExceptionHandler(() -> {
             series.getData().clear();
         });
+    }
+
+    void checkSeriesRemove(int expectedNodesCount) {
+        startAppWithSeries();
+        assertEquals(expectedNodesCount, chart.getPlotChildren().size());
+        chart.getData().remove(0);
+        pulse();
+        assertEquals(0, chart.getPlotChildren().size());
     }
 }

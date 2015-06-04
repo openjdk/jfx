@@ -25,10 +25,12 @@
 
 package javafx.scene.chart;
 
+import com.sun.javafx.scene.control.infrastructure.ControlTestUtils;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Collection;
+import static org.junit.Assert.assertEquals;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -36,18 +38,20 @@ import org.junit.runners.Parameterized;
 @RunWith(Parameterized.class)
 public class XYNumberLineChartsTest extends XYNumberChartsTestBase {
     private Class chartClass;
+    private int seriesFadeOutTime;
 
     @Parameterized.Parameters
     public static Collection implementations() {
         return Arrays.asList(new Object[][] {
-            { AreaChart.class },
-            { LineChart.class },
-            { StackedAreaChart.class }
+            { AreaChart.class, 400 },
+            { LineChart.class, 900 },
+            { StackedAreaChart.class, 400 }
         });
     }
 
-    public XYNumberLineChartsTest(Class chartClass) {
+    public XYNumberLineChartsTest(Class chartClass, int seriesFadeOutTime) {
         this.chartClass = chartClass;
+        this.seriesFadeOutTime = seriesFadeOutTime;
     }
 
     @Override
@@ -68,5 +72,40 @@ public class XYNumberLineChartsTest extends XYNumberChartsTestBase {
     @Test
     public void testSeriesClearAnimatedWithoutSymbols_rt_40632() {
         checkSeriesClearAnimated_rt_40632();
+    }
+
+    @Test
+    public void testSeriesRemoveWithoutSymbols() {
+        // 1 area group
+        checkSeriesRemove(1);
+    }
+
+    @Test
+    public void testSeriesRemoveWithoutSymbolsAnimated_rt_22124() {
+        startAppWithSeries();
+        // 1 area group
+        assertEquals(1, chart.getPlotChildren().size());
+
+        chart.setAnimated(true);
+        ControlTestUtils.runWithExceptionHandler(() -> {
+            // tests RT-22124
+            chart.getData().remove(0);
+        });
+        toolkit.setAnimationTime(seriesFadeOutTime/2);
+        assertEquals(1, chart.getPlotChildren().size());
+        // tests RT-46086
+        assertEquals(0.5, chart.getPlotChildren().get(0).getOpacity(), 0.0);
+        toolkit.setAnimationTime(seriesFadeOutTime);
+        assertEquals(0, chart.getPlotChildren().size());
+    }
+
+    @Test
+    public void testDataWithoutSymbolsAddWithAnimation_rt_39353() {
+        startAppWithSeries();
+        chart.setAnimated(true);
+        series.getData().add(new XYChart.Data<>(30, 30));
+        ControlTestUtils.runWithExceptionHandler(() -> {
+            toolkit.setAnimationTime(0);
+        });
     }
 }

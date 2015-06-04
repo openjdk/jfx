@@ -88,51 +88,6 @@ public class AreaChartTest extends XYChartTestBase {
         return sb;
     }
 
-    @Test
-    public void testSeriesRemove() {
-        startApp();
-        ac.getData().addAll(series1);
-        pulse();
-        // 5 symbols and 1 area group
-        assertEquals(6, ac.getPlotChildren().size());
-        ac.getData().remove(0);
-        pulse();
-        assertEquals(0, ac.getPlotChildren().size());
-    }
-
-    @Test
-    public void testSeriesRemoveWithoutSymbols() {
-        startApp();
-        ac.setCreateSymbols(false);
-        ac.getData().addAll(series1);
-        pulse();
-        // 1 area group
-        assertEquals(1, ac.getPlotChildren().size());
-        ac.getData().remove(0);
-        pulse();
-        assertEquals(0, ac.getPlotChildren().size());
-    }
-
-    @Test
-    public void testSeriesRemoveWithoutSymbolsAnimated_rt_22124() {
-        startApp();
-        ac.setCreateSymbols(false);
-        ac.getData().addAll(series1);
-        pulse();
-        // 1 area group
-        assertEquals(1, ac.getPlotChildren().size());
-
-        ac.setAnimated(true);
-        ControlTestUtils.runWithExceptionHandler(() -> {
-            ac.getData().remove(0);
-        });
-        toolkit.setAnimationTime(200);
-        assertEquals(1, ac.getPlotChildren().size());
-        assertEquals(0.5, ac.getPlotChildren().get(0).getOpacity(), 0.0);
-        toolkit.setAnimationTime(400);
-        assertEquals(0, ac.getPlotChildren().size());
-    }
-
     @Test @Ignore
     public void testDataItemRemove() {
         startApp();
@@ -169,19 +124,4 @@ public class AreaChartTest extends XYChartTestBase {
          pulse();
          assertEquals(5, countSymbols(ac, "chart-area-symbol"));
      }
-
-    @Test
-    public void testDataWithoutSymbolsAddWithAnimation_rt_39353() {
-        startApp();
-        ac.getData().addAll(series1);
-        ac.setAnimated(true);
-        ac.setCreateSymbols(false);
-        series1.getData().add(new XYChart.Data(40d,10d));
-        ControlTestUtils.runWithExceptionHandler(() -> {
-            toolkit.setAnimationTime(0);
-            // check remove just in case
-            series1.getData().remove(0);
-            toolkit.setAnimationTime(800);
-        });
-    }
 }

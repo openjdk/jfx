@@ -35,20 +35,22 @@ import org.junit.runners.Parameterized;
 @RunWith(Parameterized.class)
 public class XYNumberChartsTest extends XYNumberChartsTestBase {
     private Class chartClass;
+    int nodesPerSeries;
 
     @Parameterized.Parameters
     public static Collection implementations() {
         return Arrays.asList(new Object[][] {
-            { AreaChart.class },
-            { BubbleChart.class },
-            { LineChart.class },
-            { ScatterChart.class },
-            { StackedAreaChart.class },
+            { AreaChart.class, 1, },
+            { BubbleChart.class, 0, },
+            { LineChart.class, 1, },
+            { ScatterChart.class, 0, },
+            { StackedAreaChart.class, 1, },
         });
     }
 
-    public XYNumberChartsTest(Class chartClass) {
+    public XYNumberChartsTest(Class chartClass, int nodesPerSeries) {
         this.chartClass = chartClass;
+        this.nodesPerSeries = nodesPerSeries;
     }
 
     @Override
@@ -67,5 +69,10 @@ public class XYNumberChartsTest extends XYNumberChartsTestBase {
     @Test
     public void testSeriesClearAnimated_rt_40632() {
         checkSeriesClearAnimated_rt_40632();
+    }
+
+    @Test
+    public void testSeriesRemove() {
+        checkSeriesRemove(2 + nodesPerSeries);
     }
 }
