@@ -192,6 +192,7 @@ protected:
     jobject jview;
     GtkWidget* gtk_widget;
     GdkWindow* gdk_window;
+    GdkWMFunction gdk_windowManagerFunctions;
 
     bool is_iconified;
     bool is_maximized;
