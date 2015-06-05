@@ -28,6 +28,7 @@ package javafx.scene;
 import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.sg.prism.NGGroup;
 import com.sun.javafx.tk.Toolkit;
+import java.util.List;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import org.junit.Before;
@@ -314,5 +315,23 @@ public class Parent_structure_sync_Test {
         assertSame(r1.impl_getPeer(), peer.getChildren().get(0));
         assertSame(r2.impl_getPeer(), peer.getChildren().get(1));
         assertSame(r3.impl_getPeer(), peer.getChildren().get(2));
+    }
+
+    @Test
+    public void validateParentsRemovedList() {
+        Group parent2 = new Group();
+        parent2.getChildren().addAll(r1, r2);
+        parent.getChildren().add(parent2);
+        sync();
+        parent2.getChildren().remove(r1);
+        assertNotNull(parent2.test_getRemoved());
+        assertFalse(parent2.test_getRemoved().isEmpty());
+        sync();
+        assertTrue(parent2.test_getRemoved().isEmpty());
+        parent2.getChildren().remove(r2);
+        parent.setVisible(false);
+        assertFalse(parent2.test_getRemoved().isEmpty());
+        sync();
+        assertTrue(parent2.test_getRemoved().isEmpty());
     }
 }
