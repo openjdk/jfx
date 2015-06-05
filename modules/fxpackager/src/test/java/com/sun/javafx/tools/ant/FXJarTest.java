@@ -165,9 +165,8 @@ public class FXJarTest {
         fxjar.execute();
     }
 
-    @Test(expected = BuildException.class)
+    @Test()
     public void codebaseManifestTest() throws IOException, ManifestException {
-
         org.apache.tools.ant.taskdefs.Manifest mf = fxjar.createManifest();
         mf.addConfiguredAttribute(new org.apache.tools.ant.taskdefs.Manifest.Attribute(
                 CODEBASE_ATTRIBUTE_NAME, CODEBASE_ATTRIBUTE_VALUE));
