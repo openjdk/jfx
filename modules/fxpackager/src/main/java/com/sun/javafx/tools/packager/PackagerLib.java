@@ -234,7 +234,7 @@ public class PackagerLib {
         if (existingSetting == null) {
             attr.put(new Attributes.Name("Permissions"),
                     Boolean.TRUE.equals(createJarParams.allPermissions) ? "all-permissions" : "sandbox");
-        } else if (!Boolean.valueOf(existingSetting).equals(createJarParams.allPermissions)) { 
+        } else if (createJarParams.allPermissions != null && !Boolean.valueOf(existingSetting).equals(createJarParams.allPermissions)) { 
             throw new PackagerException(
                 "ERR_ContradictorySetting", "Permissions"); 
         }
@@ -244,7 +244,7 @@ public class PackagerLib {
             if (createJarParams.codebase != null) {
                 attr.put(new Attributes.Name("Codebase"), createJarParams.codebase);
             }
-        } else if (!existingSetting.equals(createJarParams.codebase)) {
+        } else if (createJarParams.codebase != null && !existingSetting.equals(createJarParams.codebase)) {
             throw new PackagerException(
                     "ERR_ContradictorySetting", "Codebase");
         }

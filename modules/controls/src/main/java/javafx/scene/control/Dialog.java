@@ -49,6 +49,7 @@ import javafx.stage.Window;
 import javafx.util.Callback;
 
 import com.sun.javafx.event.EventHandlerManager;
+import com.sun.javafx.tk.Toolkit;
 
 /**
  * A Dialog in JavaFX wraps a {@link DialogPane} and provides the necessary API
@@ -286,8 +287,12 @@ public class Dialog<R> implements EventTarget {
      * this brings up a non-blocking dialog). Users of this API must either
      * poll the {@link #resultProperty() result property}, or else add a listener
      * to the result property to be informed of when it is set.
+     * @throws IllegalStateException if this method is called on a thread
+     *     other than the JavaFX Application Thread.
      */
     public final void show() {
+        Toolkit.getToolkit().checkFxUserThread();
+
         Event.fireEvent(this, new DialogEvent(this, DialogEvent.DIALOG_SHOWING));
         if( getWidth() == Double.NaN && getHeight() == Double.NaN ) {
             dialog.sizeToScene();
@@ -301,11 +306,28 @@ public class Dialog<R> implements EventTarget {
     /**
      * Shows the dialog and waits for the user response (in other words, brings 
      * up a blocking dialog, with the returned value the users input).
-     * 
+     * <p>
+     * This method must be called on the JavaFX Application thread.
+     * Additionally, it must either be called from an input event handler or
+     * from the run method of a Runnable passed to
+     * {@link javafx.application.Platform#runLater Platform.runLater}.
+     * It must not be called during animation or layout processing.
+     * </p>
+     *
      * @return An {@link Optional} that contains the {@link #resultProperty() result}.
      *         Refer to the {@link Dialog} class documentation for more detail.
+     * @throws IllegalStateException if this method is called on a thread
+     *     other than the JavaFX Application Thread.
+     * @throws IllegalStateException if this method is called during
+     *     animation or layout processing.
      */
     public final Optional<R> showAndWait() {
+        Toolkit.getToolkit().checkFxUserThread();
+
+        if (!Toolkit.getToolkit().canStartNestedEventLoop()) {
+            throw new IllegalStateException("showAndWait is not allowed during animation or layout processing");
+        }
+
         Event.fireEvent(this, new DialogEvent(this, DialogEvent.DIALOG_SHOWING));
         if( getWidth() == Double.NaN && getHeight() == Double.NaN ) {
             dialog.sizeToScene();

@@ -241,6 +241,15 @@ public abstract class Toolkit {
     public abstract boolean init();
 
     /**
+     * Indicates whether or not a nested event loop can be started
+     * from the current thread in the current state. Note that a nested
+     * event loop is not allowed outside of an event handler.
+     *
+     * @return flag indicating whether a nested event loop can be started.
+     */
+    public abstract boolean canStartNestedEventLoop();
+
+    /**
      * Enter a nested event loop and block until the corresponding
      * exitNestedEventLoop call is made.
      * The key passed into this method is used to

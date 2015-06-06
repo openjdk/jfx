@@ -474,19 +474,18 @@ final class BMPImageLoader extends ImageLoaderImpl {
 
         int hght = Math.abs(bih.biHeight);
 
-        if ((width > 0 && width != bih.biWidth) ||
-            (height > 0 && height != hght))
-        {
-            throw new IOException("scaling for BMP is not supported");
-        }
+        int[] outWH = ImageTools.computeDimensions(bih.biWidth, hght, width, height, preserveAspectRatio);
+        width = outWH[0];
+        height = outWH[1];
 
         // Pass image metadata to any listeners.
         ImageMetadata imageMetadata = new ImageMetadata(null, Boolean.TRUE,
-            null, null, null, null, null, bih.biWidth, hght,
+            null, null, null, null, null, width, height,
             null, null, null);
         updateImageMetadata(imageMetadata);
 
-        int stride = bih.biWidth * 3;
+        int bpp = 3;
+        int stride = bih.biWidth * bpp;
 
         byte image[] = new byte[stride * hght];
 
@@ -529,8 +528,14 @@ final class BMPImageLoader extends ImageLoaderImpl {
                 throw new IOException("Unknown BMP bit depth");
         }
 
-        return new ImageFrame(ImageStorage.ImageType.RGB, ByteBuffer.wrap(image),
-                bih.biWidth, hght, stride, null, null);
+        ByteBuffer img = ByteBuffer.wrap(image);
+        if (bih.biWidth != width || hght != height) {
+            img = ImageTools.scaleImage(img, bih.biWidth, hght, bpp,
+                    width, height, smooth);
+        }
+
+        return new ImageFrame(ImageStorage.ImageType.RGB, img,
+                width, height, width * bpp, null, imageMetadata);
     }
 }
 

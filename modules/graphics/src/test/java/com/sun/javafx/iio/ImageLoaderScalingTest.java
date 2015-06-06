@@ -31,6 +31,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import static org.junit.Assert.*;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class ImageLoaderScalingTest {
@@ -53,21 +54,21 @@ public class ImageLoaderScalingTest {
         return Image.convertImageFrame(imgFrames[0]);
     }
 
-    private void compare(Image img, BufferedImage bImg) {
+    private void compare(Image img, Image expectedImg) {
         assertNotNull(img);
-        assertNotNull(bImg);
+        assertNotNull(expectedImg);
         int w = img.getWidth(), h = img.getHeight();
-        double scaleX = (double)bImg.getWidth() / w;
-        double scaleY = (double)bImg.getHeight() / h;
+        double scaleX = (double)expectedImg.getWidth() / w;
+        double scaleY = (double)expectedImg.getHeight() / h;
         for (int y = 0; y < h; y++) {
             int srcY = (int) Math.floor((y + 0.5) * scaleY);
             for (int x = 0; x < w; x++) {
                 int srcX = (int) Math.floor((x + 0.5) * scaleX);
-                int expected = bImg.getRGB(srcX, srcY);
+                int expected = expectedImg.getArgb(srcX, srcY);
                 int actual = img.getArgb(x, y);
                 if (expected != actual) {
                     if (writeFiles) {
-                        writeImages(img, bImg);
+                        writeImages(img, expectedImg);
                     }
                     throw new org.junit.ComparisonFailure(
                         "pixel " + x + ", " + y + " does not match",
@@ -79,65 +80,117 @@ public class ImageLoaderScalingTest {
         }
     }
 
-    private void writePNGFile(BufferedImage bImg, String fileName) {
-        try {
-            ImageTestHelper.writeImage(bImg, fileName, "png", null);
-        } catch (IOException e) {
-            System.out.println("writePNGFile " + fileName + " failed: " + e);
-        }
-    }
-
-    private void writeImages(Image img, BufferedImage bImg) {
+    private void writeImage(Image img, String fileName) {
         int w = img.getWidth();
         int h = img.getHeight();
-        writePNGFile(bImg, "out"+w+"x"+h+"OrigJDK.png");
         int pixels[] = new int[w * h];
         img.getPixels(0, 0, w, h,
                 javafx.scene.image.PixelFormat.getIntArgbPreInstance(),
                 pixels, 0, w);
-        BufferedImage fxImg = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
-        fxImg.setRGB(0, 0, w, h, pixels, 0, w);
-        writePNGFile(fxImg, "out"+w+"x"+h+"ScaledFX.png");
+        BufferedImage bImg = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+        bImg.setRGB(0, 0, w, h, pixels, 0, w);
+        try {
+            ImageTestHelper.writeImage(bImg, fileName, "png", null);
+        } catch (IOException e) {
+            System.err.println("writeImage " + fileName + " failed: " + e);
+        }
     }
 
-    private ByteArrayInputStream writePNGStream(BufferedImage bImg)
-            throws IOException
-    {
-        return ImageTestHelper.writeImageToStream(bImg, "png", null);
+    private void writeImages(Image img, Image expectedImg) {
+        int w = img.getWidth();
+        int h = img.getHeight();
+        writeImage(expectedImg, "out"+w+"x"+h+"Orig.png");
+        writeImage(img, "out"+w+"x"+h+"Scaled.png");
     }
 
-    private void scaleAndCompareImage(BufferedImage bImg, int width, int height)
-            throws Exception
+    private void scaleAndCompareImage(BufferedImage bImg, String format,
+            int width, int height) throws Exception
     {
-        ByteArrayInputStream in = writePNGStream(bImg);                
+        ByteArrayInputStream in = ImageTestHelper.writeImageToStream(bImg, format, null);
+        Image expectedImg = loadImage(in, 0, 0);
+        in.reset();
         Image img = loadImage(in, width, height);
-        compare(img, bImg);
+        compare(img, expectedImg);
     }
 
-    private void testScale(int w1, int h1, int w2, int h2) throws Exception {
-        BufferedImage bImg = createImage(w1, h1);
-        scaleAndCompareImage(bImg, w2, h2);
-    }
-
-    @Test
-    public void testNoScale() throws Exception {
-        testScale(100, 100, 100, 100);
+    private void testScale(String format, int srcW, int srcH, int dstW, int dstH) throws Exception {
+        BufferedImage bImg = createImage(srcW, srcH);
+        scaleAndCompareImage(bImg, format, dstW, dstH);
     }
 
     @Test
-    public void testAllTheScales() throws Exception {
+    public void testNoScalePNG() throws Exception {
+        testScale("png", 100, 100, 0, 0);
+        testScale("png", 100, 100, 100, 100);
+    }
+
+    @Test
+    public void testNoScaleBMP() throws Exception {
+        testScale("bmp", 100, 100, 0, 0);
+        testScale("bmp", 100, 100, 100, 100);
+    }
+
+    @Test
+    public void testNoScaleJPG() throws Exception {
+        testScale("jpg", 100, 100, 0, 0);
+        testScale("jpg", 100, 100, 100, 100);
+    }
+
+    @Test
+    public void testNoScaleGIF() throws Exception {
+        testScale("gif", 100, 100, 0, 0);
+        testScale("gif", 100, 100, 100, 100);
+    }
+
+    @Test
+    public void testAllTheScalesPNG() throws Exception {
+        testAllTheScales("png");
+    }
+
+    @Test
+    public void testAllTheScalesBMP() throws Exception {
+        testAllTheScales("bmp");
+    }
+
+    @Ignore // libjpeg can scale the image itself and results are unpredictable
+    @Test
+    public void testAllTheScalesJPG() throws Exception {
+        testAllTheScales("jpg");
+    }
+
+    @Test
+    public void testAllTheScalesGIF() throws Exception {
+        testAllTheScales("gif");
+    }
+
+    public void testAllTheScales(String format) throws Exception {
         BufferedImage bImg = createImage(10, 10);
         for (int h = 2; h < 20; h++) {
             for (int w = 2; w < 20; w++) {
-                scaleAndCompareImage(bImg, w, h);
-                testScale(w, h, 10, 10);
+                scaleAndCompareImage(bImg, format, w, h);
+                testScale(format, w, h, 10, 10);
             }
         }
     }
 
+    // (62.0 / 78.0) * 78 != 62
     @Test
-    public void testRT20295() throws Exception {
-        // (62.0 / 78.0) * 78 != 62
-        testScale(100, 62, 100, 78);
+    public void testRT20295_PNG() throws Exception {
+        testScale("png", 100, 62, 100, 78);
+    }
+
+    @Test
+    public void testRT20295_BMP() throws Exception {
+        testScale("bmp", 100, 62, 100, 78);
+    }
+
+    @Test
+    public void testRT20295_JPG() throws Exception {
+        testScale("jpg", 100, 62, 100, 78);
+    }
+
+    @Test
+    public void testRT20295_GIF() throws Exception {
+        testScale("gif", 100, 62, 100, 78);
     }
 }

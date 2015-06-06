@@ -44,10 +44,10 @@ gboolean is_in_drag();
 #define DRAG_IMAGE_MAX_WIDTH 320
 #define DRAG_IMAGE_MAX_HEIGH 240
 
-#define BSWAP_32(x) (((int)(x) << 24)  | \
-          (((int)(x) << 8) & 0xff0000) | \
-          (((int)(x) >> 8) & 0xff00)   | \
-          ((int)(x)  >> 24))
+#define BSWAP_32(x) (((uint)(x) << 24)  | \
+          (((uint)(x) << 8) & 0xff0000) | \
+          (((uint)(x) >> 8) & 0xff00)   | \
+          ((uint)(x)  >> 24))
 
 class DragView {
 public:

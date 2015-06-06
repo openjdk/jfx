@@ -30,8 +30,6 @@ import com.sun.javafx.iio.ImageMetadata;
 import com.sun.javafx.iio.ImageStorage;
 import com.sun.javafx.iio.common.ImageLoaderImpl;
 import com.sun.javafx.iio.common.ImageTools;
-import com.sun.javafx.iio.common.PushbroomScaler;
-import com.sun.javafx.iio.common.ScalerFactory;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -223,23 +221,26 @@ public class GIFImageLoader2 extends ImageLoaderImpl {
 
         byte palette[][] = localPalette ? readPalete(2 << (imgCtrl & 7), trnsIndex) : globalPalette;
 
-        ImageMetadata metadata = updateMetadata(screenW, screenH, imageControlCode & 0xFFFF);
+        int[] outWH = ImageTools.computeDimensions(screenW, screenH, width, height, preserveAspectRatio);
+        width = outWH[0];
+        height = outWH[1];
+
+        ImageMetadata metadata = updateMetadata(width, height, imageControlCode & 0xFFFF);
 
         int disposalCode = (imageControlCode >>> 26) & 7;
         byte pImage[] = new byte[w * h];
         decodeImage(pImage, w, h, isInterlaced ? computeInterlaceReIndex(h) : null);
 
-        ImageFrame imgGIF = decodePalette(pImage, palette, trnsIndex,
-                left, top, w, h, disposalCode, metadata);
+        ByteBuffer img = decodePalette(pImage, palette, trnsIndex,
+                left, top, w, h, disposalCode);
 
-        // need to remove scaler from image decoder itself
-        int[] outWH = ImageTools.computeDimensions(screenW, screenH, width, height, preserveAspectRatio);
-
-        if (screenW != outWH[0] || screenH != outWH[1]) {
-            imgGIF = scaleImage(imgGIF, outWH[0], outWH[1], smooth);
+        if (screenW != width || screenH != height) {
+            img = ImageTools.scaleImage(img, screenW, screenH, 4,
+                    width, height, smooth);
         }
 
-        return imgGIF;
+        return new ImageFrame(ImageStorage.ImageType.RGBA, img,
+                width, height, width * 4, null, metadata);
     }
 
     // IO helpers
@@ -290,8 +291,8 @@ public class GIFImageLoader2 extends ImageLoaderImpl {
     }
 
     // decode palletized image into RGBA
-    private ImageFrame decodePalette(byte[] srcImage, byte[][] palette, int trnsIndex,
-            int left, int top, int w, int h, int disposalCode, ImageMetadata metadata) {
+    private ByteBuffer decodePalette(byte[] srcImage, byte[][] palette, int trnsIndex,
+            int left, int top, int w, int h, int disposalCode) {
 
         byte img[] = (disposalCode == 3) ? image.clone() : image;
 
@@ -322,25 +323,7 @@ public class GIFImageLoader2 extends ImageLoaderImpl {
         if (disposalCode != 3) img = img.clone();
         if (disposalCode == 2) restoreToBackground(image, left, top, w, h);
 
-        return new ImageFrame(ImageStorage.ImageType.RGBA, ByteBuffer.wrap(img),
-                screenW, screenH, screenW * 4, null, metadata);
-    }
-
-    // copy from PNG, needs exctract refactoring later
-    // scales the image
-    private ImageFrame scaleImage(ImageFrame imgPNG, int rWidth, int rHeight, boolean smooth) {
-        byte image[] = ((ByteBuffer) imgPNG.getImageData()).array();
-        int bpp = ImageStorage.getNumBands(imgPNG.getImageType());
-
-        PushbroomScaler scaler = ScalerFactory.createScaler(screenW, screenH, bpp,
-                rWidth, rHeight, smooth);
-
-        for (int y = 0; y != screenH; ++y) {
-            scaler.putSourceScanline(image, y * screenW * bpp);
-        }
-
-        return new ImageFrame(imgPNG.getImageType(), scaler.getDestination(),
-                rWidth, rHeight, rWidth * bpp, null, imgPNG.getMetadata());
+        return ByteBuffer.wrap(img);
     }
 
     // fill metadata

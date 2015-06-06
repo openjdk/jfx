@@ -117,6 +117,11 @@ void WindowContextBase::process_state(GdkEventWindowState* event) {
             stateChangeEvent = com_sun_glass_events_WindowEvent_MAXIMIZE;
         } else {
             stateChangeEvent = com_sun_glass_events_WindowEvent_RESTORE;
+            if ((gdk_windowManagerFunctions & GDK_FUNC_MINIMIZE) == 0) {
+                // in this case - the window manager will not support the programatic
+                // request to iconify - so we need to restore it now.
+                gdk_window_set_functions(gdk_window, gdk_windowManagerFunctions);
+            }
         }
 
         notify_state(stateChangeEvent);
@@ -685,6 +690,7 @@ WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long
 
     gdk_window_register_dnd(gdk_window);
 
+    gdk_windowManagerFunctions = wmf;
     if (wmf) {
         gdk_window_set_functions(gdk_window, wmf);
     }
@@ -1273,6 +1279,13 @@ void WindowContextTop::set_minimized(bool minimize) {
         if (frame_type == TRANSPARENT) {
             // https://bugs.launchpad.net/ubuntu/+source/unity/+bug/1245571
             gdk_window_input_shape_combine_mask(gdk_window, NULL, 0, 0);
+        }
+
+        if ((gdk_windowManagerFunctions & GDK_FUNC_MINIMIZE) == 0) {
+            // in this case - the window manager will not support the programatic
+            // request to iconify - so we need to disable this until we are restored.
+            GdkWMFunction wmf = (GdkWMFunction)(gdk_windowManagerFunctions | GDK_FUNC_MINIMIZE);
+            gdk_window_set_functions(gdk_window, wmf);
         }
         gtk_window_iconify(GTK_WINDOW(gtk_widget));
     } else {

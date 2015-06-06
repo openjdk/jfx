@@ -31,11 +31,18 @@ import java.util.HashSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.print.PrinterJob;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
+import javafx.util.Duration;
 import junit.framework.AssertionFailedError;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -644,6 +651,153 @@ public class ShowAndWaitTest {
 
         for (int i = 0; i < N; i++) {
             assertFalse(tmpStage[i].isShowing());
+        }
+    }
+
+    // Verify that Stage.showAndWait throws an exception if called from an
+    // animation timeline.
+    @Test
+    public void testTimeline() throws Throwable {
+        ensureTest1();
+
+        final CountDownLatch animationDone = new CountDownLatch(1);
+        final AtomicReference<Throwable> error = new AtomicReference<>(null);
+
+        KeyFrame kf = new KeyFrame(Duration.millis(200), e -> {
+            try {
+                tmpStage1 = new TestStage(modality);
+                stages.add(tmpStage1);
+                assertFalse(tmpStage1.isPrimary());
+                assertFalse(tmpStage1.isShowing());
+                try {
+                    tmpStage1.showAndWait();
+                    fail("Did not get expected exception from showAndWait");
+                } catch (IllegalStateException ex) {
+                    // Good
+                }
+                assertFalse(tmpStage1.isShowing());
+            } catch (Throwable t) {
+                error.set(t);
+            }
+            animationDone.countDown();
+        });
+        Timeline timeline = new Timeline(kf);
+        timeline.play();
+
+        try {
+            if (!animationDone.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
+                fail("Timeout waiting for animation");
+            }
+        } catch (InterruptedException ex) {
+            fail("Unexpected exception: " + ex);
+        }
+
+        final Throwable t = error.get();
+        if (t != null) {
+            throw t;
+        }
+
+        assertFalse(tmpStage1.isShowing());
+    }
+
+    // Verify that Alert.showAndWait throws an exception if called from an
+    // animation timeline.
+    @Test
+    public void testTimelineDialog() throws Throwable {
+        ensureTest1();
+
+        final CountDownLatch animationDone = new CountDownLatch(1);
+        final AtomicReference<Throwable> error = new AtomicReference<>(null);
+
+        KeyFrame kf = new KeyFrame(Duration.millis(200), e -> {
+            Alert alert = null;
+            try {
+                alert = new Alert(Alert.AlertType.INFORMATION);
+                assertFalse(alert.isShowing());
+                try {
+                    alert.showAndWait();
+                    fail("Did not get expected exception from showAndWait");
+                } catch (IllegalStateException ex) {
+                    // Good
+                }
+                assertFalse(alert.isShowing());
+            } catch (Throwable t) {
+                error.set(t);
+                try {
+                    if (alert.isShowing()) {
+                        alert.close();
+                    }
+                } catch (RuntimeException ex) {}
+            }
+            animationDone.countDown();
+        });
+        Timeline timeline = new Timeline(kf);
+        timeline.play();
+
+        try {
+            if (!animationDone.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
+                fail("Timeout waiting for animation");
+            }
+        } catch (InterruptedException ex) {
+            fail("Unexpected exception: " + ex);
+        }
+
+        final Throwable t = error.get();
+        if (t != null) {
+            throw t;
+        }
+    }
+
+    // Verify that printing throws an exception if called from an
+    // animation timeline.
+    @Test
+    public void testTimelinePrint() throws Throwable {
+        ensureTest1();
+
+        final CountDownLatch animationDone = new CountDownLatch(1);
+        final AtomicReference<Throwable> error = new AtomicReference<>(null);
+
+        KeyFrame kf = new KeyFrame(Duration.millis(200), e -> {
+            try {
+                PrinterJob job = PrinterJob.createPrinterJob();
+                try {
+                    job.showPrintDialog(myApp.primaryStage);
+                    fail("Did not get expected exception from showPrintDialog");
+                } catch (IllegalStateException ex) {
+                    // Good
+                }
+                try {
+                    job.showPageSetupDialog(myApp.primaryStage);
+                    fail("Did not get expected exception from showPageSetupDialog");
+                } catch (IllegalStateException ex) {
+                    // Good
+                }
+                try {
+                    Rectangle rect = new Rectangle(200, 100, Color.GREEN);
+                    job.printPage(rect);
+                    fail("Did not get expected exception from printPage");
+                } catch (IllegalStateException ex) {
+                    // Good
+                }
+            } catch (Throwable t) {
+                error.set(t);
+            }
+            animationDone.countDown();
+        });
+        Timeline timeline = new Timeline(kf);
+        timeline.play();
+
+        try {
+            if (!animationDone.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
+                fail("Timeout waiting for animation");
+            }
+        } catch (InterruptedException ex) {
+            fail("Unexpected exception: " + ex);
+        }
+
+        final Throwable t = error.get();
+        if (t != null) {
+            throw t;
         }
     }
 

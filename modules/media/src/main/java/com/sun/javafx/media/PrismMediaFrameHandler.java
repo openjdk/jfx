@@ -74,7 +74,9 @@ public class PrismMediaFrameHandler implements ResourceFactoryListener {
     
     /**
      * This should only ever be called during a render cycle. Any other time it
-     * will return null.
+     * will return null. Note that a returned texture should be unlocked when
+     * the caller no longer needs it.
+     * 
      * @param g the Graphics context about to be rendered into
      * @return the current media texture valid for rendering into <code>g</code>
      * or null if called outside a render cycle

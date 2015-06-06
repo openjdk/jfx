@@ -244,17 +244,15 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
         int itemIndex = series.getItemIndex(item);
         if (shouldAnimate()) {
             boolean animate = false;
-            if (itemIndex > 0 && itemIndex < series.getDataSize()) {
+            // dataSize represents size of currently visible data. After this operation, the number will decrement by 1
+            final int dataSize = series.getDataSize();
+            // This is the size of current data list in Series. Note that it might be totaly different from dataSize as
+            // some big operation might have happened on the list.
+            final int dataListSize = series.getData().size();
+            if (itemIndex > 0 && itemIndex < dataSize - 1) {
                 animate = true;
-                int index=0;
-
                 Data<X,Y> p1 = series.getItem(itemIndex - 1);
                 Data<X,Y> p2 = series.getItem(itemIndex + 1);
-
-                if (p2 == null) {
-                    return;
-                }
-
                 double x1 = getXAxis().toNumericValue(p1.getXValue());
                 double y1 = getYAxis().toNumericValue(p1.getYValue());
                 double x3 = getXAxis().toNumericValue(p2.getXValue());
@@ -274,16 +272,16 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
 //                double y = (y3 + y1)/2;
 //                item.setCurrentX(x);
 //                item.setCurrentY(y);
-            } else if (itemIndex == 0 && series.getDataSize() > 1) {
+            } else if (itemIndex == 0 && dataListSize > 1) {
                 animate = true;
                 item.setXValue(series.getData().get(0).getXValue());
                 item.setYValue(series.getData().get(0).getYValue());
-            } else if (itemIndex == (series.getDataSize() - 1) && series.getDataSize() > 1) {
+            } else if (itemIndex == (dataSize - 1) && dataListSize > 1) {
                 animate = true;
-                int last = series.getData().size() - 1;
+                int last = dataListSize - 1;
                 item.setXValue(series.getData().get(last).getXValue());
                 item.setYValue(series.getData().get(last).getYValue());
-            } else {
+            } else if (symbol != null) {
                 // fade out symbol
                 symbol.setOpacity(0);
                 FadeTransition ft = new FadeTransition(Duration.millis(500),symbol);

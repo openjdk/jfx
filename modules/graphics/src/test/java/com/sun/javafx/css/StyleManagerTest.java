@@ -36,8 +36,6 @@ import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Rectangle;
-import javafx.stage.PopupWindow;
-import javafx.stage.Window;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -46,9 +44,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.Assert.*;
-import static org.junit.Assert.assertEquals;
 
 /**
  *
@@ -1078,4 +1076,43 @@ public class StyleManagerTest {
         assertEquals(StyleOrigin.USER, fillProperty.getStyleOrigin());
 
     }
+
+    @Test
+    public void testConcurrentAccess() {
+        final int NUM_THREADS = 10;
+        final Thread[] bgThreads = new Thread[NUM_THREADS];
+        final AtomicBoolean err = new AtomicBoolean(false);
+        for (int i = 0; i < NUM_THREADS; i++) {
+            Thread thr = new Thread(() -> {
+                try {
+                    for (int j = 0; j < 1000; j++) {
+                        Scene scene = new Scene(new Group());
+                        scene.setUserAgentStylesheet("com/sun/javafx/css/ua0.css");
+                        scene.getRoot().applyCss();
+                    }
+                } catch (RuntimeException ex) {
+                    err.set(true);
+                    throw ex;
+                }
+            });
+            thr.setName("MyThread-" + i);
+            thr.setDaemon(true);
+            bgThreads[i] = thr;
+        }
+
+        for (Thread thr : bgThreads) {
+            thr.start();
+        }
+
+        try {
+            for (Thread thr : bgThreads) {
+                thr.join();
+            }
+        } catch (InterruptedException ex) {
+            fail("Unexpected exception waiting for threads to finish");
+        }
+
+        assertFalse("Exception during CSS processing on BG thread", err.get());
+    }
+
 }

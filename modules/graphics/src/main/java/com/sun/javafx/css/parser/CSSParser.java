@@ -114,17 +114,12 @@ import java.util.Stack;
 
 final public class CSSParser {
 
-    /* Lazy instantiation */
-    private static class InstanceHolder {
-        final static CSSParser INSTANCE = new CSSParser();
-    }
-
     /**
      * @deprecated As of 8u40, use new CSSParser() instead.
      */
     @Deprecated
     public static CSSParser getInstance() {
-        return InstanceHolder.INSTANCE;
+        return new CSSParser();
     }
 
     public CSSParser() {

@@ -31,8 +31,6 @@ import com.sun.javafx.iio.ImageStorage.ImageType;
 import com.sun.glass.utils.NativeLibLoader;
 import com.sun.javafx.iio.common.ImageLoaderImpl;
 import com.sun.javafx.iio.common.ImageTools;
-import com.sun.javafx.iio.common.PushbroomScaler;
-import com.sun.javafx.iio.common.ScalerFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
@@ -223,7 +221,7 @@ public class JPEGImageLoader extends ImageLoaderImpl {
 
         ImageMetadata md = new ImageMetadata(null, true,
                 null, null, null, null, null,
-                inWidth, inHeight, null, null, null);
+                width, height, null, null, null);
 
         updateImageMetadata(md);
 
@@ -251,45 +249,18 @@ public class JPEGImageLoader extends ImageLoaderImpl {
             throw new IOException("Error decompressing JPEG stream!");
         }
 
-        ImageFrame frame = null;
-
         // Check whether the decompressed image has been scaled to the correct
-        // dimensions. If not, downscalte it here. Note outData, outHeight, and
+        // dimensions. If not, downscale it here. Note outData, outHeight, and
         // outWidth refer to the image as returned by the decompressor. This
         // image might have been downscaled from the original source by a factor
         // of N/8 where 1 <= N <=8.
         if (outWidth != width || outHeight != height) {
-            // Get the decompressed data array. Note that the code really should
-            // be moidified to use direct buffers if and only if this post-
-            // decompression scaling will NOT occur.
-            byte[] outData;
-            if (buffer.hasArray()) {
-                outData = buffer.array();
-            } else {
-                outData = new byte[buffer.capacity()];
-                buffer.get(outData);
-            }
-
-            PushbroomScaler scaler = ScalerFactory.createScaler(outWidth, outHeight,
-                    outNumComponents, width, height, smooth);
-            int stride = outWidth * outNumComponents;
-            int off = 0;
-            for (int y = 0; y < outHeight; y++) {
-                if (scaler.putSourceScanline(outData, off)) {
-                    break;
-                }
-                off += stride;
-            }
-            buffer = scaler.getDestination();
-            frame = new ImageFrame(outImageType, buffer,
-                    width, height, width * outNumComponents, null, md);
-        }
-        else {
-            frame = new ImageFrame(outImageType, buffer,
-                                   outWidth, outHeight, outWidth * outNumComponents, null, md);
+            buffer = ImageTools.scaleImage(buffer,
+                    outWidth, outHeight, outNumComponents, width, height, smooth);
         }
 
-        return frame;
+        return new ImageFrame(outImageType, buffer,
+                width, height, width * outNumComponents, null, md);
     }
 
     private static class Lock {

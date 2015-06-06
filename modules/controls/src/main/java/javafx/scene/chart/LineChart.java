@@ -304,59 +304,56 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
         if (shouldAnimate()) {
             XYValueMap.clear();
             boolean animate = false;
-            if (itemIndex > 0 && itemIndex < series.getDataSize()) {
+            // dataSize represents size of currently visible data. After this operation, the number will decrement by 1
+            final int dataSize = series.getDataSize();
+            // This is the size of current data list in Series. Note that it might be totaly different from dataSize as
+            // some big operation might have happened on the list.
+            final int dataListSize = series.getData().size();
+            if (itemIndex > 0 && itemIndex < dataSize - 1) {
                 animate = true;
                 Data<X,Y> p1 = series.getItem(itemIndex - 1);
                 Data<X,Y> p2 = series.getItem(itemIndex + 1);
-                if (p1 != null && p2 != null) {
-                    double x1 = getXAxis().toNumericValue(p1.getXValue());
-                    double y1 = getYAxis().toNumericValue(p1.getYValue());
-                    double x3 = getXAxis().toNumericValue(p2.getXValue());
-                    double y3 = getYAxis().toNumericValue(p2.getYValue());
+                double x1 = getXAxis().toNumericValue(p1.getXValue());
+                double y1 = getYAxis().toNumericValue(p1.getYValue());
+                double x3 = getXAxis().toNumericValue(p2.getXValue());
+                double y3 = getYAxis().toNumericValue(p2.getYValue());
 
-                    double x2 = getXAxis().toNumericValue(item.getXValue());
-                    double y2 = getYAxis().toNumericValue(item.getYValue());
-                    if (x2 > x1 && x2 < x3) {
-    //                //1.  y intercept of the line : y = ((y3-y1)/(x3-x1)) * x2 + (x3y1 - y3x1)/(x3 -x1)
-                        double y = ((y3-y1)/(x3-x1)) * x2 + (x3*y1 - y3*x1)/(x3-x1);
-                        item.setCurrentX(getXAxis().toRealValue(x2));
-                        item.setCurrentY(getYAxis().toRealValue(y2));
-                        item.setXValue(getXAxis().toRealValue(x2));
-                        item.setYValue(getYAxis().toRealValue(y));
-                    } else {
-                    //2.  we can simply use the midpoint on the line as well..
-                        double x = (x3 + x1)/2;
-                        double y = (y3 + y1)/2;
-                        item.setCurrentX(getXAxis().toRealValue(x));
-                        item.setCurrentY(getYAxis().toRealValue(y));
-                    }
+                double x2 = getXAxis().toNumericValue(item.getXValue());
+                double y2 = getYAxis().toNumericValue(item.getYValue());
+                if (x2 > x1 && x2 < x3) {
+//                //1.  y intercept of the line : y = ((y3-y1)/(x3-x1)) * x2 + (x3y1 - y3x1)/(x3 -x1)
+                    double y = ((y3-y1)/(x3-x1)) * x2 + (x3*y1 - y3*x1)/(x3-x1);
+                    item.setCurrentX(getXAxis().toRealValue(x2));
+                    item.setCurrentY(getYAxis().toRealValue(y2));
+                    item.setXValue(getXAxis().toRealValue(x2));
+                    item.setYValue(getYAxis().toRealValue(y));
+                } else {
+                //2.  we can simply use the midpoint on the line as well..
+                    double x = (x3 + x1)/2;
+                    double y = (y3 + y1)/2;
+                    item.setCurrentX(getXAxis().toRealValue(x));
+                    item.setCurrentY(getYAxis().toRealValue(y));
                 }
-            } else if (itemIndex == 0 && series.getDataSize() > 1) {
+            } else if (itemIndex == 0 && dataListSize > 1) {
                 animate = true;
-                Iterator<Data<X,Y>> iter = getDisplayedDataIterator(series);
-                if (iter.hasNext()) { // get first data value
-                    Data<X,Y> d = iter.next();
-                    item.setXValue(d.getXValue());
-                    item.setYValue(d.getYValue());
-                }
-            } else if (itemIndex == (series.getDataSize() - 1) && series.getDataSize() > 1) {
+                item.setXValue(series.getData().get(0).getXValue());
+                item.setYValue(series.getData().get(0).getYValue());
+            } else if (itemIndex == (dataSize - 1) && dataListSize > 1) {
                 animate = true;
-                int last = series.getData().size() - 1;
+                int last = dataListSize - 1;
                 item.setXValue(series.getData().get(last).getXValue());
                 item.setYValue(series.getData().get(last).getYValue());
-            } else {
+            } else if (symbol != null) {
                 // fade out symbol
-                if (symbol != null) {
-                    fadeSymbolTransition = new FadeTransition(Duration.millis(500),symbol);
-                    fadeSymbolTransition.setToValue(0);
-                    fadeSymbolTransition.setOnFinished(actionEvent -> {
-                        item.setSeries(null);
-                        getPlotChildren().remove(symbol);
-                        removeDataItemFromDisplay(series, item);
-                        symbol.setOpacity(1.0);
-                    });
-                    fadeSymbolTransition.play();
-                }
+                fadeSymbolTransition = new FadeTransition(Duration.millis(500),symbol);
+                fadeSymbolTransition.setToValue(0);
+                fadeSymbolTransition.setOnFinished(actionEvent -> {
+                    item.setSeries(null);
+                    getPlotChildren().remove(symbol);
+                    removeDataItemFromDisplay(series, item);
+                    symbol.setOpacity(1.0);
+                });
+                fadeSymbolTransition.play();
             }
             if (animate) {
                 dataRemoveTimeline = createDataRemoveTimeline(item, symbol, series);

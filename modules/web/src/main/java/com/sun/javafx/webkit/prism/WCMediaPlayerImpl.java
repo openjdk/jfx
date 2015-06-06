@@ -357,6 +357,7 @@ final class WCMediaPlayerImpl extends WCMediaPlayer
             g.drawTexture(texture,
                     x, y, x + w, y + h,
                     0f, 0f, texture.getContentWidth(), texture.getContentHeight());
+            texture.unlock();
         } else {
             if (verbose) log.log(Level.FINEST, "  (Prism)renderImpl, texture is null, draw black rect");
             gc.fillRect(x, y, w, h, 0xFF000000);

@@ -722,6 +722,10 @@ public class StubToolkit extends Toolkit {
         throw new UnsupportedOperationException();
     }
 
+    @Override public boolean canStartNestedEventLoop() {
+        return false;
+    }
+
     @Override public Object enterNestedEventLoop(Object key) {
         throw new UnsupportedOperationException("Not supported yet.");
     }

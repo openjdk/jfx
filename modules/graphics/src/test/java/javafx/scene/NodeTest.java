@@ -1027,7 +1027,8 @@ public class NodeTest {
 
         syncNode(g);
         syncNode(c);
-        assertEquals(1, sg.getChildren().size());
+        // Group with change in children will always be synced even if it is invisible
+        assertEquals(2, sg.getChildren().size());
         assertEquals(50.0, sc.getRadius(), 0.01);
 
         g.setVisible(true);
