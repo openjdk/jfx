@@ -45,6 +45,8 @@ abstract class CMap {
     static final int SHORTMASK = 0x0000ffff;
     static final int INTMASK   = 0xffffffff;
 
+    private static final int MAX_CODE_POINTS = 0x10ffff;
+
     static CMap initialize(PrismFontFile font) {
 
         CMap cmap = null;
@@ -472,6 +474,11 @@ abstract class CMap {
              buffer.position(offset+12);
              startCharCode = buffer.getInt() & INTMASK;
              numChars = buffer.getInt() & INTMASK;
+             if (numChars <= 0 || numChars > MAX_CODE_POINTS ||
+                 offset > buffer.capacity() - numChars*2 - 12 - 8)
+             {
+                 throw new RuntimeException("Invalid cmap subtable");   
+             }
              glyphIdArray = new char[numChars];
              for (int i=0; i< numChars; i++) {
                  glyphIdArray[i] = buffer.getChar();
@@ -504,6 +511,11 @@ abstract class CMap {
         CMapFormat12(Buffer buffer, int offset) {
 
             numGroups = buffer.getInt(offset+12);
+            if (numGroups <= 0 || numGroups > MAX_CODE_POINTS ||
+                offset > buffer.capacity() - numGroups*12 - 12 - 4)
+            {
+                throw new RuntimeException("Invalid cmap subtable");
+            }
             startCharCode = new long[numGroups];
             endCharCode = new long[numGroups];
             startGlyphID = new int[numGroups];
