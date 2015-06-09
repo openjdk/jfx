@@ -271,7 +271,7 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
 
     @Override
     protected void createIndeterminateTimeline() {
-        if (indeterminateTransition != null) return;
+        if (indeterminateTransition != null) indeterminateTransition.stop();
 
         ProgressIndicator control = getSkinnable();
         final double w = control.getWidth() - (snappedLeftInset() + snappedRightInset());
@@ -358,11 +358,9 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
 
             // apply clip
             bar.setClip(clipRegion);
-        } else {
-            if (indeterminateTransition != null) {
-                indeterminateTransition.stop();
-                indeterminateTransition = null;
-            }
+        } else if (indeterminateTransition != null) {
+            indeterminateTransition.stop();
+            indeterminateTransition = null;
 
             // remove clip
             bar.setClip(null);
