@@ -208,15 +208,16 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
             // snap to pixel
             final Region r = (Region) popupContent;
 
-            final double prefWidth = r.prefWidth(-1);
-            final double minWidth = r.minWidth(-1);
-            final double maxWidth = r.maxWidth(-1);
-            final double w = snapSize(Math.min(Math.max(prefWidth, minWidth), Math.max(minWidth, maxWidth)));
+            // 0 is used here for the width due to RT-46097
+            double prefHeight = snapSize(r.prefHeight(0));
+            double minHeight = snapSize(r.minHeight(0));
+            double maxHeight = snapSize(r.maxHeight(0));
+            double h = snapSize(Math.min(Math.max(prefHeight, minHeight), Math.max(minHeight, maxHeight)));
 
-            final double prefHeight = r.prefHeight(w);
-            final double minHeight = r.minHeight(w);
-            final double maxHeight = r.maxHeight(w);
-            final double h = snapSize(Math.min(Math.max(prefHeight, minHeight), Math.max(minHeight, maxHeight)));
+            double prefWidth = snapSize(r.prefWidth(h));
+            double minWidth = snapSize(r.minWidth(h));
+            double maxWidth = snapSize(r.maxWidth(h));
+            double w = snapSize(Math.min(Math.max(prefWidth, minWidth), Math.max(minWidth, maxWidth)));
 
             popupContent.resize(w, h);
         } else {
