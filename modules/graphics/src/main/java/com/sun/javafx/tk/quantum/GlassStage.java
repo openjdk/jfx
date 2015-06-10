@@ -163,8 +163,11 @@ abstract class GlassStage implements TKStage {
         // If Window #1 pops up an APPLICATION modal dialog #2 it should block
         // Window #1, but will also block Window #3, #4, etc., unless those
         // windows are descendants of #2.
-        for (GlassStage window : windows) {
-            if (window != this) {
+
+        // Make a copy of the windows list, since it could change as the result
+        // of a child window being closed when the parent is closed.
+        for (GlassStage window : windows.toArray(new GlassStage[windows.size()])) {
+            if (window != this && windows.contains(window)) {
                 window.setPlatformEnabled(enabled);
             }
         }
