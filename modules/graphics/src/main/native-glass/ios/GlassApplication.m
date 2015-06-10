@@ -109,6 +109,9 @@ jclass mat_jCursorClass = NULL;
 static int postEventPipe[2];
 static int haveIDs = 0;
 
+static BOOL shouldKeepRunningNestedLoop = YES;
+static jobject nestedLoopReturnValue = NULL;
+
 //Library entrypoint
 JNIEXPORT jint JNICALL
 JNI_OnLoad_glass(JavaVM *vm, void *reserved)
@@ -494,7 +497,7 @@ jclass classForName(JNIEnv *env, char *className)
     jint error = (*jVM)->AttachCurrentThread(jVM, (void **)&jEnv, NULL);
     GLASS_LOG("AttachCurrentThread returned %ld",error);
     
-    
+
     if (error == 0)
     {
         NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
@@ -545,6 +548,42 @@ jclass classForName(JNIEnv *env, char *className)
         NSLog(@"ERROR: Glass could not attach to VM, result:%ld", error);
     }
 }
+
+
++ (jobject)enterNestedEventLoopWithEnv:(JNIEnv*)env
+{
+    jobject ret = NULL;
+    GLASS_LOG("entering nestedEventLoop");
+
+    NSRunLoop *theRL = [NSRunLoop currentRunLoop];
+    UIApplication * app = [UIApplication sharedApplication];
+    shouldKeepRunningNestedLoop = YES;
+    while (shouldKeepRunningNestedLoop && [theRL runMode:NSDefaultRunLoopMode
+                                              beforeDate:[NSDate dateWithTimeIntervalSinceNow:0.010]])
+    {
+        // don't do anything, as long as we should stay here events are forwarded.
+    }
+    GLASS_LOG("leaving enterNestedEventLoop");
+
+    if (nestedLoopReturnValue != NULL) {
+        ret = (*env)->NewLocalRef(env, nestedLoopReturnValue);
+        (*env)->DeleteGlobalRef(env, nestedLoopReturnValue);
+        nestedLoopReturnValue = NULL;
+    }
+
+    shouldKeepRunningNestedLoop = YES;
+
+    return ret;
+}
+
++ (void)leaveNestedEventLoopWithEnv:(JNIEnv*)env retValue:(jobject)retValue
+{
+    if (retValue != NULL) {
+        nestedLoopReturnValue = (*env)->NewGlobalRef(env, retValue);
+    }
+    shouldKeepRunningNestedLoop = NO;
+}
+
 
 
 - (void)notify
@@ -778,6 +817,49 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosApplication__1runLoop
     GLASS_CHECK_EXCEPTION(env);
     GLASS_LOG("Java_com_sun_glass_ui_ios_IosApplication__1runLoop ... returns");
 }
+
+
+/*
+ *  * Class:     com_sun_glass_ui_ios_IosApplication
+ *   * Method:    _enterNestedEventLoopImpl
+ *    * Signature: ()Ljava/lang/Object;
+ *     */
+JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_ios_IosApplication__1enterNestedEventLoopImpl
+(JNIEnv *env, jobject japplication)
+{
+    GLASS_LOG("Java_com_sun_glass_ui_ios_IosApplication__1enterNestedEventLoopImpl");
+
+    jobject ret;
+
+    NSAutoreleasePool *glasspool = [[NSAutoreleasePool alloc] init];
+    {
+        ret = [GlassApplication enterNestedEventLoopWithEnv:env];
+    }
+    [glasspool drain]; glasspool=nil;
+     GLASS_CHECK_EXCEPTION(env);
+
+    return ret;
+}
+
+/*
+ *  * Class:     com_sun_glass_ui_ios_IosApplication
+ *   * Method:    _leaveNestedEventLoopImpl
+ *    * Signature: (Ljava/lang/Object;)V
+ *     */
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosApplication__1leaveNestedEventLoopImpl
+(JNIEnv *env, jobject japplication, jobject retValue)
+{
+    GLASS_LOG("Java_com_sun_glass_ui_ios_IosApplication__1leaveNestedEventLoopImpl");
+
+    NSAutoreleasePool *glasspool = [[NSAutoreleasePool alloc] init];
+    {
+	    [GlassApplication leaveNestedEventLoopWithEnv:env retValue:retValue];
+    }
+    [glasspool drain]; glasspool=nil;
+     GLASS_CHECK_EXCEPTION(env);
+
+}
+
 
 
 /*

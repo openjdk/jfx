@@ -166,11 +166,11 @@ static jint getTouchStateFromPhase(int phase)
     // emulate mouse
     if (self.mouseTouch != nil && [involvedTouches containsObject:self.mouseTouch] == YES) {
         CGPoint viewPoint = [self.mouseTouch locationInView:self.uiView.superview];
+        self.mouseTouch = nil; // do this before we call into the Java layer, as this might call us back (enterNestedEventLoop) before returning
 
         [self sendJavaMouseEvent:viewPoint type:com_sun_glass_events_MouseEvent_UP button:com_sun_glass_events_MouseEvent_BUTTON_LEFT];
         [self sendJavaMouseEvent:viewPoint type:com_sun_glass_events_MouseEvent_EXIT button:com_sun_glass_events_MouseEvent_BUTTON_NONE];
 
-        self.mouseTouch = nil;
     }
 }
 
