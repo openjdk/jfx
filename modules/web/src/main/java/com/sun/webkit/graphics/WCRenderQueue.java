@@ -46,7 +46,7 @@ public abstract class WCRenderQueue extends Ref {
     private final boolean opaque;
 
     // Associated graphics context (currently used to draw to a buffered image).
-    private final WCGraphicsContext gc;
+    protected final WCGraphicsContext gc;
 
     protected WCRenderQueue(WCGraphicsContext gc) {
         this.clip = null;
@@ -141,6 +141,12 @@ public abstract class WCRenderQueue extends Ref {
                         new Object[]{hashCode(), idCountObj.decrementAndGet()});
             }
         }
+    }
+    
+    protected abstract void disposeGraphics();
+    
+    private void fwkDisposeGraphics() {
+        disposeGraphics();
     }
 
     private native void twkRelease(Object[] bufs);

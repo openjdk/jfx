@@ -56,6 +56,21 @@ namespace WebCore {
         CheckAndClearException(env);
     }
 
+    void RenderingQueue::disposeGraphics() {
+        JNIEnv* env = WebCore_GetJavaEnv();
+
+	// The method is called from the dtor which potentially can be called after VM detach.
+	// So the check for NULL.
+	if (env == NULL) return;
+
+        static jmethodID midFwkDisposeGraphics = env->GetMethodID(
+                PG_GetRenderQueueClass(env), "fwkDisposeGraphics", "()V");
+        ASSERT(midFwkDisposeGraphics);
+
+	env->CallVoidMethod(getWCRenderingQueue(), midFwkDisposeGraphics);
+	CheckAndClearException(env);
+    }
+    
     /*
      * The method is called on Event thread (so, it's not concurrent with JS and the release of resources).
      */

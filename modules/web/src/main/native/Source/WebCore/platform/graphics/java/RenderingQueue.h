@@ -127,6 +127,7 @@ namespace WebCore {
         }
 
         ~RenderingQueue() {
+            disposeGraphics();
         }
 
     private:
@@ -138,6 +139,7 @@ namespace WebCore {
         {}
 
         void flush();
+        void disposeGraphics();
 
         int m_capacity;
         bool m_autoFlush;

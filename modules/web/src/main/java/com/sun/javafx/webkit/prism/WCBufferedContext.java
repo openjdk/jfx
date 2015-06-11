@@ -46,6 +46,11 @@ final class WCBufferedContext extends WCGraphicsPrismContext {
     WCBufferedContext(PrismImage img) {
         this.img = img;
     }
+    
+    @Override
+    public Type type() {
+        return Type.DEDICATED;
+    }
 
     @Override
     public WCImage getImage() {

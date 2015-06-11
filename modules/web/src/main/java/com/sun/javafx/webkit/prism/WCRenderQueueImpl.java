@@ -39,11 +39,21 @@ final class WCRenderQueueImpl extends WCRenderQueue {
         super(clip, opaque);
     }
 
-    @Override protected void flush() {
+    @Override
+    protected void flush() {
         if (!isEmpty()) {
             PrismInvoker.invokeOnRenderThread(() -> {
                 decode();
             });
         }
+    }
+    
+    @Override
+    protected void disposeGraphics() {
+        PrismInvoker.invokeOnRenderThread(() -> {
+            if (gc != null) {                
+                gc.dispose();
+            }
+        });
     }
 }
