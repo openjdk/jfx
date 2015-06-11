@@ -179,51 +179,7 @@ public class JFXPanel extends JComponent {
     private AtomicInteger disableCount = new AtomicInteger(0);
 
     private boolean isCapturingMouse = false;
-    
-    private static ThreadLocal<Class> classCClipboard =
-        new ThreadLocal<Class>() {
-            @Override protected Class initialValue() {
-                try {
-                    return Class.forName("sun.lwawt.macosx.CClipboard");
-                } catch (Exception ex) {
-                    if (log.isLoggable(Level.FINE)) {
-                        log.fine(ex.getMessage());
-                    }
-                }
-                return null;
-            }
-        };
-    
-    private static ThreadLocal<Method> methodCheckPasteboard =
-        new ThreadLocal<Method>() {
-            @Override protected Method initialValue() {
-                if (classCClipboard.get() != null) {
-                    try {
-                        Method m = classCClipboard.get().getDeclaredMethod("checkPasteboard");
-                        m.setAccessible(true);
-                        return m;
-                    } catch (Exception ex) {
-                        if (log.isLoggable(Level.FINE)) {
-                            log.fine(ex.getMessage());
-                        }
-                    }
-                }
-                return null;
-            }
-        };
-    
-    private static void checkPasteboard(Clipboard clipboard) {
-        if (PlatformUtil.isMac() && methodCheckPasteboard.get() != null && clipboard != null) {
-            try {
-                methodCheckPasteboard.get().invoke(clipboard);
-            } catch (Exception ex) {
-                if (log.isLoggable(Level.FINE)) {
-                    log.fine(ex.getMessage());
-                }
-            }
-        }
-    }
-    
+            
     private synchronized void registerFinishListener() {
         if (instanceCount.getAndIncrement() > 0) {
             // Already registered
@@ -644,15 +600,6 @@ public class JFXPanel extends JComponent {
      */
     @Override
     protected void processFocusEvent(FocusEvent e) {
-        if (e.getID() == FocusEvent.FOCUS_LOST) {
-            try {
-                Clipboard c = java.awt.Toolkit.getDefaultToolkit().getSystemClipboard();
-                // todo: replace with ((SunClipboard)c).checkLostOwnership() when JDK-8061315 is fixed
-                checkPasteboard(c);
-            } catch (SecurityException ex) {
-                if (log.isLoggable(Level.FINE)) log.fine(ex.getMessage());
-            }
-        }
         sendFocusEventToFX(e);
         super.processFocusEvent(e);
     }
@@ -879,9 +826,6 @@ public class JFXPanel extends JComponent {
         pWidth = 0;
         pHeight = 0;
         
-        methodCheckPasteboard.remove();
-        classCClipboard.remove();
-
         super.removeNotify();
 
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
