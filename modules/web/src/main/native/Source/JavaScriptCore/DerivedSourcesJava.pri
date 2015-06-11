@@ -154,7 +154,7 @@ INSPECTOR_JSON_INPUT = $$PWD/inspector/protocol
 inspectorJSON.output = InspectorJS.json
 inspectorJSON.input = INSPECTOR_JSON_INPUT
 inspectorJSON.script = $$PWD/inspector/scripts/generate-combined-inspector-json.py
-inspectorJSON.commands = python $$inspectorJSON.script ${QMAKE_FILE_NAME} > ${QMAKE_FILE_OUT}
+inspectorJSON.commands = python $$inspectorJSON.script ${QMAKE_FILE_NAME} > ${QMAKE_FILE_OUT} && $$CHK_DIR_EXISTS $${GENERATED_SOURCES_DIR}/inspector || $(MKDIR) $${GENERATED_SOURCES_DIR}/inspector 
 inspectorJSON.depends = ${QMAKE_FILE_NAME}
 GENERATORS += inspectorJSON
 
@@ -176,7 +176,7 @@ inspectorJS.input = INSPECTOR_JS_GEN_FILES
 inspectorJS.output = ${QMAKE_FILE_NAME}
 inspectorJS.output_no_prepend = true
 inspectorJS.script = $$PWD/inspector/scripts/CodeGeneratorInspector.py
-inspectorJS.commands = $$CHK_FILE_EXISTS ${QMAKE_FILE_NAME} || python $$inspectorJS.script $${GENERATED_SOURCES_DIR}/InspectorJS.json --output_h_dir $${GENERATED_SOURCES_DIR} --output_cpp_dir $${GENERATED_SOURCES_DIR} --output_js_dir $${GENERATED_SOURCES_DIR} --output_type JavaScript && cd $${GENERATED_SOURCES_DIR} && $$CHK_DIR_EXISTS inspector || $(MKDIR) inspector && $(COPY_FILE) InspectorJS*.h inspector
+inspectorJS.commands = $$CHK_FILE_EXISTS ${QMAKE_FILE_NAME} || python $$inspectorJS.script $${GENERATED_SOURCES_DIR}/InspectorJS.json --output_h_dir $${GENERATED_SOURCES_DIR}/inspector --output_cpp_dir $${GENERATED_SOURCES_DIR} --output_js_dir $${GENERATED_SOURCES_DIR} --output_type JavaScript && cd $${GENERATED_SOURCES_DIR} && $$CHK_FILE_EXISTS inspector/${QMAKE_FILE_BASE}.h && $(COPY_FILE) inspector/${QMAKE_FILE_BASE}.h ${QMAKE_FILE_BASE}.h 
 inspectorJS.extra_sources = $${INSPECTOR_JS_CPP_FILES}
 inspectorJS.extra_sources_no_prepend = true
 inspectorJS.depends = $${GENERATED_SOURCES_DIR}/InspectorJS.json
