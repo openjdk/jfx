@@ -58,8 +58,25 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static com.sun.scenario.effect.Blend.Mode.*;
+import com.sun.scenario.effect.impl.Renderer;
+import com.sun.scenario.effect.impl.prism.PrRenderer;
 
 class WCGraphicsPrismContext extends WCGraphicsContext {
+    
+    public enum Type {
+        /**
+         * Base context associated with the topmost page buffer.
+         * Created and disposed during a single render pass.
+         */
+        PRIMARY,
+        
+        /**
+         * A context associated with a dedicated buffer representing
+         * a separate render target like canvas, buffered image etc.
+         * Its life cycle is not limited to a single render pass.
+         */
+        DEDICATED
+    }
 
     private final static Logger log =
         Logger.getLogger(WCGraphicsPrismContext.class.getName());
@@ -88,6 +105,10 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     }
 
     WCGraphicsPrismContext() {
+    }
+    
+    public Type type() {
+        return Type.PRIMARY;
     }
 
     final void initBaseTransform(BaseTransform t) {
@@ -254,7 +275,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     }
 
 
-    public void dispose() {
+    public void dispose() {        
         if (!states.isEmpty()) {
             log.fine("Unbalanced saveState/restoreState");
         }
@@ -303,7 +324,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         path.translate(-clip.x, -clip.y);
 
         Layer layer = new ClipLayer(
-                getGraphics(false), clip, path);
+            getGraphics(false), clip, path, type() == Type.DEDICATED);
 
         startNewLayer(layer);
 
@@ -1305,15 +1326,24 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         PrDrawable buffer;
         Graphics graphics;
         final Rectangle bounds;
+        boolean permanent;
 
-        Layer(Graphics g, Rectangle bounds) {
+        Layer(Graphics g, Rectangle bounds, boolean permanent) {
             this.bounds = new Rectangle(bounds);
+            this.permanent = permanent;
 
             // avoid creating zero-size drawable, see also RT-21410
             int w = Math.max(bounds.width, 1);
             int h = Math.max(bounds.height, 1);
             fctx = getFilterContext(g);
-            buffer = (PrDrawable) Effect.getCompatibleImage(fctx, w, h);
+            if (permanent) {
+                ResourceFactory f = GraphicsPipeline.getDefaultResourceFactory();
+                RTTexture rtt = f.createRTTexture(w, h, Texture.WrapMode.CLAMP_NOT_NEEDED);
+                rtt.makePermanent();
+                buffer = ((PrRenderer)Renderer.getRenderer(fctx)).createDrawable(rtt);                
+            } else {
+                buffer = (PrDrawable) Effect.getCompatibleImage(fctx, w, h);
+            }
         }
 
         Graphics getGraphics() {
@@ -1329,7 +1359,11 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
 
         private void dispose() {
             if (buffer != null) {
-                Effect.releaseCompatibleImage(fctx, buffer);
+                if (permanent) {
+                    buffer.flush(); // releases the resource
+                } else {
+                    Effect.releaseCompatibleImage(fctx, buffer);
+                }
                 fctx = null;
                 buffer = null;
             }
@@ -1343,7 +1377,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         private final float opacity;
 
         private TransparencyLayer(Graphics g, Rectangle bounds, float opacity) {
-            super(g, bounds);
+            super(g, bounds, false);
             this.opacity = opacity;
         }
 
@@ -1373,8 +1407,10 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         private final WCPath normalizedToClipPath;
         private boolean srcover;
 
-        private ClipLayer(Graphics g, Rectangle bounds, WCPath normalizedToClipPath) {
-            super(g, bounds);
+        private ClipLayer(Graphics g, Rectangle bounds, WCPath normalizedToClipPath,
+                          boolean permanent)
+        {
+            super(g, bounds, permanent);
             this.normalizedToClipPath = normalizedToClipPath;
             srcover = true;
         }

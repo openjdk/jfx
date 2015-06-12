@@ -55,6 +55,7 @@ import org.junit.runners.Parameterized.Parameters;
 import util.Util;
 
 import static org.junit.Assert.*;
+import static org.junit.Assume.*;
 import static util.Util.TIMEOUT;
 
 /**
@@ -752,6 +753,8 @@ public class ShowAndWaitTest {
     // animation timeline.
     @Test
     public void testTimelinePrint() throws Throwable {
+        assumeNotNull(PrinterJob.createPrinterJob());
+
         ensureTest1();
 
         final CountDownLatch animationDone = new CountDownLatch(1);

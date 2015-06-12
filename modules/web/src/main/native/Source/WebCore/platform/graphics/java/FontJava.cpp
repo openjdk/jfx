@@ -97,6 +97,15 @@ FloatRect Font::selectionRectForComplexText(const TextRun& run,
     if (!jFont)
         return FloatRect();
 
+    // adjusting to/from bounds due to issue RT-46101
+    if (from > run.length()) {
+        return FloatRect();
+    }
+
+    if (to > run.length()) {
+        to = run.length();
+    }
+
     JNIEnv* env = WebCore_GetJavaEnv();
     static jmethodID getStringBounds_mID = env->GetMethodID(
         PG_GetFontClass(env),
@@ -111,7 +120,10 @@ FloatRect Font::selectionRectForComplexText(const TextRun& run,
         jint(from),
         jint(to),
         jboolean(run.rtl()))));
-    CheckAndClearException(env);
+
+    if (CheckAndClearException(env)) {
+        return FloatRect();
+    }
 
     jdouble* pBnds = (jdouble*)env->GetPrimitiveArrayCritical((jdoubleArray)bnds, NULL);
     FloatRect r(pBnds[0] + point.x(), point.y(), pBnds[2], h);
