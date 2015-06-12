@@ -512,6 +512,9 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
 
             setStyle();
 
+            // sanity check the cmap table
+            checkCMAP();
+
             /* Get names last, as the name table is far from the file header.
              * Although its also likely too big to fit in the read cache
              * in which case that would remain valid, but also will help
@@ -824,6 +827,31 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
         }
     }
 
+    private void checkCMAP() throws Exception {
+        DirectoryEntry cmapDE = getDirectoryEntry(FontConstants.cmapTag);
+        if (cmapDE != null) {
+            if (cmapDE.length < 4) {
+                throw new Exception("Invalid cmap table length");
+            }
+            Buffer cmapTableHeader = filereader.readBlock(cmapDE.offset, 4);
+            short version = cmapTableHeader.getShort();
+            short numberSubTables = cmapTableHeader.getShort();
+            int indexLength = numberSubTables * 8;
+            if (numberSubTables <= 0 || cmapDE.length < indexLength + 4) {
+                throw new Exception("Invalid cmap subtables count");
+            }
+            Buffer cmapTableIndex = filereader.readBlock(cmapDE.offset + 4, indexLength);
+            for (int i = 0; i < numberSubTables; i++) {
+                short platformID = cmapTableIndex.getShort();
+                short encodingID = cmapTableIndex.getShort();
+                int offset = cmapTableIndex.getInt();
+                if (offset < 0 || offset >= cmapDE.length) {
+                    throw new Exception("Invalid cmap subtable offset");
+                }
+            }
+        }
+    }
+    
     /*** BEGIN LOCALE_ID MAPPING ****/
 
     private static Map<String, Short> lcidMap;
