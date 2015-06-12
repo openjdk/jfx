@@ -121,6 +121,9 @@ public final class WebPage {
     // The current frame being generated.
     // Accessed on: Event thread only.
     private RenderFrame currentFrame = new RenderFrame();
+    
+    // An ID of the current updateContent cycle associated with an updateContent call.
+    private int updateContentCycleID;
 
     static {
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
@@ -584,6 +587,8 @@ public final class WebPage {
     public void updateContent(WCRectangle toPaint) {
         lockPage();
         try {
+            ++updateContentCycleID;
+            
             paintLog.log(Level.FINEST, "toPaint: {0}", toPaint);
             if (isDisposed) {
                 paintLog.fine("updateContent() request for a disposed web page.");
@@ -594,6 +599,10 @@ public final class WebPage {
         } finally {
             unlockPage();
         }
+    }
+    
+    public int getUpdateContentCycleID() {
+        return updateContentCycleID;
     }
 
     public boolean isRepaintPending() {

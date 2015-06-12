@@ -45,11 +45,11 @@ import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.LinkedHashMap;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.control.skin.BehaviorSkinBase;
 import com.sun.javafx.webkit.Accessor;
@@ -97,25 +97,20 @@ public final class RenderThemeImpl extends RenderTheme {
      * the limit is reached, a control which is used most rarely is removed.
      */
     static final class Pool<T extends Widget> {
-        // The size limit.
-        private static final int MAX_SIZE = 100;
+        private static final int INITIAL_CAPACITY = 100;
+        
+        private int capacity = INITIAL_CAPACITY;
 
-        // When this size barrier is reached, the pool starts to sort the IDs
-        // so that the IDs of "popular" controls "bubble" up the list
-        // and the IDs of controls which are used most rarely "settle" down.
-        // The pool of a size lesser than this value is not sorted for the sake
-        // of performance.
-        private static final int SORT_BARRIER = 50;
-
-        // The list of IDs used to track the rate of accociated controls
+        // A map of control IDs used to track the rate of accociated controls
         // based on their "popularity".
-        private final LinkedList<Long> ids = new LinkedList<Long>();
+        // Maps an ID to an updateContentCycleID corresponding to the cycle
+        // at which the control was added to the pool.
+        private final LinkedHashMap<Long, Integer> ids = new LinkedHashMap<>();
 
-        // The map b/w the IDs and associated controls.
-        // The {@code ids} list is kept in sync with the set of keys.
-        private final Map<Long, WeakReference<T>> pool =
-                new HashMap<Long, WeakReference<T>>();
-
+        // A map b/w the IDs and associated controls.
+        // The {@code ids} map is kept in sync with the set of keys.
+        private final Map<Long, WeakReference<T>> pool = new HashMap<>();
+        
         private final Notifier<T> notifier;
         private final String type; // used for logging
 
@@ -149,27 +144,36 @@ public final class RenderThemeImpl extends RenderTheme {
                 return null;
             }
 
-            if (ids.size() > SORT_BARRIER) {
-                // "Bubble" the id.
-                ids.remove(Long.valueOf(id));
-                ids.addFirst(id);
-            }
+            // "Bubble" the id.
+            Integer value = ids.remove(Long.valueOf(id));
+            ids.put(id, value);
+            
             return control;
         }
 
-        void put(long id, T control) {
+        void put(long id, T control, int updateContentCycleID) {
             if (log.isLoggable(Level.FINEST)) {
                 log.log(Level.FINEST, "size: {0}, id: 0x{1}, control: {2}",
                         new Object[] {pool.size(), Long.toHexString(id), control.getType()});
             }
-            if (ids.size() >= MAX_SIZE) {
-                // Remove the last id and its associated "unpopular" control.
-                T last = pool.remove(ids.removeLast()).get();
-                if (last != null) {
-                    notifier.notifyRemoved(last);
+            if (ids.size() >= capacity) {
+                // Pull a control from the bottom of the map, least used.
+                Long _id = ids.keySet().iterator().next();
+                Integer cycleID = ids.get(_id);
+                // Remove that "unpopular" control in case it wasn't added
+                // during the current update cycle.
+                if (cycleID != updateContentCycleID) {
+                    ids.remove(_id);
+                    T _control = pool.remove(_id).get();
+                    if (_control != null) {
+                        notifier.notifyRemoved(_control);
+                    }
+                // Otherwise, double the pool capacity.
+                } else {
+                    capacity = Math.min(capacity, (int)Math.ceil(Integer.MAX_VALUE/2)) * 2;
                 }
             }
-            ids.addFirst(id);
+            ids.put(id, updateContentCycleID);
             pool.put(id, new WeakReference<T>(control));
         }
 
@@ -188,6 +192,7 @@ public final class RenderThemeImpl extends RenderTheme {
                 }
             }
             pool.clear();
+            capacity = INITIAL_CAPACITY;
         }
     }
 
@@ -298,7 +303,7 @@ public final class RenderThemeImpl extends RenderTheme {
                     return null;
             }
             fc.asControl().setFocusTraversable(false);
-            pool.put(id, fc); // put or replace the entry
+            pool.put(id, fc, accessor.getPage().getUpdateContentCycleID()); // put or replace the entry
             accessor.addChild(fc.asControl());
         }
 

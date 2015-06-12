@@ -178,7 +178,7 @@ public final class ScrollBarThemeImpl extends ScrollBarTheme {
         ScrollBarWidget sb = pool.get(id);
         if (sb == null) {
             sb = new ScrollBarWidget();
-            pool.put(id, sb);
+            pool.put(id, sb, accessor.getPage().getUpdateContentCycleID());
             accessor.addChild(sb);
         }
         adjustScrollBar(sb, w, h, orientation, value, visibleSize, totalSize);
