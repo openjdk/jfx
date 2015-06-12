@@ -600,7 +600,8 @@ public class Utils {
     private static Bounds getBounds(Object obj) {
         if (obj instanceof Node) {
             final Node n = (Node)obj;
-            return n.localToScreen(n.getLayoutBounds());
+            Bounds b = n.localToScreen(n.getLayoutBounds());
+            return b != null ? b : new BoundingBox(0, 0, 0, 0);
         } else if (obj instanceof Window) {
             final Window window = (Window)obj;
             return new BoundingBox(window.getX(), window.getY(), window.getWidth(), window.getHeight());
