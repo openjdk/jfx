@@ -216,6 +216,10 @@ static gboolean gst_queue_sink_activate_push (GstPad * pad, gboolean active);
 static gboolean gst_queue_is_empty (GstQueue * queue);
 static gboolean gst_queue_is_filled (GstQueue * queue);
 
+#ifdef GSTREAMER_LITE
+static GstStateChangeReturn gst_queue_change_state (GstElement *element, GstStateChange transition);
+#endif
+
 #define GST_TYPE_QUEUE_LEAKY (queue_leaky_get_type ())
 
 static GType
@@ -373,6 +377,10 @@ gst_queue_class_init (GstQueueClass * klass)
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   gobject_class->finalize = gst_queue_finalize;
+
+#ifdef GSTREAMER_LITE
+  GST_ELEMENT_CLASS (klass)->change_state = GST_DEBUG_FUNCPTR(gst_queue_change_state);
+#endif
 
   /* Registering debug symbols for function pointers */
   GST_DEBUG_REGISTER_FUNCPTR (gst_queue_chain);
@@ -1581,3 +1589,27 @@ gst_queue_get_property (GObject * object,
 
   GST_QUEUE_MUTEX_UNLOCK (queue);
 }
+
+#ifdef GSTREAMER_LITE
+static GstStateChangeReturn gst_queue_change_state (GstElement *element, GstStateChange transition)
+{
+    GstQueue *queue = GST_QUEUE(element);
+    GstStateChangeReturn ret = GST_ELEMENT_CLASS (parent_class)->change_state (element, transition);
+
+    if (ret == GST_STATE_CHANGE_FAILURE)
+        return ret;
+
+    switch (transition)
+    {
+        case GST_STATE_CHANGE_READY_TO_NULL:
+            GST_QUEUE_MUTEX_LOCK (queue);
+            queue->srcresult = GST_FLOW_WRONG_STATE; // make sure we stop _loop task
+            g_cond_signal (queue->item_add);
+            GST_QUEUE_MUTEX_UNLOCK (queue);
+            break;
+        default:
+            break;
+    }
+    return ret;
+}
+#endif
