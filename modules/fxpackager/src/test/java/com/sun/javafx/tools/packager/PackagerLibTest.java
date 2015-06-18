@@ -53,7 +53,6 @@ import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import org.w3c.dom.Document;
 import org.xml.sax.ErrorHandler;
 import org.xml.sax.SAXException;
 import org.xml.sax.SAXParseException;
@@ -181,8 +180,8 @@ public class PackagerLibTest {
         new FileWriter(css).write(" .hello { -fx-color: red; }");
         lib.packageAsJar(params);
 
-        File testFile = new File(dest.getRoot(), "temp.jar");
-        JarFile jar = new JarFile(testFile);
+        //File testFile = new File(dest.getRoot(), "temp.jar");
+        //JarFile jar = new JarFile(testFile);
 
         // NOTE: Test is incomplete.
     }
@@ -277,7 +276,7 @@ public class PackagerLibTest {
 
             builder.setErrorHandler(new SimpleErrorHandler());
             try {
-                Document document = builder.parse(file);
+                builder.parse(file);
             } catch (SAXException ex) {
                 fail("Parsing exception: "+ex);
             } catch (IOException ex) {
@@ -291,7 +290,7 @@ public class PackagerLibTest {
     @Test
     public void testGenerateDeploymentPackages() throws PackagerException, IOException {
         DeployParams params = new DeployParams();
-        params.outdir = destRoot;
+        params.outdir = new File(destRoot, "smoke");
         params.outfile = "temp";
         params.setApplicationClass(DUMMY_APP_MAIN);
         File j1 = createTestJar(null, DUMMY_APP_MAIN);
@@ -299,8 +298,8 @@ public class PackagerLibTest {
 
         lib.generateDeploymentPackages(params);
 
-        File jnlpFile = new File(destRoot, "temp.jnlp");
-        File htmlFile = new File(destRoot, "temp.html");
+        File jnlpFile = new File(params.outdir, "temp.jnlp");
+        File htmlFile = new File(params.outdir, "temp.html");
         assertTrue(jnlpFile.exists() && jnlpFile.canRead());
         assertTrue(htmlFile.exists() && htmlFile.canRead());
 
@@ -313,7 +312,7 @@ public class PackagerLibTest {
     //extension JNLP with 1 jar
     public void testGenerateExtensionJNLP_basic() throws PackagerException, IOException {
         DeployParams params = new DeployParams();
-        params.outdir = destRoot;
+        params.outdir = new File(destRoot, "ext");
         params.outfile = "temp";
         params.isExtension = true;
         params.setApplicationClass(DUMMY_APP_MAIN);
@@ -322,7 +321,7 @@ public class PackagerLibTest {
 
         lib.generateDeploymentPackages(params);
 
-        File jnlpFile = new File(destRoot, "temp.jnlp");
+        File jnlpFile = new File(params.outdir, "temp.jnlp");
         assertTrue(jnlpFile.exists() && jnlpFile.canRead());
 
         validateJNLP(jnlpFile);
@@ -332,7 +331,7 @@ public class PackagerLibTest {
     //extension JNLP with 2 jars
     public void testGenerateExtensionJNLP_multi() throws PackagerException, IOException {
         DeployParams params = new DeployParams();
-        params.outdir = destRoot;
+        params.outdir = new File(destRoot, "ext2");
         params.outfile = "temp";
         params.isExtension = true;
         params.setApplicationClass(DUMMY_APP_MAIN);
@@ -343,7 +342,7 @@ public class PackagerLibTest {
 
         lib.generateDeploymentPackages(params);
 
-        File jnlpFile = new File(destRoot, "temp.jnlp");
+        File jnlpFile = new File(params.outdir, "temp.jnlp");
         assertTrue(jnlpFile.exists() && jnlpFile.canRead());
 
         validateJNLP(jnlpFile);
@@ -353,7 +352,7 @@ public class PackagerLibTest {
     //extension JNLP with several jars. jars may be platform specific
     public void testGenerateExtensionJNLP_multi_mix() throws PackagerException, IOException {
         DeployParams params = new DeployParams();
-        params.outdir = destRoot;
+        params.outdir = new File(destRoot, "ext_mix");
         params.outfile = "temp";
         params.isExtension = true;
         params.setApplicationClass(DUMMY_APP_MAIN);
@@ -367,7 +366,7 @@ public class PackagerLibTest {
 
         lib.generateDeploymentPackages(params);
 
-        File jnlpFile = new File(destRoot, "temp.jnlp");
+        File jnlpFile = new File(params.outdir, "temp.jnlp");
         assertTrue(jnlpFile.exists() && jnlpFile.canRead());
 
         validateJNLP(jnlpFile);

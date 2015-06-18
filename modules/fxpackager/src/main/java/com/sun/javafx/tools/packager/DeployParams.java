@@ -31,13 +31,9 @@ import com.oracle.tools.packager.jnlp.JNLPBundler;
 import com.sun.javafx.tools.ant.Callback;
 import com.sun.javafx.tools.packager.bundlers.*;
 import com.sun.javafx.tools.packager.bundlers.Bundler.BundleType;
-import com.sun.javafx.tools.resource.DeployResource;
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
@@ -46,7 +42,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.stream.Collectors;
 
 import static com.oracle.tools.packager.jnlp.JNLPBundler.*;
 
@@ -113,7 +108,7 @@ public class DeployParams extends CommonParams {
     //list of HTML templates to process
     List<Template> templates = new LinkedList<>();
 
-    String jrePlatform = "1.6+";
+    String jrePlatform = "1.8+";
     String fxPlatform = PackagerLib.JAVAFX_VERSION+"+";
     File javaRuntimeToUse = null;
     boolean javaRuntimeWasSet = false;

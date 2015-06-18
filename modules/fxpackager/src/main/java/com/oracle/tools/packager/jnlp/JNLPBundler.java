@@ -36,6 +36,15 @@ import com.sun.javafx.tools.packager.PackagerException;
 import com.sun.javafx.tools.packager.PackagerLib;
 import com.sun.javafx.tools.packager.TemplatePlaceholders;
 
+import javax.xml.stream.XMLOutputFactory;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamWriter;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.stream.StreamResult;
+import javax.xml.transform.stream.StreamSource;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -45,9 +54,12 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.io.StringReader;
+import java.io.StringWriter;
 import java.security.cert.CertificateEncodingException;
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.EnumMap;
@@ -77,6 +89,8 @@ public class JNLPBundler extends AbstractBundler {
     private static final String EMBEDDED_DT = "./"+webfilesDir+"/"+dtFX;
 
     private static final String PUBLIC_DT = "http://java.com/js/dtjava.js";
+    
+    private static final String JFX_NS_URI = "http://javafx.com";
 
     public static final StandardBundlerParam<String> OUT_FILE = new StandardBundlerParam<>(
             I18N.getString("param.out-file.name"),
@@ -140,7 +154,7 @@ public class JNLPBundler extends AbstractBundler {
             I18N.getString("param.placeholder.description"),
             "jnlp.placeholder",
             String.class,
-            p -> "'javafx-app-placeholder'",
+            p -> "javafx-app-placeholder",
             (s, p) -> {
                 if (!s.startsWith("'")) {
                     s = "'" + s;
@@ -212,7 +226,7 @@ public class JNLPBundler extends AbstractBundler {
             I18N.getString("param.update-mode.description"),
             "jnlp.updateMode",
             String.class,
-            p -> null,
+            p -> "background",
             (s, p) -> s);
     
     public static final StandardBundlerParam<String> FX_PLATFORM = new StandardBundlerParam<>(
@@ -220,7 +234,7 @@ public class JNLPBundler extends AbstractBundler {
             I18N.getString("param.fx-platform.description"),
             "jnlp.fxPlatform",
             String.class,
-            p -> "8.0",
+            p -> "1.8+",
             (s, p) -> s);
     
     public static final StandardBundlerParam<String> JRE_PLATFORM = new StandardBundlerParam<>(
@@ -228,7 +242,7 @@ public class JNLPBundler extends AbstractBundler {
             I18N.getString("param.jre-platform.description"),
             "jnlp.jrePlatform",
             String.class,
-            p -> "8.0",
+            p -> "1.8+",
             (s, p) -> s);
     
     @SuppressWarnings("unchecked")
@@ -336,7 +350,7 @@ public class JNLPBundler extends AbstractBundler {
             );
 
 
-    private static enum Mode {FX, APPLET, SwingAPP}
+    private enum Mode {FX, APPLET, SwingAPP}
 
     @Override
     public String getName() {
@@ -361,7 +375,43 @@ public class JNLPBundler extends AbstractBundler {
 
     @Override
     public Collection<BundlerParamInfo<?>> getBundleParameters() {
-        return null;
+        return Arrays.asList(
+                ALL_PERMISSIONS,
+                APPLET_PARAMS,
+                APP_NAME,
+                APP_PARAMS,
+                APP_RESOURCES_LIST,
+                ARGUMENTS,
+                CODEBASE,
+                DESCRIPTION,
+                EMBED_JNLP,
+                EMBEDDED_HEIGHT,
+                EMBEDDED_WIDTH,
+                ESCAPED_APPLET_PARAMS,
+                EXTENSION,
+//                FALLBACK_APP,
+//                FX_PLATFORM,
+                HEIGHT,
+                ICONS,
+                IDENTIFIER,
+                INCLUDE_DT,
+                JRE_PLATFORM,
+                JS_CALLBACKS,
+                JVM_OPTIONS,
+                JVM_PROPERTIES,
+                MAIN_CLASS,
+                OFFLINE_ALLOWED,
+                OUT_FILE,
+                PRELOADER_CLASS,
+                PLACEHOLDER,
+                SHORTCUT_HINT,
+                SWING_APP,
+                TEMPLATES,
+                TITLE,
+                UPDATE_MODE,
+                VENDOR,
+                WIDTH
+        );
     }
 
     @Override
@@ -406,10 +456,10 @@ public class JNLPBundler extends AbstractBundler {
         String corePattern = "(#[\\w\\.\\(\\)]+#)";
         //This will match
         //   "/*", "//" or "<!--" with arbitrary number of spaces
-        String prefixGeneric = "[\\/\\*-<\\!]*[ \\t]*";
+        String prefixGeneric = "[/\\*-<!]*[ \\t]*";
         //This will match
         //   "/*", "//" or "<!--" with arbitrary number of spaces
-        String suffixGeneric = "[ \\t]*[\\*\\/>-]*";
+        String suffixGeneric = "[ \\t]*[\\*/>-]*";
 
         //NB: result core match is group number 1
         Pattern mainPattern = Pattern.compile(
@@ -439,7 +489,7 @@ public class JNLPBundler extends AbstractBundler {
                     null : parts[1];
             if (templateStrings.containsKey(
                     TemplatePlaceholders.fromString(rulePart))
-                    && (idPart == null /* it is ok for templeteId to be not null, e.g. DT.SCRIPT.CODE */
+                    && (idPart == null /* it is ok for templateId to be not null, e.g. DT.SCRIPT.CODE */
                     || idPart.equals(IDENTIFIER.fetchFrom(params)))) {
                 coreReplacement = templateStrings.get(
                         TemplatePlaceholders.fromString(rulePart));
@@ -524,6 +574,8 @@ public class JNLPBundler extends AbstractBundler {
             //we do not need html if this is component and not main app
             boolean isExtension = EXTENSION.fetchFrom(params);
             if (!isExtension) {
+                // even though the html is unused if templateOn, 
+                // the templateStrings is updated as a side effect.
                 ByteArrayOutputStream html_bos =
                         new ByteArrayOutputStream();
                 PrintStream html_ps = new PrintStream(html_bos);
@@ -618,262 +670,322 @@ public class JNLPBundler extends AbstractBundler {
         String title = TITLE.fetchFrom(params);
         String vendor = VENDOR.fetchFrom(params);
         String description = DESCRIPTION.fetchFrom(params);
-        
-        out.println("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
-        //have to use "old" spec version or old javaws will fail
-        // with "unknown" version exception ...
-        out.println("<jnlp spec=\"1.0\" xmlns:jfx=\"http://javafx.com\"" +
-                (codebase != null ?
-                        " codebase=\"" + codebase + "\"" : "") +
-                " href=\""+jnlp_filename+"\">");
-        out.println("  <information>");
-        out.println("    <title>" +
-                ((title != null)
-                        ? title : "Sample JavaFX Application") +
-                "</title>");
-        out.println("    <vendor>" +
-                ((vendor != null)
-                        ? vendor : "Unknown vendor") +
-                "</vendor>");
-        out.println("    <description>" +
-                ((description != null)
-                        ? description : "Sample JavaFX 2.0 application.") +
-                "</description>");
-        for (Map<String, ? super Object> iconInfo : ICONS.fetchFrom(params)) {
-//            if (i.mode == DeployParams.RunMode.WEBSTART ||
-//                    i.mode == DeployParams.RunMode.ALL) {
-            String href =   ICONS_HREF.fetchFrom(iconInfo);
-            String kind =   ICONS_KIND.fetchFrom(iconInfo);
-            String width =  ICONS_WIDTH.fetchFrom(iconInfo);
-            String height = ICONS_HEIGHT.fetchFrom(iconInfo);
-            String depth =  ICONS_DEPTH.fetchFrom(iconInfo);
+
+        try {
+            XMLOutputFactory xmlOutputFactory = XMLOutputFactory.newFactory();
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            XMLStreamWriter xout = xmlOutputFactory.createXMLStreamWriter(baos);
+
+            xout.writeStartDocument("utf-8", "1.0");
+            xout.writeStartElement("jnlp");
+            xout.writeAttribute("spec", "1.0");
+            xout.writeNamespace("jfx", "http://javafx.com");
+            if (codebase != null) {
+                xout.writeAttribute("codebase", codebase);
+            }
+            xout.writeAttribute("href", jnlp_filename);
             
-            out.println("    <icon href=\"" + href + "\" " +
-                    ((kind != null) ?   " kind=\"" + kind + "\"" : "") +
-                    ((width != null) ?  " width=\"" + width + "\"" : "") +
-                    ((height != null) ? " height=\"" + height + "\"" : "") +
-                    ((depth != null) ?  " depth=\"" + depth + "\"" : "") +
-                    "/>");
-//            }
-        }
+            xout.writeStartElement("information");
 
-        boolean offlineAllowed = OFFLINE_ALLOWED.fetchFrom(params);
-        boolean isExtension = EXTENSION.fetchFrom(params);
-        if (offlineAllowed && !isExtension) {
-            out.println("    <offline-allowed/>");
-        }
+            xout.writeStartElement("title");
+            if (title != null) {
+                xout.writeCharacters(title);
+            } else {
+                xout.writeCData("Sample JavaFX Application");
+            }
+            xout.writeEndElement();
+            
+            xout.writeStartElement("vendor");
+            if (vendor != null) {
+                xout.writeCharacters(vendor);
+            } else {
+                xout.writeCharacters("Unknown vendor");
+            }
+            xout.writeEndElement();
+            
+            xout.writeStartElement("description");
+            if (description != null) {
+                xout.writeCharacters(description);
+            } else {
+                xout.writeCharacters("Sample JavaFX 2.0 application.");
+            }
+            xout.writeEndElement();
+            for (Map<String, ? super Object> iconInfo : ICONS.fetchFrom(params)) {
+                String href =   ICONS_HREF.fetchFrom(iconInfo);
+                String kind =   ICONS_KIND.fetchFrom(iconInfo);
+                String width =  ICONS_WIDTH.fetchFrom(iconInfo);
+                String height = ICONS_HEIGHT.fetchFrom(iconInfo);
+                String depth =  ICONS_DEPTH.fetchFrom(iconInfo);
+                
+                xout.writeStartElement("icon");
+                
+                xout.writeAttribute("href", href);
+                if (kind != null)   xout.writeAttribute("kind",   kind);
+                if (width != null)  xout.writeAttribute("width",  width);
+                if (height != null) xout.writeAttribute("height", height);
+                if (depth != null)  xout.writeAttribute("depth",  depth);
+                
+                xout.writeEndElement();
+            }
 
-        boolean needShortcut = SHORTCUT_HINT.fetchFrom(params);
-        if (Boolean.TRUE.equals(needShortcut)) {
-            out.println("  <shortcut><desktop/></shortcut>");
+            boolean offlineAllowed = OFFLINE_ALLOWED.fetchFrom(params);
+            boolean isExtension = EXTENSION.fetchFrom(params);
+            if (offlineAllowed && !isExtension) {
+                xout.writeEmptyElement("offline-allowed");
+            }
+
+            boolean needShortcut = SHORTCUT_HINT.fetchFrom(params);
+            if (Boolean.TRUE.equals(needShortcut)) {
+                xout.writeStartElement("shortcut");
+                xout.writeEmptyElement("desktop");
+                xout.writeEndElement();
 
 //            //TODO: Add support for a more sophisticated shortcut tag.
 //  <shortcut/> // install no shortcuts, and do not consider "installed"
 //  <shortcut installed="true"/> // install no shortcuts, but consider "installed"
 //  <shortcut installed="false"><desktop/></shortcut> // install desktop shortcut, but do not consider the app "installed"
 //  <shortcut installed="true"><menu/></shortcut> // install menu shortcut, and consider app "installed"
-        }
-
-        out.println("  </information>");
-
-        boolean needToCloseResourceTag = false;
-        //jre is available for all platforms
-        if (!isExtension) {
-            out.println("  <resources>");
-            needToCloseResourceTag = true;
-
-            String vmargs = getJvmArguments(params, false);
-            vmargs = (vmargs == null) ? "" : " java-vm-args=\""+vmargs+"\" ";
+            }
             
-            out.println("    <j2se version=\"" + JRE_PLATFORM.fetchFrom(params) + "\"" +
-                    vmargs + " href=\"http://java.sun.com/products/autodl/j2se\"/>");
-            for (Map.Entry<String, String> entry : JVM_PROPERTIES.fetchFrom(params).entrySet()) {
-                out.println("    <property name=\"" + entry.getKey() +
-                        "\" value=\"" + entry.getValue() + "\"/>");
-            }
-        }
-        String currentOS = null, currentArch = null;
-        //NOTE: This should sort the list by os+arch; it will reduce the number of resource tags
-        String pendingPrint = null;
-        //for (DeployResource resource: deployParams.resources) {
-        for (RelativeFileSet rfs : APP_RESOURCES_LIST.fetchFrom(params)) {
-            //if not same OS or arch then open new resources element
-            if (!needToCloseResourceTag ||
-                    ((currentOS == null && rfs.getOs() != null) ||
-                            currentOS != null && !currentOS.equals(rfs.getOs())) ||
-                    ((currentArch == null && rfs.getArch() != null) ||
-                            currentArch != null && !currentArch.equals(rfs.getArch()))) 
-            {
+            xout.writeEndElement(); // information
 
-                //we do not print right a way as it may be empty block
-                // Not all resources make sense for JNLP (e.g. data or license)
-                if (needToCloseResourceTag) {
-                    pendingPrint = "  </resources>\n";
-                } else {
-                    pendingPrint = "";
+            boolean needToCloseResourceTag = false;
+            //jre is available for all platforms
+            if (!isExtension) {
+                xout.writeStartElement("resources");
+                needToCloseResourceTag = true;
+
+                xout.writeStartElement("j2se");
+                xout.writeAttribute("version", JRE_PLATFORM.fetchFrom(params));
+                String vmargs = getJvmArguments(params, false);
+                if (vmargs != null) {
+                    xout.writeAttribute("java-vm-args", vmargs);
                 }
-                currentOS = rfs.getOs();
-                currentArch = rfs.getArch();
-                pendingPrint += "  <resources" +
-                        ((currentOS != null) ? " os=\"" + currentOS + "\"" : "") +
-                        ((currentArch != null) ? " arch=\""+currentArch+"\"" : "") +
-                        ">\n";
+                xout.writeAttribute("href", "http://java.sun.com/products/autodl/j2se");
+                for (Map.Entry<String, String> entry : JVM_PROPERTIES.fetchFrom(params).entrySet()) {
+                    xout.writeStartElement("property");
+                    xout.writeAttribute("name", entry.getKey());
+                    xout.writeAttribute("value", entry.getValue());
+                    xout.writeEndElement(); //property
+                }
+                xout.writeEndElement(); //j2se
             }
-            for (String relativePath : rfs.getIncludedFiles()) {
-
-                final File srcFile = new File(rfs.getBaseDirectory(), relativePath);
-                if (srcFile.exists() && srcFile.isFile()) {
-                    RelativeFileSet.Type type = rfs.getType();
-                    if (type == RelativeFileSet.Type.UNKNOWN) {
-                        if (relativePath.endsWith(".jar")) {
-                            type = RelativeFileSet.Type.jar;
-                        } else if (relativePath.endsWith(".jnlp")) {
-                            type = RelativeFileSet.Type.jnlp;
-                        } else if (relativePath.endsWith(".dll")) {
-                            type = RelativeFileSet.Type.nativelib;
-                        } else if (relativePath.endsWith(".so")) {
-                            type = RelativeFileSet.Type.nativelib;
-                        } else if (relativePath.endsWith(".dylib")) {
-                            type = RelativeFileSet.Type.nativelib;
+            String currentOS = null, currentArch = null;
+//            //NOTE: This should sort the list by os+arch; it will reduce the number of resource tags
+//            String pendingPrint = null;
+            //for (DeployResource resource: deployParams.resources) {
+            for (RelativeFileSet rfs : APP_RESOURCES_LIST.fetchFrom(params)) {
+                //if not same OS or arch then open new resources element
+                if (!needToCloseResourceTag ||
+                        ((currentOS == null && rfs.getOs() != null) ||
+                                currentOS != null && !currentOS.equals(rfs.getOs())) ||
+                        ((currentArch == null && rfs.getArch() != null) ||
+                                currentArch != null && !currentArch.equals(rfs.getArch()))) 
+                {
+    
+                    //we do not print right a way as it may be empty block
+                    // Not all resources make sense for JNLP (e.g. data or license)
+                    if (needToCloseResourceTag) {
+                        xout.writeEndElement();
+                    }
+                    needToCloseResourceTag = true;
+                    
+                    currentOS = rfs.getOs();
+                    currentArch = rfs.getArch();
+                    xout.writeStartElement("resources");
+                    if (currentOS != null) xout.writeAttribute("os", currentOS);
+                    if (currentArch != null) xout.writeAttribute("arch", currentArch);
+                }
+                for (String relativePath : rfs.getIncludedFiles()) {
+    
+                    final File srcFile = new File(rfs.getBaseDirectory(), relativePath);
+                    if (srcFile.exists() && srcFile.isFile()) {
+                        RelativeFileSet.Type type = rfs.getType();
+                        if (type == RelativeFileSet.Type.UNKNOWN) {
+                            if (relativePath.endsWith(".jar")) {
+                                type = RelativeFileSet.Type.jar;
+                            } else if (relativePath.endsWith(".jnlp")) {
+                                type = RelativeFileSet.Type.jnlp;
+                            } else if (relativePath.endsWith(".dll")) {
+                                type = RelativeFileSet.Type.nativelib;
+                            } else if (relativePath.endsWith(".so")) {
+                                type = RelativeFileSet.Type.nativelib;
+                            } else if (relativePath.endsWith(".dylib")) {
+                                type = RelativeFileSet.Type.nativelib;
+                            }
+                        }
+                        switch (type) {
+                            case jar:
+                                xout.writeStartElement("jar");
+                                xout.writeAttribute("href", relativePath);
+                                xout.writeAttribute("size", Long.toString(srcFile.length()));
+                                if (rfs.getMode() != null) {
+                                    xout.writeAttribute("download", rfs.getMode());
+                                }
+                                xout.writeEndElement(); //jar
+                                break;
+                            case jnlp:
+                                xout.writeStartElement("extension");
+                                xout.writeAttribute("href", relativePath);
+                                xout.writeEndElement(); //extension
+                                break;
+                            case nativelib:
+                                xout.writeStartElement("nativelib");
+                                xout.writeAttribute("href", relativePath);
+                                xout.writeEndElement(); //nativelib
+                                break;
                         }
                     }
-                    switch (type) {
-                        case jar:
-                            if (pendingPrint != null) {
-                                out.print(pendingPrint);
-                                pendingPrint = null;
-                                needToCloseResourceTag = true;
-                            }
-                            out.print("    <jar href=\"" + relativePath + "\" size=\""
-                                    + srcFile.length() + "\"");
-                            out.print(" download=\"" + rfs.getMode() + "\" ");
-                            out.println("/>");
-                            break;
-                        case jnlp:
-                            if (pendingPrint != null) {
-                                out.print(pendingPrint);
-                                pendingPrint = null;
-                                needToCloseResourceTag = true;
-                            }
-                            out.println("    <extension href=\"" + relativePath + "\"/>");
-                            break;
-                        case nativelib:
-                            if (pendingPrint != null) {
-                                out.print(pendingPrint);
-                                needToCloseResourceTag = true;
-                                pendingPrint = null;
-                            }
-                            out.println("    <nativelib href=\"" + relativePath + "\"/>");
-                            break;
-                    }
                 }
             }
-        }
-        if (needToCloseResourceTag) {
-            out.println("  </resources>");
-        }
+            if (needToCloseResourceTag) {
+                xout.writeEndElement();
+            }
 
-        boolean allPermissions = ALL_PERMISSIONS.fetchFrom(params); 
-        if (allPermissions) {
-            out.println("<security>");
-            out.println("  <all-permissions/>");
-            out.println("</security>");
-        }
+            boolean allPermissions = ALL_PERMISSIONS.fetchFrom(params); 
+            if (allPermissions) {
+                xout.writeStartElement("security");
+                xout.writeEmptyElement("all-permissions");
+                xout.writeEndElement();
+            }
 
         
-        if (!isExtension) {
-            Integer width = WIDTH.fetchFrom(params);
-            Integer height = HEIGHT.fetchFrom(params);
-            if (width == null) {
-                width = 0;
-            }
-            if (height == null) {
-                height = 0;
-            }
-
-            String applicationClass = MAIN_CLASS.fetchFrom(params);
-            String preloader = PRELOADER_CLASS.fetchFrom(params);
-            Map<String, String> appParams = APP_PARAMS.fetchFrom(params);
-            List<String> arguments = ARGUMENTS.fetchFrom(params);
-
-            String appName = APP_NAME.fetchFrom(params);
-            if (m == Mode.APPLET) {
-                out.print("  <applet-desc  width=\"" + width
-                        + "\" height=\"" + height + "\"");
-
-                out.print(" main-class=\"" + applicationClass + "\" ");
-                out.println(" name=\"" + appName + "\" >");
-
-                for (Map.Entry<String, String> appParamEntry : appParams.entrySet()) {
-                    out.println("    <param name=\"" + appParamEntry.getKey() + "\""
-                            + (appParamEntry.getValue() != null
-                            ? (" value=\"" + appParamEntry.getValue() + "\"") : "")
-                            + "/>");
+            if (!isExtension) {
+                Integer width = WIDTH.fetchFrom(params);
+                Integer height = HEIGHT.fetchFrom(params);
+                if (width == null) {
+                    width = 0;
                 }
-                out.println("  </applet-desc>");
-            } else if (m == Mode.SwingAPP) {
-                out.print("  <application-desc main-class=\"" + applicationClass + "\" ");
-                out.println(" name=\"" + appName + "\" >");
-                for (String a : arguments) {
-                    out.println("    <argument>" + a + "</argument>");
+                if (height == null) {
+                    height = 0;
                 }
-                out.println("  </application-desc>");
-            } else { //JavaFX application
-                //embed fallback application
-                String fallbackApp = FALLBACK_APP.fetchFrom(params);
-                if (fallbackApp != null) {
-                    out.print("  <applet-desc  width=\"" + width
-                            + "\" height=\"" + height + "\"");
+    
+                String applicationClass = MAIN_CLASS.fetchFrom(params);
+                String preloader = PRELOADER_CLASS.fetchFrom(params);
+                Map<String, String> appParams = APP_PARAMS.fetchFrom(params);
+                List<String> arguments = ARGUMENTS.fetchFrom(params);
+    
+                String appName = APP_NAME.fetchFrom(params);
+                if (m == Mode.APPLET) {
+                    xout.writeStartDocument("applet-desc");
+                    xout.writeAttribute("width", Integer.toString(width));
+                    xout.writeAttribute("height", Integer.toString(height));
+                    xout.writeAttribute("main-class", applicationClass);
+                    xout.writeAttribute("name", appName);
 
-                    out.print(" main-class=\"" + fallbackApp + "\" ");
-                    out.println(" name=\"" + appName + "\" >");
-                    out.println("    <param name=\"requiredFXVersion\" value=\""
-                            + FX_PLATFORM.fetchFrom(params) + "\"/>");
-                    out.println("  </applet-desc>");
-                }
+                    xout.writeStartElement("param");
+                    xout.writeAttribute("name", "requiredFXVersion");
+                    xout.writeAttribute("value", FX_PLATFORM.fetchFrom(params));
+                    xout.writeEndElement(); // param
+    
+                    for (Map.Entry<String, String> appParamEntry : appParams.entrySet()) {
+                        xout.writeStartElement("param");
+                        xout.writeAttribute("name", appParamEntry.getKey());
+                        if (appParamEntry.getValue() != null) {
+                            xout.writeAttribute("value", appParamEntry.getValue());
+                        }
+                        xout.writeEndElement(); // param
+                    }
+                    xout.writeEndElement(); // applet-desc
+                } else if (m == Mode.SwingAPP) {
+                    xout.writeStartElement("application-desc");
+                    xout.writeAttribute("main-class", applicationClass);
+                    xout.writeAttribute("name", appName);
 
-                //javafx application descriptor
-                out.print("  <jfx:javafx-desc  width=\"" + width
-                        + "\" height=\"" + height + "\"");
+                    for (String a : arguments) {
+                        xout.writeStartElement("argument");
+                        xout.writeCharacters(a);
+                        xout.writeEndElement(); // argument
+                    }
+                    xout.writeEndElement();
+                } else { //JavaFX application
+                    //embed fallback application
+                    String fallbackApp = FALLBACK_APP.fetchFrom(params);
+                    if (fallbackApp != null) {
+                        xout.writeStartElement("applet-desc");
+                        xout.writeAttribute("width", Integer.toString(width));
+                        xout.writeAttribute("height", Integer.toString(height));
+                        xout.writeAttribute("main-class", fallbackApp);
+                        xout.writeAttribute("name", appName);
 
-                out.print(" main-class=\"" + applicationClass + "\" ");
-                out.print(" name=\"" + appName + "\" ");
-                if (preloader != null) {
-                    out.print(" preloader-class=\"" + preloader + "\"");
-                }
-                if (((appParams == null) || appParams.isEmpty())
-                        && (arguments == null || arguments.isEmpty())) {
-                    out.println("/>");
-                } else {
-                    out.println(">");
+                        xout.writeStartElement("param");
+                        xout.writeAttribute("name", "requiredFXVersion");
+                        xout.writeAttribute("value", FX_PLATFORM.fetchFrom(params));
+                        xout.writeEndElement(); // param
+
+                        xout.writeEndElement(); // applet-desc
+                    }
+    
+                    xout.writeStartElement("jfx", "javafx-desc", JFX_NS_URI);
+                    xout.writeAttribute("width", Integer.toString(width));
+                    xout.writeAttribute("height", Integer.toString(height));
+                    xout.writeAttribute("main-class", applicationClass);
+                    xout.writeAttribute("name", appName);
+                    if (preloader != null) {
+                        xout.writeAttribute("preloader-class", preloader);
+                    }
+                    
                     if (appParams != null) {
                         for (Map.Entry<String, String> appParamEntry : appParams.entrySet()) {
-                            out.println("    <fx:param name=\"" + appParamEntry.getKey() + "\""
-                                    + (appParamEntry.getValue() != null
-                                    ? (" value=\"" + appParamEntry.getValue() + "\"") : "")
-                                    + "/>");
+                            xout.writeStartElement("param");
+                            xout.writeAttribute("name", appParamEntry.getKey());
+                            if (appParamEntry.getValue() != null) {
+                                xout.writeAttribute("value", appParamEntry.getValue());
+                            }
+                            xout.writeEndElement(); // param
                         }
                     }
                     if (arguments != null) {
                         for (String a : arguments) {
-                            out.println("    <fx:argument>" + a + "</fx:argument>");
+                            xout.writeStartElement("argument");
+                            xout.writeCharacters(a);
+                            xout.writeEndElement(); // argument
                         }
                     }
-                    out.println("  </jfx:javafx-desc>");
+                    
+                    xout.writeEndElement(); //javafx-desc
                 }
             }
-        }
+            
+            String updateMode = UPDATE_MODE.fetchFrom(params);
+            if (updateMode != null) {
+                xout.writeStartElement("update");
+                xout.writeAttribute("check", UPDATE_MODE.fetchFrom(params));
+                xout.writeEndElement(); // update
+            }
+    
+            xout.writeEndElement(); // jnlp
 
-        out.println("  <update check=\"" + UPDATE_MODE.fetchFrom(params) + "\"/>");
-        out.println("</jnlp>");
+            // now pretty print
+            String s = baos.toString();
+            out.println(xmlPrettyPrint(s));            
+        } catch (XMLStreamException | TransformerException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private String xmlPrettyPrint(String s) throws TransformerException {
+//        System.out.println(s);
+        TransformerFactory factory = TransformerFactory.newInstance();
+
+        Transformer transformer = factory.newTransformer();
+        transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+        transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
+
+        StringWriter formattedStringWriter = new StringWriter();
+        transformer.transform(new StreamSource(new StringReader(s)), new StreamResult(formattedStringWriter));
+        return formattedStringWriter.toString();
     }
 
 
-
     private void addToList(List<String> l, String name, String value, boolean isString) {
-        String s = isString ? "'" : "";
-        String v = name +" : " + s + value + s;
-        l.add(v);
+        if (isString) {
+            l.add(name + " : '" + value.replaceAll("(['\"\\\\])", "\\\\$1") + "'");
+        } else {
+            l.add(name + " : " + value);
+            
+        }
     }
 
     private String listToString(List<String> lst, String offset) {
@@ -902,7 +1014,7 @@ public class JNLPBundler extends AbstractBundler {
     }
 
     private void generateHTML(Map<String, ? super Object> params,
-                              PrintStream out,
+                              PrintStream theOut,
                               byte[] jnlp_bytes_browser, String jnlpfile_browser,
                               byte[] jnlp_bytes_webstart, String jnlpfile_webstart,
                               Map<TemplatePlaceholders, String> templateStrings,
@@ -911,170 +1023,220 @@ public class JNLPBundler extends AbstractBundler {
         String poff2 = poff + poff;
         String poff3 = poff2 + poff;
 
-        StringBuilder out_embed_dynamic = new StringBuilder();
-        StringBuilder out_embed_onload = new StringBuilder();
-        StringBuilder out_launch_code = new StringBuilder();
+        try {
+            XMLOutputFactory xmlOutputFactory = XMLOutputFactory.newFactory();
 
-        String appletParams = getAppletParameters(params);
-        String jnlp_content_browser = null;
-        String jnlp_content_webstart = null;
-        
-        boolean embedJNLP = EMBED_JNLP.fetchFrom(params);
-        boolean includeDT = INCLUDE_DT.fetchFrom(params);
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            XMLStreamWriter xout = xmlOutputFactory.createXMLStreamWriter(baos);
 
-        if (embedJNLP) {
-            jnlp_content_browser = encodeAsBase64(jnlp_bytes_browser);
-            jnlp_content_webstart = encodeAsBase64(jnlp_bytes_webstart);
-        }
+            String appletParams = getAppletParameters(params);
+            String jnlp_content_browser = null;
+            String jnlp_content_webstart = null;
 
-        out.println("<html><head>");
-        String dtURL = includeDT ? EMBEDDED_DT : PUBLIC_DT;
-        String includeDtString = "<SCRIPT src=\"" + dtURL + "\"></SCRIPT>";
-        if (templateStrings != null) {
-            templateStrings.put(TemplatePlaceholders.SCRIPT_URL, dtURL);
-            templateStrings.put(TemplatePlaceholders.SCRIPT_CODE, includeDtString);
-        }
-        out.println("  " + includeDtString);
+            boolean embedJNLP = EMBED_JNLP.fetchFrom(params);
+            boolean includeDT = INCLUDE_DT.fetchFrom(params);
 
-        List<String> w_app = new ArrayList<>();
-        List<String> w_platform = new ArrayList<>();
-        List<String> w_callback = new ArrayList<>();
+            if (embedJNLP) {
+                jnlp_content_browser = encodeAsBase64(jnlp_bytes_browser);
+                jnlp_content_webstart = encodeAsBase64(jnlp_bytes_webstart);
+            }
 
-        addToList(w_app, "url", jnlpfile_webstart, true);
-        if (jnlp_content_webstart != null) {
-            addToList(w_app, "jnlp_content", jnlp_content_webstart, true);
-        }
+            xout.writeStartElement("html");
+            xout.writeStartElement("head");
+            String dtURL = includeDT ? EMBEDDED_DT : PUBLIC_DT;
+            if (templateStrings != null) {
+                templateStrings.put(TemplatePlaceholders.SCRIPT_URL, dtURL);
+                
+                ByteArrayOutputStream baos2 = new ByteArrayOutputStream();
+                XMLStreamWriter xo2 = xmlOutputFactory.createXMLStreamWriter(baos2);
+                xo2.writeStartElement("SCRIPT");
+                xo2.writeAttribute("src", dtURL);
+                xo2.writeEndElement();
+                xo2.close();
+                templateStrings.put(TemplatePlaceholders.SCRIPT_CODE, baos.toString());
+            }
+            xout.writeStartElement("SCRIPT");
+            xout.writeAttribute("src", dtURL);
+            xout.writeEndElement();
 
-        addToList(w_platform, "javafx", FX_PLATFORM.fetchFrom(params), true);
-        String vmargs = getJvmArguments(params, true);
-        if (vmargs != null) {
-            addToList(w_platform, "jvmargs", vmargs, true);
-        }
+            List<String> w_app = new ArrayList<>();
+            List<String> w_platform = new ArrayList<>();
+            List<String> w_callback = new ArrayList<>();
 
-        if (!"".equals(appletParams)) {
-            addToList(w_app, "params", "{"+appletParams+"}", false);
-        }
+            addToList(w_app, "url", jnlpfile_webstart, true);
+            if (jnlp_content_webstart != null) {
+                addToList(w_app, "jnlp_content", jnlp_content_webstart, true);
+            }
 
-    
-        for (Map.Entry<String, String> callbackEntry : JS_CALLBACKS.fetchFrom(params).entrySet()) {
-            addToList(w_callback, callbackEntry.getKey(), callbackEntry.getValue(), false);
-        }
-    
-        //prepare content of launchApp function
-        out_launch_code.append(poff2).append("dtjava.launch(");
-        out_launch_code.append(listToString(w_app, poff3)).append(",\n");
-        out_launch_code.append(listToString(w_platform, poff3)).append(",\n");
-        out_launch_code.append(listToString(w_callback, poff3)).append("\n");
-        out_launch_code.append(poff2).append(");\n");
+            addToList(w_platform, "javafx", FX_PLATFORM.fetchFrom(params), true);
+            String vmargs = getJvmArguments(params, true);
+            if (vmargs != null) {
+                addToList(w_platform, "jvmargs", vmargs, true);
+            }
 
-        out.println("<script>");
-        out.println(poff  + "function launchApplication(jnlpfile) {");
-        out.print(out_launch_code.toString());
-        out.println(poff2 + "return false;");
-        out.println(poff + "}");
-        out.println("</script>");
+            if (!"".equals(appletParams)) {
+                addToList(w_app, "params", "{" + appletParams + "}", false);
+            }
 
-        if (templateStrings != null) {
-            templateStrings.put(TemplatePlaceholders.LAUNCH_CODE,
-                    out_launch_code.toString());
-        }
 
-        //applet deployment
-        String appId = IDENTIFIER.fetchFrom(params);
-        String placeholder = PLACEHOLDER.fetchFrom(params);
+            for (Map.Entry<String, String> callbackEntry : JS_CALLBACKS.fetchFrom(params).entrySet()) {
+                addToList(w_callback, callbackEntry.getKey(), callbackEntry.getValue(), false);
+            }
 
-        //prepare content of embedApp()
-        List<String> p_app = new ArrayList<>();
-        List<String> p_platform = new ArrayList<>();
-        List<String> p_callback = new ArrayList<>();
+            //prepare content of launchApp function
+            StringBuilder out_launch_code = new StringBuilder();
+            out_launch_code.append(poff2).append("dtjava.launch(");
+            out_launch_code.append(listToString(w_app, poff3)).append(",\n");
+            out_launch_code.append(listToString(w_platform, poff3)).append(",\n");
+            out_launch_code.append(listToString(w_callback, poff3)).append("\n");
+            out_launch_code.append(poff2).append(");\n");
 
-        if (appId != null) {
-            addToList(p_app, "id", appId, true);
-        }
-        boolean isSwingApp = SWING_APP.fetchFrom(params);
-        if (isSwingApp) {
-            addToList(p_app, "toolkit", "swing", true);
-        }
-        addToList(p_app, "url", jnlpfile_browser, true);
-        addToList(p_app, "placeholder", placeholder, false);
-        addToList(p_app, "width", EMBEDDED_WIDTH.fetchFrom(params), true);
-        addToList(p_app, "height", EMBEDDED_HEIGHT.fetchFrom(params), true);
-        if (jnlp_content_browser != null) {
-            addToList(p_app, "jnlp_content", jnlp_content_browser, true);
-        }
+            xout.writeStartElement("script");
+            xout.writeCharacters("\n" + poff + "function launchApplication(jnlpfile) {\n");
+            xout.writeCharacters(out_launch_code.toString());
+            xout.writeCharacters(poff2 + "return false;\n");
+            xout.writeCharacters(poff + "}\n");
+            xout.writeEndElement();
 
-        addToList(p_platform, "javafx", FX_PLATFORM.fetchFrom(params), true);
-        if (vmargs != null) {
-            addToList(p_platform, "jvmargs", vmargs, true);
-        }
+            if (templateStrings != null) {
+                templateStrings.put(TemplatePlaceholders.LAUNCH_CODE,
+                        out_launch_code.toString());
+            }
 
-        for (Map.Entry<String, String> callbackEntry : JS_CALLBACKS.fetchFrom(params).entrySet()) {
-            addToList(w_callback, callbackEntry.getKey(), callbackEntry.getValue(), false);
-        }
+            //applet deployment
+            String appId = IDENTIFIER.fetchFrom(params);
+            String placeholder = PLACEHOLDER.fetchFrom(params);
 
-        if (!"".equals(appletParams)) {
-            addToList(p_app, "params", "{"+appletParams+"}", false);
-        }
+            //prepare content of embedApp()
+            List<String> p_app = new ArrayList<>();
+            List<String> p_platform = new ArrayList<>();
+            List<String> p_callback = new ArrayList<>();
 
-        if (swingMode) {
-            //Splash will not work in SwingMode
-            //Unless user overwrites onGetSplash handler (and that means he handles splash on his own)
-            // we will reset splash function to be "none"
-            boolean needOnGetSplashImpl = true;
-            for (String callback : JS_CALLBACKS.fetchFrom(params).keySet()) {
-                if ("onGetSplash".equals(callback)) {
-                    needOnGetSplashImpl = false;
+            if (appId != null) {
+                addToList(p_app, "id", appId, true);
+            }
+            boolean isSwingApp = SWING_APP.fetchFrom(params);
+            if (isSwingApp) {
+                addToList(p_app, "toolkit", "swing", true);
+            }
+            addToList(p_app, "url", jnlpfile_browser, true);
+            addToList(p_app, "placeholder", placeholder, true);
+            addToList(p_app, "width", EMBEDDED_WIDTH.fetchFrom(params), true);
+            addToList(p_app, "height", EMBEDDED_HEIGHT.fetchFrom(params), true);
+            if (jnlp_content_browser != null) {
+                addToList(p_app, "jnlp_content", jnlp_content_browser, true);
+            }
+
+            addToList(p_platform, "javafx", FX_PLATFORM.fetchFrom(params), true);
+            if (vmargs != null) {
+                addToList(p_platform, "jvmargs", vmargs, true);
+            }
+
+            for (Map.Entry<String, String> callbackEntry : JS_CALLBACKS.fetchFrom(params).entrySet()) {
+                addToList(w_callback, callbackEntry.getKey(), callbackEntry.getValue(), false);
+            }
+
+            if (!"".equals(appletParams)) {
+                addToList(p_app, "params", "{" + appletParams + "}", false);
+            }
+
+            if (swingMode) {
+                //Splash will not work in SwingMode
+                //Unless user overwrites onGetSplash handler (and that means he handles splash on his own)
+                // we will reset splash function to be "none"
+                boolean needOnGetSplashImpl = true;
+                for (String callback : JS_CALLBACKS.fetchFrom(params).keySet()) {
+                    if ("onGetSplash".equals(callback)) {
+                        needOnGetSplashImpl = false;
+                    }
+                }
+
+                if (needOnGetSplashImpl) {
+                    addToList(p_callback, "onGetSplash", "function() {}", false);
                 }
             }
 
-            if (needOnGetSplashImpl) {
-                addToList(p_callback, "onGetSplash", "function() {}", false);
+            StringBuilder out_embed_dynamic = new StringBuilder();
+            out_embed_dynamic.append("dtjava.embed(\n");
+            out_embed_dynamic.append(listToString(p_app, poff3)).append(",\n");
+            out_embed_dynamic.append(listToString(p_platform, poff3)).append(",\n");
+            out_embed_dynamic.append(listToString(p_callback, poff3)).append("\n");
+
+            out_embed_dynamic.append(poff2).append(");\n");
+
+            //now wrap content with function
+            String embedFuncName = "javafxEmbed" + IDENTIFIER.fetchFrom(params);
+            ByteArrayOutputStream baos_embed_onload = new ByteArrayOutputStream();
+            XMLStreamWriter xo_embed_onload = xmlOutputFactory.createXMLStreamWriter(baos_embed_onload);
+            writeEmbeddedDynamic(out_embed_dynamic, embedFuncName, xo_embed_onload);
+            xo_embed_onload.close();
+            String out_embed_onload = xmlPrettyPrint(baos_embed_onload.toString());
+
+            if (templateStrings != null) {
+                templateStrings.put(
+                        TemplatePlaceholders.EMBED_CODE_ONLOAD,
+                        out_embed_onload);
+                templateStrings.put(
+                        TemplatePlaceholders.EMBED_CODE_DYNAMIC,
+                        out_embed_dynamic.toString());
             }
+
+            writeEmbeddedDynamic(out_embed_dynamic, embedFuncName, xout);
+
+            xout.writeEndElement(); //head
+            
+            xout.writeStartElement("body");
+            xout.writeStartElement("h2");
+            xout.writeCharacters("Test page for ");
+            xout.writeStartElement("b");
+            xout.writeCharacters(APP_NAME.fetchFrom(params));
+            xout.writeEndElement(); // b
+            xout.writeEndElement(); // h2
+            
+            xout.writeStartElement("b");
+            xout.writeCharacters("Webstart:");
+            xout.writeEndElement();
+            
+            xout.writeStartElement("a");
+            xout.writeAttribute("href", jnlpfile_webstart);
+            xout.writeAttribute("onclick", "return launchApplication('" + jnlpfile_webstart + "');");
+            xout.writeCharacters("click to launch this app as webstart");
+            xout.writeEndElement(); // a
+            
+            xout.writeEmptyElement("br");
+            xout.writeEmptyElement("hr");
+            xout.writeEmptyElement("br");
+            xout.writeCharacters("\n");
+            xout.writeComment(" Applet will be inserted here ");
+            
+            xout.writeStartElement("div");
+            xout.writeAttribute("id", placeholder);
+            xout.writeEndElement(); //div
+            xout.writeEndElement(); // body
+            xout.writeEndElement(); // html
+            xout.close();
+            
+            theOut.print(xmlPrettyPrint(baos.toString()));
+
+        } catch (XMLStreamException | TransformerException e) {
+            e.printStackTrace();
         }
+    }
 
-        out_embed_dynamic.append("dtjava.embed(\n");
-        out_embed_dynamic.append(listToString(p_app, poff3)).append(",\n");
-        out_embed_dynamic.append(listToString(p_platform, poff3)).append(",\n");
-        out_embed_dynamic.append(listToString(p_callback, poff3)).append("\n");
+    private void writeEmbeddedDynamic(StringBuilder out_embed_dynamic, String embedFuncName, XMLStreamWriter xo_embed_onload) throws XMLStreamException {
+        xo_embed_onload.writeStartElement("script");
+        xo_embed_onload.writeCharacters("\n    function ");
+        xo_embed_onload.writeCharacters(embedFuncName);
+        xo_embed_onload.writeCharacters("() {\n        ");
+        xo_embed_onload.writeCharacters(out_embed_dynamic.toString());
+        xo_embed_onload.writeCharacters("    }\n    ");
+        xo_embed_onload.writeComment(
+                " Embed FX application into web page once page is loaded ");
+        xo_embed_onload.writeCharacters("\n    dtjava.addOnloadCallback(");
+        xo_embed_onload.writeCharacters(embedFuncName);
+        xo_embed_onload.writeCharacters(");\n");
 
-        out_embed_dynamic.append(poff2).append(");\n");
-
-        //now wrap content with function
-        String embedFuncName = "javafxEmbed" + IDENTIFIER.fetchFrom(params);
-        out_embed_onload.append("\n<script>\n");
-        out_embed_onload.append(poff).append("function ").append(embedFuncName).append("() {\n");
-        out_embed_onload.append(poff2);
-        out_embed_onload.append(out_embed_dynamic);
-        out_embed_onload.append(poff).append("}\n");
-
-        out_embed_onload.append(poff).append(
-                "<!-- Embed FX application into web page once page is loaded -->\n");
-        out_embed_onload.append(poff).append("dtjava.addOnloadCallback(").append(embedFuncName).append(
-                ");\n");
-        out_embed_onload.append("</script>\n");
-
-        if (templateStrings != null) {
-            templateStrings.put(
-                    TemplatePlaceholders.EMBED_CODE_ONLOAD,
-                    out_embed_onload.toString());
-            templateStrings.put(
-                    TemplatePlaceholders.EMBED_CODE_DYNAMIC,
-                    out_embed_dynamic.toString());
-        }
-
-        out.println(out_embed_onload.toString());
-
-        out.println("</head><body>");
-        out.println("<h2>Test page for <b>"+APP_NAME.fetchFrom(params)+"</b></h2>");
-        String launchString = "return launchApplication('" + jnlpfile_webstart + "');";
-        out.println("  <b>Webstart:</b> <a href='" + jnlpfile_webstart +
-                "' onclick=\"" + launchString + "\">"
-                + "click to launch this app as webstart</a><br><hr><br>");
-        out.println("");
-        out.println("  <!-- Applet will be inserted here -->");
-        //placeholder is wrapped with single quotes already
-        out.println("  <div id="+placeholder+"></div>");
-        out.println("</body></html>");
+        xo_embed_onload.writeEndElement();
     }
 
     private void save(File outdir, String fname, byte[] content) throws IOException {
@@ -1095,7 +1257,7 @@ public class JNLPBundler extends AbstractBundler {
 
         final File outDir = fout.getParentFile();
         if (!outDir.exists() && !outDir.mkdirs()) {
-            throw new PackagerException("ERR_CreatingDirFailed", outDir.getPath()); //FIXE I18N
+            throw new PackagerException("ERR_CreatingDirFailed", outDir.getPath());
         }
         try (InputStream is = isa; OutputStream out = new FileOutputStream(fout)) {
             byte[] buf = new byte[16384];
@@ -1116,11 +1278,11 @@ public class JNLPBundler extends AbstractBundler {
                 result.append(", ");
             }
             addComma = true;
-            result.append("\"")
+            result.append("")
                     .append(entry.getKey())
-                    .append(": \"")
-                    .append(entry.getValue())
-                    .append("\"");
+                    .append(": '")
+                    .append(entry.getValue().replaceAll("(['\"\\\\])", "\\\\$1"))
+                    .append("'");
 
         }
         for (Map.Entry<String, String> entry : APPLET_PARAMS.fetchFrom(params).entrySet()) {
@@ -1128,8 +1290,7 @@ public class JNLPBundler extends AbstractBundler {
                 result.append(", ");
             }
             addComma = true;
-            result.append("\"")
-                    .append(entry.getKey())
+            result.append(entry.getKey())
                     .append(": ")
                     .append(entry.getValue());
 
