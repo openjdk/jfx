@@ -316,7 +316,7 @@ public class Main {
                             templateInFile = new File(nextArg(args, i++));
                         } else if (arg.equalsIgnoreCase("-templateOutFilename")) {
                             templateOutFile = new File(nextArg(args, i++));
-                        } else if (arg.equalsIgnoreCase("-appId")) {
+                        } else if (arg.equalsIgnoreCase("-appId") || arg.equalsIgnoreCase("-templateId")) {
                             String appIdArg = nextArg(args, i++);
                             deployParams.setAppId(appIdArg);
                             deployParams.setId(appIdArg);
