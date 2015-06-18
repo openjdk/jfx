@@ -707,14 +707,14 @@ DALVIK.iio.linkFlags = [linkFlags].flatten()
 DALVIK.iio.lib = "javafx_iio"
 
 DALVIK.prismES2 = [:]
-DALVIK.prismES2.variants = ["eglfb", "monocle"]
+DALVIK.prismES2.variants = ["monocle"]
 DALVIK.prismES2.javahInclude = ["com/sun/prism/es2/**/*"]
 
 DALVIK.prismES2.monocle= [:]
 DALVIK.prismES2.monocle.nativeSource = [
     file("modules/graphics/src/main/native-prism-es2"),
     file("modules/graphics/src/main/native-prism-es2/GL"),
-    file("modules/graphics/src/main/native-prism-es2/eglWrapped"),
+    file("modules/graphics/src/main/native-prism-es2/eglWrapper"),
     file("modules/graphics/src/main/native-prism-es2/monocle")
 ]
 DALVIK.prismES2.monocle.compiler = compiler
