@@ -34,6 +34,7 @@ import com.sun.javafx.tools.packager.bundlers.Bundler.BundleType;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
@@ -90,7 +91,7 @@ public class DeployParams extends CommonParams {
 
     Boolean needShortcut = null;
     Boolean needMenu = null;
-    boolean needInstall = false;
+    Boolean needInstall = null;
 
     String outfile;
     //if true then we cobundle js and image files needed
@@ -586,6 +587,7 @@ public class DeployParams extends CommonParams {
         bundleParams.setEmail(email);
         bundleParams.setShortcutHint(needShortcut);
         bundleParams.setMenuHint(needMenu);
+        putUnlessNull(INSTALL_HINT.getID(), needInstall);
         bundleParams.setSystemWide(systemWide);
         bundleParams.setServiceHint(serviceHint);
         bundleParams.setInstalldirChooser(installdirChooser);
@@ -603,6 +605,7 @@ public class DeployParams extends CommonParams {
         bundleParams.setArguments(arguments);
 
         File appIcon = null;
+        List<Map<String, ? super Object>> bundlerIcons = new ArrayList<>();
         for (Icon ic: icons) {
             //NB: in theory we should be paying attention to RunMode but
             // currently everything is marked as webstart internally and runmode
@@ -618,8 +621,18 @@ public class DeployParams extends CommonParams {
                     appIcon = new File(outdir, ic.href);
                 }
             }
+            
+            Map<String, ? super Object> iconInfo = new TreeMap<>();
+            if (ic.href != null) iconInfo.put(ICONS_HREF.getID(), ic.href);
+            if (ic.kind != null) iconInfo.put(ICONS_KIND.getID(), ic.kind);
+            if (ic.width > 0)    iconInfo.put(ICONS_WIDTH.getID(), Integer.toString(ic.width));
+            if (ic.height > 0)   iconInfo.put(ICONS_HEIGHT.getID(), Integer.toString(ic.height));
+            if (ic.depth > 0)    iconInfo.put(ICONS_DEPTH.getID(), Integer.toString(ic.depth));
+            
+            if (!iconInfo.isEmpty()) bundlerIcons.add(iconInfo);
         }
-
+        putUnlessNullOrEmpty(ICONS.getID(), bundlerIcons);
+        
         bundleParams.setIcon(appIcon);
 
         Map<String, String> paramsMap = new TreeMap<>();
@@ -703,7 +716,13 @@ public class DeployParams extends CommonParams {
         }
     }
 
-    public void putUnlessNullOrEmpty(String param, Map value) {
+    public void putUnlessNullOrEmpty(String param, Map<?, ?> value) {
+        if (value != null && !value.isEmpty()) {
+            bundlerArguments.put(param, value);
+        }
+    }
+
+    public void putUnlessNullOrEmpty(String param, Collection<?> value) {
         if (value != null && !value.isEmpty()) {
             bundlerArguments.put(param, value);
         }

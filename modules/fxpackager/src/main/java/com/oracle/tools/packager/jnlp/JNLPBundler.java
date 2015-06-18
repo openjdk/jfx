@@ -295,6 +295,18 @@ public class JNLPBundler extends AbstractBundler {
             null
     );
 
+    public static final StandardBundlerParam<Boolean> INSTALL_HINT =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.menu-install-hint.name"),
+                    I18N.getString("param.menu-install-hint.description"),
+                    "jnlp.install",
+                    Boolean.class,
+                    params -> null,
+                    // valueOf(null) is false, and we actually do want null in some cases
+                    (s, p) -> (s == null || "null".equalsIgnoreCase(s))? null : Boolean.valueOf(s)
+            );
+
+
     public static final StandardBundlerParam<String> ICONS_HREF =
             new StandardBundlerParam<>(
                     I18N.getString("param.icons-href.name"),
@@ -395,11 +407,13 @@ public class JNLPBundler extends AbstractBundler {
                 ICONS,
                 IDENTIFIER,
                 INCLUDE_DT,
+                INSTALL_HINT,
                 JRE_PLATFORM,
                 JS_CALLBACKS,
                 JVM_OPTIONS,
                 JVM_PROPERTIES,
                 MAIN_CLASS,
+                MENU_HINT,
                 OFFLINE_ALLOWED,
                 OUT_FILE,
                 PRELOADER_CLASS,
@@ -606,7 +620,6 @@ public class JNLPBundler extends AbstractBundler {
 
             //copy jar files
             for (RelativeFileSet rfs : APP_RESOURCES_LIST.fetchFrom(params)) {
-                System.out.println(rfs);
                 copyFiles(rfs, outputParentDir);
             }
 
@@ -678,6 +691,7 @@ public class JNLPBundler extends AbstractBundler {
             XMLStreamWriter xout = xmlOutputFactory.createXMLStreamWriter(baos);
 
             xout.writeStartDocument("utf-8", "1.0");
+            xout.writeCharacters("\n");
             xout.writeStartElement("jnlp");
             xout.writeAttribute("spec", "1.0");
             xout.writeNamespace("jfx", "http://javafx.com");
@@ -735,20 +749,42 @@ public class JNLPBundler extends AbstractBundler {
                 xout.writeEmptyElement("offline-allowed");
             }
 
-            boolean needShortcut = SHORTCUT_HINT.fetchFrom(params);
-            if (Boolean.TRUE.equals(needShortcut)) {
+            Boolean needShortcut = SHORTCUT_HINT.fetchFrom(params);
+            Boolean needMenu = MENU_HINT.fetchFrom(params);
+            Boolean needInstall = INSTALL_HINT.fetchFrom(params);
+            if (Boolean.TRUE.equals(needShortcut) || Boolean.TRUE.equals(needMenu) || Boolean.TRUE.equals(needInstall)) {
                 xout.writeStartElement("shortcut");
-                xout.writeEmptyElement("desktop");
+                if (needInstall != null) {
+                    xout.writeAttribute("installed", needInstall.toString());
+                }
+                if (Boolean.TRUE.equals(needShortcut)) {
+                    xout.writeEmptyElement("desktop");
+                }
+                if (Boolean.TRUE.equals(needMenu)) {
+                    xout.writeEmptyElement("menu");
+                    //todo add submenu element
+                }
                 xout.writeEndElement();
-
-//            //TODO: Add support for a more sophisticated shortcut tag.
-//  <shortcut/> // install no shortcuts, and do not consider "installed"
-//  <shortcut installed="true"/> // install no shortcuts, but consider "installed"
-//  <shortcut installed="false"><desktop/></shortcut> // install desktop shortcut, but do not consider the app "installed"
-//  <shortcut installed="true"><menu/></shortcut> // install menu shortcut, and consider app "installed"
             }
             
+            //TODO file associations
+            
             xout.writeEndElement(); // information
+
+            boolean allPermissions = ALL_PERMISSIONS.fetchFrom(params);
+            if (allPermissions) {
+                xout.writeStartElement("security");
+                xout.writeEmptyElement("all-permissions");
+                xout.writeEndElement();
+            }
+
+            String updateMode = UPDATE_MODE.fetchFrom(params);
+            if (updateMode != null) {
+                xout.writeStartElement("update");
+                xout.writeAttribute("check", UPDATE_MODE.fetchFrom(params));
+                xout.writeEndElement(); // update
+            }
+
 
             boolean needToCloseResourceTag = false;
             //jre is available for all platforms
@@ -843,14 +879,6 @@ public class JNLPBundler extends AbstractBundler {
                 xout.writeEndElement();
             }
 
-            boolean allPermissions = ALL_PERMISSIONS.fetchFrom(params); 
-            if (allPermissions) {
-                xout.writeStartElement("security");
-                xout.writeEmptyElement("all-permissions");
-                xout.writeEndElement();
-            }
-
-        
             if (!isExtension) {
                 Integer width = WIDTH.fetchFrom(params);
                 Integer height = HEIGHT.fetchFrom(params);
@@ -948,13 +976,6 @@ public class JNLPBundler extends AbstractBundler {
                 }
             }
             
-            String updateMode = UPDATE_MODE.fetchFrom(params);
-            if (updateMode != null) {
-                xout.writeStartElement("update");
-                xout.writeAttribute("check", UPDATE_MODE.fetchFrom(params));
-                xout.writeEndElement(); // update
-            }
-    
             xout.writeEndElement(); // jnlp
 
             // now pretty print
