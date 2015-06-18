@@ -88,7 +88,7 @@ public class JNLPBundler extends AbstractBundler {
     //Note: leading "." is important for IE8
     private static final String EMBEDDED_DT = "./"+webfilesDir+"/"+dtFX;
 
-    private static final String PUBLIC_DT = "http://java.com/js/dtjava.js";
+    private static final String PUBLIC_DT = "https://java.com/js/dtjava.js";
     
     private static final String JFX_NS_URI = "http://javafx.com";
 
