@@ -688,7 +688,7 @@ public class JNLPBundler extends AbstractBundler {
             XMLOutputFactory xmlOutputFactory = XMLOutputFactory.newFactory();
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            XMLStreamWriter xout = xmlOutputFactory.createXMLStreamWriter(baos);
+            XMLStreamWriter xout = xmlOutputFactory.createXMLStreamWriter(baos, "utf-8");
 
             xout.writeStartDocument("utf-8", "1.0");
             xout.writeCharacters("\n");
@@ -1048,7 +1048,7 @@ public class JNLPBundler extends AbstractBundler {
             XMLOutputFactory xmlOutputFactory = XMLOutputFactory.newFactory();
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            XMLStreamWriter xout = xmlOutputFactory.createXMLStreamWriter(baos);
+            XMLStreamWriter xout = xmlOutputFactory.createXMLStreamWriter(baos, "utf-8");
 
             String appletParams = getAppletParameters(params);
             String jnlp_content_browser = null;
@@ -1069,7 +1069,7 @@ public class JNLPBundler extends AbstractBundler {
                 templateStrings.put(TemplatePlaceholders.SCRIPT_URL, dtURL);
                 
                 ByteArrayOutputStream baos2 = new ByteArrayOutputStream();
-                XMLStreamWriter xo2 = xmlOutputFactory.createXMLStreamWriter(baos2);
+                XMLStreamWriter xo2 = xmlOutputFactory.createXMLStreamWriter(baos2, "utf-8");
                 xo2.writeStartElement("SCRIPT");
                 xo2.writeAttribute("src", dtURL);
                 xo2.writeEndElement();
@@ -1188,7 +1188,7 @@ public class JNLPBundler extends AbstractBundler {
             //now wrap content with function
             String embedFuncName = "javafxEmbed" + IDENTIFIER.fetchFrom(params);
             ByteArrayOutputStream baos_embed_onload = new ByteArrayOutputStream();
-            XMLStreamWriter xo_embed_onload = xmlOutputFactory.createXMLStreamWriter(baos_embed_onload);
+            XMLStreamWriter xo_embed_onload = xmlOutputFactory.createXMLStreamWriter(baos_embed_onload, "utf-8");
             writeEmbeddedDynamic(out_embed_dynamic, embedFuncName, xo_embed_onload);
             xo_embed_onload.close();
             String out_embed_onload = xmlPrettyPrint(baos_embed_onload.toString());
