@@ -6,9 +6,6 @@ SOURCE_DIR = $$BASE_DIR
 DESTDIR = ../lib
 QMAKE_LIBDIR += $$DESTDIR
 
-CHK_FILE_EXISTS = test -f
-CHK_DIR_EXISTS = test -d
-
 mac*|linux* {
     INC_OPT=-include
 }
@@ -172,15 +169,31 @@ INSPECTOR_JS_GEN_FILES = \
     $${INSPECTOR_JS_CPP_FILES} \
     $${INSPECTOR_JS_H_FILES}
 
+INSPECTOR_JS_DIR = \
+    $${GENERATED_SOURCES_DIR}/inspector
+
 inspectorJS.input = INSPECTOR_JS_GEN_FILES
 inspectorJS.output = ${QMAKE_FILE_NAME}
 inspectorJS.output_no_prepend = true
 inspectorJS.script = $$PWD/inspector/scripts/CodeGeneratorInspector.py
-inspectorJS.commands = $$CHK_FILE_EXISTS ${QMAKE_FILE_NAME} || python $$inspectorJS.script $${GENERATED_SOURCES_DIR}/InspectorJS.json --output_h_dir $${GENERATED_SOURCES_DIR} --output_cpp_dir $${GENERATED_SOURCES_DIR} --output_js_dir $${GENERATED_SOURCES_DIR} --output_type JavaScript && cd $${GENERATED_SOURCES_DIR} && $$CHK_DIR_EXISTS inspector || $(MKDIR) inspector && $(COPY_FILE) InspectorJS*.h inspector
+inspectorJS.commands = $$replace(QMAKE_CHK_EXISTS, "%1", ${QMAKE_FILE_NAME}) python $$inspectorJS.script $${GENERATED_SOURCES_DIR}/InspectorJS.json --output_h_dir $${GENERATED_SOURCES_DIR} --output_cpp_dir $${GENERATED_SOURCES_DIR} --output_js_dir $${GENERATED_SOURCES_DIR} --output_type JavaScript
 inspectorJS.extra_sources = $${INSPECTOR_JS_CPP_FILES}
 inspectorJS.extra_sources_no_prepend = true
 inspectorJS.depends = $${GENERATED_SOURCES_DIR}/InspectorJS.json
 GENERATORS += inspectorJS
+
+inspectorCreateDir.input = INSPECTOR_JS_DIR
+inspectorCreateDir.output = ${QMAKE_FILE_NAME}
+inspectorCreateDir.output_no_prepend = true
+inspectorCreateDir.commands = $$replace(QMAKE_MKDIR_CMD, "%1", ${QMAKE_FILE_NAME})
+GENERATORS += inspectorCreateDir
+
+inspectorCopy.input = INSPECTOR_JS_H_FILES
+inspectorCopy.output = $${INSPECTOR_JS_DIR}/${QMAKE_FILE_BASE}.h
+inspectorCopy.output_no_prepend = true
+inspectorCopy.commands = $(COPY_FILE) ${QMAKE_FILE_NAME} $$shell_path($$INSPECTOR_JS_DIR)
+inspectorCopy.depends = $$INSPECTOR_JS_DIR
+GENERATORS += inspectorCopy
 
 LLINT_DEPENDENCY = \
     $$PWD/llint/LowLevelInterpreter.asm \
