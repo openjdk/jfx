@@ -26,7 +26,7 @@ bool FrameData::clear(bool clearMetadata)
 
     if (m_frame) {
 #if USE(IMAGEIO)
-        JNIEnv* env = WebCore_GetJavaEnv();
+	WC_GETJAVAENV_CHKRET(env, false);
         static jmethodID midDestroyDecodedData = env->GetMethodID(
                 JLClass(env->GetObjectClass(*m_frame)),
                 "destroyDecodedData",
@@ -60,10 +60,8 @@ void BitmapImage::draw(GraphicsContext *gc, const FloatRect &dstRect, const Floa
 
 PassRefPtr<Image> BitmapImage::createFromName(const char* name)
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
-    if (!env)
-        return NULL;
-
+    WC_GETJAVAENV_CHKRET(env, NULL);
+    
     RefPtr<BitmapImage> img(create());
 
 #if USE(IMAGEIO)

@@ -11,8 +11,8 @@ namespace WebCore {
 
 void systemBeep()
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
-
+    WC_GETJAVAENV_CHKRET(env);
+    
     JLClass cls( env->FindClass("java/awt/Toolkit") );
     ASSERT(cls);
 

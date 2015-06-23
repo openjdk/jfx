@@ -18,6 +18,10 @@ ALWAYS_INLINE JNIEnv* JNICALL JavaScriptCore_GetJavaEnv()
     return 0;
 }
 
+#define JSC_GETJAVAENV_CHKRET(_env_var, ... /* ret val */)   \
+    JNIEnv* _env_var = JavaScriptCore_GetJavaEnv(); \
+    if (!_env_var) return __VA_ARGS__;
+
 extern bool CheckAndClearException(JNIEnv* env);
 
 #define jlong_to_ptr(a) ((void*)(uintptr_t)(a))

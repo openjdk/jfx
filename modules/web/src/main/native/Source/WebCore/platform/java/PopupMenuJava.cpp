@@ -52,8 +52,8 @@ PopupMenuJava::~PopupMenuJava()
     if (!m_popup)
         return;
 
-    JNIEnv* env = WebCore_GetJavaEnv();
-
+    WC_GETJAVAENV_CHKRET(env);
+    
     static jmethodID mid = env->GetMethodID(getJPopupMenuClass(),
         "fwkDestroy", "()V");
     ASSERT(mid);

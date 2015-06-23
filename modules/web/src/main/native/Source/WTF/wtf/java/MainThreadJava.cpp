@@ -16,7 +16,7 @@
 namespace WTF {
     void scheduleDispatchFunctionsOnMainThread()
     {
-        JNIEnv* env = JavaScriptCore_GetJavaEnv();
+	JSC_GETJAVAENV_CHKRET(env);
 
         static JGClass jMainThreadCls(env->FindClass("com/sun/webkit/MainThread"));
 

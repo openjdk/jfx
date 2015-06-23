@@ -51,7 +51,7 @@ void JavaEventListener::handleEvent(ScriptExecutionContext* context, Event* even
 
 JavaEventListener::~JavaEventListener()
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    WC_GETJAVAENV_CHKRET(env);
 
     JGClass eli(env->FindClass("com/sun/webkit/dom/EventListenerImpl"));
     static jmethodID midDispose(env->GetStaticMethodID(

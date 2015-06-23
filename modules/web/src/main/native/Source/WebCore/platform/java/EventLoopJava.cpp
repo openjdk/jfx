@@ -25,7 +25,7 @@ namespace WebCore {
 
 void EventLoop::cycle()
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    WC_GETJAVAENV_CHKRET(env);
     initRefs(env);
 
     env->CallStaticVoidMethod(eventLoopClass, cycleMethod);
