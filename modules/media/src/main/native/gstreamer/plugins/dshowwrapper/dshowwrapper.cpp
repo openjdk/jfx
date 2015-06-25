@@ -705,7 +705,11 @@ int dshowwrapper_deliver(GstBuffer *pBuffer, sUserData *pUserData)
         return 1; // DShow may not like failures
     }
 
-    decoder->is_data_produced = TRUE;
+    if (decoder->pDSLock)
+    {
+        CAutoLock lock(decoder->pDSLock);
+        decoder->is_data_produced = TRUE;
+    }
 
     decoder->offset[pUserData->output_index] += GST_BUFFER_SIZE(pBuffer);
     GST_BUFFER_OFFSET_END(pBuffer) = decoder->offset[pUserData->output_index];
@@ -830,14 +834,20 @@ int dshowwrapper_sink_event(int sinkEvent, void *pData, int size, sUserData *pUs
     switch (sinkEvent)
     {
     case SINK_EOS:
+    {
         if (decoder->is_eos[pUserData->output_index])
             break;
 
-        if (!decoder->is_data_produced)
+        bool error = false;
+        if (decoder->pDSLock) 
         {
-            gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR, GST_STREAM_ERROR, GST_STREAM_ERROR_DECODE, g_strdup("Failed to decode stream"), NULL, ("dshowwrapper.c"), ("dshowwrapper_sink_event"), 0);
-            decoder->is_data_produced = TRUE; // Do not send more errors
+            CAutoLock lock(decoder->pDSLock);
+            if (!decoder->is_data_produced)
+                error = decoder->is_data_produced = TRUE; // Do not send more errors
         }
+
+        if (error)
+            gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR, GST_STREAM_ERROR, GST_STREAM_ERROR_DECODE, g_strdup("Failed to decode stream"), NULL, ("dshowwrapper.c"), ("dshowwrapper_sink_event"), 0);
 
         // Deliver last buffer
         if (decoder->out_buffer[pUserData->output_index] != NULL)
@@ -860,6 +870,7 @@ int dshowwrapper_sink_event(int sinkEvent, void *pData, int size, sUserData *pUs
 #endif
         gst_pad_push_event (decoder->srcpad[pUserData->output_index], gst_event_new_eos());
         break;
+    }
     case SINK_CODEC_DATA:
         if (pData != NULL && size > 0)
         {
@@ -2719,14 +2730,25 @@ static GstFlowReturn dshowwrapper_chain (GstPad * pad, GstBuffer * buf)
     }
 
     // MP2T has too many small buffers and we can get false error here. We will detect stream issues at the EOS anyway.
-    if (!decoder->is_data_produced && decoder->eInputFormat != MEDIA_FORMAT_STREAM_MP2T)
+    if (decoder->pDSLock) 
     {
-        decoder->input_buffers_count++;
-        if (decoder->input_buffers_count > INPUT_BUFFERS_BEFORE_ERROR)
+        decoder->pDSLock->Lock();
+        bool unlock = true;
+        if (!decoder->is_data_produced && decoder->eInputFormat != MEDIA_FORMAT_STREAM_MP2T)
         {
-            gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR, GST_STREAM_ERROR, GST_STREAM_ERROR_DECODE, g_strdup("Failed to decode stream"), NULL, ("dshowwrapper.c"), ("dshowwrapper_chain"), 0);
-            decoder->is_data_produced = TRUE; // Do not send more errors
+            decoder->input_buffers_count++;
+            if (decoder->input_buffers_count > INPUT_BUFFERS_BEFORE_ERROR)
+            {
+                decoder->is_data_produced = TRUE; // Do not send more errors
+                unlock = false;
+                decoder->pDSLock->Unlock();
+
+                gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR, GST_STREAM_ERROR, GST_STREAM_ERROR_DECODE, g_strdup("Failed to decode stream"), NULL, ("dshowwrapper.c"), ("dshowwrapper_chain"), 0);
+            }
         }
+
+        if (unlock)
+            decoder->pDSLock->Unlock();
     }
 
     if (decoder->force_discontinuity)
@@ -2738,8 +2760,12 @@ static GstFlowReturn dshowwrapper_chain (GstPad * pad, GstBuffer * buf)
 
     if (decoder->is_flushing)
         ret = GST_FLOW_WRONG_STATE;
-    else if (FAILED(decoder->pSrc->DeliverSample(buf)))
-        ret = GST_FLOW_ERROR;
+    else 
+    {
+        HRESULT hres = decoder->pSrc->DeliverSample(buf);
+        if (hres != S_OK && hres != E_FAIL)
+            ret = GST_FLOW_ERROR;
+    }
 
     return ret;
 }
@@ -2883,6 +2909,7 @@ static gboolean dshowwrapper_sink_event(GstPad* pad, GstEvent *event)
                 decoder->pMediaControl->Run();
 
             decoder->is_flushing = FALSE;
+            decoder->is_data_produced = FALSE;
         }
         break;
     case GST_EVENT_EOS:

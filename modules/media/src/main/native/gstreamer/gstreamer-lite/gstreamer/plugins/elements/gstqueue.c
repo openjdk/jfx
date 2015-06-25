@@ -1298,6 +1298,12 @@ out_flushing:
               gst_flow_get_name (ret), ret));
       gst_pad_push_event (queue->srcpad, gst_event_new_eos ());
     }
+#ifdef GSTREAMER_LITE
+    else if (ret == GST_FLOW_ERROR) { // Fail immediately even if there is no eos
+      GST_ELEMENT_ERROR (queue, STREAM, FAILED, (_("Internal data flow error.")), 
+          ("streaming task paused, reason %s (%d)", gst_flow_get_name (ret), ret));
+    }
+#endif
     return;
   }
 }
