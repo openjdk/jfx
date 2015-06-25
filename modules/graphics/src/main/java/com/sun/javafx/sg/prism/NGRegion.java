@@ -676,7 +676,7 @@ public class NGRegion extends NGGroup {
                 final BorderStroke stroke = strokes.get(i);
                 // We're stroking a path, so there is no point trying to figure out the length.
                 // Instead, we just pass -1, telling setBorderStyle to just do a simple stroke
-                setBorderStyle(g, stroke, -1);
+                setBorderStyle(g, stroke, -1, false);
                 final Insets insets = stroke.getInsets();
                 g.draw(resizeShape((float) insets.getTop(), (float) insets.getRight(),
                                    (float) insets.getBottom(), (float) insets.getLeft()));
@@ -1192,33 +1192,33 @@ public class NGRegion extends NGGroup {
                 // If the stroke is uniform, then that means that the style, width, and stroke of
                 // all four sides is the same.
                 if (!(topStroke instanceof Color && ((Color)topStroke).getOpacity() == 0f) && topStyle != BorderStrokeStyle.NONE) {
-                    float w = width - leftInset - rightInset;
-                    float h = height - topInset - bottomInset;
+                    float w = width - l - r;
+                    float h = height - t - b;
                     // The length of each side of the path we're going to stroke
                     final double di = 2 * radii.getTopLeftHorizontalRadius();
                     final double circle = di*Math.PI;
                     final double totalLineLength =
                             circle +
-                            2 * (width - di) +
-                            2 * (height - di);
+                            2 * (w - di) +
+                            2 * (h - di);
 
                     if (w >= 0 && h >= 0) {
-                        setBorderStyle(g, stroke, totalLineLength);
+                        setBorderStyle(g, stroke, totalLineLength, true);
                         if (radii.isUniform() && radius == 0) {
                             // We're just drawing a squared stroke on all four sides of the same style
                             // and width and color, so a simple drawRect call is all that is needed.
-                            g.drawRect(leftInset, topInset, w, h);
+                            g.drawRect(l, t, w, h);
                         } else if (radii.isUniform()) {
                             // The radii are uniform, but are not squared up, so we have to
                             // draw a rounded rectangle.
                             float ar = radius + radius;
                             if (ar > w) ar = w;
                             if (ar > h) ar = h;
-                            g.drawRoundRect(leftInset, topInset, w, h, ar, ar);
+                            g.drawRoundRect(l, t, w, h, ar, ar);
                         } else {
                             // We do not have uniform radii, so we need to create a path that represents
                             // the stroke and then draw that.
-                            g.draw(createPath(width, height, topInset, leftInset, bottomInset, rightInset, radii));
+                            g.draw(createPath(width, height, t, l, b, r, radii));
                         }
                     }
                 }
@@ -1251,7 +1251,7 @@ public class NGRegion extends NGGroup {
                                    rightWidth, height - topInset - bottomInset);
                     } else {
                         g.setStroke(createStroke(rightStyle, rightWidth, height, true));
-                        g.drawLine(width - r, topInset, width - r, height - bottomInset);
+                        g.drawLine(width - r, t, width - r, height - b);
                     }
                 }
 
@@ -1272,7 +1272,7 @@ public class NGRegion extends NGGroup {
                         g.fillRect(leftInset, topInset, leftWidth, height - topInset - bottomInset);
                     } else {
                         g.setStroke(createStroke(leftStyle, leftWidth, height, true));
-                        g.drawLine(l, topInset, l, height - bottomInset);
+                        g.drawLine(l, t, l, height - b);
                     }
                 }
             } else {
@@ -1467,26 +1467,20 @@ public class NGRegion extends NGGroup {
 
 
     /**
-     * Calls {@link #createStroke(javafx.scene.layout.BorderStrokeStyle, double, double, boolean)})
-     * with "forLine" set to false
-     */
-    private BasicStroke createStroke(BorderStrokeStyle sb, double strokeWidth, double lineLength) {
-        return createStroke(sb, strokeWidth, lineLength, false);
-    }
-
-    /**
      * Creates a Prism BasicStroke based on the stroke style, width, and line length.
      *
      * @param sb             The BorderStrokeStyle
      * @param strokeWidth    The width of the stroke we're going to draw
      * @param lineLength     The total linear length of this stroke. This is needed for
      *                       handling "dashed" and "dotted" cases, otherwise, it is ignored.
-     * @param forLine        When this is set to true, the stroke is always centered. Outer and inner stroke
-     *                       does not make any sense for line as it does not encloses any area
+     * @param forceCentered  When this is set to true, the stroke is always centered.
      *                       The "outer/inner" stroking has to be done by moving the line
      * @return A prism BasicStroke
      */
-    private BasicStroke createStroke(BorderStrokeStyle sb, double strokeWidth, double lineLength, boolean forLine) {
+    private BasicStroke createStroke(BorderStrokeStyle sb,
+                                     double strokeWidth,
+                                     double lineLength,
+                                     boolean forceCentered) {
         int cap;
         if (sb.getLineCap() == StrokeLineCap.BUTT) {
             cap = BasicStroke.CAP_BUTT;
@@ -1506,7 +1500,7 @@ public class NGRegion extends NGGroup {
         }
 
         int type;
-        if (forLine) {
+        if (forceCentered) {
             type = BasicStroke.TYPE_CENTERED;
         } else if (scaleShape) {
             // Note: this is just a workaround that allows us to avoid shape bounds computation with the given stroke.
@@ -1610,7 +1604,7 @@ public class NGRegion extends NGGroup {
         return bs;
     }
 
-    private void setBorderStyle(Graphics g, BorderStroke sb, double length) {
+    private void setBorderStyle(Graphics g, BorderStroke sb, double length, boolean forceCentered) {
         // Any one of, or all of, the sides could be 'none'.
         // Take the first side that isn't.
         final BorderWidths widths = sb.getWidths();
@@ -1635,7 +1629,8 @@ public class NGRegion extends NGGroup {
         if (bs == null || bs == BorderStrokeStyle.NONE) {
             return;
         }
-        g.setStroke(createStroke(bs, sbWidth, length));
+
+        g.setStroke(createStroke(bs, sbWidth, length, forceCentered));
         g.setPaint(sbFill);
     }
 
