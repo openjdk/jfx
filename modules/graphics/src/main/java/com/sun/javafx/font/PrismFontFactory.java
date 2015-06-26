@@ -1908,7 +1908,8 @@ public abstract class PrismFontFactory implements FontFactory {
     public static float getSystemFontSize() {
         if (systemFontSize == -1) {
             if (isWindows) {
-                systemFontSize = (float)getSystemFontSizeNative();
+                float uiScale = Screen.getMainScreen().getUIScale();
+                systemFontSize = getSystemFontSizeNative() / uiScale;
             } else if (isMacOSX || isIOS) {
                 systemFontSize = MacFontFinder.getSystemFontSize();
             } else if (isAndroid) {
