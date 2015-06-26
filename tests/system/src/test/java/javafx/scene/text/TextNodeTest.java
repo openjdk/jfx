@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,18 +25,34 @@
 
 package javafx.scene.text;
 
+import com.sun.javafx.application.PlatformImpl;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import javafx.geometry.Bounds;
 import javafx.geometry.VPos;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.PathElement;
 
+import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class TextNodeTest {
 
-    public TextNodeTest() {
+    @BeforeClass
+    public static void initFX() {
+        final CountDownLatch startupLatch = new CountDownLatch(1);
+        PlatformImpl.startup(() -> {
+            startupLatch.countDown();
+        });
+        try {
+            if (!startupLatch.await(5, TimeUnit.SECONDS)) {
+                fail("Timeout waiting for FX runtime to start");
+            }
+        } catch (InterruptedException ex) {
+            fail("Unexpected exception: " + ex);
+        }
     }
 
     @Test public void testBounds() {
