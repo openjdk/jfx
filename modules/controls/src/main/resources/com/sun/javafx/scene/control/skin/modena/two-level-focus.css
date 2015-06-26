@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,15 +24,15 @@
  */
 
 /*******************************************************************************
- *																			   *
- * 2-level focus setting for Modena											   *
- *																			   *
+ *                                                                             *
+ * 2-level focus setting for Modena                                            *
+ *                                                                             *
  ******************************************************************************/
 
 /*******************************************************************************
- *																			   *
- * ChoiceBox																   *
- *																			   *
+ *                                                                             *
+ * ChoiceBox                                                                   *
+ *                                                                             *
  ******************************************************************************/
 .choice-box:showing:external-focus {
     -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
@@ -40,9 +40,9 @@
     -fx-background-radius: 3px, 3px, 2px, 1px;
 }
 /*******************************************************************************
- *																			   *
- * TextField																   *
- *																			   *
+ *                                                                             *
+ * TextField                                                                   *
+ *                                                                             *
  ******************************************************************************/
 .text-input:focused:internal-focus {
     -fx-highlight-fill: -fx-accent;
@@ -63,18 +63,18 @@
         linear-gradient(from 0px 0px to 0px 5px, derive(-fx-control-inner-background, -9%), -fx-control-inner-background);
 }
 /*******************************************************************************
- *																			   *
- * TextArea																	   *
- *																			   *
+ *                                                                             *
+ * TextArea                                                                    *
+ *                                                                             *
  ******************************************************************************/
 .text-area:focused:internal-focus .content {
     -fx-background-color:
         linear-gradient(from 0px 0px to 0px 4px, derive(-fx-control-inner-background, -8%), -fx-control-inner-background);
 }
 /*******************************************************************************
- *																			   *
- * Slider																	   *
- *																			   *
+ *                                                                             *
+ * Slider                                                                      *
+ *                                                                             *
  ******************************************************************************/
 .slider {
     -fx-padding: 5;
@@ -94,9 +94,9 @@
         -fx-body-color;
 }
 /*******************************************************************************
- *																			   *
- * ListView, TableView														   *
- *																			   *
+ *                                                                             *
+ * ListView, TableView                                                         *
+ *                                                                             *
  ******************************************************************************/
 .list-view:focused:external-focus > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected,
 .table-view:focused:external-focus > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:selected,
@@ -112,9 +112,9 @@
     -fx-background-insets: 0, 1;
 }
 /*******************************************************************************
- *																			   *
- * ComboBox																	   *
- *																			   *
+ *                                                                             *
+ * ComboBox                                                                    *
+ *                                                                             *
  ******************************************************************************/
 .combo-box-base:focused:showing:external-focus,
 .combo-box-base:editable:focused:showing:external-focus > .arrow-button {

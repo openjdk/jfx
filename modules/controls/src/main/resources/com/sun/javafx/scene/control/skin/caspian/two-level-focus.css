@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,23 +24,23 @@
  */
 
  /*******************************************************************************
- *																			   *
- * 2-level focus setting for Caspian										   *
- *																			   *
+ *                                                                             *
+ * 2-level focus setting for Caspian                                           *
+ *                                                                             *
  ******************************************************************************/
 
 /*******************************************************************************
- *																			   *
- * ChoiceBox																   *
- *																			   *
+ *                                                                             *
+ * ChoiceBox                                                                   *
+ *                                                                             *
  ******************************************************************************/
 .choice-box:showing {
     -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
 }
 /*******************************************************************************
- *																			   *
- * TextField																   *
- *																			   *
+ *                                                                             *
+ * TextField                                                                   *
+ *                                                                             *
  ******************************************************************************/
 .text-input:focused:internal-focus {
     -fx-highlight-fill: -fx-accent;
@@ -58,9 +58,9 @@
     -fx-prompt-text-fill: transparent;
 }
 /*******************************************************************************
- *																			   *
- * TextArea																	   *
- *																			   *
+ *                                                                             *
+ * TextArea                                                                    *
+ *                                                                             *
  ******************************************************************************/
 .text-area:focused:internal-focus {
     -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;
@@ -69,9 +69,9 @@
     -fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;
 }
 /*******************************************************************************
- *																			   *
- * Slider																	   *
- *																			   *
+ *                                                                             *
+ * Slider                                                                      *
+ *                                                                             *
  ******************************************************************************/
 .slider {
     -fx-padding: 5;
@@ -92,9 +92,9 @@
     -fx-background-insets: 0, 1, 2;
 }
 /*******************************************************************************
- *																			   *
- * ListView, TableView														   *
- *																			   *
+ *                                                                             *
+ * ListView, TableView                                                         *
+ *                                                                             *
  ******************************************************************************/
 .list-view:focused:external-focus > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected,
 .table-view:focused:external-focus > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:selected,
@@ -110,9 +110,9 @@
     -fx-background-insets: 0, 1;
 }
 /*******************************************************************************
- *																			   *
- * ComboBox																	   *
- *																			   *
+ *                                                                             *
+ * ComboBox                                                                    *
+ *                                                                             *
  ******************************************************************************/
 .combo-box-base:focused:showing  {
     -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;

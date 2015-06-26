@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -74,9 +74,9 @@ void main()
     tangentFrame[2] *= (tangent.w>=0.0) ? 1.0 : -1.0;
     
     mat3 sWorldMatrix = mat3(worldMatrix[0].xyz, 
-    	 	      	     worldMatrix[1].xyz, 
-			     worldMatrix[2].xyz);
-    
+                             worldMatrix[1].xyz, 
+                             worldMatrix[2].xyz);
+
     //Translate the tangent frame to world space.
     tangentFrame[0] = sWorldMatrix * tangentFrame[0];
     tangentFrame[1] = sWorldMatrix * tangentFrame[1];
