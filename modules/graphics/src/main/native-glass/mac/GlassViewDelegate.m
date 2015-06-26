@@ -189,7 +189,9 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
     
     [self->fullscreenWindow release];
     self->fullscreenWindow = nil;
-    
+
+    [GlassTouches stopTracking:self];
+
     GET_MAIN_JENV;
     if (env != NULL)
     {
