@@ -50,7 +50,7 @@ SocketStreamHandle::SocketStreamHandle(const URL& url, Page* page,
 
 SocketStreamHandle::~SocketStreamHandle()
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    WC_GETJAVAENV_CHKRET(env);
 
     static jmethodID mid = env->GetMethodID(
             GetSocketStreamHandleClass(env),

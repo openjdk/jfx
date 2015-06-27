@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
 #include "TextCodecJava.h"
@@ -26,7 +26,7 @@ static PassOwnPtr<TextCodec> newTextCodecJava(const TextEncoding& encoding, cons
 
 static JNIEnv* setUpCodec() {
     JNIEnv* env = WebCore_GetJavaEnv();
-
+    
     if (!textCodecClass) {
         textCodecClass =  JLClass(env->FindClass("com/sun/webkit/text/TextCodec"));
         ASSERT(textCodecClass);
@@ -129,7 +129,7 @@ TextCodecJava::TextCodecJava(const TextEncoding& encoding)
 
 TextCodecJava::~TextCodecJava()
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    WC_GETJAVAENV_CHKRET(env);
 
     if (m_codec) {
         env->DeleteGlobalRef(m_codec);

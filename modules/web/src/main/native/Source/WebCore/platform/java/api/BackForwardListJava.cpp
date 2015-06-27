@@ -92,8 +92,8 @@ static void notifyHistoryItemChangedImpl(HistoryItem* item) {
 }
 
 void notifyHistoryItemDestroyed(const JLObject &host)
-{
-    JNIEnv* env = WebCore_GetJavaEnv();
+{    
+    WC_GETJAVAENV_CHKRET(env);
     static jmethodID notifyItemDestroyedMID =
             initMethod(env, getJEntryClass(), "notifyItemDestroyed", "()V");
     if (host) {

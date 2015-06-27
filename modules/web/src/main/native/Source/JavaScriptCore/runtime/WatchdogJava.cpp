@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
  */
 
 #include "config.h"
@@ -19,7 +19,7 @@ static jclass GetWatchdogTimerClass(JNIEnv* env)
 
 void Watchdog::initTimer()
 {
-    JNIEnv* env = JavaScriptCore_GetJavaEnv();
+    JSC_GETJAVAENV_CHKRET(env);
 
     static jmethodID mid = env->GetStaticMethodID(
             GetWatchdogTimerClass(env),
@@ -36,7 +36,7 @@ void Watchdog::initTimer()
 
 void Watchdog::destroyTimer()
 {
-    JNIEnv* env = JavaScriptCore_GetJavaEnv();
+    JSC_GETJAVAENV_CHKRET(env);
 
     static jmethodID mid = env->GetMethodID(
             GetWatchdogTimerClass(env),
@@ -52,7 +52,7 @@ void Watchdog::destroyTimer()
 
 void Watchdog::startTimer(double limit)
 {
-    JNIEnv* env = JavaScriptCore_GetJavaEnv();
+    JSC_GETJAVAENV_CHKRET(env);
 
     static jmethodID mid = env->GetMethodID(
             GetWatchdogTimerClass(env),
@@ -66,7 +66,7 @@ void Watchdog::startTimer(double limit)
 
 void Watchdog::stopTimer()
 {
-    JNIEnv* env = JavaScriptCore_GetJavaEnv();
+    JSC_GETJAVAENV_CHKRET(env);
 
     static jmethodID mid = env->GetMethodID(
             GetWatchdogTimerClass(env),

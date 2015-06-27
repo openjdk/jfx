@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
 #include "MainThreadJava.h"
@@ -16,7 +16,7 @@
 namespace WTF {
     void scheduleDispatchFunctionsOnMainThread()
     {
-        JNIEnv* env = JavaScriptCore_GetJavaEnv();
+	JSC_GETJAVAENV_CHKRET(env);
 
         static JGClass jMainThreadCls(env->FindClass("com/sun/webkit/MainThread"));
 

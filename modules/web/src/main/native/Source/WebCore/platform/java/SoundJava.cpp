@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
 
@@ -11,8 +11,8 @@ namespace WebCore {
 
 void systemBeep()
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
-
+    WC_GETJAVAENV_CHKRET(env);
+    
     JLClass cls( env->FindClass("java/awt/Toolkit") );
     ASSERT(cls);
 

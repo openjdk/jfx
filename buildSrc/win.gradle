@@ -152,14 +152,35 @@ ext.MSVCP = cygpath("${WINDOWS_VS_MSVCDIR}/redist/${IS_64 ? 'x64' : 'x86'}/Micro
 if (!file(RC).exists()) throw new GradleException("FAIL: cannot find RC: " + RC)
 if (!file(FXC).exists()) throw new GradleException("FAIL: cannot find FXC: " + FXC)
 
+// The product version passed to RC is defined as follows:
+//
+// MAJOR.MINOR.UPDATE_10.BUILD
+//
+// where:
+//
+// MAJOR = 8 (for JDK 8)
+// MINOR = 0
+// UPDATE_10 = JDK update * 10, so 8u65 --> 650
+// BUILD = build number with no leading zeros
+//
+def rcVerMajor = Integer.parseInt(jfxReleaseMajorVersion)
+def rcVerMinor = Integer.parseInt(jfxReleaseMinorVersion)
+def rcVerMicro = Integer.parseInt(jfxReleaseMicroVersion) * 10
+def rcVerSubMicro = Integer.parseInt(PROMOTED_BUILD_NUMBER)
+
+def rcVer = "${rcVerMajor}.${rcVerMinor}.${rcVerMicro}.${rcVerSubMicro}"
+def rcVerComma = "${rcVerMajor},${rcVerMinor},${rcVerMicro},${rcVerSubMicro}"
+
+def rcVerProduct = "${rcVerMajor}"
+
 def rcFlags = [
     "/d", "\"JFX_COMPANY=${COMPANY_NAME}\"",
     "/d", "\"JFX_COMPONENT=${PRODUCT_NAME} ${PLATFORM_NAME} binary\"",
-    "/d", "\"JFX_NAME=${PRODUCT_NAME} ${PLATFORM_NAME} ${jfxReleaseMajorVersion}\"",
-    "/d", "\"JFX_VER=${jfxReleaseMajorVersion}.${jfxReleaseMinorVersion}.${jfxReleaseMicroVersion}.${PROMOTED_BUILD_NUMBER}\"",
+    "/d", "\"JFX_NAME=${PRODUCT_NAME} ${PLATFORM_NAME} ${rcVerProduct}\"",
+    "/d", "\"JFX_VER=${rcVer}\"",
     "/d", "\"JFX_BUILD_ID=${RAW_VERSION}-${RELEASE_MILESTONE}-b${PROMOTED_BUILD_NUMBER}\"",
     "/d", "\"JFX_COPYRIGHT=Copyright \u00A9 ${Calendar.getInstance().get(Calendar.YEAR)}\"",
-    "/d", "\"JFX_FVER=${jfxReleaseMajorVersion},${jfxReleaseMinorVersion},${jfxReleaseMicroVersion},${PROMOTED_BUILD_NUMBER}\"",
+    "/d", "\"JFX_FVER=${rcVerComma}\"",
     "/d", "\"JFX_FTYPE=0x2L\"",
     "/nologo"
 ];
@@ -274,6 +295,13 @@ WIN.fxpackager.ccFlags = ["/nologo", "/W3", "/EHsc", "/MT", "/GS",
                     "/I$JDK_HOME/include", "/I$JDK_HOME/include/win32",
                     "/O2", "-c"]
 WIN.fxpackager.linker = linker
+WIN.fxpackager.rcSource = file("modules/fxpackager/src/main/native/javapackager/win/javapackager.rc")
+WIN.fxpackager.rcCompiler = rcCompiler
+WIN.fxpackager.rcFlags = [
+    "/l", "0x409",
+    "/d", "JFX_FNAME=javapackager.exe",
+    "/d", "JFX_INTERNAL_NAME=javapackager",
+    rcFlags].flatten();
 
 WIN.iio = [:]
 WIN.iio.javahInclude = ["com/sun/javafx/iio/**/*"]

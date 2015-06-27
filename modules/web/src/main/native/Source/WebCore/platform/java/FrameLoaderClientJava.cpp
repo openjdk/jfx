@@ -161,7 +161,7 @@ FrameLoaderClientJava::FrameLoaderClientJava(const JLObject &webPage)
 void FrameLoaderClientJava::destroyIfNeeded() {
     if (m_FrameLoaderClientDestroyed && m_ProgressTrackerClientDestroyed) {
 
-        JNIEnv* env = WebCore_GetJavaEnv();
+	WC_GETJAVAENV_CHKRET(env);
         initRefs(env);
 
         ASSERT(m_webPage);

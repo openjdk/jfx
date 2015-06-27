@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -872,10 +872,6 @@ flv_demux_parse_next_block(FlvDemux* filter, guchar* data, gsize size)
             result = GST_FLOW_ERROR;
             break;
         }
-    }
-
-    if (result == GST_FLOW_ERROR) {
-        gst_element_message_full(GST_ELEMENT(filter), GST_MESSAGE_ERROR, GST_STREAM_ERROR, GST_STREAM_ERROR_DEMUX, g_strdup("Failed to demux FLV stream"), NULL, ("flvdemux.c"), ("flv_demux_parse_next_block"), 0);
     }
 
     return result;

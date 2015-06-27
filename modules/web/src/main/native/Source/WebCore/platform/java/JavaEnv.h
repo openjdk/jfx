@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  */
 #ifndef JavaEnv_h
 #define JavaEnv_h
@@ -16,6 +16,10 @@ ALWAYS_INLINE JNIEnv* JNICALL WebCore_GetJavaEnv()
     jvm->GetEnv(&env, JNI_VERSION_1_2);
     return (JNIEnv*)env;
 }
+
+#define WC_GETJAVAENV_CHKRET(_env_var, ... /* ret val */)	\
+    JNIEnv* _env_var = WebCore_GetJavaEnv(); \
+    if (!_env_var) return __VA_ARGS__;
 
 bool CheckAndClearException(JNIEnv* env);
 

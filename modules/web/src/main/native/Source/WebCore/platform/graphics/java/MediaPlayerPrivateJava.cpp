@@ -251,7 +251,7 @@ MediaPlayerPrivate::MediaPlayerPrivate(MediaPlayer *player)
 
 MediaPlayerPrivate::~MediaPlayerPrivate()
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    WC_GETJAVAENV_CHKRET(env);
     static jmethodID s_mID
         = env->GetMethodID(PG_GetMediaPlayerClass(env), "fwkDispose", "()V");
     ASSERT(s_mID);

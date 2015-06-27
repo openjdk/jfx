@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  */
 #ifndef JavaRef_h
 #define JavaRef_h
@@ -17,6 +17,10 @@ ALWAYS_INLINE JNIEnv* JNICALL JavaScriptCore_GetJavaEnv()
     }
     return 0;
 }
+
+#define JSC_GETJAVAENV_CHKRET(_env_var, ... /* ret val */)   \
+    JNIEnv* _env_var = JavaScriptCore_GetJavaEnv(); \
+    if (!_env_var) return __VA_ARGS__;
 
 extern bool CheckAndClearException(JNIEnv* env);
 

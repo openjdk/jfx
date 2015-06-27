@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
 
@@ -26,7 +26,7 @@ void setSharedTimerFireInterval(double fireTime)
     if (fireTime < MINIMAL_INTERVAL) {
         fireTime = MINIMAL_INTERVAL;
     }
-    JNIEnv* env = WebCore_GetJavaEnv();
+    WC_GETJAVAENV_CHKRET(env);
 
     static jmethodID mid = env->GetStaticMethodID(getTimerClass(env),
                                                   "fwkSetFireTime", "(D)V");
@@ -38,8 +38,8 @@ void setSharedTimerFireInterval(double fireTime)
 
 void stopSharedTimer()
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
-
+    WC_GETJAVAENV_CHKRET(env);
+    
     static jmethodID mid = env->GetStaticMethodID(getTimerClass(env),
                                                   "fwkStopTimer", "()V");
     ASSERT(mid);

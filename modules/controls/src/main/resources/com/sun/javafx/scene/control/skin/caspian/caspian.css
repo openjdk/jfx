@@ -1,25 +1,25 @@
 /*
- * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER. 
- *  
- * This code is free software; you can redistribute it and/or modify it 
- * under the terms of the GNU General Public License version 2 only, as 
- * published by the Free Software Foundation.  Oracle designates this 
- * particular file as subject to the "Classpath" exception as provided 
- * by Oracle in the LICENSE file that accompanied this code. 
- *  
- * This code is distributed in the hope that it will be useful, but WITHOUT 
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License 
- * version 2 for more details (a copy is included in the LICENSE file that 
- * accompanied this code). 
- *  
- * You should have received a copy of the GNU General Public License version 
- * 2 along with this work; if not, write to the Free Software Foundation, 
- * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA. 
- *  
- * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA 
- * or visit www.oracle.com if you need additional information or have any 
+ * Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
 
@@ -3968,7 +3968,7 @@ Only the properties with values that are different from the TextBox are specifie
 whose borders are styled.  Only the right border is specified
 with a color; the other three borders are transparent.*/
 
-/* Note: This first section of CSS (below) specifies the Separator’s color.
+/* Note: This first section of CSS (below) specifies the Separator's color.
 Specifying the color here ensures the same color for both .top-toolbar
 and .bottom-toolbar Separators, as they will inherit the color. */
 
@@ -3978,7 +3978,7 @@ and .bottom-toolbar Separators, as they will inherit the color. */
     -fx-border-color: transparent derive(-fx-base,-35%) transparent transparent; /* #878787 */
 }
 
-/* Note: This next section of CSS (below) specifies the Separator’s length.
+/* Note: This next section of CSS (below) specifies the Separator's length.
 The length of the Separator is determined by adding its -fx-padding values
 to the top and bottom -fx-padding values of the parent toolbar. */
 

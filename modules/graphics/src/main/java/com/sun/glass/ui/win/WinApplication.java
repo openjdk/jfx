@@ -94,7 +94,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
                 if (PrismSettings.allowHiDPIScaling) {
                     overrideUIScale = getFloat("glass.win.uiScale", -1.0f, "Forcing UI scaling factor: ");
                     overrideRenderScale = getFloat("glass.win.renderScale", -1.0f, "Forcing Rendering scaling factor: ");
-                    minDPIScale = getFloat("glass.win.minHiDPI", 1.0f, "Threshold to enable UI scaling factor: ");
+                    minDPIScale = getFloat("glass.win.minHiDPI", 1.5f, "Threshold to enable UI scaling factor: ");
                     forceIntegerRenderScale = getBoolean("glass.win.forceIntegerRenderScale", true, "forcing integer rendering scale");
                 } else {
                     overrideUIScale = overrideRenderScale = 1.0f;
