@@ -25,12 +25,12 @@
 
 package javafx.beans.property.adapter;
 
+import com.sun.javafx.property.adapter.Disposer;
 import com.sun.javafx.property.adapter.ReadOnlyPropertyDescriptor;
 import javafx.beans.property.ReadOnlyObjectPropertyBase;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.UndeclaredThrowableException;
-import sun.misc.Cleaner;
 
 import java.security.AccessController;
 import java.security.AccessControlContext;
@@ -68,7 +68,7 @@ public final class ReadOnlyJavaBeanObjectProperty<T> extends ReadOnlyObjectPrope
         this.descriptor = descriptor;
         this.listener = descriptor.new ReadOnlyListener<T>(bean, this);
         descriptor.addListener(listener);
-        Cleaner.create(this, new DescriptorListenerCleaner(descriptor, listener));
+        Disposer.addRecord(this, new DescriptorListenerCleaner(descriptor, listener));
     }
 
     /**
