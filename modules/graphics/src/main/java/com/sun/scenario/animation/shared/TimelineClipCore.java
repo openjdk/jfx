@@ -70,6 +70,9 @@ public class TimelineClipCore {
     // The sorted list of keyframes
     private KeyFrame[] keyFrames = new KeyFrame[0];
     private long[] keyFrameTicks = new long[0];
+    // If there are no KeyFrames with onFinished handler then we can skip frames
+    // This works because KeyFrame.onFinished is final
+    private boolean canSkipFrames = true;
 
     private ClipInterpolator clipInterpolator;
 
@@ -87,10 +90,14 @@ public class TimelineClipCore {
         keyFrames.toArray(sortedKeyFrames);
         Arrays.sort(sortedKeyFrames, KEY_FRAME_COMPARATOR);
         
+        canSkipFrames = true;
         this.keyFrames = sortedKeyFrames;
         keyFrameTicks = new long[n];
         for (int i = 0; i < n; ++i) {
             keyFrameTicks[i] = TickCalculation.fromDuration(this.keyFrames[i].getTime());
+            if (canSkipFrames && this.keyFrames[i].getOnFinished() != null) {
+                canSkipFrames = false;
+            }
         }
         clipInterpolator = clipInterpolator.setKeyFrames(sortedKeyFrames, keyFrameTicks);
         return (n == 0) ? Duration.ZERO
@@ -149,6 +156,12 @@ public class TimelineClipCore {
      * Called to visit all keyframes within a specified time-interval.
      */
     public void playTo(long ticks) {
+        if (canSkipFrames) {
+            clearLastKeyFrame();
+            setTime(ticks);
+            clipInterpolator.interpolate(ticks);
+            return;
+        }
         aborted = false;
         final boolean forward = curTicks <= ticks;
 

@@ -317,12 +317,28 @@ public final class ImageTest {
         toolkit.setAnimationTime(1000);
         assertEquals(0, getPlatformImage(animatedImage).getFrame());
 
+        toolkit.setAnimationTime(1999);
+        assertEquals(0, getPlatformImage(animatedImage).getFrame());
+        toolkit.setAnimationTime(2000);
+        assertEquals(1, getPlatformImage(animatedImage).getFrame());
+
         toolkit.setAnimationTime(2500);
         assertEquals(1, getPlatformImage(animatedImage).getFrame());
-        
+
+        toolkit.setAnimationTime(2999);
+        assertEquals(1, getPlatformImage(animatedImage).getFrame());
+        toolkit.setAnimationTime(3000);
+        assertEquals(2, getPlatformImage(animatedImage).getFrame());
+
         toolkit.setAnimationTime(4500);
         assertEquals(2, getPlatformImage(animatedImage).getFrame());
-        
+
+        toolkit.setAnimationTime(5999);
+        assertEquals(2, getPlatformImage(animatedImage).getFrame());
+        toolkit.setAnimationTime(6000);
+        // end of the cycle does flip frames!
+        assertEquals(0, getPlatformImage(animatedImage).getFrame());
+
         toolkit.setAnimationTime(7000);
         assertEquals(0, getPlatformImage(animatedImage).getFrame());
 
