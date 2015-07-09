@@ -691,7 +691,7 @@ public class PickTest3D extends Application {
     private static Material createMaterial(Color dif, Color spec) {
         PhongMaterial mat = new PhongMaterial();
 
-        mat.setDiffuseColor(new Color(dif.getRed(), dif.getGreen(), dif.getBlue(), 0.5));
+        mat.setDiffuseColor(new Color(dif.getRed(), dif.getGreen(), dif.getBlue(), 1.0));
         mat.setSpecularColor(spec);
         mat.setDiffuseMap(diffuseMap);
         return mat;

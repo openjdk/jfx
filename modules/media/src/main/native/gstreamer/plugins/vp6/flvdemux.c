@@ -874,6 +874,10 @@ flv_demux_parse_next_block(FlvDemux* filter, guchar* data, gsize size)
         }
     }
 
+    if (result == GST_FLOW_ERROR) {
+        gst_element_message_full(GST_ELEMENT(filter), GST_MESSAGE_ERROR, GST_STREAM_ERROR, GST_STREAM_ERROR_DEMUX, g_strdup("Failed to demux FLV stream"), NULL, ("flvdemux.c"), ("flv_demux_parse_next_block"), 0);
+    }
+
     return result;
 }
 
