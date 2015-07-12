@@ -658,53 +658,54 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                 // that actually exist
                 if (!file.exists()) continue;
 
-                JarFile jf = new JarFile(file);
-                Manifest m = jf.getManifest();
-                Attributes attrs = (m != null) ? m.getMainAttributes() : null;
+                try (JarFile jf = new JarFile(file)) {
+                    Manifest m = jf.getManifest();
+                    Attributes attrs = (m != null) ? m.getMainAttributes() : null;
 
-                if (attrs != null) {
-                    String mainClass = attrs.getValue(Attributes.Name.MAIN_CLASS);
-                    String fxMain = attrs.getValue(MANIFEST_JAVAFX_MAIN);
-                    String preloaderClass = attrs.getValue(MANIFEST_PRELOADER);
-                    if (hasMainClass) {
-                        if (declaredMainClass.equals(fxMain)) {
-                            params.put(USE_FX_PACKAGING.getID(), true);
-                        } else if (declaredMainClass.equals(mainClass)) {
-                            params.put(USE_FX_PACKAGING.getID(), false);
+                    if (attrs != null) {
+                        String mainClass = attrs.getValue(Attributes.Name.MAIN_CLASS);
+                        String fxMain = attrs.getValue(MANIFEST_JAVAFX_MAIN);
+                        String preloaderClass = attrs.getValue(MANIFEST_PRELOADER);
+                        if (hasMainClass) {
+                            if (declaredMainClass.equals(fxMain)) {
+                                params.put(USE_FX_PACKAGING.getID(), true);
+                            } else if (declaredMainClass.equals(mainClass)) {
+                                params.put(USE_FX_PACKAGING.getID(), false);
+                            } else {
+                                if (fxMain != null) {
+                                    Log.info(MessageFormat.format(I18N.getString("message.fx-app-does-not-match-specified-main"), fnames[1], fxMain, declaredMainClass));
+                                }
+                                if (mainClass != null) {
+                                    Log.info(MessageFormat.format(I18N.getString("message.main-class-does-not-match-specified-main"), fnames[1], mainClass, declaredMainClass));
+                                }
+                                continue;
+                            }
                         } else {
                             if (fxMain != null) {
-                                Log.info(MessageFormat.format(I18N.getString("message.fx-app-does-not-match-specified-main"), fnames[1], fxMain, declaredMainClass));
+                                params.put(USE_FX_PACKAGING.getID(), true);
+                                params.put(MAIN_CLASS.getID(), fxMain);
+                            } else if (mainClass != null) {
+                                params.put(USE_FX_PACKAGING.getID(), false);
+                                params.put(MAIN_CLASS.getID(), mainClass);
+                            } else {
+                                continue;
                             }
-                            if (mainClass != null) {
-                                Log.info(MessageFormat.format(I18N.getString("message.main-class-does-not-match-specified-main"), fnames[1], mainClass, declaredMainClass));
+                        }
+                        if (!hasPreloader && preloaderClass != null) {
+                            params.put(PRELOADER_CLASS.getID(), preloaderClass);
+                        }
+                        if (!hasMainJar) {
+                            if (fnames[0] == null) {
+                                fnames[0] = file.getParentFile().toString();
                             }
-                            continue;
+                            params.put(MAIN_JAR.getID(), new RelativeFileSet(new File(fnames[0]), new LinkedHashSet<>(Arrays.asList(file))));
                         }
-                    } else {
-                        if (fxMain != null) {
-                            params.put(USE_FX_PACKAGING.getID(), true);
-                            params.put(MAIN_CLASS.getID(), fxMain);
-                        } else if (mainClass != null) {
-                            params.put(USE_FX_PACKAGING.getID(), false);
-                            params.put(MAIN_CLASS.getID(), mainClass);
-                        } else {
-                            continue;
+                        if (!hasMainJarClassPath) {
+                            String cp = attrs.getValue(Attributes.Name.CLASS_PATH);
+                            params.put(CLASSPATH.getID(), cp == null ? "" : cp);
                         }
+                        break;
                     }
-                    if (!hasPreloader && preloaderClass != null) {
-                        params.put(PRELOADER_CLASS.getID(), preloaderClass);
-                    }
-                    if (!hasMainJar) {
-                        if (fnames[0] == null) {
-                            fnames[0] = file.getParentFile().toString();
-                        }
-                        params.put(MAIN_JAR.getID(), new RelativeFileSet(new File(fnames[0]), new LinkedHashSet<>(Arrays.asList(file))));
-                    }
-                    if (!hasMainJarClassPath) {
-                        String cp = attrs.getValue(Attributes.Name.CLASS_PATH);
-                        params.put(CLASSPATH.getID(), cp == null ? "" : cp);
-                    }
-                    break;
                 }
             } catch (IOException ignore) {
                 ignore.printStackTrace();
