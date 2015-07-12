@@ -1299,10 +1299,10 @@ public class JNLPBundler extends AbstractBundler {
                 result.append(", ");
             }
             addComma = true;
-            result.append("")
-                    .append(entry.getKey())
-                    .append(": '")
-                    .append(entry.getValue().replaceAll("(['\"\\\\])", "\\\\$1"))
+            result.append("'")
+                    .append(quoteEscape(entry.getKey()))
+                    .append("' : '")
+                    .append(quoteEscape(entry.getValue()))
                     .append("'");
 
         }
@@ -1311,12 +1311,17 @@ public class JNLPBundler extends AbstractBundler {
                 result.append(", ");
             }
             addComma = true;
-            result.append(entry.getKey())
-                    .append(": ")
+            result.append("'")
+                    .append(quoteEscape(entry.getKey()))
+                    .append("' : ")
                     .append(entry.getValue());
 
         }
         return result.toString();
+    }
+
+    String quoteEscape(String s) {
+        return s.replaceAll("(['\"\\\\])", "\\\\$1");
     }
 
     private static String[] webFiles = {
