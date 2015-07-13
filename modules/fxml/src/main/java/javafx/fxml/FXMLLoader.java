@@ -924,7 +924,8 @@ public class FXMLLoader {
 
                         try {
                             if (controllerFactory == null) {
-                                setController(ReflectUtil.newInstance(type));
+                                ReflectUtil.checkPackageAccess(type);
+                                setController(type.newInstance());
                             } else {
                                 setController(controllerFactory.call(type));
                             }
@@ -1006,7 +1007,8 @@ public class FXMLLoader {
 
                 if (value == null) {
                     try {
-                        value = ReflectUtil.newInstance(type);
+                        ReflectUtil.checkPackageAccess(type);
+                        value = type.newInstance();
                     } catch (InstantiationException exception) {
                         throw constructLoadException(exception);
                     } catch (IllegalAccessException exception) {
@@ -1314,7 +1316,8 @@ public class FXMLLoader {
 
                     if (value == null) {
                         try {
-                            value = ReflectUtil.newInstance(type);
+                            ReflectUtil.checkPackageAccess(type);
+                            value = type.newInstance();
                         } catch (InstantiationException exception) {
                             throw constructLoadException(exception);
                         } catch (IllegalAccessException exception) {
