@@ -25,12 +25,12 @@
 
 package javafx.beans.property.adapter;
 
+import com.sun.javafx.property.adapter.Disposer;
 import com.sun.javafx.property.adapter.ReadOnlyPropertyDescriptor;
 import javafx.beans.property.ReadOnlyFloatPropertyBase;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.UndeclaredThrowableException;
-import sun.misc.Cleaner;
 
 import java.security.AccessController;
 import java.security.AccessControlContext;
@@ -66,7 +66,7 @@ public final class ReadOnlyJavaBeanFloatProperty extends ReadOnlyFloatPropertyBa
         this.descriptor = descriptor;
         this.listener = descriptor.new ReadOnlyListener<Number>(bean, this);
         descriptor.addListener(listener);
-        Cleaner.create(this, new DescriptorListenerCleaner(descriptor, listener));
+        Disposer.addRecord(this, new DescriptorListenerCleaner(descriptor, listener));
     }
 
     /**
