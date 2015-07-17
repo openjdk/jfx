@@ -59,6 +59,32 @@ static void *AVFMediaPlayerItemTracksContext = &AVFMediaPlayerItemTracksContext;
 // Apple really likes to output '2vuy', this should be the least expensive conversion
 #define FALLBACK_VO_FORMAT kCVPixelFormatType_422YpCbCr8
 
+#define FOURCC_CHAR(f) ((f) & 0x7f) ? (char)((f) & 0x7f) : '?'
+
+static inline NSString *FourCCToNSString(UInt32 fcc) {
+    if (fcc < 0x100) {
+        return [NSString stringWithFormat:@"%u", fcc];
+    }
+    return [NSString stringWithFormat:@"%c%c%c%c",
+            FOURCC_CHAR(fcc >> 24),
+            FOURCC_CHAR(fcc >> 16),
+            FOURCC_CHAR(fcc >> 8),
+            FOURCC_CHAR(fcc)];
+}
+
+#if DUMP_TRACK_INFO
+static void append_log(NSMutableString *s, NSString *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    NSString *appString = [[NSString alloc] initWithFormat:fmt arguments:args];
+    [s appendFormat:@"%@\n", appString];
+    va_end(args);
+}
+#define TRACK_LOG(fmt, ...) append_log(trackLog, fmt, ##__VA_ARGS__)
+#else
+#define TRACK_LOG(...) {}
+#endif
+
 @implementation AVFMediaPlayer
 
 static void SpectrumCallbackProc(void *context, double duration);
@@ -199,25 +225,33 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
 // If we get an unsupported pixel format in the video output, call this to
 // force it to output our fallback format
 - (void) setFallbackVideoFormat {
-    AVPlayerItemVideoOutput *newOutput =
+    // schedule this to be done when we're not buried inside the AVPlayer callback
+    __weak AVFMediaPlayer *blockSelf = self; // retain cycle avoidance
+    dispatch_async(dispatch_get_main_queue(), ^{
+        LOGGER_DEBUGMSG(([[NSString stringWithFormat:@"Falling back on video format: %@", FourCCToNSString(FALLBACK_VO_FORMAT)] UTF8String]));
+        AVPlayerItemVideoOutput *newOutput =
         [[AVPlayerItemVideoOutput alloc] initWithPixelBufferAttributes:
          @{(id)kCVPixelBufferPixelFormatTypeKey: @(FALLBACK_VO_FORMAT)}];
 
-    if (newOutput) {
-        CVDisplayLinkStop(_displayLink);
-        [_playerItem removeOutput:_playerOutput];
+        if (newOutput) {
+            CVDisplayLinkStop(_displayLink);
+            [_playerItem removeOutput:_playerOutput];
 
-        self.playerOutput = newOutput;
-        [_playerOutput setDelegate:self queue:playerQueue];
-        [_playerOutput requestNotificationOfMediaDataChangeWithAdvanceInterval:ADVANCE_INTERVAL_IN_SECONDS];
-        [_playerItem addOutput:_playerOutput];
-    }
+            self.playerOutput = newOutput;
+            [_playerOutput setDelegate:blockSelf queue:playerQueue];
+            [_playerOutput requestNotificationOfMediaDataChangeWithAdvanceInterval:ADVANCE_INTERVAL_IN_SECONDS];
+            [_playerItem addOutput:_playerOutput];
+        }
+    });
 }
 
 - (void) createVideoOutput {
     @synchronized(self) {
         // Skip if already created
         if (!_playerOutput) {
+#if FORCE_VO_FORMAT
+            LOGGER_DEBUGMSG(([[NSString stringWithFormat:@"Forcing VO format: %@", FourCCToNSString(FORCED_VO_FORMAT)] UTF8String]));
+#endif
             // Create the player video output
             // kCVPixelFormatType_32ARGB comes out inverted, so don't use it
             // '2vuy' -> kCVPixelFormatType_422YpCbCr8 -> YCbCr_422 (uses less CPU too)
@@ -387,21 +421,6 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     }
 }
 
-#if DUMP_TRACK_INFO
-static void append_log(NSMutableString *s, NSString *fmt, ...) {
-    va_list args;
-    va_start(args, fmt);
-    NSString *appString = [[NSString alloc] initWithFormat:fmt arguments:args];
-    [s appendFormat:@"%@\n", appString];
-    va_end(args);
-}
-#define TRACK_LOG(fmt, ...) append_log(trackLog, fmt, ##__VA_ARGS__)
-#else
-#define TRACK_LOG(...) {}
-#endif
-
-#define FOURCC_CHAR(f) ((f)&0xff)?(char)((f)&0xff):'?'
-
 - (void) extractTrackInfo {
 #if DUMP_TRACK_INFO
     NSMutableString *trackLog = [[NSMutableString alloc] initWithFormat:
@@ -462,11 +481,8 @@ static void append_log(NSMutableString *s, NSString *fmt, ...) {
         TRACK_LOG(@"  enabled: %s", track.enabled ? "YES" : "NO");
         TRACK_LOG(@"  track ID: %d", track.trackID);
         TRACK_LOG(@"  language code: %@ (%sprovided)", lang, track.languageCode ? "" : "NOT ");
-        TRACK_LOG(@"  encoding (FourCC): '%c%c%c%c' (JFX encoding %d)",
-                  FOURCC_CHAR(fcc>>24),
-                  FOURCC_CHAR(fcc>>16),
-                  FOURCC_CHAR(fcc>>8),
-                  FOURCC_CHAR(fcc),
+        TRACK_LOG(@"  encoding (FourCC): '%@' (JFX encoding %d)",
+                  FourCCToNSString(fcc),
                   (int)encoding);
 
         // Tracks in AVFoundation don't have names, so we'll need to give them
@@ -588,7 +604,15 @@ static void append_log(NSMutableString *s, NSString *fmt, ...) {
     } catch (const char *message) {
         // Check if the video format is supported, if not try our fallback format
         OSType format = CVPixelBufferGetPixelFormatType(buf);
+        if (format == 0) {
+            // Bad pixel format, possibly a bad frame or ???
+            // This seems to happen when the stream is corrupt, so let's ignore
+            // it and hope things recover
+            return;
+        }
         if (!CVVideoFrame::IsFormatSupported(format)) {
+            LOGGER_DEBUGMSG(([[NSString stringWithFormat:@"Bad pixel format: '%@'",
+                               FourCCToNSString(format)] UTF8String]));
             [self setFallbackVideoFormat];
             return;
         }
