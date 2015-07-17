@@ -63,8 +63,10 @@ final class WCPageBackBufferImpl extends WCPageBackBuffer implements ResourceFac
     }
 
     public void flush(final WCGraphicsContext gc, int x, int y, final int w, final int h) {
-        ((Graphics) gc.getPlatformGraphics()).drawTexture(texture, x, y, w, h,
-                x * pixelScale, y * pixelScale, w * pixelScale, h * pixelScale);
+        int x2 = x + w;
+        int y2 = y + h;
+        ((Graphics) gc.getPlatformGraphics()).drawTexture(texture, x, y, x2, y2,
+                x * pixelScale, y * pixelScale, x2 * pixelScale, y2 * pixelScale);
         texture.unlock();
     }
 

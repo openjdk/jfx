@@ -1390,8 +1390,11 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                 @Override void doPaint(Graphics g) {
                     float op = g.getExtraAlpha();
                     g.setExtraAlpha(opacity);
+                    Affine3D tx = new Affine3D(g.getTransformNoClone());
+                    g.setTransform(BaseTransform.IDENTITY_TRANSFORM);
                     g.drawTexture(buffer.getTextureObject(),
-                            0, 0, bounds.width, bounds.height);
+                            bounds.x, bounds.y, bounds.width, bounds.height);
+                    g.setTransform(tx);
                     g.setExtraAlpha(op);
                 }
             }.paint(g);
@@ -1459,7 +1462,10 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                 Blend blend = new Blend(Blend.Mode.SRC_IN,
                         new PassThrough(bufferImg, bounds.width, bounds.height),
                         new PassThrough(buffer, bounds.width, bounds.height));
-                PrEffectHelper.render(blend, g, 0, 0, null);
+                Affine3D tx = new Affine3D(g.getTransformNoClone());
+                g.setTransform(BaseTransform.IDENTITY_TRANSFORM);
+                PrEffectHelper.render(blend, g, bounds.x, bounds.y, null);
+                g.setTransform(tx);
             }
 
             Effect.releaseCompatibleImage(fctx, bufferImg);
