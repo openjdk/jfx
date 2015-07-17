@@ -477,6 +477,22 @@ public class Main {
                 }
                 if (signJar) {
                     signJarParams.validate();
+                    if (signJarParams.storePass == null) {
+                        char[] passwd = System.console().readPassword(bundle.getString("MSG_EnterKeystorePassword"));
+                        if (passwd == null) {
+                            signJarParams.storePass = "";
+                        } else {
+                            signJarParams.storePass = new String(passwd);
+                        }
+                    }
+                    if (signJarParams.keyPass == null) {
+                        char[] passwd = System.console().readPassword(bundle.getString("MSG_EnterKeyPassword"), signJarParams.alias);
+                        if (passwd == null) {
+                            signJarParams.keyPass = "";
+                        } else {
+                            signJarParams.keyPass = new String(passwd);
+                        }
+                    }
                     packager.signJar(signJarParams);
                 }
                 if (makeAll) {

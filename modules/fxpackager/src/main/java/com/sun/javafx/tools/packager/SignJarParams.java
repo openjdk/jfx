@@ -86,8 +86,8 @@ public class SignJarParams extends CommonParams {
         if (!keyStore.isFile()) {
             throw new PackagerException("ERR_InvalidStoreFile", keyStore.getAbsolutePath());
         }
-        if (alias == null || storePass == null) {
-            throw new PackagerException("ERR_MissingArgument", "alias or storePass");
+        if (alias == null) {
+            throw new PackagerException("ERR_MissingArgument", "alias");
         }
         if (storeType == null) {
             storeType = "jks";
