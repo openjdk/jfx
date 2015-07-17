@@ -1732,6 +1732,7 @@ project(":systemTests") {
             exclude("**/javafx/embed/swing/*.*");
             exclude("**/javafx/scene/layout/*.*");
             exclude("**/test3d/*.*");
+            exclude("**/scenegraph/*.*");
             exclude("**/painttest/*.*");
             exclude("**/renderlock/*.*");
         }
