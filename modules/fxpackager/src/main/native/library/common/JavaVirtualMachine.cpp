@@ -404,7 +404,17 @@ bool JavaVirtualMachine::StartJVM() {
     }
 
     JavaLibrary javaLibrary;
+
+    // TODO: Clean this up. Because of bug JDK-8131321 the opening of the PE file fails in WindowsPlatform.cpp on the check to
+    // if (pNTHeader->Signature == IMAGE_NT_SIGNATURE)
+#ifdef _WIN64
+    if (FilePath::FileExists(_T("msvcr100.dll")) == true) {
+        javaLibrary.AddDependency(_T("msvcr100.dll"));
+    }
+#else
     javaLibrary.AddDependencies(platform.FilterOutRuntimeDependenciesForPlatform(platform.GetLibraryImports(package.GetJVMLibraryFileName())));
+#endif
+
     javaLibrary.Load(package.GetJVMLibraryFileName());
 
 #ifndef USE_JLI_LAUNCH
