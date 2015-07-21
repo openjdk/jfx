@@ -504,44 +504,16 @@ public abstract class XYChart<X,Y> extends Chart {
         requestChartLayout();
     }
 
-    private void dataXValueChanged(Data<X,Y> item) {
-        if(item.getCurrentX() != item.getXValue()) invalidateRange();
+    private <T> void dataValueChanged(Data<X,Y> item, T newValue, ObjectProperty<T> currentValueProperty) {
+        if (currentValueProperty.get() != newValue) invalidateRange();
         dataItemChanged(item);
         if (shouldAnimate()) {
             animate(
-                    new KeyFrame(Duration.ZERO, new KeyValue(item.currentXProperty(), item.getCurrentX())),
-                    new KeyFrame(Duration.millis(700), new KeyValue(item.currentXProperty(), item.getXValue(), Interpolator.EASE_BOTH))
+                    new KeyFrame(Duration.ZERO, new KeyValue(currentValueProperty, currentValueProperty.get())),
+                    new KeyFrame(Duration.millis(700), new KeyValue(currentValueProperty, newValue, Interpolator.EASE_BOTH))
             );
         } else {
-            item.setCurrentX(item.getXValue());
-            requestChartLayout();
-        }
-    }
-
-    private void dataYValueChanged(Data<X,Y> item) {
-        if(item.getCurrentY() != item.getYValue()) invalidateRange();
-        dataItemChanged(item);
-        if (shouldAnimate()) {
-            animate(
-                    new KeyFrame(Duration.ZERO, new KeyValue(item.currentYProperty(), item.getCurrentY())),
-                    new KeyFrame(Duration.millis(700), new KeyValue(item.currentYProperty(), item.getYValue(), Interpolator.EASE_BOTH))
-            );
-        } else {
-            item.setCurrentY(item.getYValue());
-            requestChartLayout();
-        }
-    }
-
-    private void dataExtraValueChanged(Data<X,Y> item) {
-        if(item.getCurrentY() != item.getYValue()) invalidateRange();
-        dataItemChanged(item);
-        if (shouldAnimate()) {
-            animate(
-                    new KeyFrame(Duration.ZERO, new KeyValue(item.currentYProperty(), item.getCurrentY())),
-                    new KeyFrame(Duration.millis(700), new KeyValue(item.currentYProperty(), item.getYValue(), Interpolator.EASE_BOTH))
-            );
-        } else {
-            item.setCurrentY(item.getYValue());
+            currentValueProperty.set(newValue);
             requestChartLayout();
         }
     }
@@ -1197,28 +1169,16 @@ public abstract class XYChart<X,Y> extends Chart {
         }
 
         /** The generic data value to be plotted on the X axis */
-        private ObjectProperty<X> xValue = new ObjectPropertyBase<X>() {
+        private ObjectProperty<X> xValue = new SimpleObjectProperty<X>(Data.this, "XValue") {
             @Override protected void invalidated() {
-                // Note: calling get to make non-lazy, replace with change listener when available
-                get();
                 if (series!=null) {
                     XYChart<X,Y> chart = series.getChart();
-                    if(chart!=null) chart.dataXValueChanged(Data.this);
+                    if(chart!=null) chart.dataValueChanged(Data.this, get(), currentXProperty());
                 } else {
                     // data has not been added to series yet :
                     // so currentX and X should be the same
                     setCurrentX(get());
                 }
-            }
-
-            @Override
-            public Object getBean() {
-                return Data.this;
-            }
-
-            @Override
-            public String getName() {
-                return "XValue";
             }
         };
         /**
@@ -1244,28 +1204,16 @@ public abstract class XYChart<X,Y> extends Chart {
         public final ObjectProperty<X> XValueProperty() { return xValue; }
 
         /** The generic data value to be plotted on the Y axis */
-        private ObjectProperty<Y> yValue = new ObjectPropertyBase<Y>() {
+        private ObjectProperty<Y> yValue = new SimpleObjectProperty<Y>(Data.this, "YValue") {
             @Override protected void invalidated() {
-                // Note: calling get to make non-lazy, replace with change listener when available
-                get();
                 if (series!=null) {
                     XYChart<X,Y> chart = series.getChart();
-                    if(chart!=null) chart.dataYValueChanged(Data.this);
+                    if(chart!=null) chart.dataValueChanged(Data.this, get(), currentYProperty());
                 } else {
                     // data has not been added to series yet :
                     // so currentY and Y should be the same
                     setCurrentY(get());
                 }
-            }
-
-            @Override
-            public Object getBean() {
-                return Data.this;
-            }
-
-            @Override
-            public String getName() {
-                return "YValue";
             }
         };
         /**
@@ -1295,24 +1243,12 @@ public abstract class XYChart<X,Y> extends Chart {
          * The generic data value to be plotted in any way the chart needs. For example used as the radius
          * for BubbleChart.
          */
-        private ObjectProperty<Object> extraValue = new ObjectPropertyBase<Object>() {
+        private ObjectProperty<Object> extraValue = new SimpleObjectProperty<Object>(Data.this, "extraValue") {
             @Override protected void invalidated() {
-                // Note: calling get to make non-lazy, replace with change listener when available
-                get();
                 if (series!=null) {
                     XYChart<X,Y> chart = series.getChart();
-                    if(chart!=null) chart.dataExtraValueChanged(Data.this);
+                    if(chart!=null) chart.dataValueChanged(Data.this, get(), currentExtraValueProperty());
                 }
-            }
-
-            @Override
-            public Object getBean() {
-                return Data.this;
-            }
-
-            @Override
-            public String getName() {
-                return "extraValue";
             }
         };
         public final Object getExtraValue() { return extraValue.get(); }
