@@ -443,6 +443,12 @@ static double calculateDSTOffset(time_t localTime, double utcOffset)
 
     double diff = ((localSystemTime.wHour - offsetHour) * secondsPerHour) + ((localSystemTime.wMinute - offsetMinute) * 60);
 
+// See: https://bugs.webkit.org/show_bug.cgi?id=137003
+#if PLATFORM(JAVA)
+    if (diff < 0)
+        diff += secondsPerDay;
+#endif
+
     return diff * msPerSecond;
 #else
     //input is UTC so we have to shift back to local time to determine DST thus the + getUTCOffset()

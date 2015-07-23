@@ -1265,7 +1265,7 @@ SOURCES += \
     platform/graphics/transforms/TransformState.cpp \
     platform/graphics/transforms/TranslateTransformOperation.cpp \
     platform/graphics/WidthIterator.cpp \
-    platform/graphics/WOFFFileFormat.cpp \
+#   platform/graphics/WOFFFileFormat.cpp \
 #   platform/image-decoders/ImageDecoder.cpp \
 #   platform/image-decoders/bmp/BMPImageDecoder.cpp \
 #   platform/image-decoders/bmp/BMPImageReader.cpp \

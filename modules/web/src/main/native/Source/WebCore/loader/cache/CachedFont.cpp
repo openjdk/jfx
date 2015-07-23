@@ -99,7 +99,9 @@ bool CachedFont::ensureCustomFontData()
 
         RefPtr<SharedBuffer> sfntBuffer;
 
-        bool fontIsWOFF = isWOFF(buffer);
+        bool fontIsWOFF = false;
+#if !PLATFORM(JAVA) // See JDK-8130740
+	fontIsWOFF = isWOFF(buffer);
         if (fontIsWOFF) {
             Vector<char> sfnt;
             if (convertWOFFToSfnt(buffer, sfnt)) {
@@ -108,7 +110,7 @@ bool CachedFont::ensureCustomFontData()
             } else
                 buffer = nullptr;
         }
-
+#endif	
         m_fontData = buffer ? createFontCustomPlatformData(*buffer) : nullptr;
         if (m_fontData)
             m_hasCreatedFontDataWrappingResource = !fontIsWOFF;

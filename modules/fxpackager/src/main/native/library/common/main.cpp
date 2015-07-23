@@ -204,6 +204,10 @@ extern "C" {
         return result;
     }
 
-    void stop_launcher() {
+#ifdef WINDOWS
+	__declspec(dllexport)
+#endif //WINDOWS
+
+	void stop_launcher() {
     }
 }

@@ -143,4 +143,27 @@ public class XYChartDataTest {
         protected void layoutPlotChildren() {
         }
     }
+
+    @Test
+    public void testModifyData() {
+        LineChart<Number, Number> lineChart = new LineChart<>(new NumberAxis(), new NumberAxis());
+        lineChart.getData().add(new XYChart.Series<>());
+        XYChart.Data<Number, Number> data = new XYChart.Data<>(1, 1, 1);
+        lineChart.getData().get(0).getData().add(data);
+        assertEquals(1, data.getXValue());
+        assertEquals(1, data.getCurrentX());
+        assertEquals(1, data.getYValue());
+        assertEquals(1, data.getCurrentY());
+        assertEquals(1, data.getExtraValue());
+        assertEquals(1, data.getCurrentExtraValue());
+        data.setXValue(2);
+        data.setYValue(2);
+        data.setExtraValue(2);
+        assertEquals(2, data.getXValue());
+        assertEquals(2, data.getCurrentX());
+        assertEquals(2, data.getYValue());
+        assertEquals(2, data.getCurrentY());
+        assertEquals(2, data.getExtraValue());
+        assertEquals(2, data.getCurrentExtraValue());
+    }
 }

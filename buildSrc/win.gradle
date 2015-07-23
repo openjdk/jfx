@@ -260,7 +260,7 @@ WIN.prismD3D.rcFlags = ["/d", "JFX_FNAME=prism_d3d.dll", "/d", "JFX_INTERNAL_NAM
 
 WIN.launcher = [:]
 WIN.launcher.compiler = compiler
-WIN.launcher.ccFlags = ["/nologo", "/W3", "/EHsc", "/D_WINDOWS", "/DUNICODE", "/D_UNICODE", "/DWIN32",
+WIN.launcher.ccFlags = ["/nologo", "/W3", "/MT", "/EHsc", "/D_WINDOWS", "/DUNICODE", "/D_UNICODE", "/DWIN32",
         "/D_LITTLE_ENDIAN", "/DWIN32_LEAN_AND_MEAN", "/I$JDK_HOME/include", "/I$JDK_HOME/include/win32",
         ccDebugFlags].flatten();
 WIN.launcher.linker = linker

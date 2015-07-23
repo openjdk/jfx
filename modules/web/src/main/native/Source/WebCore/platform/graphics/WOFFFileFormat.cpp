@@ -80,8 +80,6 @@ bool isWOFF(SharedBuffer* buffer)
 
 bool convertWOFFToSfnt(SharedBuffer* woff, Vector<char>& sfnt)
 {
-    return false;  // todo tav unknown uncompress method
-    /*
     ASSERT_ARG(sfnt, sfnt.isEmpty());
 
     size_t offset = 0;
@@ -216,7 +214,6 @@ bool convertWOFFToSfnt(SharedBuffer* woff, Vector<char>& sfnt)
     }
 
     return sfnt.size() == totalSfntSize;
-    */
 }
     
 } // namespace WebCore

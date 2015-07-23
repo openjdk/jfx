@@ -1,0 +1,6 @@
+LIBRARY
+
+EXPORTS
+    DllMain @1
+	;start_launcher @2
+	;stop_launcher @3

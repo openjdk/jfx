@@ -1,18 +1,26 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 11.00
-# Visual Studio 2010
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "library", "library.vcxproj", "{0E29BA9D-7DE3-45F0-99BC-0442BFABE2D7}"
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.21005.1
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "packager", "library.vcxproj", "{0E29BA9D-7DE3-45F0-99BC-0442BFABE2D7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
+		Debug|x64 = Debug|x64
 		Release|Win32 = Release|Win32
+		Release|x64 = Release|x64
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{0E29BA9D-7DE3-45F0-99BC-0442BFABE2D7}.Debug|Win32.ActiveCfg = Debug|Win32
 		{0E29BA9D-7DE3-45F0-99BC-0442BFABE2D7}.Debug|Win32.Build.0 = Debug|Win32
+		{0E29BA9D-7DE3-45F0-99BC-0442BFABE2D7}.Debug|x64.ActiveCfg = Debug|x64
+		{0E29BA9D-7DE3-45F0-99BC-0442BFABE2D7}.Debug|x64.Build.0 = Debug|x64
 		{0E29BA9D-7DE3-45F0-99BC-0442BFABE2D7}.Release|Win32.ActiveCfg = Release|Win32
 		{0E29BA9D-7DE3-45F0-99BC-0442BFABE2D7}.Release|Win32.Build.0 = Release|Win32
+		{0E29BA9D-7DE3-45F0-99BC-0442BFABE2D7}.Release|x64.ActiveCfg = Release|x64
+		{0E29BA9D-7DE3-45F0-99BC-0442BFABE2D7}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -56,6 +56,9 @@ import com.sun.javafx.runtime.async.AsyncOperationListener;
 import com.sun.javafx.tk.ImageLoader;
 import com.sun.javafx.tk.PlatformImage;
 import com.sun.javafx.tk.Toolkit;
+import javafx.animation.Interpolator;
+import javafx.animation.KeyValue;
+import javafx.beans.property.SimpleIntegerProperty;
 
 /**
  * The {@code Image} class represents graphical images and is used for loading
@@ -557,6 +560,7 @@ public class Image {
         private final String name;
 
         private T value;
+        private boolean valid = true;
 
         public ObjectPropertyImpl(final String name) {
             this.name = name;
@@ -569,7 +573,7 @@ public class Image {
         public void set(final T value) {
             if (this.value != value) {
                 this.value = value;
-                fireValueChangedEvent();
+                markInvalid();
             }
         }
 
@@ -578,8 +582,16 @@ public class Image {
             super.fireValueChangedEvent();
         }
 
+        private void markInvalid() {
+            if (valid) {
+                valid = false;
+                fireValueChangedEvent();
+            }
+        }
+
         @Override
         public T get() {
+            valid = true;
             return value;
         }
 
@@ -853,6 +865,12 @@ public class Image {
     private static final class Animation {
         final WeakReference<Image> imageRef;
         final Timeline timeline;
+        final SimpleIntegerProperty frameIndex = new SimpleIntegerProperty() {
+            @Override
+            protected void invalidated() {
+                updateImage(get());
+            }
+        };
 
         public Animation(final Image image, final ImageLoader loader) {
             imageRef = new WeakReference<Image>(image);
@@ -894,7 +912,7 @@ public class Image {
         private void addKeyFrame(final int index, final double duration) {
             timeline.getKeyFrames().add(
                     new KeyFrame(Duration.millis(duration),
-                            event -> updateImage(index)
+                            new KeyValue(frameIndex, index, Interpolator.DISCRETE)
                     ));
         }
     }
