@@ -482,24 +482,32 @@ audioconverter_src_event (GstPad * pad, GstEvent * event)
                     gst_event_unref (event);
                 }
             }
-            if (!result) {
-                SInt64 absolutePacketOffset = start / decode->frame_duration;
-                SInt64 absoluteByteOffset;
-                UInt32 flags = 0;
-                if(noErr == AudioFileStreamSeek(decode->audioStreamID, absolutePacketOffset,
-                                                &absoluteByteOffset, &flags)) {
-                    start_byte = (gint64)absoluteByteOffset;
-                    result = gst_pad_push_event(decode->sinkpad,
-                                                gst_event_new_seek(rate, GST_FORMAT_BYTES,
-                                                                   (GstSeekFlags)(GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_ACCURATE),
-                                                                   GST_SEEK_TYPE_SET, start_byte,
-                                                                   GST_SEEK_TYPE_NONE, 0));
-                    if (result)
-                    {
-                        // INLINE - gst_event_unref()
-                        gst_event_unref (event);
+            
+            if (!result) 
+            {
+                if (decode->frame_duration != 0) 
+                {
+                    SInt64 absolutePacketOffset = start / decode->frame_duration;
+                    SInt64 absoluteByteOffset;
+                    UInt32 flags = 0;
+                    if(noErr == AudioFileStreamSeek(decode->audioStreamID, absolutePacketOffset,
+                                                    &absoluteByteOffset, &flags)) {
+                        start_byte = (gint64)absoluteByteOffset;
+                        result = gst_pad_push_event(decode->sinkpad,
+                                                    gst_event_new_seek(rate, GST_FORMAT_BYTES,
+                                                                       (GstSeekFlags)(GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_ACCURATE),
+                                                                       GST_SEEK_TYPE_SET, start_byte,
+                                                                       GST_SEEK_TYPE_NONE, 0));
+                        if (result)
+                        {
+                            // INLINE - gst_event_unref()
+                            gst_event_unref (event);
+                        }
                     }
                 }
+                else
+                    gst_element_message_full(GST_ELEMENT(decode), GST_MESSAGE_ERROR, GST_STREAM_ERROR, GST_STREAM_ERROR_DECODE, 
+                                             g_strdup("Zero frame duration"), NULL, ("audioconverter.c"), ("audioconverter_src_event"), 0);
             }
         }
     }
@@ -874,10 +882,18 @@ audioconverter_chain (GstPad * pad, GstBuffer * buf)
             }
         }
 
+        // Check frame duration for zero to avoid division by zero.
+        if (decode->frame_duration == 0) 
+        {
+            gst_element_message_full(GST_ELEMENT(decode), GST_MESSAGE_ERROR, GST_STREAM_ERROR, GST_STREAM_ERROR_DECODE, 
+                                     g_strdup("Zero frame duration"), NULL, ("audioconverter.c"), ("audioconverter_chain"), 0);
+            ret = GST_FLOW_ERROR;
+            goto _exit;
+        }
+        
         // Derive sample count using the timestamp.
         guint64 frame_index = buf_time/decode->frame_duration;
         decode->total_samples = frame_index * decode->samples_per_frame;
-
 
         // Set the sink and source pad caps if not already done.
         if (TRUE != decode->has_pad_caps)
