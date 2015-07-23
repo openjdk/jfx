@@ -72,7 +72,7 @@ public class LauncherImpl {
     private static final boolean trace = false;
 
     // set system property javafx.verbose to true to make the launcher noisy
-    private static boolean verbose = false;
+    private static final boolean verbose;
     
     private static final String MF_MAIN_CLASS = "Main-Class";
     private static final String MF_JAVAFX_MAIN = "JavaFX-Application-Class";
@@ -108,6 +108,11 @@ public class LauncherImpl {
     // has set the CCL in the case where main is called after the FX toolkit
     // is started.
     private static ClassLoader savedMainCcl = null;
+
+    static {
+        verbose = AccessController.doPrivileged((PrivilegedAction<Boolean>) () ->
+                Boolean.getBoolean("javafx.verbose"));
+    }
 
     /**
      * This method is called by the Application.launch method.
@@ -237,8 +242,6 @@ public class LauncherImpl {
         String preloaderClassName = null;
         String[] appArgs = args;
         ClassLoader appLoader = null;
-        
-        verbose = Boolean.getBoolean("javafx.verbose");
         
         if (launchMode.equals(LAUNCH_MODE_JAR)) {
             Attributes jarAttrs = getJarAttributes(launchName);
