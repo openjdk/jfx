@@ -168,7 +168,7 @@ public final class WebPage {
         hostWindow = new WCFrameView(this);
         pPage = twkCreatePage(editable);
 
-        twkInit(pPage, false);
+        twkInit(pPage, false, WCGraphicsManager.getGraphicsManager().getDevicePixelScale());
 
         if (pageClient != null && pageClient.isBackBufferSupported()) {
             backbuffer = pageClient.createBackBuffer();
@@ -2419,7 +2419,7 @@ public final class WebPage {
     // *************************************************************************
 
     private native long twkCreatePage(boolean editable);
-    private native void twkInit(long pPage, boolean usePlugins);
+    private native void twkInit(long pPage, boolean usePlugins, float devicePixelScale);
     private native void twkDestroyPage(long pPage);
 
     private native long twkGetMainFrame(long pPage);

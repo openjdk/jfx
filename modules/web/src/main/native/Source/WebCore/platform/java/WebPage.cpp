@@ -830,7 +830,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkCreatePage
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkInit
-    (JNIEnv* env, jobject self, jlong pPage, jboolean usePlugins)
+    (JNIEnv* env, jobject self, jlong pPage, jboolean usePlugins, jfloat devicePixelScale)
 {
     Page* page = WebPage::pageFromJLong(pPage);
 
@@ -856,14 +856,10 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkInit
     settings.setFixedFontFamily("Monospaced");
 //    settings->setShowsURLsInToolTips(true);
 
-//    JLObject jlself(self, true);
-//    FrameLoaderClientJava* frameLoaderClient = new FrameLoaderClientJava(jlself);
-//    RefPtr<Frame> frame = Frame::create(page, 0 /* ownerFrameElement */, frameLoaderClient);
-//    frameLoaderClient->setFrame(frame.get());
-
+    page->setDeviceScaleFactor(devicePixelScale);
+    
     dynamic_cast<FrameLoaderClientJava*>(&page->mainFrame().loader().client())->setFrame(&page->mainFrame());
 
-    //    frame->init();
     page->mainFrame().init();
 
     JSContextGroupRef contextGroup = toRef(mainThreadNormalWorld().vm());

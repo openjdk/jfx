@@ -56,6 +56,8 @@ public abstract class WCGraphicsManager {
     public static WCGraphicsManager getGraphicsManager() {
         return manager;
     }
+    
+    public abstract float getDevicePixelScale();
 
     protected abstract WCImageDecoder getImageDecoder();
 
