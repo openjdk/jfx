@@ -926,6 +926,12 @@ void
 g_atomic_int_add (volatile gint G_GNUC_MAY_ALIAS *atomic,
 		  gint           val)
 {
+#ifdef GSTREAMER_LITE
+  if (atomic == NULL) {
+      return;
+  }
+#endif // GSTREAMER_LITE
+
   g_mutex_lock (g_atomic_mutex);
   *atomic += val;
   g_mutex_unlock (g_atomic_mutex);

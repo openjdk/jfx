@@ -117,6 +117,11 @@ GValueArray*
 g_value_array_new (guint n_prealloced)
 {
   GValueArray *value_array = g_slice_new (GValueArray);
+#ifdef GSTREAMER_LITE
+  if (value_array == NULL) {
+    return NULL;
+  }
+#endif // GSTREAMER_LITE
 
   value_array->n_values = 0;
   value_array->n_prealloced = 0;
@@ -169,6 +174,11 @@ g_value_array_copy (const GValueArray *value_array)
   g_return_val_if_fail (value_array != NULL, NULL);
 
   new_array = g_slice_new (GValueArray);
+#ifdef GSTREAMER_LITE
+  if (new_array == NULL) {
+    return NULL;
+  }
+#endif // GSTREAMER_LITE
   new_array->n_values = 0;
   new_array->values = NULL;
   new_array->n_prealloced = 0;

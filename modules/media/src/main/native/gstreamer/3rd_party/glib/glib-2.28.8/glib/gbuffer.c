@@ -61,6 +61,11 @@ g_buffer_new_from_data (gconstpointer data,
   GBuffer *buffer;
 
   buffer = g_slice_new (GBuffer);
+#ifdef GSTREAMER_LITE
+  if (buffer == NULL) {
+    return NULL;
+  }
+#endif // GSTREAMER_LITE
   buffer->data = g_memdup (data, size);
   buffer->size = size;
   buffer->free_func = g_buffer_free_gfree;
@@ -92,6 +97,11 @@ g_buffer_new_take_data (gpointer data,
   GBuffer *buffer;
 
   buffer = g_slice_new (GBuffer);
+#ifdef GSTREAMER_LITE
+  if (buffer == NULL) {
+      return NULL;
+  }
+#endif // GSTREAMER_LITE
   buffer->data = data;
   buffer->size = size;
   buffer->free_func = g_buffer_free_gfree;
@@ -123,6 +133,11 @@ g_buffer_new_from_static_data (gconstpointer data,
   GBuffer *buffer;
 
   buffer = g_slice_new (GBuffer);
+#ifdef GSTREAMER_LITE
+  if (buffer == NULL) {
+    return NULL;
+  }
+#endif // GSTREAMER_LITE
   buffer->data = data;
   buffer->size = size;
   buffer->free_func = g_buffer_free;
@@ -165,6 +180,11 @@ g_buffer_new_from_pointer (gconstpointer  data,
   GUserNotifyBuffer *ubuffer;
 
   ubuffer = g_slice_new (GUserNotifyBuffer);
+#ifdef GSTREAMER_LITE
+  if (ubuffer == NULL) {
+    return NULL;
+  }
+#endif // GSTREAMER_LITE
   ubuffer->buffer.data = data;
   ubuffer->buffer.size = size;
   ubuffer->buffer.free_func = g_buffer_free_usernotify;

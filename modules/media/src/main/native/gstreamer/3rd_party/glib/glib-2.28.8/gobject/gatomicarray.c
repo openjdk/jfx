@@ -77,6 +77,11 @@ freelist_alloc (gsize size, gboolean reuse)
 
   real_size = sizeof (gsize) + MAX (size, sizeof (FreeListNode));
   mem = g_slice_alloc (real_size);
+#ifdef GSTREAMER_LITE
+  if (mem == NULL) {
+    return NULL;
+  }
+#endif // GSTREAMER_LITE
   mem = ((char *) mem) + sizeof (gsize);
   G_ATOMIC_ARRAY_DATA_SIZE (mem) = size;
   return mem;
