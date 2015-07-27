@@ -586,9 +586,7 @@ public abstract class NGNode {
      * RectBounds or its Z dimension is almost zero.
      */
     public boolean isContentBounds2D() {
-        return (contentBounds.is2D()
-                || (Affine3D.almostZero(contentBounds.getMaxZ())
-                && Affine3D.almostZero(contentBounds.getMinZ())));
+        return contentBounds.is2D();
     }
 
     /***************************************************************************

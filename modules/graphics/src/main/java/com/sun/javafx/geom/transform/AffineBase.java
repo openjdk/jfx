@@ -960,7 +960,8 @@ public abstract class AffineBase extends BaseTransform {
 
     public BaseBounds transform(BaseBounds src, BaseBounds dst) {
         // assert(APPLY_3D was dealt with at a higher level)
-        if (!src.is2D() || !dst.is2D()) {
+        if (src.getBoundsType() != BaseBounds.BoundsType.RECTANGLE ||
+                dst.getBoundsType() != BaseBounds.BoundsType.RECTANGLE) {
             return transform3DBounds(src, dst);
         }
         return transform2DBounds((RectBounds)src, (RectBounds)dst);
@@ -1899,7 +1900,8 @@ public abstract class AffineBase extends BaseTransform {
         throws NoninvertibleTransformException
     {
         // assert(APPLY_3D was dealt with at a higher level)
-        if (!src.is2D() || !dst.is2D()) {
+        if (src.getBoundsType() != BaseBounds.BoundsType.RECTANGLE ||
+                dst.getBoundsType() != BaseBounds.BoundsType.RECTANGLE) {
             return inversTransform3DBounds(src, dst);
         }
         return inversTransform2DBounds((RectBounds)src, (RectBounds)dst);
