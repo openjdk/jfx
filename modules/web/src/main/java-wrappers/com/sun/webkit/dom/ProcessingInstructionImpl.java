@@ -2,17 +2,17 @@
 
 package com.sun.webkit.dom;
 
-import org.w3c.dom.DOMException;
+import org.w3c.dom.Node;
 import org.w3c.dom.ProcessingInstruction;
 import org.w3c.dom.stylesheets.StyleSheet;
 
-public class ProcessingInstructionImpl extends NodeImpl implements ProcessingInstruction {
+public class ProcessingInstructionImpl extends CharacterDataImpl implements ProcessingInstruction {
     ProcessingInstructionImpl(long peer) {
         super(peer);
     }
 
-    static ProcessingInstruction getImpl(long peer) {
-        return (ProcessingInstruction)create(peer);
+    static Node getImpl(long peer) {
+        return (Node)create(peer);
     }
 
 
@@ -21,16 +21,6 @@ public class ProcessingInstructionImpl extends NodeImpl implements ProcessingIns
         return getTargetImpl(getPeer());
     }
     native static String getTargetImpl(long peer);
-
-    public String getData() {
-        return getDataImpl(getPeer());
-    }
-    native static String getDataImpl(long peer);
-
-    public void setData(String value) throws DOMException {
-        setDataImpl(getPeer(), value);
-    }
-    native static void setDataImpl(long peer, String value);
 
     public StyleSheet getSheet() {
         return StyleSheetImpl.getImpl(getSheetImpl(getPeer()));

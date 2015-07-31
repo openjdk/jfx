@@ -97,16 +97,6 @@ public class HTMLIFrameElementImpl extends HTMLElementImpl implements HTMLIFrame
     }
     native static void setSandboxImpl(long peer, String value);
 
-    public boolean getSeamless() {
-        return getSeamlessImpl(getPeer());
-    }
-    native static boolean getSeamlessImpl(long peer);
-
-    public void setSeamless(boolean value) {
-        setSeamlessImpl(getPeer(), value);
-    }
-    native static void setSeamlessImpl(long peer, boolean value);
-
     public String getScrolling() {
         return getScrollingImpl(getPeer());
     }

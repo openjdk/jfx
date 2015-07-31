@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,8 @@
  */
 
 package com.sun.javafx.geom;
+
+import com.sun.javafx.geom.transform.Affine3D;
 
 /**
  *
@@ -76,7 +78,7 @@ public class BoxBounds extends BaseBounds {
     }
 
     public boolean is2D() {
-        return false;
+        return (Affine3D.almostZero(minZ) && Affine3D.almostZero(maxZ));
     }
 
     /**

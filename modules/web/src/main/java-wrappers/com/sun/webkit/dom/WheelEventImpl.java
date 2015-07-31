@@ -20,6 +20,26 @@ public class WheelEventImpl extends MouseEventImpl {
     public static final int DOM_DELTA_PAGE = 0x02;
 
 //attributes
+    public double getDeltaX() {
+        return getDeltaXImpl(getPeer());
+    }
+    native static double getDeltaXImpl(long peer);
+
+    public double getDeltaY() {
+        return getDeltaYImpl(getPeer());
+    }
+    native static double getDeltaYImpl(long peer);
+
+    public double getDeltaZ() {
+        return getDeltaZImpl(getPeer());
+    }
+    native static double getDeltaZImpl(long peer);
+
+    public int getDeltaMode() {
+        return getDeltaModeImpl(getPeer());
+    }
+    native static int getDeltaModeImpl(long peer);
+
     public int getWheelDeltaX() {
         return getWheelDeltaXImpl(getPeer());
     }
@@ -29,11 +49,6 @@ public class WheelEventImpl extends MouseEventImpl {
         return getWheelDeltaYImpl(getPeer());
     }
     native static int getWheelDeltaYImpl(long peer);
-
-    public int getDeltaMode() {
-        return getDeltaModeImpl(getPeer());
-    }
-    native static int getDeltaModeImpl(long peer);
 
     public int getWheelDelta() {
         return getWheelDeltaImpl(getPeer());

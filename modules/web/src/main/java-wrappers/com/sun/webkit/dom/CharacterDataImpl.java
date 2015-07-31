@@ -4,14 +4,15 @@ package com.sun.webkit.dom;
 
 import org.w3c.dom.CharacterData;
 import org.w3c.dom.DOMException;
+import org.w3c.dom.Node;
 
 public class CharacterDataImpl extends NodeImpl implements CharacterData {
     CharacterDataImpl(long peer) {
         super(peer);
     }
 
-    static CharacterData getImpl(long peer) {
-        return (CharacterData)create(peer);
+    static Node getImpl(long peer) {
+        return (Node)create(peer);
     }
 
 

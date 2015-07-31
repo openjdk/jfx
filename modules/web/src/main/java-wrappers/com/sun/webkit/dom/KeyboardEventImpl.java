@@ -26,6 +26,11 @@ public class KeyboardEventImpl extends UIEventImpl {
     }
     native static String getKeyIdentifierImpl(long peer);
 
+    public int getLocation() {
+        return getLocationImpl(getPeer());
+    }
+    native static int getLocationImpl(long peer);
+
     public int getKeyLocation() {
         return getKeyLocationImpl(getPeer());
     }
@@ -82,7 +87,7 @@ public class KeyboardEventImpl extends UIEventImpl {
         , boolean cancelable
         , AbstractView view
         , String keyIdentifier
-        , int keyLocation
+        , int location
         , boolean ctrlKey
         , boolean altKey
         , boolean shiftKey
@@ -95,7 +100,7 @@ public class KeyboardEventImpl extends UIEventImpl {
             , cancelable
             , DOMWindowImpl.getPeer(view)
             , keyIdentifier
-            , keyLocation
+            , location
             , ctrlKey
             , altKey
             , shiftKey
@@ -108,7 +113,7 @@ public class KeyboardEventImpl extends UIEventImpl {
         , boolean cancelable
         , long view
         , String keyIdentifier
-        , int keyLocation
+        , int location
         , boolean ctrlKey
         , boolean altKey
         , boolean shiftKey
@@ -121,7 +126,7 @@ public class KeyboardEventImpl extends UIEventImpl {
         , boolean cancelable
         , AbstractView view
         , String keyIdentifier
-        , int keyLocation
+        , int location
         , boolean ctrlKey
         , boolean altKey
         , boolean shiftKey
@@ -133,7 +138,7 @@ public class KeyboardEventImpl extends UIEventImpl {
             , cancelable
             , DOMWindowImpl.getPeer(view)
             , keyIdentifier
-            , keyLocation
+            , location
             , ctrlKey
             , altKey
             , shiftKey
@@ -145,7 +150,7 @@ public class KeyboardEventImpl extends UIEventImpl {
         , boolean cancelable
         , long view
         , String keyIdentifier
-        , int keyLocation
+        , int location
         , boolean ctrlKey
         , boolean altKey
         , boolean shiftKey

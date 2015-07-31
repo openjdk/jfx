@@ -75,8 +75,12 @@ public class BaseBoundsTest {
         assertFalse(rectBounds.isEmpty());
 
         BoxBounds boxBounds = new BoxBounds(10, 20, 0, 20, 30, 0);
-        assertFalse(boxBounds.is2D());
+        assertTrue(boxBounds.is2D());
         assertTrue(boxBounds.intersects(rectBounds));
+
+        boxBounds = new BoxBounds(10, 20, 2, 20, 30, 2);
+        assertFalse(boxBounds.is2D());
+        assertFalse(boxBounds.intersects(rectBounds));
     }
 
     public @Test

@@ -10,7 +10,6 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.css.CSSStyleDeclaration;
 import org.w3c.dom.events.Event;
-import org.w3c.dom.events.EventException;
 import org.w3c.dom.events.EventListener;
 import org.w3c.dom.events.EventTarget;
 import org.w3c.dom.views.AbstractView;
@@ -914,6 +913,16 @@ public class DOMWindowImpl extends JSObject implements AbstractView, EventTarget
     }
     native static void setOnwaitingImpl(long peer, long value);
 
+    public EventListener getOnwheel() {
+        return EventListenerImpl.getImpl(getOnwheelImpl(getPeer()));
+    }
+    native static long getOnwheelImpl(long peer);
+
+    public void setOnwheel(EventListener value) {
+        setOnwheelImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnwheelImpl(long peer, long value);
+
     public EventListener getOnreset() {
         return EventListenerImpl.getImpl(getOnresetImpl(getPeer()));
     }
@@ -1181,42 +1190,6 @@ public class DOMWindowImpl extends JSObject implements AbstractView, EventTarget
         , String pseudoElement);
 
 
-    public void clearTimeout(int handle)
-    {
-        clearTimeoutImpl(getPeer()
-            , handle);
-    }
-    native static void clearTimeoutImpl(long peer
-        , int handle);
-
-
-    public void clearInterval(int handle)
-    {
-        clearIntervalImpl(getPeer()
-            , handle);
-    }
-    native static void clearIntervalImpl(long peer
-        , int handle);
-
-
-    public String atob(String string) throws DOMException
-    {
-        return atobImpl(getPeer()
-            , string);
-    }
-    native static String atobImpl(long peer
-        , String string);
-
-
-    public String btoa(String string) throws DOMException
-    {
-        return btoaImpl(getPeer()
-            , string);
-    }
-    native static String btoaImpl(long peer
-        , String string);
-
-
     public void addEventListener(String type
         , EventListener listener
         , boolean useCapture)
@@ -1247,7 +1220,7 @@ public class DOMWindowImpl extends JSObject implements AbstractView, EventTarget
         , boolean useCapture);
 
 
-    public boolean dispatchEvent(Event evt) throws EventException
+    public boolean dispatchEvent(Event evt) throws DOMException
     {
         return dispatchEventImpl(getPeer()
             , EventImpl.getPeer(evt));
@@ -1268,6 +1241,42 @@ public class DOMWindowImpl extends JSObject implements AbstractView, EventTarget
         releaseEventsImpl(getPeer());
     }
     native static void releaseEventsImpl(long peer);
+
+
+    public String atob(String string) throws DOMException
+    {
+        return atobImpl(getPeer()
+            , string);
+    }
+    native static String atobImpl(long peer
+        , String string);
+
+
+    public String btoa(String string) throws DOMException
+    {
+        return btoaImpl(getPeer()
+            , string);
+    }
+    native static String btoaImpl(long peer
+        , String string);
+
+
+    public void clearTimeout(int handle)
+    {
+        clearTimeoutImpl(getPeer()
+            , handle);
+    }
+    native static void clearTimeoutImpl(long peer
+        , int handle);
+
+
+    public void clearInterval(int handle)
+    {
+        clearIntervalImpl(getPeer()
+            , handle);
+    }
+    native static void clearIntervalImpl(long peer
+        , int handle);
 
 
 

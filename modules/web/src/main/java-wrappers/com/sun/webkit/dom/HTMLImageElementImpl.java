@@ -115,6 +115,16 @@ public class HTMLImageElementImpl extends HTMLElementImpl implements HTMLImageEl
     }
     native static void setSrcImpl(long peer, String value);
 
+    public String getSrcset() {
+        return getSrcsetImpl(getPeer());
+    }
+    native static String getSrcsetImpl(long peer);
+
+    public void setSrcset(String value) {
+        setSrcsetImpl(getPeer(), value);
+    }
+    native static void setSrcsetImpl(long peer, String value);
+
     public String getUseMap() {
         return getUseMapImpl(getPeer());
     }
