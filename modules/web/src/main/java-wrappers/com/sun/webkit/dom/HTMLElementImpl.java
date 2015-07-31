@@ -18,16 +18,6 @@ public class HTMLElementImpl extends ElementImpl implements HTMLElement {
 
 
 //attributes
-    public String getId() {
-        return getIdImpl(getPeer());
-    }
-    native static String getIdImpl(long peer);
-
-    public void setId(String value) {
-        setIdImpl(getPeer(), value);
-    }
-    native static void setIdImpl(long peer, String value);
-
     public String getTitle() {
         return getTitleImpl(getPeer());
     }
@@ -187,26 +177,6 @@ public class HTMLElementImpl extends ElementImpl implements HTMLElement {
         setSpellcheckImpl(getPeer(), value);
     }
     native static void setSpellcheckImpl(long peer, boolean value);
-
-    public boolean getItemScope() {
-        return getItemScopeImpl(getPeer());
-    }
-    native static boolean getItemScopeImpl(long peer);
-
-    public void setItemScope(boolean value) {
-        setItemScopeImpl(getPeer(), value);
-    }
-    native static void setItemScopeImpl(long peer, boolean value);
-
-    public String getItemId() {
-        return getItemIdImpl(getPeer());
-    }
-    native static String getItemIdImpl(long peer);
-
-    public void setItemId(String value) {
-        setItemIdImpl(getPeer(), value);
-    }
-    native static void setItemIdImpl(long peer, String value);
 
 
 //functions

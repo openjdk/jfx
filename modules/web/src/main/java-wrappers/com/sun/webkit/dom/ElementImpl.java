@@ -42,6 +42,16 @@ public class ElementImpl extends NodeImpl implements Element {
     }
     native static long getStyleImpl(long peer);
 
+    public String getId() {
+        return getIdImpl(getPeer());
+    }
+    native static String getIdImpl(long peer);
+
+    public void setId(String value) {
+        setIdImpl(getPeer(), value);
+    }
+    native static void setIdImpl(long peer, String value);
+
     public int getOffsetLeft() {
         return getOffsetLeftImpl(getPeer());
     }
@@ -477,6 +487,16 @@ public class ElementImpl extends NodeImpl implements Element {
     }
     native static void setOnsubmitImpl(long peer, long value);
 
+    public EventListener getOnwheel() {
+        return EventListenerImpl.getImpl(getOnwheelImpl(getPeer()));
+    }
+    native static long getOnwheelImpl(long peer);
+
+    public void setOnwheel(EventListener value) {
+        setOnwheelImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnwheelImpl(long peer, long value);
+
     public EventListener getOnbeforecut() {
         return EventListenerImpl.getImpl(getOnbeforecutImpl(getPeer()));
     }
@@ -841,13 +861,6 @@ public class ElementImpl extends NodeImpl implements Element {
         , String selectors);
 
 
-    public void remove() throws DOMException
-    {
-        removeImpl(getPeer());
-    }
-    native static void removeImpl(long peer);
-
-
     public void webkitRequestFullScreen(short flags)
     {
         webkitRequestFullScreenImpl(getPeer()
@@ -862,6 +875,13 @@ public class ElementImpl extends NodeImpl implements Element {
         webkitRequestFullscreenImpl(getPeer());
     }
     native static void webkitRequestFullscreenImpl(long peer);
+
+
+    public void remove() throws DOMException
+    {
+        removeImpl(getPeer());
+    }
+    native static void removeImpl(long peer);
 
 
 

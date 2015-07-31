@@ -13,7 +13,6 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.w3c.dom.UserDataHandler;
 import org.w3c.dom.events.Event;
-import org.w3c.dom.events.EventException;
 import org.w3c.dom.events.EventListener;
 import org.w3c.dom.events.EventTarget;
 
@@ -507,7 +506,7 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
         , boolean useCapture);
 
 
-    public boolean dispatchEvent(Event event) throws EventException
+    public boolean dispatchEvent(Event event) throws DOMException
     {
         return dispatchEventImpl(getPeer()
             , EventImpl.getPeer(event));

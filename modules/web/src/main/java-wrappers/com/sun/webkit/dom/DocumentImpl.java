@@ -24,6 +24,7 @@ import org.w3c.dom.events.EventListener;
 import org.w3c.dom.html.HTMLCollection;
 import org.w3c.dom.html.HTMLElement;
 import org.w3c.dom.html.HTMLHeadElement;
+import org.w3c.dom.html.HTMLScriptElement;
 import org.w3c.dom.ranges.Range;
 import org.w3c.dom.stylesheets.StyleSheetList;
 import org.w3c.dom.traversal.NodeFilter;
@@ -593,6 +594,16 @@ public class DocumentImpl extends NodeImpl implements Document, XPathEvaluator, 
     }
     native static void setOnsubmitImpl(long peer, long value);
 
+    public EventListener getOnwheel() {
+        return EventListenerImpl.getImpl(getOnwheelImpl(getPeer()));
+    }
+    native static long getOnwheelImpl(long peer);
+
+    public void setOnwheel(EventListener value) {
+        setOnwheelImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnwheelImpl(long peer, long value);
+
     public EventListener getOnbeforecut() {
         return EventListenerImpl.getImpl(getOnbeforecutImpl(getPeer()));
     }
@@ -723,6 +734,16 @@ public class DocumentImpl extends NodeImpl implements Document, XPathEvaluator, 
     }
     native static boolean getHiddenImpl(long peer);
 
+    public HTMLScriptElement getCurrentScript() {
+        return HTMLScriptElementImpl.getImpl(getCurrentScriptImpl(getPeer()));
+    }
+    native static long getCurrentScriptImpl(long peer);
+
+    public String getOrigin() {
+        return getOriginImpl(getPeer());
+    }
+    native static String getOriginImpl(long peer);
+
 
 //functions
     public Element createElement(String tagName) throws DOMException
@@ -771,7 +792,7 @@ public class DocumentImpl extends NodeImpl implements Document, XPathEvaluator, 
     public ProcessingInstruction createProcessingInstruction(String target
         , String data) throws DOMException
     {
-        return ProcessingInstructionImpl.getImpl(createProcessingInstructionImpl(getPeer()
+        return (ProcessingInstruction)ProcessingInstructionImpl.getImpl(createProcessingInstructionImpl(getPeer()
             , target
             , data));
     }
@@ -1046,15 +1067,6 @@ public class DocumentImpl extends NodeImpl implements Document, XPathEvaluator, 
     }
     native static long getElementsByNameImpl(long peer
         , String elementName);
-
-
-    public NodeList getItems(String typeNames)
-    {
-        return NodeListImpl.getImpl(getItemsImpl(getPeer()
-            , typeNames));
-    }
-    native static long getItemsImpl(long peer
-        , String typeNames);
 
 
     public Element elementFromPoint(int x

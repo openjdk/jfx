@@ -8,7 +8,6 @@ import org.w3c.dom.DOMException;
 import org.w3c.dom.DocumentFragment;
 import org.w3c.dom.Node;
 import org.w3c.dom.ranges.Range;
-import org.w3c.dom.ranges.RangeException;
 
 public class RangeImpl implements Range {
     private static class SelfDisposer implements DisposerRecord {
@@ -106,7 +105,7 @@ public class RangeImpl implements Range {
 
 //functions
     public void setStart(Node refNode
-        , int offset) throws RangeException, DOMException
+        , int offset) throws DOMException
     {
         setStartImpl(getPeer()
             , NodeImpl.getPeer(refNode)
@@ -118,7 +117,7 @@ public class RangeImpl implements Range {
 
 
     public void setEnd(Node refNode
-        , int offset) throws RangeException, DOMException
+        , int offset) throws DOMException
     {
         setEndImpl(getPeer()
             , NodeImpl.getPeer(refNode)
@@ -129,7 +128,7 @@ public class RangeImpl implements Range {
         , int offset);
 
 
-    public void setStartBefore(Node refNode) throws RangeException, DOMException
+    public void setStartBefore(Node refNode) throws DOMException
     {
         setStartBeforeImpl(getPeer()
             , NodeImpl.getPeer(refNode));
@@ -138,7 +137,7 @@ public class RangeImpl implements Range {
         , long refNode);
 
 
-    public void setStartAfter(Node refNode) throws RangeException, DOMException
+    public void setStartAfter(Node refNode) throws DOMException
     {
         setStartAfterImpl(getPeer()
             , NodeImpl.getPeer(refNode));
@@ -147,7 +146,7 @@ public class RangeImpl implements Range {
         , long refNode);
 
 
-    public void setEndBefore(Node refNode) throws RangeException, DOMException
+    public void setEndBefore(Node refNode) throws DOMException
     {
         setEndBeforeImpl(getPeer()
             , NodeImpl.getPeer(refNode));
@@ -156,7 +155,7 @@ public class RangeImpl implements Range {
         , long refNode);
 
 
-    public void setEndAfter(Node refNode) throws RangeException, DOMException
+    public void setEndAfter(Node refNode) throws DOMException
     {
         setEndAfterImpl(getPeer()
             , NodeImpl.getPeer(refNode));
@@ -174,7 +173,7 @@ public class RangeImpl implements Range {
         , boolean toStart);
 
 
-    public void selectNode(Node refNode) throws RangeException, DOMException
+    public void selectNode(Node refNode) throws DOMException
     {
         selectNodeImpl(getPeer()
             , NodeImpl.getPeer(refNode));
@@ -183,7 +182,7 @@ public class RangeImpl implements Range {
         , long refNode);
 
 
-    public void selectNodeContents(Node refNode) throws RangeException, DOMException
+    public void selectNodeContents(Node refNode) throws DOMException
     {
         selectNodeContentsImpl(getPeer()
             , NodeImpl.getPeer(refNode));
@@ -225,7 +224,7 @@ public class RangeImpl implements Range {
     native static long cloneContentsImpl(long peer);
 
 
-    public void insertNode(Node newNode) throws DOMException, RangeException
+    public void insertNode(Node newNode) throws DOMException
     {
         insertNodeImpl(getPeer()
             , NodeImpl.getPeer(newNode));
@@ -234,7 +233,7 @@ public class RangeImpl implements Range {
         , long newNode);
 
 
-    public void surroundContents(Node newParent) throws DOMException, RangeException
+    public void surroundContents(Node newParent) throws DOMException
     {
         surroundContentsImpl(getPeer()
             , NodeImpl.getPeer(newParent));
@@ -273,7 +272,7 @@ public class RangeImpl implements Range {
         , String html);
 
 
-    public boolean intersectsNode(Node refNode) throws RangeException, DOMException
+    public boolean intersectsNode(Node refNode) throws DOMException
     {
         return intersectsNodeImpl(getPeer()
             , NodeImpl.getPeer(refNode));
@@ -282,7 +281,7 @@ public class RangeImpl implements Range {
         , long refNode);
 
 
-    public short compareNode(Node refNode) throws RangeException, DOMException
+    public short compareNode(Node refNode) throws DOMException
     {
         return compareNodeImpl(getPeer()
             , NodeImpl.getPeer(refNode));
@@ -292,7 +291,7 @@ public class RangeImpl implements Range {
 
 
     public short comparePoint(Node refNode
-        , int offset) throws RangeException, DOMException
+        , int offset) throws DOMException
     {
         return comparePointImpl(getPeer()
             , NodeImpl.getPeer(refNode)
@@ -304,7 +303,7 @@ public class RangeImpl implements Range {
 
 
     public boolean isPointInRange(Node refNode
-        , int offset) throws RangeException, DOMException
+        , int offset) throws DOMException
     {
         return isPointInRangeImpl(getPeer()
             , NodeImpl.getPeer(refNode)
@@ -315,7 +314,7 @@ public class RangeImpl implements Range {
         , int offset);
 
 
-    public void expand(String unit) throws RangeException, DOMException
+    public void expand(String unit) throws DOMException
     {
         expandImpl(getPeer()
             , unit);
