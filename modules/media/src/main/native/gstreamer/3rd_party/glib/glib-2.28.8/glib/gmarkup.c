@@ -2035,6 +2035,11 @@ g_markup_parse_context_push (GMarkupParseContext *context,
   GMarkupRecursionTracker *tracker;
 
   tracker = g_slice_new (GMarkupRecursionTracker);
+#ifdef GSTREAMER_LITE
+  if (tracker == NULL) {
+    return;
+  }
+#endif // GSTREAMER_LITE
   tracker->prev_element = context->subparser_element;
   tracker->prev_parser = context->parser;
   tracker->prev_user_data = context->user_data;

@@ -957,6 +957,12 @@ g_source_attach (GSource      *source,
 		 GMainContext *context)
 {
   guint result = 0;
+  
+#ifdef GSTREAMER_LITE
+  if (source == NULL) {
+    return 0;
+  }
+#endif // GSTREAMER_LITE
 
   g_return_val_if_fail (source->context == NULL, 0);
   g_return_val_if_fail (!SOURCE_DESTROYED (source), 0);
@@ -3501,6 +3507,11 @@ g_main_context_add_poll_unlocked (GMainContext *context,
 {
   GPollRec *prevrec, *nextrec;
   GPollRec *newrec = g_slice_new (GPollRec);
+#ifdef GSTREAMER_LITE
+  if (newrec == NULL) {
+    return;
+  }
+#endif // GSTREAMER_LITE
 
   /* This file descriptor may be checked before we ever poll */
   fd->revents = 0;

@@ -2260,11 +2260,17 @@ gst_base_parse_chain (GstPad * pad, GstBuffer * buffer)
            * fragment coming later, hopefully subclass skips efficiently ... */
           timestamp = gst_adapter_prev_timestamp (parse->priv->adapter, NULL);
           outbuf = gst_adapter_take_buffer (parse->priv->adapter, skip);
+#ifdef GSTREAMER_LITE
+          if (outbuf != NULL) {
+#endif // GSTREAMER_LITE
           outbuf = gst_buffer_make_metadata_writable (outbuf);
           GST_BUFFER_TIMESTAMP (outbuf) = timestamp;
           parse->priv->buffers_pending =
               g_slist_prepend (parse->priv->buffers_pending, outbuf);
           outbuf = NULL;
+#ifdef GSTREAMER_LITE
+          }
+#endif // GSTREAMER_LITE
         } else {
           gst_adapter_flush (parse->priv->adapter, skip);
         }

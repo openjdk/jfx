@@ -628,6 +628,11 @@ g_hash_table_new_full (GHashFunc       hash_func,
   GHashTable *hash_table;
 
   hash_table = g_slice_new (GHashTable);
+#ifdef GSTREAMER_LITE
+  if (hash_table == NULL) {
+    return NULL;
+  }
+#endif // GSTREAMER_LITE
   g_hash_table_set_shift (hash_table, HASH_TABLE_MIN_SHIFT);
   hash_table->nnodes             = 0;
   hash_table->noccupied          = 0;
