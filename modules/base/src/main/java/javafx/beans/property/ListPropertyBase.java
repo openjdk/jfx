@@ -29,6 +29,7 @@ import com.sun.javafx.binding.ListExpressionHelper;
 import java.lang.ref.WeakReference;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.WeakListener;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
@@ -318,7 +319,7 @@ public abstract class ListPropertyBase<E> extends ListProperty<E> {
         return result.toString();
     }
 
-    private static class Listener<E> implements InvalidationListener {
+    private static class Listener<E> implements InvalidationListener, WeakListener {
 
         private final WeakReference<ListPropertyBase<E>> wref;
 
@@ -335,6 +336,10 @@ public abstract class ListPropertyBase<E> extends ListProperty<E> {
                 ref.markInvalid(ref.value);
             }
         }
-    }
 
+        @Override
+        public boolean wasGarbageCollected() {
+            return wref.get() == null;
+        }
+    }
 }

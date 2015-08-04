@@ -33,6 +33,7 @@ import javafx.beans.value.ObservableValue;
 
 import com.sun.javafx.binding.ExpressionHelper;
 import java.lang.ref.WeakReference;
+import javafx.beans.WeakListener;
 import javafx.beans.value.ObservableDoubleValue;
 import javafx.beans.value.ObservableNumberValue;
 
@@ -246,7 +247,7 @@ public abstract class DoublePropertyBase extends DoubleProperty {
         return result.toString();
     }
 
-    private static class Listener implements InvalidationListener {
+    private static class Listener implements InvalidationListener, WeakListener {
 
         private final WeakReference<DoublePropertyBase> wref;
 
@@ -262,6 +263,11 @@ public abstract class DoublePropertyBase extends DoubleProperty {
             } else {
                 ref.markInvalid();
             }
+        }
+
+        @Override
+        public boolean wasGarbageCollected() {
+            return wref.get() == null;
         }
     }
 }

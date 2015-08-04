@@ -34,6 +34,7 @@ import javafx.beans.value.ObservableValue;
 
 import com.sun.javafx.binding.ExpressionHelper;
 import java.lang.ref.WeakReference;
+import javafx.beans.WeakListener;
 
 /**
  * The class {@code BooleanPropertyBase} is the base class for a property
@@ -228,7 +229,7 @@ public abstract class BooleanPropertyBase extends BooleanProperty {
         return result.toString();
     }
 
-    private static class Listener implements InvalidationListener {
+    private static class Listener implements InvalidationListener, WeakListener {
 
         private final WeakReference<BooleanPropertyBase> wref;
 
@@ -245,6 +246,10 @@ public abstract class BooleanPropertyBase extends BooleanProperty {
                 ref.markInvalid();
             }
         }
-    }
 
+        @Override
+        public boolean wasGarbageCollected() {
+            return wref.get() == null;
+        }
+    }
 }

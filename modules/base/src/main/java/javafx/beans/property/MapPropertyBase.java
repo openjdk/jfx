@@ -29,6 +29,7 @@ import com.sun.javafx.binding.MapExpressionHelper;
 import java.lang.ref.WeakReference;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.WeakListener;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.*;
@@ -319,7 +320,7 @@ public abstract class MapPropertyBase<K, V> extends MapProperty<K, V> {
         return result.toString();
     }
 
-    private static class Listener<K,V> implements InvalidationListener {
+    private static class Listener<K,V> implements InvalidationListener, WeakListener {
 
         private final WeakReference<MapPropertyBase<K,V>> wref;
 
@@ -336,6 +337,10 @@ public abstract class MapPropertyBase<K, V> extends MapProperty<K, V> {
                 ref.markInvalid(ref.value);
             }
         }
-    }
 
+        @Override
+        public boolean wasGarbageCollected() {
+            return wref.get() == null;
+        }
+    }
 }

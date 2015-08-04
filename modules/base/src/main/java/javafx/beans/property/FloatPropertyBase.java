@@ -33,6 +33,7 @@ import javafx.beans.value.ObservableValue;
 
 import com.sun.javafx.binding.ExpressionHelper;
 import java.lang.ref.WeakReference;
+import javafx.beans.WeakListener;
 import javafx.beans.value.ObservableFloatValue;
 import javafx.beans.value.ObservableNumberValue;
 
@@ -247,7 +248,7 @@ public abstract class FloatPropertyBase extends FloatProperty {
         return result.toString();
     }
 
-    private static class Listener implements InvalidationListener {
+    private static class Listener implements InvalidationListener, WeakListener {
 
         private final WeakReference<FloatPropertyBase> wref;
 
@@ -263,6 +264,11 @@ public abstract class FloatPropertyBase extends FloatProperty {
             } else {
                 ref.markInvalid();
             }
+        }
+
+        @Override
+        public boolean wasGarbageCollected() {
+            return wref.get() == null;
         }
     }
 }
