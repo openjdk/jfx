@@ -30,6 +30,7 @@ import java.nio.IntBuffer;
 import com.sun.javafx.scene.traversal.Direction;
 import javafx.collections.ObservableList;
 import javafx.event.EventType;
+import javafx.scene.image.PixelFormat;
 import javafx.scene.input.InputMethodEvent;
 import javafx.scene.input.InputMethodRequests;
 import javafx.scene.input.InputMethodTextRun;
@@ -57,6 +58,11 @@ public interface EmbeddedSceneInterface {
      * A request to fetch all the FX scene pixels into a offscreen buffer.
      */
     public boolean getPixels(IntBuffer dest, int width, int height);
+    
+    /*
+     * A request to get the FX scene's pixel format.
+     */
+    public PixelFormat<?> getPixelFormat();
 
     /*
      * A notification about mouse event received by host container.

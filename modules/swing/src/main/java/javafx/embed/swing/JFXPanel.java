@@ -515,7 +515,7 @@ public class JFXPanel extends JComponent {
             pHeight -= (i.top + i.bottom);
         }        
         if (oldWidth != pWidth || oldHeight != pHeight) {
-            resizePixelBuffer(scaleFactor);
+            createResizePixelBuffer(scaleFactor);
             sendResizeEventToFX();
         }
     }
@@ -605,14 +605,15 @@ public class JFXPanel extends JComponent {
     }
 
     // called on EDT only
-    private void resizePixelBuffer(int newScaleFactor) {
-        if ((pWidth <= 0) || (pHeight <= 0)) {
-             pixelsIm = null;
+    private void createResizePixelBuffer(int newScaleFactor) {
+        if (scenePeer == null || pWidth <= 0 || pHeight <= 0) {
+            pixelsIm = null;
         } else {
-            BufferedImage oldIm = pixelsIm;                        
+            BufferedImage oldIm = pixelsIm;
             pixelsIm = new BufferedImage(pWidth * newScaleFactor,
                                          pHeight * newScaleFactor,
-                                         BufferedImage.TYPE_INT_ARGB);
+                                         SwingFXUtils.getBestBufferedImageType(
+                                             scenePeer.getPixelFormat(), null));
             if (oldIm != null) {
                 double ratio = newScaleFactor / scaleFactor;
                 // Transform old size to the new coordinate space.
@@ -659,10 +660,12 @@ public class JFXPanel extends JComponent {
      */
     @Override
     protected void paintComponent(Graphics g) {
-        if ((scenePeer == null) || (pixelsIm == null)) {
+        if (scenePeer == null) {
             return;
         }
-        
+        if (pixelsIm == null) {
+            createResizePixelBuffer(scaleFactor);
+        }
         DataBufferInt dataBuf = (DataBufferInt)pixelsIm.getRaster().getDataBuffer();
         int[] pixelsData = dataBuf.getData();
         IntBuffer buf = IntBuffer.wrap(pixelsData);           
@@ -689,7 +692,7 @@ public class JFXPanel extends JComponent {
                 newScaleFactor = ((SunGraphics2D)g).surfaceData.getDefaultScale();
             }            
             if (scaleFactor != newScaleFactor) {
-                resizePixelBuffer(newScaleFactor);
+                createResizePixelBuffer(newScaleFactor);
                 // The scene will request repaint.
                 scenePeer.setPixelScaleFactor(newScaleFactor);
                 scaleFactor = newScaleFactor;

@@ -34,6 +34,7 @@ import javafx.scene.input.InputMethodRequests;
 import javafx.scene.input.InputMethodTextRun;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
+import javafx.scene.image.PixelFormat;
 import java.nio.IntBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -50,6 +51,7 @@ import com.sun.javafx.tk.Toolkit;
 import com.sun.prism.paint.Color;
 import com.sun.prism.paint.Paint;
 import com.sun.glass.ui.Pixels;
+import java.nio.ByteOrder;
 
 final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
 
@@ -65,7 +67,9 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
     private volatile IntBuffer  texBits;
     private volatile int        texLineStride; // pre-scaled
     private volatile float      texScaleFactor = 1.0f;
- 
+    
+    private volatile PixelFormat<?> pixelFormat;
+    
     public EmbeddedScene(HostInterface host, boolean depthBuffer, boolean msaa) {
         super(depthBuffer, msaa);
         sceneState = new EmbeddedState(this);
@@ -76,8 +80,23 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
         PaintCollector collector = PaintCollector.getInstance();
         painter = new UploadingPainter(this);
         paintRenderJob = new PaintRenderJob(this, collector.getRendered(), painter);
+        
+        int nativeFormat = Pixels.getNativeFormat();
+        ByteOrder byteorder = ByteOrder.nativeOrder();
+        
+        if (nativeFormat == Pixels.Format.BYTE_BGRA_PRE &&
+            byteorder == ByteOrder.LITTLE_ENDIAN)
+        {
+            pixelFormat = PixelFormat.getIntArgbPreInstance();
+            
+        } else if (nativeFormat == Pixels.Format.BYTE_ARGB &&
+                   byteorder == ByteOrder.BIG_ENDIAN)
+        {
+            pixelFormat = PixelFormat.getIntArgbInstance();
+        }
+        assert pixelFormat != null;
     }
-
+    
     @Override
     public void dispose() {
         assert host != null;
@@ -138,7 +157,11 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
     public float getRenderScale() {
         return renderScale;
     }
-
+    
+    public PixelFormat<?> getPixelFormat() {
+        return pixelFormat;
+    }
+    
     // Called by EmbeddedPainter on the render thread under renderLock
     void uploadPixels(Pixels pixels) {
         texBits = (IntBuffer)pixels.getPixels();
