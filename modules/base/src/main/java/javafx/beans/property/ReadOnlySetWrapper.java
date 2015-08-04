@@ -25,7 +25,6 @@
 
 package javafx.beans.property;
 
-import com.sun.javafx.binding.SetExpressionHelper;
 import javafx.beans.InvalidationListener;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.ObservableSet;
@@ -175,51 +174,11 @@ public class ReadOnlySetWrapper<E> extends SimpleSetProperty<E> {
         }
     }
 
-    private class ReadOnlyPropertyImpl extends ReadOnlySetProperty<E> {
-
-        private SetExpressionHelper<E> helper = null;
+    private class ReadOnlyPropertyImpl extends ReadOnlySetPropertyBase<E> {
 
         @Override
         public ObservableSet<E> get() {
             return ReadOnlySetWrapper.this.get();
-        }
-
-        @Override
-        public void addListener(InvalidationListener listener) {
-            helper = SetExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override
-        public void removeListener(InvalidationListener listener) {
-            helper = SetExpressionHelper.removeListener(helper, listener);
-        }
-
-        @Override
-        public void addListener(ChangeListener<? super ObservableSet<E>> listener) {
-            helper = SetExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override
-        public void removeListener(ChangeListener<? super ObservableSet<E>> listener) {
-            helper = SetExpressionHelper.removeListener(helper, listener);
-        }
-
-        @Override
-        public void addListener(SetChangeListener<? super E> listener) {
-            helper = SetExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override
-        public void removeListener(SetChangeListener<? super E> listener) {
-            helper = SetExpressionHelper.removeListener(helper, listener);
-        }
-
-        private void fireValueChangedEvent() {
-            SetExpressionHelper.fireValueChangedEvent(helper);
-        }
-
-        private void fireValueChangedEvent(Change<? extends E> change) {
-            SetExpressionHelper.fireValueChangedEvent(helper, change);
         }
 
         @Override

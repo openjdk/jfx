@@ -25,7 +25,6 @@
 
 package javafx.beans.property;
 
-import com.sun.javafx.binding.MapExpressionHelper;
 import javafx.beans.InvalidationListener;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.ObservableMap;
@@ -175,51 +174,11 @@ public class ReadOnlyMapWrapper<K, V> extends SimpleMapProperty<K, V> {
         }
     }
 
-    private class ReadOnlyPropertyImpl extends ReadOnlyMapProperty<K, V> {
-
-        private MapExpressionHelper<K, V> helper = null;
+    private class ReadOnlyPropertyImpl extends ReadOnlyMapPropertyBase<K, V> {
 
         @Override
         public ObservableMap<K, V> get() {
             return ReadOnlyMapWrapper.this.get();
-        }
-
-        @Override
-        public void addListener(InvalidationListener listener) {
-            helper = MapExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override
-        public void removeListener(InvalidationListener listener) {
-            helper = MapExpressionHelper.removeListener(helper, listener);
-        }
-
-        @Override
-        public void addListener(ChangeListener<? super ObservableMap<K, V>> listener) {
-            helper = MapExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override
-        public void removeListener(ChangeListener<? super ObservableMap<K, V>> listener) {
-            helper = MapExpressionHelper.removeListener(helper, listener);
-        }
-
-        @Override
-        public void addListener(MapChangeListener<? super K, ? super V> listener) {
-            helper = MapExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override
-        public void removeListener(MapChangeListener<? super K, ? super V> listener) {
-            helper = MapExpressionHelper.removeListener(helper, listener);
-        }
-
-        private void fireValueChangedEvent() {
-            MapExpressionHelper.fireValueChangedEvent(helper);
-        }
-
-        private void fireValueChangedEvent(Change<? extends K, ? extends V> change) {
-            MapExpressionHelper.fireValueChangedEvent(helper, change);
         }
 
         @Override
