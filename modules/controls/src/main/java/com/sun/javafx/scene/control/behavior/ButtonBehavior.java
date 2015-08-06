@@ -31,6 +31,7 @@ import javafx.scene.input.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
 import static javafx.scene.input.KeyCode.SPACE;
+import static javafx.scene.input.KeyCode.TAB;
 import static javafx.scene.input.KeyEvent.KEY_PRESSED;
 import static javafx.scene.input.KeyEvent.KEY_RELEASED;
 
@@ -94,6 +95,9 @@ public class ButtonBehavior<C extends ButtonBase> extends BehaviorBase<C> {
 
     protected static final List<KeyBinding> BUTTON_BINDINGS = new ArrayList<KeyBinding>();
     static {
+            BUTTON_BINDINGS.add(new KeyBinding(TAB, "TraverseNext"));
+            BUTTON_BINDINGS.add(new KeyBinding(TAB, "TraversePrevious").shift());
+
             BUTTON_BINDINGS.add(new KeyBinding(SPACE, KEY_PRESSED, PRESS_ACTION));
             BUTTON_BINDINGS.add(new KeyBinding(SPACE, KEY_RELEASED, RELEASE_ACTION));
     }
