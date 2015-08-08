@@ -2564,6 +2564,11 @@ g_variant_iter_new (GVariant *value)
   GVariantIter *iter;
 
   iter = (GVariantIter *) g_slice_new (struct heap_iter);
+#ifdef GSTREAMER_LITE
+  if (iter == NULL) {
+    return NULL;
+  }
+#endif // GSTREAMER_LITE
   GVHI(iter)->value_ref = g_variant_ref (value);
   GVHI(iter)->magic = GVHI_MAGIC;
 
@@ -2622,6 +2627,12 @@ GVariantIter *
 g_variant_iter_copy (GVariantIter *iter)
 {
   GVariantIter *copy;
+  
+#ifdef GSTREAMER_LITE
+  if (iter == NULL) {
+    return NULL;
+  }
+#endif // GSTREAMER_LITE
 
   g_return_val_if_fail (is_valid_iter (iter), 0);
 
@@ -2820,6 +2831,11 @@ g_variant_builder_new (const GVariantType *type)
   GVariantBuilder *builder;
 
   builder = (GVariantBuilder *) g_slice_new (struct heap_builder);
+#ifdef GSTREAMER_LITE
+  if (builder == NULL) {
+    return NULL;
+  }
+#endif // GSTREAMER_LITE
   g_variant_builder_init (builder, type);
   GVHB(builder)->magic = GVHB_MAGIC;
   GVHB(builder)->ref_count = 1;
@@ -4766,6 +4782,11 @@ g_variant_byteswap (GVariant *value)
       g_variant_serialised_byteswap (serialised);
 
       buffer = g_buffer_new_take_data (serialised.data, serialised.size);
+#ifdef GSTREAMER_LITE
+      if (buffer == NULL) {
+          return NULL;
+      }
+#endif // GSTREAMER_LITE
       new = g_variant_new_from_buffer (g_variant_get_type (value), buffer, TRUE);
       g_buffer_unref (buffer);
     }

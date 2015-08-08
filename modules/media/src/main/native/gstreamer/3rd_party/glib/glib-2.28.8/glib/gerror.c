@@ -54,6 +54,11 @@ g_error_new_valist (GQuark       domain,
   GError *error;
 
   error = g_slice_new (GError);
+#ifdef GSTREAMER_LITE
+  if (error == NULL) {
+    return NULL;
+  }
+#endif // GSTREAMER_LITE
 
   error->domain = domain;
   error->code = code;
@@ -117,6 +122,11 @@ g_error_new_literal (GQuark         domain,
   g_return_val_if_fail (domain != 0, NULL);
 
   err = g_slice_new (GError);
+#ifdef GSTREAMER_LITE
+  if (err == NULL) {
+    return NULL;
+  }
+#endif // GSTREAMER_LITE
 
   err->domain = domain;
   err->code = code;
@@ -157,6 +167,11 @@ g_error_copy (const GError *error)
   g_return_val_if_fail (error != NULL, NULL);
 
   copy = g_slice_new (GError);
+#ifdef GSTREAMER_LITE
+  if (copy == NULL) {
+    return NULL;
+  }
+#endif // GSTREAMER_LITE
 
   *copy = *error;
 

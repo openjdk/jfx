@@ -94,6 +94,11 @@ static inline GCacheNode*
 g_cache_node_new (gpointer value)
 {
   GCacheNode *node = g_slice_new (GCacheNode);
+#ifdef GSTREAMER_LITE
+  if (node == NULL) {
+    return NULL;
+  }
+#endif // GSTREAMER_LITE
   node->value = value;
   node->ref_count = 1;
   return node;
@@ -177,6 +182,12 @@ g_cache_new (GCacheNewFunc      value_new_func,
   g_return_val_if_fail (key_equal_func != NULL, NULL);
 
   cache = g_slice_new (GCache);
+#ifdef GSTREAMER_LITE
+  if (cache == NULL) {
+      return NULL;
+  }
+#endif // GSTREAMER_LITE
+
   cache->value_new_func = value_new_func;
   cache->value_destroy_func = value_destroy_func;
   cache->key_dup_func = key_dup_func;
@@ -240,6 +251,11 @@ g_cache_insert (GCache   *cache,
   key = (* cache->key_dup_func) (key);
   value = (* cache->value_new_func) (key);
   node = g_cache_node_new (value);
+#ifdef GSTREAMER_LITE
+  if (node == NULL) {
+      return NULL;
+  }
+#endif // GSTREAMER_LITE
 
   g_hash_table_insert (cache->key_table, key, node);
   g_hash_table_insert (cache->value_table, value, key);

@@ -1198,6 +1198,11 @@ g_checksum_copy (const GChecksum *checksum)
   g_return_val_if_fail (checksum != NULL, NULL);
 
   copy = g_slice_new (GChecksum);
+#ifdef GSTREAMER_LITE
+  if (copy == NULL) {
+    return NULL;
+  }
+#endif // GSTREAMER_LITE
   *copy = *checksum;
 
   copy->digest_str = g_strdup (checksum->digest_str);

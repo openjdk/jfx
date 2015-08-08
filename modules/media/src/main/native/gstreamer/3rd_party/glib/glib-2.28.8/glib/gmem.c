@@ -1100,6 +1100,11 @@ g_mem_chunk_new (const gchar  *name,
   g_return_val_if_fail (atom_size > 0, NULL);
 
   mem_chunk = g_slice_new (GMemChunk);
+#ifdef GSTREAMER_LITE
+  if (mem_chunk == NULL) {
+    return NULL;
+  }
+#endif // GSTREAMER_LITE
   mem_chunk->alloc_size = atom_size;
   return mem_chunk;
 }
