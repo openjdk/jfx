@@ -29,9 +29,10 @@ import java.lang.ref.WeakReference;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.WeakListener;
 import javafx.beans.binding.Binding;
 
-public class BindingHelperObserver implements InvalidationListener {
+public class BindingHelperObserver implements InvalidationListener, WeakListener {
 
     private final WeakReference<Binding<?>> ref;
 
@@ -52,4 +53,8 @@ public class BindingHelperObserver implements InvalidationListener {
         }
     }
 
+    @Override
+    public boolean wasGarbageCollected() {
+        return ref.get() == null;
+    }
 }

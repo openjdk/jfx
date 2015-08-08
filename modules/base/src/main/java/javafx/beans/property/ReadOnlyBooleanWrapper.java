@@ -28,8 +28,6 @@ package javafx.beans.property;
 import javafx.beans.InvalidationListener;
 import javafx.beans.value.ChangeListener;
 
-import com.sun.javafx.binding.ExpressionHelper;
-
 /**
  * This class provides a convenient class to define read-only properties. It
  * creates two properties that are synchronized. One property is read-only
@@ -145,39 +143,13 @@ public class ReadOnlyBooleanWrapper extends SimpleBooleanProperty {
         }
     }
 
-    private class ReadOnlyPropertyImpl extends ReadOnlyBooleanProperty {
-        
-        private ExpressionHelper<Boolean> helper = null;
-        
+    private class ReadOnlyPropertyImpl extends ReadOnlyBooleanPropertyBase {
+
         @Override
         public boolean get() {
             return ReadOnlyBooleanWrapper.this.get();
         }
 
-        @Override 
-        public void addListener(InvalidationListener listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override 
-        public void removeListener(InvalidationListener listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
-        }
-        
-        @Override
-        public void addListener(ChangeListener<? super Boolean> listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override 
-        public void removeListener(ChangeListener<? super Boolean> listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
-        }
-        
-        private void fireValueChangedEvent() {
-            ExpressionHelper.fireValueChangedEvent(helper);
-        }
-        
         @Override
         public Object getBean() {
             return ReadOnlyBooleanWrapper.this.getBean();

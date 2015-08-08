@@ -25,7 +25,6 @@
 
 package javafx.beans.property;
 
-import com.sun.javafx.binding.ListExpressionHelper;
 import javafx.beans.InvalidationListener;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.ListChangeListener;
@@ -175,51 +174,11 @@ public class ReadOnlyListWrapper<E> extends SimpleListProperty<E> {
         }
     }
 
-    private class ReadOnlyPropertyImpl extends ReadOnlyListProperty<E> {
-
-        private ListExpressionHelper<E> helper = null;
+    private class ReadOnlyPropertyImpl extends ReadOnlyListPropertyBase<E> {
 
         @Override
         public ObservableList<E> get() {
             return ReadOnlyListWrapper.this.get();
-        }
-
-        @Override
-        public void addListener(InvalidationListener listener) {
-            helper = ListExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override
-        public void removeListener(InvalidationListener listener) {
-            helper = ListExpressionHelper.removeListener(helper, listener);
-        }
-
-        @Override
-        public void addListener(ChangeListener<? super ObservableList<E>> listener) {
-            helper = ListExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override
-        public void removeListener(ChangeListener<? super ObservableList<E>> listener) {
-            helper = ListExpressionHelper.removeListener(helper, listener);
-        }
-
-        @Override
-        public void addListener(ListChangeListener<? super E> listener) {
-            helper = ListExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override
-        public void removeListener(ListChangeListener<? super E> listener) {
-            helper = ListExpressionHelper.removeListener(helper, listener);
-        }
-
-        private void fireValueChangedEvent() {
-            ListExpressionHelper.fireValueChangedEvent(helper);
-        }
-
-        private void fireValueChangedEvent(Change<? extends E> change) {
-            ListExpressionHelper.fireValueChangedEvent(helper, change);
         }
 
         @Override

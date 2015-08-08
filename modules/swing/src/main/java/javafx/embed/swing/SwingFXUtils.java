@@ -45,11 +45,10 @@ import javafx.scene.image.WritableImage;
 import javafx.scene.image.WritablePixelFormat;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.tk.Toolkit;
+import javax.swing.SwingUtilities;
 import sun.awt.AWTAccessor;
 import sun.awt.FwDispatcher;
 import sun.awt.image.IntegerComponentRaster;
-
-import javax.swing.*;
 
 /**
  * This class provides utility methods for converting data types between
@@ -140,7 +139,7 @@ public class SwingFXUtils {
      *             for storage if it is compatible, or null
      * @return 
      */
-    private static int
+    static int
         getBestBufferedImageType(PixelFormat<?> fxFormat, BufferedImage bimg)
     {
         if (bimg != null) {

@@ -93,9 +93,9 @@ class HeavyweightDialog extends FXDialog {
             }
         });
 
-        stage.addEventHandler(KeyEvent.KEY_RELEASED, keyEvent -> {
+        stage.addEventHandler(KeyEvent.KEY_PRESSED, keyEvent -> {
             if (keyEvent.getCode() == KeyCode.ESCAPE) {
-                if (requestPermissionToClose(dialog)) {
+                if (!keyEvent.isConsumed() && requestPermissionToClose(dialog)) {
                     dialog.close();
                     keyEvent.consume();
                 }

@@ -32,6 +32,7 @@ import javafx.beans.value.ObservableValue;
 
 import com.sun.javafx.binding.ExpressionHelper;
 import java.lang.ref.WeakReference;
+import javafx.beans.WeakListener;
 
 /**
  * The class {@code StringPropertyBase} is the base class for a property
@@ -213,7 +214,7 @@ public abstract class StringPropertyBase extends StringProperty {
         return result.toString();
     }
 
-    private static class Listener implements InvalidationListener {
+    private static class Listener implements InvalidationListener, WeakListener {
 
         private final WeakReference<StringPropertyBase> wref;
 
@@ -229,6 +230,11 @@ public abstract class StringPropertyBase extends StringProperty {
             } else {
                 ref.markInvalid();
             }
+        }
+
+        @Override
+        public boolean wasGarbageCollected() {
+            return wref.get() == null;
         }
     }
 }
