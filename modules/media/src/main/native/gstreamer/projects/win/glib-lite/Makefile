@@ -1,7 +1,7 @@
 #
 # glib-lite Makefile
 #
-LINK = link.exe
+LINKER = link.exe
 
 GLIB_VERSION = 2.28.8
 export GLIB_BASE_DIR = 3rd_party/glib/glib-$(GLIB_VERSION)
@@ -51,7 +51,7 @@ LIBS = $(addprefix $(BUILD_DIR)/,$(MODULES))
 default: $(TARGET)
 
 $(TARGET): $(LIBS)
-	$(LINK) $(LDFLAGS) $(shell cygpath -ma "$(RESOURCE)") $(foreach lib,$(LIBS),$(shell cygpath -ma $(lib))) 
+	$(LINKER) $(LDFLAGS) $(shell cygpath -ma "$(RESOURCE)") $(foreach lib,$(LIBS),$(shell cygpath -ma $(lib))) 
 
 $(BUILD_DIR)/$(GLIB_TARGET):
 	$(MAKE) TARGET=$(BUILD_DIR)/$(GLIB_TARGET) -f Makefile.glib

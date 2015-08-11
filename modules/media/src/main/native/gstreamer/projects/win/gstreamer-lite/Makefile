@@ -2,7 +2,7 @@
 # gstreamer-lite Makefile
 #
 
-LINK = link.exe
+LINKER = link.exe
 
 GLIB_VERSION = 2.28.8
 export GLIB_DIR = ../../../3rd_party/glib/glib-$(GLIB_VERSION)
@@ -54,7 +54,7 @@ default: $(MODULES)
 	$(MAKE) $(TARGET)
 
 $(TARGET): $(LIBS)
-	$(LINK) $(LDFLAGS) $(shell cygpath -ma "$(RESOURCE)") $(foreach lib,$(LIBS),$(shell cygpath -ma $(lib)))
+	$(LINKER) $(LDFLAGS) $(shell cygpath -ma "$(RESOURCE)") $(foreach lib,$(LIBS),$(shell cygpath -ma $(lib)))
 
 $(GSTREAMER_TARGET):
 	$(MAKE) TARGET=$(BUILD_DIR)/$(GSTREAMER_TARGET) -f Makefile.gstreamer

@@ -241,4 +241,4 @@ MAC.fontT2K.lib = "javafx_font_t2k"
 MAC.media = [:]
 MAC.media.compiler = compiler
 MAC.media.linker = linker
-MAC.media.lib = "libtool"
+MAC.media.ar = "libtool"

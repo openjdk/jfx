@@ -1,8 +1,7 @@
 # jfxmedia-jni win32/win64 makefile
 
 CC = cl.exe
-CPP = cl.exe
-LINK = link.exe
+LINKER = link.exe
 MAKEDEPEND = makedepend.exe
 
 BUILD_DIR = $(shell cygpath -u "$(OUTPUT_DIR)/$(BUILD_TYPE)")
@@ -149,7 +148,7 @@ OBJECTS = $(patsubst %.cpp,$(OBJBASE_DIR)/%.obj,$(CPP_SOURCES)) $(patsubst %.c,$
 default: $(TARGET)
 
 $(TARGET): $(DEPFILE) $(OBJECTS) 
-	$(LINK) $(LDFLAGS) $(shell cygpath -ma "$(RESOURCE)") $(foreach object,$(OBJECTS),$(shell cygpath -ma $(object)))
+	$(LINKER) $(LDFLAGS) $(shell cygpath -ma "$(RESOURCE)") $(foreach object,$(OBJECTS),$(shell cygpath -ma $(object)))
 
 $(DEPFILE): | $(DEP_DIRS)
 	@echo $(DEPTOKEN) > $(DEPFILE)
@@ -161,7 +160,7 @@ $(DEP_DIRS):
 -include $(DEPFILE)
 
 $(OBJBASE_DIR)/%.obj: $(SRCBASE_DIR)/%.cpp
-	$(CPP) $(CFLAGS) -TP -c -Fo$(shell cygpath -ma $@) $<
+	$(CC) $(CFLAGS) -TP -c -Fo$(shell cygpath -ma $@) $<
 
 $(OBJBASE_DIR)/%.obj: $(SRCBASE_DIR)/%.c
 	$(CC) $(CFLAGS) -TC -c -Fo$(shell cygpath -ma $@) $<

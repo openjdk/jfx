@@ -98,4 +98,4 @@ $(TARGET_DIRS):
 	mkdir -p $(TARGET_DIRS)
 
 $(TARGET): $(OBJECTS)
-	$(CC) -dynamiclib $(OBJECTS) $(ON2_LIB) $(LDFLAGS) -o $@
+	$(LINKER) -dynamiclib $(OBJECTS) $(ON2_LIB) $(LDFLAGS) -o $@

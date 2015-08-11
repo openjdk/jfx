@@ -3,8 +3,7 @@
 #
 
 CC   = cl.exe
-CPP  = cl.exe
-LINK = link.exe
+LINKER = link.exe
 
 GLIB_VERSION = 2.28.8
 
@@ -142,7 +141,7 @@ default: $(MODULES)
 	$(MAKE) $(TARGET)
 
 $(TARGET): $(OBJECTS) $(LIBS)
-	$(LINK) $(LDFLAGS) $(shell cygpath -ma "$(RESOURCE)") $(foreach object,$(OBJECTS),$(shell cygpath -ma $(object))) $(foreach lib,$(LIBS),$(shell cygpath -ma $(lib)))
+	$(LINKER) $(LDFLAGS) $(shell cygpath -ma "$(RESOURCE)") $(foreach object,$(OBJECTS),$(shell cygpath -ma $(object))) $(foreach lib,$(LIBS),$(shell cygpath -ma $(lib)))
 
 $(OBJECTS): | $(DEP_DIRS)
 
@@ -150,13 +149,13 @@ $(DEP_DIRS):
 	@mkdir -p $(DEP_DIRS)
 
 $(OBJBASE_DIR)/%.obj: $(SRCBASE_DIR)/%.cpp
-	$(CPP) $(CFLAGS) $(O1FLAGS) -TP -c -Fo$(shell cygpath -ma $@) $<
+	$(CC) $(CFLAGS) $(O1FLAGS) -TP -c -Fo$(shell cygpath -ma $@) $<
 
 $(OBJBASE_DIR)/%.obj: $(SRCBASE_DIR)/%.c
-	$(CPP) $(CFLAGS) $(O1FLAGS) -TC -c -Fo$(shell cygpath -ma $@) $<
+	$(CC) $(CFLAGS) $(O1FLAGS) -TC -c -Fo$(shell cygpath -ma $@) $<
 
 $(OBJBASE_DIR)/plugin_vp6/vp6decoder.obj: $(SRCBASE_DIR)/plugin_vp6/vp6decoder.c
-	$(CPP) $(CFLAGS) $(O2FLAGS) -TC -c -Fo$(shell cygpath -ma $@) $<
+	$(CC) $(CFLAGS) $(O2FLAGS) -TC -c -Fo$(shell cygpath -ma $@) $<
 
 $(BASECLASSES_TARGET):
 	$(MAKE) TARGET=$(BUILD_DIR)/$(BASECLASSES_TARGET) -f Makefile.BaseClasses
