@@ -33,6 +33,7 @@ import java.util.List;
 
 import javafx.beans.DefaultProperty;
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -130,7 +131,13 @@ public class MenuBar extends Control {
      *
      * This should not be set on more than one MenuBar instance per
      * Stage. If this property is set to true on more than one
-     * MenuBar in the same Stage, then the behavior is undefined.
+     * MenuBar in the same Stage, then the last menu set is allowed
+     * to modify the system menu bar, and if there is an existing installed
+     * system menu it is unset and removed from the system menu bar.
+     *
+     * Note that trying to uni-directionally bind to this property
+     * will throw a RuntimeException.  Please use
+     * bi-directional binding to this property instead.
      *
      * @since JavaFX 2.1
      */
@@ -152,10 +159,19 @@ public class MenuBar extends Control {
                 public String getName() {
                     return "useSystemMenuBar";
                 }
+                
+                @Override
+                public void bind(final ObservableValue<? extends Boolean> rawObservable) {
+                    throw new RuntimeException(BIND_MSG);
+                }
+
             };
         }
         return useSystemMenuBar;
     }
+    private String BIND_MSG =
+        "cannot uni-directionally bind to the system menu bar - use bindBidrectional instead";
+                                               
     private BooleanProperty useSystemMenuBar;
     public final void setUseSystemMenuBar(boolean value) {
         useSystemMenuBarProperty().setValue(value);

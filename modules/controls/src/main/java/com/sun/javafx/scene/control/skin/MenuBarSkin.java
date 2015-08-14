@@ -528,9 +528,9 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
             // remove action listeners 
             updateActionListeners(m, false);
         }
-        for(Node n : container.getChildren()) {
-            //Stop observing menu's showing & disable property for changes.
-            //Need to unbind before clearing container's children.
+        for (Node n : container.getChildren()) {
+            // Stop observing menu's showing & disable property for changes.
+            // Need to unbind before clearing container's children.
             MenuBarButton menuButton = (MenuBarButton)n;
             menuButton.hide();
             menuButton.menu.showingProperty().removeListener(menuButton.menuListener);
@@ -569,6 +569,11 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
                                         currentMenuBarStage = null;
                                         setSystemMenu(stage);
                                     }
+                                } else {
+                                    if (curMBSkin != null && curMBSkin.getSkinnable() != null &&
+                                            curMBSkin.getSkinnable().isUseSystemMenuBar()) {
+                                        curMBSkin.getSkinnable().setUseSystemMenuBar(false);
+                                    }
                                 }
                             }
                         }
@@ -580,12 +585,8 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
                                     if (systemMenuMap == null) {
                                         initSystemMenuBar();
                                     }
-                                    if (wrappedMenus == null) {
-                                        wrappedMenus = new ArrayList<>();
-                                        systemMenuMap.put(stage, new WeakReference<>(this));
-                                    } else {
-                                        wrappedMenus.clear();
-                                    }
+                                    wrappedMenus = new ArrayList<>();
+                                    systemMenuMap.put(stage, new WeakReference<>(this));
                                     for (Menu menu : getSkinnable().getMenus()) {
                                         wrappedMenus.add(GlobalMenuAdapter.adapt(menu));
                                     }
