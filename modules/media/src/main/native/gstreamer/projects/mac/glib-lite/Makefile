@@ -154,4 +154,4 @@ $(TARGET_DIRS):
 	mkdir -p $(TARGET_DIRS)
 
 $(TARGET): $(OBJECTS)
-	$(CC) -dynamiclib $(OBJECTS) $(LDFLAGS) -o $@
+	$(LINKER) -dynamiclib $(OBJECTS) $(LDFLAGS) -o $@

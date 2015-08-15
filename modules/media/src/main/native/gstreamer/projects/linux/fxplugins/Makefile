@@ -90,4 +90,4 @@ $(TARGET_DIRS):
 	mkdir -p $(TARGET_DIRS)
 
 $(TARGET): $(OBJECTS)
-	$(CC) -shared $(OBJECTS) $(ON2_LIB) $(ON2_LIB) $(LDFLAGS) -o $@
+	$(LINKER) -shared $(OBJECTS) $(ON2_LIB) $(ON2_LIB) $(LDFLAGS) -o $@

@@ -256,4 +256,4 @@ LINUX.fontPango.lib = "javafx_font_pango"
 LINUX.media = [:]
 LINUX.media.compiler = compiler
 LINUX.media.linker = linker
-LINUX.media.lib = "ar"
+LINUX.media.ar = "ar"

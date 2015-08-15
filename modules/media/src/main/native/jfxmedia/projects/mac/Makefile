@@ -177,7 +177,7 @@ $(OBJBASE_DIR)/%.o: %.m
 
 $(TARGET): $(JFXMEDIA_OBJECTS)
 	@mkdir -p $(dir $@)
-	$(LINK) -dynamiclib $(JFXMEDIA_LDFLAGS) $(JFXMEDIA_OBJECTS) -o $@
+	$(LINKER) -dynamiclib $(JFXMEDIA_LDFLAGS) $(JFXMEDIA_OBJECTS) -o $@
 
 
 # ------------------------------------------------------------------
@@ -304,4 +304,4 @@ $(QTK_OBJBASE)/%.o: %.mm
 
 $(QTK_LIB): $(TARGET) $(QTK_OBJECTS)
 	@mkdir -p $(dir $@)
-	$(LINK)  $(QTK_LDFLAGS) -dynamiclib $(QTK_OBJECTS) -l$(BASE_NAME) -o $@
+	$(LINKER)  $(QTK_LDFLAGS) -dynamiclib $(QTK_OBJECTS) -l$(BASE_NAME) -o $@

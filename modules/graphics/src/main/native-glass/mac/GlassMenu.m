@@ -67,7 +67,7 @@ static jfieldID  jDelegateMenuField = 0;
 
 - (void)dealloc
 {
-    NSLog(@"GlassMenubar dealloc: %p", self);
+    LOG("GlassMenubar dealloc: %p", self);
     [super dealloc];
 }
 

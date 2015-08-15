@@ -128,7 +128,7 @@ $(DEP_DIRS):
 	mkdir -p $(DEP_DIRS)
 
 $(TARGET): $(DEPFILES) $(OBJECTS)
-	$(LINK) -shared $(OBJECTS) $(LDFLAGS) -o $@
+	$(LINKER) -shared $(OBJECTS) $(LDFLAGS) -o $@
 
 $(OBJBASE_DIR)/%.o: $(SRCBASE_DIR)/%.cpp
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(INCLUDES) -x c++ -c $< -o $@

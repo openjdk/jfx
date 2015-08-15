@@ -84,4 +84,4 @@ $(TARGET_DIRS):
 	mkdir -p $(TARGET_DIRS)
 
 $(TARGET): $(OBJECTS)
-	$(CC) -shared $(OBJECTS) $(LDFLAGS) -o $@
+	$(LINKER) -shared $(OBJECTS) $(LDFLAGS) -o $@
