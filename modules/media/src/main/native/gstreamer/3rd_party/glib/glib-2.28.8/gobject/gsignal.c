@@ -449,6 +449,11 @@ handler_match_prepend (HandlerMatch *list,
   HandlerMatch *node;
   
   node = g_slice_new (HandlerMatch);
+#ifdef GSTREAMER_LITE
+  if (node == NULL) {
+    return NULL;
+  }
+#endif // GSTREAMER_LITE
   node->handler = handler;
   node->next = list;
   node->signal_id = signal_id;
@@ -1186,6 +1191,12 @@ g_signal_list_ids (GType  itype,
   keys = g_bsearch_array_get_nth (g_signal_key_bsa, &g_signal_key_bconfig, 0);
   n_nodes = g_bsearch_array_get_n_nodes (g_signal_key_bsa);
   result = g_array_new (FALSE, FALSE, sizeof (guint));
+#ifdef GSTREAMER_LITE
+  if (result == NULL) {
+    SIGNAL_UNLOCK ();
+    return NULL;
+  }
+#endif // GSTREAMER_LITE
   
   for (i = 0; i < n_nodes; i++)
     if (keys[i].itype == itype)

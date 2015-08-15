@@ -791,6 +791,12 @@ g_key_file_parse_comment (GKeyFile     *key_file,
   g_warn_if_fail (key_file->current_group != NULL);
 
   pair = g_slice_new (GKeyFileKeyValuePair);
+#ifdef GSTREAMER_LITE
+  if (pair == NULL) {
+    g_warn_if_fail(pair != NULL);
+    return;
+  }
+#endif // GSTREAMER_LITE
   pair->key = NULL;
   pair->value = g_strndup (line, length);
   
@@ -919,6 +925,14 @@ g_key_file_parse_key_value_pair (GKeyFile     *key_file,
       GKeyFileKeyValuePair *pair;
 
       pair = g_slice_new (GKeyFileKeyValuePair);
+#ifdef GSTREAMER_LITE
+      if (pair == NULL) {
+        if (locale != NULL) {
+          g_free (locale);
+        }
+        return;
+      }
+#endif // GSTREAMER_LITE
       pair->key = key;
       pair->value = value;
 
@@ -1615,6 +1629,11 @@ g_key_file_set_string_list (GKeyFile            *key_file,
   g_return_if_fail (list != NULL || length == 0);
 
   value_list = g_string_sized_new (length * 128);
+#ifdef GSTREAMER_LITE
+  if (value_list == NULL) {
+    return;
+  }
+#endif // GSTREAMER_LITE
   for (i = 0; i < length && list[i] != NULL; i++)
     {
       gchar *value;
@@ -1859,6 +1878,11 @@ g_key_file_set_locale_string_list (GKeyFile            *key_file,
   g_return_if_fail (length != 0);
 
   value_list = g_string_sized_new (length * 128);
+#ifdef GSTREAMER_LITE
+  if (value_list == NULL) {
+    return;
+  }
+#endif // GSTREAMER_LITE
   for (i = 0; i < length && list[i] != NULL; i++)
     {
       gchar *value;
@@ -2073,6 +2097,11 @@ g_key_file_set_boolean_list (GKeyFile    *key_file,
   g_return_if_fail (list != NULL);
 
   value_list = g_string_sized_new (length * 8);
+#ifdef GSTREAMER_LITE
+  if (value_list == NULL) {
+    return;
+  }
+#endif // GSTREAMER_LITE
   for (i = 0; i < length; i++)
     {
       gchar *value;
@@ -2435,6 +2464,11 @@ g_key_file_set_integer_list (GKeyFile    *key_file,
   g_return_if_fail (list != NULL);
 
   values = g_string_sized_new (length * 16);
+#ifdef GSTREAMER_LITE
+  if (values == NULL) {
+    return;
+  }
+#endif // GSTREAMER_LITE
   for (i = 0; i < length; i++)
     {
       gchar *value;
@@ -2646,6 +2680,11 @@ g_key_file_set_double_list (GKeyFile    *key_file,
   g_return_if_fail (list != NULL);
 
   values = g_string_sized_new (length * 16);
+#ifdef GSTREAMER_LITE
+  if (values == NULL) {
+    return;
+  }
+#endif // GSTREAMER_LITE
   for (i = 0; i < length; i++)
     {
       gchar result[G_ASCII_DTOSTR_BUF_SIZE];
@@ -2719,6 +2758,11 @@ g_key_file_set_key_comment (GKeyFile     *key_file,
   /* Now we can add our new comment
    */
   pair = g_slice_new (GKeyFileKeyValuePair);
+#ifdef GSTREAMER_LITE
+  if (pair == NULL) {
+    return FALSE;
+  }
+#endif // GSTREAMER_LITE
   pair->key = NULL;
   pair->value = g_key_file_parse_comment_as_value (key_file, comment);
   
@@ -2762,6 +2806,11 @@ g_key_file_set_group_comment (GKeyFile     *key_file,
   /* Now we can add our new comment
    */
   group->comment = g_slice_new (GKeyFileKeyValuePair);
+#ifdef GSTREAMER_LITE
+  if (group->comment == NULL) {
+    return FALSE;
+  }
+#endif // GSTREAMER_LITE
   group->comment->key = NULL;
   group->comment->value = g_key_file_parse_comment_as_value (key_file, comment);
 
@@ -2801,6 +2850,11 @@ g_key_file_set_top_comment (GKeyFile     *key_file,
      return TRUE;
 
   pair = g_slice_new (GKeyFileKeyValuePair);
+#ifdef GSTREAMER_LITE
+  if (pair == NULL) {
+    return FALSE;
+  }
+#endif // GSTREAMER_LITE
   pair->key = NULL;
   pair->value = g_key_file_parse_comment_as_value (key_file, comment);
   

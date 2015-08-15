@@ -1436,6 +1436,11 @@ gst_wavparse_stream_headers (GstWavParse * wav)
             }
             gst_adapter_flush (wav->adapter, 8);
             data = gst_adapter_peek (wav->adapter, data_size);
+#ifdef GSTREAMER_LITE
+            if (data == NULL) {
+                goto header_read_error;
+            }
+#endif // GSTREAMER_LITE
             wav->fact = GST_READ_UINT32_LE (data);
             gst_adapter_flush (wav->adapter, GST_ROUND_UP_2 (size));
           } else {

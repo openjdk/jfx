@@ -194,7 +194,14 @@ public abstract class Toolkit {
                 || (userSpecifiedToolkit && !forcedToolkit.endsWith("StubToolkit"));
 
         try {
-            TOOLKIT = (Toolkit) Class.forName(forcedToolkit).newInstance();
+            Class<?> clz = Class.forName(forcedToolkit, false, Toolkit.class.getClassLoader());
+            // Check that clz is a subclass of Toolkit
+            if (!Toolkit.class.isAssignableFrom(clz)) {
+                throw new IllegalArgumentException("Unrecognized FX Toolkit class: "
+                        + forcedToolkit);
+            }
+
+            TOOLKIT = (Toolkit) clz.newInstance();
             if (TOOLKIT.init()) {
                 if (printToolkit) {
                     System.err.println("JavaFX: using " + forcedToolkit);
