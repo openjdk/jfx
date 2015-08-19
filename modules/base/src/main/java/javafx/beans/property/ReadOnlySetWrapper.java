@@ -25,11 +25,7 @@
 
 package javafx.beans.property;
 
-import javafx.beans.InvalidationListener;
-import javafx.beans.value.ChangeListener;
 import javafx.collections.ObservableSet;
-import javafx.collections.SetChangeListener;
-
 import static javafx.collections.SetChangeListener.Change;
 
 /**
@@ -104,61 +100,8 @@ public class ReadOnlySetWrapper<E> extends SimpleSetProperty<E> {
      * {@inheritDoc}
      */
     @Override
-    public void addListener(InvalidationListener listener) {
-        getReadOnlyProperty().addListener(listener);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void removeListener(InvalidationListener listener) {
-        if (readOnlyProperty != null) {
-            readOnlyProperty.removeListener(listener);
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void addListener(ChangeListener<? super ObservableSet<E>> listener) {
-        getReadOnlyProperty().addListener(listener);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void removeListener(ChangeListener<? super ObservableSet<E>> listener) {
-        if (readOnlyProperty != null) {
-            readOnlyProperty.removeListener(listener);
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void addListener(SetChangeListener<? super E> listener) {
-        getReadOnlyProperty().addListener(listener);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void removeListener(SetChangeListener<? super E> listener) {
-        if (readOnlyProperty != null) {
-            readOnlyProperty.removeListener(listener);
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     protected void fireValueChangedEvent() {
+        super.fireValueChangedEvent();
         if (readOnlyProperty != null) {
             readOnlyProperty.fireValueChangedEvent();
         }
@@ -169,6 +112,7 @@ public class ReadOnlySetWrapper<E> extends SimpleSetProperty<E> {
      */
     @Override
     protected void fireValueChangedEvent(Change<? extends E> change) {
+        super.fireValueChangedEvent(change);
         if (readOnlyProperty != null) {
             readOnlyProperty.fireValueChangedEvent(change);
         }
