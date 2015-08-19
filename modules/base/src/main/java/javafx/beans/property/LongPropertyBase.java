@@ -171,10 +171,7 @@ public abstract class LongPropertyBase extends LongProperty {
             newObservable = (ObservableLongValue)rawObservable;
         } else if (rawObservable instanceof ObservableNumberValue) {
             final ObservableNumberValue numberValue = (ObservableNumberValue)rawObservable;
-            newObservable = new LongBinding() {
-                {
-                    super.bind(rawObservable);
-                }
+            newObservable = new ValueWrapper(rawObservable) {
 
                 @Override
                 protected long computeValue() {
@@ -182,10 +179,7 @@ public abstract class LongPropertyBase extends LongProperty {
                 }
             };
         } else {
-            newObservable = new LongBinding() {
-                {
-                    super.bind(rawObservable);
-                }
+            newObservable = new ValueWrapper(rawObservable) {
 
                 @Override
                 protected long computeValue() {
@@ -214,6 +208,9 @@ public abstract class LongPropertyBase extends LongProperty {
         if (observable != null) {
             value = observable.get();
             observable.removeListener(listener);
+            if (observable instanceof ValueWrapper) {
+                ((ValueWrapper)observable).dispose();
+            }
             observable = null;
         }
     }
@@ -268,6 +265,21 @@ public abstract class LongPropertyBase extends LongProperty {
         @Override
         public boolean wasGarbageCollected() {
             return wref.get() == null;
+        }
+    }
+
+    private abstract class ValueWrapper extends LongBinding {
+
+        private ObservableValue<? extends Number> observable;
+
+        public ValueWrapper(ObservableValue<? extends Number> observable) {
+            this.observable = observable;
+            bind(observable);
+        }
+
+        @Override
+        public void dispose() {
+            unbind(observable);
         }
     }
 }

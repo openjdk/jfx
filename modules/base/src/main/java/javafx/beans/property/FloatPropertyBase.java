@@ -171,10 +171,7 @@ public abstract class FloatPropertyBase extends FloatProperty {
             newObservable = (ObservableFloatValue)rawObservable;
         } else if (rawObservable instanceof ObservableNumberValue) {
             final ObservableNumberValue numberValue = (ObservableNumberValue)rawObservable;
-            newObservable = new FloatBinding() {
-                {
-                    super.bind(rawObservable);
-                }
+            newObservable = new ValueWrapper(rawObservable) {
 
                 @Override
                 protected float computeValue() {
@@ -182,10 +179,7 @@ public abstract class FloatPropertyBase extends FloatProperty {
                 }
             };
         } else {
-            newObservable = new FloatBinding() {
-                {
-                    super.bind(rawObservable);
-                }
+            newObservable = new ValueWrapper(rawObservable) {
 
                 @Override
                 protected float computeValue() {
@@ -215,6 +209,9 @@ public abstract class FloatPropertyBase extends FloatProperty {
         if (observable != null) {
             value = observable.get();
             observable.removeListener(listener);
+            if (observable instanceof ValueWrapper) {
+                ((ValueWrapper)observable).dispose();
+            }
             observable = null;
         }
     }
@@ -269,6 +266,21 @@ public abstract class FloatPropertyBase extends FloatProperty {
         @Override
         public boolean wasGarbageCollected() {
             return wref.get() == null;
+        }
+    }
+
+    private abstract class ValueWrapper extends FloatBinding {
+
+        private ObservableValue<? extends Number> observable;
+
+        public ValueWrapper(ObservableValue<? extends Number> observable) {
+            this.observable = observable;
+            bind(observable);
+        }
+
+        @Override
+        public void dispose() {
+            unbind(observable);
         }
     }
 }

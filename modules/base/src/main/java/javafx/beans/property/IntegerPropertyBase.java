@@ -171,10 +171,7 @@ public abstract class IntegerPropertyBase extends IntegerProperty {
             newObservable = (ObservableIntegerValue)rawObservable;
         } else if (rawObservable instanceof ObservableNumberValue) {
             final ObservableNumberValue numberValue = (ObservableNumberValue)rawObservable;
-            newObservable = new IntegerBinding() {
-                {
-                    super.bind(rawObservable);
-                }
+            newObservable = new ValueWrapper(rawObservable) {
 
                 @Override
                 protected int computeValue() {
@@ -182,10 +179,7 @@ public abstract class IntegerPropertyBase extends IntegerProperty {
                 }
             };
         } else {
-            newObservable = new IntegerBinding() {
-                {
-                    super.bind(rawObservable);
-                }
+            newObservable = new ValueWrapper(rawObservable) {
 
                 @Override
                 protected int computeValue() {
@@ -214,6 +208,9 @@ public abstract class IntegerPropertyBase extends IntegerProperty {
         if (observable != null) {
             value = observable.get();
             observable.removeListener(listener);
+            if (observable instanceof ValueWrapper) {
+                ((ValueWrapper)observable).dispose();
+            }
             observable = null;
         }
     }
@@ -268,6 +265,21 @@ public abstract class IntegerPropertyBase extends IntegerProperty {
         @Override
         public boolean wasGarbageCollected() {
             return wref.get() == null;
+        }
+    }
+
+    private abstract class ValueWrapper extends IntegerBinding {
+
+        private ObservableValue<? extends Number> observable;
+
+        public ValueWrapper(ObservableValue<? extends Number> observable) {
+            this.observable = observable;
+            bind(observable);
+        }
+
+        @Override
+        public void dispose() {
+            unbind(observable);
         }
     }
 }
