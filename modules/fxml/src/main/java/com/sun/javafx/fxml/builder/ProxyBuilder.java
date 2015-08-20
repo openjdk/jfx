@@ -478,7 +478,7 @@ public class ProxyBuilder<T> extends AbstractMap<String, Object> implements Buil
         Map<String, LinkedList<Method>> methods = getClassMethodCache(type);
 
         for (String methodName : methods.keySet()) {
-            if (methodName.startsWith(SETTER_PREFIX)) {
+            if (methodName.startsWith(SETTER_PREFIX) && methodName.length() > SETTER_PREFIX.length()) {
                 String propName = methodName.substring(SETTER_PREFIX.length());
                 propName = Character.toLowerCase(propName.charAt(0)) + propName.substring(1);
                 List<Method> methodsList = methods.get(methodName);
@@ -490,8 +490,8 @@ public class ProxyBuilder<T> extends AbstractMap<String, Object> implements Buil
                     }
                 }
             }
-            if (methodName.startsWith(GETTER_PREFIX)) {
-                String propName = methodName.substring(SETTER_PREFIX.length());
+            if (methodName.startsWith(GETTER_PREFIX) && methodName.length() > GETTER_PREFIX.length()) {
+                String propName = methodName.substring(GETTER_PREFIX.length());
                 propName = Character.toLowerCase(propName.charAt(0)) + propName.substring(1);
                 List<Method> methodsList = methods.get(methodName);
                 for (Method m : methodsList) {
