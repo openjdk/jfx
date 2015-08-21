@@ -308,7 +308,8 @@ public class BidirectionalContentBinding {
                         final Map<K, V> dest = (map1 == change.getMap())? map2 : map1;
                         if (change.wasRemoved()) {
                             dest.remove(change.getKey());
-                        } else {
+                        }
+                        if (change.wasAdded()) {
                             dest.put(change.getKey(), change.getValueAdded());
                         }
                     } finally {

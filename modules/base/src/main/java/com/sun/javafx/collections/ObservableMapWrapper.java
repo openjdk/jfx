@@ -98,12 +98,12 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
             StringBuilder builder = new StringBuilder();
             if (wasAdded) {
                 if (wasRemoved) {
-                    builder.append("replaced ").append(old).append("by ").append(added);
+                    builder.append(old).append(" replaced by ").append(added);
                 } else {
-                    builder.append("added ").append(added);
+                    builder.append(added).append(" added");
                 }
             } else {
-                builder.append("removed ").append(old);
+                builder.append(old).append(" removed");
             }
             builder.append(" at key ").append(key);
             return builder.toString();

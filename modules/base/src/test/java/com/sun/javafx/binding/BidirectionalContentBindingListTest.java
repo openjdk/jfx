@@ -270,4 +270,12 @@ public class BidirectionalContentBindingListTest {
         assertFalse(binding3.equals(binding1));
         assertFalse(binding3.equals(binding4));
     }
+
+    @Test
+    public void testChangeValue() {
+        Bindings.bindContentBidirectional(op1, op2);
+        assertEquals(2, op2.get(0).intValue());
+        op1.set(0, 1);
+        assertEquals(1, op2.get(0).intValue());
+    }
 }

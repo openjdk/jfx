@@ -282,4 +282,12 @@ public class BidirectionalContentBindingMapTest {
         assertFalse(binding3.equals(binding1));
         assertFalse(binding3.equals(binding4));
     }
+
+    @Test
+    public void testChangeValue() {
+        Bindings.bindContentBidirectional(op1, op2);
+        assertEquals(2, op2.get(key2_1).intValue());
+        op1.put(key2_1, 1);
+        assertEquals(1, op2.get(key2_1).intValue());
+    }
 }
