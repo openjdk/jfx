@@ -252,6 +252,11 @@ g_slist_append (GSList   *list,
   GSList *last;
 
   new_list = _g_slist_alloc ();
+#ifdef GSTREAMER_LITE
+  if (new_list == NULL) {
+    return NULL;
+  }
+#endif // GSTREAMER_LITE
   new_list->data = data;
   new_list->next = NULL;
 
@@ -295,6 +300,12 @@ g_slist_prepend (GSList   *list,
   GSList *new_list;
 
   new_list = _g_slist_alloc ();
+#ifdef GSTREAMER_LITE
+  if (new_list == NULL) {
+    return NULL;
+  }
+#endif // GSTREAMER_LITE
+
   new_list->data = data;
   new_list->next = list;
 
@@ -329,6 +340,11 @@ g_slist_insert (GSList   *list,
     return g_slist_prepend (list, data);
 
   new_list = _g_slist_alloc ();
+#ifdef GSTREAMER_LITE
+  if (new_list == NULL) {
+    return NULL;
+  }
+#endif // GSTREAMER_LITE
   new_list->data = data;
 
   if (!list)
@@ -378,6 +394,11 @@ g_slist_insert_before (GSList  *slist,
   if (!slist)
     {
       slist = _g_slist_alloc ();
+#ifdef GSTREAMER_LITE
+      if (slist == NULL) {
+        return NULL;
+      }
+#endif // GSTREAMER_LITE
       slist->data = data;
       slist->next = NULL;
       g_return_val_if_fail (sibling == NULL, slist);
@@ -393,6 +414,11 @@ g_slist_insert_before (GSList  *slist,
       if (!last)
         {
           node = _g_slist_alloc ();
+#ifdef GSTREAMER_LITE
+          if (node == NULL) {
+            return NULL;
+          }
+#endif // GSTREAMER_LITE
           node->data = data;
           node->next = slist;
 
@@ -401,6 +427,11 @@ g_slist_insert_before (GSList  *slist,
       else
         {
           node = _g_slist_alloc ();
+#ifdef GSTREAMER_LITE
+          if (node == NULL) {
+            return NULL;
+          }
+#endif // GSTREAMER_LITE
           node->data = data;
           node->next = last->next;
           last->next = node;
@@ -609,6 +640,11 @@ g_slist_copy (GSList *list)
       GSList *last;
 
       new_list = _g_slist_alloc ();
+#ifdef GSTREAMER_LITE
+      if (new_list == NULL) {
+        return NULL;
+      }
+#endif // GSTREAMER_LITE
       new_list->data = list->data;
       last = new_list;
       list = list->next;
@@ -898,6 +934,11 @@ g_slist_insert_sorted_real (GSList   *list,
   if (!list)
     {
       new_list = _g_slist_alloc ();
+#ifdef GSTREAMER_LITE
+      if (new_list == NULL) {
+        return NULL;
+      }
+#endif // GSTREAMER_LITE
       new_list->data = data;
       new_list->next = NULL;
       return new_list;
@@ -914,6 +955,11 @@ g_slist_insert_sorted_real (GSList   *list,
     }
 
   new_list = _g_slist_alloc ();
+#ifdef GSTREAMER_LITE
+  if (new_list == NULL) {
+    return NULL;
+  }
+#endif // GSTREAMER_LITE
   new_list->data = data;
 
   if ((!tmp_list->next) && (cmp > 0))

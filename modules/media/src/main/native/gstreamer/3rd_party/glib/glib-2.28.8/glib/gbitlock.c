@@ -138,6 +138,12 @@ g_futex_wait (const volatile gint *address,
       if ((waiter = g_futex_find_address (address)) == NULL)
         {
           waiter = g_slice_new (WaitAddress);
+#ifdef GSTREAMER_LITE
+          if (waiter == NULL) {
+            g_mutex_unlock (g_futex_mutex);
+            return;
+          }
+#endif // GSTREAMER_LITE
           waiter->address = address;
           waiter->wait_queue = g_cond_new ();
           waiter->ref_count = 0;

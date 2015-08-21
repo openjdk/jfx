@@ -399,6 +399,11 @@ g_data_set_internal (GData	  **datalist,
 	}
       
       list = g_slice_new (GData);
+#ifdef GSTREAMER_LITE
+      if (list == NULL) {
+        return NULL;
+      }
+#endif // GSTREAMER_LITE
       list->next = G_DATALIST_GET_POINTER (datalist);
       list->id = key_id;
       list->data = data;
@@ -497,6 +502,12 @@ g_dataset_id_set_data_full (gconstpointer  dataset_location,
   if (!dataset)
     {
       dataset = g_slice_new (GDataset);
+#ifdef GSTREAMER_LITE
+      if (dataset == NULL) {
+        G_UNLOCK (g_dataset_global);
+        return;
+      }
+#endif // GSTREAMER_LITE
       dataset->location = dataset_location;
       g_datalist_init (&dataset->datalist);
       g_hash_table_insert (g_dataset_location_ht, 

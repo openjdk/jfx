@@ -46,7 +46,13 @@ jstring JavaStringFromNSString(JNIEnv *env, NSString *ns)
     jstring outString = 0;
     
     if (NULL != env && nil != ns) {
-        NSInteger length = [ns length];
+        jsize length;
+        if (ns.length > INT32_MAX) {
+            // overflow protection: NSUInteger is 64 bit ulong, jsize is 32 bit int
+            length = INT32_MAX-1;
+        } else {
+            length = (jsize)ns.length;
+        }
         unichar *strBuf = malloc(length * sizeof(unichar));
         if (!strBuf) {
             return 0;
