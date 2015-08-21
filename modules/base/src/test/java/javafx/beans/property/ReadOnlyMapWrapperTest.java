@@ -155,7 +155,7 @@ public class ReadOnlyMapWrapperTest {
         property.set(VALUE_1);
         assertEquals(VALUE_1, property.get());
         property.check(1);
-        internalInvalidationListener.check(readOnlyProperty, 1);
+        internalInvalidationListener.check(property, 1);
         assertEquals(VALUE_1, readOnlyProperty.get());
         publicInvalidationListener.check(readOnlyProperty, 1);
         
@@ -172,7 +172,7 @@ public class ReadOnlyMapWrapperTest {
         property.set(VALUE_1);
         assertEquals(VALUE_1, property.get());
         property.check(1);
-        internalInvalidationListener.check(readOnlyProperty, 1);
+        internalInvalidationListener.check(property, 1);
         assertEquals(VALUE_1, readOnlyProperty.get());
         publicInvalidationListener.check(readOnlyProperty, 1);
     }
@@ -185,7 +185,7 @@ public class ReadOnlyMapWrapperTest {
         property.set(VALUE_1);
         assertEquals(VALUE_1, property.get());
         property.check(1);
-        internalChangeListener.check(readOnlyProperty, DEFAULT, VALUE_1, 1);
+        internalChangeListener.check(property, DEFAULT, VALUE_1, 1);
         assertEquals(VALUE_1, readOnlyProperty.get());
         
         // set same value again
@@ -200,7 +200,7 @@ public class ReadOnlyMapWrapperTest {
         property.set(VALUE_1);
         assertEquals(VALUE_1, property.get());
         property.check(2);
-        internalChangeListener.check(readOnlyProperty, VALUE_2, VALUE_1, 2);
+        internalChangeListener.check(property, VALUE_2, VALUE_1, 2);
         assertEquals(VALUE_1, readOnlyProperty.get());
     }
     
@@ -239,7 +239,7 @@ public class ReadOnlyMapWrapperTest {
         property.setValue(VALUE_1);
         assertEquals(VALUE_1, property.get());
         property.check(1);
-        internalInvalidationListener.check(readOnlyProperty, 1);
+        internalInvalidationListener.check(property, 1);
         assertEquals(VALUE_1, readOnlyProperty.get());
         publicInvalidationListener.check(readOnlyProperty, 1);
         
@@ -256,7 +256,7 @@ public class ReadOnlyMapWrapperTest {
         property.setValue(VALUE_1);
         assertEquals(VALUE_1, property.get());
         property.check(1);
-        internalInvalidationListener.check(readOnlyProperty, 1);
+        internalInvalidationListener.check(property, 1);
         assertEquals(VALUE_1, readOnlyProperty.get());
         publicInvalidationListener.check(readOnlyProperty, 1);
     }
@@ -269,7 +269,7 @@ public class ReadOnlyMapWrapperTest {
         property.setValue(VALUE_1);
         assertEquals(VALUE_1, property.get());
         property.check(1);
-        internalChangeListener.check(readOnlyProperty, DEFAULT, VALUE_1, 1);
+        internalChangeListener.check(property, DEFAULT, VALUE_1, 1);
         assertEquals(VALUE_1, readOnlyProperty.get());
         
         // set same value again
@@ -284,7 +284,7 @@ public class ReadOnlyMapWrapperTest {
         property.setValue(VALUE_1);
         assertEquals(VALUE_1, property.get());
         property.check(2);
-        internalChangeListener.check(readOnlyProperty, VALUE_2, VALUE_1, 2);
+        internalChangeListener.check(property, VALUE_2, VALUE_1, 2);
         assertEquals(VALUE_1, readOnlyProperty.get());
     }
     
@@ -331,7 +331,7 @@ public class ReadOnlyMapWrapperTest {
         assertEquals(VALUE_1, property.get());
         assertTrue(property.isBound());
         property.check(1);
-        internalInvalidationListener.check(readOnlyProperty, 1);
+        internalInvalidationListener.check(property, 1);
         assertEquals(VALUE_1, readOnlyProperty.get());
         publicInvalidationListener.check(readOnlyProperty, 1);
 
@@ -339,7 +339,7 @@ public class ReadOnlyMapWrapperTest {
         v.set(VALUE_2);
         assertEquals(VALUE_2, property.get());
         property.check(1);
-        internalInvalidationListener.check(readOnlyProperty, 1);
+        internalInvalidationListener.check(property, 1);
         assertEquals(VALUE_2, readOnlyProperty.get());
         publicInvalidationListener.check(readOnlyProperty, 1);
 
@@ -348,7 +348,7 @@ public class ReadOnlyMapWrapperTest {
         v.set(VALUE_2);
         assertEquals(VALUE_2, property.get());
         property.check(1);
-        internalInvalidationListener.check(readOnlyProperty, 1);
+        internalInvalidationListener.check(property, 1);
         assertEquals(VALUE_2, readOnlyProperty.get());
         publicInvalidationListener.check(readOnlyProperty, 1);
 
@@ -357,7 +357,7 @@ public class ReadOnlyMapWrapperTest {
         v.set(VALUE_1);
         assertEquals(VALUE_1, property.get());
         property.check(1);
-        internalInvalidationListener.check(readOnlyProperty, 1);
+        internalInvalidationListener.check(property, 1);
         assertEquals(VALUE_1, readOnlyProperty.get());
         publicInvalidationListener.check(readOnlyProperty, 1);
     }
@@ -371,14 +371,14 @@ public class ReadOnlyMapWrapperTest {
         assertEquals(VALUE_1, property.get());
         assertTrue(property.isBound());
         property.check(1);
-        internalChangeListener.check(readOnlyProperty, DEFAULT, VALUE_1, 1);
+        internalChangeListener.check(property, DEFAULT, VALUE_1, 1);
         assertEquals(VALUE_1, readOnlyProperty.get());
 
         // change binding once
         v.set(VALUE_2);
         assertEquals(VALUE_2, property.get());
         property.check(1);
-        internalChangeListener.check(readOnlyProperty, VALUE_1, VALUE_2, 1);
+        internalChangeListener.check(property, VALUE_1, VALUE_2, 1);
         assertEquals(VALUE_2, readOnlyProperty.get());
 
         // change binding twice without reading
@@ -386,7 +386,7 @@ public class ReadOnlyMapWrapperTest {
         v.set(VALUE_2);
         assertEquals(VALUE_2, property.get());
         property.check(2);
-        internalChangeListener.check(readOnlyProperty, VALUE_1, VALUE_2, 2);
+        internalChangeListener.check(property, VALUE_1, VALUE_2, 2);
         assertEquals(VALUE_2, readOnlyProperty.get());
 
         // change binding twice to same value
@@ -394,7 +394,7 @@ public class ReadOnlyMapWrapperTest {
         v.set(VALUE_1);
         assertEquals(VALUE_1, property.get());
         property.check(2);
-        internalChangeListener.check(readOnlyProperty, VALUE_2, VALUE_1, 1);
+        internalChangeListener.check(property, VALUE_2, VALUE_1, 1);
         assertEquals(VALUE_1, readOnlyProperty.get());
     }
     
@@ -443,7 +443,7 @@ public class ReadOnlyMapWrapperTest {
         assertEquals(VALUE_1, property.get());
         assertTrue(property.isBound());
         property.check(1);
-        internalInvalidationListener.check(readOnlyProperty, 1);
+        internalInvalidationListener.check(property, 1);
         assertEquals(VALUE_1, readOnlyProperty.get());
         publicInvalidationListener.check(readOnlyProperty, 1);
 
@@ -451,7 +451,7 @@ public class ReadOnlyMapWrapperTest {
         v.set(VALUE_2);
         assertEquals(VALUE_2, property.get());
         property.check(1);
-        internalInvalidationListener.check(readOnlyProperty, 1);
+        internalInvalidationListener.check(property, 1);
         assertEquals(VALUE_2, readOnlyProperty.get());
         publicInvalidationListener.check(readOnlyProperty, 1);
 
@@ -460,7 +460,7 @@ public class ReadOnlyMapWrapperTest {
         v.set(VALUE_2);
         assertEquals(VALUE_2, property.get());
         property.check(1);
-        internalInvalidationListener.check(readOnlyProperty, 1);
+        internalInvalidationListener.check(property, 1);
         assertEquals(VALUE_2, readOnlyProperty.get());
         publicInvalidationListener.check(readOnlyProperty, 1);
 
@@ -469,7 +469,7 @@ public class ReadOnlyMapWrapperTest {
         v.set(VALUE_1);
         assertEquals(VALUE_1, property.get());
         property.check(1);
-        internalInvalidationListener.check(readOnlyProperty, 1);
+        internalInvalidationListener.check(property, 1);
         assertEquals(VALUE_1, readOnlyProperty.get());
         publicInvalidationListener.check(readOnlyProperty, 1);
     }
@@ -483,14 +483,14 @@ public class ReadOnlyMapWrapperTest {
         assertEquals(VALUE_1, property.get());
         assertTrue(property.isBound());
         property.check(1);
-        internalChangeListener.check(readOnlyProperty, DEFAULT, VALUE_1, 1);
+        internalChangeListener.check(property, DEFAULT, VALUE_1, 1);
         assertEquals(VALUE_1, readOnlyProperty.get());
 
         // change binding once
         v.set(VALUE_2);
         assertEquals(VALUE_2, property.get());
         property.check(1);
-        internalChangeListener.check(readOnlyProperty, VALUE_1, VALUE_2, 1);
+        internalChangeListener.check(property, VALUE_1, VALUE_2, 1);
         assertEquals(VALUE_2, readOnlyProperty.get());
 
         // change binding twice without reading
@@ -498,7 +498,7 @@ public class ReadOnlyMapWrapperTest {
         v.set(VALUE_2);
         assertEquals(VALUE_2, property.get());
         property.check(2);
-        internalChangeListener.check(readOnlyProperty, VALUE_1, VALUE_2, 2);
+        internalChangeListener.check(property, VALUE_1, VALUE_2, 2);
         assertEquals(VALUE_2, readOnlyProperty.get());
 
         // change binding twice to same value
@@ -506,7 +506,7 @@ public class ReadOnlyMapWrapperTest {
         v.set(VALUE_1);
         assertEquals(VALUE_1, property.get());
         property.check(2);
-        internalChangeListener.check(readOnlyProperty, VALUE_2, VALUE_1, 1);
+        internalChangeListener.check(property, VALUE_2, VALUE_1, 1);
         assertEquals(VALUE_1, readOnlyProperty.get());
     }
 
@@ -568,7 +568,7 @@ public class ReadOnlyMapWrapperTest {
         assertEquals(VALUE_2, property.get());
         assertTrue(property.isBound());
         property.check(1);
-        internalInvalidationListener.check(readOnlyProperty, 1);
+        internalInvalidationListener.check(property, 1);
         assertEquals(VALUE_2, readOnlyProperty.get());
         publicInvalidationListener.check(readOnlyProperty, 1);
         
@@ -576,7 +576,7 @@ public class ReadOnlyMapWrapperTest {
         v2.set(VALUE_1);
         assertEquals(VALUE_1, property.get());
         property.check(1);
-        internalInvalidationListener.check(readOnlyProperty, 1);
+        internalInvalidationListener.check(property, 1);
         assertEquals(VALUE_1, readOnlyProperty.get());
         publicInvalidationListener.check(readOnlyProperty, 1);
         
@@ -623,7 +623,7 @@ public class ReadOnlyMapWrapperTest {
         property.set(VALUE_2);
         assertEquals(VALUE_2, property.get());
         property.check(1);
-        internalInvalidationListener.check(readOnlyProperty, 1);
+        internalInvalidationListener.check(property, 1);
         assertEquals(VALUE_2, readOnlyProperty.get());
         publicInvalidationListener.check(readOnlyProperty, 1);
     }
@@ -641,7 +641,7 @@ public class ReadOnlyMapWrapperTest {
         property.addListener(internalListener2);
         internalListener2.reset();
         property.set(VALUE_2);
-        internalListener2.check(readOnlyProperty, 1);
+        internalListener2.check(property, 1);
         
         // setting the property, checking public
         property.set(VALUE_1);
@@ -657,7 +657,7 @@ public class ReadOnlyMapWrapperTest {
         v.get();
         internalListener3.reset();
         v.set(VALUE_1);
-        internalListener3.check(readOnlyProperty, 1);
+        internalListener3.check(property, 1);
         
         // binding the property, checking public
         property.bind(v);

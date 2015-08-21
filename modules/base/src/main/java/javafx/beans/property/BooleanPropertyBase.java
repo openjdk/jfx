@@ -165,17 +165,7 @@ public abstract class BooleanPropertyBase extends BooleanProperty {
         }
 
         final ObservableBooleanValue newObservable = (rawObservable instanceof ObservableBooleanValue) ? (ObservableBooleanValue) rawObservable
-                : new BooleanBinding() {
-                    {
-                        super.bind(rawObservable);
-                    }
-
-                    @Override
-                    protected boolean computeValue() {
-                        final Boolean value = rawObservable.getValue();
-                        return (value == null)? false : value;
-                    }
-                };
+                : new ValueWrapper(rawObservable);
 
         if (!newObservable.equals(observable)) {
             unbind();
@@ -196,6 +186,9 @@ public abstract class BooleanPropertyBase extends BooleanProperty {
         if (observable != null) {
             value = observable.get();
             observable.removeListener(listener);
+            if (observable instanceof ValueWrapper) {
+                ((ValueWrapper)observable).dispose();
+            }
             observable = null;
         }
     }
@@ -251,5 +244,25 @@ public abstract class BooleanPropertyBase extends BooleanProperty {
         public boolean wasGarbageCollected() {
             return wref.get() == null;
         }
+    }
+
+    private class ValueWrapper extends BooleanBinding {
+        private ObservableValue<? extends Boolean> observable;
+
+        public ValueWrapper(ObservableValue<? extends Boolean> observable) {
+            this.observable = observable;
+            bind(observable);
+        }
+
+        @Override
+        protected boolean computeValue() {
+            final Boolean value = observable.getValue();
+            return (value == null) ? false : value;
+        }
+
+        @Override
+        public void dispose() {
+            unbind(observable);
+        }        
     }
 }

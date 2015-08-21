@@ -28,9 +28,11 @@ package javafx.beans.property;
 import com.sun.javafx.binding.ExpressionHelperUtility;
 import java.util.Arrays;
 import java.util.List;
+import javafx.beans.value.ObservableNumberValue;
+import javafx.beans.value.ObservableValue;
+import javafx.beans.value.ObservableValueBase;
 import static org.junit.Assert.assertEquals;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -70,6 +72,31 @@ public class PropertyBaseTest<T> {
         }
     }
 
+    private static class NumberPropertyMock extends ObservableValueBase<Number>
+            implements ObservableNumberValue, Property<Number>
+    {
+        private Number value = 0;
+
+        @Override public int intValue()       { return value.intValue(); }
+        @Override public long longValue()     { return value.longValue(); }
+        @Override public float floatValue()   { return value.floatValue(); }
+        @Override public double doubleValue() { return value.doubleValue(); }
+        @Override public Number getValue()    { return value; }
+        @Override public void setValue(Number value) {
+            this.value = value;
+            fireValueChangedEvent();
+        }
+
+        @Override public void bind(ObservableValue<? extends Number> observable) {}
+        @Override public void unbind() {}
+        @Override public boolean isBound() { return false; }
+        @Override public void bindBidirectional(Property<Number> other) {}
+        @Override public void unbindBidirectional(Property<Number> other) {}
+
+        @Override public Object getBean() { return null; }
+        @Override public String getName() { return ""; }
+    }
+
     @Parameterized.Parameters
     public static List<Object[]> data() {
         return Arrays.asList(new Object[][] {
@@ -84,9 +111,13 @@ public class PropertyBaseTest<T> {
             // Property->Listener->Binding->BindingHelperObserver->Value
             { new Factory(() -> new SimpleBooleanProperty(), () -> new SimpleObjectProperty<>(), true) },
             { new Factory(() -> new SimpleDoubleProperty(), () -> new SimpleObjectProperty<>(), 1.0) },
+            { new Factory(() -> new SimpleDoubleProperty(), () -> new NumberPropertyMock(), 1.0) },
             { new Factory(() -> new SimpleFloatProperty(), () -> new SimpleObjectProperty<>(), 1.0f) },
+            { new Factory(() -> new SimpleFloatProperty(), () -> new NumberPropertyMock(), 1.0f) },
             { new Factory(() -> new SimpleIntegerProperty(), () -> new SimpleObjectProperty<>(), 1) },
+            { new Factory(() -> new SimpleIntegerProperty(), () -> new NumberPropertyMock(), 1) },
             { new Factory(() -> new SimpleLongProperty(), () -> new SimpleObjectProperty<>(), 1L) },
+            { new Factory(() -> new SimpleLongProperty(), () -> new NumberPropertyMock(), 1L) },
             // generic
             // Property->Listener->Value
             { new Factory(() -> new SimpleObjectProperty(), () -> new SimpleObjectProperty<>(), new Object()) },
@@ -140,7 +171,6 @@ public class PropertyBaseTest<T> {
         assertEquals(1, ExpressionHelperUtility.getInvalidationListeners(observable).size());
     }
 
-    @Ignore("8130458")
     @Test
     public void testUnbindGenericWrapper() {
         property.bind(observable);

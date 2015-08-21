@@ -171,10 +171,7 @@ public abstract class DoublePropertyBase extends DoubleProperty {
             newObservable = (ObservableDoubleValue)rawObservable;
         } else if (rawObservable instanceof ObservableNumberValue) {
             final ObservableNumberValue numberValue = (ObservableNumberValue)rawObservable;
-            newObservable = new DoubleBinding() {
-                {
-                    super.bind(rawObservable);
-                }
+            newObservable = new ValueWrapper(rawObservable) {
 
                 @Override
                 protected double computeValue() {
@@ -182,10 +179,7 @@ public abstract class DoublePropertyBase extends DoubleProperty {
                 }
             };
         } else {
-            newObservable = new DoubleBinding() {
-                {
-                    super.bind(rawObservable);
-                }
+            newObservable = new ValueWrapper(rawObservable) {
 
                 @Override
                 protected double computeValue() {
@@ -214,6 +208,9 @@ public abstract class DoublePropertyBase extends DoubleProperty {
         if (observable != null) {
             value = observable.get();
             observable.removeListener(listener);
+            if (observable instanceof ValueWrapper) {
+                ((ValueWrapper)observable).dispose();
+            }
             observable = null;
         }
     }
@@ -268,6 +265,21 @@ public abstract class DoublePropertyBase extends DoubleProperty {
         @Override
         public boolean wasGarbageCollected() {
             return wref.get() == null;
+        }
+    }
+
+    private abstract class ValueWrapper extends DoubleBinding {
+
+        private ObservableValue<? extends Number> observable;
+
+        public ValueWrapper(ObservableValue<? extends Number> observable) {
+            this.observable = observable;
+            bind(observable);
+        }
+
+        @Override
+        public void dispose() {
+            unbind(observable);
         }
     }
 }

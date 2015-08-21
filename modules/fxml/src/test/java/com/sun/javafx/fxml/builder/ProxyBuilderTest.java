@@ -238,4 +238,14 @@ public class ProxyBuilderTest {
         result = (ClassWithReadOnlyCollection) pb.build();
         assertArrayEquals(inputList.toArray(), result.propertyList.toArray());
     }
+
+    @Test
+    public void testShortMethodNames() {
+        new ProxyBuilder<>(ShortMethodNames.class);
+    }
+
+    public static class ShortMethodNames {
+        public void get() {}
+        public void set() {}
+    }
 }

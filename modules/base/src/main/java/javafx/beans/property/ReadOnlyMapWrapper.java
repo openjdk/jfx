@@ -25,11 +25,7 @@
 
 package javafx.beans.property;
 
-import javafx.beans.InvalidationListener;
-import javafx.beans.value.ChangeListener;
 import javafx.collections.ObservableMap;
-import javafx.collections.MapChangeListener;
-
 import static javafx.collections.MapChangeListener.Change;
 
 /**
@@ -104,61 +100,8 @@ public class ReadOnlyMapWrapper<K, V> extends SimpleMapProperty<K, V> {
      * {@inheritDoc}
      */
     @Override
-    public void addListener(InvalidationListener listener) {
-        getReadOnlyProperty().addListener(listener);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void removeListener(InvalidationListener listener) {
-        if (readOnlyProperty != null) {
-            readOnlyProperty.removeListener(listener);
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void addListener(ChangeListener<? super ObservableMap<K, V>> listener) {
-        getReadOnlyProperty().addListener(listener);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void removeListener(ChangeListener<? super ObservableMap<K, V>> listener) {
-        if (readOnlyProperty != null) {
-            readOnlyProperty.removeListener(listener);
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void addListener(MapChangeListener<? super K, ? super V> listener) {
-        getReadOnlyProperty().addListener(listener);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void removeListener(MapChangeListener<? super K, ? super V> listener) {
-        if (readOnlyProperty != null) {
-            readOnlyProperty.removeListener(listener);
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     protected void fireValueChangedEvent() {
+        super.fireValueChangedEvent();
         if (readOnlyProperty != null) {
             readOnlyProperty.fireValueChangedEvent();
         }
@@ -169,6 +112,7 @@ public class ReadOnlyMapWrapper<K, V> extends SimpleMapProperty<K, V> {
      */
     @Override
     protected void fireValueChangedEvent(Change<? extends K, ? extends V> change) {
+        super.fireValueChangedEvent(change);
         if (readOnlyProperty != null) {
             readOnlyProperty.fireValueChangedEvent(change);
         }
