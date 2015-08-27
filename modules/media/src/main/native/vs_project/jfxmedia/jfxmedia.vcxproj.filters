@@ -144,6 +144,15 @@
     <ClCompile Include="..\..\jfxmedia\platform\gstreamer\GstVideoFrame.cpp">
       <Filter>platform\gstreamer</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\jfxmedia\jni\NativeAudioEqualizer.cpp">
+      <Filter>jni</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\jfxmedia\jni\NativeAudioSpectrum.cpp">
+      <Filter>jni</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\jfxmedia\jni\NativeEqualizerBand.cpp">
+      <Filter>jni</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\jfxmedia\jni\JavaBandsHolder.h">

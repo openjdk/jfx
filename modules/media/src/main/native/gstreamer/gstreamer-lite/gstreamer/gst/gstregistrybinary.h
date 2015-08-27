@@ -17,8 +17,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 /* SUGGESTIONS AND TODO :
@@ -55,12 +55,12 @@ G_BEGIN_DECLS
  * This _must_ be updated whenever the registry format changes,
  * we currently use the core version where this change happened.
  */
-#define GST_MAGIC_BINARY_VERSION_STR ("0.10.30.1")
+#define GST_MAGIC_BINARY_VERSION_STR "1.0.0"
 
 /*
  * GST_MAGIC_BINARY_VERSION_LEN:
  *
- * length of the version string.
+ * Maximum length of the version string in the header.
  */
 #define GST_MAGIC_BINARY_VERSION_LEN (64)
 

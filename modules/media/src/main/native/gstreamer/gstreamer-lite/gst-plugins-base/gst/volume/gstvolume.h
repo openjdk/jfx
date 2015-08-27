@@ -17,8 +17,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 #ifndef __GST_VOLUME_H__
@@ -26,7 +26,7 @@
 
 #include <gst/gst.h>
 #include <gst/base/gstbasetransform.h>
-#include <gst/interfaces/streamvolume.h>
+#include <gst/audio/streamvolume.h>
 #include <gst/audio/audio.h>
 #include <gst/audio/gstaudiofilter.h>
 
@@ -67,7 +67,7 @@ struct _GstVolume {
   gint   current_vol_i24; /* the _i(nt) values get synchronized with the */
   gint   current_vol_i16; /* the _i(nt) values get synchronized with the */
   gint   current_vol_i8;   /* the _i(nt) values get synchronized with the */
-  
+
   GList *tracklist;
   gboolean negotiated;
 

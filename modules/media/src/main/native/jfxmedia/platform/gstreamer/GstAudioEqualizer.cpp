@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,14 +43,14 @@ CGstEqualizerBand::CGstEqualizerBand(double bandwidth, double gain, CGstAudioEqu
 CGstEqualizerBand::CGstEqualizerBand(const CGstEqualizerBand& other)
     : CEqualizerBand(other.m_Bandwidth, other.m_Gain)
 {
-    m_Band = (other.m_Band) ? GST_OBJECT(gst_object_ref(other.m_Band)) : NULL;
+    m_Band = (other.m_Band) ? G_OBJECT(g_object_ref(other.m_Band)) : NULL;
     m_Equalizer = other.m_Equalizer;
 }
 
 CGstEqualizerBand::~CGstEqualizerBand()
 {
     if (m_Band)
-        gst_object_unref(m_Band);
+        g_object_unref(m_Band);
 }
 
 double CGstEqualizerBand::GetCenterFrequency()
@@ -95,10 +95,10 @@ void CGstEqualizerBand::SetGain(double gain)
     }
 }
 
-void CGstEqualizerBand::ReplaceBand(GstObject* p_Band)
+void CGstEqualizerBand::ReplaceBand(GObject* p_Band)
 {
     if (m_Band)
-        gst_object_unref(m_Band);
+        g_object_unref(m_Band);
 
     m_Band = p_Band;
 }

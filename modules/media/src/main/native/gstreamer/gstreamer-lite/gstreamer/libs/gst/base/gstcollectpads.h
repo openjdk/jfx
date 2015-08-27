@@ -1,7 +1,8 @@
 /* GStreamer
  * Copyright (C) 2005 Wim Taymans <wim@fluendo.com>
+ * Copyright (C) 2008 Mark Nauwelaerts <mnauw@users.sourceforge.net>
  *
- * gstcollect_pads.h:
+ * gstcollectpads.h:
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -15,8 +16,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 #ifndef __GST_COLLECT_PADS_H__
@@ -34,6 +35,7 @@ G_BEGIN_DECLS
 #define GST_IS_COLLECT_PADS_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass),GST_TYPE_COLLECT_PADS))
 
 typedef struct _GstCollectData GstCollectData;
+typedef struct _GstCollectDataPrivate GstCollectDataPrivate;
 typedef struct _GstCollectPads GstCollectPads;
 typedef struct _GstCollectPadsPrivate GstCollectPadsPrivate;
 typedef struct _GstCollectPadsClass GstCollectPadsClass;
@@ -45,33 +47,61 @@ typedef struct _GstCollectPadsClass GstCollectPadsClass;
  * A function that will be called when the #GstCollectData will be freed.
  * It is passed the pointer to the structure and should free any custom
  * memory and resources allocated for it.
- *
- * Since: 0.10.12
  */
 typedef void (*GstCollectDataDestroyNotify) (GstCollectData *data);
 
 /**
- * GstCollectPadsClipFunction:
- * @pads: a #GstCollectPads 
- * @data: a #GstCollectData 
- * @buffer: a #GstBuffer 
- * @user_data: user data 
- *
- * A function that will be called when @buffer is received on the pad managed
- * by @data in the collecpad object @pads.
- *
- * The function should use the segment of @data and the negotiated media type on
- * the pad to perform clipping of @buffer. 
- *
- * This function takes ownership of @buffer.
- *
- * Returns: a #GstBuffer that contains the clipped data of @buffer or NULL when
- * the buffer has been clipped completely.
- *
- * Since: 0.10.26
+ * GstCollectPadsStateFlags:
+ * @GST_COLLECT_PADS_STATE_EOS:         Set if collectdata's pad is EOS.
+ * @GST_COLLECT_PADS_STATE_FLUSHING:    Set if collectdata's pad is flushing.
+ * @GST_COLLECT_PADS_STATE_NEW_SEGMENT: Set if collectdata's pad received a
+ *                                      new_segment event.
+ * @GST_COLLECT_PADS_STATE_WAITING:     Set if collectdata's pad must be waited
+ *                                      for when collecting.
+ * @GST_COLLECT_PADS_STATE_LOCKED:      Set collectdata's pad WAITING state must
+ *                                      not be changed.
+ * #GstCollectPadsStateFlags indicate private state of a collectdata('s pad).
  */
-typedef GstBuffer * (*GstCollectPadsClipFunction) (GstCollectPads *pads, GstCollectData *data,
-                                                   GstBuffer *buffer, gpointer user_data);
+typedef enum {
+  GST_COLLECT_PADS_STATE_EOS = 1 << 0,
+  GST_COLLECT_PADS_STATE_FLUSHING = 1 << 1,
+  GST_COLLECT_PADS_STATE_NEW_SEGMENT = 1 << 2,
+  GST_COLLECT_PADS_STATE_WAITING = 1 << 3,
+  GST_COLLECT_PADS_STATE_LOCKED = 1 << 4
+} GstCollectPadsStateFlags;
+
+/**
+ * GST_COLLECT_PADS_STATE:
+ * @data: a #GstCollectData.
+ *
+ * A flags word containing #GstCollectPadsStateFlags flags set
+ * on this collected pad.
+ */
+#define GST_COLLECT_PADS_STATE(data)                 (((GstCollectData *) data)->state)
+/**
+ * GST_COLLECT_PADS_STATE_IS_SET:
+ * @data: a #GstCollectData.
+ * @flag: the #GstCollectPadsStateFlags to check.
+ *
+ * Gives the status of a specific flag on a collected pad.
+ */
+#define GST_COLLECT_PADS_STATE_IS_SET(data,flag)     !!(GST_COLLECT_PADS_STATE (data) & flag)
+/**
+ * GST_COLLECT_PADS_STATE_SET:
+ * @data: a #GstCollectData.
+ * @flag: the #GstCollectPadsStateFlags to set.
+ *
+ * Sets a state flag on a collected pad.
+ */
+#define GST_COLLECT_PADS_STATE_SET(data,flag)        (GST_COLLECT_PADS_STATE (data) |= flag)
+/**
+ * GST_COLLECT_PADS_STATE_UNSET:
+ * @data: a #GstCollectData.
+ * @flag: the #GstCollectPadsStateFlags to clear.
+ *
+ * Clears a state flag on a collected pad.
+ */
+#define GST_COLLECT_PADS_STATE_UNSET(data,flag)      (GST_COLLECT_PADS_STATE (data) &= ~(flag))
 
 /**
  * GstCollectData:
@@ -85,7 +115,7 @@ typedef GstBuffer * (*GstCollectPadsClipFunction) (GstCollectPads *pads, GstColl
  */
 struct _GstCollectData
 {
-  /* with LOCK of @collect */
+  /* with STREAM_LOCK of @collect */
   GstCollectPads        *collect;
   GstPad                *pad;
   GstBuffer             *buffer;
@@ -93,16 +123,13 @@ struct _GstCollectData
   GstSegment             segment;
 
   /*< private >*/
-  union {
-    struct {
-      gboolean           flushing;
-      gboolean           new_segment;
-      gboolean           eos;
-      gint               refcount;
-    } ABI;
-    /* adding + 0 to mark ABI change to be undone later */
-    gpointer _gst_reserved[GST_PADDING + 0];
-  } abidata;
+  /* state: bitfield for easier extension;
+   * eos, flushing, new_segment, waiting */
+  GstCollectPadsStateFlags    state;
+
+  GstCollectDataPrivate *priv;
+
+  gpointer _gst_reserved[GST_PADDING];
 };
 
 /**
@@ -112,61 +139,163 @@ struct _GstCollectData
  *
  * A function that will be called when all pads have received data.
  *
- * Returns: #GST_FLOW_OK for success
+ * Returns: %GST_FLOW_OK for success
  */
 typedef GstFlowReturn (*GstCollectPadsFunction) (GstCollectPads *pads, gpointer user_data);
 
-#define GST_COLLECT_PADS_GET_PAD_LOCK(pads) (((GstCollectPads *)pads)->abidata.ABI.pad_lock)
-#define GST_COLLECT_PADS_PAD_LOCK(pads)     (g_mutex_lock(GST_COLLECT_PADS_GET_PAD_LOCK (pads)))
-#define GST_COLLECT_PADS_PAD_UNLOCK(pads)   (g_mutex_unlock(GST_COLLECT_PADS_GET_PAD_LOCK (pads)))
+/**
+ * GstCollectPadsBufferFunction:
+ * @pads: the #GstCollectPads that triggered the callback
+ * @data: the #GstCollectData of pad that has received the buffer
+ * @buffer: (transfer full): the #GstBuffer
+ * @user_data: user data passed to gst_collect_pads_set_buffer_function()
+ *
+ * A function that will be called when a (considered oldest) buffer can be muxed.
+ * If all pads have reached EOS, this function is called with %NULL @buffer
+ * and %NULL @data.
+ *
+ * Returns: %GST_FLOW_OK for success
+ */
+typedef GstFlowReturn (*GstCollectPadsBufferFunction) (GstCollectPads *pads, GstCollectData *data,
+                                                       GstBuffer *buffer, gpointer user_data);
 
-#define GST_COLLECT_PADS_GET_COND(pads) (((GstCollectPads *)pads)->cond)
-#define GST_COLLECT_PADS_WAIT(pads)     (g_cond_wait (GST_COLLECT_PADS_GET_COND (pads), GST_OBJECT_GET_LOCK (pads)))
-#define GST_COLLECT_PADS_SIGNAL(pads)   (g_cond_signal (GST_COLLECT_PADS_GET_COND (pads)))
-#define GST_COLLECT_PADS_BROADCAST(pads)(g_cond_broadcast (GST_COLLECT_PADS_GET_COND (pads)))
+/**
+ * GstCollectPadsCompareFunction:
+ * @pads: the #GstCollectPads that is comparing the timestamps
+ * @data1: the first #GstCollectData
+ * @timestamp1: the first timestamp
+ * @data2: the second #GstCollectData
+ * @timestamp2: the second timestamp
+ * @user_data: user data passed to gst_collect_pads_set_compare_function()
+ *
+ * A function for comparing two timestamps of buffers or newsegments collected on one pad.
+ *
+ * Returns: Integer less than zero when first timestamp is deemed older than the second one.
+ *          Zero if the timestamps are deemed equally old.
+ *          Integer greater than zero when second timestamp is deemed older than the first one.
+ */
+typedef gint (*GstCollectPadsCompareFunction) (GstCollectPads *pads,
+                                               GstCollectData * data1, GstClockTime timestamp1,
+                                               GstCollectData * data2, GstClockTime timestamp2,
+                                               gpointer user_data);
+
+/**
+ * GstCollectPadsEventFunction:
+ * @pads: the #GstCollectPads that triggered the callback
+ * @pad: the #GstPad that received an event
+ * @event: the #GstEvent received
+ * @user_data: user data passed to gst_collect_pads_set_event_function()
+ *
+ * A function that will be called while processing an event. It takes
+ * ownership of the event and is responsible for chaining up (to
+ * gst_collect_pads_event_default()) or dropping events (such typical cases
+ * being handled by the default handler).
+ *
+ * Returns: %TRUE if the pad could handle the event
+ */
+typedef gboolean (*GstCollectPadsEventFunction)        (GstCollectPads *pads, GstCollectData * pad,
+                                                        GstEvent * event, gpointer user_data);
+
+
+/**
+ * GstCollectPadsQueryFunction:
+ * @pads: the #GstCollectPads that triggered the callback
+ * @pad: the #GstPad that received an event
+ * @query: the #GstEvent received
+ * @user_data: user data passed to gst_collect_pads_set_query_function()
+ *
+ * A function that will be called while processing a query. It takes
+ * ownership of the query and is responsible for chaining up (to
+ * events downstream (with gst_pad_event_default()).
+ *
+ * Returns: %TRUE if the pad could handle the event
+ */
+typedef gboolean (*GstCollectPadsQueryFunction)        (GstCollectPads *pads, GstCollectData * pad,
+                                                        GstQuery * query, gpointer user_data);
+
+/**
+ * GstCollectPadsClipFunction:
+ * @pads: a #GstCollectPads
+ * @data: a #GstCollectData
+ * @inbuffer: (transfer full): the input #GstBuffer
+ * @outbuffer: the output #GstBuffer
+ * @user_data: user data
+ *
+ * A function that will be called when @inbuffer is received on the pad managed
+ * by @data in the collectpad object @pads.
+ *
+ * The function should use the segment of @data and the negotiated media type on
+ * the pad to perform clipping of @inbuffer.
+ *
+ * This function takes ownership of @inbuffer and should output a buffer in
+ * @outbuffer or return %NULL in @outbuffer if the buffer should be dropped.
+ *
+ * Returns: a #GstFlowReturn that corresponds to the result of clipping.
+ */
+typedef GstFlowReturn (*GstCollectPadsClipFunction) (GstCollectPads *pads, GstCollectData *data,
+                                                     GstBuffer *inbuffer, GstBuffer **outbuffer,
+                                                     gpointer user_data);
+
+
+/**
+ * GstCollectPadsFlushFunction:
+ * @pads: a #GstCollectPads
+ * @user_data: user data
+ *
+ * A function that will be called while processing a flushing seek event.
+ *
+ * The function should flush any internal state of the element and the state of
+ * all the pads. It should clear only the state not directly managed by the
+ * @pads object. It is therefore not necessary to call
+ * gst_collect_pads_set_flushing nor gst_collect_pads_clear from this function.
+ *
+ * Since: 1.4
+ */
+typedef void (*GstCollectPadsFlushFunction) (GstCollectPads *pads, gpointer user_data);
+
+/**
+ * GST_COLLECT_PADS_GET_STREAM_LOCK:
+ * @pads: a #GstCollectPads
+ *
+ * Get the stream lock of @pads. The stream lock is used to coordinate and
+ * serialize execution among the various streams being collected, and in
+ * protecting the resources used to accomplish this.
+ */
+#define GST_COLLECT_PADS_GET_STREAM_LOCK(pads) (&((GstCollectPads *)pads)->stream_lock)
+/**
+ * GST_COLLECT_PADS_STREAM_LOCK:
+ * @pads: a #GstCollectPads
+ *
+ * Lock the stream lock of @pads.
+ */
+#define GST_COLLECT_PADS_STREAM_LOCK(pads)     g_rec_mutex_lock(GST_COLLECT_PADS_GET_STREAM_LOCK (pads))
+/**
+ * GST_COLLECT_PADS_STREAM_UNLOCK:
+ * @pads: a #GstCollectPads
+ *
+ * Unlock the stream lock of @pads.
+ */
+#define GST_COLLECT_PADS_STREAM_UNLOCK(pads)   g_rec_mutex_unlock(GST_COLLECT_PADS_GET_STREAM_LOCK (pads))
 
 /**
  * GstCollectPads:
- * @data: #GList of #GstCollectData managed by this #GstCollectPads.
+ * @data: (element-type GstBase.CollectData): #GList of #GstCollectData managed
+ *   by this #GstCollectPads.
  *
  * Collectpads object.
- * Note that @data is only reliable for iterating the list of #GstCollectData
- * when inside the #GstCollectPadsFunction callback.
  */
 struct _GstCollectPads {
   GstObject      object;
 
-  /*< public >*/ /* with LOCK */
+  /*< public >*/ /* with LOCK and/or STREAM_LOCK */
   GSList        *data;                  /* list of CollectData items */
 
   /*< private >*/
-  guint32        cookie;                /* @data list cookie */
+  GRecMutex      stream_lock;          /* used to serialize collection among several streams */
 
-  /* with LOCK */
-  GCond         *cond;                  /* to signal removal of data */
+  GstCollectPadsPrivate *priv;
 
-  GstCollectPadsFunction func;          /* function and user_data for callback */
-  gpointer       user_data;
-
-  guint          numpads;               /* number of pads in @data */
-  guint          queuedpads;            /* number of pads with a buffer */
-  guint          eospads;               /* number of pads that are EOS */
-
-  /* with LOCK and PAD_LOCK*/
-  gboolean       started;
-
-  /*< private >*/
-  union {
-    struct {
-      /* since 0.10.6 */ /* with PAD_LOCK */
-      GMutex    *pad_lock;              /* used to serialize add/remove */
-      GSList    *pad_list;              /* updated pad list */
-      guint32    pad_cookie;            /* updated cookie */
-      GstCollectPadsPrivate  *priv;
-    } ABI;
-    /* adding + 0 to mark ABI change to be undone later */
-    gpointer _gst_reserved[GST_PADDING + 0];
-  } abidata;
+  gpointer _gst_reserved[GST_PADDING];
 };
 
 struct _GstCollectPadsClass {
@@ -179,44 +308,73 @@ struct _GstCollectPadsClass {
 GType gst_collect_pads_get_type(void);
 
 /* creating the object */
-GstCollectPads* gst_collect_pads_new            (void);
+GstCollectPads*        gst_collect_pads_new           (void);
 
 /* set the callbacks */
-void            gst_collect_pads_set_function      (GstCollectPads *pads, GstCollectPadsFunction func,
-                                                    gpointer user_data);
-void            gst_collect_pads_set_clip_function (GstCollectPads *pads, GstCollectPadsClipFunction clipfunc,
-                                                    gpointer user_data);
+void            gst_collect_pads_set_function         (GstCollectPads *pads,
+                                                       GstCollectPadsFunction func,
+                                                       gpointer user_data);
+void            gst_collect_pads_set_buffer_function  (GstCollectPads *pads,
+                                                       GstCollectPadsBufferFunction func,
+                                                       gpointer user_data);
+void            gst_collect_pads_set_event_function   (GstCollectPads *pads,
+                                                       GstCollectPadsEventFunction func,
+                                                       gpointer user_data);
+void            gst_collect_pads_set_query_function   (GstCollectPads *pads,
+                                                       GstCollectPadsQueryFunction func,
+                                                       gpointer user_data);
+void            gst_collect_pads_set_compare_function (GstCollectPads *pads,
+                                                       GstCollectPadsCompareFunction func,
+                                                       gpointer user_data);
+void            gst_collect_pads_set_clip_function    (GstCollectPads *pads,
+                                                       GstCollectPadsClipFunction clipfunc,
+                                                       gpointer user_data);
+void            gst_collect_pads_set_flush_function    (GstCollectPads *pads,
+                                                       GstCollectPadsFlushFunction func,
+                                                       gpointer user_data);
 
 /* pad management */
-GstCollectData* gst_collect_pads_add_pad        (GstCollectPads *pads, GstPad *pad, guint size);
-GstCollectData* gst_collect_pads_add_pad_full   (GstCollectPads *pads, GstPad *pad, guint size, GstCollectDataDestroyNotify destroy_notify);
-
-
-gboolean        gst_collect_pads_remove_pad     (GstCollectPads *pads, GstPad *pad);
-gboolean        gst_collect_pads_is_active      (GstCollectPads *pads, GstPad *pad);
+GstCollectData* gst_collect_pads_add_pad       (GstCollectPads *pads, GstPad *pad, guint size,
+                                                GstCollectDataDestroyNotify destroy_notify,
+                                                gboolean lock);
+gboolean        gst_collect_pads_remove_pad    (GstCollectPads *pads, GstPad *pad);
 
 /* start/stop collection */
-GstFlowReturn   gst_collect_pads_collect        (GstCollectPads *pads);
-GstFlowReturn   gst_collect_pads_collect_range  (GstCollectPads *pads, guint64 offset, guint length);
-
-void            gst_collect_pads_start          (GstCollectPads *pads);
-void            gst_collect_pads_stop           (GstCollectPads *pads);
-void            gst_collect_pads_set_flushing   (GstCollectPads *pads, gboolean flushing);
+void            gst_collect_pads_start         (GstCollectPads *pads);
+void            gst_collect_pads_stop          (GstCollectPads *pads);
+void            gst_collect_pads_set_flushing  (GstCollectPads *pads, gboolean flushing);
 
 /* get collected buffers */
-GstBuffer*      gst_collect_pads_peek           (GstCollectPads *pads, GstCollectData *data);
-GstBuffer*      gst_collect_pads_pop            (GstCollectPads *pads, GstCollectData *data);
+GstBuffer*      gst_collect_pads_peek          (GstCollectPads *pads, GstCollectData *data);
+GstBuffer*      gst_collect_pads_pop           (GstCollectPads *pads, GstCollectData *data);
 
 /* get collected bytes */
-guint           gst_collect_pads_available      (GstCollectPads *pads);
-guint           gst_collect_pads_read           (GstCollectPads *pads, GstCollectData *data,
-                                                 guint8 **bytes, guint size);
-GstBuffer *     gst_collect_pads_read_buffer    (GstCollectPads * pads, GstCollectData * data,
-                                                 guint size);
-GstBuffer *     gst_collect_pads_take_buffer    (GstCollectPads * pads, GstCollectData * data,
-                                                 guint size);
-guint           gst_collect_pads_flush          (GstCollectPads *pads, GstCollectData *data,
-                                                 guint size);
+guint           gst_collect_pads_available     (GstCollectPads *pads);
+guint           gst_collect_pads_flush         (GstCollectPads *pads, GstCollectData *data,
+                                                guint size);
+GstBuffer*      gst_collect_pads_read_buffer   (GstCollectPads * pads, GstCollectData * data,
+                                                guint size);
+GstBuffer*      gst_collect_pads_take_buffer   (GstCollectPads * pads, GstCollectData * data,
+                                                guint size);
+
+/* setting and unsetting waiting mode */
+void            gst_collect_pads_set_waiting   (GstCollectPads *pads, GstCollectData *data,
+                                                gboolean waiting);
+
+/* convenience helper */
+GstFlowReturn	gst_collect_pads_clip_running_time (GstCollectPads * pads,
+					            GstCollectData * cdata,
+                                                    GstBuffer * buf, GstBuffer ** outbuf,
+                                                    gpointer user_data);
+
+/* default handlers */
+gboolean        gst_collect_pads_event_default (GstCollectPads * pads, GstCollectData * data,
+                                                GstEvent * event, gboolean discard);
+gboolean        gst_collect_pads_src_event_default (GstCollectPads * pads, GstPad * pad,
+                                                    GstEvent * event);
+gboolean        gst_collect_pads_query_default (GstCollectPads * pads, GstCollectData * data,
+                                                GstQuery * query, gboolean discard);
+
 
 G_END_DECLS
 

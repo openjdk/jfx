@@ -169,16 +169,14 @@ static GstStaticPadTemplate src_factory =
     GST_PAD_ALWAYS,
     GST_STATIC_CAPS(
     // PCM
-    "audio/x-raw-int, "
-    "endianness = (int) " G_STRINGIFY (G_LITTLE_ENDIAN) ", "
-    "signed = (boolean) true, "
-    "width = (int) 16, "
-    "depth = (int) 16, "
+    "audio/x-raw, "
+    "format = (string) S16LE, "
+    "layout = (string) interleaved, "
     "rate = (int) { 8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000 }, "
     "channels = (int) [ 1, 6 ]; "
     // YV12
     "video/x-raw-yuv, "
-    "format=(fourcc)YV12; "
+    "format=(string)YV12; "
     // H.264
     "video/x-h264; "
     // AAC
@@ -196,17 +194,15 @@ static GstStateChangeReturn dshowwrapper_change_state(GstElement* element, GstSt
 static GstClock* dshowwrapper_provide_clock(GstElement *element);
 static GstClockTime dshowwrapper_clock_get_time(GstClock *clock, gpointer user_data);
 #endif // ENABLE_CLOCK
-static GstFlowReturn dshowwrapper_chain (GstPad* pad, GstBuffer* buf);
+static GstFlowReturn dshowwrapper_chain (GstPad* pad, GstObject *parent, GstBuffer* buf);
 
-static const GstQueryType* dshowwrapper_get_sink_query_types (GstPad* pad);
-static gboolean dshowwrapper_sink_query (GstPad* pad, GstQuery* query);
-static gboolean dshowwrapper_sink_event (GstPad* pad, GstEvent* event);
-static gboolean dshowwrapper_sink_set_caps (GstPad * pad, GstCaps * caps);
-static gboolean dshowwrapper_activate(GstPad* pad);
+//static gboolean dshowwrapper_sink_query (GstPad* pad, GstObject *parent, GstQuery* query);
+static gboolean dshowwrapper_sink_event (GstPad* pad, GstObject *parent, GstEvent* event);
+static gboolean dshowwrapper_sink_set_caps (GstPad * pad, GstObject *parent, GstCaps * caps);
+static gboolean dshowwrapper_activate(GstPad* pad, GstObject *parent);
 
-static const GstQueryType* dshowwrapper_get_src_query_types (GstPad* pad);
-static gboolean dshowwrapper_src_query (GstPad* pad, GstQuery* query);
-static gboolean dshowwrapper_src_event (GstPad* pad, GstEvent* event);
+static gboolean dshowwrapper_src_query (GstPad* pad, GstObject *parent, GstQuery* query);
+static gboolean dshowwrapper_src_event (GstPad* pad, GstObject *parent, GstEvent* event);
 
 static gboolean dshowwrapper_create_src_pad(GstDShowWrapper *decoder, GstPad **ppPad, GstCaps *caps, gchar *name, gboolean check_no_more_pads);
 
@@ -217,16 +213,42 @@ static HANDLE hMutex = CreateMutex(NULL, FALSE, NULL);
 
 /***********************************************************************************
 * Substitution for
-* GST_BOILERPLATE (GstDShowWrapper, gst_dshowwrapper, GstElement, GST_TYPE_ELEMENT);
+* G_DEFINE_TYPE (GstDShowWrapper, gst_dshowwrapper, GstElement, GST_TYPE_ELEMENT);
 ***********************************************************************************/
-static GstElementClass *parent_class = NULL;
-
-// GObject vmethod implementations
-static void gst_dshowwrapper_base_init (gpointer gclass)
+#define gst_dshowwrapper_parent_class parent_class
+static void gst_dshowwrapper_init          (GstDShowWrapper      *self);
+static void gst_dshowwrapper_class_init    (GstDShowWrapperClass *klass);
+static gpointer gst_dshowwrapper_parent_class = NULL;
+static void     gst_dshowwrapper_class_intern_init (gpointer klass)
 {
-    GstElementClass *element_class;
+    gst_dshowwrapper_parent_class = g_type_class_peek_parent (klass);
+    gst_dshowwrapper_class_init ((GstDShowWrapperClass*) klass);
+}
 
-    element_class = GST_ELEMENT_CLASS (gclass);
+GType gst_dshowwrapper_get_type (void)
+{
+    static volatile gsize gonce_data = 0;
+// INLINE - g_once_init_enter()
+    if (g_once_init_enter (&gonce_data))
+    {
+        GType _type;
+        _type = g_type_register_static_simple (GST_TYPE_ELEMENT,
+               g_intern_static_string ("GstDShowWrapper"),
+               sizeof (GstDShowWrapperClass),
+               (GClassInitFunc) gst_dshowwrapper_class_intern_init,
+               sizeof(GstDShowWrapper),
+               (GInstanceInitFunc) gst_dshowwrapper_init,
+               (GTypeFlags) 0);
+        g_once_init_leave (&gonce_data, (gsize) _type);
+    }
+    return (GType) gonce_data;
+}
+
+// Initialize dshowwrapper's class.
+static void gst_dshowwrapper_class_init (GstDShowWrapperClass *klass)
+{
+    GstElementClass *element_class = (GstElementClass*)klass;
+    GObjectClass *gobject_class = (GObjectClass*)klass;
 
     gst_element_class_set_details_simple(element_class,
         "DShowWrapper",
@@ -238,15 +260,8 @@ static void gst_dshowwrapper_base_init (gpointer gclass)
         gst_static_pad_template_get (&src_factory));
     gst_element_class_add_pad_template (element_class,
         gst_static_pad_template_get (&sink_factory));
-}
 
-// Initialize dshowwrapper's class.
-static void gst_dshowwrapper_class_init (GstDShowWrapperClass *klass)
-{
-    GstElementClass *gstelement_class = (GstElementClass*)klass;
-    GObjectClass *gobject_class = (GObjectClass*)klass;
-
-    gstelement_class->change_state = dshowwrapper_change_state;
+    element_class->change_state = dshowwrapper_change_state;
 #if ENABLE_CLOCK
     gstelement_class->provide_clock = dshowwrapper_provide_clock;
 #endif // ENABLE_CLOCK
@@ -264,26 +279,17 @@ static void gst_dshowwrapper_class_init (GstDShowWrapperClass *klass)
         (GParamFlags)(G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_STRINGS)));
 }
 
-static void gst_dshowwrapper_class_init_trampoline (gpointer g_class, gpointer data)
-{
-    parent_class = (GstElementClass*)g_type_class_peek_parent (g_class);
-    gst_dshowwrapper_class_init((GstDShowWrapperClass*)g_class);
-}
-
 // Initialize the new element
 // Instantiate pads and add them to element
 // Set pad calback functions
 // Initialize instance structure
-static void gst_dshowwrapper_init (GstDShowWrapper *decoder, GstDShowWrapper *g_class)
+static void gst_dshowwrapper_init (GstDShowWrapper *decoder)
 {
     // Input
     decoder->sinkpad = gst_pad_new_from_static_template (&sink_factory, "sink");
     gst_element_add_pad (GST_ELEMENT (decoder), decoder->sinkpad);
     gst_pad_set_chain_function (decoder->sinkpad, dshowwrapper_chain);
-    gst_pad_set_query_type_function(decoder->sinkpad, dshowwrapper_get_sink_query_types);
-    gst_pad_set_query_function(decoder->sinkpad, dshowwrapper_sink_query);
     gst_pad_set_event_function(decoder->sinkpad, dshowwrapper_sink_event);
-    gst_pad_set_setcaps_function(decoder->sinkpad, dshowwrapper_sink_set_caps);
     gst_pad_set_activate_function(decoder->sinkpad, dshowwrapper_activate);
 
     // Output
@@ -298,6 +304,7 @@ static void gst_dshowwrapper_init (GstDShowWrapper *decoder, GstDShowWrapper *g_
         decoder->is_sink_connected[i] = FALSE;
         decoder->offset[i] = 0;
         decoder->out_buffer[i] = NULL;
+        decoder->caps_event[i] = NULL;
         decoder->last_pts[i] = GST_CLOCK_TIME_NONE;
         decoder->pMPEG2PIDMap[i] = NULL;
         decoder->eOutputFormat[i] = MEDIA_FORMAT_UNKNOWN;
@@ -389,34 +396,16 @@ static void gst_dshowwrapper_dispose(GObject* object)
             gst_buffer_unref (decoder->out_buffer[i]);
             decoder->out_buffer[i] = NULL;
         }
+
+        if (decoder->caps_event[i] != NULL)
+        {
+            // INLINE - gst_event_unref()
+            gst_event_unref (decoder->caps_event[i]);
+            decoder->caps_event[i] = NULL;
+        }
     }
 
     G_OBJECT_CLASS(parent_class)->dispose(object);
-}
-
-GType gst_dshowwrapper_get_type (void)
-{
-    static volatile gsize gonce_data = 0;
-    // INLINE - g_once_init_enter()
-    if (g_once_init_enter (&gonce_data))
-    {
-        GType _type;
-        _type = gst_type_register_static_full (GST_TYPE_ELEMENT,
-            g_intern_static_string ("GstDShowWrapper"),
-            sizeof (GstDShowWrapperClass),
-            gst_dshowwrapper_base_init,
-            NULL,
-            gst_dshowwrapper_class_init_trampoline,
-            NULL,
-            NULL,
-            sizeof (GstDShowWrapper),
-            0,
-            (GInstanceInitFunc) gst_dshowwrapper_init,
-            NULL,
-            (GTypeFlags) 0);
-        g_once_init_leave (&gonce_data, (gsize) _type);
-    }
-    return (GType) gonce_data;
 }
 
 static void gst_dshowwrapper_set_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
@@ -598,37 +587,38 @@ void dshowwrapper_release_sample(GstBuffer *pBuffer, sUserData *pUserData)
 void dshowwrapper_get_gst_buffer_sink(GstBuffer **ppBuffer, long lSize, sUserData *pUserData)
 {
     GstDShowWrapper *decoder = (GstDShowWrapper*)pUserData->pUserData;
-    GstFlowReturn ret = GST_FLOW_OK;
 
-    ret = gst_pad_alloc_buffer(decoder->srcpad[pUserData->output_index], decoder->offset[pUserData->output_index], lSize, GST_PAD_CAPS(decoder->srcpad[pUserData->output_index]), ppBuffer);
-    if (ret == GST_FLOW_NOT_LINKED) // Re-create src pad
+    if (!GST_PAD_IS_LINKED(decoder->srcpad[pUserData->output_index])) // Re-create src pad
     {
         if (!dshowwrapper_create_src_pad(decoder, &decoder->srcpad[pUserData->output_index], NULL, NULL, TRUE))
         {
             *ppBuffer = NULL;
             return;
         }
-
-        // Try again
-        ret = gst_pad_alloc_buffer(decoder->srcpad[pUserData->output_index], decoder->offset[pUserData->output_index], lSize, GST_PAD_CAPS(decoder->srcpad[pUserData->output_index]), ppBuffer);
     }
 
-    if (ret != GST_FLOW_OK)
+    *ppBuffer = gst_buffer_new_allocate(NULL, lSize, NULL);
+    if (*ppBuffer != NULL)
     {
-        *ppBuffer = NULL;
+        GST_BUFFER_OFFSET(*ppBuffer) = decoder->offset[pUserData->output_index];
     }
 }
 
 void dshowwrapper_deliver_post_process_mp2t(GstBuffer *pBuffer, GstDShowWrapper *decoder, int index)
 {
+    GstMapInfo info;
     guint8 *data = NULL;
-    guint size = 0;
+    gsize size = 0;
+    gsize offset = 0;
 
     if (pBuffer == NULL)
         return;
 
-    data = GST_BUFFER_DATA(pBuffer);
-    size = GST_BUFFER_SIZE(pBuffer);
+    if (!gst_buffer_map(pBuffer, &info, GST_MAP_READ))
+        return;
+
+    data = info.data;
+    size = info.size;
 
     if (data == NULL || size < 3)
         return;
@@ -679,17 +669,17 @@ void dshowwrapper_deliver_post_process_mp2t(GstBuffer *pBuffer, GstDShowWrapper 
             }
 
             guint8 optional_remaining_header_size = data[8];
-            data += (PES_HEADER_SIZE + PES_OPTIONAL_HEADER_SIZE + optional_remaining_header_size);
             size -= (PES_HEADER_SIZE + PES_OPTIONAL_HEADER_SIZE + optional_remaining_header_size);
+            offset = (PES_HEADER_SIZE + PES_OPTIONAL_HEADER_SIZE + optional_remaining_header_size);
         }
         else
         {
-            data += PES_HEADER_SIZE;
             size -= PES_HEADER_SIZE;
+            offset = PES_HEADER_SIZE;
         }
 
-        GST_BUFFER_DATA(pBuffer) = data;
-        GST_BUFFER_SIZE(pBuffer) = size;
+        gst_buffer_unmap(pBuffer, &info);
+        gst_buffer_resize(pBuffer, offset, size);
     }
 }
 
@@ -707,13 +697,12 @@ int dshowwrapper_deliver(GstBuffer *pBuffer, sUserData *pUserData)
 
     decoder->is_data_produced = TRUE;
 
-    decoder->offset[pUserData->output_index] += GST_BUFFER_SIZE(pBuffer);
+    decoder->offset[pUserData->output_index] += gst_buffer_get_size(pBuffer);
     GST_BUFFER_OFFSET_END(pBuffer) = decoder->offset[pUserData->output_index];
 
     // Caps might be change on pad, but buffers may come with old caps, since they we requested before caps change
-    if (pUserData->bFlag1 && GST_BUFFER_CAPS(pBuffer) != GST_PAD_CAPS(pBuffer))
+    if (pUserData->bFlag1)
     {
-        gst_buffer_set_caps(pBuffer, GST_PAD_CAPS(decoder->srcpad[pUserData->output_index]));
         GST_BUFFER_FLAG_SET(pBuffer, GST_BUFFER_FLAG_DISCONT); // Caps changed
     }
 
@@ -801,7 +790,6 @@ int dshowwrapper_deliver(GstBuffer *pBuffer, sUserData *pUserData)
                 g_print("AMDEBUG AAC  -1\n");
         }
 #endif
-
         ret = gst_pad_push(decoder->srcpad[pUserData->output_index], decoder->out_buffer[pUserData->output_index]);
         decoder->out_buffer[pUserData->output_index] = NULL;
 
@@ -816,6 +804,14 @@ int dshowwrapper_deliver(GstBuffer *pBuffer, sUserData *pUserData)
             return 1;
         else if (ret != GST_FLOW_OK)
             return 0;
+    }
+
+    // Send caps event here. We cannot send it right away from dshowwrapper_sink_event(), since
+    // we cached out_buffer which still has data with old caps.
+    if (decoder->caps_event[pUserData->output_index] != NULL)
+    {
+        gst_pad_push_event(decoder->srcpad[pUserData->output_index], decoder->caps_event[pUserData->output_index]);
+        decoder->caps_event[pUserData->output_index] = NULL;
     }
 
     decoder->out_buffer[pUserData->output_index] = pBuffer;
@@ -864,10 +860,20 @@ int dshowwrapper_sink_event(int sinkEvent, void *pData, int size, sUserData *pUs
         if (pData != NULL && size > 0)
         {
             GstBuffer *pBuffer = gst_buffer_new_and_alloc(size);
-            memcpy(GST_BUFFER_DATA(pBuffer), pData, size);
-            GstCaps *caps = gst_caps_copy(GST_PAD_CAPS(decoder->srcpad));
+            if (pBuffer == NULL)
+                return 0;
+            gst_buffer_fill(pBuffer, 0, pData, size);
+            GstCaps *padCaps = gst_pad_get_current_caps(decoder->srcpad[pUserData->output_index]);
+            if (padCaps == NULL)
+                return 0;
+            GstCaps *caps = gst_caps_copy(padCaps);
+            if (caps == NULL)
+                return 0;
+            gst_caps_unref(padCaps);
             gst_caps_set_simple(caps, "codec_data", GST_TYPE_BUFFER, pBuffer, NULL);
-            gst_pad_set_caps(decoder->srcpad[pUserData->output_index], caps);
+            if (decoder->caps_event[pUserData->output_index] != NULL)
+                gst_event_unref (decoder->caps_event[pUserData->output_index]); // INLINE - gst_event_unref()
+            decoder->caps_event[pUserData->output_index] = gst_event_new_caps(caps);
             gst_caps_unref(caps);
             // INLINE - gst_buffer_unref()
             gst_buffer_unref (pBuffer);
@@ -878,9 +884,17 @@ int dshowwrapper_sink_event(int sinkEvent, void *pData, int size, sUserData *pUs
         {
             int rate = *((int*)pData);
 
-            GstCaps *caps = gst_caps_copy(GST_PAD_CAPS(decoder->srcpad[pUserData->output_index]));
+            GstCaps *padCaps = gst_pad_get_current_caps(decoder->srcpad[pUserData->output_index]);
+            if (padCaps == NULL)
+                return 0;
+            GstCaps *caps = gst_caps_copy(padCaps);
+            if (caps == NULL)
+                return 0;
+            gst_caps_unref(padCaps);
             gst_caps_set_simple(caps, "rate", G_TYPE_INT, rate, NULL);
-            gst_pad_set_caps(decoder->srcpad[pUserData->output_index], caps);
+            if (decoder->caps_event[pUserData->output_index] != NULL)
+                gst_event_unref (decoder->caps_event[pUserData->output_index]); // INLINE - gst_event_unref()
+            decoder->caps_event[pUserData->output_index] = gst_event_new_caps(caps);
             gst_caps_unref(caps);
         }
         break;
@@ -889,9 +903,17 @@ int dshowwrapper_sink_event(int sinkEvent, void *pData, int size, sUserData *pUs
         {
             int channels = *((int*)pData);
 
-            GstCaps *caps = gst_caps_copy(GST_PAD_CAPS(decoder->srcpad[pUserData->output_index]));
+            GstCaps *padCaps = gst_pad_get_current_caps(decoder->srcpad[pUserData->output_index]);
+            if (padCaps == NULL)
+                return 0;
+            GstCaps *caps = gst_caps_copy(padCaps);
+            if (caps == NULL)
+                return 0;
+            gst_caps_unref(padCaps);
             gst_caps_set_simple(caps, "channels", G_TYPE_INT, channels, NULL);
-            gst_pad_set_caps(decoder->srcpad[pUserData->output_index], caps);
+            if (decoder->caps_event[pUserData->output_index] != NULL)
+                gst_event_unref (decoder->caps_event[pUserData->output_index]); // INLINE - gst_event_unref()
+            decoder->caps_event[pUserData->output_index] = gst_event_new_caps(caps);
             gst_caps_unref(caps);
         }
         break;
@@ -902,7 +924,13 @@ int dshowwrapper_sink_event(int sinkEvent, void *pData, int size, sUserData *pUs
             int width = (resolution >> 32) & 0x00000000FFFFFFFF;
             int height = resolution & 0x00000000FFFFFFFF;
 
-            GstCaps *caps = gst_caps_copy(GST_PAD_CAPS(decoder->srcpad[pUserData->output_index]));
+            GstCaps *padCaps = gst_pad_get_current_caps(decoder->srcpad[pUserData->output_index]);
+            if (padCaps == NULL)
+                return 0;
+            GstCaps *caps = gst_caps_copy(padCaps);
+            if (caps == NULL)
+                return 0;
+            gst_caps_unref(padCaps);
             if (decoder->eOutputFormat[DEFAULT_OUTPUT_DS_STREAM_INDEX] == MEDIA_FORMAT_VIDEO_I420)
             {
                 gst_caps_set_simple(caps,
@@ -923,7 +951,9 @@ int dshowwrapper_sink_event(int sinkEvent, void *pData, int size, sUserData *pUs
                     "height", G_TYPE_INT, height,
                     NULL);
             }
-            gst_pad_set_caps(decoder->srcpad[pUserData->output_index], caps);
+            if (decoder->caps_event[pUserData->output_index] != NULL)
+                gst_event_unref (decoder->caps_event[pUserData->output_index]); // INLINE - gst_event_unref()
+            decoder->caps_event[pUserData->output_index] = gst_event_new_caps(caps);
             gst_caps_unref(caps);
         }
         break;
@@ -1452,13 +1482,15 @@ static gboolean dshowwrapper_load_decoder_aac(GstStructure *s, GstDShowWrapper *
         const GValue *v = NULL;
         GstBuffer *codec_data = NULL;
         gint codec_data_size = 0;
+        GstMapInfo info;
 
         v = gst_structure_get_value(s, "codec_data");
         if (v != NULL)
         {
             codec_data = gst_value_get_buffer(v);
             if (codec_data != NULL)
-                codec_data_size = GST_BUFFER_SIZE(codec_data);
+                if (gst_buffer_map(codec_data, &info, GST_MAP_READ))
+                    codec_data_size = info.size;
         }
 
         inputFormat.type = MEDIATYPE_Audio;
@@ -1481,7 +1513,8 @@ static gboolean dshowwrapper_load_decoder_aac(GstStructure *s, GstDShowWrapper *
         if (codec_data_size > 0)
         {
             wfx->cbSize = codec_data_size;
-            memcpy(inputFormat.pFormat + sizeof(WAVEFORMATEX), GST_BUFFER_DATA(codec_data), codec_data_size);
+            memcpy(inputFormat.pFormat + sizeof(WAVEFORMATEX), info.data, codec_data_size);
+            gst_buffer_unmap(codec_data, &info);
         }
     }
     else
@@ -1523,15 +1556,16 @@ static gboolean dshowwrapper_load_decoder_aac(GstStructure *s, GstDShowWrapper *
 
     // Set srcpad caps
     GstCaps *caps = NULL;
-    caps = gst_caps_new_simple ("audio/x-raw-int",
+    caps = gst_caps_new_simple ("audio/x-raw",
+        "format", G_TYPE_STRING, "S16LE",
+        "layout", G_TYPE_STRING, "interleaved",
         "rate", G_TYPE_INT, rate,
         "channels", G_TYPE_INT, channels,
-        "endianness", G_TYPE_INT, G_LITTLE_ENDIAN,
-        "width", G_TYPE_INT, 16,
-        "depth", G_TYPE_INT, 16,
-        "signed", G_TYPE_BOOLEAN, true,
         NULL);
-    gst_pad_set_caps(decoder->srcpad[0], caps);
+
+    GstEvent *caps_event = gst_event_new_caps(caps);
+    if (caps_event)
+        gst_pad_push_event(decoder->srcpad[0], caps_event);
     gst_caps_unref(caps);
 
     outputFormat.type = MEDIATYPE_Audio;
@@ -1712,16 +1746,16 @@ static gboolean dshowwrapper_load_decoder_mp3(GstStructure *s, GstDShowWrapper *
 
     // Set srcpad caps
     GstCaps *caps = NULL;
-    caps = gst_caps_new_simple ("audio/x-raw-int",
+    caps = gst_caps_new_simple ("audio/x-raw",
+        "format", G_TYPE_STRING, "S16LE",
+        "layout", G_TYPE_STRING, "interleaved",
         "rate", G_TYPE_INT, rate,
         "channels", G_TYPE_INT, channels,
-        "endianness", G_TYPE_INT, G_LITTLE_ENDIAN,
-        "width", G_TYPE_INT, 16,
-        "depth", G_TYPE_INT, 16,
-        "signed", G_TYPE_BOOLEAN, true,
         NULL);
 
-    gst_pad_set_caps(decoder->srcpad[0], caps);
+    GstEvent *caps_event = gst_event_new_caps(caps);
+    if (caps_event)
+        gst_pad_push_event(decoder->srcpad[0], caps_event);
     gst_caps_unref(caps);
 
     outputFormat.type = MEDIATYPE_Audio;
@@ -1893,8 +1927,16 @@ static gboolean dshowwrapper_load_decoder_h264(GstStructure *s, GstDShowWrapper 
         guint avcProfile = 0;
         guint avcLevel = 0;
         guint lengthSizeMinusOne = 0;
-        if (codec_data != NULL && GST_BUFFER_SIZE(codec_data) <= MAX_HEADER_SIZE)
-            header_size = dshowwrapper_get_avc_config(GST_BUFFER_DATA(codec_data), GST_BUFFER_SIZE(codec_data), header, 256, &avcProfile, &avcLevel, &lengthSizeMinusOne);
+        GstMapInfo info;
+        if (codec_data != NULL && gst_buffer_get_size(codec_data) <= MAX_HEADER_SIZE)
+        {
+            if (gst_buffer_map(codec_data, &info, GST_MAP_READ))
+            {
+                if (info.size <= MAX_HEADER_SIZE)
+                    header_size = dshowwrapper_get_avc_config(info.data, info.size, header, 256, &avcProfile, &avcLevel, &lengthSizeMinusOne);
+                gst_buffer_unmap(codec_data, &info);
+            }
+        }
         else
             return FALSE;
 
@@ -1999,7 +2041,7 @@ static gboolean dshowwrapper_load_decoder_h264(GstStructure *s, GstDShowWrapper 
         // Set srcpad caps
         GstCaps *caps = NULL;
         caps = gst_caps_new_simple ("video/x-raw-yuv",
-            "format", GST_TYPE_FOURCC, GST_MAKE_FOURCC ('Y', 'V', '1', '2'),
+            "format", G_TYPE_STRING, "YV12",
             "framerate", GST_TYPE_FRACTION, framerate_num, framerate_den,
             "width", G_TYPE_INT, width,
             "height", G_TYPE_INT, height,
@@ -2011,7 +2053,9 @@ static gboolean dshowwrapper_load_decoder_h264(GstStructure *s, GstDShowWrapper 
             "stride-u", G_TYPE_INT, width/2,
             NULL);
 
-        gst_pad_set_caps(decoder->srcpad[0], caps);
+        GstEvent *caps_event = gst_event_new_caps(caps);
+        if (caps_event)
+            gst_pad_push_event(decoder->srcpad[0], caps_event);
         gst_caps_unref(caps);
 
         outputFormat.type = MEDIATYPE_Video;
@@ -2044,13 +2088,15 @@ static gboolean dshowwrapper_load_decoder_h264(GstStructure *s, GstDShowWrapper 
         // Set srcpad caps
         GstCaps *caps = NULL;
         caps = gst_caps_new_simple ("video/x-raw-yuv",
-            "format", GST_TYPE_FOURCC, GST_MAKE_FOURCC ('Y', 'V', '1', '2'),
+            "format", G_TYPE_STRING, "YV12",
             "framerate", GST_TYPE_FRACTION, framerate_num, framerate_den,
             "width", G_TYPE_INT, width,
             "height", G_TYPE_INT, height,
             NULL);
 
-        gst_pad_set_caps(decoder->srcpad[0], caps);
+        GstEvent *caps_event = gst_event_new_caps(caps);
+        if (caps_event)
+            gst_pad_push_event(decoder->srcpad[0], caps_event);
         gst_caps_unref(caps);
 
         outputFormat.type = MEDIATYPE_Video;
@@ -2236,7 +2282,7 @@ static void dshowwrapper_mp2t_map_pid(GstDShowWrapper *decoder)
 
                     decoder->eOutputFormat[MP2T_VIDEO_INDEX] = MEDIA_FORMAT_VIDEO_H264;
 
-                    caps = gst_caps_new_simple ("video/x-h264", NULL);
+                    caps = gst_caps_new_simple ("video/x-h264", NULL, NULL);
                     if (!dshowwrapper_create_src_pad(decoder, &decoder->srcpad[MP2T_VIDEO_INDEX], caps, NULL, TRUE))
                         goto exit;
                 }
@@ -2561,30 +2607,40 @@ static gboolean dshowwrapper_create_src_pad(GstDShowWrapper *decoder, GstPad **p
             gst_pad_set_active(*ppPad, FALSE);
         }
         if (caps == NULL)
-            caps = gst_caps_copy(GST_PAD_CAPS(*ppPad));
+        {
+            GstCaps *padCaps = gst_pad_get_current_caps(*ppPad);
+            if (padCaps == NULL)
+                return FALSE;
+            GstCaps *caps = gst_caps_copy(padCaps);
+            if (caps == NULL)
+                return FALSE;
+            gst_caps_unref(padCaps);
+        }
         gst_element_remove_pad(GST_ELEMENT(decoder), *ppPad);
 
         *ppPad = NULL;
     }
 
     *ppPad = gst_pad_new_from_static_template (&src_factory, name);
-    gst_pad_set_query_type_function(*ppPad, dshowwrapper_get_src_query_types);
     gst_pad_set_query_function(*ppPad, dshowwrapper_src_query);
     gst_pad_set_event_function(*ppPad, dshowwrapper_src_event);
-    gst_pad_use_fixed_caps (*ppPad);
-
-    // Set caps
-    if (caps)
-    {
-        gst_pad_set_caps(*ppPad, caps);
-        gst_caps_unref(caps);
-    }
 
     if (active || GST_STATE(decoder) > GST_STATE_READY)
     {
         if (!gst_pad_set_active(*ppPad, TRUE))
             return FALSE;
     }
+
+    // Set caps
+    if (caps)
+    {
+        GstEvent *caps_event = gst_event_new_caps(caps);
+        if (caps_event)
+            gst_pad_push_event(*ppPad, caps_event);
+        gst_caps_unref(caps);
+    }
+
+    gst_pad_use_fixed_caps (*ppPad);
 
     if (!gst_element_add_pad(GST_ELEMENT(decoder), *ppPad))
         return FALSE;
@@ -2624,7 +2680,7 @@ static GstStateChangeReturn dshowwrapper_change_state (GstElement* element, GstS
     GstStateChangeReturn ret;
 
     // Change state.
-    ret = parent_class->change_state(element, transition);
+    ret = GST_ELEMENT_CLASS(parent_class)->change_state(element, transition);
     if (GST_STATE_CHANGE_FAILURE == ret)
     {
         return ret;
@@ -2677,16 +2733,16 @@ static GstClockTime dshowwrapper_clock_get_time(GstClock *clock, gpointer user_d
 #endif // ENABLE_CLOCK
 
 // Processes input buffers
-static GstFlowReturn dshowwrapper_chain (GstPad * pad, GstBuffer * buf)
+static GstFlowReturn dshowwrapper_chain (GstPad * pad, GstObject *parent, GstBuffer * buf)
 {
     GstFlowReturn ret = GST_FLOW_OK;
-    GstDShowWrapper *decoder = GST_DSHOWWRAPPER (GST_OBJECT_PARENT (pad));
+    GstDShowWrapper *decoder = GST_DSHOWWRAPPER (parent);
 
     if (decoder->is_flushing || decoder->is_eos_received)
     {
         // INLINE - gst_buffer_unref()
         gst_buffer_unref (buf);
-        return GST_FLOW_WRONG_STATE;
+        return GST_FLOW_FLUSHING;
     }
 
     if (decoder->map_pid)
@@ -2731,43 +2787,19 @@ static GstFlowReturn dshowwrapper_chain (GstPad * pad, GstBuffer * buf)
 
     if (decoder->force_discontinuity)
     {
-        buf = gst_buffer_make_metadata_writable(buf);
+        buf = gst_buffer_make_writable(buf);
         GST_BUFFER_FLAG_SET(buf, GST_BUFFER_FLAG_DISCONT);
         decoder->force_discontinuity = FALSE;
     }
 
-    HRESULT hr = decoder->pSrc->DeliverSample(buf);
-    if (FAILED(hr) || decoder->is_flushing)
-        return GST_FLOW_WRONG_STATE;
-
-    return ret;
-}
-
-static const GstQueryType* dshowwrapper_get_sink_query_types (GstPad* pad)
-{
-    static const GstQueryType dshowwrapper_sink_query_types[] = {
-        GST_QUERY_CONVERT,
-        GST_QUERY_NONE
-    };
-
-    return dshowwrapper_sink_query_types;
-}
-
-static gboolean dshowwrapper_sink_query (GstPad* pad, GstQuery* query)
-{
-    gboolean result = FALSE;
-    GstObject *parent = gst_object_get_parent((GstObject*)pad);
-    GstDShowWrapper *decode = GST_DSHOWWRAPPER (parent);
-
-    if (result == FALSE)
+    if (decoder->pSrc)
     {
-        result = gst_pad_query_default(pad, query);
+        HRESULT hr = decoder->pSrc->DeliverSample(buf);
+        if (FAILED(hr) || decoder->is_flushing)
+            return GST_FLOW_FLUSHING;
     }
 
-    // Unref the parent object.
-    gst_object_unref(parent);
-
-    return result;
+    return ret;
 }
 
 static gboolean dshowwrapper_push_sink_event(GstDShowWrapper *decoder, GstEvent *event)
@@ -2786,34 +2818,39 @@ static gboolean dshowwrapper_push_sink_event(GstDShowWrapper *decoder, GstEvent 
     return ret;
 }
 
-static gboolean dshowwrapper_sink_event(GstPad* pad, GstEvent *event)
+static gboolean dshowwrapper_sink_event(GstPad* pad, GstObject *parent, GstEvent *event)
 {
     gboolean ret = FALSE;
-    GstObject *parent = gst_object_get_parent((GstObject*)pad);
     GstDShowWrapper *decoder = GST_DSHOWWRAPPER (parent);
-    GstEvent *newsegment = NULL;
+    GstSegment segment;
+    GstSegment newsegment;
 
     switch (GST_EVENT_TYPE (event))
     {
-    case GST_EVENT_NEWSEGMENT:
-        gboolean update;
-        GstFormat format;
-        gdouble rate, arate;
-        gint64 start, stop, time;
+    case GST_EVENT_SEGMENT:
         if (decoder->enable_position)
         {
-            gst_event_parse_new_segment_full(event, &update, &rate, &arate, &format, &start, &stop, &time);
-            if (format == GST_FORMAT_TIME)
+            gst_event_copy_segment(event, &segment);
+            if (segment.format == GST_FORMAT_TIME)
             {
-                decoder->last_stop = start;
+                decoder->last_stop = segment.position;
             }
         }
         if (decoder->eInputFormat == MEDIA_FORMAT_STREAM_MP2T) // Resend new segment event with GST_FORMAT_TIME
         {
-            gst_event_parse_new_segment_full(event, &update, &rate, &arate, &format, &start, &stop, &time);
+            gst_event_copy_segment(event, &segment);
             // INLINE - gst_event_unref()
             gst_event_unref (event);
-            event = gst_event_new_new_segment(update, rate, GST_FORMAT_TIME, 0, stop, time);
+
+            gst_segment_init (&newsegment, GST_FORMAT_TIME);
+            newsegment.flags = segment.flags;
+            newsegment.rate = segment.rate;
+            newsegment.start = 0;
+            newsegment.stop = segment.stop;
+            newsegment.time = segment.position;
+            newsegment.position = segment.position;
+            event = gst_event_new_segment(&newsegment);
+
             if (decoder->pending_event)
             {
                 // INLINE - gst_event_unref()
@@ -2896,21 +2933,33 @@ static gboolean dshowwrapper_sink_event(GstPad* pad, GstEvent *event)
             ret = TRUE;
         }
         break;
+    case GST_EVENT_CAPS:
+        {
+            GstCaps *caps;
+
+            gst_event_parse_caps (event, &caps);
+            if (!dshowwrapper_sink_set_caps(pad, parent, caps))
+            {
+                gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR, GST_STREAM_ERROR, GST_STREAM_ERROR_DECODE, g_strdup("Failed to decode stream"), NULL, ("dshowwrapper.c"), ("dshowwrapper_sink_event"), 0);
+            }
+
+            // INLINE - gst_event_unref()
+            gst_event_unref (event);
+            ret = TRUE;
+        }
+        break;
     default:
         ret = dshowwrapper_push_sink_event(decoder, event);
         break;
     }
 
-    // Unlock the parent object.
-    gst_object_unref(parent);
-
     return ret;
 }
 
-static gboolean dshowwrapper_sink_set_caps(GstPad * pad, GstCaps * caps)
+static gboolean dshowwrapper_sink_set_caps(GstPad * pad, GstObject *parent, GstCaps * caps)
 {
     gboolean ret = FALSE;
-    GstDShowWrapper *decoder = GST_DSHOWWRAPPER (GST_OBJECT_PARENT (pad));
+    GstDShowWrapper *decoder = GST_DSHOWWRAPPER (parent);
 
     if (pad == decoder->sinkpad)
     {
@@ -2920,46 +2969,30 @@ static gboolean dshowwrapper_sink_set_caps(GstPad * pad, GstCaps * caps)
     return ret;
 }
 
-static gboolean dshowwrapper_activate(GstPad *pad)
+static gboolean dshowwrapper_activate(GstPad *pad, GstObject *parent)
 {
-    return gst_pad_activate_push(pad, TRUE);
+    return gst_pad_activate_mode (pad, GST_PAD_MODE_PUSH, TRUE);
 }
 
-static const GstQueryType* dshowwrapper_get_src_query_types (GstPad * pad)
-{
-    static const GstQueryType dshowwrapper_src_query_types[] = {
-        GST_QUERY_POSITION,
-        GST_QUERY_DURATION,
-        GST_QUERY_NONE
-    };
-
-    return dshowwrapper_src_query_types;
-}
-
-static gboolean dshowwrapper_src_query (GstPad * pad, GstQuery * query)
+static gboolean dshowwrapper_src_query (GstPad * pad, GstObject *parent, GstQuery * query)
 {
     gboolean result = FALSE;
-    GstObject *parent = gst_object_get_parent((GstObject*)pad);
     GstDShowWrapper *decoder = GST_DSHOWWRAPPER(parent);
-    GstFormat format = GST_FORMAT_UNDEFINED;
 
     switch (GST_QUERY_TYPE (query))
     {
     case GST_QUERY_DURATION:
-        result = gst_pad_query_default(pad, query);
+        result = gst_pad_query_default(pad, parent, query);
         if (result == FALSE)
         {
             result = TRUE; // No need to ask again
             if (decoder->enable_mp3 && decoder->mp3_duration == -1 && decoder->mp3_id3_size >= 0)
             {
                 gint64 data_length = 0;
-                GstFormat format = GST_FORMAT_BYTES;
-                if (gst_pad_query_peer_duration(decoder->sinkpad, &format, &data_length))
+                if (gst_pad_peer_query_duration(decoder->sinkpad, GST_FORMAT_BYTES, &data_length))
                 {
                     data_length -= decoder->mp3_id3_size;
-
-                    format = GST_FORMAT_TIME;
-                    if (gst_pad_query_peer_convert(decoder->sinkpad, GST_FORMAT_BYTES, data_length, &format, &decoder->mp3_duration))
+                    if (gst_pad_peer_query_convert(decoder->sinkpad, GST_FORMAT_BYTES, data_length, GST_FORMAT_TIME, &decoder->mp3_duration))
                     {
                         gst_query_set_duration(query, GST_FORMAT_TIME, decoder->mp3_duration);
                     }
@@ -2989,18 +3022,14 @@ static gboolean dshowwrapper_src_query (GstPad * pad, GstQuery * query)
 
     // Use default query if flag indicates query not handled
     if (result == FALSE)
-        result = gst_pad_query_default(pad, query);
-
-    // Unref the parent object
-    gst_object_unref(parent);
+        result = gst_pad_query_default(pad, parent, query);
 
     return result;
 }
 
-static gboolean dshowwrapper_src_event (GstPad* pad, GstEvent* event)
+static gboolean dshowwrapper_src_event (GstPad* pad, GstObject *parent, GstEvent* event)
 {
     gboolean result = FALSE;
-    GstObject *parent = gst_object_get_parent((GstObject*)pad);
     GstDShowWrapper *decoder = GST_DSHOWWRAPPER (parent);
 
     if (decoder->enable_mp3 || decoder->eInputFormat == MEDIA_FORMAT_STREAM_MP2T)
@@ -3022,8 +3051,7 @@ static gboolean dshowwrapper_src_event (GstPad* pad, GstEvent* event)
                 if (decoder->enable_mp3)
                 {
                     gint64 start_byte = 0;
-                    GstFormat format = GST_FORMAT_BYTES;
-                    if (gst_pad_query_peer_convert(decoder->sinkpad, GST_FORMAT_TIME, start, &format, &start_byte))
+                    if (gst_pad_peer_query_convert(decoder->sinkpad, GST_FORMAT_TIME, start, GST_FORMAT_BYTES, &start_byte))
                     {
                         result = gst_pad_push_event(decoder->sinkpad,
                             gst_event_new_seek(rate, GST_FORMAT_BYTES,
@@ -3056,9 +3084,6 @@ static gboolean dshowwrapper_src_event (GstPad* pad, GstEvent* event)
     // Push the event upstream only if it was not processed.
     if (!result)
         result = gst_pad_push_event(decoder->sinkpad, event);
-
-    // Unlock the parent object.
-    gst_object_unref(parent);
 
     return result;
 }

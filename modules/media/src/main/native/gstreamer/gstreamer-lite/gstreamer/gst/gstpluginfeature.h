@@ -16,8 +16,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 
@@ -39,20 +39,17 @@ G_BEGIN_DECLS
 #define GST_PLUGIN_FEATURE_CAST(obj)            ((GstPluginFeature*)(obj))
 
 /**
- * GST_PLUGIN_FEATURE_NAME:
- * @feature: The feature to query
+ * GstPluginFeature:
  *
- * Get the name of the feature
+ * Opaque #GstPluginFeature structure.
  */
-#define GST_PLUGIN_FEATURE_NAME(feature)  (GST_PLUGIN_FEATURE (feature)->name)
-
 typedef struct _GstPluginFeature GstPluginFeature;
 typedef struct _GstPluginFeatureClass GstPluginFeatureClass;
 
 /**
  * GstRank:
  * @GST_RANK_NONE: will be chosen last or not at all
- * @GST_RANK_MARGINAL: unlikly to be chosen
+ * @GST_RANK_MARGINAL: unlikely to be chosen
  * @GST_RANK_SECONDARY: likely to be chosen
  * @GST_RANK_PRIMARY: will be chosen first
  *
@@ -72,43 +69,25 @@ typedef enum {
 } GstRank;
 
 /**
- * GstPluginFeature:
+ * gst_plugin_feature_get_name:
+ * @feature: a #GstPluginFeature to get the name of @feature.
  *
- * Opaque #GstPluginFeature structure.
+ * Returns the name of @feature.
+ * For a nameless plugin feature, this returns %NULL.
+ *
+ * Returns: (transfer none) (nullable): the name of @feature. MT safe.
+ *
  */
-struct _GstPluginFeature {
-  GstObject      object;
-
-  /*< private >*/
-  gboolean       loaded;
-  gchar         *name;
-  guint          rank;
-
-  const gchar   *plugin_name;
-  GstPlugin     *plugin;      /* weak ref */
-
-  /*< private >*/
-  gpointer _gst_reserved[GST_PADDING - 1];
-};
-
-struct _GstPluginFeatureClass {
-  GstObjectClass        parent_class;
-
-  /*< private >*/
-  gpointer _gst_reserved[GST_PADDING];
-};
+#define                 gst_plugin_feature_get_name(feature)      GST_OBJECT_NAME(feature)
 
 /**
- * GstTypeNameData:
- * @name: a name
- * @type: a GType
+ * gst_plugin_feature_set_name:
+ * @feature: a #GstPluginFeature to set the name of.
+ * @name: the new name
  *
- * Structure used for filtering based on @name and @type.
+ * Sets the name of the plugin feature, getting rid of the old name if there was one.
  */
-typedef struct {
-  const gchar   *name;
-  GType          type;
-} GstTypeNameData;
+#define                 gst_plugin_feature_set_name(feature,name) gst_object_set_name(GST_OBJECT_CAST(feature),name)
 
 /**
  * GstPluginFeatureFilter:
@@ -130,16 +109,14 @@ GType           gst_plugin_feature_get_type             (void);
 GstPluginFeature *
                 gst_plugin_feature_load                 (GstPluginFeature *feature);
 
-gboolean        gst_plugin_feature_type_name_filter     (GstPluginFeature *feature,
-                                                         GstTypeNameData *data);
-
 void            gst_plugin_feature_set_rank             (GstPluginFeature *feature, guint rank);
-void            gst_plugin_feature_set_name             (GstPluginFeature *feature, const gchar *name);
 guint           gst_plugin_feature_get_rank             (GstPluginFeature *feature);
-const gchar    *gst_plugin_feature_get_name             (GstPluginFeature *feature);
+
+GstPlugin     * gst_plugin_feature_get_plugin           (GstPluginFeature *feature);
+const gchar   * gst_plugin_feature_get_plugin_name      (GstPluginFeature *feature);
 
 void            gst_plugin_feature_list_free            (GList *list);
-GList          *gst_plugin_feature_list_copy            (GList *list);
+GList          *gst_plugin_feature_list_copy            (GList *list) G_GNUC_MALLOC;
 void            gst_plugin_feature_list_debug           (GList *list);
 
 /**
@@ -148,8 +125,6 @@ void            gst_plugin_feature_list_debug           (GList *list);
  *     plugin features
  *
  * Debug the plugin feature names in @list.
- *
- * Since: 0.10.31
  */
 #ifndef GST_DISABLE_GST_DEBUG
 #define GST_PLUGIN_FEATURE_LIST_DEBUG(list) gst_plugin_feature_list_debug(list)

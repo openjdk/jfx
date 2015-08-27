@@ -14,8 +14,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 /**
@@ -29,9 +29,9 @@
  * <refsect2>
  * <title>Example launch line</title>
  * |[
- * gst-launch audiotestsrc wave=saw ! audiodynamic characteristics=soft-knee mode=compressor threshold=0.5 rate=0.5 ! alsasink
- * gst-launch filesrc location="melo1.ogg" ! oggdemux ! vorbisdec ! audioconvert ! audiodynamic characteristics=hard-knee mode=expander threshold=0.2 rate=4.0 ! alsasink
- * gst-launch audiotestsrc wave=saw ! audioconvert ! audiodynamic ! audioconvert ! alsasink
+ * gst-launch-1.0 audiotestsrc wave=saw ! audiodynamic characteristics=soft-knee mode=compressor threshold=0.5 rate=0.5 ! alsasink
+ * gst-launch-1.0 filesrc location="melo1.ogg" ! oggdemux ! vorbisdec ! audioconvert ! audiodynamic characteristics=hard-knee mode=expander threshold=0.2 rate=4.0 ! alsasink
+ * gst-launch-1.0 audiotestsrc wave=saw ! audioconvert ! audiodynamic ! audioconvert ! alsasink
  * ]|
  * </refsect2>
  */
@@ -46,7 +46,6 @@
 #include <gst/base/gstbasetransform.h>
 #include <gst/audio/audio.h>
 #include <gst/audio/gstaudiofilter.h>
-#include <gst/controller/gstcontroller.h>
 
 #include "audiodynamic.h"
 
@@ -70,24 +69,13 @@ enum
 };
 
 #define ALLOWED_CAPS \
-    "audio/x-raw-int,"                                                \
-    " depth=(int)16,"                                                 \
-    " width=(int)16,"                                                 \
-    " endianness=(int)BYTE_ORDER,"                                    \
-    " signed=(bool)TRUE,"                                             \
-    " rate=(int)[1,MAX],"                                             \
-    " channels=(int)[1,MAX]; "                                        \
-    "audio/x-raw-float,"                                              \
-    " width=(int)32,"                                                 \
-    " endianness=(int)BYTE_ORDER,"                                    \
-    " rate=(int)[1,MAX],"                                             \
-    " channels=(int)[1,MAX]"
+    "audio/x-raw,"                                                \
+    " format=(string) {"GST_AUDIO_NE(S16)","GST_AUDIO_NE(F32)"}," \
+    " rate=(int)[1,MAX],"                                         \
+    " channels=(int)[1,MAX],"                                     \
+    " layout=(string) {interleaved, non-interleaved}"
 
-#define DEBUG_INIT(bla) \
-  GST_DEBUG_CATEGORY_INIT (gst_audio_dynamic_debug, "audiodynamic", 0, "audiodynamic element");
-
-GST_BOILERPLATE_FULL (GstAudioDynamic, gst_audio_dynamic, GstAudioFilter,
-    GST_TYPE_AUDIO_FILTER, DEBUG_INIT);
+G_DEFINE_TYPE (GstAudioDynamic, gst_audio_dynamic, GST_TYPE_AUDIO_FILTER);
 
 static void gst_audio_dynamic_set_property (GObject * object, guint prop_id,
     const GValue * value, GParamSpec * pspec);
@@ -95,7 +83,7 @@ static void gst_audio_dynamic_get_property (GObject * object, guint prop_id,
     GValue * value, GParamSpec * pspec);
 
 static gboolean gst_audio_dynamic_setup (GstAudioFilter * filter,
-    GstRingBufferSpec * format);
+    const GstAudioInfo * info);
 static GstFlowReturn gst_audio_dynamic_transform_ip (GstBaseTransform * base,
     GstBuffer * buf);
 
@@ -193,14 +181,17 @@ gst_audio_dynamic_mode_get_type (void)
 }
 
 static gboolean
-gst_audio_dynamic_set_process_function (GstAudioDynamic * filter)
+gst_audio_dynamic_set_process_function (GstAudioDynamic * filter,
+    const GstAudioInfo * info)
 {
   gint func_index;
 
+  if (GST_AUDIO_INFO_FORMAT (info) == GST_AUDIO_FORMAT_UNKNOWN)
+    return FALSE;
+
   func_index = (filter->mode == MODE_COMPRESSOR) ? 0 : 4;
   func_index += (filter->characteristics == CHARACTERISTICS_HARD_KNEE) ? 0 : 2;
-  func_index +=
-      (GST_AUDIO_FILTER (filter)->format.type == GST_BUFTYPE_FLOAT) ? 1 : 0;
+  func_index += (GST_AUDIO_INFO_FORMAT (info) == GST_AUDIO_FORMAT_F32) ? 1 : 0;
 
   if (func_index >= 0 && func_index < 8) {
     filter->process = process_functions[func_index];
@@ -213,27 +204,18 @@ gst_audio_dynamic_set_process_function (GstAudioDynamic * filter)
 /* GObject vmethod implementations */
 
 static void
-gst_audio_dynamic_base_init (gpointer klass)
-{
-  GstElementClass *element_class = GST_ELEMENT_CLASS (klass);
-  GstCaps *caps;
-
-  gst_element_class_set_details_simple (element_class,
-      "Dynamic range controller", "Filter/Effect/Audio",
-      "Compressor and Expander", "Sebastian Dröge <slomo@circular-chaos.org>");
-
-  caps = gst_caps_from_string (ALLOWED_CAPS);
-  gst_audio_filter_class_add_pad_templates (GST_AUDIO_FILTER_CLASS (klass),
-      caps);
-  gst_caps_unref (caps);
-}
-
-static void
 gst_audio_dynamic_class_init (GstAudioDynamicClass * klass)
 {
   GObjectClass *gobject_class;
+  GstElementClass *gstelement_class;
+  GstCaps *caps;
+
+  GST_DEBUG_CATEGORY_INIT (gst_audio_dynamic_debug, "audiodynamic", 0,
+      "audiodynamic element");
 
   gobject_class = (GObjectClass *) klass;
+  gstelement_class = (GstElementClass *) klass;
+
   gobject_class->set_property = gst_audio_dynamic_set_property;
   gobject_class->get_property = gst_audio_dynamic_get_property;
 
@@ -263,14 +245,25 @@ gst_audio_dynamic_class_init (GstAudioDynamicClass * klass)
           1.0,
           G_PARAM_READWRITE | GST_PARAM_CONTROLLABLE | G_PARAM_STATIC_STRINGS));
 
+  gst_element_class_set_static_metadata (gstelement_class,
+      "Dynamic range controller", "Filter/Effect/Audio",
+      "Compressor and Expander", "Sebastian Dröge <slomo@circular-chaos.org>");
+
+  caps = gst_caps_from_string (ALLOWED_CAPS);
+  gst_audio_filter_class_add_pad_templates (GST_AUDIO_FILTER_CLASS (klass),
+      caps);
+  gst_caps_unref (caps);
+
   GST_AUDIO_FILTER_CLASS (klass)->setup =
       GST_DEBUG_FUNCPTR (gst_audio_dynamic_setup);
+
   GST_BASE_TRANSFORM_CLASS (klass)->transform_ip =
       GST_DEBUG_FUNCPTR (gst_audio_dynamic_transform_ip);
+  GST_BASE_TRANSFORM_CLASS (klass)->transform_ip_on_passthrough = FALSE;
 }
 
 static void
-gst_audio_dynamic_init (GstAudioDynamic * filter, GstAudioDynamicClass * klass)
+gst_audio_dynamic_init (GstAudioDynamic * filter)
 {
   filter->ratio = 1.0;
   filter->threshold = 0.0;
@@ -289,11 +282,13 @@ gst_audio_dynamic_set_property (GObject * object, guint prop_id,
   switch (prop_id) {
     case PROP_CHARACTERISTICS:
       filter->characteristics = g_value_get_enum (value);
-      gst_audio_dynamic_set_process_function (filter);
+      gst_audio_dynamic_set_process_function (filter,
+          GST_AUDIO_FILTER_INFO (filter));
       break;
     case PROP_MODE:
       filter->mode = g_value_get_enum (value);
-      gst_audio_dynamic_set_process_function (filter);
+      gst_audio_dynamic_set_process_function (filter,
+          GST_AUDIO_FILTER_INFO (filter));
       break;
     case PROP_THRESHOLD:
       filter->threshold = g_value_get_float (value);
@@ -335,12 +330,12 @@ gst_audio_dynamic_get_property (GObject * object, guint prop_id,
 /* GstAudioFilter vmethod implementations */
 
 static gboolean
-gst_audio_dynamic_setup (GstAudioFilter * base, GstRingBufferSpec * format)
+gst_audio_dynamic_setup (GstAudioFilter * base, const GstAudioInfo * info)
 {
   GstAudioDynamic *filter = GST_AUDIO_DYNAMIC (base);
   gboolean ret = TRUE;
 
-  ret = gst_audio_dynamic_set_process_function (filter);
+  ret = gst_audio_dynamic_set_process_function (filter, info);
 
   return ret;
 }
@@ -584,6 +579,7 @@ gst_audio_dynamic_transform_soft_knee_expander_int (GstAudioDynamic * filter,
   gdouble zero_p, zero_n;
   gdouble a_p, b_p, c_p;
   gdouble a_n, b_n, c_n;
+  gdouble r2;
 
   /* Nothing to do for us here if threshold equals 0.0
    * or ratio equals 1.0 */
@@ -613,11 +609,12 @@ gst_audio_dynamic_transform_soft_knee_expander_int (GstAudioDynamic * filter,
    * b = (1 + r^2) / 2
    * c = t * (1.0 - b - a*t)
    * f(x) = ax^2 + bx + c */
-  a_p = (1.0 - filter->ratio * filter->ratio) / (4.0 * thr_p);
-  b_p = (1.0 + filter->ratio * filter->ratio) / 2.0;
+  r2 = filter->ratio * filter->ratio;
+  a_p = (1.0 - r2) / (4.0 * thr_p);
+  b_p = (1.0 + r2) / 2.0;
   c_p = thr_p * (1.0 - b_p - a_p * thr_p);
-  a_n = (1.0 - filter->ratio * filter->ratio) / (4.0 * thr_n);
-  b_n = (1.0 + filter->ratio * filter->ratio) / 2.0;
+  a_n = (1.0 - r2) / (4.0 * thr_n);
+  b_n = (1.0 + r2) / 2.0;
   c_n = thr_n * (1.0 - b_n - a_n * thr_n);
 
   for (; num_samples; num_samples--) {
@@ -643,6 +640,7 @@ gst_audio_dynamic_transform_soft_knee_expander_float (GstAudioDynamic * filter,
   gdouble zero;
   gdouble a_p, b_p, c_p;
   gdouble a_n, b_n, c_n;
+  gdouble r2;
 
   /* Nothing to do for us here if threshold equals 0.0
    * or ratio equals 1.0 */
@@ -668,11 +666,12 @@ gst_audio_dynamic_transform_soft_knee_expander_float (GstAudioDynamic * filter,
    * b = (1 + r^2) / 2
    * c = t * (1.0 - b - a*t)
    * f(x) = ax^2 + bx + c */
-  a_p = (1.0 - filter->ratio * filter->ratio) / (4.0 * threshold);
-  b_p = (1.0 + filter->ratio * filter->ratio) / 2.0;
+  r2 = filter->ratio * filter->ratio;
+  a_p = (1.0 - r2) / (4.0 * threshold);
+  b_p = (1.0 + r2) / 2.0;
   c_p = threshold * (1.0 - b_p - a_p * threshold);
-  a_n = (1.0 - filter->ratio * filter->ratio) / (-4.0 * threshold);
-  b_n = (1.0 + filter->ratio * filter->ratio) / 2.0;
+  a_n = (1.0 - r2) / (-4.0 * threshold);
+  b_n = (1.0 + r2) / 2.0;
   c_n = -threshold * (1.0 - b_n + a_n * threshold);
 
   for (; num_samples; num_samples--) {
@@ -696,6 +695,7 @@ gst_audio_dynamic_transform_ip (GstBaseTransform * base, GstBuffer * buf)
   GstAudioDynamic *filter = GST_AUDIO_DYNAMIC (base);
   guint num_samples;
   GstClockTime timestamp, stream_time;
+  GstMapInfo map;
 
   timestamp = GST_BUFFER_TIMESTAMP (buf);
   stream_time =
@@ -705,16 +705,17 @@ gst_audio_dynamic_transform_ip (GstBaseTransform * base, GstBuffer * buf)
       GST_TIME_ARGS (timestamp));
 
   if (GST_CLOCK_TIME_IS_VALID (stream_time))
-    gst_object_sync_values (G_OBJECT (filter), stream_time);
+    gst_object_sync_values (GST_OBJECT (filter), stream_time);
 
-  num_samples =
-      GST_BUFFER_SIZE (buf) / (GST_AUDIO_FILTER (filter)->format.width / 8);
-
-  if (gst_base_transform_is_passthrough (base) ||
-      G_UNLIKELY (GST_BUFFER_FLAG_IS_SET (buf, GST_BUFFER_FLAG_GAP)))
+  if (G_UNLIKELY (GST_BUFFER_FLAG_IS_SET (buf, GST_BUFFER_FLAG_GAP)))
     return GST_FLOW_OK;
 
-  filter->process (filter, GST_BUFFER_DATA (buf), num_samples);
+  gst_buffer_map (buf, &map, GST_MAP_READWRITE);
+  num_samples = map.size / GST_AUDIO_FILTER_BPS (filter);
+
+  filter->process (filter, map.data, num_samples);
+
+  gst_buffer_unmap (buf, &map);
 
   return GST_FLOW_OK;
 }

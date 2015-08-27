@@ -15,8 +15,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -26,7 +26,7 @@
 #include "riff-ids.h"
 #include "riff-media.h"
 
-#include <gst/audio/multichannel.h>
+#include <gst/audio/audio.h>
 
 #include <string.h>
 #include <math.h>
@@ -68,21 +68,14 @@ gst_riff_create_video_caps (guint32 codec_fcc,
 
       if (strf) {
         if (bpp == 8) {
-          caps = gst_caps_new_simple ("video/x-raw-rgb",
-              "bpp", G_TYPE_INT, 8, "depth", G_TYPE_INT, 8,
-              "endianness", G_TYPE_INT, G_BYTE_ORDER, NULL);
+          caps = gst_caps_new_simple ("video/x-raw",
+              "format", G_TYPE_STRING, "RGB8P", NULL);
         } else if (bpp == 24) {
-          caps = gst_caps_new_simple ("video/x-raw-rgb",
-              "bpp", G_TYPE_INT, 24, "depth", G_TYPE_INT, 24,
-              "endianness", G_TYPE_INT, G_BIG_ENDIAN,
-              "red_mask", G_TYPE_INT, 0xff, "green_mask", G_TYPE_INT, 0xff00,
-              "blue_mask", G_TYPE_INT, 0xff0000, NULL);
+          caps = gst_caps_new_simple ("video/x-raw",
+              "format", G_TYPE_STRING, "BGR", NULL);
         } else if (bpp == 32) {
-          caps = gst_caps_new_simple ("video/x-raw-rgb",
-              "bpp", G_TYPE_INT, 32, "depth", G_TYPE_INT, 24,
-              "endianness", G_TYPE_INT, G_BIG_ENDIAN,
-              "red_mask", G_TYPE_INT, 0xff00, "green_mask", G_TYPE_INT,
-              0xff0000, "blue_mask", G_TYPE_INT, 0xff000000, NULL);
+          caps = gst_caps_new_simple ("video/x-raw",
+              "format", G_TYPE_STRING, "BGRx", NULL);
         } else {
           GST_WARNING ("Unhandled DIB RGB depth: %d", bpp);
           return NULL;
@@ -90,8 +83,8 @@ gst_riff_create_video_caps (guint32 codec_fcc,
       } else {
         /* for template */
         caps =
-            gst_caps_from_string ("video/x-raw-rgb, bpp = (int) { 8, 24, 32 }, "
-            "depth = (int) { 8, 24}");
+            gst_caps_from_string ("video/x-raw, format = (string) "
+            "{ RGB8P, BGR, BGRx }");
       }
 
       palette = strf_data;
@@ -104,43 +97,64 @@ gst_riff_create_video_caps (guint32 codec_fcc,
       }
       break;
     }
+
+    case GST_MAKE_FOURCC ('G', 'R', 'E', 'Y'):
+    case GST_MAKE_FOURCC ('Y', '8', '0', '0'):
+    case GST_MAKE_FOURCC ('Y', '8', ' ', ' '):
+      caps = gst_caps_new_simple ("video/x-raw",
+          "format", G_TYPE_STRING, "GRAY8", NULL);
+      if (codec_name)
+        *codec_name = g_strdup ("Uncompressed 8-bit monochrome");
+      break;
+
+    case GST_MAKE_FOURCC ('r', '2', '1', '0'):
+      caps = gst_caps_new_simple ("video/x-raw",
+          "format", G_TYPE_STRING, "r210", NULL);
+      if (codec_name)
+        *codec_name = g_strdup ("Uncompressed packed RGB 10-bit 4:4:4");
+      break;
+
     case GST_MAKE_FOURCC ('I', '4', '2', '0'):
-      caps = gst_caps_new_simple ("video/x-raw-yuv",
-          "format", GST_TYPE_FOURCC, codec_fcc, NULL);
+      caps = gst_caps_new_simple ("video/x-raw",
+          "format", G_TYPE_STRING, "I420", NULL);
       if (codec_name)
         *codec_name = g_strdup ("Uncompressed planar YUV 4:2:0");
       break;
 
     case GST_MAKE_FOURCC ('Y', 'U', 'Y', '2'):
     case GST_MAKE_FOURCC ('Y', 'U', 'N', 'V'):
-      caps = gst_caps_new_simple ("video/x-raw-yuv",
-          "format", GST_TYPE_FOURCC, GST_MAKE_FOURCC ('Y', 'U', 'Y', '2'),
-          NULL);
+      caps = gst_caps_new_simple ("video/x-raw",
+          "format", G_TYPE_STRING, "YUY2", NULL);
       if (codec_name)
         *codec_name = g_strdup ("Uncompressed packed YUV 4:2:2");
       break;
 
     case GST_MAKE_FOURCC ('Y', 'V', 'U', '9'):
-      caps = gst_caps_new_simple ("video/x-raw-yuv",
-          "format", GST_TYPE_FOURCC, codec_fcc, NULL);
+      caps = gst_caps_new_simple ("video/x-raw",
+          "format", G_TYPE_STRING, "YVU9", NULL);
       if (codec_name)
         *codec_name = g_strdup ("Uncompressed packed YVU 4:1:0");
       break;
 
     case GST_MAKE_FOURCC ('U', 'Y', 'V', 'Y'):
     case GST_MAKE_FOURCC ('2', 'v', 'u', 'y'):
-      caps = gst_caps_new_simple ("video/x-raw-yuv",
-          "format", GST_TYPE_FOURCC, GST_MAKE_FOURCC ('U', 'Y', 'V', 'Y'),
-          NULL);
+      caps = gst_caps_new_simple ("video/x-raw",
+          "format", G_TYPE_STRING, "UYVY", NULL);
       if (codec_name)
         *codec_name = g_strdup ("Uncompressed packed YUV 4:2:2");
       break;
 
     case GST_MAKE_FOURCC ('Y', 'V', '1', '2'):
-      caps = gst_caps_new_simple ("video/x-raw-yuv",
-          "format", GST_TYPE_FOURCC, codec_fcc, NULL);
+      caps = gst_caps_new_simple ("video/x-raw",
+          "format", G_TYPE_STRING, "YV12", NULL);
       if (codec_name)
         *codec_name = g_strdup ("Uncompressed packed YVU 4:2:2");
+      break;
+    case GST_MAKE_FOURCC ('v', '2', '1', '0'):
+      caps = gst_caps_new_simple ("video/x-raw",
+          "format", G_TYPE_STRING, "v210", NULL);
+      if (codec_name)
+        *codec_name = g_strdup ("Uncompressed packed 10-bit YUV 4:2:2");
       break;
 
     case GST_MAKE_FOURCC ('M', 'J', 'P', 'G'): /* YUY2 MJPEG */
@@ -150,45 +164,45 @@ gst_riff_create_video_caps (guint32 codec_fcc,
     case GST_MAKE_FOURCC ('d', 'm', 'b', '1'):
     case GST_MAKE_FOURCC ('A', 'C', 'D', 'V'):
     case GST_MAKE_FOURCC ('Q', 'I', 'V', 'G'):
-      caps = gst_caps_new_simple ("image/jpeg", NULL);
+      caps = gst_caps_new_empty_simple ("image/jpeg");
       if (codec_name)
         *codec_name = g_strdup ("Motion JPEG");
       break;
 
     case GST_MAKE_FOURCC ('J', 'P', 'E', 'G'): /* generic (mostly RGB) MJPEG */
     case GST_MAKE_FOURCC ('j', 'p', 'e', 'g'): /* generic (mostly RGB) MJPEG */
-      caps = gst_caps_new_simple ("image/jpeg", NULL);
+      caps = gst_caps_new_empty_simple ("image/jpeg");
       if (codec_name)
         *codec_name = g_strdup ("JPEG Still Image");
       break;
 
     case GST_MAKE_FOURCC ('P', 'I', 'X', 'L'): /* Miro/Pinnacle fourccs */
     case GST_MAKE_FOURCC ('V', 'I', 'X', 'L'): /* Miro/Pinnacle fourccs */
-      caps = gst_caps_new_simple ("image/jpeg", NULL);
+      caps = gst_caps_new_empty_simple ("image/jpeg");
       if (codec_name)
         *codec_name = g_strdup ("Miro/Pinnacle Motion JPEG");
       break;
 
     case GST_MAKE_FOURCC ('C', 'J', 'P', 'G'):
-      caps = gst_caps_new_simple ("image/jpeg", NULL);
+      caps = gst_caps_new_empty_simple ("image/jpeg");
       if (codec_name)
         *codec_name = g_strdup ("Creative Webcam JPEG");
       break;
 
     case GST_MAKE_FOURCC ('S', 'L', 'M', 'J'):
-      caps = gst_caps_new_simple ("image/jpeg", NULL);
+      caps = gst_caps_new_empty_simple ("image/jpeg");
       if (codec_name)
         *codec_name = g_strdup ("SL Motion JPEG");
       break;
 
     case GST_MAKE_FOURCC ('J', 'P', 'G', 'L'):
-      caps = gst_caps_new_simple ("image/jpeg", NULL);
+      caps = gst_caps_new_empty_simple ("image/jpeg");
       if (codec_name)
         *codec_name = g_strdup ("Pegasus Lossless JPEG");
       break;
 
     case GST_MAKE_FOURCC ('L', 'O', 'C', 'O'):
-      caps = gst_caps_new_simple ("video/x-loco", NULL);
+      caps = gst_caps_new_empty_simple ("video/x-loco");
       if (codec_name)
         *codec_name = g_strdup ("LOCO Lossless");
       break;
@@ -199,19 +213,19 @@ gst_riff_create_video_caps (guint32 codec_fcc,
     case GST_MAKE_FOURCC ('S', 'P', '5', '6'):
     case GST_MAKE_FOURCC ('S', 'P', '5', '7'):
     case GST_MAKE_FOURCC ('S', 'P', '5', '8'):
-      caps = gst_caps_new_simple ("video/sp5x", NULL);
+      caps = gst_caps_new_empty_simple ("video/sp5x");
       if (codec_name)
         *codec_name = g_strdup ("Sp5x-like JPEG");
       break;
 
     case GST_MAKE_FOURCC ('Z', 'M', 'B', 'V'):
-      caps = gst_caps_new_simple ("video/x-zmbv", NULL);
+      caps = gst_caps_new_empty_simple ("video/x-zmbv");
       if (codec_name)
         *codec_name = g_strdup ("Zip Motion Block video");
       break;
 
     case GST_MAKE_FOURCC ('H', 'F', 'Y', 'U'):
-      caps = gst_caps_new_simple ("video/x-huffyuv", NULL);
+      caps = gst_caps_new_empty_simple ("video/x-huffyuv");
       if (strf) {
         gst_caps_set_simple (caps, "bpp",
             G_TYPE_INT, (int) strf->bit_cnt, NULL);
@@ -346,14 +360,16 @@ gst_riff_create_video_caps (guint32 codec_fcc,
 
     case GST_MAKE_FOURCC ('S', 'E', 'D', 'G'):
       caps = gst_caps_new_simple ("video/mpeg",
-          "mpegversion", G_TYPE_INT, 4, NULL);
+          "mpegversion", G_TYPE_INT, 4,
+          "systemstream", G_TYPE_BOOLEAN, FALSE, NULL);
       if (codec_name)
         *codec_name = g_strdup ("Samsung MPEG-4");
       break;
 
     case GST_MAKE_FOURCC ('M', '4', 'C', 'C'):
       caps = gst_caps_new_simple ("video/mpeg",
-          "mpegversion", G_TYPE_INT, 4, NULL);
+          "mpegversion", G_TYPE_INT, 4,
+          "systemstream", G_TYPE_BOOLEAN, FALSE, NULL);
       if (codec_name)
         *codec_name = g_strdup ("Divio MPEG-4");
       break;
@@ -403,19 +419,6 @@ gst_riff_create_video_caps (guint32 codec_fcc,
         *codec_name = g_strdup ("DivX MPEG-4 Version 5");
       break;
 
-    case GST_MAKE_FOURCC ('X', 'V', 'I', 'D'):
-    case GST_MAKE_FOURCC ('x', 'v', 'i', 'd'):
-      caps = gst_caps_new_simple ("video/x-xvid", NULL);
-      if (codec_name)
-        *codec_name = g_strdup ("XVID MPEG-4");
-      break;
-
-    case GST_MAKE_FOURCC ('R', 'M', 'P', '4'):
-      caps = gst_caps_new_simple ("video/x-xvid", NULL);
-      if (codec_name)
-        *codec_name = g_strdup ("Sigma-Designs MPEG-4");
-      break;
-
     case GST_MAKE_FOURCC ('M', 'P', 'G', '4'):
     case GST_MAKE_FOURCC ('M', 'P', '4', '1'):
     case GST_MAKE_FOURCC ('m', 'p', '4', '1'):
@@ -444,7 +447,8 @@ gst_riff_create_video_caps (guint32 codec_fcc,
     case GST_MAKE_FOURCC ('M', 'P', '4', 'S'):
     case GST_MAKE_FOURCC ('M', '4', 'S', '2'):
       caps = gst_caps_new_simple ("video/mpeg",
-          "mpegversion", G_TYPE_INT, 4, NULL);
+          "mpegversion", G_TYPE_INT, 4,
+          "systemstream", G_TYPE_BOOLEAN, FALSE, NULL);
       if (codec_name)
         *codec_name = g_strdup ("Microsoft ISO MPEG-4 1.1");
       break;
@@ -453,11 +457,16 @@ gst_riff_create_video_caps (guint32 codec_fcc,
     case GST_MAKE_FOURCC ('U', 'M', 'P', '4'):
     case GST_MAKE_FOURCC ('F', 'F', 'D', 'S'):
       caps = gst_caps_new_simple ("video/mpeg",
-          "mpegversion", G_TYPE_INT, 4, NULL);
+          "mpegversion", G_TYPE_INT, 4,
+          "systemstream", G_TYPE_BOOLEAN, FALSE, NULL);
       if (codec_name)
         *codec_name = g_strdup ("FFmpeg MPEG-4");
       break;
 
+    case GST_MAKE_FOURCC ('3', 'I', 'V', '1'):
+    case GST_MAKE_FOURCC ('3', 'I', 'V', '2'):
+    case GST_MAKE_FOURCC ('X', 'V', 'I', 'D'):
+    case GST_MAKE_FOURCC ('x', 'v', 'i', 'd'):
     case GST_MAKE_FOURCC ('E', 'M', '4', 'A'):
     case GST_MAKE_FOURCC ('E', 'P', 'V', 'H'):
     case GST_MAKE_FOURCC ('F', 'V', 'F', 'W'):
@@ -474,8 +483,10 @@ gst_riff_create_video_caps (guint32 codec_fcc,
     case GST_MAKE_FOURCC ('G', 'E', 'O', 'X'):
     case GST_MAKE_FOURCC ('M', 'P', '4', 'V'):
     case GST_MAKE_FOURCC ('m', 'p', '4', 'v'):
+    case GST_MAKE_FOURCC ('R', 'M', 'P', '4'):
       caps = gst_caps_new_simple ("video/mpeg",
-          "mpegversion", G_TYPE_INT, 4, NULL);
+          "mpegversion", G_TYPE_INT, 4,
+          "systemstream", G_TYPE_BOOLEAN, FALSE, NULL);
       if (codec_name)
         *codec_name = g_strdup ("MPEG-4");
       break;
@@ -486,13 +497,6 @@ gst_riff_create_video_caps (guint32 codec_fcc,
           "msmpegversion", G_TYPE_INT, 43, NULL);
       if (codec_name)
         *codec_name = g_strdup ("Microsoft MPEG-4 4.3");        /* FIXME? */
-      break;
-
-    case GST_MAKE_FOURCC ('3', 'I', 'V', '1'):
-    case GST_MAKE_FOURCC ('3', 'I', 'V', '2'):
-      caps = gst_caps_new_simple ("video/x-3ivx", NULL);
-      if (codec_name)
-        *codec_name = g_strdup ("3ivx");
       break;
 
     case GST_MAKE_FOURCC ('D', 'V', 'S', 'D'):
@@ -524,6 +528,20 @@ gst_riff_create_video_caps (guint32 codec_fcc,
         *codec_name = g_strdup ("DVCPro50 Video");
       break;
 
+    case GST_MAKE_FOURCC ('M', 'S', 'S', '1'):
+      caps = gst_caps_new_simple ("video/x-wmv",
+          "wmvversion", G_TYPE_INT, 1, "format", G_TYPE_STRING, "MSS1", NULL);
+      if (codec_name)
+        *codec_name = g_strdup ("Microsoft Windows Media 7 Screen");
+      break;
+
+    case GST_MAKE_FOURCC ('M', 'S', 'S', '2'):
+      caps = gst_caps_new_simple ("video/x-wmv",
+          "wmvversion", G_TYPE_INT, 3, "format", G_TYPE_STRING, "MSS2", NULL);
+      if (codec_name)
+        *codec_name = g_strdup ("Microsoft Windows Media 9 Screen");
+      break;
+
     case GST_MAKE_FOURCC ('W', 'M', 'V', '1'):
       caps = gst_caps_new_simple ("video/x-wmv",
           "wmvversion", G_TYPE_INT, 1, NULL);
@@ -540,29 +558,27 @@ gst_riff_create_video_caps (guint32 codec_fcc,
 
     case GST_MAKE_FOURCC ('W', 'M', 'V', '3'):
       caps = gst_caps_new_simple ("video/x-wmv",
-          "wmvversion", G_TYPE_INT, 3, NULL);
+          "wmvversion", G_TYPE_INT, 3, "format", G_TYPE_STRING, "WMV3", NULL);
       if (codec_name)
         *codec_name = g_strdup ("Microsoft Windows Media 9");
       break;
 
     case GST_MAKE_FOURCC ('W', 'M', 'V', 'A'):
       caps = gst_caps_new_simple ("video/x-wmv",
-          "wmvversion", G_TYPE_INT, 3, "format", GST_TYPE_FOURCC,
-          codec_fcc, NULL);
+          "wmvversion", G_TYPE_INT, 3, "format", G_TYPE_STRING, "WMVA", NULL);
       if (codec_name)
         *codec_name = g_strdup ("Microsoft Windows Media Advanced Profile");
       break;
 
     case GST_MAKE_FOURCC ('W', 'V', 'C', '1'):
       caps = gst_caps_new_simple ("video/x-wmv",
-          "wmvversion", G_TYPE_INT, 3, "format", GST_TYPE_FOURCC,
-          codec_fcc, NULL);
+          "wmvversion", G_TYPE_INT, 3, "format", G_TYPE_STRING, "WVC1", NULL);
       if (codec_name)
         *codec_name = g_strdup ("Microsoft Windows Media VC-1");
       break;
 
     case GST_MAKE_FOURCC ('c', 'v', 'i', 'd'):
-      caps = gst_caps_new_simple ("video/x-cinepak", NULL);
+      caps = gst_caps_new_empty_simple ("video/x-cinepak");
       if (codec_name)
         *codec_name = g_strdup ("Cinepak video");
       break;
@@ -575,6 +591,10 @@ gst_riff_create_video_caps (guint32 codec_fcc,
     case GST_MAKE_FOURCC ('w', 'h', 'a', 'm'):
       caps = gst_caps_new_simple ("video/x-msvideocodec",
           "msvideoversion", G_TYPE_INT, 1, NULL);
+      if (strf) {
+        gst_caps_set_simple (caps, "bpp",
+            G_TYPE_INT, (int) strf->bit_cnt, NULL);
+      }
       if (codec_name)
         *codec_name = g_strdup ("MS video v1");
       palette = strf_data;
@@ -600,7 +620,7 @@ gst_riff_create_video_caps (guint32 codec_fcc,
       break;
 
     case GST_MAKE_FOURCC ('A', 'A', 'S', 'C'):
-      caps = gst_caps_new_simple ("video/x-aasc", NULL);
+      caps = gst_caps_new_empty_simple ("video/x-aasc");
       if (codec_name)
         *codec_name = g_strdup ("Autodesk Animator");
       break;
@@ -645,27 +665,27 @@ gst_riff_create_video_caps (guint32 codec_fcc,
       break;
 
     case GST_MAKE_FOURCC ('M', 'S', 'Z', 'H'):
-      caps = gst_caps_new_simple ("video/x-mszh", NULL);
+      caps = gst_caps_new_empty_simple ("video/x-mszh");
       if (codec_name)
         *codec_name = g_strdup ("Lossless MSZH Video");
       break;
 
     case GST_MAKE_FOURCC ('Z', 'L', 'I', 'B'):
-      caps = gst_caps_new_simple ("video/x-zlib", NULL);
+      caps = gst_caps_new_empty_simple ("video/x-zlib");
       if (codec_name)
         *codec_name = g_strdup ("Lossless zlib video");
       break;
 
     case GST_MAKE_FOURCC ('C', 'L', 'J', 'R'):
     case GST_MAKE_FOURCC ('c', 'l', 'j', 'r'):
-      caps = gst_caps_new_simple ("video/x-cirrus-logic-accupak", NULL);
+      caps = gst_caps_new_empty_simple ("video/x-cirrus-logic-accupak");
       if (codec_name)
         *codec_name = g_strdup ("Cirrus Logipak AccuPak");
       break;
 
     case GST_MAKE_FOURCC ('C', 'Y', 'U', 'V'):
     case GST_MAKE_FOURCC ('c', 'y', 'u', 'v'):
-      caps = gst_caps_new_simple ("video/x-compressed-yuv", NULL);
+      caps = gst_caps_new_empty_simple ("video/x-compressed-yuv");
       if (codec_name)
         *codec_name = g_strdup ("CYUV Lossless");
       break;
@@ -690,17 +710,18 @@ gst_riff_create_video_caps (guint32 codec_fcc,
     case GST_MAKE_FOURCC ('V', 'P', '3', '1'):
     case GST_MAKE_FOURCC ('v', 'p', '3', '1'):
     case GST_MAKE_FOURCC ('V', 'P', '3', ' '):
-      caps = gst_caps_new_simple ("video/x-vp3", NULL);
+      caps = gst_caps_new_empty_simple ("video/x-vp3");
       if (codec_name)
         *codec_name = g_strdup ("VP3");
       break;
 
     case GST_MAKE_FOURCC ('U', 'L', 'T', 'I'):
-      caps = gst_caps_new_simple ("video/x-ultimotion", NULL);
+      caps = gst_caps_new_empty_simple ("video/x-ultimotion");
       if (codec_name)
         *codec_name = g_strdup ("IBM UltiMotion");
       break;
 
+      /* FIXME 2.0: Rename video/x-camtasia to video/x-tscc,version=1 */
     case GST_MAKE_FOURCC ('T', 'S', 'C', 'C'):
     case GST_MAKE_FOURCC ('t', 's', 'c', 'c'):{
       if (strf) {
@@ -710,10 +731,20 @@ gst_riff_create_video_caps (guint32 codec_fcc,
             depth, NULL);
       } else {
         /* template caps */
-        caps = gst_caps_new_simple ("video/x-camtasia", NULL);
+        caps = gst_caps_new_empty_simple ("video/x-camtasia");
       }
       if (codec_name)
         *codec_name = g_strdup ("TechSmith Camtasia");
+      break;
+    }
+
+    case GST_MAKE_FOURCC ('T', 'S', 'C', '2'):
+    case GST_MAKE_FOURCC ('t', 's', 'c', '2'):{
+      caps =
+          gst_caps_new_simple ("video/x-tscc", "tsccversion", G_TYPE_INT, 2,
+          NULL);
+      if (codec_name)
+        *codec_name = g_strdup ("TechSmith Screen Capture 2");
       break;
     }
 
@@ -726,7 +757,7 @@ gst_riff_create_video_caps (guint32 codec_fcc,
             depth, NULL);
       } else {
         /* template caps */
-        caps = gst_caps_new_simple ("video/x-camstudio", NULL);
+        caps = gst_caps_new_empty_simple ("video/x-camstudio");
       }
       if (codec_name)
         *codec_name = g_strdup ("Camstudio");
@@ -764,7 +795,8 @@ gst_riff_create_video_caps (guint32 codec_fcc,
     case GST_MAKE_FOURCC ('M', 'P', 'N', 'G'):
     case GST_MAKE_FOURCC ('m', 'p', 'n', 'g'):
     case GST_MAKE_FOURCC ('P', 'N', 'G', ' '):
-      caps = gst_caps_new_simple ("image/png", NULL);
+    case GST_MAKE_FOURCC ('p', 'n', 'g', ' '):
+      caps = gst_caps_new_empty_simple ("image/png");
       if (codec_name)
         *codec_name = g_strdup ("PNG image");
       break;
@@ -784,7 +816,7 @@ gst_riff_create_video_caps (guint32 codec_fcc,
       break;
 
     case GST_MAKE_FOURCC ('d', 'r', 'a', 'c'):
-      caps = gst_caps_new_simple ("video/x-dirac", NULL);
+      caps = gst_caps_new_empty_simple ("video/x-dirac");
       if (codec_name)
         *codec_name = g_strdup ("Dirac");
       break;
@@ -792,7 +824,7 @@ gst_riff_create_video_caps (guint32 codec_fcc,
     case GST_RIFF_rpza:
     case GST_RIFF_azpr:
     case GST_MAKE_FOURCC ('R', 'P', 'Z', 'A'):
-      caps = gst_caps_new_simple ("video/x-apple-video", NULL);
+      caps = gst_caps_new_empty_simple ("video/x-apple-video");
       if (codec_name)
         *codec_name = g_strdup ("Apple Video (RPZA)");
       break;
@@ -806,14 +838,14 @@ gst_riff_create_video_caps (guint32 codec_fcc,
       break;
 
     case GST_MAKE_FOURCC ('K', 'M', 'V', 'C'):
-      caps = gst_caps_new_simple ("video/x-kmvc", NULL);
+      caps = gst_caps_new_empty_simple ("video/x-kmvc");
       if (codec_name)
         *codec_name = g_strdup ("Karl Morton's video codec");
       break;
 
     case GST_MAKE_FOURCC ('v', 'p', '5', '0'):
     case GST_MAKE_FOURCC ('V', 'P', '5', '0'):
-      caps = gst_caps_new_simple ("video/x-vp5", NULL);
+      caps = gst_caps_new_empty_simple ("video/x-vp5");
       if (codec_name)
         *codec_name = g_strdup ("On2 VP5");
       break;
@@ -824,7 +856,7 @@ gst_riff_create_video_caps (guint32 codec_fcc,
     case GST_MAKE_FOURCC ('V', 'P', '6', '1'):
     case GST_MAKE_FOURCC ('V', 'p', '6', '2'):
     case GST_MAKE_FOURCC ('V', 'P', '6', '2'):
-      caps = gst_caps_new_simple ("video/x-vp6", NULL);
+      caps = gst_caps_new_empty_simple ("video/x-vp6");
       if (codec_name)
         *codec_name = g_strdup ("On2 VP6");
       break;
@@ -832,42 +864,49 @@ gst_riff_create_video_caps (guint32 codec_fcc,
     case GST_MAKE_FOURCC ('V', 'P', '6', 'F'):
     case GST_MAKE_FOURCC ('v', 'p', '6', 'f'):
     case GST_MAKE_FOURCC ('F', 'L', 'V', '4'):
-      caps = gst_caps_new_simple ("video/x-vp6-flash", NULL);
+      caps = gst_caps_new_empty_simple ("video/x-vp6-flash");
       if (codec_name)
         *codec_name = g_strdup ("On2 VP6");
       break;
 
     case GST_MAKE_FOURCC ('v', 'p', '7', '0'):
     case GST_MAKE_FOURCC ('V', 'P', '7', '0'):
-      caps = gst_caps_new_simple ("video/x-vp7", NULL);
+      caps = gst_caps_new_empty_simple ("video/x-vp7");
       if (codec_name)
         *codec_name = g_strdup ("On2 VP7");
       break;
 
     case GST_MAKE_FOURCC ('V', 'P', '8', '0'):
-      caps = gst_caps_new_simple ("video/x-vp8", NULL);
+      caps = gst_caps_new_empty_simple ("video/x-vp8");
       if (codec_name)
         *codec_name = g_strdup ("On2 VP8");
       break;
 
     case GST_MAKE_FOURCC ('L', 'M', '2', '0'):
-      caps = gst_caps_new_simple ("video/x-mimic", NULL);
+      caps = gst_caps_new_empty_simple ("video/x-mimic");
       if (codec_name)
         *codec_name = g_strdup ("Mimic webcam");
       break;
 
     case GST_MAKE_FOURCC ('T', 'H', 'E', 'O'):
     case GST_MAKE_FOURCC ('t', 'h', 'e', 'o'):
-      caps = gst_caps_new_simple ("video/x-theora", NULL);
+      caps = gst_caps_new_empty_simple ("video/x-theora");
       if (codec_name)
         *codec_name = g_strdup ("Theora video codec");
 
       break;
 
     case GST_MAKE_FOURCC ('F', 'P', 'S', '1'):
-      caps = gst_caps_new_simple ("video/x-fraps", NULL);
+      caps = gst_caps_new_empty_simple ("video/x-fraps");
       if (codec_name)
         *codec_name = g_strdup ("Fraps video");
+
+      break;
+
+    case GST_MAKE_FOURCC ('D', 'X', 'S', 'B'):
+      caps = gst_caps_new_empty_simple ("subpicture/x-xsub");
+      if (codec_name)
+        *codec_name = g_strdup ("XSUB subpicture stream");
 
       break;
 
@@ -886,9 +925,11 @@ gst_riff_create_video_caps (guint32 codec_fcc,
   }
 
   if (strf != NULL) {
+    /* raw rgb data is stored topdown, but instead of inverting the buffer, */
+    /* some tools just negate the height field in the header (e.g. ffmpeg) */
     gst_caps_set_simple (caps,
         "width", G_TYPE_INT, strf->width,
-        "height", G_TYPE_INT, strf->height, NULL);
+        "height", G_TYPE_INT, ABS ((gint) strf->height), NULL);
   } else {
     gst_caps_set_simple (caps,
         "width", GST_TYPE_INT_RANGE, 1, G_MAXINT,
@@ -908,31 +949,34 @@ gst_riff_create_video_caps (guint32 codec_fcc,
   if (palette) {
     GstBuffer *copy;
     guint num_colors;
+    gsize size;
 
     if (strf != NULL)
       num_colors = strf->num_colors;
     else
       num_colors = 256;
 
-    if (GST_BUFFER_SIZE (palette) >= (num_colors * 4)) {
-      /* palette is always at least 256*4 bytes */
-      copy =
-          gst_buffer_new_and_alloc (MAX (GST_BUFFER_SIZE (palette), 256 * 4));
-      memcpy (GST_BUFFER_DATA (copy), GST_BUFFER_DATA (palette),
-          GST_BUFFER_SIZE (palette));
+    size = gst_buffer_get_size (palette);
 
-#if (G_BYTE_ORDER == G_BIG_ENDIAN)
-      {
-        guint8 *data = GST_BUFFER_DATA (copy);
+    if (size >= (num_colors * 4)) {
+      guint8 *pdata;
+
+      /* palette is always at least 256*4 bytes */
+      pdata = g_malloc0 (MAX (size, 256 * 4));
+      gst_buffer_extract (palette, 0, pdata, size);
+
+      if (G_BYTE_ORDER == G_BIG_ENDIAN) {
+        guint8 *p = pdata;
         gint n;
 
         /* own endianness */
         for (n = 0; n < num_colors; n++) {
-          GST_WRITE_UINT32_BE (data, GST_READ_UINT32_LE (data));
-          data += sizeof (guint32);
+          GST_WRITE_UINT32_BE (p, GST_READ_UINT32_LE (p));
+          p += sizeof (guint32);
         }
       }
-#endif
+
+      copy = gst_buffer_new_wrapped (pdata, size);
       gst_caps_set_simple (caps, "palette_data", GST_TYPE_BUFFER, copy, NULL);
       gst_buffer_unref (copy);
     } else {
@@ -952,7 +996,7 @@ static const struct
   0x00001, GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT}, {
   0x00002, GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT}, {
   0x00004, GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER}, {
-  0x00008, GST_AUDIO_CHANNEL_POSITION_LFE}, {
+  0x00008, GST_AUDIO_CHANNEL_POSITION_LFE1}, {
   0x00010, GST_AUDIO_CHANNEL_POSITION_REAR_LEFT}, {
   0x00020, GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT}, {
   0x00040, GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT_OF_CENTER}, {
@@ -960,38 +1004,26 @@ static const struct
   0x00100, GST_AUDIO_CHANNEL_POSITION_REAR_CENTER}, {
   0x00200, GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT}, {
   0x00400, GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT}, {
-  0x00800, GST_AUDIO_CHANNEL_POSITION_INVALID}, /* TOP_CENTER       */
-  {
-  0x01000, GST_AUDIO_CHANNEL_POSITION_INVALID}, /* TOP_FRONT_LEFT   */
-  {
-  0x02000, GST_AUDIO_CHANNEL_POSITION_INVALID}, /* TOP_FRONT_CENTER */
-  {
-  0x04000, GST_AUDIO_CHANNEL_POSITION_INVALID}, /* TOP_FRONT_RIGHT  */
-  {
-  0x08000, GST_AUDIO_CHANNEL_POSITION_INVALID}, /* TOP_BACK_LEFT    */
-  {
-  0x10000, GST_AUDIO_CHANNEL_POSITION_INVALID}, /* TOP_BACK_CENTER  */
-  {
-  0x20000, GST_AUDIO_CHANNEL_POSITION_INVALID}  /* TOP_BACK_RIGHT   */
+  0x00800, GST_AUDIO_CHANNEL_POSITION_TOP_CENTER}, {
+  0x01000, GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_LEFT}, {
+  0x02000, GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_CENTER}, {
+  0x04000, GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_RIGHT}, {
+  0x08000, GST_AUDIO_CHANNEL_POSITION_TOP_REAR_LEFT}, {
+  0x10000, GST_AUDIO_CHANNEL_POSITION_TOP_REAR_CENTER}, {
+  0x20000, GST_AUDIO_CHANNEL_POSITION_TOP_REAR_RIGHT}
 };
 
 #define MAX_CHANNEL_POSITIONS G_N_ELEMENTS (layout_mapping)
 
 static gboolean
-gst_riff_wavext_add_channel_layout (GstCaps * caps, guint32 layout)
+gst_riff_wavext_add_channel_mask (GstCaps * caps, gint num_channels,
+    guint32 layout, gint channel_reorder_map[18])
 {
-  GstAudioChannelPosition pos[MAX_CHANNEL_POSITIONS];
-  GstStructure *s;
-  gint num_channels, i, p;
+  gint i, p;
+  guint64 channel_mask = 0;
+  GstAudioChannelPosition from[18], to[18];
 
-  s = gst_caps_get_structure (caps, 0);
-  if (!gst_structure_get_int (s, "channels", &num_channels))
-    g_return_val_if_reached (FALSE);
-
-  /* In theory this should be done for 1 and 2 channels too but
-   * apparently breaks too many things currently.
-   */
-  if (num_channels <= 2 || num_channels > MAX_CHANNEL_POSITIONS) {
+  if (num_channels < 1 || num_channels > MAX_CHANNEL_POSITIONS) {
     GST_DEBUG ("invalid number of channels: %d", num_channels);
     return FALSE;
   }
@@ -1010,7 +1042,8 @@ gst_riff_wavext_add_channel_layout (GstCaps * caps, guint32 layout)
         /* what to do? just ignore it and let downstream deal with a channel
          * layout that has INVALID positions in it for now ... */
       }
-      pos[p] = layout_mapping[i].gst_pos;
+      channel_mask |= G_GUINT64_CONSTANT (1) << layout_mapping[i].gst_pos;
+      from[p] = layout_mapping[i].gst_pos;
       ++p;
     }
   }
@@ -1021,21 +1054,36 @@ gst_riff_wavext_add_channel_layout (GstCaps * caps, guint32 layout)
     return FALSE;
   }
 
-  gst_audio_set_channel_positions (s, pos);
+  if (channel_reorder_map) {
+    memcpy (to, from, sizeof (from[0]) * num_channels);
+    if (!gst_audio_channel_positions_to_valid_order (to, num_channels))
+      return FALSE;
+    if (!gst_audio_get_channel_reorder_map (num_channels, from, to,
+            channel_reorder_map))
+      return FALSE;
+  }
+
+  gst_caps_set_simple (caps, "channel-mask", GST_TYPE_BITMASK, channel_mask,
+      NULL);
+
   return TRUE;
 }
 
 static gboolean
-gst_riff_wave_add_default_channel_layout (GstCaps * caps)
+gst_riff_wave_add_default_channel_mask (GstCaps * caps,
+    gint nchannels, gint channel_reorder_map[18])
 {
-  GstAudioChannelPosition pos[8] = { GST_AUDIO_CHANNEL_POSITION_NONE, };
-  GstStructure *s;
-  gint nchannels;
-
-  s = gst_caps_get_structure (caps, 0);
-
-  if (!gst_structure_get_int (s, "channels", &nchannels))
-    g_return_val_if_reached (FALSE);
+  guint64 channel_mask = 0;
+  static const gint reorder_maps[8][11] = {
+    {0,},
+    {0, 1},
+    {-1, -1, -1},
+    {0, 1, 2, 3},
+    {0, 1, 3, 4, 2},
+    {0, 1, 4, 5, 2, 3},
+    {-1, -1, -1, -1, -1, -1, -1},
+    {0, 1, 4, 5, 2, 3, 6, 7}
+  };
 
   if (nchannels > 8) {
     GST_DEBUG ("invalid number of channels: %d", nchannels);
@@ -1051,31 +1099,46 @@ gst_riff_wave_add_default_channel_layout (GstCaps * caps)
    */
   switch (nchannels) {
     case 1:
-      pos[0] = GST_AUDIO_CHANNEL_POSITION_FRONT_MONO;
-      break;
+      /* Mono => nothing */
+      if (channel_reorder_map)
+        channel_reorder_map[0] = 0;
+      return TRUE;
     case 8:
-      pos[7] = GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT;
-      pos[6] = GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT;
+      channel_mask |=
+          G_GUINT64_CONSTANT (1) << GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT;
+      channel_mask |=
+          G_GUINT64_CONSTANT (1) << GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT;
       /* fall through */
     case 6:
-      pos[5] = GST_AUDIO_CHANNEL_POSITION_LFE;
+      channel_mask |= G_GUINT64_CONSTANT (1) << GST_AUDIO_CHANNEL_POSITION_LFE1;
       /* fall through */
     case 5:
-      pos[4] = GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER;
+      channel_mask |=
+          G_GUINT64_CONSTANT (1) << GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER;
       /* fall through */
     case 4:
-      pos[3] = GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT;
-      pos[2] = GST_AUDIO_CHANNEL_POSITION_REAR_LEFT;
+      channel_mask |=
+          G_GUINT64_CONSTANT (1) << GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT;
+      channel_mask |=
+          G_GUINT64_CONSTANT (1) << GST_AUDIO_CHANNEL_POSITION_REAR_LEFT;
       /* fall through */
     case 2:
-      pos[1] = GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT;
-      pos[0] = GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT;
+      channel_mask |=
+          G_GUINT64_CONSTANT (1) << GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT;
+      channel_mask |=
+          G_GUINT64_CONSTANT (1) << GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT;
       break;
     default:
       return FALSE;
   }
 
-  gst_audio_set_channel_positions (s, pos);
+  if (channel_reorder_map)
+    memcpy (channel_reorder_map, reorder_maps[nchannels - 1],
+        sizeof (gint) * nchannels);
+
+  gst_caps_set_simple (caps, "channel-mask", GST_TYPE_BITMASK, channel_mask,
+      NULL);
+
   return TRUE;
 }
 
@@ -1115,12 +1178,18 @@ gst_riff_wavext_get_default_channel_mask (guint nchannels)
 GstCaps *
 gst_riff_create_audio_caps (guint16 codec_id,
     gst_riff_strh * strh, gst_riff_strf_auds * strf,
-    GstBuffer * strf_data, GstBuffer * strd_data, char **codec_name)
+    GstBuffer * strf_data, GstBuffer * strd_data, char **codec_name,
+    gint channel_reorder_map[18])
 {
   gboolean block_align = FALSE, rate_chan = TRUE;
   GstCaps *caps = NULL;
   gint rate_min = 1000, rate_max = 96000;
   gint channels_max = 2;
+  gint i;
+
+  if (channel_reorder_map)
+    for (i = 0; i < 18; i++)
+      channel_reorder_map[i] = -1;
 
   switch (codec_id) {
     case GST_RIFF_WAVE_FORMAT_PCM:     /* PCM */
@@ -1131,57 +1200,69 @@ gst_riff_create_audio_caps (guint16 codec_id,
         gint ba = strf->blockalign;
         gint ch = strf->channels;
         gint wd, ws;
+        GstAudioFormat format;
 
         /* If we have an empty blockalign, we take the width contained in 
-         * strf->size */
+         * strf->bits_per_sample */
         if (ba != 0)
           wd = ba * 8 / ch;
         else
-          wd = strf->size;
+          wd = strf->bits_per_sample;
 
-        if (strf->size > 32) {
+        if (strf->bits_per_sample > 32) {
           GST_WARNING ("invalid depth (%d) of pcm audio, overwriting.",
-              strf->size);
-          strf->size = 8 * ((wd + 7) / 8);
+              strf->bits_per_sample);
+          strf->bits_per_sample = 8 * ((wd + 7) / 8);
         }
 
         /* in riff, the depth is stored in the size field but it just means that
          * the _least_ significant bits are cleared. We can therefore just play
          * the sample as if it had a depth == width */
-        /* For reference, the actual depth is in strf->size */
+        /* For reference, the actual depth is in strf->bits_per_sample */
         ws = wd;
 
-        caps = gst_caps_new_simple ("audio/x-raw-int",
-            "endianness", G_TYPE_INT, G_LITTLE_ENDIAN,
-            "channels", G_TYPE_INT, ch,
-            "width", G_TYPE_INT, wd,
-            "depth", G_TYPE_INT, ws, "signed", G_TYPE_BOOLEAN, wd != 8, NULL);
+        format =
+            gst_audio_format_build_integer (wd != 8, G_LITTLE_ENDIAN, wd, ws);
 
-        /* Add default channel layout. In theory this should be done
-         * for 1 and 2 channels too but apparently breaks too many
-         * things currently. Also we know no default layout for more than
+        caps = gst_caps_new_simple ("audio/x-raw",
+            "format", G_TYPE_STRING, gst_audio_format_to_string (format),
+            "layout", G_TYPE_STRING, "interleaved",
+            "channels", G_TYPE_INT, ch, NULL);
+
+        /* Add default channel layout. We know no default layout for more than
          * 8 channels. */
-        if (ch > 2) {
-          if (ch > 8)
-            GST_WARNING ("don't know default layout for %d channels", ch);
-          else if (gst_riff_wave_add_default_channel_layout (caps))
-            GST_DEBUG ("using default channel layout for %d channels", ch);
-          else
-            GST_WARNING ("failed to add channel layout");
-        }
+        if (ch > 8)
+          GST_WARNING ("don't know default layout for %d channels", ch);
+        else if (gst_riff_wave_add_default_channel_mask (caps, ch,
+                channel_reorder_map))
+          GST_DEBUG ("using default channel layout for %d channels", ch);
+        else
+          GST_WARNING ("failed to add channel layout");
       } else {
         /* FIXME: this is pretty useless - we need fixed caps */
-        caps = gst_caps_from_string ("audio/x-raw-int, "
-            "endianness = (int) LITTLE_ENDIAN, "
-            "signed = (boolean) { true, false }, "
-            "width = (int) { 8, 16, 24, 32 }, " "depth = (int) [ 1, 32 ]");
+        caps = gst_caps_from_string ("audio/x-raw, "
+            "format = (string) { S8, U8, S16LE, U16LE, S24LE, "
+            "U24LE, S32LE, U32LE }, " "layout = (string) interleaved");
       }
       if (codec_name && strf)
         *codec_name = g_strdup_printf ("Uncompressed %d-bit PCM audio",
-            strf->size);
+            strf->bits_per_sample);
       break;
 
     case GST_RIFF_WAVE_FORMAT_ADPCM:
+      if (strf != NULL) {
+        /* Many encoding tools create a wrong bitrate information in the header,
+         * so either we calculate the bitrate or mark it as invalid as this
+         * would probably confuse timing */
+        strf->av_bps = 0;
+        if (strf->channels != 0 && strf->rate != 0 && strf->blockalign != 0) {
+          int spb = ((strf->blockalign - strf->channels * 7) / 2) * 2;
+          strf->av_bps =
+              gst_util_uint64_scale_int (strf->rate, strf->blockalign, spb);
+          GST_DEBUG ("fixing av_bps to calculated value %d of MS ADPCM",
+              strf->av_bps);
+        }
+      }
       caps = gst_caps_new_simple ("audio/x-adpcm",
           "layout", G_TYPE_STRING, "microsoft", NULL);
       if (codec_name)
@@ -1198,30 +1279,29 @@ gst_riff_create_audio_caps (guint16 codec_id,
         gint ch = strf->channels;
         gint wd = ba * 8 / ch;
 
-        caps = gst_caps_new_simple ("audio/x-raw-float",
-            "endianness", G_TYPE_INT, G_LITTLE_ENDIAN,
-            "channels", G_TYPE_INT, ch, "width", G_TYPE_INT, wd, NULL);
+        caps = gst_caps_new_simple ("audio/x-raw",
+            "format", G_TYPE_STRING, wd == 64 ? "F64LE" : "F32LE",
+            "layout", G_TYPE_STRING, "interleaved",
+            "channels", G_TYPE_INT, ch, NULL);
 
-        /* Add default channel layout. In theory this should be done
-         * for 1 and 2 channels too but apparently breaks too many
-         * things currently. Also we know no default layout for more than
+        /* Add default channel layout. We know no default layout for more than
          * 8 channels. */
-        if (ch > 2) {
-          if (ch > 8)
-            GST_WARNING ("don't know default layout for %d channels", ch);
-          else if (gst_riff_wave_add_default_channel_layout (caps))
-            GST_DEBUG ("using default channel layout for %d channels", ch);
-          else
-            GST_WARNING ("failed to add channel layout");
-        }
+        if (ch > 8)
+          GST_WARNING ("don't know default layout for %d channels", ch);
+        else if (gst_riff_wave_add_default_channel_mask (caps, ch,
+                channel_reorder_map))
+          GST_DEBUG ("using default channel layout for %d channels", ch);
+        else
+          GST_WARNING ("failed to add channel layout");
       } else {
         /* FIXME: this is pretty useless - we need fixed caps */
-        caps = gst_caps_from_string ("audio/x-raw-float, "
-            "endianness = (int) LITTLE_ENDIAN, " "width = (int) { 32, 64 }");
+        caps = gst_caps_from_string ("audio/x-raw, "
+            "format = (string) { F32LE, F64LE }, "
+            "layout = (string) interleaved");
       }
       if (codec_name && strf)
         *codec_name = g_strdup_printf ("Uncompressed %d-bit IEEE float audio",
-            strf->size);
+            strf->bits_per_sample);
       break;
 
     case GST_RIFF_WAVE_FORMAT_IBM_CVSD:
@@ -1229,33 +1309,33 @@ gst_riff_create_audio_caps (guint16 codec_id,
 
     case GST_RIFF_WAVE_FORMAT_ALAW:
       if (strf != NULL) {
-        if (strf->size != 8) {
+        if (strf->bits_per_sample != 8) {
           GST_WARNING ("invalid depth (%d) of alaw audio, overwriting.",
-              strf->size);
-          strf->size = 8;
-          strf->blockalign = (strf->size * strf->channels) / 8;
+              strf->bits_per_sample);
+          strf->bits_per_sample = 8;
+          strf->blockalign = (strf->bits_per_sample * strf->channels) / 8;
           strf->av_bps = strf->blockalign * strf->rate;
         }
         if (strf->av_bps == 0 || strf->blockalign == 0) {
           GST_WARNING ("fixing av_bps (%d) and blockalign (%d) of alaw audio",
               strf->av_bps, strf->blockalign);
-          strf->blockalign = (strf->size * strf->channels) / 8;
+          strf->blockalign = (strf->bits_per_sample * strf->channels) / 8;
           strf->av_bps = strf->blockalign * strf->rate;
         }
       }
       rate_max = 48000;
-      caps = gst_caps_new_simple ("audio/x-alaw", NULL);
+      caps = gst_caps_new_empty_simple ("audio/x-alaw");
       if (codec_name)
         *codec_name = g_strdup ("A-law audio");
       break;
 
     case GST_RIFF_WAVE_FORMAT_WMS:
-      caps = gst_caps_new_simple ("audio/x-wms", NULL);
+      caps = gst_caps_new_empty_simple ("audio/x-wms");
       if (strf != NULL) {
         gst_caps_set_simple (caps,
             "bitrate", G_TYPE_INT, strf->av_bps * 8,
-            "width", G_TYPE_INT, strf->size,
-            "depth", G_TYPE_INT, strf->size, NULL);
+            "width", G_TYPE_INT, strf->bits_per_sample,
+            "depth", G_TYPE_INT, strf->bits_per_sample, NULL);
       } else {
         gst_caps_set_simple (caps,
             "bitrate", GST_TYPE_INT_RANGE, 0, G_MAXINT, NULL);
@@ -1267,22 +1347,22 @@ gst_riff_create_audio_caps (guint16 codec_id,
 
     case GST_RIFF_WAVE_FORMAT_MULAW:
       if (strf != NULL) {
-        if (strf->size != 8) {
+        if (strf->bits_per_sample != 8) {
           GST_WARNING ("invalid depth (%d) of mulaw audio, overwriting.",
-              strf->size);
-          strf->size = 8;
-          strf->blockalign = (strf->size * strf->channels) / 8;
+              strf->bits_per_sample);
+          strf->bits_per_sample = 8;
+          strf->blockalign = (strf->bits_per_sample * strf->channels) / 8;
           strf->av_bps = strf->blockalign * strf->rate;
         }
         if (strf->av_bps == 0 || strf->blockalign == 0) {
           GST_WARNING ("fixing av_bps (%d) and blockalign (%d) of mulaw audio",
               strf->av_bps, strf->blockalign);
-          strf->blockalign = (strf->size * strf->channels) / 8;
+          strf->blockalign = (strf->bits_per_sample * strf->channels) / 8;
           strf->av_bps = strf->blockalign * strf->rate;
         }
       }
       rate_max = 48000;
-      caps = gst_caps_new_simple ("audio/x-mulaw", NULL);
+      caps = gst_caps_new_empty_simple ("audio/x-mulaw");
       if (codec_name)
         *codec_name = g_strdup ("Mu-law audio");
       break;
@@ -1291,7 +1371,19 @@ gst_riff_create_audio_caps (guint16 codec_id,
       goto unknown;
 
     case GST_RIFF_WAVE_FORMAT_DVI_ADPCM:
-      rate_max = 48000;
+      if (strf != NULL) {
+        /* Many encoding tools create a wrong bitrate information in the
+         * header, so either we calculate the bitrate or mark it as invalid
+         * as this would probably confuse timing */
+        strf->av_bps = 0;
+        if (strf->channels != 0 && strf->rate != 0 && strf->blockalign != 0) {
+          int spb = ((strf->blockalign - strf->channels * 4) / 2) * 2;
+          strf->av_bps =
+              gst_util_uint64_scale_int (strf->rate, strf->blockalign, spb);
+          GST_DEBUG ("fixing av_bps to calculated value %d of IMA DVI ADPCM",
+              strf->av_bps);
+        }
+      }
       caps = gst_caps_new_simple ("audio/x-adpcm",
           "layout", G_TYPE_STRING, "dvi", NULL);
       if (codec_name)
@@ -1299,10 +1391,41 @@ gst_riff_create_audio_caps (guint16 codec_id,
       block_align = TRUE;
       break;
 
+    case GST_RIFF_WAVE_FORMAT_ITU_G726_ADPCM:
+      rate_min = 8000;
+      rate_max = 8000;
+      channels_max = 1;
+      if (strf != NULL) {
+        gint bitrate;
+        bitrate = 0;
+        if (strf->av_bps == 2000 || strf->av_bps == 3000 || strf->av_bps == 4000
+            || strf->av_bps == 5000) {
+          strf->blockalign = strf->av_bps / 1000;
+          bitrate = strf->av_bps * 8;
+        } else if (strf->blockalign >= 2 && strf->blockalign <= 5) {
+          bitrate = strf->blockalign * 8000;
+        }
+        if (bitrate > 0) {
+          caps = gst_caps_new_simple ("audio/x-adpcm",
+              "layout", G_TYPE_STRING, "g726", "bitrate", G_TYPE_INT, bitrate,
+              NULL);
+        } else {
+          caps = gst_caps_new_simple ("audio/x-adpcm",
+              "layout", G_TYPE_STRING, "g726", NULL);
+        }
+      } else {
+        caps = gst_caps_new_simple ("audio/x-adpcm",
+            "layout", G_TYPE_STRING, "g726", NULL);
+      }
+      if (codec_name)
+        *codec_name = g_strdup ("G726 ADPCM audio");
+      block_align = TRUE;
+      break;
+
     case GST_RIFF_WAVE_FORMAT_DSP_TRUESPEECH:
       rate_min = 8000;
       rate_max = 8000;
-      caps = gst_caps_new_simple ("audio/x-truespeech", NULL);
+      caps = gst_caps_new_empty_simple ("audio/x-truespeech");
       if (codec_name)
         *codec_name = g_strdup ("DSP Group TrueSpeech");
       break;
@@ -1310,7 +1433,7 @@ gst_riff_create_audio_caps (guint16 codec_id,
     case GST_RIFF_WAVE_FORMAT_GSM610:
     case GST_RIFF_WAVE_FORMAT_MSN:
       rate_min = 1;
-      caps = gst_caps_new_simple ("audio/ms-gsm", NULL);
+      caps = gst_caps_new_empty_simple ("audio/ms-gsm");
       if (codec_name)
         *codec_name = g_strdup ("MS GSM audio");
       break;
@@ -1337,7 +1460,7 @@ gst_riff_create_audio_caps (guint16 codec_id,
       rate_min = 8000;
       rate_max = 8000;
       channels_max = 1;
-      caps = gst_caps_new_simple ("audio/AMR", NULL);
+      caps = gst_caps_new_empty_simple ("audio/AMR");
       if (codec_name)
         *codec_name = g_strdup ("AMR Narrow Band (NB)");
       break;
@@ -1346,7 +1469,7 @@ gst_riff_create_audio_caps (guint16 codec_id,
       rate_min = 16000;
       rate_max = 16000;
       channels_max = 1;
-      caps = gst_caps_new_simple ("audio/AMR-WB", NULL);
+      caps = gst_caps_new_empty_simple ("audio/AMR-WB");
       if (codec_name)
         *codec_name = g_strdup ("AMR Wide Band (WB)");
       break;
@@ -1358,20 +1481,20 @@ gst_riff_create_audio_caps (guint16 codec_id,
     case GST_RIFF_WAVE_FORMAT_VORBIS2PLUS:     /* ogg/vorbis mode 2+ */
     case GST_RIFF_WAVE_FORMAT_VORBIS3PLUS:     /* ogg/vorbis mode 3+ */
       rate_max = 192000;
-      caps = gst_caps_new_simple ("audio/x-vorbis", NULL);
+      caps = gst_caps_new_empty_simple ("audio/x-vorbis");
       if (codec_name)
         *codec_name = g_strdup ("Vorbis");
       break;
 
     case GST_RIFF_WAVE_FORMAT_A52:
       channels_max = 6;
-      caps = gst_caps_new_simple ("audio/x-ac3", NULL);
+      caps = gst_caps_new_empty_simple ("audio/x-ac3");
       if (codec_name)
         *codec_name = g_strdup ("AC-3 audio");
       break;
     case GST_RIFF_WAVE_FORMAT_DTS:
       channels_max = 6;
-      caps = gst_caps_new_simple ("audio/x-dts", NULL);
+      caps = gst_caps_new_empty_simple ("audio/x-dts");
       if (codec_name)
         *codec_name = g_strdup ("DTS audio");
       /* wavparse is not always able to specify rate/channels for DTS-in-wav */
@@ -1395,7 +1518,7 @@ gst_riff_create_audio_caps (guint16 codec_id,
     {
       gint version = (codec_id - GST_RIFF_WAVE_FORMAT_WMAV1) + 1;
 
-      channels_max = 6;
+      channels_max = 8;
       block_align = TRUE;
 
       caps = gst_caps_new_simple ("audio/x-wma",
@@ -1411,7 +1534,7 @@ gst_riff_create_audio_caps (guint16 codec_id,
       if (strf != NULL) {
         gst_caps_set_simple (caps,
             "bitrate", G_TYPE_INT, strf->av_bps * 8,
-            "depth", G_TYPE_INT, strf->size, NULL);
+            "depth", G_TYPE_INT, strf->bits_per_sample, NULL);
       } else {
         gst_caps_set_simple (caps,
             "bitrate", GST_TYPE_INT_RANGE, 0, G_MAXINT, NULL);
@@ -1419,13 +1542,13 @@ gst_riff_create_audio_caps (guint16 codec_id,
       break;
     }
     case GST_RIFF_WAVE_FORMAT_SONY_ATRAC3:
-      caps = gst_caps_new_simple ("audio/x-vnd.sony.atrac3", NULL);
+      caps = gst_caps_new_empty_simple ("audio/x-vnd.sony.atrac3");
       if (codec_name)
         *codec_name = g_strdup ("Sony ATRAC3");
       break;
 
     case GST_RIFF_WAVE_FORMAT_SIREN:
-      caps = gst_caps_new_simple ("audio/x-siren", NULL);
+      caps = gst_caps_new_empty_simple ("audio/x-siren");
       if (codec_name)
         *codec_name = g_strdup ("Siren7");
       rate_chan = FALSE;
@@ -1466,25 +1589,28 @@ gst_riff_create_audio_caps (guint16 codec_id,
       guint16 valid_bits_per_sample;
       guint32 channel_mask;
       guint32 subformat_guid[4];
-      const guint8 *data;
+      GstMapInfo info;
+      gsize size;
 
       channels_max = 8;
 
       /* should be at least 22 bytes */
-      if (strf_data == NULL || GST_BUFFER_SIZE (strf_data) < 22) {
-        GST_WARNING ("WAVE_FORMAT_EXTENSIBLE data size is %d (expected: 22)",
-            (strf_data) ? GST_BUFFER_SIZE (strf_data) : -1);
+      size = gst_buffer_get_size (strf_data);
+
+      if (strf_data == NULL || size < 22) {
+        GST_WARNING ("WAVE_FORMAT_EXTENSIBLE data size is %" G_GSIZE_FORMAT
+            " (expected: 22)", (strf_data) ? size : -1);
         return NULL;
       }
 
-      data = GST_BUFFER_DATA (strf_data);
-
-      valid_bits_per_sample = GST_READ_UINT16_LE (data);
-      channel_mask = GST_READ_UINT32_LE (data + 2);
-      subformat_guid[0] = GST_READ_UINT32_LE (data + 6);
-      subformat_guid[1] = GST_READ_UINT32_LE (data + 10);
-      subformat_guid[2] = GST_READ_UINT32_LE (data + 14);
-      subformat_guid[3] = GST_READ_UINT32_LE (data + 18);
+      gst_buffer_map (strf_data, &info, GST_MAP_READ);
+      valid_bits_per_sample = GST_READ_UINT16_LE (info.data);
+      channel_mask = GST_READ_UINT32_LE (info.data + 2);
+      subformat_guid[0] = GST_READ_UINT32_LE (info.data + 6);
+      subformat_guid[1] = GST_READ_UINT32_LE (info.data + 10);
+      subformat_guid[2] = GST_READ_UINT32_LE (info.data + 14);
+      subformat_guid[3] = GST_READ_UINT32_LE (info.data + 18);
+      gst_buffer_unmap (strf_data, &info);
 
       GST_DEBUG ("valid bps    = %u", valid_bits_per_sample);
       GST_DEBUG ("channel mask = 0x%08x", channel_mask);
@@ -1499,6 +1625,7 @@ gst_riff_create_audio_caps (guint16 codec_id,
             gint ba = strf->blockalign;
             gint wd = ba * 8 / strf->channels;
             gint ws;
+            GstAudioFormat format;
 
             /* in riff, the depth is stored in the size field but it just
              * means that the _least_ significant bits are cleared. We can
@@ -1506,37 +1633,23 @@ gst_riff_create_audio_caps (guint16 codec_id,
             ws = wd;
 
             /* For reference, use this to get the actual depth:
-             * ws = strf->size;
+             * ws = strf->bits_per_sample;
              * if (valid_bits_per_sample != 0)
              *   ws = valid_bits_per_sample; */
 
-            caps = gst_caps_new_simple ("audio/x-raw-int",
-                "endianness", G_TYPE_INT, G_LITTLE_ENDIAN,
+            format =
+                gst_audio_format_build_integer (wd != 8, G_LITTLE_ENDIAN, wd,
+                ws);
+
+            caps = gst_caps_new_simple ("audio/x-raw",
+                "format", G_TYPE_STRING, gst_audio_format_to_string (format),
+                "layout", G_TYPE_STRING, "interleaved",
                 "channels", G_TYPE_INT, strf->channels,
-                "width", G_TYPE_INT, wd,
-                "depth", G_TYPE_INT, ws,
-                "rate", G_TYPE_INT, strf->rate,
-                "signed", G_TYPE_BOOLEAN, wd != 8, NULL);
-
-            /* If channel_mask == 0 and channels > 2 let's
-             * assume default layout as some wav files don't have the
-             * channel mask set. Don't set the layout for 1 or 2
-             * channels as it apparently breaks too many things currently. */
-            if (channel_mask == 0 && strf->channels > 2)
-              channel_mask =
-                  gst_riff_wavext_get_default_channel_mask (strf->channels);
-
-            if ((channel_mask != 0 || strf->channels > 2) &&
-                !gst_riff_wavext_add_channel_layout (caps, channel_mask)) {
-              GST_WARNING ("failed to add channel layout");
-              gst_caps_unref (caps);
-              caps = NULL;
-            }
-            rate_chan = FALSE;
+                "rate", G_TYPE_INT, strf->rate, NULL);
 
             if (codec_name) {
               *codec_name = g_strdup_printf ("Uncompressed %d-bit PCM audio",
-                  strf->size);
+                  strf->bits_per_sample);
             }
           }
         } else if (subformat_guid[0] == 0x00000003) {
@@ -1545,40 +1658,25 @@ gst_riff_create_audio_caps (guint16 codec_id,
             gint ba = strf->blockalign;
             gint wd = ba * 8 / strf->channels;
 
-            caps = gst_caps_new_simple ("audio/x-raw-float",
-                "endianness", G_TYPE_INT, G_LITTLE_ENDIAN,
+            caps = gst_caps_new_simple ("audio/x-raw",
+                "format", G_TYPE_STRING, wd == 32 ? "F32LE" : "F64LE",
+                "layout", G_TYPE_STRING, "interleaved",
                 "channels", G_TYPE_INT, strf->channels,
-                "width", G_TYPE_INT, wd, "rate", G_TYPE_INT, strf->rate, NULL);
-
-            /* If channel_mask == 0 and channels > 2 let's
-             * assume default layout as some wav files don't have the
-             * channel mask set. Don't set the layout for 1 or 2
-             * channels as it apparently breaks too many things currently. */
-            if (channel_mask == 0 && strf->channels > 2)
-              channel_mask =
-                  gst_riff_wavext_get_default_channel_mask (strf->channels);
-
-            if ((channel_mask != 0 || strf->channels > 2) &&
-                !gst_riff_wavext_add_channel_layout (caps, channel_mask)) {
-              GST_WARNING ("failed to add channel layout");
-              gst_caps_unref (caps);
-              caps = NULL;
-            }
-            rate_chan = FALSE;
+                "rate", G_TYPE_INT, strf->rate, NULL);
 
             if (codec_name) {
               *codec_name =
                   g_strdup_printf ("Uncompressed %d-bit IEEE float audio",
-                  strf->size);
+                  strf->bits_per_sample);
             }
           }
-        } else if (subformat_guid[0] == 00000006) {
+        } else if (subformat_guid[0] == 0x0000006) {
           GST_DEBUG ("ALAW");
           if (strf != NULL) {
-            if (strf->size != 8) {
+            if (strf->bits_per_sample != 8) {
               GST_WARNING ("invalid depth (%d) of alaw audio, overwriting.",
-                  strf->size);
-              strf->size = 8;
+                  strf->bits_per_sample);
+              strf->bits_per_sample = 8;
               strf->av_bps = 8;
               strf->blockalign = strf->av_bps * strf->channels;
             }
@@ -1586,22 +1684,22 @@ gst_riff_create_audio_caps (guint16 codec_id,
               GST_WARNING
                   ("fixing av_bps (%d) and blockalign (%d) of alaw audio",
                   strf->av_bps, strf->blockalign);
-              strf->av_bps = strf->size;
+              strf->av_bps = strf->bits_per_sample;
               strf->blockalign = strf->av_bps * strf->channels;
             }
           }
           rate_max = 48000;
-          caps = gst_caps_new_simple ("audio/x-alaw", NULL);
+          caps = gst_caps_new_empty_simple ("audio/x-alaw");
 
           if (codec_name)
             *codec_name = g_strdup ("A-law audio");
         } else if (subformat_guid[0] == 0x00000007) {
           GST_DEBUG ("MULAW");
           if (strf != NULL) {
-            if (strf->size != 8) {
+            if (strf->bits_per_sample != 8) {
               GST_WARNING ("invalid depth (%d) of mulaw audio, overwriting.",
-                  strf->size);
-              strf->size = 8;
+                  strf->bits_per_sample);
+              strf->bits_per_sample = 8;
               strf->av_bps = 8;
               strf->blockalign = strf->av_bps * strf->channels;
             }
@@ -1609,23 +1707,61 @@ gst_riff_create_audio_caps (guint16 codec_id,
               GST_WARNING
                   ("fixing av_bps (%d) and blockalign (%d) of mulaw audio",
                   strf->av_bps, strf->blockalign);
-              strf->av_bps = strf->size;
+              strf->av_bps = strf->bits_per_sample;
               strf->blockalign = strf->av_bps * strf->channels;
             }
           }
           rate_max = 48000;
-          caps = gst_caps_new_simple ("audio/x-mulaw", NULL);
+          caps = gst_caps_new_empty_simple ("audio/x-mulaw");
           if (codec_name)
             *codec_name = g_strdup ("Mu-law audio");
         } else if (subformat_guid[0] == 0x00000092) {
           GST_DEBUG ("FIXME: handle DOLBY AC3 SPDIF format");
+          GST_DEBUG ("WAVE_FORMAT_EXTENSIBLE AC-3 SPDIF audio");
+          caps = gst_caps_new_empty_simple ("audio/x-ac3");
+          if (codec_name)
+            *codec_name = g_strdup ("wavext AC-3 SPDIF audio");
+        } else if (subformat_guid[0] == GST_RIFF_WAVE_FORMAT_EXTENSIBLE) {
+          GST_DEBUG ("WAVE_FORMAT_EXTENSIBLE nested");
+        } else {
+          /* recurse where no special consideration has yet to be identified 
+           * for the subformat guid */
+          caps = gst_riff_create_audio_caps (subformat_guid[0], strh, strf,
+              strf_data, strd_data, codec_name, channel_reorder_map);
+          if (!codec_name)
+            GST_DEBUG ("WAVE_FORMAT_EXTENSIBLE audio");
+          if (caps) {
+            if (codec_name) {
+              GST_DEBUG ("WAVE_FORMAT_EXTENSIBLE %s", *codec_name);
+              *codec_name = g_strjoin ("wavext ", *codec_name, NULL);
+            }
+            return caps;
+          }
         }
       } else if (subformat_guid[0] == 0x6ba47966 &&
           subformat_guid[1] == 0x41783f83 &&
           subformat_guid[2] == 0xf0006596 && subformat_guid[3] == 0xe59262bf) {
-        caps = gst_caps_new_simple ("application/x-ogg-avi", NULL);
+        caps = gst_caps_new_empty_simple ("application/x-ogg-avi");
         if (codec_name)
           *codec_name = g_strdup ("Ogg-AVI");
+      }
+
+      if (strf != NULL) {
+        /* If channel_mask == 0 and channels > 1 let's
+         * assume default layout as some wav files don't have the
+         * channel mask set. Don't set the layout for 1 channel. */
+        if (channel_mask == 0 && strf->channels > 1)
+          channel_mask =
+              gst_riff_wavext_get_default_channel_mask (strf->channels);
+
+        if ((channel_mask != 0 || strf->channels > 1) &&
+            !gst_riff_wavext_add_channel_mask (caps, strf->channels,
+                channel_mask, channel_reorder_map)) {
+          GST_WARNING ("failed to add channel layout");
+          gst_caps_unref (caps);
+          caps = NULL;
+        }
+        rate_chan = FALSE;
       }
 
       if (caps == NULL) {
@@ -1828,6 +1964,8 @@ gst_riff_create_video_template_caps (void)
     GST_MAKE_FOURCC ('Y', 'V', '1', '2'),
     GST_MAKE_FOURCC ('L', 'O', 'C', 'O'),
     GST_MAKE_FOURCC ('Z', 'M', 'B', 'V'),
+    GST_MAKE_FOURCC ('v', '2', '1', '0'),
+    GST_MAKE_FOURCC ('r', '2', '1', '0'),
     /* FILL ME */
   };
   guint i;
@@ -1880,11 +2018,13 @@ gst_riff_create_audio_template_caps (void)
 
   caps = gst_caps_new_empty ();
   for (i = 0; i < G_N_ELEMENTS (tags); i++) {
-    one = gst_riff_create_audio_caps (tags[i], NULL, NULL, NULL, NULL, NULL);
+    one =
+        gst_riff_create_audio_caps (tags[i], NULL, NULL, NULL, NULL, NULL,
+        NULL);
     if (one)
       gst_caps_append (caps, one);
   }
-  one = gst_caps_new_simple ("application/x-ogg-avi", NULL);
+  one = gst_caps_new_empty_simple ("application/x-ogg-avi");
   gst_caps_append (caps, one);
 
   return caps;

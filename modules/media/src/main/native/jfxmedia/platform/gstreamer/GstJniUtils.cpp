@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,7 +28,6 @@
 #include <glib.h>
 
 extern "C" JavaVM* g_pJVM;
-static GStaticPrivate g_Private = G_STATIC_PRIVATE_INIT;
 
 void DetachThread(gpointer data)
 {
@@ -37,17 +36,19 @@ void DetachThread(gpointer data)
         g_pJVM->DetachCurrentThread();
 }
 
+static GPrivate g_Private = G_PRIVATE_INIT(DetachThread);
+
 jboolean GstGetEnv(JNIEnv **env)
 {
     if (g_pJVM->GetEnv((void**)env, JNI_VERSION_1_2) == JNI_OK)
         return true;
     else
     {
-        JNIEnv *private_env = (JNIEnv*)g_static_private_get(&g_Private);
+        JNIEnv *private_env = (JNIEnv*)g_private_get(&g_Private);
         if (!private_env)
         {
             if (g_pJVM->AttachCurrentThreadAsDaemon((void**)&private_env, NULL) == 0)
-                g_static_private_set(&g_Private, private_env, DetachThread);
+                g_private_set(&g_Private, private_env);
             else
                 return false;
         }

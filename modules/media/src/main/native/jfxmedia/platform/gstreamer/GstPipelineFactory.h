@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -93,8 +93,6 @@ private:
     static void     SourceCloseConnection(GstElement *src, gpointer data);
     static int      SourceProperty(GstElement *src, int prop, int value, gpointer data);
     static int      SourceGetStreamSize(GstElement *src, gpointer data);
-
-    static GstFlowReturn AVSinkAllocAlignedBuffer(GstPad *pad, guint64 offset, guint size, GstCaps *caps, GstBuffer **buf);
 
 private:
     ContentTypesList m_ContentTypes;

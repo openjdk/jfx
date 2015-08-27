@@ -14,8 +14,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  * 
  */
 
@@ -35,11 +35,15 @@
  *
  * <refsect2>
  * <title>Example application</title>
- * |[
+ * <informalexample><programlisting language="C">
  * <xi:include xmlns:xi="http://www.w3.org/2003/XInclude" parse="text" href="../../../../tests/examples/audiofx/iirfilter-example.c" />
- * ]|
+ * </programlisting></informalexample>
  * </refsect2>
  */
+
+/* FIXME 0.11: suppress warnings for deprecated API such as GValueArray
+ * with newer GLib versions (>= 2.31.0) */
+#define GLIB_DISABLE_DEPRECATION_WARNINGS
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -49,9 +53,10 @@
 #include <math.h>
 #include <gst/gst.h>
 #include <gst/audio/gstaudiofilter.h>
-#include <gst/controller/gstcontroller.h>
 
 #include "audioiirfilter.h"
+
+#include "gst/glib-compat-private.h"
 
 #define GST_CAT_DEFAULT gst_audio_iir_filter_debug
 GST_DEBUG_CATEGORY_STATIC (GST_CAT_DEFAULT);
@@ -71,12 +76,9 @@ enum
 
 static guint gst_audio_iir_filter_signals[LAST_SIGNAL] = { 0, };
 
-#define DEBUG_INIT(bla) \
-  GST_DEBUG_CATEGORY_INIT (gst_audio_iir_filter_debug, "audioiirfilter", 0, \
-      "Generic audio IIR filter plugin");
-
-GST_BOILERPLATE_FULL (GstAudioIIRFilter, gst_audio_iir_filter, GstAudioFilter,
-    GST_TYPE_AUDIO_FX_BASE_IIR_FILTER, DEBUG_INIT);
+#define gst_audio_iir_filter_parent_class parent_class
+G_DEFINE_TYPE (GstAudioIIRFilter, gst_audio_iir_filter,
+    GST_TYPE_AUDIO_FX_BASE_IIR_FILTER);
 
 static void gst_audio_iir_filter_set_property (GObject * object, guint prop_id,
     const GValue * value, GParamSpec * pspec);
@@ -85,25 +87,17 @@ static void gst_audio_iir_filter_get_property (GObject * object, guint prop_id,
 static void gst_audio_iir_filter_finalize (GObject * object);
 
 static gboolean gst_audio_iir_filter_setup (GstAudioFilter * base,
-    GstRingBufferSpec * format);
-
-/* Element class */
-static void
-gst_audio_iir_filter_base_init (gpointer g_class)
-{
-  GstElementClass *element_class = GST_ELEMENT_CLASS (g_class);
-
-  gst_element_class_set_details_simple (element_class,
-      "Audio IIR filter", "Filter/Effect/Audio",
-      "Generic audio IIR filter with custom filter kernel",
-      "Sebastian Dröge <sebastian.droege@collabora.co.uk>");
-}
+    const GstAudioInfo * info);
 
 static void
 gst_audio_iir_filter_class_init (GstAudioIIRFilterClass * klass)
 {
   GObjectClass *gobject_class = (GObjectClass *) klass;
+  GstElementClass *gstelement_class = (GstElementClass *) klass;
   GstAudioFilterClass *filter_class = (GstAudioFilterClass *) klass;
+
+  GST_DEBUG_CATEGORY_INIT (gst_audio_iir_filter_debug, "audioiirfilter", 0,
+      "Generic audio IIR filter plugin");
 
   gobject_class->set_property = gst_audio_iir_filter_set_property;
   gobject_class->get_property = gst_audio_iir_filter_get_property;
@@ -111,14 +105,14 @@ gst_audio_iir_filter_class_init (GstAudioIIRFilterClass * klass)
 
   g_object_class_install_property (gobject_class, PROP_A,
       g_param_spec_value_array ("a", "A",
-          "Filter coefficients (numerator of transfer function)",
+          "Filter coefficients (denominator of transfer function)",
           g_param_spec_double ("Coefficient", "Filter Coefficient",
               "Filter coefficient", -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
               G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS),
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
   g_object_class_install_property (gobject_class, PROP_B,
       g_param_spec_value_array ("b", "B",
-          "Filter coefficients (denominator of transfer function)",
+          "Filter coefficients (numerator of transfer function)",
           g_param_spec_double ("Coefficient", "Filter Coefficient",
               "Filter coefficient", -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
               G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS),
@@ -138,7 +132,12 @@ gst_audio_iir_filter_class_init (GstAudioIIRFilterClass * klass)
   gst_audio_iir_filter_signals[SIGNAL_RATE_CHANGED] =
       g_signal_new ("rate-changed", G_TYPE_FROM_CLASS (klass),
       G_SIGNAL_RUN_LAST, G_STRUCT_OFFSET (GstAudioIIRFilterClass, rate_changed),
-      NULL, NULL, gst_marshal_VOID__INT, G_TYPE_NONE, 1, G_TYPE_INT);
+      NULL, NULL, NULL, G_TYPE_NONE, 1, G_TYPE_INT);
+
+  gst_element_class_set_static_metadata (gstelement_class,
+      "Audio IIR filter", "Filter/Effect/Audio",
+      "Generic audio IIR filter with custom filter kernel",
+      "Sebastian Dröge <sebastian.droege@collabora.co.uk>");
 }
 
 static void
@@ -184,11 +183,10 @@ gst_audio_iir_filter_update_coefficients (GstAudioIIRFilter * self,
 }
 
 static void
-gst_audio_iir_filter_init (GstAudioIIRFilter * self,
-    GstAudioIIRFilterClass * g_class)
+gst_audio_iir_filter_init (GstAudioIIRFilter * self)
 {
   GValue v = { 0, };
-  GValueArray *a, *b;
+  GValueArray *a;
 
   a = g_value_array_new (1);
 
@@ -197,27 +195,26 @@ gst_audio_iir_filter_init (GstAudioIIRFilter * self,
   g_value_array_append (a, &v);
   g_value_unset (&v);
 
-  b = NULL;
-  gst_audio_iir_filter_update_coefficients (self, a, b);
+  gst_audio_iir_filter_update_coefficients (self, a, g_value_array_copy (a));
 
-  self->lock = g_mutex_new ();
+  g_mutex_init (&self->lock);
 }
 
 /* GstAudioFilter vmethod implementations */
 
 /* get notified of caps and plug in the correct process function */
 static gboolean
-gst_audio_iir_filter_setup (GstAudioFilter * base, GstRingBufferSpec * format)
+gst_audio_iir_filter_setup (GstAudioFilter * base, const GstAudioInfo * info)
 {
   GstAudioIIRFilter *self = GST_AUDIO_IIR_FILTER (base);
+  gint new_rate = GST_AUDIO_INFO_RATE (info);
 
-  if (self->rate != format->rate) {
+  if (GST_AUDIO_FILTER_RATE (self) != new_rate) {
     g_signal_emit (G_OBJECT (self),
-        gst_audio_iir_filter_signals[SIGNAL_RATE_CHANGED], 0, format->rate);
-    self->rate = format->rate;
+        gst_audio_iir_filter_signals[SIGNAL_RATE_CHANGED], 0, new_rate);
   }
 
-  return GST_AUDIO_FILTER_CLASS (parent_class)->setup (base, format);
+  return GST_AUDIO_FILTER_CLASS (parent_class)->setup (base, info);
 }
 
 static void
@@ -225,8 +222,7 @@ gst_audio_iir_filter_finalize (GObject * object)
 {
   GstAudioIIRFilter *self = GST_AUDIO_IIR_FILTER (object);
 
-  g_mutex_free (self->lock);
-  self->lock = NULL;
+  g_mutex_clear (&self->lock);
 
   if (self->a)
     g_value_array_free (self->a);
@@ -248,16 +244,16 @@ gst_audio_iir_filter_set_property (GObject * object, guint prop_id,
 
   switch (prop_id) {
     case PROP_A:
-      g_mutex_lock (self->lock);
+      g_mutex_lock (&self->lock);
       gst_audio_iir_filter_update_coefficients (self, g_value_dup_boxed (value),
           NULL);
-      g_mutex_unlock (self->lock);
+      g_mutex_unlock (&self->lock);
       break;
     case PROP_B:
-      g_mutex_lock (self->lock);
+      g_mutex_lock (&self->lock);
       gst_audio_iir_filter_update_coefficients (self, NULL,
           g_value_dup_boxed (value));
-      g_mutex_unlock (self->lock);
+      g_mutex_unlock (&self->lock);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);

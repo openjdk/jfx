@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -91,9 +91,10 @@ public:
     virtual CAudioEqualizer*    GetAudioEqualizer();
     virtual CAudioSpectrum*     GetAudioSpectrum();
 
+    CPlayerEventDispatcher* m_pEventDispatcher;
+
 protected:
     CPipelineOptions*       m_pOptions;
-    CPlayerEventDispatcher* m_pEventDispatcher;
     PlayerState             m_PlayerState;
     PlayerState             m_PlayerPendingState;
     bool                    m_bBufferingEnabled;

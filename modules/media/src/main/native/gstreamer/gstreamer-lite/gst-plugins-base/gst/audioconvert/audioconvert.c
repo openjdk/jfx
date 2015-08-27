@@ -15,8 +15,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -29,113 +29,112 @@
 #include "gstchannelmix.h"
 #include "gstaudioquantize.h"
 #include "audioconvert.h"
-#include "gst/floatcast/floatcast.h"
 #include "gstaudioconvertorc.h"
 
 #if G_BYTE_ORDER == G_LITTLE_ENDIAN
-#define orc_audio_convert_unpack_u16_le orc_audio_convert_unpack_u16
-#define orc_audio_convert_unpack_u16_be orc_audio_convert_unpack_u16_swap
-#define orc_audio_convert_unpack_s16_le orc_audio_convert_unpack_s16
-#define orc_audio_convert_unpack_s16_be orc_audio_convert_unpack_s16_swap
-#define orc_audio_convert_unpack_u32_le orc_audio_convert_unpack_u32
-#define orc_audio_convert_unpack_u32_be orc_audio_convert_unpack_u32_swap
-#define orc_audio_convert_unpack_s32_le orc_audio_convert_unpack_s32
-#define orc_audio_convert_unpack_s32_be orc_audio_convert_unpack_s32_swap
-#define orc_audio_convert_unpack_float_le orc_audio_convert_unpack_float_s32
-#define orc_audio_convert_unpack_float_be orc_audio_convert_unpack_float_s32_swap
-#define orc_audio_convert_unpack_double_le orc_audio_convert_unpack_double_s32
-#define orc_audio_convert_unpack_double_be orc_audio_convert_unpack_double_s32_swap
-#define orc_audio_convert_unpack_float_hq_le orc_audio_convert_unpack_float_double
-#define orc_audio_convert_unpack_float_hq_be orc_audio_convert_unpack_float_double_swap
-#define orc_audio_convert_unpack_double_hq_le orc_audio_convert_unpack_double_double
-#define orc_audio_convert_unpack_double_hq_be orc_audio_convert_unpack_double_double_swap
-#define orc_audio_convert_unpack_u8_float orc_audio_convert_unpack_u8_double
-#define orc_audio_convert_unpack_u16_le_float orc_audio_convert_unpack_u16_double
-#define orc_audio_convert_unpack_u16_be_float orc_audio_convert_unpack_u16_double_swap
-#define orc_audio_convert_unpack_u32_le_float orc_audio_convert_unpack_u32_double
-#define orc_audio_convert_unpack_u32_be_float orc_audio_convert_unpack_u32_double_swap
-#define orc_audio_convert_unpack_s8_float orc_audio_convert_unpack_s8_double
-#define orc_audio_convert_unpack_s16_le_float orc_audio_convert_unpack_s16_double
-#define orc_audio_convert_unpack_s16_be_float orc_audio_convert_unpack_s16_double_swap
-#define orc_audio_convert_unpack_s32_le_float orc_audio_convert_unpack_s32_double
-#define orc_audio_convert_unpack_s32_be_float orc_audio_convert_unpack_s32_double_swap
-#define orc_audio_convert_pack_u8 orc_audio_convert_pack_u8
-#define orc_audio_convert_pack_u16_le orc_audio_convert_pack_u16
-#define orc_audio_convert_pack_u16_be orc_audio_convert_pack_u16_swap
-#define orc_audio_convert_pack_s16_le orc_audio_convert_pack_s16
-#define orc_audio_convert_pack_s16_be orc_audio_convert_pack_s16_swap
-#define orc_audio_convert_pack_u32_le orc_audio_convert_pack_u32
-#define orc_audio_convert_pack_u32_be orc_audio_convert_pack_u32_swap
-#define orc_audio_convert_pack_s32_le orc_audio_convert_pack_s32
-#define orc_audio_convert_pack_s32_be orc_audio_convert_pack_s32_swap
-#define orc_audio_convert_pack_float_le orc_audio_convert_pack_s32_float
-#define orc_audio_convert_pack_float_be orc_audio_convert_pack_s32_float_swap
-#define orc_audio_convert_pack_double_le orc_audio_convert_pack_s32_double
-#define orc_audio_convert_pack_double_be orc_audio_convert_pack_s32_double_swap
-#define orc_audio_convert_pack_float_hq_le orc_audio_convert_pack_double_float
-#define orc_audio_convert_pack_float_hq_be orc_audio_convert_pack_double_float_swap
-#define orc_audio_convert_pack_s8_float orc_audio_convert_pack_double_s8
-#define orc_audio_convert_pack_s16_le_float orc_audio_convert_pack_double_s16
-#define orc_audio_convert_pack_s16_be_float orc_audio_convert_pack_double_s16_swap
-#define orc_audio_convert_pack_s32_le_float orc_audio_convert_pack_double_s32
-#define orc_audio_convert_pack_s32_be_float orc_audio_convert_pack_double_s32_swap
-#define orc_audio_convert_pack_u8_float orc_audio_convert_pack_double_u8
-#define orc_audio_convert_pack_u16_le_float orc_audio_convert_pack_double_u16
-#define orc_audio_convert_pack_u16_be_float orc_audio_convert_pack_double_u16_swap
-#define orc_audio_convert_pack_u32_le_float orc_audio_convert_pack_double_u32
-#define orc_audio_convert_pack_u32_be_float orc_audio_convert_pack_double_u32_swap
+#define audio_convert_orc_unpack_u16_le audio_convert_orc_unpack_u16
+#define audio_convert_orc_unpack_u16_be audio_convert_orc_unpack_u16_swap
+#define audio_convert_orc_unpack_s16_le audio_convert_orc_unpack_s16
+#define audio_convert_orc_unpack_s16_be audio_convert_orc_unpack_s16_swap
+#define audio_convert_orc_unpack_u32_le audio_convert_orc_unpack_u32
+#define audio_convert_orc_unpack_u32_be audio_convert_orc_unpack_u32_swap
+#define audio_convert_orc_unpack_s32_le audio_convert_orc_unpack_s32
+#define audio_convert_orc_unpack_s32_be audio_convert_orc_unpack_s32_swap
+#define audio_convert_orc_unpack_float_le audio_convert_orc_unpack_float_s32
+#define audio_convert_orc_unpack_float_be audio_convert_orc_unpack_float_s32_swap
+#define audio_convert_orc_unpack_double_le audio_convert_orc_unpack_double_s32
+#define audio_convert_orc_unpack_double_be audio_convert_orc_unpack_double_s32_swap
+#define audio_convert_orc_unpack_float_hq_le audio_convert_orc_unpack_float_double
+#define audio_convert_orc_unpack_float_hq_be audio_convert_orc_unpack_float_double_swap
+#define audio_convert_orc_unpack_double_hq_le audio_convert_orc_unpack_double_double
+#define audio_convert_orc_unpack_double_hq_be audio_convert_orc_unpack_double_double_swap
+#define audio_convert_orc_unpack_u8_float audio_convert_orc_unpack_u8_double
+#define audio_convert_orc_unpack_u16_le_float audio_convert_orc_unpack_u16_double
+#define audio_convert_orc_unpack_u16_be_float audio_convert_orc_unpack_u16_double_swap
+#define audio_convert_orc_unpack_u32_le_float audio_convert_orc_unpack_u32_double
+#define audio_convert_orc_unpack_u32_be_float audio_convert_orc_unpack_u32_double_swap
+#define audio_convert_orc_unpack_s8_float audio_convert_orc_unpack_s8_double
+#define audio_convert_orc_unpack_s16_le_float audio_convert_orc_unpack_s16_double
+#define audio_convert_orc_unpack_s16_be_float audio_convert_orc_unpack_s16_double_swap
+#define audio_convert_orc_unpack_s32_le_float audio_convert_orc_unpack_s32_double
+#define audio_convert_orc_unpack_s32_be_float audio_convert_orc_unpack_s32_double_swap
+#define audio_convert_orc_pack_u8 audio_convert_orc_pack_u8
+#define audio_convert_orc_pack_u16_le audio_convert_orc_pack_u16
+#define audio_convert_orc_pack_u16_be audio_convert_orc_pack_u16_swap
+#define audio_convert_orc_pack_s16_le audio_convert_orc_pack_s16
+#define audio_convert_orc_pack_s16_be audio_convert_orc_pack_s16_swap
+#define audio_convert_orc_pack_u32_le audio_convert_orc_pack_u32
+#define audio_convert_orc_pack_u32_be audio_convert_orc_pack_u32_swap
+#define audio_convert_orc_pack_s32_le audio_convert_orc_pack_s32
+#define audio_convert_orc_pack_s32_be audio_convert_orc_pack_s32_swap
+#define audio_convert_orc_pack_float_le audio_convert_orc_pack_s32_float
+#define audio_convert_orc_pack_float_be audio_convert_orc_pack_s32_float_swap
+#define audio_convert_orc_pack_double_le audio_convert_orc_pack_s32_double
+#define audio_convert_orc_pack_double_be audio_convert_orc_pack_s32_double_swap
+#define audio_convert_orc_pack_float_hq_le audio_convert_orc_pack_double_float
+#define audio_convert_orc_pack_float_hq_be audio_convert_orc_pack_double_float_swap
+#define audio_convert_orc_pack_s8_float audio_convert_orc_pack_double_s8
+#define audio_convert_orc_pack_s16_le_float audio_convert_orc_pack_double_s16
+#define audio_convert_orc_pack_s16_be_float audio_convert_orc_pack_double_s16_swap
+#define audio_convert_orc_pack_s32_le_float audio_convert_orc_pack_double_s32
+#define audio_convert_orc_pack_s32_be_float audio_convert_orc_pack_double_s32_swap
+#define audio_convert_orc_pack_u8_float audio_convert_orc_pack_double_u8
+#define audio_convert_orc_pack_u16_le_float audio_convert_orc_pack_double_u16
+#define audio_convert_orc_pack_u16_be_float audio_convert_orc_pack_double_u16_swap
+#define audio_convert_orc_pack_u32_le_float audio_convert_orc_pack_double_u32
+#define audio_convert_orc_pack_u32_be_float audio_convert_orc_pack_double_u32_swap
 #else
-#define orc_audio_convert_unpack_u16_be orc_audio_convert_unpack_u16
-#define orc_audio_convert_unpack_u16_le orc_audio_convert_unpack_u16_swap
-#define orc_audio_convert_unpack_s16_be orc_audio_convert_unpack_s16
-#define orc_audio_convert_unpack_s16_le orc_audio_convert_unpack_s16_swap
-#define orc_audio_convert_unpack_u32_be orc_audio_convert_unpack_u32
-#define orc_audio_convert_unpack_u32_le orc_audio_convert_unpack_u32_swap
-#define orc_audio_convert_unpack_s32_be orc_audio_convert_unpack_s32
-#define orc_audio_convert_unpack_s32_le orc_audio_convert_unpack_s32_swap
-#define orc_audio_convert_unpack_float_be orc_audio_convert_unpack_float_s32
-#define orc_audio_convert_unpack_float_le orc_audio_convert_unpack_float_s32_swap
-#define orc_audio_convert_unpack_double_be orc_audio_convert_unpack_double_s32
-#define orc_audio_convert_unpack_double_le orc_audio_convert_unpack_double_s32_swap
-#define orc_audio_convert_unpack_float_hq_be orc_audio_convert_unpack_float_double
-#define orc_audio_convert_unpack_float_hq_le orc_audio_convert_unpack_float_double_swap
-#define orc_audio_convert_unpack_double_hq_be orc_audio_convert_unpack_double_double
-#define orc_audio_convert_unpack_double_hq_le orc_audio_convert_unpack_double_double_swap
-#define orc_audio_convert_unpack_u8_float orc_audio_convert_unpack_u8_double
-#define orc_audio_convert_unpack_u16_be_float orc_audio_convert_unpack_u16_double
-#define orc_audio_convert_unpack_u16_le_float orc_audio_convert_unpack_u16_double_swap
-#define orc_audio_convert_unpack_u32_be_float orc_audio_convert_unpack_u32_double
-#define orc_audio_convert_unpack_u32_le_float orc_audio_convert_unpack_u32_double_swap
-#define orc_audio_convert_unpack_s8_float orc_audio_convert_unpack_s8_double
-#define orc_audio_convert_unpack_s16_be_float orc_audio_convert_unpack_s16_double
-#define orc_audio_convert_unpack_s16_le_float orc_audio_convert_unpack_s16_double_swap
-#define orc_audio_convert_unpack_s32_be_float orc_audio_convert_unpack_s32_double
-#define orc_audio_convert_unpack_s32_le_float orc_audio_convert_unpack_s32_double_swap
-#define orc_audio_convert_pack_u8 orc_audio_convert_pack_u8
-#define orc_audio_convert_pack_u16_be orc_audio_convert_pack_u16
-#define orc_audio_convert_pack_u16_le orc_audio_convert_pack_u16_swap
-#define orc_audio_convert_pack_s16_be orc_audio_convert_pack_s16
-#define orc_audio_convert_pack_s16_le orc_audio_convert_pack_s16_swap
-#define orc_audio_convert_pack_u32_be orc_audio_convert_pack_u32
-#define orc_audio_convert_pack_u32_le orc_audio_convert_pack_u32_swap
-#define orc_audio_convert_pack_s32_be orc_audio_convert_pack_s32
-#define orc_audio_convert_pack_s32_le orc_audio_convert_pack_s32_swap
-#define orc_audio_convert_pack_float_be orc_audio_convert_pack_s32_float
-#define orc_audio_convert_pack_float_le orc_audio_convert_pack_s32_float_swap
-#define orc_audio_convert_pack_double_be orc_audio_convert_pack_s32_double
-#define orc_audio_convert_pack_double_le orc_audio_convert_pack_s32_double_swap
-#define orc_audio_convert_pack_float_hq_be orc_audio_convert_pack_double_float
-#define orc_audio_convert_pack_float_hq_le orc_audio_convert_pack_double_float_swap
-#define orc_audio_convert_pack_s8_float orc_audio_convert_pack_double_s8
-#define orc_audio_convert_pack_s16_be_float orc_audio_convert_pack_double_s16
-#define orc_audio_convert_pack_s16_le_float orc_audio_convert_pack_double_s16_swap
-#define orc_audio_convert_pack_s32_be_float orc_audio_convert_pack_double_s32
-#define orc_audio_convert_pack_s32_le_float orc_audio_convert_pack_double_s32_swap
-#define orc_audio_convert_pack_u8_float orc_audio_convert_pack_double_u8
-#define orc_audio_convert_pack_u16_be_float orc_audio_convert_pack_double_u16
-#define orc_audio_convert_pack_u16_le_float orc_audio_convert_pack_double_u16_swap
-#define orc_audio_convert_pack_u32_be_float orc_audio_convert_pack_double_u32
-#define orc_audio_convert_pack_u32_le_float orc_audio_convert_pack_double_u32_swap
+#define audio_convert_orc_unpack_u16_be audio_convert_orc_unpack_u16
+#define audio_convert_orc_unpack_u16_le audio_convert_orc_unpack_u16_swap
+#define audio_convert_orc_unpack_s16_be audio_convert_orc_unpack_s16
+#define audio_convert_orc_unpack_s16_le audio_convert_orc_unpack_s16_swap
+#define audio_convert_orc_unpack_u32_be audio_convert_orc_unpack_u32
+#define audio_convert_orc_unpack_u32_le audio_convert_orc_unpack_u32_swap
+#define audio_convert_orc_unpack_s32_be audio_convert_orc_unpack_s32
+#define audio_convert_orc_unpack_s32_le audio_convert_orc_unpack_s32_swap
+#define audio_convert_orc_unpack_float_be audio_convert_orc_unpack_float_s32
+#define audio_convert_orc_unpack_float_le audio_convert_orc_unpack_float_s32_swap
+#define audio_convert_orc_unpack_double_be audio_convert_orc_unpack_double_s32
+#define audio_convert_orc_unpack_double_le audio_convert_orc_unpack_double_s32_swap
+#define audio_convert_orc_unpack_float_hq_be audio_convert_orc_unpack_float_double
+#define audio_convert_orc_unpack_float_hq_le audio_convert_orc_unpack_float_double_swap
+#define audio_convert_orc_unpack_double_hq_be audio_convert_orc_unpack_double_double
+#define audio_convert_orc_unpack_double_hq_le audio_convert_orc_unpack_double_double_swap
+#define audio_convert_orc_unpack_u8_float audio_convert_orc_unpack_u8_double
+#define audio_convert_orc_unpack_u16_be_float audio_convert_orc_unpack_u16_double
+#define audio_convert_orc_unpack_u16_le_float audio_convert_orc_unpack_u16_double_swap
+#define audio_convert_orc_unpack_u32_be_float audio_convert_orc_unpack_u32_double
+#define audio_convert_orc_unpack_u32_le_float audio_convert_orc_unpack_u32_double_swap
+#define audio_convert_orc_unpack_s8_float audio_convert_orc_unpack_s8_double
+#define audio_convert_orc_unpack_s16_be_float audio_convert_orc_unpack_s16_double
+#define audio_convert_orc_unpack_s16_le_float audio_convert_orc_unpack_s16_double_swap
+#define audio_convert_orc_unpack_s32_be_float audio_convert_orc_unpack_s32_double
+#define audio_convert_orc_unpack_s32_le_float audio_convert_orc_unpack_s32_double_swap
+#define audio_convert_orc_pack_u8 audio_convert_orc_pack_u8
+#define audio_convert_orc_pack_u16_be audio_convert_orc_pack_u16
+#define audio_convert_orc_pack_u16_le audio_convert_orc_pack_u16_swap
+#define audio_convert_orc_pack_s16_be audio_convert_orc_pack_s16
+#define audio_convert_orc_pack_s16_le audio_convert_orc_pack_s16_swap
+#define audio_convert_orc_pack_u32_be audio_convert_orc_pack_u32
+#define audio_convert_orc_pack_u32_le audio_convert_orc_pack_u32_swap
+#define audio_convert_orc_pack_s32_be audio_convert_orc_pack_s32
+#define audio_convert_orc_pack_s32_le audio_convert_orc_pack_s32_swap
+#define audio_convert_orc_pack_float_be audio_convert_orc_pack_s32_float
+#define audio_convert_orc_pack_float_le audio_convert_orc_pack_s32_float_swap
+#define audio_convert_orc_pack_double_be audio_convert_orc_pack_s32_double
+#define audio_convert_orc_pack_double_le audio_convert_orc_pack_s32_double_swap
+#define audio_convert_orc_pack_float_hq_be audio_convert_orc_pack_double_float
+#define audio_convert_orc_pack_float_hq_le audio_convert_orc_pack_double_float_swap
+#define audio_convert_orc_pack_s8_float audio_convert_orc_pack_double_s8
+#define audio_convert_orc_pack_s16_be_float audio_convert_orc_pack_double_s16
+#define audio_convert_orc_pack_s16_le_float audio_convert_orc_pack_double_s16_swap
+#define audio_convert_orc_pack_s32_be_float audio_convert_orc_pack_double_s32
+#define audio_convert_orc_pack_s32_le_float audio_convert_orc_pack_double_s32_swap
+#define audio_convert_orc_pack_u8_float audio_convert_orc_pack_double_u8
+#define audio_convert_orc_pack_u16_be_float audio_convert_orc_pack_double_u16
+#define audio_convert_orc_pack_u16_le_float audio_convert_orc_pack_double_u16_swap
+#define audio_convert_orc_pack_u32_be_float audio_convert_orc_pack_double_u32
+#define audio_convert_orc_pack_u32_le_float audio_convert_orc_pack_double_u32_swap
 #endif
 
 /* sign bit in the intermediate format */
@@ -147,7 +146,7 @@
 #define MAKE_UNPACK_FUNC_NAME(name)                                     \
 audio_convert_unpack_##name
 #define MAKE_ORC_UNPACK_FUNC_NAME(name)                                 \
-orc_audio_convert_unpack_##name
+audio_convert_orc_unpack_##name
 
 /* unpack from integer to signed integer 32 */
 #define MAKE_UNPACK_FUNC_II(name, stride, sign, READ_FUNC)              \
@@ -280,7 +279,7 @@ MAKE_UNPACK_FUNC_ORC_IF (s32_le_float, 4, 0, READ32_FROM_LE);
 MAKE_UNPACK_FUNC_ORC_IF (u32_be_float, 4, SIGNED, READ32_FROM_BE);
 MAKE_UNPACK_FUNC_ORC_IF (s32_be_float, 4, 0, READ32_FROM_BE);
 
-/* One of the double_hq_* functions generated above is ineffecient, but it's
+/* One of the double_hq_* functions generated above is inefficient, but it's
  * never used anyway.  The same is true for one of the s32_* functions. */
 
 /*** 
@@ -289,7 +288,7 @@ MAKE_UNPACK_FUNC_ORC_IF (s32_be_float, 4, 0, READ32_FROM_BE);
 #define MAKE_PACK_FUNC_NAME(name)                                       \
 audio_convert_pack_##name
 #define MAKE_PACK_FUNC_NAME_ORC(name)                                       \
-orc_audio_convert_pack_##name
+audio_convert_orc_pack_##name
 
 /*
  * These functions convert the signed 32 bit integers to the
@@ -556,24 +555,27 @@ static AudioConvertPack pack_funcs[] = {
   (AudioConvertPack) MAKE_PACK_FUNC_NAME (s32_be_float),
 };
 
-#define DOUBLE_INTERMEDIATE_FORMAT(ctx)                                 \
-    ((!ctx->in.is_int && !ctx->out.is_int) || (ctx->ns != NOISE_SHAPING_NONE))
+#define DOUBLE_INTERMEDIATE_FORMAT(ctx)                   \
+    ((!GST_AUDIO_FORMAT_INFO_IS_INTEGER (ctx->in.finfo) &&    \
+      !GST_AUDIO_FORMAT_INFO_IS_INTEGER (ctx->out.finfo)) ||  \
+     (ctx->ns != NOISE_SHAPING_NONE))
 
 static gint
-audio_convert_get_func_index (AudioConvertCtx * ctx, AudioConvertFmt * fmt)
+audio_convert_get_func_index (AudioConvertCtx * ctx,
+    const GstAudioFormatInfo * fmt)
 {
   gint index = 0;
 
-  if (fmt->is_int) {
-    index += (fmt->width / 8 - 1) * 4;
-    index += fmt->endianness == G_LITTLE_ENDIAN ? 0 : 2;
-    index += fmt->sign ? 1 : 0;
+  if (GST_AUDIO_FORMAT_INFO_IS_INTEGER (fmt)) {
+    index += (GST_AUDIO_FORMAT_INFO_WIDTH (fmt) / 8 - 1) * 4;
+    index += GST_AUDIO_FORMAT_INFO_IS_LITTLE_ENDIAN (fmt) ? 0 : 2;
+    index += GST_AUDIO_FORMAT_INFO_IS_SIGNED (fmt) ? 1 : 0;
     index += (ctx->ns == NOISE_SHAPING_NONE) ? 0 : 24;
   } else {
     /* this is float/double */
     index = 16;
-    index += (fmt->width == 32) ? 0 : 2;
-    index += (fmt->endianness == G_LITTLE_ENDIAN) ? 0 : 1;
+    index += (GST_AUDIO_FORMAT_INFO_WIDTH (fmt) == 32) ? 0 : 2;
+    index += GST_AUDIO_FORMAT_INFO_IS_LITTLE_ENDIAN (fmt) ? 0 : 1;
     index += (DOUBLE_INTERMEDIATE_FORMAT (ctx)) ? 4 : 0;
   }
 
@@ -581,34 +583,22 @@ audio_convert_get_func_index (AudioConvertCtx * ctx, AudioConvertFmt * fmt)
 }
 
 static inline gboolean
-check_default (AudioConvertCtx * ctx, AudioConvertFmt * fmt)
+check_default (AudioConvertCtx * ctx, const GstAudioFormatInfo * fmt)
 {
   if (!DOUBLE_INTERMEDIATE_FORMAT (ctx)) {
-    return (fmt->width == 32 && fmt->depth == 32 &&
-        fmt->endianness == G_BYTE_ORDER && fmt->sign == TRUE);
+    return GST_AUDIO_FORMAT_INFO_FORMAT (fmt) == GST_AUDIO_FORMAT_S32;
   } else {
-    return (fmt->width == 64 && fmt->endianness == G_BYTE_ORDER);
+    return GST_AUDIO_FORMAT_INFO_FORMAT (fmt) == GST_AUDIO_FORMAT_F64;
   }
 }
 
 gboolean
-audio_convert_clean_fmt (AudioConvertFmt * fmt)
-{
-  g_return_val_if_fail (fmt != NULL, FALSE);
-
-  g_free (fmt->pos);
-  fmt->pos = NULL;
-
-  return TRUE;
-}
-
-
-gboolean
-audio_convert_prepare_context (AudioConvertCtx * ctx, AudioConvertFmt * in,
-    AudioConvertFmt * out, GstAudioConvertDithering dither,
+audio_convert_prepare_context (AudioConvertCtx * ctx, GstAudioInfo * in,
+    GstAudioInfo * out, GstAudioConvertDithering dither,
     GstAudioConvertNoiseShaping ns)
 {
   gint idx_in, idx_out;
+  gint in_depth, out_depth;
 
   g_return_val_if_fail (ctx != NULL, FALSE);
   g_return_val_if_fail (in != NULL, FALSE);
@@ -616,41 +606,51 @@ audio_convert_prepare_context (AudioConvertCtx * ctx, AudioConvertFmt * in,
 
   /* first clean the existing context */
   audio_convert_clean_context (ctx);
-
-  g_return_val_if_fail (in->unpositioned_layout == out->unpositioned_layout,
-      FALSE);
+  if ((GST_AUDIO_INFO_CHANNELS (in) != GST_AUDIO_INFO_CHANNELS (out)) &&
+      (GST_AUDIO_INFO_IS_UNPOSITIONED (in)
+          || GST_AUDIO_INFO_IS_UNPOSITIONED (out)))
+    goto unpositioned;
 
   ctx->in = *in;
   ctx->out = *out;
+
+  in_depth = GST_AUDIO_FORMAT_INFO_DEPTH (in->finfo);
+  out_depth = GST_AUDIO_FORMAT_INFO_DEPTH (out->finfo);
+
+  GST_INFO ("depth in %d, out %d", in_depth, out_depth);
 
   /* Don't dither or apply noise shaping if target depth is bigger than 20 bits
    * as DA converters only can do a SNR up to 20 bits in reality.
    * Also don't dither or apply noise shaping if target depth is larger than
    * source depth. */
-  if (ctx->out.depth <= 20 && (!ctx->in.is_int
-          || ctx->in.depth >= ctx->out.depth)) {
+  if (out_depth <= 20 && (!GST_AUDIO_FORMAT_INFO_IS_INTEGER (in->finfo)
+          || in_depth >= out_depth)) {
     ctx->dither = dither;
     ctx->ns = ns;
+    GST_INFO ("using dither %d and noise shaping %d", dither, ns);
   } else {
     ctx->dither = DITHER_NONE;
     ctx->ns = NOISE_SHAPING_NONE;
+    GST_INFO ("using no dither and noise shaping");
   }
 
   /* Use simple error feedback when output sample rate is smaller than
    * 32000 as the other methods might move the noise to audible ranges */
-  if (ctx->ns > NOISE_SHAPING_ERROR_FEEDBACK && ctx->out.rate < 32000)
+  if (ctx->ns > NOISE_SHAPING_ERROR_FEEDBACK && out->rate < 32000)
     ctx->ns = NOISE_SHAPING_ERROR_FEEDBACK;
 
   gst_channel_mix_setup_matrix (ctx);
 
-  idx_in = audio_convert_get_func_index (ctx, in);
+  idx_in = audio_convert_get_func_index (ctx, in->finfo);
   ctx->unpack = unpack_funcs[idx_in];
 
-  idx_out = audio_convert_get_func_index (ctx, out);
+  idx_out = audio_convert_get_func_index (ctx, out->finfo);
   ctx->pack = pack_funcs[idx_out];
 
+  GST_INFO ("func index in %d, out %d", idx_in, idx_out);
+
   /* if both formats are float/double or we use noise shaping use double as
-   * intermediate format and and switch mixing */
+   * intermediate format and switch mixing */
   if (!DOUBLE_INTERMEDIATE_FORMAT (ctx)) {
     GST_INFO ("use int mixing");
     ctx->channel_mix = (AudioConvertMix) gst_channel_mix_mix_int;
@@ -658,24 +658,35 @@ audio_convert_prepare_context (AudioConvertCtx * ctx, AudioConvertFmt * in,
     GST_INFO ("use float mixing");
     ctx->channel_mix = (AudioConvertMix) gst_channel_mix_mix_float;
   }
-  GST_INFO ("unitsizes: %d -> %d", in->unit_size, out->unit_size);
+  GST_INFO ("unitsizes: %d -> %d", in->bpf, out->bpf);
 
   /* check if input is in default format */
-  ctx->in_default = check_default (ctx, in);
+  ctx->in_default = check_default (ctx, in->finfo);
   /* check if channel mixer is passthrough */
   ctx->mix_passthrough = gst_channel_mix_passthrough (ctx);
   /* check if output is in default format */
-  ctx->out_default = check_default (ctx, out);
+  ctx->out_default = check_default (ctx, out->finfo);
 
   GST_INFO ("in default %d, mix passthrough %d, out default %d",
       ctx->in_default, ctx->mix_passthrough, ctx->out_default);
 
-  ctx->in_scale = (in->is_int) ? (32 - in->depth) : 0;
-  ctx->out_scale = (out->is_int) ? (32 - out->depth) : 0;
+  ctx->in_scale =
+      GST_AUDIO_FORMAT_INFO_IS_INTEGER (in->finfo) ? (32 - in_depth) : 0;
+  ctx->out_scale =
+      GST_AUDIO_FORMAT_INFO_IS_INTEGER (out->finfo) ? (32 - out_depth) : 0;
+
+  GST_INFO ("scale in %d, out %d", ctx->in_scale, ctx->out_scale);
 
   gst_audio_quantize_setup (ctx);
 
   return TRUE;
+
+  /* ERRORS */
+unpositioned:
+  {
+    GST_WARNING ("unpositioned channels");
+    return FALSE;
+  }
 }
 
 gboolean
@@ -684,9 +695,9 @@ audio_convert_clean_context (AudioConvertCtx * ctx)
   g_return_val_if_fail (ctx != NULL, FALSE);
 
   gst_audio_quantize_free (ctx);
-  audio_convert_clean_fmt (&ctx->in);
-  audio_convert_clean_fmt (&ctx->out);
   gst_channel_mix_unset_matrix (ctx);
+  gst_audio_info_init (&ctx->in);
+  gst_audio_info_init (&ctx->out);
 
   g_free (ctx->tmpbuf);
   ctx->tmpbuf = NULL;
@@ -702,9 +713,9 @@ audio_convert_get_sizes (AudioConvertCtx * ctx, gint samples, gint * srcsize,
   g_return_val_if_fail (ctx != NULL, FALSE);
 
   if (srcsize)
-    *srcsize = samples * ctx->in.unit_size;
+    *srcsize = samples * ctx->in.bpf;
   if (dstsize)
-    *dstsize = samples * ctx->out.unit_size;
+    *dstsize = samples * ctx->out.bpf;
 
   return TRUE;
 }
@@ -716,6 +727,7 @@ audio_convert_convert (AudioConvertCtx * ctx, gpointer src,
   guint insize, outsize, size;
   gpointer outbuf, tmpbuf;
   guint intemp = 0, outtemp = 0, biggest;
+  gint in_width, out_width;
 
   g_return_val_if_fail (ctx != NULL, FALSE);
   g_return_val_if_fail (src != NULL, FALSE);
@@ -725,23 +737,26 @@ audio_convert_convert (AudioConvertCtx * ctx, gpointer src,
   if (samples == 0)
     return TRUE;
 
-  insize = ctx->in.unit_size * samples;
-  outsize = ctx->out.unit_size * samples;
+  insize = ctx->in.bpf * samples;
+  outsize = ctx->out.bpf * samples;
+
+  in_width = GST_AUDIO_FORMAT_INFO_WIDTH (ctx->in.finfo);
+  out_width = GST_AUDIO_FORMAT_INFO_WIDTH (ctx->out.finfo);
 
   /* find biggest temp buffer size */
   size = (DOUBLE_INTERMEDIATE_FORMAT (ctx)) ? sizeof (gdouble)
       : sizeof (gint32);
 
   if (!ctx->in_default)
-    intemp = gst_util_uint64_scale (insize, size * 8, ctx->in.width);
+    intemp = gst_util_uint64_scale (insize, size * 8, in_width);
   if (!ctx->mix_passthrough || !ctx->out_default)
-    outtemp = gst_util_uint64_scale (outsize, size * 8, ctx->out.width);
+    outtemp = gst_util_uint64_scale (outsize, size * 8, out_width);
   biggest = MAX (intemp, outtemp);
 
   /* see if one of the buffers can be used as temp */
-  if ((outsize >= biggest) && (ctx->out.unit_size <= size))
+  if ((outsize >= biggest) && (ctx->out.bpf <= size))
     tmpbuf = dst;
-  else if ((insize >= biggest) && src_writable && (ctx->in.unit_size >= size))
+  else if ((insize >= biggest) && src_writable && (ctx->in.bpf >= size))
     tmpbuf = src;
   else {
     if (biggest > ctx->tmpbufsize) {
@@ -779,7 +794,7 @@ audio_convert_convert (AudioConvertCtx * ctx, gpointer src,
   }
 
   /* we only need to quantize if output format is int */
-  if (ctx->out.is_int) {
+  if (GST_AUDIO_FORMAT_INFO_IS_INTEGER (ctx->out.finfo)) {
     if (ctx->out_default)
       outbuf = dst;
     else

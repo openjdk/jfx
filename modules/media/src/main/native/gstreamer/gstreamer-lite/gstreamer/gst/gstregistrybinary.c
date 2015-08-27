@@ -18,8 +18,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 /* FIXME:
@@ -56,6 +56,9 @@
 #include <gst/gstelement.h>
 #include <gst/gsttypefind.h>
 #include <gst/gsttypefindfactory.h>
+#ifndef GSTREAMER_LITE
+#include <gst/gstdeviceproviderfactory.h>
+#endif // GSTREAMER_LITE
 #include <gst/gsturi.h>
 #include <gst/gstinfo.h>
 #include <gst/gstenumtypes.h>
@@ -219,10 +222,11 @@ gst_registry_binary_cache_write (BinaryRegistryCache * cache,
 {
   long written;
   if (offset != cache->currentoffset) {
-    if (lseek (cache->cache_fd, offset, SEEK_SET) != 0) {
-      GST_ERROR ("Seeking to new offset failed");
-      return FALSE;
+    if (lseek (cache->cache_fd, offset, SEEK_SET) < 0) {
+      GST_ERROR ("Seeking to new offset failed: %s", g_strerror (errno));
+      return -1;
     }
+    GST_LOG ("Seeked from offset %lu to %lu", offset, cache->currentoffset);
     cache->currentoffset = offset;
   }
 
@@ -245,13 +249,14 @@ gst_registry_binary_cache_finish (BinaryRegistryCache * cache, gboolean success)
   if (close (cache->cache_fd) < 0)
     goto close_failed;
 
-  if (success) {
+  if (!success)
+    goto fail_after_close;
+
     /* Only do the rename if we wrote the entire file successfully */
     if (g_rename (cache->tmp_location, cache->location) < 0) {
       GST_ERROR ("g_rename() failed: %s", g_strerror (errno));
       goto rename_failed;
     }
-  }
 
   g_free (cache->tmp_location);
   g_slice_free (BinaryRegistryCache, cache);
@@ -353,7 +358,8 @@ gst_registry_binary_initialize_magic (GstBinaryRegistryMagic * m)
  * Returns: %TRUE on success.
  */
 gboolean
-gst_registry_binary_write_cache (GstRegistry * registry, const char *location)
+priv_gst_registry_binary_write_cache (GstRegistry * registry, GList * plugins,
+    const char *location)
 {
   GList *walk;
   GstBinaryRegistryMagic magic;
@@ -369,13 +375,13 @@ gst_registry_binary_write_cache (GstRegistry * registry, const char *location)
     goto fail;
 
   /* iterate trough the list of plugins and fit them into binary structures */
-  for (walk = registry->plugins; walk; walk = g_list_next (walk)) {
+  for (walk = plugins; walk != NULL; walk = walk->next) {
     GstPlugin *plugin = GST_PLUGIN (walk->data);
 
     if (!plugin->filename)
       continue;
 
-    if (plugin->flags & GST_PLUGIN_FLAG_CACHED) {
+    if (GST_OBJECT_FLAG_IS_SET (plugin, GST_PLUGIN_FLAG_CACHED)) {
       GStatBuf statbuf;
 
       if (g_stat (plugin->filename, &statbuf) < 0 ||
@@ -503,7 +509,8 @@ fail:
  * Returns: %TRUE on success.
  */
 gboolean
-gst_registry_binary_read_cache (GstRegistry * registry, const char *location)
+priv_gst_registry_binary_read_cache (GstRegistry * registry,
+    const char *location)
 {
   GMappedFile *mapped = NULL;
   gchar *contents = NULL;
@@ -521,7 +528,9 @@ gst_registry_binary_read_cache (GstRegistry * registry, const char *location)
   /* make sure these types exist */
   GST_TYPE_ELEMENT_FACTORY;
   GST_TYPE_TYPE_FIND_FACTORY;
-  GST_TYPE_INDEX_FACTORY;
+#ifndef GSTREAMER_LITE
+  GST_TYPE_DEVICE_PROVIDER_FACTORY;
+#endif // GSTREAMER_LITE
 
 #ifndef GST_DISABLE_GST_DEBUG
   timer = g_timer_new ();
@@ -635,27 +644,3 @@ Error:
   }
   return res;
 }
-
-#ifndef GST_REMOVE_DEPRECATED
-#ifdef GST_DISABLE_DEPRECATED
-gboolean
-gst_registry_xml_read_cache (GstRegistry * registry, const char *location);
-#endif
-/* FIXME 0.11: these symbols are here for backwards compatibility and should
- * be removed or made private */
-gboolean
-gst_registry_xml_read_cache (GstRegistry * registry, const char *location)
-{
-  return FALSE;
-}
-
-#ifdef GST_DISABLE_DEPRECATED
-gboolean
-gst_registry_xml_write_cache (GstRegistry * registry, const char *location);
-#endif
-gboolean
-gst_registry_xml_write_cache (GstRegistry * registry, const char *location)
-{
-  return FALSE;
-}
-#endif /* GST_REMOVE_DEPRECATED */

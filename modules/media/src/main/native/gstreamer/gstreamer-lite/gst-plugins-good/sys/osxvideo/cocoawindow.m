@@ -14,10 +14,10 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
- * 
- * The development of this code was made possible due to the involvement of Pioneers 
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
+ *
+ * The development of this code was made possible due to the involvement of Pioneers
  * of the Inevitable, the creators of the Songbird Music player
  *
  */
@@ -36,28 +36,267 @@
 #include <OpenGL/gl.h>
 #include <OpenGL/glext.h>
 
+#include <Carbon/Carbon.h>
+
 /* Debugging category */
 #include <gst/gstinfo.h>
+
+static
+const gchar* gst_keycode_to_keyname(gint16 keycode)
+{
+    switch (keycode)
+    {
+      case kVK_ANSI_A:
+        return "a";
+      case kVK_ANSI_S:
+        return "s";
+      case kVK_ANSI_D:
+        return "d";
+      case kVK_ANSI_F:
+        return "f";
+      case kVK_ANSI_H:
+        return "h";
+      case kVK_ANSI_G:
+        return "g";
+      case kVK_ANSI_Z:
+        return "z";
+      case kVK_ANSI_X:
+        return "x";
+      case kVK_ANSI_C:
+        return "c";
+      case kVK_ANSI_V:
+        return "v";
+      case kVK_ANSI_B:
+        return "b";
+      case kVK_ANSI_Q:
+        return "q";
+      case kVK_ANSI_W:
+        return "w";
+      case kVK_ANSI_E:
+        return "e";
+      case kVK_ANSI_R:
+        return "r";
+      case kVK_ANSI_Y:
+        return "y";
+      case kVK_ANSI_T:
+        return "t";
+      case kVK_ANSI_1:
+        return "1";
+      case kVK_ANSI_2:
+        return "2";
+      case kVK_ANSI_3:
+        return "3";
+      case kVK_ANSI_4:
+        return "4";
+      case kVK_ANSI_6:
+        return "6";
+      case kVK_ANSI_5:
+        return "5";
+      case kVK_ANSI_Equal:
+        return "equal";
+      case kVK_ANSI_9:
+        return "9";
+      case kVK_ANSI_7:
+        return "7";
+      case kVK_ANSI_Minus:
+        return "minus";
+      case kVK_ANSI_8:
+        return "8";
+      case kVK_ANSI_0:
+        return "0";
+      case kVK_ANSI_RightBracket:
+        return "bracketright";
+      case kVK_ANSI_O:
+        return "0";
+      case kVK_ANSI_U:
+        return "u";
+      case kVK_ANSI_LeftBracket:
+        return "bracketleft";
+      case kVK_ANSI_I:
+        return "i";
+      case kVK_ANSI_P:
+        return "p";
+      case kVK_ANSI_L:
+        return "l";
+      case kVK_ANSI_J:
+        return "j";
+      case kVK_ANSI_Quote:
+        return "apostrophe";
+      case kVK_ANSI_K:
+        return "k";
+      case kVK_ANSI_Semicolon:
+        return "semicolon";
+      case kVK_ANSI_Backslash:
+        return "backslash";
+      case kVK_ANSI_Comma:
+        return "comma";
+      case kVK_ANSI_Slash:
+        return "slash";
+      case kVK_ANSI_N:
+        return "n";
+      case kVK_ANSI_M:
+        return "m";
+      case kVK_ANSI_Period:
+        return "period";
+      case kVK_ANSI_Grave:
+        return "grave";
+      case kVK_ANSI_KeypadDecimal:
+        return "KP_Delete";
+      case kVK_ANSI_KeypadMultiply:
+        return "KP_Multiply";
+      case kVK_ANSI_KeypadPlus:
+        return "KP_Add";
+      case kVK_ANSI_KeypadClear:
+        return "KP_Clear";
+      case kVK_ANSI_KeypadDivide:
+        return "KP_Divide";
+      case kVK_ANSI_KeypadEnter:
+        return "KP_Enter";
+      case kVK_ANSI_KeypadMinus:
+        return "KP_Subtract";
+      case kVK_ANSI_KeypadEquals:
+        return "KP_Equals";
+      case kVK_ANSI_Keypad0:
+        return "KP_Insert";
+      case kVK_ANSI_Keypad1:
+        return "KP_End";
+      case kVK_ANSI_Keypad2:
+        return "KP_Down";
+      case kVK_ANSI_Keypad3:
+        return "KP_Next";
+      case kVK_ANSI_Keypad4:
+        return "KP_Left";
+      case kVK_ANSI_Keypad5:
+        return "KP_Begin";
+      case kVK_ANSI_Keypad6:
+        return "KP_Right";
+      case kVK_ANSI_Keypad7:
+        return "KP_Home";
+      case kVK_ANSI_Keypad8:
+        return "KP_Up";
+      case kVK_ANSI_Keypad9:
+        return "KP_Prior";
+
+    /* keycodes for keys that are independent of keyboard layout*/
+
+      case kVK_Return:
+        return "Return";
+      case kVK_Tab:
+        return "Tab";
+      case kVK_Space:
+        return "space";
+      case kVK_Delete:
+        return "Backspace";
+      case kVK_Escape:
+        return "Escape";
+      case kVK_Command:
+        return "Command";
+      case kVK_Shift:
+        return "Shift_L";
+      case kVK_CapsLock:
+        return "Caps_Lock";
+      case kVK_Option:
+        return "Option_L";
+      case kVK_Control:
+        return "Control_L";
+      case kVK_RightShift:
+        return "Shift_R";
+      case kVK_RightOption:
+        return "Option_R";
+      case kVK_RightControl:
+        return "Control_R";
+      case kVK_Function:
+        return "Function";
+      case kVK_F17:
+        return "F17";
+      case kVK_VolumeUp:
+        return "VolumeUp";
+      case kVK_VolumeDown:
+        return "VolumeDown";
+      case kVK_Mute:
+        return "Mute";
+      case kVK_F18:
+        return "F18";
+      case kVK_F19:
+        return "F19";
+      case kVK_F20:
+        return "F20";
+      case kVK_F5:
+        return "F5";
+      case kVK_F6:
+        return "F6";
+      case kVK_F7:
+        return "F7";
+      case kVK_F3:
+        return "F3";
+      case kVK_F8:
+        return "F8";
+      case kVK_F9:
+        return "F9";
+      case kVK_F11:
+        return "F11";
+      case kVK_F13:
+        return "F13";
+      case kVK_F16:
+        return "F16";
+      case kVK_F14:
+        return "F14";
+      case kVK_F10:
+        return "F10";
+      case kVK_F12:
+        return "F12";
+      case kVK_F15:
+        return "F15";
+      case kVK_Help:
+        return "Help";
+      case kVK_Home:
+        return "Home";
+      case kVK_PageUp:
+        return "Prior";
+      case kVK_ForwardDelete:
+        return "Delete";
+      case kVK_F4:
+        return "F4";
+      case kVK_End:
+        return "End";
+      case kVK_F2:
+        return "F2";
+      case kVK_PageDown:
+        return "Next";
+      case kVK_F1:
+        return "F1";
+      case kVK_LeftArrow:
+        return "Left";
+      case kVK_RightArrow:
+        return "Right";
+      case kVK_DownArrow:
+        return "Down";
+      case kVK_UpArrow:
+        return "Up";
+    default:
+        return "";
+  };
+}
 
 @ implementation GstOSXVideoSinkWindow
 
 /* The object has to be released */
-- (id) initWithContentRect: (NSRect) rect
+- (id) initWithContentNSRect: (NSRect) rect
 		 styleMask: (unsigned int) styleMask
-		   backing: (NSBackingStoreType) bufferingType 
+		   backing: (NSBackingStoreType) bufferingType
 		     defer: (BOOL) flag
 		    screen:(NSScreen *) aScreen
 {
   self = [super initWithContentRect: rect
 		styleMask: styleMask
-		backing: bufferingType 
-		defer: flag 
+		backing: bufferingType
+		defer: flag
 		screen:aScreen];
 
   GST_DEBUG ("Initializing GstOSXvideoSinkWindow");
 
   gstview = [[GstGLView alloc] initWithFrame:rect];
-  
+
   if (gstview)
     [self setContentView:gstview];
   [self setTitle:@"GStreamer Video Output"];
@@ -69,8 +308,6 @@
   width = size.width;
   height = size.height;
 
-  [gstview setVideoSize: (int) width:(int) height];
-
   [super setContentSize:size];
 }
 
@@ -81,21 +318,6 @@
 - (void) awakeFromNib {
   [self setAcceptsMouseMovedEvents:YES];
 }
-
-- (void) sendEvent:(NSEvent *) event {
-  BOOL taken = NO;
-
-  GST_DEBUG ("event %p type:%d", event,(gint)[event type]);
-
-  if ([event type] == NSKeyDown) {
-  }
-  /*taken = [gstview keyDown:event]; */
-
-  if (!taken) {
-    [super sendEvent:event];
-  }
-}
-
 
 @end
 
@@ -109,7 +331,6 @@
 - (id) initWithFrame:(NSRect) frame {
   NSOpenGLPixelFormat *fmt;
   NSOpenGLPixelFormatAttribute attribs[] = {
-    NSOpenGLPFAAccelerated,
     NSOpenGLPFANoRecovery,
     NSOpenGLPFADoubleBuffer,
     NSOpenGLPFAColorSize, 24,
@@ -128,6 +349,7 @@
   }
 
   self = [super initWithFrame: frame pixelFormat:fmt];
+  [fmt release];
 
    actualContext = [self openGLContext];
    [actualContext makeCurrentContext];
@@ -140,15 +362,31 @@
   data = nil;
   width = frame.size.width;
   height = frame.size.height;
+  drawingBounds = NSMakeRect(0, 0, width, height);
 
   GST_LOG ("Width: %d Height: %d", width, height);
+
+  trackingArea = [[NSTrackingArea alloc] initWithRect:[self bounds]
+      options: (NSTrackingMouseEnteredAndExited | NSTrackingMouseMoved | NSTrackingActiveInKeyWindow)
+      owner:self
+      userInfo:nil];
+
+  [self addTrackingArea:trackingArea];
+  mainThread = [NSThread mainThread];
 
   [self initTextures];
   return self;
 }
 
+- (NSRect) getDrawingBounds {
+  return drawingBounds;
+}
+
 - (void) reshape {
   NSRect bounds;
+  gdouble frame_par, view_par;
+  gint view_height, view_width, c_height, c_width, c_x, c_y;
+
 
   GST_LOG ("reshaping");
 
@@ -159,9 +397,33 @@
   [actualContext makeCurrentContext];
 
   bounds = [self bounds];
+  view_width = bounds.size.width;
+  view_height = bounds.size.height;
 
-  glViewport (0, 0, (GLint) bounds.size.width, (GLint) bounds.size.height);
+  frame_par = (gdouble) width / height;
+  view_par = (gdouble) view_width / view_height;
+  if (!keepAspectRatio)
+    view_par = frame_par;
 
+  if (frame_par == view_par) {
+    c_height = view_height;
+    c_width = view_width;
+    c_x = 0;
+    c_y = 0;
+  } else if (frame_par < view_par) {
+    c_height = view_height;
+    c_width = c_height * frame_par;
+    c_x = (view_width - c_width) / 2;
+    c_y = 0;
+  } else {
+    c_width = view_width;
+    c_height = c_width / frame_par;
+    c_x = 0;
+    c_y = (view_height - c_height) / 2;
+  }
+
+  drawingBounds = NSMakeRect(c_x, c_y, c_width, c_height);
+  glViewport (c_x, c_y, (GLint) c_width, (GLint) c_height);
 }
 
 - (void) initTextures {
@@ -186,7 +448,7 @@
 
   glPixelStorei (GL_UNPACK_ALIGNMENT, 1);
   glPixelStorei (GL_UNPACK_ROW_LENGTH, width);
-  
+
   glBindTexture (GL_TEXTURE_RECTANGLE_EXT, pi_texture);
 
   /* Use VRAM texturing */
@@ -210,7 +472,7 @@
   // glPixelStorei (GL_UNPACK_ROW_LENGTH, 0); WHY ??
 
   glTexImage2D (GL_TEXTURE_RECTANGLE_EXT, 0, GL_RGBA,
-		width, height, 0, 
+		width, height, 0,
 		GL_YCBCR_422_APPLE, GL_UNSIGNED_SHORT_8_8_APPLE, data);
 
 
@@ -351,7 +613,7 @@
   } else if (fullscreen && !flag) {
     // fullscreen now and needs to go back to normal
     initDone = NO;
-    
+
     actualContext = [self openGLContext];
 
     [NSOpenGLContext clearCurrentContext];
@@ -371,16 +633,23 @@
   }
 }
 
-- (void) setVideoSize: (int) w:(int) h {
+- (void) setVideoSize: (int)w : (int)h {
   GST_LOG ("width:%d, height:%d", w, h);
 
   width = w;
   height = h;
 
-//  if (data) g_free(data);
-
-//  data = g_malloc0 (2 * w * h);
   [self initTextures];
+  [self reshape];
+}
+
+- (void) setKeepAspectRatio: (BOOL) flag {
+  keepAspectRatio = flag;
+  [self reshape];
+}
+
+- (void) setMainThread: (NSThread *) thread {
+  mainThread = thread;
 }
 
 - (void) haveSuperviewReal:(NSMutableArray *)closure {
@@ -390,8 +659,9 @@
 
 - (BOOL) haveSuperview {
 	NSMutableArray *closure = [NSMutableArray arrayWithCapacity:1];
-	[self performSelectorOnMainThread:@selector(haveSuperviewReal:)
-			withObject:(id)closure waitUntilDone:YES];
+	[self performSelector:@selector(haveSuperviewReal:)
+		onThread:mainThread
+		withObject:(id)closure waitUntilDone:YES];
 
 	return [[closure objectAtIndex:0] boolValue];
 }
@@ -405,8 +675,9 @@
 }
 
 - (void) addToSuperview: (NSView *)superview {
-	[self performSelectorOnMainThread:@selector(addToSuperviewReal:)
-			withObject:superview waitUntilDone:YES];
+	[self performSelector:@selector(addToSuperviewReal:)
+		onThread:mainThread
+		withObject:superview waitUntilDone:YES];
 }
 
 - (void) removeFromSuperview: (id)unused
@@ -428,4 +699,122 @@
 
   [super dealloc];
 }
+
+- (void)updateTrackingAreas {
+  [self removeTrackingArea:trackingArea];
+  [trackingArea release];
+  trackingArea = [[NSTrackingArea alloc] initWithRect: [self bounds]
+      options: (NSTrackingMouseEnteredAndExited | NSTrackingMouseMoved | NSTrackingActiveInKeyWindow)
+      owner:self userInfo:nil];
+  [self addTrackingArea:trackingArea];
+}
+
+- (BOOL)acceptsFirstResponder {
+    return YES;
+}
+
+- (void) setNavigation:(GstNavigation *)nav
+{
+  navigation = nav;
+}
+
+- (void)sendMouseEvent:(NSEvent *)event : (const char *)event_name
+{
+  NSPoint location;
+  gint button;
+  gdouble x, y;
+
+  if (!navigation)
+    return;
+
+  switch ([event type]) {
+    case NSMouseMoved:
+      button = 0;
+      break;
+    case NSLeftMouseDown:
+    case NSLeftMouseUp:
+      button = 1;
+      break;
+    case NSRightMouseDown:
+    case NSRightMouseUp:
+      button = 2;
+      break;
+    default:
+      button = 3;
+      break;
+  }
+
+  location = [self convertPoint:[event locationInWindow] fromView:nil];
+
+  x = location.x;
+  y = location.y;
+  /* invert Y */
+
+  y = (1 - ((gdouble) y) / [self bounds].size.height) * [self bounds].size.height;
+
+  gst_navigation_send_mouse_event (navigation, event_name, button, x, y);
+}
+
+- (void)sendKeyEvent:(NSEvent *)event : (const char *)event_name
+{
+  if (!navigation)
+    return;
+
+  gst_navigation_send_key_event(navigation, event_name, gst_keycode_to_keyname([event keyCode]));
+}
+
+- (void)sendModifierKeyEvent:(NSEvent *)event
+{
+  NSUInteger flags = [event modifierFlags];
+  const gchar* event_name = flags > savedModifierFlags ? "key-press" : "key-release";
+  savedModifierFlags = flags;
+  [self sendKeyEvent: event: event_name];
+}
+
+- (void)keyDown:(NSEvent *) event;
+{
+  [self sendKeyEvent: event: "key-press"];
+  [super keyDown: event];
+}
+
+- (void)keyUp:(NSEvent *) event;
+{
+  [self sendKeyEvent: event: "key-release"];
+  [super keyUp: event];
+}
+
+- (void)flagsChanged:(NSEvent *) event;
+{
+  [self sendModifierKeyEvent: event];
+  [super flagsChanged: event];
+}
+
+- (void)mouseDown:(NSEvent *) event;
+{
+  [self sendMouseEvent:event: "mouse-button-press"];
+  [super mouseDown: event];
+}
+
+- (void)mouseUp:(NSEvent *) event;
+{
+  [self sendMouseEvent:event: "mouse-button-release"];
+  [super mouseUp: event];
+}
+
+- (void)mouseMoved:(NSEvent *)event;
+{
+  [self sendMouseEvent:event: "mouse-move"];
+  [super mouseMoved: event];
+}
+
+- (void)mouseEntered:(NSEvent *)event;
+{
+  [super mouseEntered: event];
+}
+
+- (void)mouseExited:(NSEvent *)event;
+{
+  [super mouseExited: event];
+}
+
 @end

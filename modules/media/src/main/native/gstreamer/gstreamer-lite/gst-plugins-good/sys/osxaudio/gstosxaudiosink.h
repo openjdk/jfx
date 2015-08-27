@@ -2,6 +2,7 @@
  * GStreamer
  * Copyright (C) 2005-2006 Zaheer Abbas Merali <zaheerabbas at merali dot org>
  * Copyright (C) 2007 Pioneers of the Inevitable <songbird@songbirdnest.com>
+ * Copyright (C) 2012 Fluendo S.A. <support@fluendo.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -38,8 +39,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  *
  * The development of this code was made possible due to the involvement of
  * Pioneers of the Inevitable, the creators of the Songbird Music player
@@ -50,8 +51,9 @@
 #define __GST_OSXAUDIOSINK_H__
 
 #include <gst/gst.h>
-#include <gst/audio/gstbaseaudiosink.h>
-#include "gstosxringbuffer.h"
+#include <gst/audio/audio.h>
+#include <gst/audio/gstaudiobasesink.h>
+#include "gstosxaudioringbuffer.h"
 
 G_BEGIN_DECLS
 
@@ -61,22 +63,31 @@ G_BEGIN_DECLS
   (G_TYPE_CHECK_INSTANCE_CAST((obj),GST_TYPE_OSX_AUDIO_SINK,GstOsxAudioSink))
 #define GST_OSX_AUDIO_SINK_CLASS(klass) \
   (G_TYPE_CHECK_CLASS_CAST((klass),GST_TYPE_OSX_AUDIO_SINK,GstOsxAudioSinkClass))
+#define GST_IS_OSX_AUDIO_SINK(obj) \
+  (G_TYPE_CHECK_INSTANCE_TYPE((obj),GST_TYPE_OSX_AUDIO_SINK))
+
+#define GST_OSX_AUDIO_MAX_CHANNEL (9)
 
 typedef struct _GstOsxAudioSink GstOsxAudioSink;
 typedef struct _GstOsxAudioSinkClass GstOsxAudioSinkClass;
 
 struct _GstOsxAudioSink
 {
-  GstBaseAudioSink sink;
+  GstAudioBaseSink sink;
 
   AudioDeviceID device_id;
+
   AudioUnit audiounit;
   double volume;
+  GstCaps *cached_caps;
+
+  guint channels;
+  GstAudioChannelPosition channel_positions[GST_OSX_AUDIO_MAX_CHANNEL];
 };
 
-struct _GstOsxAudioSinkClass 
+struct _GstOsxAudioSinkClass
 {
-  GstBaseAudioSinkClass parent_class;
+  GstAudioBaseSinkClass parent_class;
 };
 
 GType gst_osx_audio_sink_get_type (void);
@@ -84,3 +95,4 @@ GType gst_osx_audio_sink_get_type (void);
 G_END_DECLS
 
 #endif /* __GST_OSXAUDIOSINK_H__ */
+

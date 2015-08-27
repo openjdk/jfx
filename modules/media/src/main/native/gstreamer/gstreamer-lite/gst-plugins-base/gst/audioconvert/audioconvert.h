@@ -15,15 +15,15 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 #ifndef __AUDIO_CONVERT_H__
 #define __AUDIO_CONVERT_H__
 
 #include <gst/gst.h>
-#include <gst/audio/multichannel.h>
+#include <gst/audio/audio.h>
 
 GST_DEBUG_CATEGORY_EXTERN (audio_convert_debug);
 #define GST_CAT_DEFAULT (audio_convert_debug)
@@ -65,6 +65,7 @@ typedef enum
 } GstAudioConvertNoiseShaping;
 
 typedef struct _AudioConvertCtx AudioConvertCtx;
+#if 0
 typedef struct _AudioConvertFmt AudioConvertFmt;
 
 struct _AudioConvertFmt
@@ -84,6 +85,7 @@ struct _AudioConvertFmt
 
   gint unit_size;
 };
+#endif
 
 typedef void (*AudioConvertUnpack) (gpointer src, gpointer dst, gint scale,
     gint count);
@@ -96,8 +98,8 @@ typedef void (*AudioConvertQuantize) (AudioConvertCtx * ctx, gpointer src,
 
 struct _AudioConvertCtx
 {
-  AudioConvertFmt in;
-  AudioConvertFmt out;
+  GstAudioInfo in;
+  GstAudioInfo out;
 
   AudioConvertUnpack unpack;
   AudioConvertPack pack;
@@ -130,10 +132,8 @@ struct _AudioConvertCtx
   gdouble *error_buf;
 };
 
-gboolean audio_convert_clean_fmt (AudioConvertFmt * fmt);
-
 gboolean audio_convert_prepare_context (AudioConvertCtx * ctx,
-    AudioConvertFmt * in, AudioConvertFmt * out,
+    GstAudioInfo * in, GstAudioInfo * out,
     GstAudioConvertDithering dither, GstAudioConvertNoiseShaping ns);
 gboolean audio_convert_get_sizes (AudioConvertCtx * ctx, gint samples,
     gint * srcsize, gint * dstsize);

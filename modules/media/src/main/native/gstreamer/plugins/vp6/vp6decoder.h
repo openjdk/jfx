@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -125,6 +125,8 @@ struct _VP6Decoder
     int                 frames_received;    /* total number of frames received */
     int                 keyframes_received; /* total number of keyframes received */
     int                 delta_sequence;     /* count of delta frames from last keyframe */
+
+    GstEvent *segment_event;
 };
 
 struct _VP6DecoderClass

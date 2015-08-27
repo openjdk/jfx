@@ -16,9 +16,13 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
+
+#ifndef __GST_AUDIO_AUDIO_H__
+#include <gst/audio/audio.h>
+#endif
 
 #ifndef __GST_AUDIO_CLOCK_H__
 #define __GST_AUDIO_CLOCK_H__
@@ -60,28 +64,22 @@ typedef GstClockTime (*GstAudioClockGetTimeFunc) (GstClock *clock, gpointer user
 
 /**
  * GstAudioClock:
- * @clock: parent #GstSystemClock
  *
  * Opaque #GstAudioClock.
  */
 struct _GstAudioClock {
   GstSystemClock clock;
 
-  /* --- protected --- */
+  /*< protected >*/
   GstAudioClockGetTimeFunc func;
-  gpointer user_data;
-
-  GstClockTime last_time;
+  gpointer                 user_data;
+  GDestroyNotify           destroy_notify;
 
   /*< private >*/
-  union {
-    struct {
-      GstClockTimeDiff   time_offset;
-      GDestroyNotify     destroy_notify;
-    } ABI;
-    /* adding + 0 to mark ABI change to be undone later */
-    gpointer _gst_reserved[GST_PADDING + 0];
-  } abidata;
+  GstClockTime             last_time;
+  GstClockTimeDiff         time_offset;
+
+  gpointer _gst_reserved[GST_PADDING];
 };
 
 struct _GstAudioClockClass {
@@ -93,8 +91,6 @@ struct _GstAudioClockClass {
 
 GType           gst_audio_clock_get_type        (void);
 GstClock*       gst_audio_clock_new             (const gchar *name, GstAudioClockGetTimeFunc func,
-                                                 gpointer user_data);
-GstClock*       gst_audio_clock_new_full        (const gchar *name, GstAudioClockGetTimeFunc func,
                                                  gpointer user_data, GDestroyNotify destroy_notify);
 void            gst_audio_clock_reset           (GstAudioClock *clock, GstClockTime time);
 

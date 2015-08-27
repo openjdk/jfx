@@ -17,8 +17,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 /**
@@ -27,7 +27,7 @@
  * @see_also: #GstElement, #GstPlugin, #GstPluginFeature, #GstPadTemplate.
  *
  * #GstElementFactory is used to create instances of elements. A
- * GstElementfactory can be added to a #GstPlugin as it is also a
+ * GstElementFactory can be added to a #GstPlugin as it is also a
  * #GstPluginFeature.
  *
  * Use the gst_element_factory_find() and gst_element_factory_create()
@@ -53,14 +53,12 @@
  *   ...
  * </programlisting>
  * </example>
- *
- * Last reviewed on 2005-11-23 (0.9.5)
  */
 
 #include "gst_private.h"
 
 #include "gstelement.h"
-#include "gstelementdetails.h"
+#include "gstelementmetadata.h"
 #include "gstinfo.h"
 #include "gsturi.h"
 #include "gstregistry.h"
@@ -77,7 +75,7 @@ static void gst_element_factory_cleanup (GstElementFactory * factory);
 /* static guint gst_element_factory_signals[LAST_SIGNAL] = { 0 }; */
 
 /* this is defined in gstelement.c */
-extern GQuark _gst_elementclass_factory;
+extern GQuark __gst_elementclass_factory;
 
 #define _do_init \
 { \
@@ -125,7 +123,8 @@ gst_element_factory_finalize (GObject * object)
  * Search for an element factory of the given name. Refs the returned
  * element factory; caller is responsible for unreffing.
  *
- * Returns: (transfer full): #GstElementFactory if found, NULL otherwise
+ * Returns: (transfer full) (nullable): #GstElementFactory if found,
+ * %NULL otherwise
  */
 GstElementFactory *
 gst_element_factory_find (const gchar * name)
@@ -134,7 +133,7 @@ gst_element_factory_find (const gchar * name)
 
   g_return_val_if_fail (name != NULL, NULL);
 
-  feature = gst_registry_find_feature (gst_registry_get_default (), name,
+  feature = gst_registry_find_feature (gst_registry_get (), name,
       GST_TYPE_ELEMENT_FACTORY);
   if (feature)
     return GST_ELEMENT_FACTORY (feature);
@@ -150,10 +149,9 @@ gst_element_factory_cleanup (GstElementFactory * factory)
 {
   GList *item;
 
-  __gst_element_details_clear (&factory->details);
-  if (factory->meta_data) {
-    gst_structure_free ((GstStructure *) factory->meta_data);
-    factory->meta_data = NULL;
+  if (factory->metadata) {
+    gst_structure_free ((GstStructure *) factory->metadata);
+    factory->metadata = NULL;
   }
   if (factory->type) {
     factory->type = G_TYPE_INVALID;
@@ -161,21 +159,8 @@ gst_element_factory_cleanup (GstElementFactory * factory)
 
   for (item = factory->staticpadtemplates; item; item = item->next) {
     GstStaticPadTemplate *templ = item->data;
-    GstCaps *caps = (GstCaps *) & (templ->static_caps);
 
-    /* FIXME: this is not threadsafe */
-    if (caps->refcount == 1) {
-      GstStructure *structure;
-      guint i;
-
-      for (i = 0; i < caps->structs->len; i++) {
-        structure = (GstStructure *) gst_caps_get_structure (caps, i);
-        gst_structure_set_parent_refcount (structure, NULL);
-        gst_structure_free (structure);
-      }
-      g_ptr_array_free (caps->structs, TRUE);
-      caps->refcount = 0;
-    }
+    gst_static_caps_cleanup (&templ->static_caps);
     g_slice_free (GstStaticPadTemplate, templ);
   }
   g_list_free (factory->staticpadtemplates);
@@ -191,11 +176,19 @@ gst_element_factory_cleanup (GstElementFactory * factory)
   factory->interfaces = NULL;
 }
 
+#define CHECK_METADATA_FIELD(klass, name, key)                                 \
+  G_STMT_START {                                                               \
+    const gchar *metafield = gst_element_class_get_metadata (klass, key);      \
+    if (G_UNLIKELY (metafield == NULL || *metafield == '\0')) {                \
+      g_warning ("Element factory metadata for '%s' has no valid %s field", name, key);    \
+      goto detailserror;                                                       \
+    } \
+  } G_STMT_END;
+
 /**
  * gst_element_register:
- * @plugin: (allow-none): #GstPlugin to register the element with, or NULL for
- *     a static element (note that passing NULL only works in GStreamer 0.10.13
- *     and later)
+ * @plugin: (allow-none): #GstPlugin to register the element with, or %NULL for
+ *     a static element.
  * @name: name of elements of this type
  * @rank: rank of element (higher rank means more importance when autoplugging)
  * @type: GType of element to register
@@ -203,7 +196,7 @@ gst_element_factory_cleanup (GstElementFactory * factory)
  * Create a new elementfactory capable of instantiating objects of the
  * @type and add the factory to @plugin.
  *
- * Returns: TRUE, if the registering succeeded, FALSE on error
+ * Returns: %TRUE, if the registering succeeded, %FALSE on error
  */
 gboolean
 gst_element_register (GstPlugin * plugin, const gchar * name, guint rank,
@@ -220,7 +213,7 @@ gst_element_register (GstPlugin * plugin, const gchar * name, guint rank,
   g_return_val_if_fail (name != NULL, FALSE);
   g_return_val_if_fail (g_type_is_a (type, GST_TYPE_ELEMENT), FALSE);
 
-  registry = gst_registry_get_default ();
+  registry = gst_registry_get ();
 
   /* check if feature already exists, if it exists there is no need to update it
    * when the registry is getting updated, outdated plugins and all their
@@ -233,7 +226,7 @@ gst_element_register (GstPlugin * plugin, const gchar * name, guint rank,
     factory = GST_ELEMENT_FACTORY_CAST (existing_feature);
     factory->type = type;
     existing_feature->loaded = TRUE;
-    g_type_set_qdata (type, _gst_elementclass_factory, factory);
+    g_type_set_qdata (type, __gst_elementclass_factory, factory);
     gst_object_unref (existing_feature);
     return TRUE;
   }
@@ -246,19 +239,17 @@ gst_element_register (GstPlugin * plugin, const gchar * name, guint rank,
       g_type_name (type));
 
   /* provide info needed during class structure setup */
-  g_type_set_qdata (type, _gst_elementclass_factory, factory);
+  g_type_set_qdata (type, __gst_elementclass_factory, factory);
   klass = GST_ELEMENT_CLASS (g_type_class_ref (type));
-  if ((klass->details.longname == NULL) ||
-      (klass->details.klass == NULL) || (klass->details.author == NULL))
-    goto detailserror;
+
+  CHECK_METADATA_FIELD (klass, name, GST_ELEMENT_METADATA_LONGNAME);
+  CHECK_METADATA_FIELD (klass, name, GST_ELEMENT_METADATA_KLASS);
+  CHECK_METADATA_FIELD (klass, name, GST_ELEMENT_METADATA_DESCRIPTION);
+  CHECK_METADATA_FIELD (klass, name, GST_ELEMENT_METADATA_AUTHOR);
 
   factory->type = type;
-  __gst_element_details_copy (&factory->details, &klass->details);
-  if (klass->meta_data) {
-    factory->meta_data = gst_structure_copy ((GstStructure *) klass->meta_data);
-  } else {
-    factory->meta_data = NULL;
-  }
+  factory->metadata = gst_structure_copy ((GstStructure *) klass->metadata);
+
   for (item = klass->padtemplates; item; item = item->next) {
     GstPadTemplate *templ = item->data;
     GstStaticPadTemplate *newt;
@@ -268,7 +259,7 @@ gst_element_register (GstPlugin * plugin, const gchar * name, guint rank,
     newt->name_template = g_intern_string (templ->name_template);
     newt->direction = templ->direction;
     newt->presence = templ->presence;
-    newt->static_caps.caps.refcount = 0;
+    newt->static_caps.caps = NULL;
     newt->static_caps.string = g_intern_string (caps_string);
     factory->staticpadtemplates =
         g_list_append (factory->staticpadtemplates, newt);
@@ -282,19 +273,18 @@ gst_element_register (GstPlugin * plugin, const gchar * name, guint rank,
     GstURIHandlerInterface *iface = (GstURIHandlerInterface *)
         g_type_interface_peek (klass, GST_TYPE_URI_HANDLER);
 
-    if (!iface || (!iface->get_type && !iface->get_type_full) ||
-        (!iface->get_protocols && !iface->get_protocols_full))
+    if (!iface || !iface->get_type || !iface->get_protocols)
       goto urierror;
     if (iface->get_type)
-      factory->uri_type = iface->get_type ();
-    else if (iface->get_type_full)
-      factory->uri_type = iface->get_type_full (factory->type);
+      factory->uri_type = iface->get_type (factory->type);
     if (!GST_URI_TYPE_IS_VALID (factory->uri_type))
       goto urierror;
-    if (iface->get_protocols)
-      factory->uri_protocols = g_strdupv (iface->get_protocols ());
-    else if (iface->get_protocols_full)
-      factory->uri_protocols = iface->get_protocols_full (factory->type);
+    if (iface->get_protocols) {
+      const gchar *const *protocols;
+
+      protocols = iface->get_protocols (factory->type);
+      factory->uri_protocols = g_strdupv ((gchar **) protocols);
+    }
     if (!factory->uri_protocols)
       goto urierror;
   }
@@ -331,8 +321,6 @@ urierror:
 
 detailserror:
   {
-    GST_WARNING_OBJECT (factory,
-        "The GstElementDetails don't seem to have been set properly");
     gst_element_factory_cleanup (factory);
     return FALSE;
   }
@@ -341,14 +329,15 @@ detailserror:
 /**
  * gst_element_factory_create:
  * @factory: factory to instantiate
- * @name: name of new element
+ * @name: (allow-none): name of new element, or %NULL to automatically create
+ *    a unique name
  *
  * Create a new element of the type defined by the given elementfactory.
  * It will be given the name supplied, since all elements require a name as
  * their first argument.
  *
- * Returns: (transfer full): new #GstElement or NULL if the element couldn't
- *     be created
+ * Returns: (transfer floating) (nullable): new #GstElement or %NULL
+ *     if the element couldn't be created
  */
 GstElement *
 gst_element_factory_create (GstElementFactory * factory, const gchar * name)
@@ -370,9 +359,9 @@ gst_element_factory_create (GstElementFactory * factory, const gchar * name)
 
   if (name)
     GST_INFO ("creating element \"%s\" named \"%s\"",
-        GST_PLUGIN_FEATURE_NAME (factory), GST_STR_NULL (name));
+        GST_OBJECT_NAME (factory), GST_STR_NULL (name));
   else
-    GST_INFO ("creating element \"%s\"", GST_PLUGIN_FEATURE_NAME (factory));
+    GST_INFO ("creating element \"%s\"", GST_OBJECT_NAME (factory));
 
   if (factory->type == 0)
     goto no_type;
@@ -394,11 +383,11 @@ gst_element_factory_create (GstElementFactory * factory, const gchar * name)
    * an element at the same moment
    */
   oclass = GST_ELEMENT_GET_CLASS (element);
-  if (!G_ATOMIC_POINTER_COMPARE_AND_EXCHANGE (&oclass->elementfactory, NULL,
+  if (!g_atomic_pointer_compare_and_exchange (&oclass->elementfactory, NULL,
           factory))
     gst_object_unref (factory);
 
-  GST_DEBUG ("created element \"%s\"", GST_PLUGIN_FEATURE_NAME (factory));
+  GST_DEBUG ("created element \"%s\"", GST_OBJECT_NAME (factory));
 
   return element;
 
@@ -426,14 +415,16 @@ no_element:
 /**
  * gst_element_factory_make:
  * @factoryname: a named factory to instantiate
- * @name: (allow-none): name of new element
+ * @name: (allow-none): name of new element, or %NULL to automatically create
+ *    a unique name
  *
  * Create a new element of the type defined by the given element factory.
- * If name is NULL, then the element will receive a guaranteed unique name,
+ * If name is %NULL, then the element will receive a guaranteed unique name,
  * consisting of the element factory name and a number.
  * If name is given, it will be given the name supplied.
  *
- * Returns: (transfer full): new #GstElement or NULL if unable to create element
+ * Returns: (transfer floating) (nullable): new #GstElement or %NULL
+ * if unable to create element
  */
 GstElement *
 gst_element_factory_make (const gchar * factoryname, const gchar * name)
@@ -505,112 +496,55 @@ gst_element_factory_get_element_type (GstElementFactory * factory)
 }
 
 /**
- * gst_element_factory_get_longname:
+ * gst_element_factory_get_metadata:
  * @factory: a #GstElementFactory
+ * @key: a key
  *
- * Gets the longname for this factory
+ * Get the metadata on @factory with @key.
  *
- * Returns: the longname
+ * Returns: (nullable): the metadata with @key on @factory or %NULL
+ * when there was no metadata with the given @key.
  */
 const gchar *
-gst_element_factory_get_longname (GstElementFactory * factory)
-{
-  g_return_val_if_fail (GST_IS_ELEMENT_FACTORY (factory), NULL);
-
-  return factory->details.longname;
-}
-
-/**
- * gst_element_factory_get_klass:
- * @factory: a #GstElementFactory
- *
- * Gets the class for this factory.
- *
- * Returns: the class
- */
-const gchar *
-gst_element_factory_get_klass (GstElementFactory * factory)
-{
-  g_return_val_if_fail (GST_IS_ELEMENT_FACTORY (factory), NULL);
-
-  return factory->details.klass;
-}
-
-/**
- * gst_element_factory_get_description:
- * @factory: a #GstElementFactory
- *
- * Gets the description for this factory.
- *
- * Returns: the description
- */
-const gchar *
-gst_element_factory_get_description (GstElementFactory * factory)
-{
-  g_return_val_if_fail (GST_IS_ELEMENT_FACTORY (factory), NULL);
-
-  return factory->details.description;
-}
-
-/**
- * gst_element_factory_get_author:
- * @factory: a #GstElementFactory
- *
- * Gets the author for this factory.
- *
- * Returns: the author
- */
-const gchar *
-gst_element_factory_get_author (GstElementFactory * factory)
-{
-  g_return_val_if_fail (GST_IS_ELEMENT_FACTORY (factory), NULL);
-
-  return factory->details.author;
-}
-
-static const gchar *
-gst_element_factory_get_meta_data (GstElementFactory * factory,
+gst_element_factory_get_metadata (GstElementFactory * factory,
     const gchar * key)
 {
-  if (!factory->meta_data)
+  return gst_structure_get_string ((GstStructure *) factory->metadata, key);
+}
+
+/**
+ * gst_element_factory_get_metadata_keys:
+ * @factory: a #GstElementFactory
+ *
+ * Get the available keys for the metadata on @factory.
+ *
+ * Returns: (transfer full) (element-type utf8) (array zero-terminated=1) (nullable):
+ * a %NULL-terminated array of key strings, or %NULL when there is no
+ * metadata. Free with g_strfreev() when no longer needed.
+ */
+gchar **
+gst_element_factory_get_metadata_keys (GstElementFactory * factory)
+{
+  GstStructure *metadata;
+  gchar **arr;
+  gint i, num;
+
+  g_return_val_if_fail (GST_IS_ELEMENT_FACTORY (factory), NULL);
+
+  metadata = (GstStructure *) factory->metadata;
+  if (metadata == NULL)
     return NULL;
 
-  /* FIXME: do we want to support other types? */
-  return gst_structure_get_string ((GstStructure *) factory->meta_data, key);
-}
+  num = gst_structure_n_fields (metadata);
+  if (num == 0)
+    return NULL;
 
-/**
- * gst_element_factory_get_documentation_uri:
- * @factory: a #GstElementFactory
- *
- * Gets documentation uri for this factory if set.
- *
- * Since: 0.10.31
- *
- * Returns: the documentation uri
- */
-const gchar *
-gst_element_factory_get_documentation_uri (GstElementFactory * factory)
-{
-  g_return_val_if_fail (GST_IS_ELEMENT_FACTORY (factory), NULL);
-  return gst_element_factory_get_meta_data (factory, "doc-uri");
-}
-
-/**
- * gst_element_factory_get_icon_name:
- * @factory: a #GstElementFactory
- *
- * Gets icon name for this factory if set.
- *
- * Since: 0.10.31
- *
- * Returns: the icon name
- */
-const gchar *
-gst_element_factory_get_icon_name (GstElementFactory * factory)
-{
-  g_return_val_if_fail (GST_IS_ELEMENT_FACTORY (factory), NULL);
-  return gst_element_factory_get_meta_data (factory, "icon-name");
+  arr = g_new (gchar *, num + 1);
+  for (i = 0; i < num; ++i) {
+    arr[i] = g_strdup (gst_structure_nth_field_name (metadata, i));
+  }
+  arr[i] = NULL;
+  return arr;
 }
 
 /**
@@ -675,7 +609,7 @@ gst_element_factory_get_static_pad_templates (GstElementFactory * factory)
  *
  * Returns: type of URIs this element supports
  */
-gint
+GstURIType
 gst_element_factory_get_uri_type (GstElementFactory * factory)
 {
   g_return_val_if_fail (GST_IS_ELEMENT_FACTORY (factory), GST_URI_UNKNOWN);
@@ -687,20 +621,20 @@ gst_element_factory_get_uri_type (GstElementFactory * factory)
  * gst_element_factory_get_uri_protocols:
  * @factory: a #GstElementFactory
  *
- * Gets a NULL-terminated array of protocols this element supports or NULL if
+ * Gets a %NULL-terminated array of protocols this element supports or %NULL if
  * no protocols are supported. You may not change the contents of the returned
  * array, as it is still owned by the element factory. Use g_strdupv() to
  * make a copy of the protocol string array if you need to.
  *
  * Returns: (transfer none) (array zero-terminated=1): the supported protocols
- *     or NULL
+ *     or %NULL
  */
-gchar **
+const gchar *const *
 gst_element_factory_get_uri_protocols (GstElementFactory * factory)
 {
   g_return_val_if_fail (GST_IS_ELEMENT_FACTORY (factory), NULL);
 
-  return factory->uri_protocols;
+  return (const gchar * const *) factory->uri_protocols;
 }
 
 /**
@@ -710,9 +644,7 @@ gst_element_factory_get_uri_protocols (GstElementFactory * factory)
  *
  * Check if @factory implements the interface with name @interfacename.
  *
- * Returns: #TRUE when @factory implement the interface.
- *
- * Since: 0.10.14
+ * Returns: %TRUE when @factory implement the interface.
  */
 gboolean
 gst_element_factory_has_interface (GstElementFactory * factory,
@@ -744,11 +676,9 @@ typedef struct
  * @factory: a #GstElementFactory
  * @type: a #GstElementFactoryListType
  *
- * Check if @factory if of the given types.
+ * Check if @factory is of the given types.
  *
  * Returns: %TRUE if @factory is of @type.
- *
- * Since: 0.10.31
  */
 gboolean
 gst_element_factory_list_is_type (GstElementFactory * factory,
@@ -757,7 +687,13 @@ gst_element_factory_list_is_type (GstElementFactory * factory,
   gboolean res = FALSE;
   const gchar *klass;
 
-  klass = gst_element_factory_get_klass (factory);
+  klass =
+      gst_element_factory_get_metadata (factory, GST_ELEMENT_METADATA_KLASS);
+
+  if (klass == NULL) {
+    GST_ERROR_OBJECT (factory, "element factory is missing klass identifiers");
+    return res;
+  }
 
   /* Filter by element type first, as soon as it matches
    * one type, we skip all other tests */
@@ -794,17 +730,24 @@ gst_element_factory_list_is_type (GstElementFactory * factory,
     res = (strstr (klass, "Formatter") != NULL);
 
   /* Filter by media type now, we only test if it
-   * matched any of the types above. */
-  if (res
+   * matched any of the types above or only checking the media
+   * type was requested. */
+  if ((res || !(type & (GST_ELEMENT_FACTORY_TYPE_MAX_ELEMENTS - 1)))
       && (type & (GST_ELEMENT_FACTORY_TYPE_MEDIA_AUDIO |
               GST_ELEMENT_FACTORY_TYPE_MEDIA_VIDEO |
-              GST_ELEMENT_FACTORY_TYPE_MEDIA_IMAGE)))
+              GST_ELEMENT_FACTORY_TYPE_MEDIA_IMAGE |
+              GST_ELEMENT_FACTORY_TYPE_MEDIA_SUBTITLE |
+              GST_ELEMENT_FACTORY_TYPE_MEDIA_METADATA)))
     res = ((type & GST_ELEMENT_FACTORY_TYPE_MEDIA_AUDIO)
         && (strstr (klass, "Audio") != NULL))
         || ((type & GST_ELEMENT_FACTORY_TYPE_MEDIA_VIDEO)
         && (strstr (klass, "Video") != NULL))
         || ((type & GST_ELEMENT_FACTORY_TYPE_MEDIA_IMAGE)
-        && (strstr (klass, "Image") != NULL));
+        && (strstr (klass, "Image") != NULL)) ||
+        ((type & GST_ELEMENT_FACTORY_TYPE_MEDIA_SUBTITLE)
+        && (strstr (klass, "Subtitle") != NULL)) ||
+        ((type & GST_ELEMENT_FACTORY_TYPE_MEDIA_METADATA)
+        && (strstr (klass, "Metadata") != NULL));
 
   return res;
 }
@@ -837,8 +780,6 @@ element_filter (GstPluginFeature * feature, FilterData * data)
  * Returns: (transfer full) (element-type Gst.ElementFactory): a #GList of
  *     #GstElementFactory elements. Use gst_plugin_feature_list_free() after
  *     usage.
- *
- * Since: 0.10.31
  */
 GList *
 gst_element_factory_list_get_elements (GstElementFactoryListType type,
@@ -852,8 +793,8 @@ gst_element_factory_list_get_elements (GstElementFactoryListType type,
   data.minrank = minrank;
 
   /* get the feature list using the filter */
-  result = gst_default_registry_feature_filter ((GstPluginFeatureFilter)
-      element_filter, FALSE, &data);
+  result = gst_registry_feature_filter (gst_registry_get (),
+      (GstPluginFeatureFilter) element_filter, FALSE, &data);
 
   /* sort on rank and name */
   result = g_list_sort (result, gst_plugin_feature_rank_compare_func);
@@ -877,16 +818,14 @@ gst_element_factory_list_get_elements (GstElementFactoryListType type,
  * whose pad templates caps can intersect with @caps will be returned.
  *
  * Returns: (transfer full) (element-type Gst.ElementFactory): a #GList of
- *     #GstElementFactory elements that match the given requisits.
+ *     #GstElementFactory elements that match the given requisites.
  *     Use #gst_plugin_feature_list_free after usage.
- *
- * Since: 0.10.31
  */
 GList *
 gst_element_factory_list_filter (GList * list,
     const GstCaps * caps, GstPadDirection direction, gboolean subsetonly)
 {
-  GList *result = NULL;
+  GQueue results = G_QUEUE_INIT;
 
   GST_DEBUG ("finding factories");
 
@@ -920,7 +859,7 @@ gst_element_factory_list_filter (GList * list,
         if ((subsetonly && gst_caps_is_subset (caps, tmpl_caps)) ||
             (!subsetonly && gst_caps_can_intersect (caps, tmpl_caps))) {
           /* non empty intersection, we can use this element */
-          result = g_list_prepend (result, gst_object_ref (factory));
+          g_queue_push_tail (&results, gst_object_ref (factory));
           gst_caps_unref (tmpl_caps);
           break;
         }
@@ -928,5 +867,5 @@ gst_element_factory_list_filter (GList * list,
       }
     }
   }
-  return g_list_reverse (result);
+  return results.head;
 }

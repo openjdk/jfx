@@ -13,8 +13,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 /*
  * Unless otherwise indicated, Source Code is licensed under MIT license.
@@ -78,6 +78,9 @@ typedef struct _GstQTPad GstQTPad;
 typedef GstBuffer * (*GstQTPadPrepareBufferFunc) (GstQTPad * pad,
     GstBuffer * buf, GstQTMux * qtmux);
 
+typedef gboolean (*GstQTPadSetCapsFunc) (GstQTPad * pad, GstCaps * caps);
+typedef GstBuffer * (*GstQTPadCreateEmptyBufferFunc) (GstQTPad * pad, gint64 duration);
+
 #define QTMUX_NO_OF_TS   10
 
 struct _GstQTPad
@@ -88,14 +91,19 @@ struct _GstQTPad
   guint32 fourcc;
   /* whether using format that have out of order buffers */
   gboolean is_out_of_order;
-  /* whether upstream provides valid PTS data */
-  gboolean have_dts;
   /* if not 0, track with constant sized samples, e.g. raw audio */
   guint sample_size;
   /* make sync table entry */
   gboolean sync;
+  /* if it is a sparse stream
+   * (meaning we can't use PTS differences to compute duration) */
+  gboolean sparse;
   /* bitrates */
   guint32 avg_bitrate, max_bitrate;
+
+  /* for avg bitrate calculation */
+  guint64 total_bytes;
+  guint64 total_duration;
 
   GstBuffer *last_buf;
   /* dts of last_buf */
@@ -104,9 +112,6 @@ struct _GstQTPad
   /* store the first timestamp for comparing with other streams and
    * know if there are late streams */
   GstClockTime first_ts;
-  GstClockTime ts_entries[QTMUX_NO_OF_TS + 2];
-  guint ts_n_entries;
-  GstBuffer *buf_entries[QTMUX_NO_OF_TS + 2];
   guint buf_head;
   guint buf_tail;
 
@@ -125,6 +130,8 @@ struct _GstQTPad
 
   /* if nothing is set, it won't be called */
   GstQTPadPrepareBufferFunc prepare_buf_func;
+  GstQTPadSetCapsFunc set_caps;
+  GstQTPadCreateEmptyBufferFunc create_empty_buffer;
 };
 
 typedef enum _GstQTMuxState
@@ -181,17 +188,16 @@ struct _GstQTMux
   AtomsTreeFlavor flavor;
   gboolean fast_start;
   gboolean guess_pts;
+#ifndef GST_REMOVE_DEPRECATED
   gint dts_method;
+#endif
   gchar *fast_start_file_path;
   gchar *moov_recov_file_path;
   guint32 fragment_duration;
   gboolean streamable;
 
-  /* for collect pads event handling function */
-  GstPadEventFunction collect_event;
-
   /* for request pad naming */
-  guint video_pads, audio_pads;
+  guint video_pads, audio_pads, subtitle_pads;
 };
 
 struct _GstQTMuxClass
@@ -208,6 +214,7 @@ typedef struct _GstQTMuxClassParams
   GstCaps *src_caps;
   GstCaps *video_sink_caps;
   GstCaps *audio_sink_caps;
+  GstCaps *subtitle_sink_caps;
 } GstQTMuxClassParams;
 
 #define GST_QT_MUX_PARAMS_QDATA g_quark_from_static_string("qt-mux-params")

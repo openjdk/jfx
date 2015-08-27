@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -100,6 +100,9 @@ struct _AudioConverter {
     gboolean is_flushing;    // element is between flush start and stop
 
     gboolean enable_parser;  // whether stream parsing is enabled
+
+    GstCaps *sink_caps;
+    GstEvent *segment_event;
 
     AudioFileStreamID audioStreamID;
 

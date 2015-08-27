@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,6 +31,9 @@
 
 class CGstMediaManager : public CMediaManager
 {
+public:
+    void StartMainLoop();
+
 protected:
     friend class CMediaManager;
     friend class CGstAudioPlaybackPipeline;
@@ -53,10 +56,19 @@ private:
     GMainLoop*    m_pMainLoop;
     GThread*      m_pMainLoopThread;
 
-    GMutex*       m_pRunloopMutex;
-    GCond*        m_pRunloopCond;
+    GMutex        m_RunloopMutex;
+    bool          m_bClearRunloopMutex;
+    GCond         m_RunloopCond;
+    bool          m_bClearRunloopCond;
 
     static volatile bool m_bStopGlibLogFunc;
+
+    GMutex        m_StartLoopMutex;
+    bool          m_bClearStartLoopMutex;
+    GCond         m_StartLoopCond;
+    bool          m_bClearStartLoopCond;
+
+    volatile bool m_bStartMainLoop;
 };
 
 #endif // _GST_MEDIA_MANAGER_H_

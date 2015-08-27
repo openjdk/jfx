@@ -16,8 +16,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 #ifndef __GST_AC3_PARSE_H__
@@ -42,6 +42,12 @@ G_BEGIN_DECLS
 typedef struct _GstAc3Parse GstAc3Parse;
 typedef struct _GstAc3ParseClass GstAc3ParseClass;
 
+enum {
+  GST_AC3_PARSE_ALIGN_NONE,
+  GST_AC3_PARSE_ALIGN_FRAME,
+  GST_AC3_PARSE_ALIGN_IEC61937,
+};
+
 /**
  * GstAc3Parse:
  *
@@ -51,9 +57,13 @@ struct _GstAc3Parse {
   GstBaseParse baseparse;
 
   /*< private >*/
-  gint         sample_rate;
-  gint         channels;
-  gboolean     eac;
+  gint                  sample_rate;
+  gint                  channels;
+  gint                  blocks;
+  gboolean              eac;
+  gboolean              sent_codec_tag;
+  volatile gint         align;
+  GstPadChainFunction   baseparse_chainfunc;
 };
 
 /**

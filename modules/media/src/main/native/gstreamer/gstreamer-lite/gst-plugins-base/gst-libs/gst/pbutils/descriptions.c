@@ -13,8 +13,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 /**
@@ -42,6 +42,9 @@
 
 #include "gst/gst-i18n-plugin.h"
 
+#include <gst/audio/audio.h>
+#include <gst/video/video.h>
+
 #include "pbutils.h"
 #include "pbutils-private.h"
 
@@ -49,236 +52,280 @@
 
 typedef enum
 {
-  FLAG_CONTAINER = (1 << 0),    /* format is a container format (muxed)             */
-  FLAG_SYSTEMSTREAM = (1 << 1)  /* match record only if caps have systemstream=true */
+  FLAG_SYSTEMSTREAM = (1 << 0), /* match record only if caps have systemstream=true   */
+  FLAG_CONTAINER = (1 << 1),    /* format is a container format (muxed)               */
+  FLAG_AUDIO = (1 << 2),        /* format is an audio format, or audio container/tag  */
+  FLAG_VIDEO = (1 << 3),        /* format is a video format, or video container/tag   */
+  FLAG_IMAGE = (1 << 4),        /* format is an image format, or image container/tag  */
+  FLAG_SUB = (1 << 5),          /* format is a subtitle format, or subtitle container */
+  FLAG_TAG = (1 << 6),          /* format is a tag/container                          */
+  FLAG_GENERIC = (1 << 7)       /* format is a generic container (e.g. multipart)     */
 } FormatFlags;
 
 typedef struct
 {
   const gchar *type;
   const gchar *desc;
-  FormatFlags flags;
+  FormatFlags flags:24;
+  gchar ext[5];                 /* file extension */
 } FormatInfo;
+
+#define AV_CONTAINER    (FLAG_CONTAINER | FLAG_AUDIO | FLAG_VIDEO)
+#define AVS_CONTAINER   (AV_CONTAINER | FLAG_SUB)
+#define AVI_CONTAINER   (AV_CONTAINER | FLAG_IMAGE)
+#define AVIS_CONTAINER  (AV_CONTAINER | FLAG_IMAGE | FLAG_SUB)
+#define AUDIO_CONTAINER (FLAG_CONTAINER | FLAG_AUDIO)
+#define VIDEO_CONTAINER (FLAG_CONTAINER | FLAG_VIDEO)
+#define AUDIO_TAG       (AUDIO_CONTAINER | FLAG_TAG)
 
 #ifndef GSTREAMER_LITE
 static const FormatInfo formats[] = {
   /* container/tag formats with static descriptions */
-  {"application/gxf", "General Exchange Format (GXF)", FLAG_CONTAINER},
-  {"application/ogg", "Ogg", FLAG_CONTAINER},
-  {"application/mxf", "Material eXchange Format (MXF)", FLAG_CONTAINER},
-  {"application/vnd.rn-realmedia", "Realmedia", FLAG_CONTAINER},
-  {"application/x-annodex", "Ogg", FLAG_CONTAINER},
-  {"application/x-id3", N_("ID3 tag"), FLAG_CONTAINER},
-  {"application/x-ape", N_("APE tag"), FLAG_CONTAINER},
-  {"application/x-apetag", N_("APE tag"), FLAG_CONTAINER},
-  {"application/x-icy", N_("ICY internet radio"), FLAG_CONTAINER},
-  {"application/x-3gp", "3GP", FLAG_CONTAINER},
-  {"application/x-pn-realaudio", "RealAudio", FLAG_CONTAINER},
-  {"application/x-yuv4mpeg", "Y4M", FLAG_CONTAINER},
-  {"multipart/x-mixed-replace", "Multipart", FLAG_CONTAINER},
-  {"video/x-fli", "FLI/FLC/FLX Animation", FLAG_CONTAINER},
-  {"video/x-flv", "Flash", FLAG_CONTAINER},
-  {"video/x-matroska", "Matroska", FLAG_CONTAINER},
-  {"video/webm", "WebM", FLAG_CONTAINER},
-  {"video/x-ms-asf", "Advanced Streaming Format (ASF)", FLAG_CONTAINER},
-  {"video/x-msvideo", "Audio Video Interleave (AVI)", FLAG_CONTAINER},
-  {"video/x-quicktime", "Quicktime", FLAG_CONTAINER},
-  {"video/quicktime", "Quicktime", FLAG_CONTAINER},
-  {"video/mj2", "Motion JPEG 2000", FLAG_CONTAINER},
+  /* FIXME: does anyone use oga in practice? */
+  {"audio/ogg", "Ogg", AUDIO_CONTAINER, "ogg"},
+  {"audio/webm", "WebM", AUDIO_CONTAINER, "webm"},
+  {"audio/x-matroska", "Matroska", AUDIO_CONTAINER, "mka"},
+  {"application/gxf", "General Exchange Format (GXF)", AVI_CONTAINER, "gxf"},
+  {"application/ogg", "Ogg", AVIS_CONTAINER, "ogg"},
+  {"application/kate", "Ogg", FLAG_CONTAINER | FLAG_SUB, "ogg"},
+  {"application/mxf", "Material eXchange Format (MXF)", AVIS_CONTAINER, "mxf"},
+  {"application/vnd.rn-realmedia", "Realmedia", AV_CONTAINER, "rm"},
+  {"application/x-id3", N_("ID3 tag"), AUDIO_TAG, ""},
+  {"application/x-ape", N_("APE tag"), AUDIO_TAG, ""},
+  {"application/x-apetag", N_("APE tag"), AUDIO_TAG, ""},
+  {"application/x-icy", N_("ICY internet radio"), AUDIO_TAG, ""},
+  {"application/x-3gp", "3GP", AV_CONTAINER, "3gp"},
+  {"application/x-pn-realaudio", "RealAudio", AUDIO_CONTAINER, "ra"},
+  {"application/x-yuv4mpeg", "Y4M", VIDEO_CONTAINER, "y4m"},
+  {"multipart/x-mixed-replace", "Multipart", FLAG_CONTAINER | FLAG_GENERIC, ""},
+  {"video/ogg", "Ogg", AVIS_CONTAINER, "ogv"},
+  {"video/x-fli", "FLI/FLC/FLX Animation", VIDEO_CONTAINER, "fli"},
+  {"video/x-flv", "Flash", AV_CONTAINER, "flv"},
+  {"video/x-matroska", "Matroska", AVIS_CONTAINER, "mkv"},
+  /* FIXME: does anyone use .mk3d in practice, rather than .mkv? */
+  {"video/x-matroska-3d", "Matroska", AVIS_CONTAINER, "mk3d"},
+  {"video/webm", "WebM", AVS_CONTAINER, "webm"},
+  {"video/x-ms-asf", "Advanced Streaming Format (ASF)", AVIS_CONTAINER, "asf"},
+  {"video/x-msvideo", "Audio Video Interleave (AVI)", AVIS_CONTAINER, "avi"},
+  {"video/x-quicktime", "Quicktime", AVIS_CONTAINER, "mov"},
+  {"video/quicktime", "Quicktime", AVIS_CONTAINER, "mov"},
+  {"video/mj2", "Motion JPEG 2000", AVIS_CONTAINER, "mj2"},
 
   /* audio formats with static descriptions */
-  {"audio/x-ac3", "AC-3 (ATSC A/52)", 0},
-  {"audio/ac3", "AC-3 (ATSC A/52)", 0},
-  {"audio/x-private-ac3", "DVD AC-3 (ATSC A/52)", 0},
-  {"audio/x-private1-ac3", "DVD AC-3 (ATSC A/52)", 0},
-  {"audio/x-alaw", "A-Law", 0},
-  {"audio/amr", "Adaptive Multi Rate (AMR)", 0},
-  {"audio/AMR", "Adaptive Multi Rate (AMR)", 0},
-  {"audio/AMR-WB", "Adaptive Multi Rate WideBand (AMR-WB)", 0},
-  {"audio/iLBC-sh", "Internet Low Bitrate Codec (iLBC)", 0},
-  {"audio/ms-gsm", "MS GSM", 0},
-  {"audio/qcelp", "QCELP", 0},
-  {"audio/aiff", "Audio Interchange File Format (AIFF)", 0},
-  {"audio/x-aiff", "Audio Interchange File Format (AIFF)", 0},
-  {"audio/x-alac", N_("Apple Lossless Audio (ALAC)"), 0},
-  {"audio/x-amr-nb-sh", "Adaptive Multi Rate NarrowBand (AMR-NB)", 0},
-  {"audio/x-amr-wb-sh", "Adaptive Multi Rate WideBand (AMR-WB)", 0},
-  {"audio/x-au", "Sun .au", 0},
-  {"audio/x-celt", "Constrained Energy Lapped Transform (CELT)", 0},
-  {"audio/x-cinepak", "Cinepak Audio", 0},
-  {"audio/x-dpcm", "DPCM", 0},
-  {"audio/x-dts", "DTS", 0},
-  {"audio/x-private1-dts", "DTS", 0},
-  {"audio/x-dv", "DV Audio", 0},
-  {"audio/x-flac", N_("Free Lossless Audio Codec (FLAC)"), 0},
-  {"audio/x-gsm", "GSM", 0},
-  {"audio/x-iec958", "S/PDIF IEC958", 0},       /* TODO: check description */
-  {"audio/x-iLBC", "Internet Low Bitrate Codec (iLBC)", 0},
-  {"audio/x-ircam", "Berkeley/IRCAM/CARL", 0},
-  {"audio/x-lpcm", "LPCM", 0},
-  {"audio/x-private1-lpcm", "DVD LPCM", 0},
-  {"audio/x-m4a", "MPEG-4 AAC", FLAG_CONTAINER},
-  {"audio/x-mod", "Module Music Format (MOD)", 0},
-  {"audio/x-mulaw", "Mu-Law", 0},
-  {"audio/x-musepack", "Musepack (MPC)", 0},
-  {"audio/x-nellymoser", "Nellymoser Asao", 0},
-  {"audio/x-nist", "Sphere NIST", 0},
-  {"audio/x-nsf", "Nintendo NSF", 0},
-  {"audio/x-paris", "Ensoniq PARIS", 0},
-  {"audio/x-qdm", "QDesign Music (QDM)", 0},
-  {"audio/x-qdm2", "QDesign Music (QDM) 2", 0},
-  {"audio/x-ralf-mpeg4-generic", "Real Audio Lossless (RALF)", 0},
-  {"audio/x-sds", "SDS", 0},
-  {"audio/x-shorten", "Shorten Lossless", 0},
-  {"audio/x-sid", "Sid", 0},
-  {"audio/x-sipro", "Sipro/ACELP.NET Voice", 0},
-  {"audio/x-siren", "Siren", 0},
-  {"audio/x-spc", "SNES-SPC700 Sound File Data", 0},
-  {"audio/x-speex", "Speex", 0},
-  {"audio/x-svx", "Amiga IFF / SVX8 / SV16", 0},
-  {"audio/x-tta", N_("Lossless True Audio (TTA)"), 0},
-  {"audio/x-ttafile", N_("Lossless True Audio (TTA)"), 0},
-  {"audio/x-vnd.sony.atrac3", "Sony ATRAC3", 0},
-  {"audio/x-vorbis", "Vorbis", 0},
-  {"audio/x-voc", "SoundBlaster VOC", 0},
-  {"audio/x-w64", "Sonic Foundry Wave64", 0},
-  {"audio/x-wav", "WAV", 0},
-  {"audio/x-wavpack", "Wavpack", 0},
-  {"audio/x-wavpack-correction", "Wavpack", 0},
-  {"audio/x-wms", N_("Windows Media Speech"), 0},
-  {"audio/x-voxware", "Voxware", 0},
+  {"audio/x-ac3", "AC-3 (ATSC A/52)", FLAG_AUDIO, "ac3"},
+  {"audio/ac3", "AC-3 (ATSC A/52)", FLAG_AUDIO, "ac3"},
+  {"audio/x-private-ac3", "DVD AC-3 (ATSC A/52)", FLAG_AUDIO, "ac3"},
+  {"audio/x-private1-ac3", "DVD AC-3 (ATSC A/52)", FLAG_AUDIO, "ac3"},
+  {"audio/x-alaw", "A-Law", FLAG_AUDIO, ""},
+  {"audio/amr", "Adaptive Multi Rate (AMR)", FLAG_AUDIO, "amr"},
+  {"audio/AMR", "Adaptive Multi Rate (AMR)", FLAG_AUDIO, "amr"},
+  {"audio/AMR-WB", "Adaptive Multi Rate WideBand (AMR-WB)", FLAG_AUDIO, "amr"},
+  {"audio/iLBC-sh", "Internet Low Bitrate Codec (iLBC)", AUDIO_CONTAINER,
+      "ilbc"},
+  {"audio/ms-gsm", "MS GSM", FLAG_AUDIO, "gsm"},
+  {"audio/qcelp", "QCELP", FLAG_AUDIO, ""},
+  {"audio/aiff", "Audio Interchange File Format (AIFF)", AUDIO_CONTAINER,
+      "aiff"},
+  {"audio/x-aiff", "Audio Interchange File Format (AIFF)", AUDIO_CONTAINER,
+      "aiff"},
+  {"audio/x-alac", N_("Apple Lossless Audio (ALAC)"), FLAG_AUDIO, ""},
+  {"audio/x-amr-nb-sh", "Adaptive Multi Rate NarrowBand (AMR-NB)",
+      AUDIO_CONTAINER, "amr"},
+  {"audio/x-amr-wb-sh", "Adaptive Multi Rate WideBand (AMR-WB)",
+      AUDIO_CONTAINER, "amr"},
+  {"audio/x-au", "Sun .au", AUDIO_CONTAINER, "au"},
+  {"audio/x-celt", "Constrained Energy Lapped Transform (CELT)", FLAG_AUDIO,
+      ""},
+  {"audio/x-cinepak", "Cinepak Audio", FLAG_AUDIO, ""},
+  {"audio/x-dpcm", "DPCM", FLAG_AUDIO, ""},
+  {"audio/x-dts", "DTS", FLAG_AUDIO, "dts"},
+  {"audio/x-private1-dts", "DTS", FLAG_AUDIO, "dts"},
+  {"audio/x-dv", "DV Audio", FLAG_AUDIO, ""},
+  {"audio/x-eac3", "E-AC-3 (ATSC A/52B)", FLAG_AUDIO, "eac3"},
+  {"audio/x-flac", N_("Free Lossless Audio Codec (FLAC)"), FLAG_AUDIO, "flac"},
+  {"audio/x-gsm", "GSM", FLAG_AUDIO, "gsm"},
+  {"audio/x-iec958", "S/PDIF IEC958", 0, ""},   /* TODO: check description */
+  {"audio/x-iLBC", "Internet Low Bitrate Codec (iLBC)", FLAG_AUDIO, "ilbc"},
+  {"audio/x-ircam", "Berkeley/IRCAM/CARL", FLAG_AUDIO, ""},
+  {"audio/x-lpcm", "LPCM", FLAG_AUDIO, ""},
+  {"audio/x-private1-lpcm", "DVD LPCM", FLAG_AUDIO, ""},
+  {"audio/x-m4a", "MPEG-4 AAC", FLAG_CONTAINER, "m4a"},
+  {"audio/x-mod", "Module Music Format (MOD)", FLAG_AUDIO, "mod"},
+  {"audio/x-mulaw", "Mu-Law", FLAG_AUDIO, ""},
+  {"audio/x-musepack", "Musepack (MPC)", FLAG_AUDIO, "mpc"},
+  {"audio/x-nellymoser", "Nellymoser Asao", FLAG_AUDIO, ""},
+  {"audio/x-nist", "Sphere NIST", FLAG_AUDIO, ""},
+  {"audio/x-nsf", "Nintendo NSF", FLAG_AUDIO, ""},
+  {"audio/x-opus", "Opus", FLAG_AUDIO, ""},
+  {"audio/x-paris", "Ensoniq PARIS", FLAG_AUDIO, ""},
+  {"audio/x-qdm", "QDesign Music (QDM)", FLAG_AUDIO, ""},
+  {"audio/x-qdm2", "QDesign Music (QDM) 2", FLAG_AUDIO, ""},
+  {"audio/x-ralf-mpeg4-generic", "Real Audio Lossless (RALF)", FLAG_AUDIO, ""},
+  {"audio/x-rf64", "Broadcast Wave Format", AUDIO_CONTAINER, "rf64"},
+  {"audio/x-sbc", "Low Complexity Subband Coding", FLAG_AUDIO, "sbc"},
+  {"audio/x-sds", "Midi Sample Dump Standard", FLAG_AUDIO, ""},
+  {"audio/x-shorten", "Shorten Lossless", FLAG_AUDIO, "shn"},
+  {"audio/x-sid", "Sid", FLAG_AUDIO, "sid"},
+  {"audio/x-sipro", "Sipro/ACELP.NET Voice", FLAG_AUDIO, ""},
+  {"audio/x-siren", "Siren", FLAG_AUDIO, ""},
+  {"audio/x-spc", "SNES-SPC700 Sound File Data", FLAG_AUDIO, "spc"},
+  {"audio/x-speex", "Speex", FLAG_AUDIO, ""},
+  {"audio/x-svx", "Amiga IFF / SVX8 / SV16", FLAG_AUDIO, ""},
+  {"audio/x-true-hd", "Dolby TrueHD", FLAG_AUDIO, ""},
+  {"audio/x-tta", N_("Lossless True Audio (TTA)"), FLAG_AUDIO, "tta"},
+  {"audio/x-ttafile", N_("Lossless True Audio (TTA)"), FLAG_AUDIO, "tta"},
+  {"audio/x-vnd.sony.atrac3", "Sony ATRAC3", FLAG_AUDIO, ""},
+  {"audio/x-vorbis", "Vorbis", FLAG_AUDIO, ""},
+  {"audio/x-voc", "SoundBlaster VOC", FLAG_AUDIO, ""},
+  {"audio/x-w64", "Sonic Foundry Wave64", AUDIO_CONTAINER, "w64"},
+  {"audio/x-wav", "WAV", AUDIO_CONTAINER, "wav"},
+  {"audio/x-wavpack", "Wavpack", FLAG_AUDIO, "wp"},
+  {"audio/x-wavpack-correction", "Wavpack", 0, "wpc"},
+  {"audio/x-wms", N_("Windows Media Speech"), FLAG_AUDIO, ""},
+  {"audio/x-voxware", "Voxware", FLAG_AUDIO, ""},
+  {"audio/x-xi", "Fasttracker 2 Extended Instrument", FLAG_AUDIO, "xi"},
 
 
   /* video formats with static descriptions */
-  {"video/sp5x", "Sunplus JPEG 5.x", 0},
-  {"video/vivo", "Vivo", 0},
-  {"video/x-3ivx", "3ivx", 0},
-  {"video/x-4xm", "4X Techologies Video", 0},
-  {"video/x-apple-video", "Apple video", 0},
-  {"video/x-aasc", "Autodesk Animator", 0},
-  {"video/x-camtasia", "TechSmith Camtasia", 0},
-  {"video/x-cdxa", "RIFF/CDXA (VCD)", 0},
-  {"video/x-cinepak", "Cinepak Video", 0},
-  {"video/x-cirrus-logic-accupak", "Cirrus Logipak AccuPak", 0},
-  {"video/x-compressed-yuv", N_("CYUV Lossless"), 0},
-  {"video/x-dirac", "Dirac", 0},
-  {"video/x-dnxhd", "Digital Nonlinear Extensible High Definition (DNxHD)", 0},
-  /* FIXME 0.11: rename to subpicture/x-dvd or so */
-  {"video/x-dvd-subpicture", "DVD subpicture", 0},
-  {"video/x-ffv", N_("FFMpeg v1"), 0},
-  {"video/x-flash-screen", "Flash Screen Video", 0},
-  {"video/x-flash-video", "Sorenson Spark Video", 0},
-  {"video/x-h261", "H.261", 0},
-  {"video/x-huffyuv", "Huffyuv", 0},
-  {"video/x-intel-h263", "Intel H.263", 0},
-  {"video/x-jpeg", "Motion JPEG", 0},
+  {"video/sp5x", "Sunplus JPEG 5.x", FLAG_VIDEO, ""},
+  {"video/vivo", "Vivo", FLAG_VIDEO, ""},
+  {"video/x-4xm", "4X Technologies Video", FLAG_VIDEO, ""},
+  {"video/x-apple-video", "Apple video", FLAG_VIDEO, ""},
+  {"video/x-aasc", "Autodesk Animator", FLAG_VIDEO, ""},
+  {"video/x-camtasia", "TechSmith Camtasia", FLAG_VIDEO, ""},
+  {"video/x-cdxa", "RIFF/CDXA (VCD)", AV_CONTAINER, ""},
+  {"video/x-cinepak", "Cinepak Video", FLAG_VIDEO, ""},
+  {"video/x-cirrus-logic-accupak", "Cirrus Logipak AccuPak", FLAG_VIDEO, ""},
+  {"video/x-compressed-yuv", N_("CYUV Lossless"), FLAG_VIDEO, ""},
+  {"video/x-dirac", "Dirac", FLAG_VIDEO, ""},
+  {"video/x-dnxhd", "Digital Nonlinear Extensible High Definition (DNxHD)",
+      FLAG_VIDEO, ""},
+  {"subpicture/x-dvd", "DVD subpicture", FLAG_VIDEO, ""},
+  {"video/x-ffv", N_("FFMpeg v1"), FLAG_VIDEO, ""},
+  {"video/x-flash-screen", "Flash Screen Video", FLAG_VIDEO, ""},
+  {"video/x-flash-video", "Sorenson Spark Video", FLAG_VIDEO, ""},
+  {"video/x-h261", "H.261", FLAG_VIDEO, ""},
+  {"video/x-huffyuv", "Huffyuv", FLAG_VIDEO, ""},
+  {"video/x-intel-h263", "Intel H.263", FLAG_VIDEO, ""},
+  {"video/x-jpeg", "Motion JPEG", FLAG_VIDEO, ""},
   /* { "video/x-jpeg-b", "", 0 }, does this actually exist? */
-  {"video/x-loco", "LOCO Lossless", 0},
-  {"video/x-mimic", "MIMIC", 0},
-  {"video/x-mjpeg", "Motion-JPEG", 0},
-  {"video/x-mjpeg-b", "Motion-JPEG format B", 0},
-  {"video/mpegts", "MPEG-2 Transport Stream", FLAG_CONTAINER},
-  {"video/x-mng", "Multiple Image Network Graphics (MNG)", 0},
-  {"video/x-mszh", N_("Lossless MSZH"), 0},
-  {"video/x-msvideocodec", "Microsoft Video 1", 0},
-  {"video/x-mve", "Interplay MVE", FLAG_CONTAINER},
-  {"video/x-nut", "NUT", FLAG_CONTAINER},
-  {"video/x-nuv", "MythTV NuppelVideo (NUV)", FLAG_CONTAINER},
-  {"video/x-qdrw", "Apple QuickDraw", 0},
-  {"video/x-raw-gray", N_("Uncompressed Gray Image"), 0},
-  {"video/x-smc", "Apple SMC", 0},
-  {"video/x-smoke", "Smoke", 0},
-  {"video/x-tarkin", "Tarkin", 0},
-  {"video/x-theora", "Theora", 0},
-  {"video/x-rle", N_("Run-length encoding"), 0},
-  {"video/x-ultimotion", "IBM UltiMotion", 0},
+  {"video/x-loco", "LOCO Lossless", FLAG_VIDEO, ""},
+  {"video/x-mimic", "MIMIC", FLAG_VIDEO, ""},
+  {"video/x-mjpeg", "Motion-JPEG", FLAG_VIDEO, ""},
+  {"video/x-mjpeg-b", "Motion-JPEG format B", FLAG_VIDEO, ""},
+  {"video/mpegts", "MPEG-2 Transport Stream", AVS_CONTAINER, "ts"},
+  {"video/x-mng", "Multiple Image Network Graphics (MNG)", FLAG_VIDEO, ""},
+  {"video/x-mszh", N_("Lossless MSZH"), FLAG_VIDEO, ""},
+  {"video/x-msvideocodec", "Microsoft Video 1", FLAG_VIDEO, ""},
+  {"video/x-mve", "Interplay MVE", AV_CONTAINER, "mve"},
+  {"video/x-nut", "NUT", AV_CONTAINER, "nut"},
+  {"video/x-nuv", "MythTV NuppelVideo (NUV)", AV_CONTAINER, "nuv"},
+  {"video/x-prores", "Apple ProRes", FLAG_VIDEO, ""},
+  {"video/x-qdrw", "Apple QuickDraw", FLAG_VIDEO, ""},
+  {"video/x-smc", "Apple SMC", FLAG_VIDEO, ""},
+  {"video/x-smoke", "Smoke", FLAG_VIDEO, ""},
+  {"video/x-tarkin", "Tarkin", FLAG_VIDEO, ""},
+  {"video/x-theora", "Theora", FLAG_VIDEO, ""},
+  {"video/x-rle", N_("Run-length encoding"), FLAG_VIDEO, ""},
+  {"video/x-ultimotion", "IBM UltiMotion", FLAG_VIDEO, ""},
   {"video/x-vcd", "VideoCD (VCD)", 0},
-  {"video/x-vmnc", "VMWare NC", 0},
-  {"video/x-vp3", "On2 VP3", 0},
-  {"video/x-vp5", "On2 VP5", 0},
-  {"video/x-vp6", "On2 VP6", 0},
-  {"video/x-vp6-flash", "On2 VP6/Flash", 0},
-  {"video/x-vp6-alpha", "On2 VP6 with alpha", 0},
-  {"video/x-vp7", "On2 VP7", 0},
-  {"video/x-vp8", "VP8", 0},
-  {"video/x-xvid", "XVID MPEG-4", 0},
-  {"video/x-zlib", "Lossless zlib video", 0},
-  {"video/x-zmbv", "Zip Motion Block video", 0},
+  {"video/x-vmnc", "VMWare NC", FLAG_VIDEO, ""},
+  {"video/x-vp3", "On2 VP3", FLAG_VIDEO, ""},
+  {"video/x-vp5", "On2 VP5", FLAG_VIDEO, ""},
+  {"video/x-vp6", "On2 VP6", FLAG_VIDEO, ""},
+  {"video/x-vp6-flash", "On2 VP6/Flash", FLAG_VIDEO, ""},
+  {"video/x-vp6-alpha", "On2 VP6 with alpha", FLAG_VIDEO, ""},
+  {"video/x-vp7", "On2 VP7", FLAG_VIDEO, ""},
+  {"video/x-vp8", "VP8", FLAG_VIDEO, ""},
+  {"video/x-vp9", "VP9", FLAG_VIDEO, ""},
+  {"video/x-zlib", "Lossless zlib video", FLAG_VIDEO, ""},
+  {"video/x-zmbv", "Zip Motion Block video", FLAG_VIDEO, ""},
 
   /* image formats with static descriptions */
-  {"image/bmp", "BMP", 0},
-  {"image/x-bmp", "BMP", 0},
-  {"image/x-MS-bmp", "BMP", 0},
-  {"image/gif", "GIF", 0},
-  {"image/jpeg", "JPEG", 0},
-  {"image/jng", "JPEG Network Graphics (JNG)", 0},
-  {"image/png", "PNG", 0},
-  {"image/pbm", "Portable BitMap (PBM)", 0},
-  {"image/ppm", "Portable PixMap (PPM)", 0},
-  {"image/svg+xml", "Scalable Vector Graphics (SVG)", 0},
-  {"image/tiff", "TIFF", 0},
-  {"image/x-cmu-raster", "CMU Raster Format", 0},
-  {"image/x-degas", "DEGAS", 0},
-  {"image/x-icon", "ICO", 0},
-  {"image/x-j2c", "JPEG 2000", 0},
-  {"image/x-jpc", "JPEG 2000", 0},
-  {"image/jp2", "JPEG 2000", 0},
-  {"image/x-pcx", "PCX", 0},
-  {"image/x-xcf", "XFC", 0},
-  {"image/x-pixmap", "XPM", 0},
-  {"image/x-portable-anymap", "Portable AnyMap (PAM)", 0},
-  {"image/x-portable-graymap", "Portable GrayMap (PGM)", 0},
-  {"image/x-xpixmap", "XPM", 0},
-  {"image/x-quicktime", "QuickTime Image Format (QTIF)", 0},
-  {"image/x-sun-raster", "Sun Raster Format (RAS)", 0},
-  {"image/x-tga", "TGA", 0},
+  {"image/bmp", "BMP", FLAG_IMAGE, "bmp"},
+  {"image/x-bmp", "BMP", FLAG_IMAGE, "bmp"},
+  {"image/x-MS-bmp", "BMP", FLAG_IMAGE, "bmp"},
+  {"image/gif", "GIF", FLAG_IMAGE, "gif"},
+  {"image/jpeg", "JPEG", FLAG_IMAGE | FLAG_VIDEO, "jpg"},
+  {"image/jng", "JPEG Network Graphics (JNG)", FLAG_IMAGE, ""},
+  {"image/png", "PNG", FLAG_VIDEO | FLAG_IMAGE, "png"},
+  {"image/pbm", "Portable BitMap (PBM)", FLAG_IMAGE, "pbm"},
+  {"image/ppm", "Portable PixMap (PPM)", FLAG_IMAGE, "ppm"},
+  {"image/svg+xml", "Scalable Vector Graphics (SVG)", FLAG_IMAGE, "svg"},
+  {"image/tiff", "TIFF", FLAG_IMAGE, "tiff"},
+  {"image/x-cmu-raster", "CMU Raster Format", FLAG_IMAGE, ""},
+  {"image/x-degas", "DEGAS", FLAG_IMAGE, ""},
+  {"image/x-icon", "ICO", FLAG_IMAGE, "ico"},
+  {"image/x-j2c", "JPEG 2000", FLAG_VIDEO | FLAG_IMAGE, ""},
+  {"image/x-jpc", "JPEG 2000", FLAG_VIDEO | FLAG_IMAGE, ""},
+  {"image/jp2", "JPEG 2000", FLAG_VIDEO | FLAG_IMAGE, ""},
+  {"image/x-pcx", "PCX", FLAG_IMAGE, ""},
+  {"image/x-xcf", "XFC", FLAG_IMAGE, ""},
+  {"image/x-pixmap", "XPM", FLAG_IMAGE, "xpm"},
+  {"image/x-portable-anymap", "Portable AnyMap (PNM)", FLAG_IMAGE, "pnm"},
+  {"image/x-portable-graymap", "Portable GrayMap (PGM)", FLAG_IMAGE, "pgm"},
+  {"image/x-xpixmap", "XPM", FLAG_IMAGE, "xpm"},
+  {"image/x-quicktime", "QuickTime Image Format (QTIF)",
+      FLAG_IMAGE | FLAG_CONTAINER, ".mov"},
+  {"image/x-sun-raster", "Sun Raster Format (RAS)", FLAG_IMAGE, ""},
+  {"image/x-tga", "TGA", FLAG_IMAGE, "tga"},
+  {"image/vnd.wap.wbmp", "Wireless Bitmap", FLAG_IMAGE, "wbmp"},
 
   /* subtitle formats with static descriptions */
-  {"application/x-ass", "ASS", 0},
-  {"application/x-subtitle-sami", N_("Sami subtitle format"), 0},
-  {"application/x-subtitle-tmplayer", N_("TMPlayer subtitle format"), 0},
-  {"application/x-kate", "Kate", 0},
-  {"subtitle/x-kate", N_("Kate subtitle format"), 0},
-  {"subpicture/x-dvb", "DVB subtitles", 0},
-  /* add variant field to typefinder? { "application/x-subtitle", N_("subtitle"), 0}, */
+  {"text/x-raw", N_("Timed Text"), FLAG_SUB, ""},
+  {"application/x-ssa", "SubStation Alpha", FLAG_SUB, ""},
+  {"application/x-ass", "Advanced SubStation Alpha", FLAG_SUB, ""},
+  /* FIXME: add variant field to typefinder? */
+  {"application/x-subtitle", N_("Subtitle"), FLAG_SUB, ""},
+  {"application/x-subtitle-mpl2", N_("MPL2 subtitle format"), FLAG_SUB, ""},
+  {"application/x-subtitle-dks", N_("DKS subtitle format"), FLAG_SUB, ""},
+  {"application/x-subtitle-qttext", N_("QTtext subtitle format"), FLAG_SUB, ""},
+  {"application/x-subtitle-sami", N_("Sami subtitle format"), FLAG_SUB, ""},
+  {"application/x-subtitle-tmplayer", N_("TMPlayer subtitle format"), FLAG_SUB,
+      ""},
+  {"application/x-teletext", "Teletext", 0, ""},
+  {"application/x-kate", "Kate", 0, ""},
+  {"subtitle/x-kate", N_("Kate subtitle format"), FLAG_SUB, ""},
+  {"subpicture/x-dvb", "DVB subtitles", FLAG_SUB, ""},
+  {"subpicture/x-pgs", "PGS subtitles", FLAG_SUB, ""},
 
   /* non-audio/video/container formats */
-  {"hdv/aux-v", "HDV AUX-V", 0},
-  {"hdv/aux-a", "HDV AUX-A", 0},
+  {"hdv/aux-v", "HDV AUX-V", 0, ""},
+  {"hdv/aux-a", "HDV AUX-A", 0, ""},
 
   /* formats with dynamic descriptions */
-  {"audio/mpeg", NULL, 0},
-  {"audio/x-adpcm", NULL, 0},
-  {"audio/x-mace", NULL, 0},
-  {"audio/x-pn-realaudio", NULL, 0},
-  {"audio/x-raw-int", NULL, 0},
-  {"audio/x-raw-float", NULL, 0},
-  {"audio/x-wma", NULL, 0},
-  {"video/mpeg", NULL, FLAG_CONTAINER | FLAG_SYSTEMSTREAM},
-  {"video/mpeg", NULL, 0},
-  {"video/x-asus", NULL, 0},
-  {"video/x-ati-vcr", NULL, 0},
-  {"video/x-divx", NULL, 0},
+  {"audio/mpeg", NULL, FLAG_AUDIO, ""},
+  {"audio/x-adpcm", NULL, FLAG_AUDIO, ""},
+  {"audio/x-mace", NULL, FLAG_AUDIO, ""},
+  {"audio/x-pn-realaudio", NULL, FLAG_AUDIO, ""},
+  {"audio/x-raw", NULL, FLAG_AUDIO, ""},
+  {"audio/x-wma", NULL, FLAG_AUDIO, ""},
+  {"video/mpeg", NULL, AVS_CONTAINER | FLAG_SYSTEMSTREAM, "mpg"},
+  {"video/mpeg", NULL, FLAG_VIDEO, ""},
+  {"video/x-asus", NULL, FLAG_VIDEO, ""},
+  {"video/x-ati-vcr", NULL, FLAG_VIDEO, ""},
+  {"video/x-divx", NULL, FLAG_VIDEO, ""},
   {"video/x-dv", "Digital Video (DV) System Stream",
-      FLAG_CONTAINER | FLAG_SYSTEMSTREAM},
-  {"video/x-dv", "Digital Video (DV)", 0},
-  {"video/x-h263", NULL, 0},
-  {"video/x-h264", NULL, 0},
-  {"video/x-indeo", NULL, 0},
-  {"video/x-msmpeg", NULL, 0},
-  {"video/x-pn-realvideo", NULL, 0},
+      FLAG_CONTAINER | FLAG_SYSTEMSTREAM, "dv"},
+  {"video/x-dv", "Digital Video (DV)", FLAG_VIDEO, ""},
+  {"video/x-h263", NULL, FLAG_VIDEO, "h263"},
+  {"video/x-h264", NULL, FLAG_VIDEO, "h264"},
+  {"video/x-h265", NULL, FLAG_VIDEO, "h265"},
+  {"video/x-indeo", NULL, FLAG_VIDEO, ""},
+  {"video/x-msmpeg", NULL, FLAG_VIDEO, ""},
+  {"video/x-pn-realvideo", NULL, FLAG_VIDEO, ""},
 #if 0
   /* do these exist? are they used anywhere? */
   {"video/x-pn-multirate-realvideo", NULL, 0},
   {"audio/x-pn-multirate-realaudio", NULL, 0},
   {"audio/x-pn-multirate-realaudio-live", NULL, 0},
 #endif
-  {"video/x-truemotion", NULL, 0},
-  {"video/x-raw-rgb", NULL, 0},
-  {"video/x-raw-yuv", NULL, 0},
-  {"video/x-svq", NULL, 0},
-  {"video/x-wmv", NULL, 0},
-  {"video/x-xan", NULL, 0}
+  {"video/x-truemotion", NULL, FLAG_VIDEO, ""},
+  {"video/x-raw", NULL, FLAG_VIDEO, ""},
+  {"video/x-svq", NULL, FLAG_VIDEO, ""},
+  {"video/x-wmv", NULL, FLAG_VIDEO, ""},
+  {"video/x-xan", NULL, FLAG_VIDEO, ""},
+  {"video/x-tscc", NULL, FLAG_VIDEO, ""}
 };
 #else // GSTREAMER_LITE
 static const FormatInfo formats[] = {
@@ -307,7 +354,7 @@ static const FormatInfo formats[] = {
 };
 #endif // GSTREAMER_LITE
 
-/* returns static descriptions and dynamic ones (such as video/x-raw-yuv),
+/* returns static descriptions and dynamic ones (such as video/x-raw),
  * or NULL if caps aren't known at all */
 static gchar *
 format_info_get_desc (const FormatInfo * info, const GstCaps * caps)
@@ -321,63 +368,70 @@ format_info_get_desc (const FormatInfo * info, const GstCaps * caps)
 
   s = gst_caps_get_structure (caps, 0);
 
-  if (strcmp (info->type, "video/x-raw-yuv") == 0) {
-    const gchar *ret = NULL;
-    guint32 fourcc = 0;
+  if (strcmp (info->type, "video/x-raw") == 0) {
+    gchar *ret = NULL;
+    const gchar *str = 0;
+    GstVideoFormat format;
+    const GstVideoFormatInfo *finfo;
 
-    gst_structure_get_fourcc (s, "format", &fourcc);
-    switch (fourcc) {
-      case GST_MAKE_FOURCC ('I', '4', '2', '0'):
-        ret = _("Uncompressed planar YUV 4:2:0");
-        break;
-      case GST_MAKE_FOURCC ('Y', 'V', '1', '2'):
-        ret = _("Uncompressed planar YVU 4:2:0");
-        break;
-      case GST_MAKE_FOURCC ('Y', 'U', 'Y', '2'):
-        ret = _("Uncompressed packed YUV 4:2:2");
-        break;
-      case GST_MAKE_FOURCC ('Y', 'U', 'V', '9'):
-        ret = _("Uncompressed packed YUV 4:1:0");
-        break;
-      case GST_MAKE_FOURCC ('Y', 'V', 'U', '9'):
-        ret = _("Uncompressed packed YVU 4:1:0");
-        break;
-      case GST_MAKE_FOURCC ('Y', 'V', 'Y', 'U'):
-      case GST_MAKE_FOURCC ('U', 'Y', 'V', 'Y'):
-        ret = _("Uncompressed packed YUV 4:2:2");
-        break;
-      case GST_MAKE_FOURCC ('Y', '4', '1', 'P'):
-        ret = _("Uncompressed packed YUV 4:1:1");
-        break;
-      case GST_MAKE_FOURCC ('I', 'Y', 'U', '2'):
-        ret = _("Uncompressed packed YUV 4:4:4");
-        break;
-      case GST_MAKE_FOURCC ('Y', '4', '2', 'B'):
-        ret = _("Uncompressed planar YUV 4:2:2");
-        break;
-      case GST_MAKE_FOURCC ('Y', '4', '1', 'B'):
-        ret = _("Uncompressed planar YUV 4:1:1");
-        break;
-      case GST_MAKE_FOURCC ('Y', '8', '0', '0'):
-        ret = _("Uncompressed black and white Y-plane");
-        break;
-      default:
-        ret = _("Uncompressed YUV");
-        break;
+    str = gst_structure_get_string (s, "format");
+    if (str == NULL)
+      return g_strdup (_("Uncompressed video"));
+    format = gst_video_format_from_string (str);
+    if (format == GST_VIDEO_FORMAT_UNKNOWN)
+      return g_strdup (_("Uncompressed video"));
+
+    finfo = gst_video_format_get_info (format);
+
+    if (GST_VIDEO_FORMAT_INFO_IS_GRAY (finfo)) {
+      ret = g_strdup (_("Uncompressed gray"));
+    } else if (GST_VIDEO_FORMAT_INFO_IS_YUV (finfo)) {
+      const gchar *subs;
+      gint w_sub, h_sub, n_semi;
+
+      w_sub = GST_VIDEO_FORMAT_INFO_W_SUB (finfo, 1);
+      h_sub = GST_VIDEO_FORMAT_INFO_H_SUB (finfo, 1);
+
+      if (w_sub == 1 && h_sub == 1) {
+        subs = "4:4:4";
+      } else if (w_sub == 2 && h_sub == 1) {
+        subs = "4:2:2";
+      } else if (w_sub == 2 && h_sub == 2) {
+        subs = "4:2:0";
+      } else if (w_sub == 4 && h_sub == 1) {
+        subs = "4:1:1";
+      } else {
+        subs = "";
     }
-    return g_strdup (ret);
-  } else if (strcmp (info->type, "video/x-raw-rgb") == 0) {
-    const gchar *rgb_str;
-    gint depth = 0;
 
-    gst_structure_get_int (s, "depth", &depth);
-    rgb_str = gst_structure_has_field (s, "alpha_mask") ? "RGBA" : "RGB";
-    if (gst_structure_has_field (s, "paletted_data")) {
-      return g_strdup_printf (_("Uncompressed palettized %d-bit %s"), depth,
-          rgb_str);
+      n_semi = GST_VIDEO_FORMAT_INFO_HAS_ALPHA (finfo) ? 3 : 2;
+
+      if (GST_VIDEO_FORMAT_INFO_N_PLANES (finfo) == 1) {
+        ret = g_strdup_printf (_("Uncompressed packed YUV %s"), subs);
+      } else if (GST_VIDEO_FORMAT_INFO_N_PLANES (finfo) == n_semi) {
+        ret = g_strdup_printf (_("Uncompressed semi-planar YUV %s"), subs);
     } else {
-      return g_strdup_printf ("Uncompressed %d-bit %s", depth, rgb_str);
+        ret = g_strdup_printf (_("Uncompressed planar YUV %s"), subs);
     }
+    } else if (GST_VIDEO_FORMAT_INFO_IS_RGB (finfo)) {
+      gboolean alpha, palette;
+      gint bits;
+
+      alpha = GST_VIDEO_FORMAT_INFO_HAS_ALPHA (finfo);
+      palette = GST_VIDEO_FORMAT_INFO_HAS_PALETTE (finfo);
+      bits = GST_VIDEO_FORMAT_INFO_BITS (finfo);
+
+      if (palette) {
+        ret = g_strdup_printf (_("Uncompressed palettized %d-bit %s"),
+            bits, alpha ? "RGBA" : "RGB");
+      } else {
+        ret = g_strdup_printf (_("Uncompressed %d-bit %s"),
+            bits, alpha ? "RGBA" : "RGB");
+      }
+    } else {
+      ret = g_strdup (_("Uncompressed video"));
+    }
+    return ret;
   } else if (strcmp (info->type, "video/x-h263") == 0) {
     const gchar *variant, *ret;
 
@@ -418,6 +472,9 @@ format_info_get_desc (const FormatInfo * info, const GstCaps * caps)
       ret = "H.264";
     }
     return g_strdup (ret);
+  } else if (strcmp (info->type, "video/x-h265") == 0) {
+    /* TODO: Any variants? */
+    return g_strdup ("H.265");
   } else if (strcmp (info->type, "video/x-divx") == 0) {
     gint ver = 0;
 
@@ -481,13 +538,20 @@ format_info_get_desc (const FormatInfo * info, const GstCaps * caps)
     return g_strdup ("Windows Media Audio");
   } else if (strcmp (info->type, "video/x-wmv") == 0) {
     gint ver = 0;
+    const gchar *str;
 
     gst_structure_get_int (s, "wmvversion", &ver);
+    str = gst_structure_get_string (s, "format");
+
     switch (ver) {
       case 1:
       case 2:
       case 3:
-        return g_strdup_printf ("Windows Media Video %d", ver + 6);
+        if (str && strncmp (str, "MSS", 3)) {
+          return g_strdup_printf ("Windows Media Video %d Screen", ver + 6);
+        } else {
+          return g_strdup_printf ("Windows Media Video %d", ver + 6);
+        }
       default:
         break;
     }
@@ -580,6 +644,8 @@ format_info_get_desc (const FormatInfo * info, const GstCaps * caps)
         }
         GST_WARNING ("Unexpected MPEG-1 layer in %" GST_PTR_FORMAT, caps);
         return g_strdup ("MPEG-1 Audio");
+      case 2:
+        return g_strdup ("MPEG-2 AAC");
       case 4:
         return g_strdup ("MPEG-4 AAC");
       default:
@@ -625,37 +691,54 @@ format_info_get_desc (const FormatInfo * info, const GstCaps * caps)
     gboolean sysstream;
     gint ver = 0;
 
-    if (!gst_structure_get_boolean (s, "systemstream", &sysstream) ||
-        !gst_structure_get_int (s, "mpegversion", &ver) || ver < 1 || ver > 4) {
-      GST_WARNING ("Missing fields in mpeg video caps %" GST_PTR_FORMAT, caps);
-    } else {
+    if (!gst_structure_get_boolean (s, "systemstream", &sysstream)) {
+      GST_WARNING ("Missing systemstream field in mpeg video caps "
+          "%" GST_PTR_FORMAT, caps);
+      sysstream = FALSE;
+    }
+
+    if (gst_structure_get_int (s, "mpegversion", &ver) && ver > 0 && ver <= 4) {
       if (sysstream) {
         return g_strdup_printf ("MPEG-%d System Stream", ver);
       } else {
         return g_strdup_printf ("MPEG-%d Video", ver);
       }
     }
+    GST_WARNING ("Missing mpegversion field in mpeg video caps "
+        "%" GST_PTR_FORMAT, caps);
     return g_strdup ("MPEG Video");
-  } else if (strcmp (info->type, "audio/x-raw-int") == 0) {
-    gint bitdepth = 0;
+  } else if (strcmp (info->type, "audio/x-raw") == 0) {
+    gint depth = 0;
+    gboolean is_float;
+    const gchar *str;
+    GstAudioFormat format;
+    const GstAudioFormatInfo *finfo;
 
-    /* 8-bit pcm might not have depth field (?) */
-    if (!gst_structure_get_int (s, "depth", &bitdepth))
-      gst_structure_get_int (s, "width", &bitdepth);
-    if (bitdepth != 0)
-      return g_strdup_printf (_("Raw %d-bit PCM audio"), bitdepth);
-    else
-      return g_strdup (_("Raw PCM audio"));
-  } else if (strcmp (info->type, "audio/x-raw-float") == 0) {
-    gint bitdepth = 0;
+    str = gst_structure_get_string (s, "format");
+    format = gst_audio_format_from_string (str);
+    if (format == GST_AUDIO_FORMAT_UNKNOWN)
+      return g_strdup (_("Uncompressed audio"));
 
-    gst_structure_get_int (s, "width", &bitdepth);
-    if (bitdepth != 0)
-      return g_strdup_printf (_("Raw %d-bit floating-point audio"), bitdepth);
-    else
-      return g_strdup (_("Raw floating-point audio"));
+    finfo = gst_audio_format_get_info (format);
+    depth = GST_AUDIO_FORMAT_INFO_DEPTH (finfo);
+    is_float = GST_AUDIO_FORMAT_INFO_IS_FLOAT (finfo);
+
+    return g_strdup_printf (_("Raw %d-bit %s audio"), depth,
+        is_float ? "floating-point" : "PCM");
+  } else if (strcmp (info->type, "video/x-tscc") == 0) {
+    gint version;
+    gst_structure_get_int (s, "tsccversion", &version);
+    switch (version) {
+      case 1:
+        return g_strdup ("TechSmith Screen Capture 1");
+      case 2:
+        return g_strdup ("TechSmith Screen Capture 2");
+      default:
+        break;
   }
-
+    GST_WARNING ("Unexpected version in %" GST_PTR_FORMAT, caps);
+    return g_strdup ("TechSmith Screen Capture");
+  }
   return NULL;
 }
 
@@ -906,7 +989,7 @@ gst_pb_utils_get_encoder_description (const GstCaps * caps)
 
 /**
  * gst_pb_utils_get_element_description:
- * @factory_name: the name of the element, e.g. "gnomevfssrc"
+ * @factory_name: the name of the element, e.g. "giosrc"
  *
  * Returns a localised string describing the given element, for use in
  * error dialogs or other messages to be seen by the user. Should never
@@ -936,8 +1019,9 @@ gst_pb_utils_get_element_description (const gchar * factory_name)
 /**
  * gst_pb_utils_add_codec_description_to_tag_list:
  * @taglist: a #GstTagList
- * @codec_tag: a GStreamer codec tag such as #GST_TAG_AUDIO_CODEC,
- *             #GST_TAG_VIDEO_CODEC or #GST_TAG_CODEC
+ * @codec_tag: (allow-none): a GStreamer codec tag such as #GST_TAG_AUDIO_CODEC,
+ *             #GST_TAG_VIDEO_CODEC or #GST_TAG_CODEC. If none is specified,
+ *             the function will attempt to detect the appropriate category.
  * @caps: the (fixed) #GstCaps for which a codec tag should be added.
  *
  * Adds a codec tag describing the format specified by @caps to @taglist.
@@ -953,15 +1037,28 @@ gst_pb_utils_add_codec_description_to_tag_list (GstTagList * taglist,
 
   g_return_val_if_fail (taglist != NULL, FALSE);
   g_return_val_if_fail (GST_IS_TAG_LIST (taglist), FALSE);
-  g_return_val_if_fail (codec_tag != NULL, FALSE);
-  g_return_val_if_fail (gst_tag_exists (codec_tag), FALSE);
-  g_return_val_if_fail (gst_tag_get_type (codec_tag) == G_TYPE_STRING, FALSE);
+  g_return_val_if_fail (codec_tag == NULL || (gst_tag_exists (codec_tag)
+          && gst_tag_get_type (codec_tag) == G_TYPE_STRING), FALSE);
   g_return_val_if_fail (caps != NULL, FALSE);
   g_return_val_if_fail (GST_IS_CAPS (caps), FALSE);
 
   info = find_format_info (caps);
   if (info == NULL)
     return FALSE;
+
+  /* Attempt to find tag classification */
+  if (codec_tag == NULL) {
+    if (info->flags & FLAG_CONTAINER)
+      codec_tag = GST_TAG_CONTAINER_FORMAT;
+    else if (info->flags & FLAG_AUDIO)
+      codec_tag = GST_TAG_AUDIO_CODEC;
+    else if (info->flags & FLAG_VIDEO)
+      codec_tag = GST_TAG_VIDEO_CODEC;
+    else if (info->flags & FLAG_SUB)
+      codec_tag = GST_TAG_SUBTITLE_CODEC;
+    else
+      codec_tag = GST_TAG_CODEC;
+  }
 
   desc = format_info_get_desc (info, caps);
   gst_tag_list_add (taglist, GST_TAG_MERGE_REPLACE, codec_tag, desc, NULL);
@@ -1016,6 +1113,79 @@ gst_pb_utils_get_codec_description (const GstCaps * caps)
   gst_caps_unref (tmp);
 
   return str;
+}
+
+/* internal helper functions for gst_encoding_profile_get_file_extension() */
+const gchar *pb_utils_get_file_extension_from_caps (const GstCaps * caps);
+gboolean pb_utils_is_tag (const GstCaps * caps);
+
+const gchar *
+pb_utils_get_file_extension_from_caps (const GstCaps * caps)
+{
+  const FormatInfo *info;
+  const gchar *ext = NULL;
+  GstCaps *stripped_caps;
+
+  g_assert (GST_IS_CAPS (caps));
+
+  stripped_caps = copy_and_clean_caps (caps);
+
+  g_assert (gst_caps_is_fixed (stripped_caps));
+
+  info = find_format_info (stripped_caps);
+
+  if (info && info->ext[0] != '\0') {
+    ext = info->ext;
+  } else if (info && info->desc == NULL) {
+    const GstStructure *s;
+
+    s = gst_caps_get_structure (stripped_caps, 0);
+
+    /* cases where we have to evaluate the caps more closely */
+    if (strcmp (info->type, "audio/mpeg") == 0) {
+      int version = 0, layer = 3;
+
+      if (gst_structure_get_int (s, "mpegversion", &version)) {
+        if (version == 2 || version == 4) {
+          ext = "aac";
+        } else if (version == 1) {
+          gst_structure_get_int (s, "layer", &layer);
+          if (layer == 1)
+            ext = "mp1";
+          else if (layer == 2)
+            ext = "mp2";
+          else
+            ext = "mp3";
+        }
+      }
+    }
+  }
+
+  gst_caps_unref (stripped_caps);
+  return ext;
+}
+
+gboolean
+pb_utils_is_tag (const GstCaps * caps)
+{
+  const FormatInfo *info;
+  GstCaps *stripped_caps;
+  gboolean is_tag = FALSE;
+
+  g_assert (GST_IS_CAPS (caps));
+
+  stripped_caps = copy_and_clean_caps (caps);
+
+  g_assert (gst_caps_is_fixed (stripped_caps));
+
+  info = find_format_info (stripped_caps);
+
+  if (info) {
+    is_tag = (info->flags & FLAG_TAG) != 0;
+  }
+  gst_caps_unref (stripped_caps);
+
+  return is_tag;
 }
 
 #if 0

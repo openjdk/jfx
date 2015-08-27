@@ -16,15 +16,19 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
+
+#ifndef __GST_AUDIO_AUDIO_H__
+#include <gst/audio/audio.h>
+#endif
 
 #ifndef __GST_AUDIO_SRC_H__
 #define __GST_AUDIO_SRC_H__
 
 #include <gst/gst.h>
-#include <gst/audio/gstbaseaudiosrc.h>
+#include <gst/audio/gstaudiobasesrc.h>
 
 G_BEGIN_DECLS
 
@@ -40,12 +44,11 @@ typedef struct _GstAudioSrcClass GstAudioSrcClass;
 
 /**
  * GstAudioSrc:
- * @element: parent class
  *
  * Base class for simple audio sources.
  */
 struct _GstAudioSrc {
-  GstBaseAudioSrc        element;
+  GstAudioBaseSrc        element;
 
   /*< private >*/ /* with LOCK */
   GThread   *thread;
@@ -61,7 +64,7 @@ struct _GstAudioSrc {
  * @prepare: configure device with format
  * @unprepare: undo the configuration
  * @close: close the device
- * @read: read samples to the audio device
+ * @read: read samples from the audio device
  * @delay: the number of samples queued in the device
  * @reset: unblock a read to the device and reset.
  *
@@ -69,20 +72,21 @@ struct _GstAudioSrc {
  * functionality.
  */
 struct _GstAudioSrcClass {
-  GstBaseAudioSrcClass parent_class;
+  GstAudioBaseSrcClass parent_class;
 
   /* vtable */
 
   /* open the device with given specs */
   gboolean (*open)      (GstAudioSrc *src);
   /* prepare resources and state to operate with the given specs */
-  gboolean (*prepare)   (GstAudioSrc *src, GstRingBufferSpec *spec);
+  gboolean (*prepare)   (GstAudioSrc *src, GstAudioRingBufferSpec *spec);
   /* undo anything that was done in prepare() */
   gboolean (*unprepare) (GstAudioSrc *src);
   /* close the device */
   gboolean (*close)     (GstAudioSrc *src);
   /* read samples from the device */
-  guint    (*read)      (GstAudioSrc *src, gpointer data, guint length);
+  guint    (*read)      (GstAudioSrc *src, gpointer data, guint length,
+      GstClockTime *timestamp);
   /* get number of samples queued in the device */
   guint    (*delay)     (GstAudioSrc *src);
   /* reset the audio device, unblock from a write */

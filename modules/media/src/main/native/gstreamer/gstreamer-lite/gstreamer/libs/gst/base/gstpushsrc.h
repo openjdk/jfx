@@ -17,8 +17,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 #ifndef __GST_PUSH_SRC_H__
@@ -54,8 +54,13 @@ struct _GstPushSrc {
 struct _GstPushSrcClass {
   GstBaseSrcClass parent_class;
 
-  /* ask the subclass to create a buffer */
+  /* ask the subclass to create a buffer, the default implementation
+   * uses alloc and fill */
   GstFlowReturn (*create) (GstPushSrc *src, GstBuffer **buf);
+  /* allocate memory for a buffer */
+  GstFlowReturn (*alloc)  (GstPushSrc *src, GstBuffer **buf);
+  /* ask the subclass to fill a buffer */
+  GstFlowReturn (*fill)   (GstPushSrc *src, GstBuffer *buf);
 
   /*< private >*/
   gpointer _gst_reserved[GST_PADDING];

@@ -17,8 +17,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  * 
  * 
  * this windowed sinc filter is taken from the freely downloadable DSP book,
@@ -45,9 +45,9 @@
  * <refsect2>
  * <title>Example launch line</title>
  * |[
- * gst-launch audiotestsrc freq=1500 ! audioconvert ! audiosincband mode=band-pass lower-frequency=3000 upper-frequency=10000 length=501 window=blackman ! audioconvert ! alsasink
- * gst-launch filesrc location="melo1.ogg" ! oggdemux ! vorbisdec ! audioconvert ! audiowsincband mode=band-reject lower-frequency=59 upper-frequency=61 length=10001 window=hamming ! audioconvert ! alsasink
- * gst-launch audiotestsrc wave=white-noise ! audioconvert ! audiowsincband mode=band-pass lower-frequency=1000 upper-frequency=2000 length=31 ! audioconvert ! alsasink
+ * gst-launch-1.0 audiotestsrc freq=1500 ! audioconvert ! audiosincband mode=band-pass lower-frequency=3000 upper-frequency=10000 length=501 window=blackman ! audioconvert ! alsasink
+ * gst-launch-1.0 filesrc location="melo1.ogg" ! oggdemux ! vorbisdec ! audioconvert ! audiowsincband mode=band-reject lower-frequency=59 upper-frequency=61 length=10001 window=hamming ! audioconvert ! alsasink
+ * gst-launch-1.0 audiotestsrc wave=white-noise ! audioconvert ! audiowsincband mode=band-pass lower-frequency=1000 upper-frequency=2000 length=31 ! audioconvert ! alsasink
  * ]|
  * </refsect2>
  */
@@ -60,9 +60,10 @@
 #include <math.h>
 #include <gst/gst.h>
 #include <gst/audio/gstaudiofilter.h>
-#include <gst/controller/gstcontroller.h>
 
 #include "audiowsincband.h"
+
+#include "gst/glib-compat-private.h"
 
 #define GST_CAT_DEFAULT gst_gst_audio_wsincband_debug
 GST_DEBUG_CATEGORY_STATIC (GST_CAT_DEFAULT);
@@ -138,12 +139,9 @@ gst_gst_audio_wsincband_window_get_type (void)
   return gtype;
 }
 
-#define DEBUG_INIT(bla) \
-  GST_DEBUG_CATEGORY_INIT (gst_gst_audio_wsincband_debug, "audiowsincband", 0, \
-      "Band-pass and Band-reject Windowed sinc filter plugin");
-
-GST_BOILERPLATE_FULL (GstAudioWSincBand, gst_audio_wsincband, GstAudioFilter,
-    GST_TYPE_AUDIO_FX_BASE_FIR_FILTER, DEBUG_INIT);
+#define gst_audio_wsincband_parent_class parent_class
+G_DEFINE_TYPE (GstAudioWSincBand, gst_audio_wsincband,
+    GST_TYPE_AUDIO_FX_BASE_FIR_FILTER);
 
 static void gst_audio_wsincband_set_property (GObject * object, guint prop_id,
     const GValue * value, GParamSpec * pspec);
@@ -152,31 +150,19 @@ static void gst_audio_wsincband_get_property (GObject * object, guint prop_id,
 static void gst_audio_wsincband_finalize (GObject * object);
 
 static gboolean gst_audio_wsincband_setup (GstAudioFilter * base,
-    GstRingBufferSpec * format);
-
+    const GstAudioInfo * info);
 
 #define POW2(x)  (x)*(x)
-
-/* Element class */
-static void
-gst_audio_wsincband_base_init (gpointer g_class)
-{
-  GstElementClass *element_class = GST_ELEMENT_CLASS (g_class);
-
-  gst_element_class_set_details_simple (element_class,
-      "Band pass & band reject filter", "Filter/Effect/Audio",
-      "Band pass and band reject windowed sinc filter",
-      "Thomas Vander Stichele <thomas at apestaart dot org>, "
-      "Steven W. Smith, "
-      "Dreamlab Technologies Ltd. <mathis.hofer@dreamlab.net>, "
-      "Sebastian Dröge <sebastian.droege@collabora.co.uk>");
-}
 
 static void
 gst_audio_wsincband_class_init (GstAudioWSincBandClass * klass)
 {
   GObjectClass *gobject_class = (GObjectClass *) klass;
+  GstElementClass *gstelement_class = (GstElementClass *) klass;
   GstAudioFilterClass *filter_class = (GstAudioFilterClass *) klass;
+
+  GST_DEBUG_CATEGORY_INIT (gst_gst_audio_wsincband_debug, "audiowsincband", 0,
+      "Band-pass and Band-reject Windowed sinc filter plugin");
 
   gobject_class->set_property = gst_audio_wsincband_set_property;
   gobject_class->get_property = gst_audio_wsincband_get_property;
@@ -210,12 +196,19 @@ gst_audio_wsincband_class_init (GstAudioWSincBandClass * klass)
           WINDOW_HAMMING,
           G_PARAM_READWRITE | GST_PARAM_CONTROLLABLE | G_PARAM_STATIC_STRINGS));
 
+  gst_element_class_set_static_metadata (gstelement_class,
+      "Band pass & band reject filter", "Filter/Effect/Audio",
+      "Band pass and band reject windowed sinc filter",
+      "Thomas Vander Stichele <thomas at apestaart dot org>, "
+      "Steven W. Smith, "
+      "Dreamlab Technologies Ltd. <mathis.hofer@dreamlab.net>, "
+      "Sebastian Dröge <sebastian.droege@collabora.co.uk>");
+
   filter_class->setup = GST_DEBUG_FUNCPTR (gst_audio_wsincband_setup);
 }
 
 static void
-gst_audio_wsincband_init (GstAudioWSincBand * self,
-    GstAudioWSincBandClass * g_class)
+gst_audio_wsincband_init (GstAudioWSincBand * self)
 {
   self->kernel_length = 101;
   self->lower_frequency = 0.0;
@@ -223,11 +216,12 @@ gst_audio_wsincband_init (GstAudioWSincBand * self,
   self->mode = MODE_BAND_PASS;
   self->window = WINDOW_HAMMING;
 
-  self->lock = g_mutex_new ();
+  g_mutex_init (&self->lock);
 }
 
 static void
-gst_audio_wsincband_build_kernel (GstAudioWSincBand * self)
+gst_audio_wsincband_build_kernel (GstAudioWSincBand * self,
+    const GstAudioInfo * info)
 {
   gint i = 0;
   gdouble sum = 0.0;
@@ -235,26 +229,32 @@ gst_audio_wsincband_build_kernel (GstAudioWSincBand * self)
   gdouble *kernel_lp, *kernel_hp;
   gdouble w;
   gdouble *kernel;
+  gint rate, channels;
 
   len = self->kernel_length;
 
-  if (GST_AUDIO_FILTER (self)->format.rate == 0) {
+  if (info) {
+    rate = GST_AUDIO_INFO_RATE (info);
+    channels = GST_AUDIO_INFO_CHANNELS (info);
+  } else {
+    rate = GST_AUDIO_FILTER_RATE (self);
+    channels = GST_AUDIO_FILTER_CHANNELS (self);
+  }
+
+  if (rate == 0) {
     GST_DEBUG ("rate not set yet");
     return;
   }
 
-  if (GST_AUDIO_FILTER (self)->format.channels == 0) {
+  if (channels == 0) {
     GST_DEBUG ("channels not set yet");
     return;
   }
 
   /* Clamp frequencies */
-  self->lower_frequency =
-      CLAMP (self->lower_frequency, 0.0,
-      GST_AUDIO_FILTER (self)->format.rate / 2);
-  self->upper_frequency =
-      CLAMP (self->upper_frequency, 0.0,
-      GST_AUDIO_FILTER (self)->format.rate / 2);
+  self->lower_frequency = CLAMP (self->lower_frequency, 0.0, rate / 2);
+  self->upper_frequency = CLAMP (self->upper_frequency, 0.0, rate / 2);
+
   if (self->lower_frequency > self->upper_frequency) {
     gint tmp = self->lower_frequency;
 
@@ -269,7 +269,7 @@ gst_audio_wsincband_build_kernel (GstAudioWSincBand * self)
       (self->mode == MODE_BAND_PASS) ? "band-pass" : "band-reject");
 
   /* fill the lp kernel */
-  w = 2 * G_PI * (self->lower_frequency / GST_AUDIO_FILTER (self)->format.rate);
+  w = 2 * G_PI * (self->lower_frequency / rate);
   kernel_lp = g_new (gdouble, len);
   for (i = 0; i < len; ++i) {
     if (i == (len - 1) / 2.0)
@@ -306,7 +306,7 @@ gst_audio_wsincband_build_kernel (GstAudioWSincBand * self)
     kernel_lp[i] /= sum;
 
   /* fill the hp kernel */
-  w = 2 * G_PI * (self->upper_frequency / GST_AUDIO_FILTER (self)->format.rate);
+  w = 2 * G_PI * (self->upper_frequency / rate);
   kernel_hp = g_new (gdouble, len);
   for (i = 0; i < len; ++i) {
     if (i == (len - 1) / 2.0)
@@ -371,20 +371,20 @@ gst_audio_wsincband_build_kernel (GstAudioWSincBand * self)
   }
 
   gst_audio_fx_base_fir_filter_set_kernel (GST_AUDIO_FX_BASE_FIR_FILTER (self),
-      kernel, self->kernel_length, (len - 1) / 2);
+      kernel, self->kernel_length, (len - 1) / 2, info);
 }
 
 /* GstAudioFilter vmethod implementations */
 
 /* get notified of caps and plug in the correct process function */
 static gboolean
-gst_audio_wsincband_setup (GstAudioFilter * base, GstRingBufferSpec * format)
+gst_audio_wsincband_setup (GstAudioFilter * base, const GstAudioInfo * info)
 {
   GstAudioWSincBand *self = GST_AUDIO_WSINC_BAND (base);
 
-  gst_audio_wsincband_build_kernel (self);
+  gst_audio_wsincband_build_kernel (self, info);
 
-  return GST_AUDIO_FILTER_CLASS (parent_class)->setup (base, format);
+  return GST_AUDIO_FILTER_CLASS (parent_class)->setup (base, info);
 }
 
 static void
@@ -392,8 +392,7 @@ gst_audio_wsincband_finalize (GObject * object)
 {
   GstAudioWSincBand *self = GST_AUDIO_WSINC_BAND (object);
 
-  g_mutex_free (self->lock);
-  self->lock = NULL;
+  g_mutex_clear (&self->lock);
 
   G_OBJECT_CLASS (parent_class)->finalize (object);
 }
@@ -410,7 +409,7 @@ gst_audio_wsincband_set_property (GObject * object, guint prop_id,
     case PROP_LENGTH:{
       gint val;
 
-      g_mutex_lock (self->lock);
+      g_mutex_lock (&self->lock);
       val = g_value_get_int (value);
       if (val % 2 == 0)
         val++;
@@ -419,34 +418,34 @@ gst_audio_wsincband_set_property (GObject * object, guint prop_id,
         gst_audio_fx_base_fir_filter_push_residue (GST_AUDIO_FX_BASE_FIR_FILTER
             (self));
         self->kernel_length = val;
-        gst_audio_wsincband_build_kernel (self);
+        gst_audio_wsincband_build_kernel (self, NULL);
       }
-      g_mutex_unlock (self->lock);
+      g_mutex_unlock (&self->lock);
       break;
     }
     case PROP_LOWER_FREQUENCY:
-      g_mutex_lock (self->lock);
+      g_mutex_lock (&self->lock);
       self->lower_frequency = g_value_get_float (value);
-      gst_audio_wsincband_build_kernel (self);
-      g_mutex_unlock (self->lock);
+      gst_audio_wsincband_build_kernel (self, NULL);
+      g_mutex_unlock (&self->lock);
       break;
     case PROP_UPPER_FREQUENCY:
-      g_mutex_lock (self->lock);
+      g_mutex_lock (&self->lock);
       self->upper_frequency = g_value_get_float (value);
-      gst_audio_wsincband_build_kernel (self);
-      g_mutex_unlock (self->lock);
+      gst_audio_wsincband_build_kernel (self, NULL);
+      g_mutex_unlock (&self->lock);
       break;
     case PROP_MODE:
-      g_mutex_lock (self->lock);
+      g_mutex_lock (&self->lock);
       self->mode = g_value_get_enum (value);
-      gst_audio_wsincband_build_kernel (self);
-      g_mutex_unlock (self->lock);
+      gst_audio_wsincband_build_kernel (self, NULL);
+      g_mutex_unlock (&self->lock);
       break;
     case PROP_WINDOW:
-      g_mutex_lock (self->lock);
+      g_mutex_lock (&self->lock);
       self->window = g_value_get_enum (value);
-      gst_audio_wsincband_build_kernel (self);
-      g_mutex_unlock (self->lock);
+      gst_audio_wsincband_build_kernel (self, NULL);
+      g_mutex_unlock (&self->lock);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);

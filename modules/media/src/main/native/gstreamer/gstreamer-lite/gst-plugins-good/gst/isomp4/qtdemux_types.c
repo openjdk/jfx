@@ -13,13 +13,13 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 #include "qtdemux_types.h"
 #include "qtdemux_dump.h"
-#include "qtdemux_fourcc.h"
+#include "fourcc.h"
 
 static const QtNodeType qt_node_types[] = {
   {FOURCC_moov, "movie", QT_FLAG_CONTAINER,},
@@ -171,6 +171,17 @@ static const QtNodeType qt_node_types[] = {
       qtdemux_dump_mehd},
   {FOURCC_ovc1, "ovc1", 0},
   {FOURCC_owma, "owma", 0},
+  {FOURCC_avcC, "AV codec configuration container", 0},
+  {FOURCC_avc1, "AV codec configuration v1", 0},
+  {FOURCC_avc3, "AV codec configuration v3", 0},
+  {FOURCC_mp4s, "VOBSUB codec configuration", 0},
+  {FOURCC_hvc1, "HEVC codec configuration", 0},
+  {FOURCC_hev1, "HEVC codec configuration", 0},
+  {FOURCC_hvcC, "HEVC codec configuration container", 0},
+  {FOURCC_tfdt, "Track fragment decode time", 0, qtdemux_dump_tfdt},
+  {FOURCC_chap, "Chapter Reference"},
+  {FOURCC_btrt, "Bitrate information", 0},
+  {FOURCC_frma, "Audio codec format", 0},
   {0, "unknown", 0,},
 };
 

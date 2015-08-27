@@ -14,8 +14,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -56,8 +56,8 @@
 /*
  * Location of profile files
  *
- * $GST_DATADIR/gstreamer-GST_MAJORMINOR/encoding-profile
- * $HOME/gstreamer-GST_MAJORMINOR/encoding-profile
+ * $GST_DATADIR/gstreamer-GST_API_VERSION/encoding-profile
+ * $HOME/gstreamer-GST_API_VERSION/encoding-profile
  *
  * Naming convention
  *   $(target.category)/$(target.name).gep
@@ -74,7 +74,7 @@
 
 struct _GstEncodingTarget
 {
-  GstMiniObject parent;
+  GObject parent;
 
   gchar *name;
   gchar *category;
@@ -85,7 +85,7 @@ struct _GstEncodingTarget
   gchar *keyfile;
 };
 
-G_DEFINE_TYPE (GstEncodingTarget, gst_encoding_target, GST_TYPE_MINI_OBJECT);
+G_DEFINE_TYPE (GstEncodingTarget, gst_encoding_target, G_TYPE_OBJECT);
 
 static void
 gst_encoding_target_init (GstEncodingTarget * target)
@@ -94,8 +94,10 @@ gst_encoding_target_init (GstEncodingTarget * target)
 }
 
 static void
-gst_encoding_target_finalize (GstEncodingTarget * target)
+gst_encoding_target_finalize (GObject * object)
 {
+  GstEncodingTarget *target = (GstEncodingTarget *) object;
+
   GST_DEBUG ("Finalizing");
 
   if (target->name)
@@ -105,22 +107,19 @@ gst_encoding_target_finalize (GstEncodingTarget * target)
   if (target->description)
     g_free (target->description);
 
-  g_list_foreach (target->profiles, (GFunc) gst_mini_object_unref, NULL);
+  g_list_foreach (target->profiles, (GFunc) g_object_unref, NULL);
   g_list_free (target->profiles);
 }
 
 static void
-gst_encoding_target_class_init (GstMiniObjectClass * klass)
+gst_encoding_target_class_init (GObjectClass * klass)
 {
-  klass->finalize =
-      (GstMiniObjectFinalizeFunction) gst_encoding_target_finalize;
+  klass->finalize = gst_encoding_target_finalize;
 }
 
 /**
  * gst_encoding_target_get_name:
  * @target: a #GstEncodingTarget
- *
- * Since: 0.10.32
  *
  * Returns: (transfer none): The name of the @target.
  */
@@ -133,8 +132,6 @@ gst_encoding_target_get_name (GstEncodingTarget * target)
 /**
  * gst_encoding_target_get_category:
  * @target: a #GstEncodingTarget
- *
- * Since: 0.10.32
  *
  * Returns: (transfer none): The category of the @target. For example:
  * #GST_ENCODING_CATEGORY_DEVICE.
@@ -149,8 +146,6 @@ gst_encoding_target_get_category (GstEncodingTarget * target)
  * gst_encoding_target_get_description:
  * @target: a #GstEncodingTarget
  *
- * Since: 0.10.32
- *
  * Returns: (transfer none): The description of the @target.
  */
 const gchar *
@@ -163,9 +158,7 @@ gst_encoding_target_get_description (GstEncodingTarget * target)
  * gst_encoding_target_get_profiles:
  * @target: a #GstEncodingTarget
  *
- * Since: 0.10.32
- *
- * Returns: (transfer none) (element-type Gst.EncodingProfile): A list of
+ * Returns: (transfer none) (element-type GstPbutils.EncodingProfile): A list of
  * #GstEncodingProfile(s) this @target handles.
  */
 const GList *
@@ -178,8 +171,6 @@ gst_encoding_target_get_profiles (GstEncodingTarget * target)
  * gst_encoding_target_get_profile:
  * @target: a #GstEncodingTarget
  * @name: the name of the profile to retrieve
- *
- * Since: 0.10.32
  *
  * Returns: (transfer full): The matching #GstEncodingProfile, or %NULL.
  */
@@ -245,7 +236,7 @@ validate_name (const gchar * name)
  * belongs. For example: #GST_ENCODING_CATEGORY_DEVICE.
  * @description: (transfer none): A description of #GstEncodingTarget in the
  * current locale.
- * @profiles: (transfer none) (element-type Gst.EncodingProfile): A #GList of
+ * @profiles: (transfer none) (element-type GstPbutils.EncodingProfile): A #GList of
  * #GstEncodingProfile.
  *
  * Creates a new #GstEncodingTarget.
@@ -258,8 +249,6 @@ validate_name (const gchar * name)
  * well-defined categories, like #GST_ENCODING_CATEGORY_DEVICE, but it
  * <emphasis>can</emphasis> be a application or user specific category if
  * needed.
- *
- * Since: 0.10.32
  *
  * Returns: (transfer full): The newly created #GstEncodingTarget or %NULL if
  * there was an error.
@@ -281,7 +270,7 @@ gst_encoding_target_new (const gchar * name, const gchar * category,
   if (!validate_name (category))
     goto invalid_category;
 
-  res = (GstEncodingTarget *) gst_mini_object_new (GST_TYPE_ENCODING_TARGET);
+  res = (GstEncodingTarget *) g_object_new (GST_TYPE_ENCODING_TARGET, NULL);
   res->name = g_strdup (name);
   res->category = g_strdup (category);
   res->description = g_strdup (description);
@@ -321,8 +310,6 @@ invalid_category:
  * the profile after calling this method, you should increase its reference
  * count.
  *
- * Since: 0.10.32
- *
  * Returns: %TRUE if the profile was added, else %FALSE.
  **/
 
@@ -357,7 +344,7 @@ serialize_stream_profiles (GKeyFile * out, GstEncodingProfile * sprof,
 {
   gchar *sprofgroupname;
   gchar *tmpc;
-  const GstCaps *format, *restriction;
+  GstCaps *format, *restriction;
   const gchar *preset, *name, *description;
 
   sprofgroupname = g_strdup_printf ("streamprofile-%s-%d", profilename, id);
@@ -406,6 +393,10 @@ serialize_stream_profiles (GKeyFile * out, GstEncodingProfile * sprof,
   }
 
   g_free (sprofgroupname);
+  if (format)
+    gst_caps_unref (format);
+  if (restriction)
+    gst_caps_unref (restriction);
   return TRUE;
 }
 
@@ -448,7 +439,7 @@ serialize_encoding_profile (GKeyFile * out, GstEncodingProfile * prof)
   const GList *tmp;
   guint i;
   const gchar *profname, *profdesc, *profpreset, *proftype;
-  const GstCaps *profformat;
+  GstCaps *profformat;
 
   profname = gst_encoding_profile_get_name (prof);
   profdesc = gst_encoding_profile_get_description (prof);
@@ -494,6 +485,8 @@ serialize_encoding_profile (GKeyFile * out, GstEncodingProfile * prof)
         return FALSE;
     }
   }
+  if (profformat)
+    gst_caps_unref (profformat);
   g_free (profgroupname);
   return TRUE;
 }
@@ -642,10 +635,14 @@ parse_encoding_profile (GKeyFile * in, gchar * parentprofilename,
             *) sprof, variableframerate);
     gst_encoding_video_profile_set_pass ((GstEncodingVideoProfile *) sprof,
         pass);
+    gst_encoding_profile_set_name (sprof, pname);
+    gst_encoding_profile_set_description (sprof, description);
   } else if (!g_strcmp0 (proftype, "audio")) {
     sprof =
         (GstEncodingProfile *) gst_encoding_audio_profile_new (formatcaps,
         preset, restrictioncaps, presence);
+    gst_encoding_profile_set_name (sprof, pname);
+    gst_encoding_profile_set_description (sprof, description);
   } else
     GST_ERROR ("Unknown profile format '%s'", proftype);
 
@@ -758,8 +755,6 @@ empty_name:
  *
  * Opens the provided file and returns the contained #GstEncodingTarget.
  *
- * Since: 0.10.32
- *
  * Returns: (transfer full): The #GstEncodingTarget contained in the file, else
  * %NULL
  */
@@ -859,8 +854,6 @@ gst_encoding_target_subload (gchar * path, const gchar * category,
  * If the category name is specified only targets from that category will be
  * searched for.
  *
- * Since: 0.10.32
- *
  * Returns: (transfer full): The #GstEncodingTarget if available, else %NULL.
  */
 GstEncodingTarget *
@@ -882,7 +875,7 @@ gst_encoding_target_load (const gchar * name, const gchar * category,
 
   /* Try from local profiles */
   tldir =
-      g_build_filename (g_get_home_dir (), ".gstreamer-" GST_MAJORMINOR,
+      g_build_filename (g_get_user_data_dir (), "gstreamer-" GST_API_VERSION,
       GST_ENCODING_TARGET_DIRECTORY, NULL);
   target = gst_encoding_target_subload (tldir, category, lfilename, error);
   g_free (tldir);
@@ -890,7 +883,7 @@ gst_encoding_target_load (const gchar * name, const gchar * category,
   if (target == NULL) {
     /* Try from system-wide profiles */
     tldir =
-        g_build_filename (GST_DATADIR, "gstreamer-" GST_MAJORMINOR,
+        g_build_filename (GST_DATADIR, "gstreamer-" GST_API_VERSION,
         GST_ENCODING_TARGET_DIRECTORY, NULL);
     target = gst_encoding_target_subload (tldir, category, lfilename, error);
     g_free (tldir);
@@ -919,8 +912,6 @@ invalid_category:
  * @error: If an error occured, this field will be filled in.
  *
  * Saves the @target to the provided file location.
- *
- * Since: 0.10.32
  *
  * Returns: %TRUE if the target was correctly saved, else %FALSE.
  **/
@@ -989,8 +980,6 @@ write_failed:
  *
  * Saves the @target to a default user-local directory.
  *
- * Since: 0.10.32
- *
  * Returns: %TRUE if the target was correctly saved, else %FALSE.
  **/
 
@@ -1005,7 +994,7 @@ gst_encoding_target_save (GstEncodingTarget * target, GError ** error)
 
   lfilename = g_strdup_printf ("%s" GST_ENCODING_TARGET_SUFFIX, target->name);
   filename =
-      g_build_filename (g_get_home_dir (), ".gstreamer-" GST_MAJORMINOR,
+      g_build_filename (g_get_user_data_dir (), "gstreamer-" GST_API_VERSION,
       GST_ENCODING_TARGET_DIRECTORY, target->category, lfilename, NULL);
   g_free (lfilename);
 
@@ -1047,8 +1036,6 @@ get_categories (gchar * path)
  *
  * Returns: (transfer full) (element-type gchar*): A list
  * of #GstEncodingTarget categories.
- *
- * Since: 0.10.32
  */
 GList *
 gst_encoding_list_available_categories (void)
@@ -1058,13 +1045,14 @@ gst_encoding_list_available_categories (void)
   gchar *topdir;
 
   /* First try user-local categories */
-  topdir = g_build_filename (g_get_home_dir (), ".gstreamer-" GST_MAJORMINOR,
+  topdir =
+      g_build_filename (g_get_user_data_dir (), "gstreamer-" GST_API_VERSION,
       GST_ENCODING_TARGET_DIRECTORY, NULL);
   res = get_categories (topdir);
   g_free (topdir);
 
   /* Extend with system-wide categories */
-  topdir = g_build_filename (GST_DATADIR, "gstreamer-" GST_MAJORMINOR,
+  topdir = g_build_filename (GST_DATADIR, "gstreamer-" GST_API_VERSION,
       GST_ENCODING_TARGET_DIRECTORY, NULL);
   tmp1 = get_categories (topdir);
   g_free (topdir);
@@ -1163,8 +1151,6 @@ compare_targets (const GstEncodingTarget * ta, const GstEncodingTarget * tb)
  * if @categoryname is %NULL.
  *
  * Returns: (transfer full) (element-type GstEncodingTarget): The list of #GstEncodingTarget
- *
- * Since: 0.10.32
  */
 GList *
 gst_encoding_list_all_targets (const gchar * categoryname)
@@ -1174,13 +1160,14 @@ gst_encoding_list_all_targets (const gchar * categoryname)
   gchar *topdir;
 
   /* Get user-locals */
-  topdir = g_build_filename (g_get_home_dir (), ".gstreamer-" GST_MAJORMINOR,
+  topdir =
+      g_build_filename (g_get_user_data_dir (), "gstreamer-" GST_API_VERSION,
       GST_ENCODING_TARGET_DIRECTORY, NULL);
   res = get_all_targets (topdir, categoryname);
   g_free (topdir);
 
   /* Get system-wide */
-  topdir = g_build_filename (GST_DATADIR, "gstreamer-" GST_MAJORMINOR,
+  topdir = g_build_filename (GST_DATADIR, "gstreamer-" GST_API_VERSION,
       GST_ENCODING_TARGET_DIRECTORY, NULL);
   tmp1 = get_all_targets (topdir, categoryname);
   g_free (topdir);

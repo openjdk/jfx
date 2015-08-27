@@ -13,8 +13,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 /*
  * Unless otherwise indicated, Source Code is licensed under MIT license.
@@ -86,7 +86,7 @@ expandable_size_get_length (guint8 * ptr, guint32 array_size)
   guint32 index = 0;
 
   while (next && index < array_size) {
-    next = ((ptr[index] & 0x80) == 1);
+    next = (ptr[index] & 0x80);
     index++;
   }
   return index;

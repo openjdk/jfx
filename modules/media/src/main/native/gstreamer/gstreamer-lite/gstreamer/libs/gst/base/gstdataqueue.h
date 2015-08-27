@@ -15,8 +15,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 
@@ -40,22 +40,21 @@ typedef struct _GstDataQueue GstDataQueue;
 typedef struct _GstDataQueueClass GstDataQueueClass;
 typedef struct _GstDataQueueSize GstDataQueueSize;
 typedef struct _GstDataQueueItem GstDataQueueItem;
+typedef struct _GstDataQueuePrivate GstDataQueuePrivate;
 
 /**
- * GstDataQueueItem:
+ * GstDataQueueItem: (skip)
  * @object: the #GstMiniObject to queue.
  * @size: the size in bytes of the miniobject.
  * @duration: the duration in #GstClockTime of the miniobject. Can not be
- * #GST_CLOCK_TIME_NONE.
- * @visible: #TRUE if @object should be considered as a visible object.
+ * %GST_CLOCK_TIME_NONE.
+ * @visible: %TRUE if @object should be considered as a visible object.
  * @destroy: The #GDestroyNotify function to use to free the #GstDataQueueItem.
  * This function should also drop the reference to @object the owner of the
  * #GstDataQueueItem is assumed to hold.
  *
  * Structure used by #GstDataQueue. You can supply a different structure, as
  * long as the top of the structure is identical to this structure.
- *
- * Since: 0.10.11
  */
 
 struct _GstDataQueueItem
@@ -67,17 +66,18 @@ struct _GstDataQueueItem
 
   /* user supplied destroy function */
   GDestroyNotify destroy;
+
+  /* < private > */
+  gpointer _gst_reserved[GST_PADDING];
 };
 
 /**
- * GstDataQueueSize:
+ * GstDataQueueSize: (skip)
  * @visible: number of buffers
  * @bytes: number of bytes
  * @time: amount of time
  *
  * Structure describing the size of a queue.
- *
- * Since: 0.10.11
  */
 struct _GstDataQueueSize
 {
@@ -87,7 +87,7 @@ struct _GstDataQueueSize
 };
 
 /**
- * GstDataQueueCheckFullFunction:
+ * GstDataQueueCheckFullFunction: (skip)
  * @queue: a #GstDataQueue.
  * @visible: The number of visible items currently in the queue.
  * @bytes: The amount of bytes currently in the queue.
@@ -97,9 +97,7 @@ struct _GstDataQueueSize
  * The prototype of the function used to inform the queue that it should be
  * considered as full.
  *
- * Returns: #TRUE if the queue should be considered full.
- *
- * Since: 0.10.11
+ * Returns: %TRUE if the queue should be considered full.
  */
 typedef gboolean (*GstDataQueueCheckFullFunction) (GstDataQueue * queue,
     guint visible, guint bytes, guint64 time, gpointer checkdata);
@@ -112,38 +110,19 @@ typedef void (*GstDataQueueEmptyCallback) (GstDataQueue * queue, gpointer checkd
  * @object: the parent structure
  *
  * Opaque #GstDataQueue structure.
- *
- * Since: 0.10.11
  */
 struct _GstDataQueue
 {
   GObject object;
 
   /*< private >*/
-  /* the queue of data we're keeping our grubby hands on */
-  GQueue *queue;
-
-  GstDataQueueSize cur_level;   /* size of the queue */
-  GstDataQueueCheckFullFunction checkfull;      /* Callback to check if the queue is full */
-  gpointer *checkdata;
-
-  GMutex *qlock;                /* lock for queue (vs object lock) */
-  GCond *item_add;              /* signals buffers now available for reading */
-  GCond *item_del;              /* signals space now available for writing */
-  gboolean flushing;            /* indicates whether conditions where signalled because
-                                 * of external flushing */
-  GstDataQueueFullCallback fullcallback;
-  GstDataQueueEmptyCallback emptycallback;
-
-  union {
-    struct {
-      gboolean waiting_add;
-      gboolean waiting_del;
-    } ABI;
-    gpointer _gst_reserved[GST_PADDING - 2];
-  } abidata;
+  GstDataQueuePrivate *priv;
+  gpointer _gst_reserved[GST_PADDING];
 };
 
+/**
+ * GstDataQueueClass:
+ */
 struct _GstDataQueueClass
 {
   GObjectClass parent_class;
@@ -158,25 +137,28 @@ struct _GstDataQueueClass
 GType gst_data_queue_get_type (void);
 
 GstDataQueue * gst_data_queue_new            (GstDataQueueCheckFullFunction checkfull,
-                                              gpointer checkdata);
-
-GstDataQueue * gst_data_queue_new_full       (GstDataQueueCheckFullFunction checkfull,
 					      GstDataQueueFullCallback fullcallback,
 					      GstDataQueueEmptyCallback emptycallback,
-					      gpointer checkdata);
+					      gpointer checkdata) G_GNUC_MALLOC;
 
 gboolean       gst_data_queue_push           (GstDataQueue * queue, GstDataQueueItem * item);
+gboolean       gst_data_queue_push_force     (GstDataQueue * queue, GstDataQueueItem * item);
+
 gboolean       gst_data_queue_pop            (GstDataQueue * queue, GstDataQueueItem ** item);
+gboolean       gst_data_queue_peek           (GstDataQueue * queue, GstDataQueueItem ** item);
 
 void           gst_data_queue_flush          (GstDataQueue * queue);
+
 void           gst_data_queue_set_flushing   (GstDataQueue * queue, gboolean flushing);
 
 gboolean       gst_data_queue_drop_head      (GstDataQueue * queue, GType type);
 
 gboolean       gst_data_queue_is_full        (GstDataQueue * queue);
+
 gboolean       gst_data_queue_is_empty       (GstDataQueue * queue);
 
 void           gst_data_queue_get_level      (GstDataQueue * queue, GstDataQueueSize *level);
+
 void           gst_data_queue_limits_changed (GstDataQueue * queue);
 
 G_END_DECLS

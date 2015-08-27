@@ -5,7 +5,7 @@
 CC   = cl.exe
 LINKER = link.exe
 
-GLIB_VERSION = 2.28.8
+GLIB_VERSION = 2.42.1
 
 BASECLASSES_TARGET = baseclasses.lib
 MODULES = $(BASECLASSES_TARGET)
@@ -50,8 +50,8 @@ DEP_DIRS = $(BUILD_DIR) $(addprefix $(OBJBASE_DIR)/,$(DIRLIST))
 C_SOURCES = javasource/javasource.c \
             javasource/marshal.c \
             progressbuffer/progressbuffer.c \
-            progressbuffer/hlsprogressbuffer.c \
             progressbuffer/win32/filecache.c \
+            progressbuffer/hlsprogressbuffer.c \
             fxplugins.c
 
 CPP_SOURCES = dshowwrapper/Allocator.cpp \

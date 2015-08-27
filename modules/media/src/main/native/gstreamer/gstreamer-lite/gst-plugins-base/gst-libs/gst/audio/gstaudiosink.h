@@ -16,15 +16,19 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
+
+#ifndef __GST_AUDIO_AUDIO_H__
+#include <gst/audio/audio.h>
+#endif
 
 #ifndef __GST_AUDIO_SINK_H__
 #define __GST_AUDIO_SINK_H__
 
 #include <gst/gst.h>
-#include <gst/audio/gstbaseaudiosink.h>
+#include <gst/audio/gstaudiobasesink.h>
 
 G_BEGIN_DECLS
 
@@ -40,11 +44,11 @@ typedef struct _GstAudioSinkClass GstAudioSinkClass;
 
 /**
  * GstAudioSink:
- * 
+ *
  * Opaque #GstAudioSink.
  */
 struct _GstAudioSink {
-  GstBaseAudioSink       element;
+  GstAudioBaseSink       element;
 
   /*< private >*/ /* with LOCK */
   GThread   *thread;
@@ -70,22 +74,20 @@ struct _GstAudioSink {
  * #GstAudioSink class. Override the vmethods to implement functionality.
  */
 struct _GstAudioSinkClass {
-  GstBaseAudioSinkClass parent_class;
+  GstAudioBaseSinkClass parent_class;
 
   /* vtable */
 
   /* open the device with given specs */
   gboolean (*open)      (GstAudioSink *sink);
   /* prepare resources and state to operate with the given specs */
-  gboolean (*prepare)   (GstAudioSink *sink, GstRingBufferSpec *spec);
+  gboolean (*prepare)   (GstAudioSink *sink, GstAudioRingBufferSpec *spec);
   /* undo anything that was done in prepare() */
   gboolean (*unprepare) (GstAudioSink *sink);
   /* close the device */
   gboolean (*close)     (GstAudioSink *sink);
   /* write samples to the device */
-  /* FIXME 0.11: change return value to gint, as most implementation use that
-   * already anyway */
-  guint    (*write)     (GstAudioSink *sink, gpointer data, guint length);
+  gint     (*write)     (GstAudioSink *sink, gpointer data, guint length);
   /* get number of samples queued in the device */
   guint    (*delay)     (GstAudioSink *sink);
   /* reset the audio device, unblock from a write */

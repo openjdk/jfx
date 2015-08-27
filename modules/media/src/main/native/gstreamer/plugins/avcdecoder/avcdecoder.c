@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,46 +58,37 @@ static GstStaticPadTemplate src_factory =
 GST_STATIC_PAD_TEMPLATE ("src",
                          GST_PAD_SRC,
                          GST_PAD_ALWAYS,
-                         GST_STATIC_CAPS ("video/x-raw-ycbcr422, format = (fourcc) UYVY")
+                         GST_STATIC_CAPS ("video/x-raw-ycbcr422, format = (string) UYVY")
                          );
 
 /***********************************************************************************
  * Substitution for
- * GST_BOILERPLATE (AvcDecoder, avcdecoder, GstElement, GST_TYPE_ELEMENT);
+ * G_DEFINE_TYPE (AvcDecoder, avcdecoder, GstElement, GST_TYPE_ELEMENT);
  ***********************************************************************************/
-static void avcdecoder_base_init (gpointer g_class);
-static void avcdecoder_class_init (AvcDecoderClass *g_class);
-static void avcdecoder_init (AvcDecoder *object, AvcDecoderClass *g_class);
-static void avcdecoder_state_destroy(AvcDecoder *decode);
-
-static GstElementClass *parent_class = NULL;
-
-static void avcdecoder_class_init_trampoline (gpointer g_class, gpointer data)
+#define avcdecoder_parent_class parent_class
+static void avcdecoder_init          (AvcDecoder      *self);
+static void avcdecoder_class_init    (AvcDecoderClass *klass);
+static gpointer avcdecoder_parent_class = NULL;
+static void     avcdecoder_class_intern_init (gpointer klass)
 {
-    parent_class = (GstElementClass *)  g_type_class_peek_parent (g_class);
-    avcdecoder_class_init ((AvcDecoderClass *)g_class);
+    avcdecoder_parent_class = g_type_class_peek_parent (klass);
+    avcdecoder_class_init ((AvcDecoderClass*) klass);
 }
 
 GType avcdecoder_get_type (void)
 {
     static volatile gsize gonce_data = 0;
-    // INLINE - g_once_init_enter()
+// INLINE - g_once_init_enter()
     if (g_once_init_enter (&gonce_data))
     {
         GType _type;
-        _type = gst_type_register_static_full (GST_TYPE_ELEMENT,
-                                               g_intern_static_string ("AvcDecoder"),
-                                               sizeof (AvcDecoderClass),
-                                               avcdecoder_base_init,
-                                               NULL,
-                                               avcdecoder_class_init_trampoline,
-                                               NULL,
-                                               NULL,
-                                               sizeof (AvcDecoder),
-                                               0,
-                                               (GInstanceInitFunc) avcdecoder_init,
-                                               NULL,
-                                               (GTypeFlags) 0);
+        _type = g_type_register_static_simple (GST_TYPE_ELEMENT,
+               g_intern_static_string ("AvcDecoder"),
+               sizeof (AvcDecoderClass),
+               (GClassInitFunc) avcdecoder_class_intern_init,
+               sizeof(AvcDecoder),
+               (GInstanceInitFunc) avcdecoder_init,               
+               (GTypeFlags) 0);
         g_once_init_leave (&gonce_data, (gsize) _type);
     }
     return (GType) gonce_data;
@@ -107,28 +98,12 @@ GType avcdecoder_get_type (void)
  * Forward declarations.
  */
 static GstStateChangeReturn avcdecoder_change_state (GstElement* element, GstStateChange transition);
-static gboolean avcdecoder_sink_event (GstPad * pad, GstEvent * event);
-static GstFlowReturn avcdecoder_chain (GstPad * pad, GstBuffer * buf);
+static gboolean avcdecoder_sink_event (GstPad * pad, GstObject *parent, GstEvent * event);
+static GstFlowReturn avcdecoder_chain (GstPad * pad, GstObject *parent, GstBuffer * buf);
 static void avcdecoder_dispose(GObject* object);
+static void avcdecoder_state_destroy(AvcDecoder *decode);
 
 /* --- GObject vmethod implementations --- */
-
-static void
-avcdecoder_base_init (gpointer gclass)
-{
-    GstElementClass *element_class = GST_ELEMENT_CLASS (gclass);
-
-    gst_element_class_set_details_simple(element_class,
-                                         "AVCDecoder",
-                                         "Codec/Decoder/Video",
-                                         "Decode raw MPEG-4 H.264 video stream",
-                                         "Oracle Corporation");
-
-    gst_element_class_add_pad_template (element_class,
-                                        gst_static_pad_template_get (&src_factory));
-    gst_element_class_add_pad_template (element_class,
-                                        gst_static_pad_template_get (&sink_factory));
-}
 
 /*
  * Initialize avcdecoder's class.
@@ -138,6 +113,17 @@ avcdecoder_class_init (AvcDecoderClass * klass)
 {
     GstElementClass *gstelement_class = (GstElementClass *) klass;
     GObjectClass *gobject_class = (GObjectClass*)klass;
+    
+    gst_element_class_set_details_simple(gstelement_class,
+                                         "AVCDecoder",
+                                         "Codec/Decoder/Video",
+                                         "Decode raw MPEG-4 H.264 video stream",
+                                         "Oracle Corporation");
+
+    gst_element_class_add_pad_template (gstelement_class,
+                                        gst_static_pad_template_get (&src_factory));
+    gst_element_class_add_pad_template (gstelement_class,
+                                        gst_static_pad_template_get (&sink_factory));
     
     gstelement_class->change_state = avcdecoder_change_state;
     
@@ -151,8 +137,7 @@ avcdecoder_class_init (AvcDecoderClass * klass)
  * Initialize instance structure.
  */
 static void
-avcdecoder_init (AvcDecoder * decode,
-                 AvcDecoderClass * gclass)
+avcdecoder_init (AvcDecoder * decode)
 {
     // Input.
     if (NULL == (decode->sinkpad = gst_pad_new_from_static_template (&sink_factory, "sink")))
@@ -191,7 +176,7 @@ avcdecoder_init (AvcDecoder * decode,
 
     gst_pad_use_fixed_caps (decode->srcpad);
     
-    decode->mutex = g_mutex_new();
+    g_mutex_init(&decode->mutex);
 }
 
 static void
@@ -201,10 +186,7 @@ avcdecoder_dispose(GObject* object)
     
     avcdecoder_state_destroy (decode);
     
-    if (NULL != decode->mutex) {
-        g_mutex_free(decode->mutex);
-        decode->mutex = NULL;
-    }
+    g_mutex_clear(&decode->mutex);
     
     G_OBJECT_CLASS(parent_class)->dispose(object);
 }
@@ -342,21 +324,28 @@ avcdecoder_decoder_output_callback (void* userData,
         size_t bytes_per_row = CVPixelBufferGetBytesPerRow(imageBuffer);
         if(!decode->is_stride_set)
         {
-            GstStructure* caps_struct = gst_caps_get_structure(GST_PAD_CAPS(srcpad), 0);
-            gst_structure_set(caps_struct, "line_stride", G_TYPE_INT, (int)bytes_per_row, NULL);
-            decode->is_stride_set = TRUE;
+            GstCaps *caps = gst_pad_get_current_caps(srcpad);
+            if (caps != NULL)
+            {
+                GstStructure* caps_struct = gst_caps_get_structure(caps, 0);
+                gst_structure_set(caps_struct, "line_stride", G_TYPE_INT, (int)bytes_per_row, NULL);
+                decode->is_stride_set = TRUE;
+                gst_caps_unref(caps);
+            }
         }
         if (kCVReturnSuccess == CVPixelBufferLockBaseAddress (imageBuffer, 0))
         {
             void* image_data = CVPixelBufferGetBaseAddress(imageBuffer);
-            if (GST_FLOW_OK == gst_pad_alloc_buffer_and_set_caps (srcpad, 0, bytes_per_row*height,
-                                                                  GST_PAD_CAPS(srcpad),
-                                                                  &buf))
+            buf = gst_buffer_new_allocate(NULL, bytes_per_row*height, NULL);
+            if (buf != NULL)
             {
-                guint8* buffer_data = GST_BUFFER_DATA (buf);
-
-                memcpy (buffer_data, image_data, GST_BUFFER_SIZE (buf));
-                GST_BUFFER_TIMESTAMP(buf) = timestamp;
+                GstMapInfo info;
+                if (gst_buffer_map(buf, &info, GST_MAP_WRITE))
+                {
+                    memcpy (info.data, image_data, info.size);
+                    gst_buffer_unmap(buf, &info);
+                    GST_BUFFER_TIMESTAMP(buf) = timestamp;                    
+                }                
             }
 
             CVPixelBufferUnlockBaseAddress (imageBuffer, 0); // ignore return value
@@ -374,7 +363,7 @@ avcdecoder_decoder_output_callback (void* userData,
 
     // the callback might be called from several threads
     // need to synchronize ordered_frames queue access
-    g_mutex_lock(decode->mutex);
+    g_mutex_lock(&decode->mutex);
 
     g_queue_insert_sorted(decode->ordered_frames, buf, avcdecoder_buffer_compare, NULL);
     
@@ -404,9 +393,9 @@ avcdecoder_decoder_output_callback (void* userData,
                 }
 
                 // it's better not to call gst_pad_push under mutex to avoid deadlocks
-                g_mutex_unlock(decode->mutex);
+                g_mutex_unlock(&decode->mutex);
                 ret = gst_pad_push(decode->srcpad, frame);
-                g_mutex_lock(decode->mutex);
+                g_mutex_lock(&decode->mutex);
             }
         }
         else
@@ -415,7 +404,7 @@ avcdecoder_decoder_output_callback (void* userData,
         }
     }
     
-    g_mutex_unlock(decode->mutex);
+    g_mutex_unlock(&decode->mutex);
 }
 
 /*
@@ -468,7 +457,7 @@ avcdecoder_state_reset(AvcDecoder *decode)
 #endif
     }
 
-    g_mutex_lock(decode->mutex);
+    g_mutex_lock(&decode->mutex);
 
     // Unref all sorted buffers and clear the associated queue.
     if (NULL != decode->ordered_frames)
@@ -480,7 +469,7 @@ avcdecoder_state_reset(AvcDecoder *decode)
     decode->is_newsegment = FALSE;
     decode->segment_start = 0;
 
-    g_mutex_unlock(decode->mutex);
+    g_mutex_unlock(&decode->mutex);
 }
 
 /**
@@ -532,105 +521,21 @@ avcdecoder_change_state (GstElement* element, GstStateChange transition)
     }
 
     // Change state.
-    return parent_class->change_state(element, transition);
+    return GST_ELEMENT_CLASS(parent_class)->change_state(element, transition);
 }
 
-/*
- * FLUSH_START, NEWSEGMENT, and FLUSH_STOP are recognized and forwarded;
- * all others are simply forwarded.
- */
-static gboolean
-avcdecoder_sink_event (GstPad * pad, GstEvent * event)
-{
-    gboolean ret;
-    GstObject *parent = gst_object_get_parent((GstObject*)pad);
-    AvcDecoder *decode = AVCDECODER (GST_OBJECT_PARENT (pad));
-    GstEvent *newsegment = NULL;
-
-    switch (GST_EVENT_TYPE (event))
-    {
-        case GST_EVENT_FLUSH_START:
-        {
-            // Start flushing buffers.
-
-            // Set flag so chain function refuses buffers.
-            decode->is_flushing = TRUE;
-
-            break;
-        }
-
-        case GST_EVENT_FLUSH_STOP:
-        {
-            // Stop flushing buffers.
-            avcdecoder_state_reset(decode);
-
-            // Unset flag so chain function accepts buffers.
-            decode->is_flushing = FALSE;
-
-            break;
-        }
-
-        case GST_EVENT_NEWSEGMENT:
-        {
-            // Set a flag indicating a new segment has begun.
-            decode->is_newsegment = TRUE;
-            decode->previous_timestamp = GST_CLOCK_TIME_NONE;
-            GstFormat segment_format;
-            gint64 start;
-            gst_event_parse_new_segment(event, NULL, NULL, &segment_format,
-                                        &start, NULL, NULL);
-            if(GST_FORMAT_TIME == segment_format)
-            {
-                decode->segment_start = start;
-            }
-            break;
-        }
-
-        default:
-            break;
-    }
-
-    // Push the event downstream.
-    ret = gst_pad_push_event (decode->srcpad, event);
-
-    // Unlock the parent object.
-    gst_object_unref(parent);
-
-    return ret;
-}
-
-/*
- * Processes a buffer of AVC-encoded video data pushed to the sink pad.
- */
 static GstFlowReturn
-avcdecoder_chain (GstPad * pad, GstBuffer * buf)
+avcdecoder_init_decoder (AvcDecoder *decode, GstCaps* videoSpecificCaps)
 {
     GstFlowReturn ret = GST_FLOW_OK;
-    AvcDecoder *decode = AVCDECODER (GST_OBJECT_PARENT (pad));
     OSStatus status = kVDADecoderNoErr;
-//    g_print("chain - time %f discont %d flags %d\n",
-//            (float)GST_BUFFER_TIMESTAMP(buf)/(float)GST_SECOND,
-//            (int)GST_BUFFER_IS_DISCONT(buf), (int)GST_BUFFER_FLAGS(buf));
-
-    // If between FLUSH_START and FLUSH_STOP, reject new buffers.
-    if (decode->is_flushing)
-    {
-        // Unref the input buffer.
-        // INLINE - gst_buffer_unref()
-        gst_buffer_unref(buf);
-
-        return GST_FLOW_WRONG_STATE;
-    }
-
+    
     // Initialize the element structure.
     if (FALSE == decode->is_initialized)
     {
         // Obtain configuration data from the "codec_data" structure in the sink caps.
-        GstCaps* videoSpecificCaps = GST_BUFFER_CAPS (buf);
         if (NULL == videoSpecificCaps || gst_caps_get_size(videoSpecificCaps) < 1)
         {
-            // INLINE - gst_buffer_unref()
-            gst_buffer_unref(buf);
             return GST_FLOW_ERROR;
         }
 
@@ -639,8 +544,6 @@ avcdecoder_chain (GstPad * pad, GstBuffer * buf)
         const GValue *videoSpecificValue = gst_structure_get_value(videoSpecificStructure, "codec_data");
         if (NULL == videoSpecificValue)
         {
-            // INLINE - gst_buffer_unref()
-            gst_buffer_unref(buf);
             return GST_FLOW_ERROR;
         }
 
@@ -664,10 +567,6 @@ avcdecoder_chain (GstPad * pad, GstBuffer * buf)
         decode->frame_duration = gst_util_uint64_scale_int_ceil(GST_SECOND, framerate_den, framerate_num);
         decode->timestamp_ceil = (GstClockTime)(1.5*decode->frame_duration + 0.5);
 
-        GstBuffer*  videoSpecificBuffer = gst_value_get_buffer (videoSpecificValue);
-        guint8* videoSpecificData = GST_BUFFER_DATA (videoSpecificBuffer);
-        guint videoSpecificDataLength = GST_BUFFER_SIZE (videoSpecificBuffer);
-
         SInt32 avcWidth = (SInt32)encoded_width;
         SInt32 avcHeight = (SInt32)encoded_height;
 
@@ -676,14 +575,25 @@ avcdecoder_chain (GstPad * pad, GstBuffer * buf)
         CFNumberRef height = CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt32Type, &avcHeight);
         SInt32 sourceFormat = 'avc1';
         CFNumberRef avcFormat = CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt32Type, &sourceFormat);
-        CFDataRef avcCData = CFDataCreate(kCFAllocatorDefault, videoSpecificData, videoSpecificDataLength);
+        
+        GstBuffer*  videoSpecificBuffer = gst_value_get_buffer (videoSpecificValue);
+        GstMapInfo info;
+        CFDataRef avcCData = NULL;
+        if (gst_buffer_map(videoSpecificBuffer, &info, GST_MAP_READ))
+        {
+            guint8* videoSpecificData = info.data;
+            guint videoSpecificDataLength = info.size;
+            avcCData = CFDataCreate(kCFAllocatorDefault, videoSpecificData, videoSpecificDataLength);
+            gst_buffer_unmap(videoSpecificBuffer, &info);
+        }
 
         CFMutableDictionaryRef decoderConfiguration = (CFDictionaryCreateMutable(kCFAllocatorDefault, 4, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
 
         CFDictionarySetValue(decoderConfiguration, kVDADecoderConfiguration_Height, height);
         CFDictionarySetValue(decoderConfiguration, kVDADecoderConfiguration_Width, width);
         CFDictionarySetValue(decoderConfiguration, kVDADecoderConfiguration_SourceFormat, avcFormat);
-        CFDictionarySetValue(decoderConfiguration, kVDADecoderConfiguration_avcCData, avcCData);
+        if (avcCData != NULL)            
+            CFDictionarySetValue(decoderConfiguration, kVDADecoderConfiguration_avcCData, avcCData);
 
         // Note: For 'yuvs' the formatType should be kYUVSPixelFormat.
         SInt32 formatType = k2vuyPixelFormat;
@@ -727,12 +637,14 @@ avcdecoder_chain (GstPad * pad, GstBuffer * buf)
             // Note: For 'yuvs' the format should be GST_MAKE_FOURCC ('Y', 'U', 'Y', '2')
             GstCaps* caps = gst_caps_new_simple (
                                                  "video/x-raw-ycbcr422",
-                                                 "format", GST_TYPE_FOURCC, GST_MAKE_FOURCC ('U', 'Y', 'V', 'Y'),
+                                                 "format", G_TYPE_STRING, "UYVY",
                                                  "framerate", GST_TYPE_FRACTION, framerate_num, framerate_den,
                                                  "width", G_TYPE_INT, encoded_width,
                                                  "height", G_TYPE_INT, encoded_height,
                                                  NULL);
-            gst_pad_set_caps (decode->srcpad, caps);
+            GstEvent *caps_event = gst_event_new_caps(caps);
+            if (caps_event)
+                gst_pad_push_event (decode->srcpad, caps_event);
             gst_caps_unref (caps);
 
             decode->is_initialized = TRUE;
@@ -770,6 +682,103 @@ avcdecoder_chain (GstPad * pad, GstBuffer * buf)
             ret = GST_FLOW_ERROR;
         }
     }
+    
+    return ret;
+}
+
+/*
+ * FLUSH_START, NEWSEGMENT, and FLUSH_STOP are recognized and forwarded;
+ * all others are simply forwarded.
+ */
+static gboolean
+avcdecoder_sink_event (GstPad * pad, GstObject *parent, GstEvent * event)
+{
+    gboolean ret = FALSE;
+    AvcDecoder *decode = AVCDECODER (parent);
+    GstSegment segment;
+
+    switch (GST_EVENT_TYPE (event))
+    {
+        case GST_EVENT_FLUSH_START:
+        {
+            // Start flushing buffers.
+
+            // Set flag so chain function refuses buffers.
+            decode->is_flushing = TRUE;
+
+            break;
+        }
+
+        case GST_EVENT_FLUSH_STOP:
+        {
+            // Stop flushing buffers.
+            avcdecoder_state_reset(decode);
+
+            // Unset flag so chain function accepts buffers.
+            decode->is_flushing = FALSE;
+
+            break;
+        }
+
+        case GST_EVENT_SEGMENT:
+        {
+            // Set a flag indicating a new segment has begun.
+            decode->is_newsegment = TRUE;
+            decode->previous_timestamp = GST_CLOCK_TIME_NONE;            
+            gst_event_copy_segment(event, &segment);
+            if(GST_FORMAT_TIME == segment.format)
+            {
+                decode->segment_start = segment.start;
+            }
+            break;
+        }
+        
+        case GST_EVENT_CAPS:
+        {
+            GstCaps *caps;
+
+            gst_event_parse_caps (event, &caps);
+            avcdecoder_init_decoder(decode, caps);
+
+            // INLINE - gst_event_unref()
+            gst_event_unref (event);
+            ret = TRUE;
+            break;
+        }
+
+        default:
+            break;
+    }
+
+    // Push the event downstream.
+    if (!ret)
+        ret = gst_pad_push_event (decode->srcpad, event);
+ 
+    return ret;
+}
+
+/*
+ * Processes a buffer of AVC-encoded video data pushed to the sink pad.
+ */
+static GstFlowReturn
+avcdecoder_chain (GstPad * pad, GstObject *parent, GstBuffer * buf)
+{
+    GstFlowReturn ret = GST_FLOW_OK;
+    AvcDecoder *decode = AVCDECODER (parent);
+    OSStatus status = kVDADecoderNoErr;
+//    g_print("chain - time %f discont %d flags %d\n",
+//            (float)GST_BUFFER_TIMESTAMP(buf)/(float)GST_SECOND,
+//            (int)GST_BUFFER_IS_DISCONT(buf), (int)GST_BUFFER_FLAGS(buf));
+
+    // If between FLUSH_START and FLUSH_STOP, reject new buffers.
+    if (decode->is_flushing)
+    {
+        // Unref the input buffer.
+        // INLINE - gst_buffer_unref()
+        gst_buffer_unref(buf);
+
+        return GST_FLOW_FLUSHING;
+    }
 
     if (GST_FLOW_OK == ret)
     {
@@ -793,23 +802,30 @@ avcdecoder_chain (GstPad * pad, GstBuffer * buf)
                                                         2,
                                                         &kCFTypeDictionaryKeyCallBacks,
                                                         &kCFTypeDictionaryValueCallBacks);
-        CFTypeRef buffer = CFDataCreate(kCFAllocatorDefault, GST_BUFFER_DATA (buf), GST_BUFFER_SIZE (buf));
-
-        // Send the encoded frame to the VDADecoder.
-        status = VDADecoderDecode (decode->decoder, 0, buffer, frame_info);
-        CFRelease(buffer);
-        CFRelease(frame_info);
-
-        if (kVDADecoderNoErr != status)
+        
+        GstMapInfo info;
+        CFTypeRef buffer = NULL;
+        if (gst_buffer_map(buf, &info, GST_MAP_READ))
         {
+            buffer = CFDataCreate(kCFAllocatorDefault, info.data, info.size);
+            gst_buffer_unmap(buf, &info);        
+
+            // Send the encoded frame to the VDADecoder.
+            status = VDADecoderDecode (decode->decoder, 0, buffer, frame_info);
+            CFRelease(buffer);
+            CFRelease(frame_info);
+
+            if (kVDADecoderNoErr != status)
+            {
 #if ENABLE_WARNINGS
-            g_warning ("Could not decode data: result code %d\n", (int)status);
+                g_warning ("Could not decode data: result code %d\n", (int)status);
 #endif
 
-            // Set an error return code only if this was not a "simple" decoding error.
-            if (kVDADecoderDecoderFailedErr != status)
-            {
-                ret = GST_FLOW_ERROR;
+                // Set an error return code only if this was not a "simple" decoding error.
+                if (kVDADecoderDecoderFailedErr != status)
+                {
+                    ret = GST_FLOW_ERROR;
+                }
             }
         }
     }

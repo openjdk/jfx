@@ -14,8 +14,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
  /**
@@ -40,61 +40,343 @@
 #include "gstvideofilter.h"
 
 #include <gst/video/video.h>
+#include <gst/video/gstvideometa.h>
+#include <gst/video/gstvideopool.h>
 
 GST_DEBUG_CATEGORY_STATIC (gst_video_filter_debug);
 #define GST_CAT_DEFAULT gst_video_filter_debug
 
-static void gst_video_filter_class_init (gpointer g_class, gpointer class_data);
-static void gst_video_filter_init (GTypeInstance * instance, gpointer g_class);
+#define gst_video_filter_parent_class parent_class
+G_DEFINE_ABSTRACT_TYPE (GstVideoFilter, gst_video_filter,
+    GST_TYPE_BASE_TRANSFORM);
 
-static GstBaseTransformClass *parent_class = NULL;
-
-GType
-gst_video_filter_get_type (void)
+/* Answer the allocation query downstream. */
+static gboolean
+gst_video_filter_propose_allocation (GstBaseTransform * trans,
+    GstQuery * decide_query, GstQuery * query)
 {
-  static GType video_filter_type = 0;
+  GstVideoFilter *filter = GST_VIDEO_FILTER_CAST (trans);
+  GstVideoInfo info;
+  GstBufferPool *pool;
+  GstCaps *caps;
+  guint size;
 
-  if (!video_filter_type) {
-    static const GTypeInfo video_filter_info = {
-      sizeof (GstVideoFilterClass),
-      NULL,
-      NULL,
-      gst_video_filter_class_init,
-      NULL,
-      NULL,
-      sizeof (GstVideoFilter),
-      0,
-      gst_video_filter_init,
-    };
+  if (!GST_BASE_TRANSFORM_CLASS (parent_class)->propose_allocation (trans,
+          decide_query, query))
+    return FALSE;
 
-    video_filter_type = g_type_register_static (GST_TYPE_BASE_TRANSFORM,
-        "GstVideoFilter", &video_filter_info, G_TYPE_FLAG_ABSTRACT);
+  /* passthrough, we're done */
+  if (decide_query == NULL)
+    return TRUE;
+
+  gst_query_parse_allocation (query, &caps, NULL);
+
+  if (caps == NULL)
+    return FALSE;
+
+  if (!gst_video_info_from_caps (&info, caps))
+    return FALSE;
+
+  size = GST_VIDEO_INFO_SIZE (&info);
+
+  if (gst_query_get_n_allocation_pools (query) == 0) {
+    GstStructure *structure;
+    GstAllocator *allocator = NULL;
+    GstAllocationParams params = { 0, 15, 0, 0, };
+
+    if (gst_query_get_n_allocation_params (query) > 0)
+      gst_query_parse_nth_allocation_param (query, 0, &allocator, &params);
+    else
+      gst_query_add_allocation_param (query, allocator, &params);
+
+    pool = gst_video_buffer_pool_new ();
+
+    structure = gst_buffer_pool_get_config (pool);
+    gst_buffer_pool_config_set_params (structure, caps, size, 0, 0);
+    gst_buffer_pool_config_set_allocator (structure, allocator, &params);
+
+    if (allocator)
+      gst_object_unref (allocator);
+
+    if (!gst_buffer_pool_set_config (pool, structure))
+      goto config_failed;
+
+    gst_query_add_allocation_pool (query, pool, size, 0, 0);
+    gst_object_unref (pool);
+    gst_query_add_allocation_meta (query, GST_VIDEO_META_API_TYPE, NULL);
   }
-  return video_filter_type;
+
+  return TRUE;
+
+  /* ERRORS */
+config_failed:
+  {
+    GST_ERROR_OBJECT (filter, "failed to set config");
+    gst_object_unref (pool);
+    return FALSE;
+  }
+}
+
+/* configure the allocation query that was answered downstream, we can configure
+ * some properties on it. Only called when not in passthrough mode. */
+static gboolean
+gst_video_filter_decide_allocation (GstBaseTransform * trans, GstQuery * query)
+{
+  GstBufferPool *pool = NULL;
+  GstStructure *config;
+  guint min, max, size;
+  gboolean update_pool;
+  GstCaps *outcaps = NULL;
+
+  if (gst_query_get_n_allocation_pools (query) > 0) {
+    gst_query_parse_nth_allocation_pool (query, 0, &pool, &size, &min, &max);
+
+    update_pool = TRUE;
+  } else {
+    GstVideoInfo vinfo;
+
+    gst_query_parse_allocation (query, &outcaps, NULL);
+    gst_video_info_init (&vinfo);
+    gst_video_info_from_caps (&vinfo, outcaps);
+    size = vinfo.size;
+    min = max = 0;
+    update_pool = FALSE;
+  }
+
+  if (!pool)
+    pool = gst_video_buffer_pool_new ();
+
+  config = gst_buffer_pool_get_config (pool);
+  gst_buffer_pool_config_add_option (config, GST_BUFFER_POOL_OPTION_VIDEO_META);
+  if (outcaps)
+    gst_buffer_pool_config_set_params (config, outcaps, size, 0, 0);
+  gst_buffer_pool_set_config (pool, config);
+
+  if (update_pool)
+    gst_query_set_nth_allocation_pool (query, 0, pool, size, min, max);
+  else
+    gst_query_add_allocation_pool (query, pool, size, min, max);
+
+  gst_object_unref (pool);
+
+  return GST_BASE_TRANSFORM_CLASS (parent_class)->decide_allocation (trans,
+      query);
+}
+
+
+/* our output size only depends on the caps, not on the input caps */
+static gboolean
+gst_video_filter_transform_size (GstBaseTransform * btrans,
+    GstPadDirection direction, GstCaps * caps, gsize size,
+    GstCaps * othercaps, gsize * othersize)
+{
+  gboolean ret = TRUE;
+  GstVideoInfo info;
+
+  g_assert (size);
+
+  ret = gst_video_info_from_caps (&info, othercaps);
+  if (ret)
+    *othersize = info.size;
+
+  return ret;
 }
 
 static gboolean
 gst_video_filter_get_unit_size (GstBaseTransform * btrans, GstCaps * caps,
-    guint * size)
+    gsize * size)
 {
-  GstVideoFormat fmt;
-  gint width, height;
+  GstVideoInfo info;
 
-  if (!gst_video_format_parse_caps (caps, &fmt, &width, &height)) {
+  if (!gst_video_info_from_caps (&info, caps)) {
     GST_WARNING_OBJECT (btrans, "Failed to parse caps %" GST_PTR_FORMAT, caps);
     return FALSE;
   }
 
-  *size = gst_video_format_get_size (fmt, width, height);
+  *size = info.size;
 
-  GST_DEBUG_OBJECT (btrans, "Returning size %u bytes for caps %"
-      GST_PTR_FORMAT, *size, caps);
+  GST_DEBUG_OBJECT (btrans, "Returning size %" G_GSIZE_FORMAT " bytes"
+      "for caps %" GST_PTR_FORMAT, *size, caps);
 
   return TRUE;
 }
 
+static gboolean
+gst_video_filter_set_caps (GstBaseTransform * trans, GstCaps * incaps,
+    GstCaps * outcaps)
+{
+  GstVideoFilter *filter = GST_VIDEO_FILTER_CAST (trans);
+  GstVideoFilterClass *fclass;
+  GstVideoInfo in_info, out_info;
+  gboolean res;
+
+  /* input caps */
+  if (!gst_video_info_from_caps (&in_info, incaps))
+    goto invalid_caps;
+
+  /* output caps */
+  if (!gst_video_info_from_caps (&out_info, outcaps))
+    goto invalid_caps;
+
+  fclass = GST_VIDEO_FILTER_GET_CLASS (filter);
+  if (fclass->set_info)
+    res = fclass->set_info (filter, incaps, &in_info, outcaps, &out_info);
+  else
+    res = TRUE;
+
+  if (res) {
+    filter->in_info = in_info;
+    filter->out_info = out_info;
+    if (fclass->transform_frame == NULL)
+      gst_base_transform_set_in_place (trans, TRUE);
+    if (fclass->transform_frame_ip == NULL)
+      GST_BASE_TRANSFORM_CLASS (fclass)->transform_ip_on_passthrough = FALSE;
+  }
+  filter->negotiated = res;
+
+  return res;
+
+  /* ERRORS */
+invalid_caps:
+  {
+    GST_ERROR_OBJECT (filter, "invalid caps");
+    filter->negotiated = FALSE;
+    return FALSE;
+  }
+}
+
+static GstFlowReturn
+gst_video_filter_transform (GstBaseTransform * trans, GstBuffer * inbuf,
+    GstBuffer * outbuf)
+{
+  GstFlowReturn res;
+  GstVideoFilter *filter = GST_VIDEO_FILTER_CAST (trans);
+  GstVideoFilterClass *fclass;
+
+  if (G_UNLIKELY (!filter->negotiated))
+    goto unknown_format;
+
+  fclass = GST_VIDEO_FILTER_GET_CLASS (filter);
+  if (fclass->transform_frame) {
+    GstVideoFrame in_frame, out_frame;
+
+    if (!gst_video_frame_map (&in_frame, &filter->in_info, inbuf, GST_MAP_READ))
+      goto invalid_buffer;
+
+    if (!gst_video_frame_map (&out_frame, &filter->out_info, outbuf,
+            GST_MAP_WRITE))
+      goto invalid_buffer;
+
+    /* GstVideoFrame has another reference, so the buffer looks unwriteable,
+     * meaning that we can't attach any metas or anything to it. Other
+     * map() functions like gst_buffer_map() don't get another reference
+     * of the buffer and expect the buffer reference to be kept until
+     * the buffer is unmapped again. */
+    gst_buffer_unref (inbuf);
+    gst_buffer_unref (outbuf);
+    res = fclass->transform_frame (filter, &in_frame, &out_frame);
+    gst_buffer_ref (inbuf);
+    gst_buffer_ref (outbuf);
+
+    gst_video_frame_unmap (&out_frame);
+    gst_video_frame_unmap (&in_frame);
+  } else {
+    GST_DEBUG_OBJECT (trans, "no transform_frame vmethod");
+    res = GST_FLOW_OK;
+  }
+
+  return res;
+
+  /* ERRORS */
+unknown_format:
+  {
+    GST_ELEMENT_ERROR (filter, CORE, NOT_IMPLEMENTED, (NULL),
+        ("unknown format"));
+    return GST_FLOW_NOT_NEGOTIATED;
+  }
+invalid_buffer:
+  {
+    GST_ELEMENT_WARNING (filter, CORE, NOT_IMPLEMENTED, (NULL),
+        ("invalid video buffer received"));
+    return GST_FLOW_OK;
+  }
+}
+
+static GstFlowReturn
+gst_video_filter_transform_ip (GstBaseTransform * trans, GstBuffer * buf)
+{
+  GstFlowReturn res;
+  GstVideoFilter *filter = GST_VIDEO_FILTER_CAST (trans);
+  GstVideoFilterClass *fclass;
+
+  if (G_UNLIKELY (!filter->negotiated))
+    goto unknown_format;
+
+  fclass = GST_VIDEO_FILTER_GET_CLASS (filter);
+  if (fclass->transform_frame_ip) {
+    GstVideoFrame frame;
+    GstMapFlags flags;
+
+    flags = GST_MAP_READ;
+
+    if (!gst_base_transform_is_passthrough (trans))
+      flags |= GST_MAP_WRITE;
+
+    if (!gst_video_frame_map (&frame, &filter->in_info, buf, flags))
+      goto invalid_buffer;
+
+    /* GstVideoFrame has another reference, so the buffer looks unwriteable,
+     * meaning that we can't attach any metas or anything to it. Other
+     * map() functions like gst_buffer_map() don't get another reference
+     * of the buffer and expect the buffer reference to be kept until
+     * the buffer is unmapped again. */
+    gst_buffer_unref (buf);
+    res = fclass->transform_frame_ip (filter, &frame);
+    gst_buffer_ref (buf);
+
+    gst_video_frame_unmap (&frame);
+  } else {
+    GST_DEBUG_OBJECT (trans, "no transform_frame_ip vmethod");
+    res = GST_FLOW_OK;
+  }
+
+  return res;
+
+  /* ERRORS */
+unknown_format:
+  {
+    GST_ELEMENT_ERROR (filter, CORE, NOT_IMPLEMENTED, (NULL),
+        ("unknown format"));
+    return GST_FLOW_NOT_NEGOTIATED;
+  }
+invalid_buffer:
+  {
+    GST_ELEMENT_WARNING (filter, CORE, NOT_IMPLEMENTED, (NULL),
+        ("invalid video buffer received"));
+    return GST_FLOW_OK;
+  }
+}
+
+static gboolean
+gst_video_filter_transform_meta (GstBaseTransform * trans, GstBuffer * inbuf,
+    GstMeta * meta, GstBuffer * outbuf)
+{
+  const GstMetaInfo *info = meta->info;
+  const gchar *const *tags;
+
+  tags = gst_meta_api_type_get_tags (info->api);
+
+  if (tags && g_strv_length ((gchar **) tags) == 1
+      && gst_meta_api_type_has_tag (info->api,
+          g_quark_from_string (GST_META_TAG_VIDEO_STR)))
+    return TRUE;
+
+  return GST_BASE_TRANSFORM_CLASS (parent_class)->transform_meta (trans, inbuf,
+      meta, outbuf);
+}
+
 static void
-gst_video_filter_class_init (gpointer g_class, gpointer class_data)
+gst_video_filter_class_init (GstVideoFilterClass * g_class)
 {
   GstBaseTransformClass *trans_class;
   GstVideoFilterClass *klass;
@@ -102,23 +384,32 @@ gst_video_filter_class_init (gpointer g_class, gpointer class_data)
   klass = (GstVideoFilterClass *) g_class;
   trans_class = (GstBaseTransformClass *) klass;
 
+  trans_class->set_caps = GST_DEBUG_FUNCPTR (gst_video_filter_set_caps);
+  trans_class->propose_allocation =
+      GST_DEBUG_FUNCPTR (gst_video_filter_propose_allocation);
+  trans_class->decide_allocation =
+      GST_DEBUG_FUNCPTR (gst_video_filter_decide_allocation);
+  trans_class->transform_size =
+      GST_DEBUG_FUNCPTR (gst_video_filter_transform_size);
   trans_class->get_unit_size =
       GST_DEBUG_FUNCPTR (gst_video_filter_get_unit_size);
-
-  parent_class = g_type_class_peek_parent (klass);
+  trans_class->transform = GST_DEBUG_FUNCPTR (gst_video_filter_transform);
+  trans_class->transform_ip = GST_DEBUG_FUNCPTR (gst_video_filter_transform_ip);
+  trans_class->transform_meta =
+      GST_DEBUG_FUNCPTR (gst_video_filter_transform_meta);
 
   GST_DEBUG_CATEGORY_INIT (gst_video_filter_debug, "videofilter", 0,
       "videofilter");
 }
 
 static void
-gst_video_filter_init (GTypeInstance * instance, gpointer g_class)
+gst_video_filter_init (GstVideoFilter * instance)
 {
   GstVideoFilter *videofilter = GST_VIDEO_FILTER (instance);
 
   GST_DEBUG_OBJECT (videofilter, "gst_video_filter_init");
 
-  videofilter->inited = FALSE;
+  videofilter->negotiated = FALSE;
   /* enable QoS */
   gst_base_transform_set_qos_enabled (GST_BASE_TRANSFORM (videofilter), TRUE);
 }

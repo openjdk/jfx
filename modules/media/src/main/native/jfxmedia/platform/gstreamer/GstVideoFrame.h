@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,8 +29,8 @@
 #include <gst/gst.h>
 #include <PipelineManagement/VideoFrame.h>
 
-#define FOURCC_I420 GST_MAKE_FOURCC ('I', '4', '2', '0')
-#define FOURCC_UYVY GST_MAKE_FOURCC ('U', 'Y', 'V', 'Y')
+#define FOURCC_I420 "I420"
+#define FOURCC_UYVY "UYVY"
 
 /**
  * class CGstVideoFrame
@@ -40,38 +40,35 @@
 class CGstVideoFrame : public CVideoFrame
 {
 public:
-    /*
-     * Return an *invalid* VideoFrame of the given size
-     * You must subsequently call SetFrameCaps to validate this buffer before usage!
-     */
-    CGstVideoFrame(guint bufferSize);
+    CGstVideoFrame();
+
+    virtual ~CGstVideoFrame();
 
     /*
-     * Returns a VideoFrame that wraps the given GstBuffer. The frame caps are
+     * Initialize a VideoFrame that wraps the given GstBuffer. The frame caps are
      * extracted from the buffer itself.
      */
-    CGstVideoFrame(GstBuffer* buffer);
-    virtual ~CGstVideoFrame();
+    bool Init(GstSample* sample);
 
     virtual void Dispose();
 
     virtual bool IsValid();
 
-    GstBuffer *GetGstBuffer() { return m_pBuffer; } // buffer is NOT referenced on return!
-    void SetFrameCaps(GstCaps *newCaps);
+    GstSample *GetGstSample() { return m_pSample; } // sample is NOT referenced on return!
 
     virtual CVideoFrame *ConvertToFormat(FrameType type);
 
-protected:
-    CGstVideoFrame() : m_pBuffer(NULL) {}
-
 private:
+    void SetFrameCaps(GstCaps *newCaps);
+
     bool        m_bIsValid;
     bool        m_bHasAlpha;
+    GstSample*  m_pSample;
     GstBuffer*  m_pBuffer;
+    GstMapInfo  m_Info;
     void*       m_pvBufferBaseAddress;
     unsigned long m_ulBufferSize;
-    guint32     m_uFormatFourCC;
+    bool        m_bIsI420;
 
     CGstVideoFrame *ConvertSwapRGB(FrameType destType);
     CGstVideoFrame *ConvertFromYCbCr420p(FrameType destType);

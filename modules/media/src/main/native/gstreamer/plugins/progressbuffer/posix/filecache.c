@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -91,9 +91,14 @@ void destroy_cache(Cache* instance)
 
 void cache_write_buffer(Cache* cache, GstBuffer* buffer)
 {
-    ssize_t written = write(cache->writeHandle, GST_BUFFER_DATA(buffer), GST_BUFFER_SIZE(buffer));
-    if (written > 0)
-        cache->write_position += written;
+    GstMapInfo info;
+    if (gst_buffer_map(buffer, &info, GST_MAP_READ))
+    {
+        ssize_t written = write(cache->writeHandle, info.data, info.size);
+        if (written > 0)
+            cache->write_position += written;        
+        gst_buffer_unmap(buffer, &info);
+    }
 }
 
 gint64 cache_read_buffer(Cache* cache, GstBuffer** buffer)
@@ -113,11 +118,9 @@ gint64 cache_read_buffer(Cache* cache, GstBuffer** buffer)
         ssize_t read_bytes = read(cache->readHandle, data, size);
         if (read_bytes > 0)
         {
-            *buffer = gst_buffer_new ();
-            GST_BUFFER_SIZE(*buffer) = read_bytes;
-            GST_BUFFER_OFFSET(*buffer) = cache->read_position;
-            GST_BUFFER_MALLOCDATA(*buffer) = data;
-            GST_BUFFER_DATA(*buffer) = GST_BUFFER_MALLOCDATA(*buffer);
+            *buffer = gst_buffer_new_wrapped_full(0, data, DEFAULT_BUFFER_SIZE, 0, read_bytes, data, g_free);
+            if (*buffer != NULL)
+                GST_BUFFER_OFFSET(*buffer) = cache->read_position;
 
             cache->read_position += read_bytes;
             return cache->read_position;
@@ -142,12 +145,12 @@ GstFlowReturn cache_read_buffer_from_position(Cache* cache, gint64 start_positio
         ssize_t read_bytes = read(cache->readHandle, data, size);
             if (read_bytes == size)
             {
-                *buffer = gst_buffer_new ();
-                GST_BUFFER_SIZE(*buffer) = read_bytes;
-                GST_BUFFER_OFFSET(*buffer) = cache->read_position;
-                GST_BUFFER_MALLOCDATA(*buffer) = data;
-                GST_BUFFER_DATA(*buffer) = GST_BUFFER_MALLOCDATA(*buffer);
-                result = GST_FLOW_OK;
+                *buffer = gst_buffer_new_wrapped_full(0, data, size, 0, read_bytes, data, g_free);
+                if (*buffer != NULL)
+                {
+                    GST_BUFFER_OFFSET(*buffer) = cache->read_position;
+                    result = GST_FLOW_OK;
+                }
             }
             else
             g_free(data); // Wrong size, deleting buffer to avoid leaking.

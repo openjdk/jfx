@@ -16,15 +16,21 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the Free
- * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
  */
+
+/* FIXME 0.11: suppress warnings for deprecated API such as GValueArray
+ * with newer GLib versions (>= 2.31.0) */
+#define GLIB_DISABLE_DEPRECATION_WARNINGS
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 
 #include "gstalsadeviceprobe.h"
-#include "gst/interfaces/propertyprobe.h"
+
+#if 0
+G_LOCK_DEFINE_STATIC (probe_lock);
 
 static const GList *
 gst_alsa_device_property_probe_get_properties (GstPropertyProbe * probe)
@@ -32,9 +38,7 @@ gst_alsa_device_property_probe_get_properties (GstPropertyProbe * probe)
   GObjectClass *klass = G_OBJECT_GET_CLASS (probe);
   static GList *list = NULL;
 
-  /* well, not perfect, but better than no locking at all.
-   * In the worst case we leak a list node, so who cares? */
-  GST_CLASS_LOCK (GST_OBJECT_CLASS (klass));
+  G_LOCK (probe_lock);
 
   if (!list) {
     GParamSpec *pspec;
@@ -43,7 +47,7 @@ gst_alsa_device_property_probe_get_properties (GstPropertyProbe * probe)
     list = g_list_append (NULL, pspec);
   }
 
-  GST_CLASS_UNLOCK (GST_OBJECT_CLASS (klass));
+  G_UNLOCK (probe_lock);
 
   return list;
 }
@@ -208,3 +212,4 @@ gst_alsa_type_add_device_property_probe_interface (GType type)
   g_type_add_interface_static (type, GST_TYPE_PROPERTY_PROBE,
       &probe_iface_info);
 }
+#endif

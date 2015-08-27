@@ -55,7 +55,7 @@ static GstStaticPadTemplate sink_template =
  */
 #define SOURCE_CAPS           \
     "video/x-raw-yuv, "       \
-    "format = (fourcc) I420"
+    "format = (string) I420"
 
 static GstStaticPadTemplate source_template =
     GST_STATIC_PAD_TEMPLATE("src",
@@ -68,52 +68,52 @@ static GstStaticPadTemplate source_template =
 
 /***********************************************************************************
  * Substitution for
- * GST_BOILERPLATE (VideoDecoder, videodecoder, BaseDecoder, TYPE_BASEDECODER);
+ * G_DEFINE_TYPE(VideoDecoder, videodecoder, BaseDecoder, TYPE_BASEDECODER);
  ***********************************************************************************/
-static void videodecoder_base_init(gpointer g_class);
-static void videodecoder_class_init(VideoDecoderClass *g_class);
-static void videodecoder_init(VideoDecoder *object, VideoDecoderClass *g_class);
-
-static GstElementClass *parent_class = NULL;
-
-static void videodecoder_class_init_trampoline(gpointer g_class, gpointer data)
+#define videodecoder_parent_class parent_class
+static void videodecoder_init          (VideoDecoder      *self);
+static void videodecoder_class_init    (VideoDecoderClass *klass);
+static gpointer videodecoder_parent_class = NULL;
+static void     videodecoder_class_intern_init (gpointer klass)
 {
-    parent_class = (GstElementClass *) g_type_class_peek_parent(g_class);
-    videodecoder_class_init((VideoDecoderClass *) g_class);
+    videodecoder_parent_class = g_type_class_peek_parent (klass);
+    videodecoder_class_init ((VideoDecoderClass*) klass);
 }
 
-GType videodecoder_get_type(void)
+GType videodecoder_get_type (void)
 {
     static volatile gsize gonce_data = 0;
-    // INLINE - g_once_init_enter()
-    if (g_once_init_enter(&gonce_data))
+// INLINE - g_once_init_enter()
+    if (g_once_init_enter (&gonce_data))
     {
-        GType _type = gst_type_register_static_full(TYPE_BASEDECODER,
-                g_intern_static_string("VideoDecoder"),
-                sizeof (VideoDecoderClass),
-                videodecoder_base_init,
-                NULL,
-                videodecoder_class_init_trampoline,
-                NULL,
-                NULL,
-                sizeof (VideoDecoder),
-                0,
-                (GInstanceInitFunc) videodecoder_init,
-                NULL,
-                (GTypeFlags) 0);
-
-        g_once_init_leave(&gonce_data, (gsize) _type);
+        GType _type;
+        _type = g_type_register_static_simple (TYPE_BASEDECODER,
+               g_intern_static_string ("VideoDecoder"),
+               sizeof (VideoDecoderClass),
+               (GClassInitFunc) videodecoder_class_intern_init,
+               sizeof(VideoDecoder),
+               (GInstanceInitFunc) videodecoder_init,               
+               (GTypeFlags) 0);
+        g_once_init_leave (&gonce_data, (gsize) _type);
     }
     return (GType) gonce_data;
 }
 
 /***********************************************************************************
-* Base init
-***********************************************************************************/
+ * Calss and instance init and forward declarations
+ ***********************************************************************************/
+static GstStateChangeReturn videodecoder_change_state(GstElement* element, GstStateChange transition);
+static gboolean             videodecoder_sink_event(GstPad *pad, GstObject *parent, GstEvent *event);
+static GstFlowReturn        videodecoder_chain(GstPad *pad, GstObject *parent, GstBuffer *buf);
 
-static void videodecoder_base_init(gpointer gclass)
+static void                 videodecoder_init_state(VideoDecoder *decoder);
+static void                 videodecoder_state_reset(VideoDecoder *decoder);
+
+static gboolean videodecoder_configure(VideoDecoder *decoder, GstCaps *sink_caps);
+
+static void videodecoder_class_init(VideoDecoderClass *klass)
 {
-    GstElementClass *element_class = GST_ELEMENT_CLASS(gclass);
+    GstElementClass *element_class = GST_ELEMENT_CLASS(klass);
 
     gst_element_class_set_details_simple(element_class,
                 "Videodecoder",
@@ -125,24 +125,11 @@ static void videodecoder_base_init(gpointer gclass)
             gst_static_pad_template_get(&source_template));
     gst_element_class_add_pad_template(element_class,
             gst_static_pad_template_get(&sink_template));
+    
+    element_class->change_state = videodecoder_change_state;
 }
 
-/***********************************************************************************
- * Calss and instance init and forward declarations
- ***********************************************************************************/
-static GstStateChangeReturn videodecoder_change_state(GstElement* element, GstStateChange transition);
-static gboolean             videodecoder_sink_event(GstPad *pad, GstEvent *event);
-static GstFlowReturn        videodecoder_chain(GstPad *pad, GstBuffer *buf);
-
-static void                 videodecoder_init_state(VideoDecoder *decoder);
-static void                 videodecoder_state_reset(VideoDecoder *decoder);
-
-static void videodecoder_class_init(VideoDecoderClass *klass)
-{
-    GST_ELEMENT_CLASS(klass)->change_state = videodecoder_change_state;
-}
-
-static void videodecoder_init(VideoDecoder *decoder, VideoDecoderClass *gclass)
+static void videodecoder_init(VideoDecoder *decoder)
 {
     BaseDecoder *base = BASEDECODER(decoder);
 
@@ -181,7 +168,7 @@ videodecoder_change_state(GstElement* element, GstStateChange transition)
     }
 
     // Change state.
-    GstStateChangeReturn ret = parent_class->change_state(element, transition);
+    GstStateChangeReturn ret = GST_ELEMENT_CLASS(parent_class)->change_state(element, transition);
     if (GST_STATE_CHANGE_FAILURE == ret)
         return ret;
 
@@ -200,9 +187,10 @@ videodecoder_change_state(GstElement* element, GstStateChange transition)
 /***********************************************************************************
  * Sink event handler
  ***********************************************************************************/
-static gboolean videodecoder_sink_event(GstPad *pad, GstEvent *event)
+static gboolean videodecoder_sink_event(GstPad *pad, GstObject *parent, GstEvent *event)
 {
-    VideoDecoder *decoder = VIDEODECODER(GST_PAD_PARENT(pad));
+    VideoDecoder *decoder = VIDEODECODER(parent);
+    gboolean ret = FALSE;
 
     switch (GST_EVENT_TYPE(event))
     {
@@ -219,6 +207,23 @@ static gboolean videodecoder_sink_event(GstPad *pad, GstEvent *event)
             // Unset flag so chain function accepts buffers.
             BASEDECODER(decoder)->is_flushing = FALSE;
             break;
+            
+        case GST_EVENT_CAPS:
+        {
+            GstCaps *caps;
+
+            gst_event_parse_caps (event, &caps);
+            if (!videodecoder_configure(decoder, caps))
+            {
+                gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR, GST_CORE_ERROR, GST_CORE_ERROR_FAILED,
+                                 g_strdup("Initialization of video decoder failed"), NULL, ("videodecoder.c"), ("videodecoder_sink_event"), 0);
+            }
+
+            // INLINE - gst_event_unref()
+            gst_event_unref (event);
+            ret = TRUE;
+            break;
+        }       
 
 #ifdef DEBUG_OUTPUT
         case GST_EVENT_NEWSEGMENT:
@@ -239,8 +244,11 @@ static gboolean videodecoder_sink_event(GstPad *pad, GstEvent *event)
         default:
             break;
     }
+    
+    if (!ret)
+        ret = gst_pad_push_event(BASEDECODER(decoder)->srcpad, event);
 
-    return gst_pad_push_event(BASEDECODER(decoder)->srcpad, event);
+    return ret;
 }
 
 /***********************************************************************************
@@ -261,6 +269,9 @@ static void videodecoder_init_state(VideoDecoder *decoder)
 static gboolean videodecoder_configure(VideoDecoder *decoder, GstCaps *sink_caps)
 {
     BaseDecoder *base = BASEDECODER(decoder);
+    
+    if (base->is_initialized)
+        return TRUE;
 
     if(gst_caps_get_size(sink_caps) < 1)
         return FALSE;
@@ -287,6 +298,8 @@ static void videodecoder_state_reset(VideoDecoder *decoder)
 static gboolean videodecoder_configure_sourcepad(VideoDecoder *decoder)
 {
     BaseDecoder *base = BASEDECODER(decoder);
+    
+    GstCaps *caps = gst_pad_get_current_caps(base->srcpad);
 
 #if NEW_CODEC_ID
     int width = base->frame->width;
@@ -296,13 +309,13 @@ static gboolean videodecoder_configure_sourcepad(VideoDecoder *decoder)
     int height = base->context->height;
 #endif // NEW_CODEC_ID 
     
-    if (GST_PAD_CAPS(base->srcpad) == NULL ||
+    if (caps == NULL ||
         decoder->width != width || decoder->height != height)
     {
         decoder->width = width;
         decoder->height = height;
 
-        decoder->discont = (GST_PAD_CAPS(base->srcpad) != NULL);
+        decoder->discont = (caps != NULL);
 
         decoder->u_offset = base->frame->linesize[0] * decoder->height;
         decoder->uv_blocksize = base->frame->linesize[1] * decoder->height / 2;
@@ -311,7 +324,7 @@ static gboolean videodecoder_configure_sourcepad(VideoDecoder *decoder)
         decoder->frame_size = (base->frame->linesize[0] + base->frame->linesize[1]) * decoder->height;
 
         GstCaps *src_caps = gst_caps_new_simple("video/x-raw-yuv",
-                                                "format", GST_TYPE_FOURCC, GST_STR_FOURCC("YV12"),
+                                                "format", G_TYPE_STRING, "YV12",
                                                 "width", G_TYPE_INT, decoder->width,
                                                 "height", G_TYPE_INT, decoder->height,
                                                 "stride-y", G_TYPE_INT, base->frame->linesize[0],
@@ -324,46 +337,64 @@ static gboolean videodecoder_configure_sourcepad(VideoDecoder *decoder)
                                                 NULL);
 
 
-        if (!gst_pad_set_caps (base->srcpad, src_caps))
+        GstEvent *caps_event = gst_event_new_caps(src_caps);
+        if (caps_event == NULL || !gst_pad_push_event (base->srcpad, caps_event))
         {
             gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR, GST_CORE_ERROR, GST_CORE_ERROR_NEGOTIATION,
                                      g_strdup("Failed to set caps on the sourcepad"), NULL,
                                      ("videodecoder.c"), ("videodecoder_configure"), 0);
+            if (caps)
+                gst_caps_unref(caps);
             gst_caps_unref(src_caps);
+            
             return FALSE;
         }
         gst_caps_unref(src_caps);
     }
+    
+    if (caps)
+        gst_caps_unref(caps);
 
     return TRUE;
 }
 /***********************************************************************************
  * chain
  ***********************************************************************************/
-static GstFlowReturn videodecoder_chain(GstPad *pad, GstBuffer *buf)
+static GstFlowReturn videodecoder_chain(GstPad *pad, GstObject *parent, GstBuffer *buf)
 {
-    VideoDecoder  *decoder = VIDEODECODER(GST_PAD_PARENT(pad));
+    VideoDecoder  *decoder = VIDEODECODER(parent);
     BaseDecoder   *base = BASEDECODER(decoder);
     GstFlowReturn  result = GST_FLOW_OK;
     int            num_dec = NO_DATA_USED;
+    GstMapInfo     info;
+    GstMapInfo     info2;
+    gboolean       unmap_buf = FALSE;
 
     if (base->is_flushing)  // Reject buffers in flushing state.
     {
-        result = GST_FLOW_WRONG_STATE;
+        result = GST_FLOW_FLUSHING;
         goto _exit;
     }
 
-    if (!base->is_initialized && !videodecoder_configure(decoder, GST_PAD_CAPS(pad)))
+    if (!base->is_initialized)
     {
         result = GST_FLOW_ERROR;
         goto _exit;
     }
+    
+    if (!gst_buffer_map(buf, &info, GST_MAP_READ))
+    {
+        result = GST_FLOW_ERROR;
+        goto _exit;
+    }
+    
+    unmap_buf = TRUE;
 
     if (!base->is_hls)
     {
-        if (av_new_packet(&decoder->packet, GST_BUFFER_SIZE(buf)) == 0)
+        if (av_new_packet(&decoder->packet, info.size) == 0)
         {
-            memcpy(decoder->packet.data, GST_BUFFER_DATA(buf), GST_BUFFER_SIZE(buf));
+            memcpy(decoder->packet.data, info.data, info.size);
             if (GST_BUFFER_TIMESTAMP_IS_VALID(buf))
                 base->context->reordered_opaque = GST_BUFFER_TIMESTAMP(buf);
             else
@@ -372,7 +403,7 @@ static GstFlowReturn videodecoder_chain(GstPad *pad, GstBuffer *buf)
             av_free_packet(&decoder->packet);
         }
         else
-        {
+        {            
             result = GST_FLOW_ERROR;
             goto _exit;
         }
@@ -380,8 +411,8 @@ static GstFlowReturn videodecoder_chain(GstPad *pad, GstBuffer *buf)
     else
     {
         av_init_packet(&decoder->packet);
-        decoder->packet.data = GST_BUFFER_DATA(buf);
-        decoder->packet.size = GST_BUFFER_SIZE(buf);
+        decoder->packet.data = info.data;
+        decoder->packet.size = info.size;
         if (GST_BUFFER_TIMESTAMP_IS_VALID(buf))
             base->context->reordered_opaque = GST_BUFFER_TIMESTAMP(buf);
         else
@@ -405,12 +436,10 @@ static GstFlowReturn videodecoder_chain(GstPad *pad, GstBuffer *buf)
             result = GST_FLOW_ERROR;
         else
         {
-            GstBuffer *outbuf = NULL;
-            result = gst_pad_alloc_buffer_and_set_caps(base->srcpad, base->context->frame_number,
-                                                       decoder->frame_size, GST_PAD_CAPS(base->srcpad), &outbuf);
-            if (result != GST_FLOW_OK)
+            GstBuffer *outbuf = gst_buffer_new_allocate(NULL, decoder->frame_size, NULL);
+            if (outbuf == NULL)
             {
-                if (result != GST_FLOW_WRONG_STATE)
+                if (result != GST_FLOW_FLUSHING)
                 {
                     gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR,
                                              GST_STREAM_ERROR, GST_STREAM_ERROR_DECODE,
@@ -420,17 +449,28 @@ static GstFlowReturn videodecoder_chain(GstPad *pad, GstBuffer *buf)
             }
             else
             {
+                GST_BUFFER_OFFSET(outbuf) = base->context->frame_number;
                 if (base->frame->reordered_opaque != AV_NOPTS_VALUE)
                 {
                     GST_BUFFER_TIMESTAMP(outbuf) = base->frame->reordered_opaque;
                     GST_BUFFER_DURATION(outbuf) = GST_BUFFER_DURATION(buf); // Duration for video usually same
                 }
-                GST_BUFFER_SIZE(outbuf) = decoder->frame_size;
 
+                if (!gst_buffer_map(outbuf, &info2, GST_MAP_WRITE))
+                {
+                    // INLINE - gst_buffer_unref()
+                    gst_buffer_unref(outbuf);
+                    gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR, GST_RESOURCE_ERROR, GST_RESOURCE_ERROR_NO_SPACE_LEFT,
+                                     g_strdup("Decoded video buffer allocation failed"), NULL, ("videodecoder.c"), ("videodecoder_chain"), 0);
+                    goto _exit;
+                }
+                
                 // Copy image by parts from different arrays.
-                memcpy(GST_BUFFER_DATA(outbuf),                     base->frame->data[0], decoder->u_offset);
-                memcpy(GST_BUFFER_DATA(outbuf) + decoder->u_offset, base->frame->data[1], decoder->uv_blocksize);
-                memcpy(GST_BUFFER_DATA(outbuf) + decoder->v_offset, base->frame->data[2], decoder->uv_blocksize);
+                memcpy(info2.data,                     base->frame->data[0], decoder->u_offset);
+                memcpy(info2.data + decoder->u_offset, base->frame->data[1], decoder->uv_blocksize);
+                memcpy(info2.data + decoder->v_offset, base->frame->data[2], decoder->uv_blocksize);
+                
+                gst_buffer_unmap(outbuf, &info2);
 
                 GST_BUFFER_OFFSET_END(outbuf) = GST_BUFFER_OFFSET_NONE;
 
@@ -456,6 +496,8 @@ static GstFlowReturn videodecoder_chain(GstPad *pad, GstBuffer *buf)
     }
 
 _exit:
+    if (unmap_buf)
+        gst_buffer_unmap(buf, &info);
 // INLINE - gst_buffer_unref()
     gst_buffer_unref(buf);
     return result;

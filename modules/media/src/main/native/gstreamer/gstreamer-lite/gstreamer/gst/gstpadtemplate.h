@@ -16,8 +16,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 
@@ -25,6 +25,10 @@
 #define __GST_PAD_TEMPLATE_H__
 
 #include <gst/gstconfig.h>
+
+typedef struct _GstPadTemplate GstPadTemplate;
+typedef struct _GstPadTemplateClass GstPadTemplateClass;
+typedef struct _GstStaticPadTemplate GstStaticPadTemplate;
 
 #include <gst/gstobject.h>
 #include <gst/gstbuffer.h>
@@ -34,11 +38,6 @@
 #include <gst/gsttask.h>
 
 G_BEGIN_DECLS
-
-/* FIXME: this awful circular dependency need to be resolved properly (see pad.h) */
-/*typedef struct _GstPadTemplate GstPadTemplate; */
-typedef struct _GstPadTemplateClass GstPadTemplateClass;
-typedef struct _GstStaticPadTemplate GstStaticPadTemplate;
 
 #ifndef GSTREAMER_LITE
 #define GST_TYPE_STATIC_PAD_TEMPLATE	(gst_static_pad_template_get_type ())
@@ -55,7 +54,7 @@ typedef struct _GstStaticPadTemplate GstStaticPadTemplate;
  * @GST_PAD_ALWAYS: the pad is always available
  * @GST_PAD_SOMETIMES: the pad will become available depending on the media stream
  * @GST_PAD_REQUEST: the pad is only available on request with
- *  gst_element_get_request_pad().
+ *  gst_element_request_pad().
  *
  * Indicates when this pad will become available.
  */
@@ -99,14 +98,11 @@ typedef enum {
 
 /**
  * GstPadTemplateFlags:
- * @GST_PAD_TEMPLATE_FIXED: the padtemplate has no variable properties
  * @GST_PAD_TEMPLATE_FLAG_LAST: first flag that can be used by subclasses.
  *
  * Flags for the padtemplate
  */
 typedef enum {
-  /* FIXME0.11: this is not used and the purpose is unclear */
-  GST_PAD_TEMPLATE_FIXED        = (GST_OBJECT_FLAG_LAST << 0),
   /* padding */
   GST_PAD_TEMPLATE_FLAG_LAST    = (GST_OBJECT_FLAG_LAST << 4)
 } GstPadTemplateFlags;
@@ -132,6 +128,7 @@ struct _GstPadTemplate {
   GstPadPresence   presence;
   GstCaps	  *caps;
 
+  /*< private >*/
   gpointer _gst_reserved[GST_PADDING];
 };
 
@@ -141,10 +138,11 @@ struct _GstPadTemplateClass {
   /* signal callbacks */
   void (*pad_created)	(GstPadTemplate *templ, GstPad *pad);
 
+  /*< private >*/
   gpointer _gst_reserved[GST_PADDING];
 };
 
-/** 
+/**
  * GstStaticPadTemplate:
  * @name_template: the name of the template
  * @direction: the direction of the template
@@ -186,7 +184,7 @@ GType			gst_static_pad_template_get_type	(void);
 
 GstPadTemplate*		gst_pad_template_new			(const gchar *name_template,
 								 GstPadDirection direction, GstPadPresence presence,
-								 GstCaps *caps);
+								 GstCaps *caps) G_GNUC_MALLOC;
 
 GstPadTemplate *	gst_static_pad_template_get             (GstStaticPadTemplate *pad_template);
 GstCaps*		gst_static_pad_template_get_caps	(GstStaticPadTemplate *templ);

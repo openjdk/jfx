@@ -16,8 +16,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 
@@ -31,25 +31,35 @@
 #include <gst/gstenumtypes.h>
 #include <gst/gstversion.h>
 
+#include <gst/gstatomicqueue.h>
 #include <gst/gstbin.h>
 #include <gst/gstbuffer.h>
 #include <gst/gstbufferlist.h>
+#include <gst/gstbufferpool.h>
 #include <gst/gstcaps.h>
+#include <gst/gstcapsfeatures.h>
 #include <gst/gstchildproxy.h>
 #include <gst/gstclock.h>
+#include <gst/gstcontrolsource.h>
 #include <gst/gstdatetime.h>
 #include <gst/gstdebugutils.h>
+#ifndef GSTREAMER_LITE
+#include <gst/gstdevice.h>
+#include <gst/gstdeviceprovider.h>
+#endif // GSTREAMER_LITE
 #include <gst/gstelement.h>
+#include <gst/gstelementmetadata.h>
 #include <gst/gsterror.h>
 #include <gst/gstevent.h>
 #include <gst/gstghostpad.h>
-#include <gst/gstindex.h>
-#include <gst/gstindexfactory.h>
+#ifndef GSTREAMER_LITE
+#include <gst/gstdevicemonitor.h>
+#endif // GSTREAMER_LITE
 #include <gst/gstinfo.h>
-#include <gst/gstinterface.h>
 #include <gst/gstiterator.h>
-#include <gst/gstmarshal.h>
 #include <gst/gstmessage.h>
+#include <gst/gstmemory.h>
+#include <gst/gstmeta.h>
 #include <gst/gstminiobject.h>
 #include <gst/gstobject.h>
 #include <gst/gstpad.h>
@@ -60,6 +70,7 @@
 #include <gst/gstpreset.h>
 #include <gst/gstquery.h>
 #include <gst/gstregistry.h>
+#include <gst/gstsample.h>
 #include <gst/gstsegment.h>
 #include <gst/gststructure.h>
 #include <gst/gstsystemclock.h>
@@ -67,13 +78,13 @@
 #include <gst/gsttagsetter.h>
 #include <gst/gsttask.h>
 #include <gst/gsttaskpool.h>
-#include <gst/gsttrace.h>
+#include <gst/gsttoc.h>
+#include <gst/gsttocsetter.h>
 #include <gst/gsttypefind.h>
 #include <gst/gsttypefindfactory.h>
 #include <gst/gsturi.h>
 #include <gst/gstutils.h>
 #include <gst/gstvalue.h>
-#include <gst/gstxml.h>
 
 #include <gst/gstparse.h>
 
@@ -99,7 +110,7 @@ void            gst_segtrap_set_enabled         (gboolean enabled);
 gboolean        gst_registry_fork_is_enabled    (void);
 void            gst_registry_fork_set_enabled   (gboolean enabled);
 
-gboolean        gst_update_registry (void);
+gboolean        gst_update_registry             (void);
 
 G_END_DECLS
 

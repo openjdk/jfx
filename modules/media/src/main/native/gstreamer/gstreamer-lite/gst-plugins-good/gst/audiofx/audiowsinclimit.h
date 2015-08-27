@@ -1,5 +1,5 @@
 /* -*- c-basic-offset: 2 -*-
- * 
+ *
  * GStreamer
  * Copyright (C) 1999-2001 Erik Walthinsen <omega@cse.ogi.edu>
  *               2006 Dreamlab Technologies Ltd. <mathis.hofer@dreamlab.net>
@@ -17,10 +17,10 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
- * 
- * 
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
+ *
+ *
  * this windowed sinc filter is taken from the freely downloadable DSP book,
  * "The Scientist and Engineer's Guide to Digital Signal Processing",
  * chapter 16
@@ -66,7 +66,7 @@ struct _GstAudioWSincLimit {
   gint kernel_length;
 
   /* < private > */
-  GMutex *lock;
+  GMutex lock;
 };
 
 struct _GstAudioWSincLimitClass {

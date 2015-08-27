@@ -13,8 +13,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 /*
  * Unless otherwise indicated, Source Code is licensed under MIT license.
@@ -49,7 +49,6 @@
 #include "descriptors.h"
 #include "properties.h"
 #include "fourcc.h"
-#include "ftypcc.h"
 
 /* helper storage struct */
 #define ATOM_ARRAY(struct_type) \
@@ -250,6 +249,8 @@ typedef struct _AtomHDLR
   guint32 flags;
   guint32 flags_mask;
   gchar *name;
+
+  AtomsTreeFlavor flavor;
 } AtomHDLR;
 
 typedef struct _AtomVMHD
@@ -339,7 +340,8 @@ typedef enum _SampleEntryKind
 {
   UNKNOWN,
   AUDIO,
-  VIDEO
+  VIDEO,
+  SUBTITLE,
 } SampleEntryKind;
 
 typedef struct _SampleTableEntry
@@ -349,7 +351,7 @@ typedef struct _SampleTableEntry
   guint8 reserved[6];
   guint16 data_reference_index;
 
-  /* sort of entry */
+  /* type of entry */
   SampleEntryKind kind;
 } SampleTableEntry;
 
@@ -419,6 +421,19 @@ typedef struct _SampleTableEntryMP4S
 
   AtomESDS es;
 } SampleTableEntryMP4S;
+
+typedef struct _SampleTableEntryTX3G
+{
+  SampleTableEntry se;
+
+  guint32 display_flags;
+  guint64 default_text_box;
+  guint16 font_id;
+  guint8  font_face; /* bold=0x1, italic=0x2, underline=0x4 */
+  guint8  font_size; /* should always be 0.05 multiplied by the video track header height */
+  guint32 foreground_color_rgba;
+
+} SampleTableEntryTX3G;
 
 typedef struct _AtomSTSD
 {
@@ -898,6 +913,17 @@ typedef struct
   GstBuffer *codec_data;
 } AudioSampleEntry;
 
+typedef struct
+{
+  guint32 fourcc;
+
+  guint8  font_face; /* bold=0x1, italic=0x2, underline=0x4 */
+  guint8  font_size;
+  guint32 foreground_color_rgba;
+} SubtitleSampleEntry;
+
+void subtitle_sample_entry_init (SubtitleSampleEntry * entry);
+
 void atom_trak_set_audio_type (AtomTRAK * trak, AtomsContext * context,
                                AudioSampleEntry * entry, guint32 scale,
                                AtomInfo * ext, gint sample_size);
@@ -905,6 +931,15 @@ void atom_trak_set_audio_type (AtomTRAK * trak, AtomsContext * context,
 void atom_trak_set_video_type (AtomTRAK * trak, AtomsContext * context,
                                VisualSampleEntry * entry, guint32 rate,
                                GList * ext_atoms_list);
+
+void atom_trak_set_subtitle_type (AtomTRAK * trak, AtomsContext * context,
+                               SubtitleSampleEntry * entry);
+
+void atom_trak_update_bitrates (AtomTRAK * trak, guint32 avg_bitrate,
+                                guint32 max_bitrate);
+
+void atom_trak_tx3g_update_dimension (AtomTRAK * trak, guint32 width,
+                                      guint32 height);
 
 AtomInfo *   build_codec_data_extension  (guint32 fourcc, const GstBuffer * codec_data);
 AtomInfo *   build_mov_aac_extension     (AtomTRAK * trak, const GstBuffer * codec_data,
@@ -916,7 +951,7 @@ AtomInfo *   build_esds_extension        (AtomTRAK * trak, guint8 object_type,
 AtomInfo *   build_btrt_extension        (guint32 buffer_size_db, guint32 avg_bitrate,
                                           guint32 max_bitrate);
 AtomInfo *   build_jp2h_extension        (AtomTRAK * trak, gint width, gint height,
-                                          guint32 fourcc, gint ncomp,
+                                          const gchar *colorspace, gint ncomp,
                                           const GValue * cmap_array,
                                           const GValue * cdef_array);
 
@@ -950,7 +985,7 @@ void atom_moov_add_3gp_tag           (AtomMOOV * moov, guint32 fourcc, guint8 * 
 
 void atom_moov_add_xmp_tags          (AtomMOOV * moov, GstBuffer * xmp);
 
-#define GST_QT_MUX_DEFAULT_TAG_LANGUAGE   "eng"
+#define GST_QT_MUX_DEFAULT_TAG_LANGUAGE   "und" /* undefined/unknown */
 guint16  language_code               (const char * lang);
 
 #endif /* __ATOMS_H__ */

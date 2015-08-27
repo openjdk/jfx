@@ -19,6 +19,9 @@
     <ClCompile Include="..\..\jfxmedia\jni\JavaPlayerEventDispatcher.cpp" />
     <ClCompile Include="..\..\jfxmedia\jni\JniUtils.cpp" />
     <ClCompile Include="..\..\jfxmedia\jni\Logger.cpp" />
+    <ClCompile Include="..\..\jfxmedia\jni\NativeAudioEqualizer.cpp" />
+    <ClCompile Include="..\..\jfxmedia\jni\NativeAudioSpectrum.cpp" />
+    <ClCompile Include="..\..\jfxmedia\jni\NativeEqualizerBand.cpp" />
     <ClCompile Include="..\..\jfxmedia\jni\NativeVideoBuffer.cpp" />
     <ClCompile Include="..\..\jfxmedia\Locator\Locator.cpp" />
     <ClCompile Include="..\..\jfxmedia\Locator\LocatorStream.cpp" />
@@ -130,7 +133,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)\..\gstreamer\3rd_party\glib\glib-2.28.8\;$(SolutionDir)\..\gstreamer\3rd_party\glib\glib-2.28.8\glib;$(SolutionDir)\..\gstreamer\3rd_party\glib\glib-2.28.8\gmodule;$(SolutionDir)\..\gstreamer\3rd_party\glib\glib-2.28.8\build\win32\vs100;$(SolutionDir)\..\gstreamer\gstreamer-lite\gstreamer;$(SolutionDir)\..\gstreamer\gstreamer-lite\gstreamer\libs;$(SolutionDir)\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs;$(SolutionDir)\..\gstreamer\gstreamer-lite\gst-plugins-base\win32\common;$(SolutionDir)\..\jfxmedia\;$(SolutionDir)\..\jfxmedia\jni;$(SolutionDir)\..\..\..\..\build\generated-src\headers</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\..\gstreamer\3rd_party\glib\glib-2.28.8\;$(SolutionDir)\..\gstreamer\3rd_party\glib\glib-2.28.8\glib;$(SolutionDir)\..\gstreamer\3rd_party\glib\glib-2.28.8\gmodule;$(SolutionDir)\..\gstreamer\3rd_party\glib\glib-2.28.8\build\win32\vs100;$(SolutionDir)\..\gstreamer\gstreamer-lite\gstreamer;$(SolutionDir)\..\gstreamer\gstreamer-lite\gstreamer\libs;$(SolutionDir)\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs;$(SolutionDir)\..\gstreamer\gstreamer-lite\gst-plugins-base\win32\common;C:\cygwin\home\kirill\work\jdk\jdk1.8.0_40\include;$(SolutionDir)\..\jfxmedia\;$(SolutionDir)\..\jfxmedia\jni;$(SolutionDir)\..\..\..\..\build\generated-src\headers</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

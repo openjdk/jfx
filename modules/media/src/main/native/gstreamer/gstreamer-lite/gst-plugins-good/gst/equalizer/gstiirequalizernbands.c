@@ -14,8 +14,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 /**
@@ -28,7 +28,7 @@
  * <refsect2>
  * <title>Example launch line</title>
  * |[
- * gst-launch filesrc location=song.ogg ! oggdemux ! vorbisdec ! audioconvert ! equalizer-nbands num-bands=15 band5::gain=6.0 ! alsasink
+ * gst-launch-1.0 filesrc location=song.ogg ! oggdemux ! vorbisdec ! audioconvert ! equalizer-nbands num-bands=15 band5::gain=6.0 ! alsasink
  * ]| This make the equalizer use 15 bands and raises the volume of the 5th band by 6 db.
  * </refsect2>
  * <refsect2>
@@ -97,26 +97,17 @@ static void gst_iir_equalizer_nbands_get_property (GObject * object,
 GST_DEBUG_CATEGORY_EXTERN (equalizer_debug);
 #define GST_CAT_DEFAULT equalizer_debug
 
-GST_BOILERPLATE (GstIirEqualizerNBands, gst_iir_equalizer_nbands,
-    GstIirEqualizer, GST_TYPE_IIR_EQUALIZER);
+#define gst_iir_equalizer_nbands_parent_class parent_class
+G_DEFINE_TYPE (GstIirEqualizerNBands, gst_iir_equalizer_nbands,
+    GST_TYPE_IIR_EQUALIZER);
 
 /* equalizer implementation */
-
-static void
-gst_iir_equalizer_nbands_base_init (gpointer g_class)
-{
-  GstElementClass *element_class = GST_ELEMENT_CLASS (g_class);
-
-  gst_element_class_set_details_simple (element_class, "N Band Equalizer",
-      "Filter/Effect/Audio",
-      "Direct Form IIR equalizer",
-      "Benjamin Otte <otte@gnome.org>," " Stefan Kost <ensonic@users.sf.net>");
-}
 
 static void
 gst_iir_equalizer_nbands_class_init (GstIirEqualizerNBandsClass * klass)
 {
   GObjectClass *gobject_class = (GObjectClass *) klass;
+  GstElementClass *gstelement_class = (GstElementClass *) klass;
 
   gobject_class->set_property = gst_iir_equalizer_nbands_set_property;
   gobject_class->get_property = gst_iir_equalizer_nbands_get_property;
@@ -125,11 +116,15 @@ gst_iir_equalizer_nbands_class_init (GstIirEqualizerNBandsClass * klass)
       g_param_spec_uint ("num-bands", "num-bands",
           "number of different bands to use", 1, 64, 10,
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS | G_PARAM_CONSTRUCT));
+
+  gst_element_class_set_static_metadata (gstelement_class, "N Band Equalizer",
+      "Filter/Effect/Audio",
+      "Direct Form IIR equalizer",
+      "Benjamin Otte <otte@gnome.org>," " Stefan Kost <ensonic@users.sf.net>");
 }
 
 static void
-gst_iir_equalizer_nbands_init (GstIirEqualizerNBands * equ_n,
-    GstIirEqualizerNBandsClass * g_class)
+gst_iir_equalizer_nbands_init (GstIirEqualizerNBands * equ_n)
 {
   GstIirEqualizer *equ = GST_IIR_EQUALIZER (equ_n);
 

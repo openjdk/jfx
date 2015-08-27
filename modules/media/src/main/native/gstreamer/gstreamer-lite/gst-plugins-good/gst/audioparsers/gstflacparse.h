@@ -17,8 +17,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 #ifndef __GST_FLAC_PARSE_H__
@@ -74,11 +74,17 @@ struct _GstFlacParse {
   guint8 blocking_strategy;
   guint16 block_size;
   guint64 sample_number;
+  gboolean strategy_checked;
+
+  gboolean sent_codec_tag;
 
   GstTagList *tags;
+  GstToc *toc;
 
   GList *headers;
   GstBuffer *seektable;
+
+  gboolean force_variable_block_size;
 };
 
 struct _GstFlacParseClass {

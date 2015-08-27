@@ -15,8 +15,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 
@@ -38,24 +38,26 @@ typedef struct _GstTypeFind GstTypeFind;
 /**
  * GstTypeFindFunction:
  * @find: A #GstTypeFind structure
- * @data: optionnal data to pass to the function
+ * @user_data: optional data to pass to the function
  *
  * A function that will be called by typefinding.
  */
-typedef void (* GstTypeFindFunction) (GstTypeFind *find, gpointer data);
+typedef void (* GstTypeFindFunction) (GstTypeFind *find, gpointer user_data);
 
 /**
  * GstTypeFindProbability:
- * @GST_TYPE_FIND_MINIMUM: unlikely typefind
- * @GST_TYPE_FIND_POSSIBLE: possible type detected
- * @GST_TYPE_FIND_LIKELY: likely a type was detected
- * @GST_TYPE_FIND_NEARLY_CERTAIN: nearly certain that a type was detected
+ * @GST_TYPE_FIND_NONE: type undetected.
+ * @GST_TYPE_FIND_MINIMUM: unlikely typefind.
+ * @GST_TYPE_FIND_POSSIBLE: possible type detected.
+ * @GST_TYPE_FIND_LIKELY: likely a type was detected.
+ * @GST_TYPE_FIND_NEARLY_CERTAIN: nearly certain that a type was detected.
  * @GST_TYPE_FIND_MAXIMUM: very certain a type was detected.
  *
  * The probability of the typefind function. Higher values have more certainty
  * in doing a reliable typefind.
  */
 typedef enum {
+  GST_TYPE_FIND_NONE = 0,
   GST_TYPE_FIND_MINIMUM = 1,
   GST_TYPE_FIND_POSSIBLE = 50,
   GST_TYPE_FIND_LIKELY = 80,
@@ -74,18 +76,18 @@ typedef enum {
  */
 struct _GstTypeFind {
   /* private to the caller of the typefind function */
-  guint8 *  (* peek)       (gpointer         data,
+  const guint8 *  (* peek)       (gpointer         data,
                             gint64           offset,
                             guint            size);
 
-  void      (* suggest)    (gpointer         data,
+  void            (* suggest)    (gpointer         data,
                             guint            probability,
-                            const GstCaps *  caps);
+                                  GstCaps         *caps);
 
-  gpointer     data;
+  gpointer         data;
 
   /* optional */
-  guint64   (* get_length) (gpointer data);
+  guint64         (* get_length) (gpointer data);
 
   /* <private> */
   gpointer _gst_reserved[GST_PADDING];
@@ -96,15 +98,15 @@ GType     gst_type_find_get_type   (void);
 #endif // GSTREAMER_LITE
 
 /* typefind function interface */
-guint8 *  gst_type_find_peek       (GstTypeFind   * find,
+const guint8 *  gst_type_find_peek       (GstTypeFind   * find,
                                     gint64          offset,
                                     guint           size);
 
-void      gst_type_find_suggest    (GstTypeFind   * find,
+void            gst_type_find_suggest    (GstTypeFind   * find,
                                     guint           probability,
-                                    const GstCaps * caps);
+                                          GstCaps       * caps);
 
-void      gst_type_find_suggest_simple (GstTypeFind * find,
+void            gst_type_find_suggest_simple (GstTypeFind * find,
                                         guint         probability,
                                         const char  * media_type,
                                         const char  * fieldname, ...);
@@ -116,8 +118,8 @@ gboolean  gst_type_find_register   (GstPlugin            * plugin,
                                     const gchar          * name,
                                     guint                  rank,
                                     GstTypeFindFunction    func,
-                                    gchar               ** extensions,
-                                    const GstCaps        * possible_caps,
+                                    const gchar          * extensions,
+                                    GstCaps              * possible_caps,
                                     gpointer               data,
                                     GDestroyNotify         data_notify);
 

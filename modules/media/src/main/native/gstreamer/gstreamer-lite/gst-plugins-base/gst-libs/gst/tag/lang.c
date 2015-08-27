@@ -13,8 +13,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 /**
@@ -29,8 +29,6 @@
  * </para>
  * </refsect2>
  */
-
-/* FIXME 0.11: maybe switch to ISO-639-2 everywhere incl. GST_TAG_LANGUAGE? */
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -268,10 +266,8 @@ qsort_strcmp_func (const void *p1, const void *p2)
  * tagging purposes (e.g. to tag an audio track appropriately in a video or
  * audio editor).
  *
- * Returns: NULL-terminated string array with two-letter language codes. Free
- *     with g_strfreev() when no longer needed.
- *
- * Since: 0.10.26
+ * Returns: (transfer full): NULL-terminated string array with two-letter
+ *     language codes. Free with g_strfreev() when no longer needed.
  */
 gchar **
 gst_tag_get_language_codes (void)
@@ -311,8 +307,8 @@ gst_tag_get_language_codes (void)
  * gst_tag_get_language_name:
  * @language_code: two or three-letter ISO-639 language code
  *
- * Returns the name of the language given an ISO-639 language code, such
- * as often found in a GST_TAG_LANGUAGE tag. The name will be translated
+ * Returns the name of the language given an ISO-639 language code as
+ * found in a GST_TAG_LANGUAGE_CODE tag. The name will be translated
  * according to the current locale (if the library was built against the
  * iso-codes package, otherwise the English name will be returned).
  *
@@ -322,8 +318,6 @@ gst_tag_get_language_codes (void)
  *     not be mapped to a language name. The returned string must not be
  *     modified and does not need to freed; it will stay valid until the
  *     application is terminated.
- *
- * Since: 0.10.26
  */
 const gchar *
 gst_tag_get_language_name (const gchar * language_code)
@@ -356,8 +350,6 @@ gst_tag_get_language_name (const gchar * language_code)
  * Returns: two-letter ISO-639-1 language code string that maps to @lang_code,
  *     or NULL if no mapping is known. The returned string must not be
  *     modified or freed.
- *
- * Since: 0.10.26
  */
 const gchar *
 gst_tag_get_language_code_iso_639_1 (const gchar * lang_code)
@@ -438,8 +430,6 @@ gst_tag_get_language_code_iso_639_2X (const gchar * lang_code, guint8 flags)
  * Returns: three-letter ISO-639-2 language code string that maps to @lang_code,
  *     or NULL if no mapping is known. The returned string must not be
  *     modified or freed.
- *
- * Since: 0.10.26
  */
 const gchar *
 gst_tag_get_language_code_iso_639_2T (const gchar * lang_code)
@@ -474,8 +464,6 @@ gst_tag_get_language_code_iso_639_2T (const gchar * lang_code)
  * Returns: three-letter ISO-639-2 language code string that maps to @lang_code,
  *     or NULL if no mapping is known. The returned string must not be
  *     modified or freed.
- *
- * Since: 0.10.26
  */
 const gchar *
 gst_tag_get_language_code_iso_639_2B (const gchar * lang_code)
@@ -491,4 +479,24 @@ gst_tag_get_language_code_iso_639_2B (const gchar * lang_code)
   GST_LOG ("%s -> %s", lang_code, GST_STR_NULL (c));
 
   return c;
+}
+
+/**
+ * gst_tag_check_language_code:
+ * @lang_code: ISO-639 language code (e.g. "deu" or "ger" or "de")
+ *
+ * Check if a given string contains a known ISO 639 language code.
+ *
+ * This is useful in situations where it's not clear whether a given
+ * string is a language code (which should be put into a #GST_TAG_LANGUAGE_CODE
+ * tag) or a free-form language name descriptor (which should be put into a
+ * #GST_TAG_LANGUAGE_NAME tag instead).
+ *
+ * Returns: TRUE if the two- or three-letter language code in @lang_code
+ *     is a valid ISO-639 language code.
+ */
+gboolean
+gst_tag_check_language_code (const gchar * lang_code)
+{
+  return (gst_tag_get_language_code_iso_639_1 (lang_code) != NULL);
 }

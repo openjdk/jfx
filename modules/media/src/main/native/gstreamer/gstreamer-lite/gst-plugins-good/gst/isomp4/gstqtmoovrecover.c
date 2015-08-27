@@ -13,8 +13,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 /*
  * Unless otherwise indicated, Source Code is licensed under MIT license.
@@ -57,8 +57,6 @@
  * </programlisting>
  * </para>
  * </refsect2>
- *
- * Documentation last reviewed on 2011-04-21
  */
 
 #ifdef HAVE_CONFIG_H
@@ -89,8 +87,8 @@ enum
   PROP_FAST_START_MODE
 };
 
-GST_BOILERPLATE (GstQTMoovRecover, gst_qt_moov_recover, GstPipeline,
-    GST_TYPE_PIPELINE);
+#define gst_qt_moov_recover_parent_class parent_class
+G_DEFINE_TYPE (GstQTMoovRecover, gst_qt_moov_recover, GST_TYPE_PIPELINE);
 
 /* property functions */
 static void gst_qt_moov_recover_set_property (GObject * object,
@@ -102,18 +100,6 @@ static GstStateChangeReturn gst_qt_moov_recover_change_state (GstElement *
     element, GstStateChange transition);
 
 static void gst_qt_moov_recover_finalize (GObject * object);
-
-static void
-gst_qt_moov_recover_base_init (gpointer g_class)
-{
-  GstElementClass *element_class = GST_ELEMENT_CLASS (g_class);
-#if 0
-  GstQTMoovRecoverClass *klass = (GstQTMoovRecoverClass *) g_class;
-#endif
-  gst_element_class_set_details_simple (element_class, "QT Moov Recover",
-      "Util", "Recovers unfinished qtmux files",
-      "Thiago Santos <thiago.sousa.santos@collabora.co.uk>");
-}
 
 static void
 gst_qt_moov_recover_class_init (GstQTMoovRecoverClass * klass)
@@ -156,11 +142,14 @@ gst_qt_moov_recover_class_init (GstQTMoovRecoverClass * klass)
 
   GST_DEBUG_CATEGORY_INIT (gst_qt_moov_recover_debug, "qtmoovrecover", 0,
       "QT Moovie Recover");
+
+  gst_element_class_set_static_metadata (gstelement_class, "QT Moov Recover",
+      "Util", "Recovers unfinished qtmux files",
+      "Thiago Santos <thiago.sousa.santos@collabora.co.uk>");
 }
 
 static void
-gst_qt_moov_recover_init (GstQTMoovRecover * qtmr,
-    GstQTMoovRecoverClass * qtmr_klass)
+gst_qt_moov_recover_init (GstQTMoovRecover * qtmr)
 {
 }
 
@@ -352,8 +341,8 @@ gst_qt_moov_recover_change_state (GstElement * element,
 
   switch (transition) {
     case GST_STATE_CHANGE_NULL_TO_READY:
-      qtmr->task = gst_task_create (gst_qt_moov_recover_run, qtmr);
-      g_static_rec_mutex_init (&qtmr->task_mutex);
+      qtmr->task = gst_task_new (gst_qt_moov_recover_run, qtmr, NULL);
+      g_rec_mutex_init (&qtmr->task_mutex);
       gst_task_set_lock (qtmr->task, &qtmr->task_mutex);
       break;
     case GST_STATE_CHANGE_PAUSED_TO_PLAYING:
@@ -371,10 +360,11 @@ gst_qt_moov_recover_change_state (GstElement * element,
       gst_task_join (qtmr->task);
       break;
     case GST_STATE_CHANGE_READY_TO_NULL:
-      g_assert (gst_task_get_state (qtmr->task) == GST_TASK_STOPPED);
+      if (gst_task_get_state (qtmr->task) != GST_TASK_STOPPED)
+        GST_ERROR ("task %p should be stopped by now", qtmr->task);
       gst_object_unref (qtmr->task);
       qtmr->task = NULL;
-      g_static_rec_mutex_free (&qtmr->task_mutex);
+      g_rec_mutex_clear (&qtmr->task_mutex);
       break;
     default:
       break;

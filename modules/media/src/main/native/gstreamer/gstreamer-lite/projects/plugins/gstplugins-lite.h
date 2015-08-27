@@ -44,7 +44,6 @@ gboolean plugin_init_qtdemux (GstPlugin * plugin);
 
 #ifdef WIN32
 gboolean plugin_init_directsound (GstPlugin * plugin);
-gboolean plugin_init_indexers (GstPlugin * plugin);
 #endif
 
 #ifdef OSX

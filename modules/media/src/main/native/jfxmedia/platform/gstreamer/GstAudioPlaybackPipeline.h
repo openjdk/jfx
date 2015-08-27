@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -120,6 +120,8 @@ public:
 
     virtual void CheckQueueSize(GstElement *element) {};
 
+    GstElementContainer m_Elements;
+
 protected:
     CGstAudioPlaybackPipeline(const GstElementContainer& elements, int flags, CPipelineOptions* pOptions);
     virtual ~CGstAudioPlaybackPipeline();
@@ -134,8 +136,6 @@ protected:
     sBusCallbackContent* m_pBusCallbackContent;
 
 protected:
-    GstElementContainer m_Elements;
-
     double              m_dResumeDeltaTime;
     float               m_fRate;
     volatile bool       m_bSeekInvoked;
@@ -157,8 +157,8 @@ protected:
 
 private:
     static void         OnParserSrcPadAdded(GstElement *element, GstPad *pad, CGstAudioPlaybackPipeline* pPipeline);
-    static gboolean     AudioSourcePadProbe(GstPad* pPad, GstBuffer *pBuffer, CGstAudioPlaybackPipeline* pPipeline);
-    static gboolean     AudioSinkPadProbe(GstPad* pPad, GstBuffer *pBuffer, CGstAudioPlaybackPipeline* pPipeline);
+    static GstPadProbeReturn     AudioSourcePadProbe(GstPad* pPad, GstPadProbeInfo *pInfo, CGstAudioPlaybackPipeline* pPipeline);
+    static GstPadProbeReturn     AudioSinkPadProbe(GstPad* pPad, GstPadProbeInfo *pInfo, CGstAudioPlaybackPipeline* pPipeline);
 
     void                SendTrackEvent();
     uint32_t            InternalPause();

@@ -14,13 +14,12 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 /**
  * SECTION:element-audioecho
- * @Since: 0.10.14
  *
  * audioecho adds an echo or (simple) reverb effect to an audio stream. The echo
  * delay, intensity and the percentage of feedback can be configured.
@@ -36,8 +35,8 @@
  * <refsect2>
  * <title>Example launch line</title>
  * |[
- * gst-launch filesrc location="melo1.ogg" ! audioconvert ! audioecho delay=500000000 intensity=0.6 feedback=0.4 ! audioconvert ! autoaudiosink
- * gst-launch filesrc location="melo1.ogg" ! decodebin ! audioconvert ! audioecho delay=50000000 intensity=0.6 feedback=0.4 ! audioconvert ! autoaudiosink
+ * gst-launch-1.0 filesrc location="melo1.ogg" ! audioconvert ! audioecho delay=500000000 intensity=0.6 feedback=0.4 ! audioconvert ! autoaudiosink
+ * gst-launch-1.0 filesrc location="melo1.ogg" ! decodebin ! audioconvert ! audioecho delay=50000000 intensity=0.6 feedback=0.4 ! audioconvert ! autoaudiosink
  * ]|
  * </refsect2>
  */
@@ -50,7 +49,6 @@
 #include <gst/base/gstbasetransform.h>
 #include <gst/audio/audio.h>
 #include <gst/audio/gstaudiofilter.h>
-#include <gst/controller/gstcontroller.h>
 
 #include "audioecho.h"
 
@@ -67,17 +65,14 @@ enum
 };
 
 #define ALLOWED_CAPS \
-    "audio/x-raw-float,"                                              \
-    " width=(int) { 32, 64 }, "                                       \
-    " endianness=(int)BYTE_ORDER,"                                    \
-    " rate=(int)[1,MAX],"                                             \
-    " channels=(int)[1,MAX]"
+    "audio/x-raw,"                                                 \
+    " format=(string) {"GST_AUDIO_NE(F32)","GST_AUDIO_NE(F64)"}, " \
+    " rate=(int)[1,MAX],"                                          \
+    " channels=(int)[1,MAX],"                                      \
+    " layout=(string) interleaved"
 
-#define DEBUG_INIT(bla) \
-  GST_DEBUG_CATEGORY_INIT (gst_audio_echo_debug, "audioecho", 0, "audioecho element");
-
-GST_BOILERPLATE_FULL (GstAudioEcho, gst_audio_echo, GstAudioFilter,
-    GST_TYPE_AUDIO_FILTER, DEBUG_INIT);
+#define gst_audio_echo_parent_class parent_class
+G_DEFINE_TYPE (GstAudioEcho, gst_audio_echo, GST_TYPE_AUDIO_FILTER);
 
 static void gst_audio_echo_set_property (GObject * object, guint prop_id,
     const GValue * value, GParamSpec * pspec);
@@ -86,7 +81,7 @@ static void gst_audio_echo_get_property (GObject * object, guint prop_id,
 static void gst_audio_echo_finalize (GObject * object);
 
 static gboolean gst_audio_echo_setup (GstAudioFilter * self,
-    GstRingBufferSpec * format);
+    const GstAudioInfo * info);
 static gboolean gst_audio_echo_stop (GstBaseTransform * base);
 static GstFlowReturn gst_audio_echo_transform_ip (GstBaseTransform * base,
     GstBuffer * buf);
@@ -99,28 +94,16 @@ static void gst_audio_echo_transform_double (GstAudioEcho * self,
 /* GObject vmethod implementations */
 
 static void
-gst_audio_echo_base_init (gpointer klass)
-{
-  GstElementClass *element_class = GST_ELEMENT_CLASS (klass);
-  GstCaps *caps;
-
-  gst_element_class_set_details_simple (element_class, "Audio echo",
-      "Filter/Effect/Audio",
-      "Adds an echo or reverb effect to an audio stream",
-      "Sebastian Dröge <sebastian.droege@collabora.co.uk>");
-
-  caps = gst_caps_from_string (ALLOWED_CAPS);
-  gst_audio_filter_class_add_pad_templates (GST_AUDIO_FILTER_CLASS (klass),
-      caps);
-  gst_caps_unref (caps);
-}
-
-static void
 gst_audio_echo_class_init (GstAudioEchoClass * klass)
 {
   GObjectClass *gobject_class = (GObjectClass *) klass;
+  GstElementClass *gstelement_class = (GstElementClass *) klass;
   GstBaseTransformClass *basetransform_class = (GstBaseTransformClass *) klass;
   GstAudioFilterClass *audioself_class = (GstAudioFilterClass *) klass;
+  GstCaps *caps;
+
+  GST_DEBUG_CATEGORY_INIT (gst_audio_echo_debug, "audioecho", 0,
+      "audioecho element");
 
   gobject_class->set_property = gst_audio_echo_set_property;
   gobject_class->get_property = gst_audio_echo_get_property;
@@ -137,7 +120,8 @@ gst_audio_echo_class_init (GstAudioEchoClass * klass)
           "Maximum delay of the echo in nanoseconds"
           " (can't be changed in PLAYING or PAUSED state)",
           1, G_MAXUINT64, 1,
-          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS | GST_PARAM_CONTROLLABLE));
+          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS |
+          GST_PARAM_MUTABLE_READY));
 
   g_object_class_install_property (gobject_class, PROP_INTENSITY,
       g_param_spec_float ("intensity", "Intensity",
@@ -151,6 +135,16 @@ gst_audio_echo_class_init (GstAudioEchoClass * klass)
           0.0, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS
           | GST_PARAM_CONTROLLABLE));
 
+  gst_element_class_set_static_metadata (gstelement_class, "Audio echo",
+      "Filter/Effect/Audio",
+      "Adds an echo or reverb effect to an audio stream",
+      "Sebastian Dröge <sebastian.droege@collabora.co.uk>");
+
+  caps = gst_caps_from_string (ALLOWED_CAPS);
+  gst_audio_filter_class_add_pad_templates (GST_AUDIO_FILTER_CLASS (klass),
+      caps);
+  gst_caps_unref (caps);
+
   audioself_class->setup = GST_DEBUG_FUNCPTR (gst_audio_echo_setup);
   basetransform_class->transform_ip =
       GST_DEBUG_FUNCPTR (gst_audio_echo_transform_ip);
@@ -158,12 +152,14 @@ gst_audio_echo_class_init (GstAudioEchoClass * klass)
 }
 
 static void
-gst_audio_echo_init (GstAudioEcho * self, GstAudioEchoClass * klass)
+gst_audio_echo_init (GstAudioEcho * self)
 {
   self->delay = 1;
   self->max_delay = 1;
   self->intensity = 0.0;
   self->feedback = 0.0;
+
+  g_mutex_init (&self->lock);
 
   gst_base_transform_set_in_place (GST_BASE_TRANSFORM (self), TRUE);
 }
@@ -175,6 +171,8 @@ gst_audio_echo_finalize (GObject * object)
 
   g_free (self->buffer);
   self->buffer = NULL;
+
+  g_mutex_clear (&self->lock);
 
   G_OBJECT_CLASS (parent_class)->finalize (object);
 }
@@ -188,8 +186,9 @@ gst_audio_echo_set_property (GObject * object, guint prop_id,
   switch (prop_id) {
     case PROP_DELAY:{
       guint64 max_delay, delay;
+      guint rate;
 
-      GST_BASE_TRANSFORM_LOCK (self);
+      g_mutex_lock (&self->lock);
       delay = g_value_get_uint64 (value);
       max_delay = self->max_delay;
 
@@ -202,13 +201,18 @@ gst_audio_echo_set_property (GObject * object, guint prop_id,
         self->delay = delay;
         self->max_delay = MAX (delay, max_delay);
       }
-      GST_BASE_TRANSFORM_UNLOCK (self);
-    }
+      rate = GST_AUDIO_FILTER_RATE (self);
+      if (rate > 0)
+        self->delay_frames =
+            MAX (gst_util_uint64_scale (self->delay, rate, GST_SECOND), 1);
+
+      g_mutex_unlock (&self->lock);
       break;
+    }
     case PROP_MAX_DELAY:{
       guint64 max_delay, delay;
 
-      GST_BASE_TRANSFORM_LOCK (self);
+      g_mutex_lock (&self->lock);
       max_delay = g_value_get_uint64 (value);
       delay = self->delay;
 
@@ -219,21 +223,21 @@ gst_audio_echo_set_property (GObject * object, guint prop_id,
         self->delay = delay;
         self->max_delay = max_delay;
       }
-      GST_BASE_TRANSFORM_UNLOCK (self);
-    }
+      g_mutex_unlock (&self->lock);
       break;
+    }
     case PROP_INTENSITY:{
-      GST_BASE_TRANSFORM_LOCK (self);
+      g_mutex_lock (&self->lock);
       self->intensity = g_value_get_float (value);
-      GST_BASE_TRANSFORM_UNLOCK (self);
-    }
+      g_mutex_unlock (&self->lock);
       break;
+    }
     case PROP_FEEDBACK:{
-      GST_BASE_TRANSFORM_LOCK (self);
+      g_mutex_lock (&self->lock);
       self->feedback = g_value_get_float (value);
-      GST_BASE_TRANSFORM_UNLOCK (self);
-    }
+      g_mutex_unlock (&self->lock);
       break;
+    }
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -248,24 +252,24 @@ gst_audio_echo_get_property (GObject * object, guint prop_id,
 
   switch (prop_id) {
     case PROP_DELAY:
-      GST_BASE_TRANSFORM_LOCK (self);
+      g_mutex_lock (&self->lock);
       g_value_set_uint64 (value, self->delay);
-      GST_BASE_TRANSFORM_UNLOCK (self);
+      g_mutex_unlock (&self->lock);
       break;
     case PROP_MAX_DELAY:
-      GST_BASE_TRANSFORM_LOCK (self);
+      g_mutex_lock (&self->lock);
       g_value_set_uint64 (value, self->max_delay);
-      GST_BASE_TRANSFORM_UNLOCK (self);
+      g_mutex_unlock (&self->lock);
       break;
     case PROP_INTENSITY:
-      GST_BASE_TRANSFORM_LOCK (self);
+      g_mutex_lock (&self->lock);
       g_value_set_float (value, self->intensity);
-      GST_BASE_TRANSFORM_UNLOCK (self);
+      g_mutex_unlock (&self->lock);
       break;
     case PROP_FEEDBACK:
-      GST_BASE_TRANSFORM_LOCK (self);
+      g_mutex_lock (&self->lock);
       g_value_set_float (value, self->feedback);
-      GST_BASE_TRANSFORM_UNLOCK (self);
+      g_mutex_unlock (&self->lock);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -276,19 +280,24 @@ gst_audio_echo_get_property (GObject * object, guint prop_id,
 /* GstAudioFilter vmethod implementations */
 
 static gboolean
-gst_audio_echo_setup (GstAudioFilter * base, GstRingBufferSpec * format)
+gst_audio_echo_setup (GstAudioFilter * base, const GstAudioInfo * info)
 {
   GstAudioEcho *self = GST_AUDIO_ECHO (base);
   gboolean ret = TRUE;
 
-  if (format->type == GST_BUFTYPE_FLOAT && format->width == 32)
-    self->process = (GstAudioEchoProcessFunc)
-        gst_audio_echo_transform_float;
-  else if (format->type == GST_BUFTYPE_FLOAT && format->width == 64)
-    self->process = (GstAudioEchoProcessFunc)
-        gst_audio_echo_transform_double;
-  else
-    ret = FALSE;
+  switch (GST_AUDIO_INFO_FORMAT (info)) {
+    case GST_AUDIO_FORMAT_F32:
+      self->process = (GstAudioEchoProcessFunc)
+          gst_audio_echo_transform_float;
+      break;
+    case GST_AUDIO_FORMAT_F64:
+      self->process = (GstAudioEchoProcessFunc)
+          gst_audio_echo_transform_double;
+      break;
+    default:
+      ret = FALSE;
+      break;
+  }
 
   g_free (self->buffer);
   self->buffer = NULL;
@@ -319,8 +328,8 @@ gst_audio_echo_transform_##name (GstAudioEcho * self, \
     type * data, guint num_samples) \
 { \
   type *buffer = (type *) self->buffer; \
-  guint channels = GST_AUDIO_FILTER (self)->format.channels; \
-  guint rate = GST_AUDIO_FILTER (self)->format.rate; \
+  guint channels = GST_AUDIO_FILTER_CHANNELS (self); \
+  guint rate = GST_AUDIO_FILTER_RATE (self); \
   guint i, j; \
   guint echo_index = self->buffer_size_frames - self->delay_frames; \
   gdouble echo_off = ((((gdouble) self->delay) * rate) / GST_SECOND) - self->delay_frames; \
@@ -359,7 +368,9 @@ gst_audio_echo_transform_ip (GstBaseTransform * base, GstBuffer * buf)
   GstAudioEcho *self = GST_AUDIO_ECHO (base);
   guint num_samples;
   GstClockTime timestamp, stream_time;
+  GstMapInfo map;
 
+  g_mutex_lock (&self->lock);
   timestamp = GST_BUFFER_TIMESTAMP (buf);
   stream_time =
       gst_segment_to_stream_time (&base->segment, GST_FORMAT_TIME, timestamp);
@@ -368,34 +379,37 @@ gst_audio_echo_transform_ip (GstBaseTransform * base, GstBuffer * buf)
       GST_TIME_ARGS (timestamp));
 
   if (GST_CLOCK_TIME_IS_VALID (stream_time))
-    gst_object_sync_values (G_OBJECT (self), stream_time);
-
-  num_samples =
-      GST_BUFFER_SIZE (buf) / (GST_AUDIO_FILTER (self)->format.width / 8);
+    gst_object_sync_values (GST_OBJECT (self), stream_time);
 
   if (self->buffer == NULL) {
-    guint width, rate, channels;
+    guint bpf, rate;
 
-    width = GST_AUDIO_FILTER (self)->format.width / 8;
-    rate = GST_AUDIO_FILTER (self)->format.rate;
-    channels = GST_AUDIO_FILTER (self)->format.channels;
+    bpf = GST_AUDIO_FILTER_BPF (self);
+    rate = GST_AUDIO_FILTER_RATE (self);
 
     self->delay_frames =
         MAX (gst_util_uint64_scale (self->delay, rate, GST_SECOND), 1);
     self->buffer_size_frames =
         MAX (gst_util_uint64_scale (self->max_delay, rate, GST_SECOND), 1);
 
-    self->buffer_size = self->buffer_size_frames * width * channels;
+    self->buffer_size = self->buffer_size_frames * bpf;
     self->buffer = g_try_malloc0 (self->buffer_size);
     self->buffer_pos = 0;
 
     if (self->buffer == NULL) {
+      g_mutex_unlock (&self->lock);
       GST_ERROR_OBJECT (self, "Failed to allocate %u bytes", self->buffer_size);
       return GST_FLOW_ERROR;
     }
   }
 
-  self->process (self, GST_BUFFER_DATA (buf), num_samples);
+  gst_buffer_map (buf, &map, GST_MAP_READWRITE);
+  num_samples = map.size / GST_AUDIO_FILTER_BPS (self);
+
+  self->process (self, map.data, num_samples);
+
+  gst_buffer_unmap (buf, &map);
+  g_mutex_unlock (&self->lock);
 
   return GST_FLOW_OK;
 }

@@ -15,8 +15,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 #ifndef __GST_RIFF_MEDIA_H__
@@ -44,7 +44,8 @@ GstCaps * gst_riff_create_audio_caps (guint16              codec_id,
                                       gst_riff_strf_auds * strf,
                                       GstBuffer          * strf_data,
                                       GstBuffer          * strd_data,
-                                      char              ** codec_name);
+                                      char              ** codec_name,
+                                      gint                 channel_reorder_map[18]);
 
 GstCaps * gst_riff_create_iavs_caps  (guint32              codec_fcc,
                                       gst_riff_strh      * strh,

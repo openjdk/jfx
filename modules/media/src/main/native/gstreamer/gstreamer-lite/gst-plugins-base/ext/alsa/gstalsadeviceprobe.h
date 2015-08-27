@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the Free
- * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
 #ifndef __GST_ALSA_DEVICE_PROBE_H__
@@ -25,7 +25,9 @@
 
 G_BEGIN_DECLS
 
+#if 0
 void      gst_alsa_type_add_device_property_probe_interface (GType type);
+#endif
 
 G_END_DECLS
 

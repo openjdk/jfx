@@ -3,7 +3,7 @@
  * Copyright (C) 2007 Pioneers of the Inevitable <songbird@songbirdnest.com>
  * Copyright (C) 2010 Fluendo S.A. <support@fluendo.com>
  *
- * gstdirectsoundsink.h: 
+ * gstdirectsoundsink.h:
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -17,30 +17,30 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  *
  * The development of this code was made possible due to the involvement
  * of Pioneers of the Inevitable, the creators of the Songbird Music player
  *
- * 
+ *
  */
 
 #ifndef __GST_DIRECTSOUNDSINK_H__
 #define __GST_DIRECTSOUNDSINK_H__
 
 #include <gst/gst.h>
+#include <gst/audio/audio.h>
 #include <gst/audio/gstaudiosink.h>
-#include <gst/interfaces/mixer.h>
 
 #include <windows.h>
 #ifndef GSTREAMER_LITE
 #include <dxerr9.h>
 #endif // GSTREAMER_LITE
 #include <dsound.h>
-#include <mmreg.h> 
-#include <ks.h> 
-#include <ksmedia.h> 
+#include <mmreg.h>
+#include <ks.h>
+#include <ksmedia.h>
 
 G_BEGIN_DECLS
 #define GST_TYPE_DIRECTSOUND_SINK            (gst_directsound_sink_get_type())
@@ -51,12 +51,13 @@ G_BEGIN_DECLS
 typedef struct _GstDirectSoundSink GstDirectSoundSink;
 typedef struct _GstDirectSoundSinkClass GstDirectSoundSinkClass;
 
-#define GST_DSOUND_LOCK(obj)	(g_mutex_lock (obj->dsound_lock))
-#define GST_DSOUND_UNLOCK(obj)	(g_mutex_unlock (obj->dsound_lock))
+#define GST_DSOUND_LOCK(obj)	(g_mutex_lock (&obj->dsound_lock))
+#define GST_DSOUND_UNLOCK(obj)	(g_mutex_unlock (&obj->dsound_lock))
 
 struct _GstDirectSoundSink
 {
   GstAudioSink sink;
+
 
   /* directsound object interface pointer */
   LPDIRECTSOUND pDS;
@@ -74,18 +75,15 @@ struct _GstDirectSoundSink
 
   /* current volume setup by mixer interface */
   glong volume;
-
-  /* tracks list of our mixer interface implementation */
-  GList *tracks;
+  gboolean mute;
 
   GstCaps *cached_caps;
-
   /* lock used to protect writes and resets */
-  GMutex *dsound_lock;
+  GMutex dsound_lock;
 
   gboolean first_buffer_after_reset;
 
-  GstBufferFormat buffer_format;
+  GstAudioRingBufferFormatType type;
 
 #ifdef GSTREAMER_LITE
   gfloat panorama;

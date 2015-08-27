@@ -13,9 +13,13 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 
 #include <glib.h>
 #include <math.h>
@@ -31,7 +35,7 @@
  *
  * #GstFFTS16 provides a FFT implementation and related functions for
  * signed 16 bit integer samples. To use this call gst_fft_s16_new() for
- * allocating a #GstFFTS16 instance with the appropiate parameters and
+ * allocating a #GstFFTS16 instance with the appropriate parameters and
  * then call gst_fft_s16_fft() or gst_fft_s16_inverse_fft() to perform the
  * FFT or inverse FFT on a buffer of samples.
  *
@@ -54,8 +58,15 @@
  * The relation between them is iFFT (FFT (x)) = x / nfft where nfft is the
  * length of the FFT. This also has to be taken into account when calculation
  * the magnitude of the frequency data.
- * 
+ *
  */
+
+struct _GstFFTS16
+{
+  void *cfg;
+  gboolean inverse;
+  gint len;
+};
 
 /**
  * gst_fft_s16_new:
@@ -186,11 +197,11 @@ gst_fft_s16_window (GstFFTS16 * self, gint16 * timedata, GstFFTWindow window)
       break;
     case GST_FFT_WINDOW_HAMMING:
       for (i = 0; i < len; i++)
-        timedata[i] *= (0.53836 - 0.46164 * cos (2.0 * M_PI * i / len));
+        timedata[i] *= (0.53836 - 0.46164 * cos (2.0 * G_PI * i / len));
       break;
     case GST_FFT_WINDOW_HANN:
       for (i = 0; i < len; i++)
-        timedata[i] *= (0.5 - 0.5 * cos (2.0 * M_PI * i / len));
+        timedata[i] *= (0.5 - 0.5 * cos (2.0 * G_PI * i / len));
       break;
     case GST_FFT_WINDOW_BARTLETT:
       for (i = 0; i < len; i++)

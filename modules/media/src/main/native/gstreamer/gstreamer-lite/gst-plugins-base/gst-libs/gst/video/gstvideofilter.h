@@ -13,8 +13,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 
@@ -22,6 +22,7 @@
 #define __GST_VIDEO_FILTER_H__
 
 #include <gst/base/gstbasetransform.h>
+#include <gst/video/video.h>
 
 G_BEGIN_DECLS
 
@@ -40,15 +41,42 @@ typedef struct _GstVideoFilterClass GstVideoFilterClass;
   (G_TYPE_CHECK_INSTANCE_TYPE((obj),GST_TYPE_VIDEO_FILTER))
 #define GST_IS_VIDEO_FILTER_CLASS(klass) \
   (G_TYPE_CHECK_CLASS_TYPE((klass),GST_TYPE_VIDEO_FILTER))
+#define GST_VIDEO_FILTER_CAST(obj)  ((GstVideoFilter *)(obj))
 
 struct _GstVideoFilter {
   GstBaseTransform element;
 
-  gboolean inited;
+  gboolean negotiated;
+  GstVideoInfo in_info;
+  GstVideoInfo out_info;
+
+  /*< private >*/
+  gpointer _gst_reserved[GST_PADDING];
 };
 
+/**
+ * GstVideoFilterClass:
+ * @parent_class: the parent class structure
+ * @set_info: function to be called with the negotiated caps and video infos
+ * @transform_frame: transform a video frame
+ * @transform_frame_ip: transform a video frame in place
+ *
+ * The video filter class structure.
+ */
 struct _GstVideoFilterClass {
   GstBaseTransformClass parent_class;
+
+  gboolean      (*set_info)           (GstVideoFilter *filter,
+                                       GstCaps *incaps, GstVideoInfo *in_info,
+                                       GstCaps *outcaps, GstVideoInfo *out_info);
+
+  /* transform */
+  GstFlowReturn (*transform_frame)    (GstVideoFilter *filter,
+                                       GstVideoFrame *inframe, GstVideoFrame *outframe);
+  GstFlowReturn (*transform_frame_ip) (GstVideoFilter *trans, GstVideoFrame *frame);
+
+  /*< private >*/
+  gpointer _gst_reserved[GST_PADDING];
 };
 
 GType gst_video_filter_get_type (void);

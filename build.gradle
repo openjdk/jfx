@@ -2360,7 +2360,7 @@ project(":media") {
                     }
                 }
 
-                def buildGlib = task("build${t.capital}Glib", dependsOn: [buildResources]) {
+	        def buildGlib = task("build${t.capital}Glib", dependsOn: [buildResources]) {
                     enabled = IS_COMPILE_MEDIA
                     doLast {
                         exec {
@@ -2378,6 +2378,12 @@ project(":media") {
                 def buildGlib = task("build${t.capital}Glib") {
                     enabled = IS_COMPILE_MEDIA
                     doLast {
+                        exec {
+                            commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/gstreamer/projects/${projectDir}/libffi")
+                            args("OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", "BASE_NAME=ffi")
+                            args ("CC=${mediaProperties.compiler}", "LINKER=${mediaProperties.linker}", "AR=${mediaProperties.ar}")
+                        }
+
                         exec {
                             commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/gstreamer/projects/${projectDir}/glib-lite")
                             args("OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", "BASE_NAME=glib-lite")

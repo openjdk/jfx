@@ -15,22 +15,24 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  *
  *
- * The development of this code was made possible due to the involvement of Pioneers 
+ * The development of this code was made possible due to the involvement of Pioneers
  * of the Inevitable, the creators of the Songbird Music player
- * 
+ *
  */
- 
+
 #ifndef __GST_OSX_VIDEO_SINK_H__
 #define __GST_OSX_VIDEO_SINK_H__
 
+#include <gst/video/video.h>
 #include <gst/video/gstvideosink.h>
 
 #include <string.h>
 #include <math.h>
+#include <objc/runtime.h>
 #include <Cocoa/Cocoa.h>
 
 #include <QuickTime/QuickTime.h>
@@ -59,25 +61,78 @@ typedef struct _GstOSXVideoSinkClass GstOSXVideoSinkClass;
 
 #define GST_TYPE_OSXVIDEOBUFFER (gst_osxvideobuffer_get_type())
 
+typedef enum {
+  GST_OSX_VIDEO_SINK_RUN_LOOP_STATE_NOT_RUNNING = 0,
+  GST_OSX_VIDEO_SINK_RUN_LOOP_STATE_RUNNING = 1,
+  GST_OSX_VIDEO_SINK_RUN_LOOP_STATE_UNKNOWN = 2,
+} GstOSXVideoSinkRunLoopState;
+
 /* OSXWindow stuff */
 struct _GstOSXWindow {
   gint width, height;
+  gboolean closed;
   gboolean internal;
   GstGLView* gstview;
+  GstOSXVideoSinkWindow* win;
 };
 
 struct _GstOSXVideoSink {
   /* Our element stuff */
   GstVideoSink videosink;
   GstOSXWindow *osxwindow;
+  void *osxvideosinkobject;
   NSView *superview;
+  gboolean keep_par;
+  GstVideoInfo info;
 };
 
 struct _GstOSXVideoSinkClass {
   GstVideoSinkClass parent_class;
+
+  GstOSXVideoSinkRunLoopState run_loop_state;
+  NSThread *ns_app_thread;
 };
 
 GType gst_osx_video_sink_get_type(void);
+
+@interface NSApplication(AppleMenu)
+- (void)setAppleMenu:(NSMenu *)menu;
+@end
+
+@interface GstBufferObject : NSObject
+{
+  @public
+  GstBuffer *buf;
+}
+
+-(id) initWithBuffer: (GstBuffer *) buf;
+@end
+
+
+@interface GstWindowDelegate : NSObject <NSWindowDelegate>
+{
+  @public
+  GstOSXVideoSink *osxvideosink;
+}
+-(id) initWithSink: (GstOSXVideoSink *) sink;
+@end
+
+@interface GstOSXVideoSinkObject : NSObject
+{
+  @public
+  GstOSXVideoSink *osxvideosink;
+}
+
+-(id) initWithSink: (GstOSXVideoSink *) sink;
+-(void) createInternalWindow;
+-(void) resize;
+-(void) destroy;
+-(void) showFrame: (GstBufferObject*) buf;
+-(void) setView: (NSView*) view;
++ (BOOL) isMainThread;
+-(void) nsAppThread;
+-(void) checkMainRunLoop;
+@end
 
 G_END_DECLS
 

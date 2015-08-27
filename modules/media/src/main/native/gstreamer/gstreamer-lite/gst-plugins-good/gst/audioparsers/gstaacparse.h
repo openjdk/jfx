@@ -15,8 +15,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 #ifndef __GST_AAC_PARSE_H__
@@ -45,6 +45,7 @@ G_BEGIN_DECLS
  * @DSPAAC_HEADER_UNKNOWN: Unknown (not recognized) header.
  * @DSPAAC_HEADER_ADIF: ADIF header found.
  * @DSPAAC_HEADER_ADTS: ADTS header found.
+ * @DSPAAC_HEADER_LOAS: LOAS header found.
  * @DSPAAC_HEADER_NONE: Raw stream, no header.
  *
  * Type header enumeration set in #header_type.
@@ -54,6 +55,7 @@ typedef enum {
   DSPAAC_HEADER_UNKNOWN,
   DSPAAC_HEADER_ADIF,
   DSPAAC_HEADER_ADTS,
+  DSPAAC_HEADER_LOAS,
   DSPAAC_HEADER_NONE
 } GstAacHeaderType;
 
@@ -63,19 +65,6 @@ typedef struct _GstAacParseClass GstAacParseClass;
 
 /**
  * GstAacParse:
- * @element: the parent element.
- * @object_type: AAC object type of the stream.
- * @bitrate:  Current media bitrate.
- * @sample_rate: Current media samplerate.
- * @channels: Current media channel count.
- * @frames_per_sec: FPS value of the current stream.
- * @header_type: #GstAacHeaderType indicating the current stream type.
- * @framecount: The amount of frames that has been processed this far.
- * @bytecount: The amount of bytes that has been processed this far.
- * @sync: Tells whether the parser is in sync (a.k.a. not searching for header)
- * @eos: End-of-Stream indicator. Set when EOS event arrives.
- * @duration: Duration of the current stream.
- * @ts: Current stream timestamp.
  *
  * The opaque GstAacParse data structure.
  */
@@ -88,8 +77,12 @@ struct _GstAacParse {
   gint           sample_rate;
   gint           channels;
   gint           mpegversion;
+  gint           frame_samples;
 
   GstAacHeaderType header_type;
+  GstAacHeaderType output_header_type;
+
+  gboolean sent_codec_tag;
 };
 
 /**

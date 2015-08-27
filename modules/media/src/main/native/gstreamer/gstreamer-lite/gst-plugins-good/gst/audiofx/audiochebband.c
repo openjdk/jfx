@@ -14,8 +14,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 /* 
@@ -59,9 +59,9 @@
  * <refsect2>
  * <title>Example launch line</title>
  * |[
- * gst-launch audiotestsrc freq=1500 ! audioconvert ! audiochebband mode=band-pass lower-frequency=1000 upper-frequenc=6000 poles=4 ! audioconvert ! alsasink
- * gst-launch filesrc location="melo1.ogg" ! oggdemux ! vorbisdec ! audioconvert ! audiochebband mode=band-reject lower-frequency=1000 upper-frequency=4000 ripple=0.2 ! audioconvert ! alsasink
- * gst-launch audiotestsrc wave=white-noise ! audioconvert ! audiochebband mode=band-pass lower-frequency=1000 upper-frequency=4000 type=2 ! audioconvert ! alsasink
+ * gst-launch-1.0 audiotestsrc freq=1500 ! audioconvert ! audiochebband mode=band-pass lower-frequency=1000 upper-frequenc=6000 poles=4 ! audioconvert ! alsasink
+ * gst-launch-1.0 filesrc location="melo1.ogg" ! oggdemux ! vorbisdec ! audioconvert ! audiochebband mode=band-reject lower-frequency=1000 upper-frequency=4000 ripple=0.2 ! audioconvert ! alsasink
+ * gst-launch-1.0 audiotestsrc wave=white-noise ! audioconvert ! audiochebband mode=band-pass lower-frequency=1000 upper-frequency=4000 type=2 ! audioconvert ! alsasink
  * ]|
  * </refsect2>
  */
@@ -70,17 +70,20 @@
 #include "config.h"
 #endif
 
+#include <string.h>
+
 #include <gst/gst.h>
 #include <gst/base/gstbasetransform.h>
 #include <gst/audio/audio.h>
 #include <gst/audio/gstaudiofilter.h>
-#include <gst/controller/gstcontroller.h>
 
 #include <math.h>
 
 #include "math_compat.h"
 
 #include "audiochebband.h"
+
+#include "gst/glib-compat-private.h"
 
 #define GST_CAT_DEFAULT gst_audio_cheb_band_debug
 GST_DEBUG_CATEGORY_STATIC (GST_CAT_DEFAULT);
@@ -96,11 +99,9 @@ enum
   PROP_POLES
 };
 
-#define DEBUG_INIT(bla) \
-  GST_DEBUG_CATEGORY_INIT (gst_audio_cheb_band_debug, "audiochebband", 0, "audiochebband element");
-
-GST_BOILERPLATE_FULL (GstAudioChebBand, gst_audio_cheb_band,
-    GstAudioFXBaseIIRFilter, GST_TYPE_AUDIO_FX_BASE_IIR_FILTER, DEBUG_INIT);
+#define gst_audio_cheb_band_parent_class parent_class
+G_DEFINE_TYPE (GstAudioChebBand, gst_audio_cheb_band,
+    GST_TYPE_AUDIO_FX_BASE_IIR_FILTER);
 
 static void gst_audio_cheb_band_set_property (GObject * object,
     guint prop_id, const GValue * value, GParamSpec * pspec);
@@ -109,7 +110,7 @@ static void gst_audio_cheb_band_get_property (GObject * object,
 static void gst_audio_cheb_band_finalize (GObject * object);
 
 static gboolean gst_audio_cheb_band_setup (GstAudioFilter * filter,
-    GstRingBufferSpec * format);
+    const GstAudioInfo * info);
 
 enum
 {
@@ -140,21 +141,14 @@ gst_audio_cheb_band_mode_get_type (void)
 /* GObject vmethod implementations */
 
 static void
-gst_audio_cheb_band_base_init (gpointer klass)
-{
-  GstElementClass *element_class = GST_ELEMENT_CLASS (klass);
-
-  gst_element_class_set_details_simple (element_class,
-      "Band pass & band reject filter", "Filter/Effect/Audio",
-      "Chebyshev band pass and band reject filter",
-      "Sebastian Dröge <sebastian.droege@collabora.co.uk>");
-}
-
-static void
 gst_audio_cheb_band_class_init (GstAudioChebBandClass * klass)
 {
   GObjectClass *gobject_class = (GObjectClass *) klass;
+  GstElementClass *gstelement_class = (GstElementClass *) klass;
   GstAudioFilterClass *filter_class = (GstAudioFilterClass *) klass;
+
+  GST_DEBUG_CATEGORY_INIT (gst_audio_cheb_band_debug, "audiochebband", 0,
+      "audiochebband element");
 
   gobject_class->set_property = gst_audio_cheb_band_set_property;
   gobject_class->get_property = gst_audio_cheb_band_get_property;
@@ -193,12 +187,16 @@ gst_audio_cheb_band_class_init (GstAudioChebBandClass * klass)
           4, 32, 4,
           G_PARAM_READWRITE | GST_PARAM_CONTROLLABLE | G_PARAM_STATIC_STRINGS));
 
+  gst_element_class_set_static_metadata (gstelement_class,
+      "Band pass & band reject filter", "Filter/Effect/Audio",
+      "Chebyshev band pass and band reject filter",
+      "Sebastian Dröge <sebastian.droege@collabora.co.uk>");
+
   filter_class->setup = GST_DEBUG_FUNCPTR (gst_audio_cheb_band_setup);
 }
 
 static void
-gst_audio_cheb_band_init (GstAudioChebBand * filter,
-    GstAudioChebBandClass * klass)
+gst_audio_cheb_band_init (GstAudioChebBand * filter)
 {
   filter->lower_frequency = filter->upper_frequency = 0.0;
   filter->mode = MODE_BAND_PASS;
@@ -206,13 +204,13 @@ gst_audio_cheb_band_init (GstAudioChebBand * filter,
   filter->poles = 4;
   filter->ripple = 0.25;
 
-  filter->lock = g_mutex_new ();
+  g_mutex_init (&filter->lock);
 }
 
 static void
 generate_biquad_coefficients (GstAudioChebBand * filter,
-    gint p, gdouble * a0, gdouble * a1, gdouble * a2, gdouble * a3,
-    gdouble * a4, gdouble * b1, gdouble * b2, gdouble * b3, gdouble * b4)
+    gint p, gint rate, gdouble * b0, gdouble * b1, gdouble * b2, gdouble * b3,
+    gdouble * b4, gdouble * a1, gdouble * a2, gdouble * a3, gdouble * a4)
 {
   gint np = filter->poles / 2;
   gdouble ripple = filter->ripple;
@@ -338,12 +336,8 @@ generate_biquad_coefficients (GstAudioChebBand * filter,
   {
     gdouble a, b, d;
     gdouble alpha, beta;
-    gdouble w0 =
-        2.0 * G_PI * (filter->lower_frequency /
-        GST_AUDIO_FILTER (filter)->format.rate);
-    gdouble w1 =
-        2.0 * G_PI * (filter->upper_frequency /
-        GST_AUDIO_FILTER (filter)->format.rate);
+    gdouble w0 = 2.0 * G_PI * (filter->lower_frequency / rate);
+    gdouble w1 = 2.0 * G_PI * (filter->upper_frequency / rate);
 
     if (filter->mode == MODE_BAND_PASS) {
       a = cos ((w1 + w0) / 2.0) / cos ((w1 - w0) / 2.0);
@@ -354,19 +348,19 @@ generate_biquad_coefficients (GstAudioChebBand * filter,
 
       d = 1.0 + beta * (y1 - beta * y2);
 
-      *a0 = (x0 + beta * (-x1 + beta * x2)) / d;
-      *a1 = (alpha * (-2.0 * x0 + x1 + beta * x1 - 2.0 * beta * x2)) / d;
-      *a2 =
+      *b0 = (x0 + beta * (-x1 + beta * x2)) / d;
+      *b1 = (alpha * (-2.0 * x0 + x1 + beta * x1 - 2.0 * beta * x2)) / d;
+      *b2 =
           (-x1 - beta * beta * x1 + 2.0 * beta * (x0 + x2) +
           alpha * alpha * (x0 - x1 + x2)) / d;
-      *a3 = (alpha * (x1 + beta * (-2.0 * x0 + x1) - 2.0 * x2)) / d;
-      *a4 = (beta * (beta * x0 - x1) + x2) / d;
-      *b1 = (alpha * (2.0 + y1 + beta * y1 - 2.0 * beta * y2)) / d;
-      *b2 =
+      *b3 = (alpha * (x1 + beta * (-2.0 * x0 + x1) - 2.0 * x2)) / d;
+      *b4 = (beta * (beta * x0 - x1) + x2) / d;
+      *a1 = (alpha * (2.0 + y1 + beta * y1 - 2.0 * beta * y2)) / d;
+      *a2 =
           (-y1 - beta * beta * y1 - alpha * alpha * (1.0 + y1 - y2) +
           2.0 * beta * (-1.0 + y2)) / d;
-      *b3 = (alpha * (y1 + beta * (2.0 + y1) - 2.0 * y2)) / d;
-      *b4 = (-beta * beta - beta * y1 + y2) / d;
+      *a3 = (alpha * (y1 + beta * (2.0 + y1) - 2.0 * y2)) / d;
+      *a4 = (-beta * beta - beta * y1 + y2) / d;
     } else {
       a = cos ((w1 + w0) / 2.0) / cos ((w1 - w0) / 2.0);
       b = tan (1.0 / 2.0) * tan ((w1 - w0) / 2.0);
@@ -376,49 +370,61 @@ generate_biquad_coefficients (GstAudioChebBand * filter,
 
       d = -1.0 + beta * (beta * y2 + y1);
 
-      *a0 = (-x0 - beta * x1 - beta * beta * x2) / d;
-      *a1 = (alpha * (2.0 * x0 + x1 + beta * x1 + 2.0 * beta * x2)) / d;
-      *a2 =
+      *b0 = (-x0 - beta * x1 - beta * beta * x2) / d;
+      *b1 = (alpha * (2.0 * x0 + x1 + beta * x1 + 2.0 * beta * x2)) / d;
+      *b2 =
           (-x1 - beta * beta * x1 - 2.0 * beta * (x0 + x2) -
           alpha * alpha * (x0 + x1 + x2)) / d;
-      *a3 = (alpha * (x1 + beta * (2.0 * x0 + x1) + 2.0 * x2)) / d;
-      *a4 = (-beta * beta * x0 - beta * x1 - x2) / d;
-      *b1 = (alpha * (-2.0 + y1 + beta * y1 + 2.0 * beta * y2)) / d;
-      *b2 =
+      *b3 = (alpha * (x1 + beta * (2.0 * x0 + x1) + 2.0 * x2)) / d;
+      *b4 = (-beta * beta * x0 - beta * x1 - x2) / d;
+      *a1 = (alpha * (-2.0 + y1 + beta * y1 + 2.0 * beta * y2)) / d;
+      *a2 =
           -(y1 + beta * beta * y1 + 2.0 * beta * (-1.0 + y2) +
           alpha * alpha * (-1.0 + y1 + y2)) / d;
-      *b3 = (alpha * (beta * (-2.0 + y1) + y1 + 2.0 * y2)) / d;
-      *b4 = -(-beta * beta + beta * y1 + y2) / d;
+      *a3 = (alpha * (beta * (-2.0 + y1) + y1 + 2.0 * y2)) / d;
+      *a4 = -(-beta * beta + beta * y1 + y2) / d;
     }
   }
 }
 
 static void
-generate_coefficients (GstAudioChebBand * filter)
+generate_coefficients (GstAudioChebBand * filter, const GstAudioInfo * info)
 {
-  if (GST_AUDIO_FILTER (filter)->format.rate == 0) {
+  gint rate;
+
+  if (info) {
+    rate = GST_AUDIO_INFO_RATE (info);
+  } else {
+    rate = GST_AUDIO_FILTER_RATE (filter);
+  }
+
+  if (rate == 0) {
     gdouble *a = g_new0 (gdouble, 1);
+    gdouble *b = g_new0 (gdouble, 1);
 
     a[0] = 1.0;
+    b[0] = 1.0;
     gst_audio_fx_base_iir_filter_set_coefficients (GST_AUDIO_FX_BASE_IIR_FILTER
-        (filter), a, 1, NULL, 0);
+        (filter), a, 1, b, 1);
     GST_LOG_OBJECT (filter, "rate was not set yet");
     return;
   }
 
   if (filter->upper_frequency <= filter->lower_frequency) {
     gdouble *a = g_new0 (gdouble, 1);
+    gdouble *b = g_new0 (gdouble, 1);
 
-    a[0] = (filter->mode == MODE_BAND_PASS) ? 0.0 : 1.0;
+    a[0] = 1.0;
+    b[0] = (filter->mode == MODE_BAND_PASS) ? 0.0 : 1.0;
     gst_audio_fx_base_iir_filter_set_coefficients (GST_AUDIO_FX_BASE_IIR_FILTER
-        (filter), a, 1, NULL, 0);
+        (filter), a, 1, b, 1);
 
     GST_LOG_OBJECT (filter, "frequency band had no or negative dimension");
     return;
   }
 
-  if (filter->upper_frequency > GST_AUDIO_FILTER (filter)->format.rate / 2) {
-    filter->upper_frequency = GST_AUDIO_FILTER (filter)->format.rate / 2;
+  if (filter->upper_frequency > rate / 2) {
+    filter->upper_frequency = rate / 2;
     GST_LOG_OBJECT (filter, "clipped upper frequency to nyquist frequency");
   }
 
@@ -441,12 +447,12 @@ generate_coefficients (GstAudioChebBand * filter)
     b[4] = 1.0;
 
     for (p = 1; p <= np / 4; p++) {
-      gdouble a0, a1, a2, a3, a4, b1, b2, b3, b4;
+      gdouble b0, b1, b2, b3, b4, a1, a2, a3, a4;
       gdouble *ta = g_new0 (gdouble, np + 5);
       gdouble *tb = g_new0 (gdouble, np + 5);
 
-      generate_biquad_coefficients (filter, p, &a0, &a1, &a2, &a3, &a4, &b1,
-          &b2, &b3, &b4);
+      generate_biquad_coefficients (filter, p, rate,
+          &b0, &b1, &b2, &b3, &b4, &a1, &a2, &a3, &a4);
 
       memcpy (ta, a, sizeof (gdouble) * (np + 5));
       memcpy (tb, b, sizeof (gdouble) * (np + 5));
@@ -455,25 +461,23 @@ generate_coefficients (GstAudioChebBand * filter)
        * to the cascade by multiplication of the transfer
        * functions */
       for (i = 4; i < np + 5; i++) {
-        a[i] =
-            a0 * ta[i] + a1 * ta[i - 1] + a2 * ta[i - 2] + a3 * ta[i - 3] +
-            a4 * ta[i - 4];
         b[i] =
-            tb[i] - b1 * tb[i - 1] - b2 * tb[i - 2] - b3 * tb[i - 3] -
+            b0 * tb[i] + b1 * tb[i - 1] + b2 * tb[i - 2] + b3 * tb[i - 3] +
             b4 * tb[i - 4];
+        a[i] =
+            ta[i] - a1 * ta[i - 1] - a2 * ta[i - 2] - a3 * ta[i - 3] -
+            a4 * ta[i - 4];
       }
       g_free (ta);
       g_free (tb);
     }
 
-    /* Move coefficients to the beginning of the array
-     * and multiply the b coefficients with -1 to move from
+    /* Move coefficients to the beginning of the array to move from
      * the transfer function's coefficients to the difference
      * equation's coefficients */
-    b[4] = 0.0;
     for (i = 0; i <= np; i++) {
       a[i] = a[i + 4];
-      b[i] = -b[i + 4];
+      b[i] = b[i + 4];
     }
 
     /* Normalize to unity gain at frequency 0 and frequency
@@ -492,17 +496,13 @@ generate_coefficients (GstAudioChebBand * filter)
       gain1 = sqrt (gain1 * gain2);
 
       for (i = 0; i <= np; i++) {
-        a[i] /= gain1;
+        b[i] /= gain1;
       }
     } else {
       /* gain is H(wc), wc = center frequency */
 
-      gdouble w1 =
-          2.0 * G_PI * (filter->lower_frequency /
-          GST_AUDIO_FILTER (filter)->format.rate);
-      gdouble w2 =
-          2.0 * G_PI * (filter->upper_frequency /
-          GST_AUDIO_FILTER (filter)->format.rate);
+      gdouble w1 = 2.0 * G_PI * (filter->lower_frequency / rate);
+      gdouble w2 = 2.0 * G_PI * (filter->upper_frequency / rate);
       gdouble w0 = (w2 + w1) / 2.0;
       gdouble zr = cos (w0), zi = sin (w0);
       gdouble gain =
@@ -510,7 +510,7 @@ generate_coefficients (GstAudioChebBand * filter)
           zi);
 
       for (i = 0; i <= np; i++) {
-        a[i] /= gain;
+        b[i] /= gain;
       }
     }
 
@@ -529,12 +529,8 @@ generate_coefficients (GstAudioChebBand * filter)
         20.0 * log10 (gst_audio_fx_base_iir_filter_calculate_gain (a, np + 1, b,
                 np + 1, 1.0, 0.0)));
     {
-      gdouble w1 =
-          2.0 * G_PI * (filter->lower_frequency /
-          GST_AUDIO_FILTER (filter)->format.rate);
-      gdouble w2 =
-          2.0 * G_PI * (filter->upper_frequency /
-          GST_AUDIO_FILTER (filter)->format.rate);
+      gdouble w1 = 2.0 * G_PI * (filter->lower_frequency / rate);
+      gdouble w2 = 2.0 * G_PI * (filter->upper_frequency / rate);
       gdouble w0 = (w2 + w1) / 2.0;
       gdouble zr, zi;
 
@@ -557,8 +553,7 @@ generate_coefficients (GstAudioChebBand * filter)
     }
     GST_LOG_OBJECT (filter, "%.2f dB gain @ %dHz",
         20.0 * log10 (gst_audio_fx_base_iir_filter_calculate_gain (a, np + 1, b,
-                np + 1, -1.0, 0.0)),
-        GST_AUDIO_FILTER (filter)->format.rate / 2);
+                np + 1, -1.0, 0.0)), rate / 2);
   }
 }
 
@@ -567,8 +562,7 @@ gst_audio_cheb_band_finalize (GObject * object)
 {
   GstAudioChebBand *filter = GST_AUDIO_CHEB_BAND (object);
 
-  g_mutex_free (filter->lock);
-  filter->lock = NULL;
+  g_mutex_clear (&filter->lock);
 
   G_OBJECT_CLASS (parent_class)->finalize (object);
 }
@@ -581,40 +575,40 @@ gst_audio_cheb_band_set_property (GObject * object, guint prop_id,
 
   switch (prop_id) {
     case PROP_MODE:
-      g_mutex_lock (filter->lock);
+      g_mutex_lock (&filter->lock);
       filter->mode = g_value_get_enum (value);
-      generate_coefficients (filter);
-      g_mutex_unlock (filter->lock);
+      generate_coefficients (filter, NULL);
+      g_mutex_unlock (&filter->lock);
       break;
     case PROP_TYPE:
-      g_mutex_lock (filter->lock);
+      g_mutex_lock (&filter->lock);
       filter->type = g_value_get_int (value);
-      generate_coefficients (filter);
-      g_mutex_unlock (filter->lock);
+      generate_coefficients (filter, NULL);
+      g_mutex_unlock (&filter->lock);
       break;
     case PROP_LOWER_FREQUENCY:
-      g_mutex_lock (filter->lock);
+      g_mutex_lock (&filter->lock);
       filter->lower_frequency = g_value_get_float (value);
-      generate_coefficients (filter);
-      g_mutex_unlock (filter->lock);
+      generate_coefficients (filter, NULL);
+      g_mutex_unlock (&filter->lock);
       break;
     case PROP_UPPER_FREQUENCY:
-      g_mutex_lock (filter->lock);
+      g_mutex_lock (&filter->lock);
       filter->upper_frequency = g_value_get_float (value);
-      generate_coefficients (filter);
-      g_mutex_unlock (filter->lock);
+      generate_coefficients (filter, NULL);
+      g_mutex_unlock (&filter->lock);
       break;
     case PROP_RIPPLE:
-      g_mutex_lock (filter->lock);
+      g_mutex_lock (&filter->lock);
       filter->ripple = g_value_get_float (value);
-      generate_coefficients (filter);
-      g_mutex_unlock (filter->lock);
+      generate_coefficients (filter, NULL);
+      g_mutex_unlock (&filter->lock);
       break;
     case PROP_POLES:
-      g_mutex_lock (filter->lock);
+      g_mutex_lock (&filter->lock);
       filter->poles = GST_ROUND_UP_4 (g_value_get_int (value));
-      generate_coefficients (filter);
-      g_mutex_unlock (filter->lock);
+      generate_coefficients (filter, NULL);
+      g_mutex_unlock (&filter->lock);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -656,11 +650,11 @@ gst_audio_cheb_band_get_property (GObject * object, guint prop_id,
 /* GstAudioFilter vmethod implementations */
 
 static gboolean
-gst_audio_cheb_band_setup (GstAudioFilter * base, GstRingBufferSpec * format)
+gst_audio_cheb_band_setup (GstAudioFilter * base, const GstAudioInfo * info)
 {
   GstAudioChebBand *filter = GST_AUDIO_CHEB_BAND (base);
 
-  generate_coefficients (filter);
+  generate_coefficients (filter, info);
 
-  return GST_AUDIO_FILTER_CLASS (parent_class)->setup (base, format);
+  return GST_AUDIO_FILTER_CLASS (parent_class)->setup (base, info);
 }

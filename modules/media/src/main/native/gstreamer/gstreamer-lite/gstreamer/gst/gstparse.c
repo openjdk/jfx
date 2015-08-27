@@ -18,8 +18,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 /**
@@ -31,7 +31,7 @@
  *
  * Please note that these functions take several measures to create
  * somewhat dynamic pipelines. Due to that such pipelines are not always
- * reuseable (set the state to NULL and back to PLAYING).
+ * reusable (set the state to NULL and back to PLAYING).
  */
 
 #include "gst_private.h"
@@ -44,12 +44,6 @@
 #include "parse/types.h"
 #endif
 
-static void
-_prepend_missing_element (gchar * element, GList ** list)
-{
-  *list = g_list_prepend (*list, g_strdup (element));
-}
-
 static GstParseContext *
 gst_parse_context_copy (const GstParseContext * context)
 {
@@ -58,27 +52,21 @@ gst_parse_context_copy (const GstParseContext * context)
 
   ret = gst_parse_context_new ();
   if (context) {
-    g_list_foreach (context->missing_elements, (GFunc) _prepend_missing_element,
-        &ret->missing_elements);
-    ret->missing_elements = g_list_reverse (ret->missing_elements);
+    GQueue missing_copy = G_QUEUE_INIT;
+    GList *l;
+
+    for (l = context->missing_elements; l != NULL; l = l->next)
+      g_queue_push_tail (&missing_copy, g_strdup ((const gchar *) l->data));
+
+    ret->missing_elements = missing_copy.head;
   }
 #endif
   return ret;
 }
 
-GType
-gst_parse_context_get_type (void)
-{
-  static GType type = 0;
-
-  if (G_UNLIKELY (type == 0)) {
-    type = g_boxed_type_register_static ("GstParseContext",
+G_DEFINE_BOXED_TYPE (GstParseContext, gst_parse_context,
         (GBoxedCopyFunc) gst_parse_context_copy,
         (GBoxedFreeFunc) gst_parse_context_free);
-  }
-
-  return type;
-}
 
 /**
  * gst_parse_error_quark:
@@ -108,8 +96,6 @@ gst_parse_error_quark (void)
  *
  * Returns: (transfer full): a newly-allocated parse context. Free with
  *     gst_parse_context_free() when no longer needed.
- *
- * Since: 0.10.20
  */
 GstParseContext *
 gst_parse_context_new (void)
@@ -131,8 +117,6 @@ gst_parse_context_new (void)
  * @context: (transfer full): a #GstParseContext
  *
  * Frees a parse context previously allocated with gst_parse_context_new().
- *
- * Since: 0.10.20
  */
 void
 gst_parse_context_free (GstParseContext * context)
@@ -156,10 +140,8 @@ gst_parse_context_free (GstParseContext * context)
  * of %GST_PARSE_ERROR_NO_SUCH_ELEMENT was returned.
  *
  * Returns: (transfer full) (array zero-terminated=1) (element-type gchar*): a
- *     NULL-terminated array of element factory name strings of missing
+ *     %NULL-terminated array of element factory name strings of missing
  *     elements. Free with g_strfreev() when no longer needed.
- *
- * Since: 0.10.20
  */
 gchar **
 gst_parse_context_get_missing_elements (GstParseContext * context)
@@ -195,14 +177,21 @@ static gchar *
 _gst_parse_escape (const gchar * str)
 {
   GString *gstr = NULL;
+  gboolean in_quotes;
 
   g_return_val_if_fail (str != NULL, NULL);
 
   gstr = g_string_sized_new (strlen (str));
 
+  in_quotes = FALSE;
+
   while (*str) {
-    if (*str == ' ')
+    if (*str == '"' && (!in_quotes || (in_quotes && *(str - 1) != '\\')))
+      in_quotes = !in_quotes;
+
+    if (*str == ' ' && !in_quotes)
       g_string_append_c (gstr, '\\');
+
     g_string_append_c (gstr, *str);
     str++;
   }
@@ -217,15 +206,15 @@ _gst_parse_escape (const gchar * str)
  * @error: pointer to a #GError
  *
  * Create a new element based on command line syntax.
- * @error will contain an error message if an erroneuos pipeline is specified.
+ * @error will contain an error message if an erroneous pipeline is specified.
  * An error does not mean that the pipeline could not be constructed.
  *
- * Returns: (transfer full): a new element on success and %NULL on failure.
+ * Returns: (transfer floating): a new element on success and %NULL on failure.
  */
 GstElement *
 gst_parse_launchv (const gchar ** argv, GError ** error)
 {
-  return gst_parse_launchv_full (argv, NULL, 0, error);
+  return gst_parse_launchv_full (argv, NULL, GST_PARSE_FLAG_NONE, error);
 }
 
 /**
@@ -240,12 +229,10 @@ gst_parse_launchv (const gchar ** argv, GError ** error)
  * @error will contain an error message if an erroneous pipeline is specified.
  * An error does not mean that the pipeline could not be constructed.
  *
- * Returns: (transfer full): a new element on success; on failure, either %NULL
+ * Returns: (transfer floating): a new element on success; on failure, either %NULL
  *   or a partially-constructed bin or element will be returned and @error will
  *   be set (unless you passed #GST_PARSE_FLAG_FATAL_ERRORS in @flags, then
  *   %NULL will always be returned on failure)
- *
- * Since: 0.10.20
  */
 GstElement *
 gst_parse_launchv_full (const gchar ** argv, GstParseContext * context,
@@ -266,6 +253,7 @@ gst_parse_launchv_full (const gchar ** argv, GstParseContext * context,
   argvp = argv;
   while (*argvp) {
     arg = *argvp;
+    GST_DEBUG ("escaping argument %s", arg);
     tmp = _gst_parse_escape (arg);
     g_string_append (str, tmp);
     g_free (tmp);
@@ -294,14 +282,15 @@ gst_parse_launchv_full (const gchar ** argv, GstParseContext * context,
  * the @error is set. In this case there was a recoverable parsing error and you
  * can try to play the pipeline.
  *
- * Returns: (transfer full): a new element on success, %NULL on failure. If
+ * Returns: (transfer floating): a new element on success, %NULL on failure. If
  *    more than one toplevel element is specified by the @pipeline_description,
  *   all elements are put into a #GstPipeline, which than is returned.
  */
 GstElement *
 gst_parse_launch (const gchar * pipeline_description, GError ** error)
 {
-  return gst_parse_launch_full (pipeline_description, NULL, 0, error);
+  return gst_parse_launch_full (pipeline_description, NULL, GST_PARSE_FLAG_NONE,
+      error);
 }
 
 /**
@@ -317,11 +306,9 @@ gst_parse_launch (const gchar * pipeline_description, GError ** error)
  * the @error is set. In this case there was a recoverable parsing error and you
  * can try to play the pipeline.
  *
- * Returns: (transfer full): a new element on success, %NULL on failure. If
+ * Returns: (transfer floating): a new element on success, %NULL on failure. If
  *    more than one toplevel element is specified by the @pipeline_description,
  *    all elements are put into a #GstPipeline, which then is returned.
- *
- * Since: 0.10.20
  */
 GstElement *
 gst_parse_launch_full (const gchar * pipeline_description,
@@ -329,6 +316,7 @@ gst_parse_launch_full (const gchar * pipeline_description,
 {
 #ifndef GST_DISABLE_PARSE
   GstElement *element;
+  GError *myerror = NULL;
 
   g_return_val_if_fail (pipeline_description != NULL, NULL);
   g_return_val_if_fail (error == NULL || *error == NULL, NULL);
@@ -336,15 +324,19 @@ gst_parse_launch_full (const gchar * pipeline_description,
   GST_CAT_INFO (GST_CAT_PIPELINE, "parsing pipeline description '%s'",
       pipeline_description);
 
-  element = _gst_parse_launch (pipeline_description, error, context, flags);
+  element = priv_gst_parse_launch (pipeline_description, &myerror, context,
+      flags);
 
   /* don't return partially constructed pipeline if FATAL_ERRORS was given */
-  if (G_UNLIKELY (error != NULL && *error != NULL && element != NULL)) {
+  if (G_UNLIKELY (myerror != NULL && element != NULL)) {
     if ((flags & GST_PARSE_FLAG_FATAL_ERRORS)) {
       gst_object_unref (element);
       element = NULL;
     }
   }
+
+  if (myerror)
+    g_propagate_error (error, myerror);
 
   return element;
 #else

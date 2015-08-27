@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -84,7 +84,7 @@ struct _JavaSource
 {
     GstElement    parent;
 
-    GMutex        *lock;
+    GMutex        lock;
     GstFlowReturn srcresult;
     GstPad        *srcpad;
 
@@ -115,18 +115,16 @@ struct _JavaSourceClass
 
 /***********************************************************************************
  * Substitution for
- * GST_BOILERPLATE(JavaSource, java_source, GstElement, GST_TYPE_ELEMENT);
+ * G_DEFINE_TYPE(JavaSource, java_source, GstElement, GST_TYPE_ELEMENT);
  ***********************************************************************************/
-static void java_source_base_init     (gpointer         g_class);
-static void java_source_class_init    (JavaSourceClass *g_class);
-static void java_source_init          (JavaSource      *object,
-                                       JavaSourceClass *g_class);
-static GstElementClass *parent_class = NULL;
-
-static void java_source_class_init_trampoline (gpointer g_class, gpointer data)
+#define java_source_parent_class parent_class
+static void java_source_init          (JavaSource      *self);
+static void java_source_class_init    (JavaSourceClass *klass);
+static gpointer java_source_parent_class = NULL;
+static void     java_source_class_intern_init (gpointer klass)
 {
-    parent_class = (GstElementClass*)g_type_class_peek_parent (g_class);
-    java_source_class_init ((JavaSourceClass*)g_class);
+    java_source_parent_class = g_type_class_peek_parent (klass);
+    java_source_class_init ((JavaSourceClass*) klass);
 }
 
 GType java_source_get_type (void)
@@ -136,18 +134,12 @@ GType java_source_get_type (void)
     if (g_once_init_enter (&gonce_data))
     {
         GType _type;
-        _type = gst_type_register_static_full (GST_TYPE_ELEMENT,
+        _type = g_type_register_static_simple (GST_TYPE_ELEMENT,
                g_intern_static_string ("JavaSource"),
                sizeof (JavaSourceClass),
-               java_source_base_init,
-               NULL,
-               java_source_class_init_trampoline,
-               NULL,
-               NULL,
-               sizeof (JavaSource),
-               0,
-               (GInstanceInitFunc) java_source_init,
-               NULL,
+               (GClassInitFunc) java_source_class_intern_init,
+               sizeof(JavaSource),
+               (GInstanceInitFunc) java_source_init,               
                (GTypeFlags) 0);
         g_once_init_leave (&gonce_data, (gsize) _type);
     }
@@ -160,20 +152,6 @@ GType java_source_get_type (void)
 static GstStaticPadTemplate source_template = GST_STATIC_PAD_TEMPLATE ("src",
     GST_PAD_SRC, GST_PAD_ALWAYS, GST_STATIC_CAPS_ANY);
 
-static void java_source_base_init (gpointer g_class)
-{
-    GstElementClass *element_class = GST_ELEMENT_CLASS (g_class);
-
-    gst_element_class_set_details_simple (element_class,
-        "Java Source",
-        "Source",
-        "Java based source element",
-        "Oracle Corporation");
-
-    gst_element_class_add_pad_template (element_class,
-        gst_static_pad_template_get (&source_template));
-}
-
 /***********************************************************************************
 * Instance init and forward declarations
 ***********************************************************************************/
@@ -185,24 +163,33 @@ static void                 java_source_finalize (GObject *object);
 static GstStateChangeReturn java_source_change_state (GstElement *element,
     GstStateChange transition);
 
-static gboolean         java_source_activatepush(GstPad *pad, gboolean active);
-static gboolean         java_source_event(GstPad *pad, GstEvent *event);
-static gboolean         java_source_checkgetrange(GstPad *pad);
-static GstFlowReturn    java_source_getrange(GstPad *pad, guint64 offset,
+static gboolean         java_source_activatemode(GstPad *pad, GstObject *parent, GstPadMode mode, gboolean active);
+static gboolean         java_source_event(GstPad *pad, GstObject *parent, GstEvent *event);
+static GstFlowReturn    java_source_getrange(GstPad *pad, GstObject *parent, guint64 offset,
     guint length, GstBuffer **data);
 static void             java_source_loop(void *data);
 
-static const GstQueryType* java_source_query_type(GstPad * pad);
-static gboolean            java_source_query (GstPad *pad, GstQuery *query);
+static gboolean            java_source_query (GstPad *pad, GstObject *parent, GstQuery *query);
 
 static void java_source_class_init (JavaSourceClass *klass)
 {
     GObjectClass *gobject_klass = G_OBJECT_CLASS (klass);
+    GstElementClass *element_class = GST_ELEMENT_CLASS (klass);
+    
     gobject_klass->finalize = GST_DEBUG_FUNCPTR(java_source_finalize);
     gobject_klass->set_property = java_source_set_property;
     gobject_klass->get_property = java_source_get_property;
+    
+    gst_element_class_set_static_metadata (element_class,
+        "Java Source",
+        "Source",
+        "Java based source element",
+        "Oracle Corporation");
 
-    GST_ELEMENT_CLASS (klass)->change_state = GST_DEBUG_FUNCPTR(java_source_change_state);
+    gst_element_class_add_pad_template (element_class,
+        gst_static_pad_template_get (&source_template));
+
+    element_class->change_state = GST_DEBUG_FUNCPTR(java_source_change_state);
 
     g_object_class_install_property (gobject_klass, PROP_SIZE,
         g_param_spec_int64 ("size", "Stream size", "stream size", -1, G_MAXINT64, -1,
@@ -307,26 +294,20 @@ static void java_source_class_init (JavaSourceClass *klass)
         0    /* n_params */ );
 }
 
-static void java_source_init(JavaSource *element, JavaSourceClass *element_klass)
+static void java_source_init(JavaSource *element)
 {
-    GstElementClass *klass = GST_ELEMENT_CLASS (element_klass);
-
-    element->srcpad = gst_pad_new_from_template (gst_element_class_get_pad_template (klass, "src"), "src");
-    gst_pad_set_activatepush_function  (element->srcpad,
-        GST_DEBUG_FUNCPTR(java_source_activatepush));
-    gst_pad_set_checkgetrange_function (element->srcpad,
-        GST_DEBUG_FUNCPTR(java_source_checkgetrange));
+    element->srcpad = gst_pad_new_from_template (gst_element_class_get_pad_template (GST_ELEMENT_GET_CLASS(element), "src"), "src");
+    gst_pad_set_activatemode_function  (element->srcpad,
+        GST_DEBUG_FUNCPTR(java_source_activatemode));
     gst_pad_set_event_function         (element->srcpad,
         GST_DEBUG_FUNCPTR(java_source_event));
     gst_pad_set_getrange_function      (element->srcpad,
         GST_DEBUG_FUNCPTR(java_source_getrange));
-    gst_pad_set_query_type_function    (element->srcpad,
-        GST_DEBUG_FUNCPTR(java_source_query_type));
     gst_pad_set_query_function         (element->srcpad,
         GST_DEBUG_FUNCPTR(java_source_query));
     gst_element_add_pad (GST_ELEMENT (element), element->srcpad);
 
-    element->lock = g_mutex_new();
+    g_mutex_init(&element->lock);
 
     element->mode = MODE_DEFAULT;
 
@@ -366,15 +347,7 @@ static void java_source_set_property (GObject *object, guint prop_id,
             element->mode = MODE_DEFAULT;
         break;
     case PROP_MIMETYPE:
-        element->mimetype = g_strdup(g_value_get_string (value));
-        // Set caps to mimetype if provided
-        if (element->mimetype)
-        {
-            GstCaps *caps = NULL;
-            caps = gst_caps_new_simple (element->mimetype, NULL);
-            gst_pad_set_caps(element->srcpad, caps);
-            gst_caps_unref(caps);
-        }
+        element->mimetype = g_strdup(g_value_get_string (value));        
         break;
     default:
         break;
@@ -397,7 +370,7 @@ static void java_source_get_property (GObject *object, guint prop_id,
 static void java_source_finalize (GObject *object)
 {
     JavaSource *element = JAVA_SOURCE(object);
-    g_mutex_free(element->lock);
+    g_mutex_clear(&element->lock);
     g_free(element->location);
     if (element->mimetype)
         g_free(element->mimetype);
@@ -410,29 +383,41 @@ static void java_source_finalize (GObject *object)
 * If we activate the element in the push mode we should start a task on its source
 * pad and begin pushing buffers down the pipeline.
 ***********************************************************************************/
-static gboolean java_source_activatepush(GstPad *pad, gboolean active)
+static gboolean java_source_activatemode(GstPad *pad, GstObject *parent, GstPadMode mode, gboolean active)
 {
-    JavaSource *element = JAVA_SOURCE(GST_PAD_PARENT(pad));
+    gboolean res = FALSE;
+    JavaSource *element = JAVA_SOURCE(parent);
 
-    if (active)
-    {
-        g_mutex_lock(element->lock);
-        element->srcresult = GST_FLOW_OK;
-        g_mutex_unlock(element->lock);
+    switch (mode) {
+        case GST_PAD_MODE_PUSH:
+            if (active) {
+                g_mutex_lock(&element->lock);
+                element->srcresult = GST_FLOW_OK;
+                g_mutex_unlock(&element->lock);
 
-        if (gst_pad_is_linked(pad))
-            return gst_pad_start_task(pad, java_source_loop, element);
-        else
-            return TRUE;
+                if (gst_pad_is_linked(pad))
+                    return gst_pad_start_task(pad, java_source_loop, element, NULL);
+                else
+                    return TRUE;
+            } else {
+                g_mutex_lock(&element->lock);
+                element->srcresult = GST_FLOW_FLUSHING;
+                g_mutex_unlock(&element->lock);
+
+                return gst_pad_stop_task(pad);
+            }
+
+            break;
+        case GST_PAD_MODE_PULL:
+            res = TRUE;
+            break;
+        default:
+            /* unknown scheduling mode */
+            res = FALSE;
+            break;
     }
-    else
-    {
-        g_mutex_lock(element->lock);
-        element->srcresult = GST_FLOW_WRONG_STATE;
-        g_mutex_unlock(element->lock);
 
-        return gst_pad_stop_task(pad);
-    }
+  return res;
 }
 
 /***********************************************************************************
@@ -453,7 +438,6 @@ static gboolean java_source_perform_seek(JavaSource *element, GstPad *pad, GstEv
 
     if (GST_FORMAT_BYTES != seek_format && (element->mode & MODE_DEFAULT) == MODE_DEFAULT)
     {
-        gst_element_message_full(GST_ELEMENT(element), GST_MESSAGE_WARNING, GST_CORE_ERROR, GST_CORE_ERROR_SEEK, g_strdup("GST_FORMAT_BYTES seek request is expected."), NULL, ("javasource.c"), ("java_source_perform_seek"), 0);
         return FALSE;
     }
     else if (GST_FORMAT_TIME != seek_format && (element->mode & MODE_HLS) == MODE_HLS)
@@ -464,9 +448,9 @@ static gboolean java_source_perform_seek(JavaSource *element, GstPad *pad, GstEv
     if (flags & GST_SEEK_FLAG_FLUSH)
         gst_pad_push_event(pad, gst_event_new_flush_start());
 
-    g_mutex_lock(element->lock);
-    element->srcresult = GST_FLOW_WRONG_STATE;
-    g_mutex_unlock(element->lock);
+    g_mutex_lock(&element->lock);
+    element->srcresult = GST_FLOW_FLUSHING;
+    g_mutex_unlock(&element->lock);
 
     if ((element->mode & MODE_HLS_LIVE) != MODE_HLS_LIVE)
         GST_PAD_STREAM_LOCK(pad);
@@ -490,7 +474,7 @@ static gboolean java_source_perform_seek(JavaSource *element, GstPad *pad, GstEv
         else
         {
             element->rate = rate;
-            element->pending_event = GST_EVENT_NEWSEGMENT;
+            element->pending_event = GST_EVENT_SEGMENT;
         }
         if ((element->mode & MODE_HLS) == MODE_HLS)
         {
@@ -507,14 +491,14 @@ static gboolean java_source_perform_seek(JavaSource *element, GstPad *pad, GstEv
         result = TRUE;
     }
 
-    g_mutex_lock(element->lock);
+    g_mutex_lock(&element->lock);
     element->srcresult = GST_FLOW_OK;
-    g_mutex_unlock(element->lock);
+    g_mutex_unlock(&element->lock);
 
     if (flags & GST_SEEK_FLAG_FLUSH)
-        gst_pad_push_event(pad, gst_event_new_flush_stop());
+        gst_pad_push_event(pad, gst_event_new_flush_stop(TRUE));
 
-    gst_pad_start_task(pad, java_source_loop, element);
+    gst_pad_start_task(pad, java_source_loop, element, NULL);
 
     GST_PAD_STREAM_UNLOCK(pad);
 
@@ -523,9 +507,9 @@ static gboolean java_source_perform_seek(JavaSource *element, GstPad *pad, GstEv
     return result;
 }
 
-static gboolean java_source_event(GstPad *pad, GstEvent *event)
+static gboolean java_source_event(GstPad *pad, GstObject *parent, GstEvent *event)
 {
-    JavaSource *element = JAVA_SOURCE(GST_PAD_PARENT(pad));
+    JavaSource *element = JAVA_SOURCE(parent);
     switch (GST_EVENT_TYPE (event))
     {
     case GST_EVENT_SEEK:
@@ -538,7 +522,7 @@ static gboolean java_source_event(GstPad *pad, GstEvent *event)
         break;
     }
 
-    return gst_pad_event_default(pad, event);
+    return gst_pad_event_default(pad, parent, event);
 }
 
 /***********************************************************************************
@@ -549,27 +533,43 @@ static void java_source_loop(void *user_data)
     JavaSource   *element = JAVA_SOURCE(user_data);
     GstFlowReturn result;
 
-    g_mutex_lock(element->lock);
+    g_mutex_lock(&element->lock);
     result = element->srcresult;
-    g_mutex_unlock(element->lock);
+    g_mutex_unlock(&element->lock);
 
     if (result == GST_FLOW_OK)
     {
 next_event:
         switch (element->pending_event)
         {
-        case GST_EVENT_NEWSEGMENT:
+            case GST_EVENT_STREAM_START:
+            {
+                gchar *stream_id;
+                GstEvent *event;
+
+                stream_id = gst_pad_create_stream_id (element->srcpad, GST_ELEMENT_CAST (element), NULL);
+                event = gst_event_new_stream_start (stream_id);
+                gst_event_set_group_id (event, gst_util_group_id_next ());
+                result = gst_pad_push_event (element->srcpad, event) ? GST_FLOW_OK : GST_FLOW_FLUSHING;
+                g_free (stream_id);
+                
+                element->pending_event = GST_EVENT_SEGMENT;
+                break;
+            }
+    
+        case GST_EVENT_SEGMENT:
             {
                 GstEvent *new_segment = NULL;
+                GstSegment segment;
                 if ((element->mode & MODE_HLS) == MODE_HLS)
                 {
                     gint result = 0;
-                    gboolean wrong_state = FALSE;
+                    gboolean wrong_state = FALSE;                    
                     g_signal_emit(element, JAVA_SOURCE_GET_CLASS(element)->signals[SIGNAL_GET_STREAM_SIZE], 0, &result);
 
-                    g_mutex_lock(element->lock);
-                    wrong_state = (element->srcresult == GST_FLOW_WRONG_STATE);
-                    g_mutex_unlock(element->lock);
+                    g_mutex_lock(&element->lock);
+                    wrong_state = (element->srcresult == GST_FLOW_FLUSHING);
+                    g_mutex_unlock(&element->lock);
 
                     if (wrong_state)
                         break; 
@@ -584,44 +584,93 @@ next_event:
                         result = -1 * result;
                         element->discont = TRUE;
                     }
-                    new_segment = gst_event_new_new_segment(element->update, element->rate, GST_FORMAT_BYTES, 0, result, element->position_time);
+                    
+                    gst_segment_init (&segment, GST_FORMAT_BYTES);
+                    if (element->update)
+                        segment.flags |= GST_SEGMENT_FLAG_UPDATE;
+                    segment.rate = element->rate;
+                    segment.start = 0;
+                    segment.stop = result;
+                    segment.time = element->position_time;
+                    segment.position = element->position_time;
+                    new_segment = gst_event_new_segment (&segment);
                 }
                 else
                 {
-                    new_segment = gst_event_new_new_segment(element->update, element->rate, GST_FORMAT_BYTES, element->position, element->size, element->position);
+                    gst_segment_init (&segment, GST_FORMAT_BYTES);
+                    if (element->update)
+                        segment.flags |= GST_SEGMENT_FLAG_UPDATE;
+                    segment.rate = element->rate;
+                    segment.start = element->position;
+                    segment.stop = element->size;
+                    segment.position = element->position;
+                    new_segment = gst_event_new_segment (&segment);
                 }
-                result = gst_pad_push_event (element->srcpad, new_segment) ? GST_FLOW_OK : GST_FLOW_WRONG_STATE;
+                result = gst_pad_push_event (element->srcpad, new_segment) ? GST_FLOW_OK : GST_FLOW_FLUSHING;
                 element->pending_event = GST_EVENT_UNKNOWN;
                 break;
             }
 
         case GST_EVENT_EOS:
             gst_pad_push_event (element->srcpad, gst_event_new_eos());
-            result = GST_FLOW_UNEXPECTED;
+            result = GST_FLOW_EOS;
             break;
 
         case GST_EVENT_UNKNOWN: // Pushing buffers
             {
                 gint     size;
+                GstMapInfo info;
                 g_signal_emit(element, JAVA_SOURCE_GET_CLASS(element)->signals[SIGNAL_READ_NEXT_BLOCK], 0, &size);
                 if (size > 0)
                 {
-                    GstBuffer *buffer = NULL;
-                    if (gst_pad_alloc_buffer(element->srcpad, element->position, size, GST_PAD_CAPS(element->srcpad), &buffer) == GST_FLOW_OK)
+                    GstBuffer *buffer = gst_buffer_new_allocate(NULL, size, NULL);
+                    if (buffer)
                     {
-                        g_signal_emit(element, JAVA_SOURCE_GET_CLASS(element)->signals[SIGNAL_COPY_BLOCK], 0, GST_BUFFER_DATA(buffer), size);
+                        GST_BUFFER_OFFSET(buffer) = element->position;
+
+                        if (!gst_buffer_map(buffer, &info, GST_MAP_WRITE))
+                        {
+                            result = GST_FLOW_ERROR;
+                            break;
+                        }
+
+                        g_signal_emit(element, JAVA_SOURCE_GET_CLASS(element)->signals[SIGNAL_COPY_BLOCK], 0, info.data, size);
+                        
+                        gst_buffer_unmap(buffer, &info);
 
                         if (element->discont)
                         {
-                            buffer = gst_buffer_make_metadata_writable (buffer);
+                            buffer = gst_buffer_make_writable (buffer);
                             GST_BUFFER_FLAG_SET (buffer, GST_BUFFER_FLAG_DISCONT);
                             element->discont = FALSE;
                         }
 
+                        // Set caps to mimetype if provided, we need to do this before pushing buffer,
+                        // so downstream filters can configure itself correctly. Caps are set via event in GStreamer 1.0.
+                        if (element->mimetype)
+                        {
+                            GstCaps *caps = NULL;
+                            GstEvent *caps_event = NULL;
+                            caps = gst_caps_new_simple (element->mimetype, NULL, NULL);
+                            caps_event = gst_event_new_caps(caps);
+                            if (caps_event)
+                                gst_pad_push_event(element->srcpad, caps_event);
+                            gst_caps_unref(caps);
+                            g_free(element->mimetype);
+                            element->mimetype = NULL;
+                        }
+
                         result = gst_pad_push(element->srcpad, buffer);
 
-                        if (element->pending_event != GST_EVENT_NEWSEGMENT)
+                        if (element->pending_event != GST_EVENT_SEGMENT)
                             element->position += size;
+
+                        // In GStreamer 1.x GST_FLOW_UNEXPECTED -> GST_FLOW_EOS, which means we should not send data anymore and send EOS event.
+                        if (result == GST_FLOW_EOS)
+                        {
+                            element->pending_event = GST_EVENT_EOS;
+                            goto next_event;
+                        }
                     }
                 }
                 else if ((element->mode & MODE_DEFAULT) == MODE_DEFAULT && size == EOS_CODE) // EOS
@@ -631,11 +680,11 @@ next_event:
                 }
                 else if ((element->mode & MODE_HLS) == MODE_HLS && size == EOS_CODE) // Request more data
                 {
-                    element->pending_event = GST_EVENT_NEWSEGMENT;
+                    element->pending_event = GST_EVENT_SEGMENT;
                     goto next_event;
                 }
                 else if (size == OTHER_ERROR_CODE) // Other error
-                    result = GST_FLOW_WRONG_STATE;
+                    result = GST_FLOW_FLUSHING;
                 break;
             }
 
@@ -644,13 +693,13 @@ next_event:
         }
     }
 
-    g_mutex_lock(element->lock);
+    g_mutex_lock(&element->lock);
 
     if (GST_FLOW_OK == element->srcresult || GST_FLOW_OK != result)
         element->srcresult = result;
     else
         result = element->srcresult;
-    g_mutex_unlock(element->lock);
+    g_mutex_unlock(&element->lock);
 
     if (result != GST_FLOW_OK)
         gst_pad_pause_task(element->srcpad);
@@ -659,20 +708,10 @@ next_event:
 /***********************************************************************************
 * query stuff
 ***********************************************************************************/
-static const GstQueryType* java_source_query_type(GstPad * pad)
-{
-    static const GstQueryType javasource_query_types[] = {
-        GST_QUERY_DURATION,
-        GST_QUERY_NONE
-    };
-
-    return javasource_query_types;
-}
-
-static gboolean java_source_query (GstPad *pad, GstQuery *query)
+static gboolean java_source_query (GstPad *pad, GstObject *parent, GstQuery *query)
 {
     gboolean result = TRUE;
-    JavaSource *element = JAVA_SOURCE (GST_OBJECT_PARENT (pad));
+    JavaSource *element = JAVA_SOURCE (parent);
 
     switch (GST_QUERY_TYPE(query))
     {
@@ -710,9 +749,23 @@ static gboolean java_source_query (GstPad *pad, GstQuery *query)
             }
             break;
         }
+    
+    case GST_QUERY_SCHEDULING:
+        {
+            if (element->is_random_access)
+            {
+                gst_query_set_scheduling(query, GST_SCHEDULING_FLAG_SEEKABLE, 4096, 4096, 16);
+                gst_query_add_scheduling_mode(query, GST_PAD_MODE_PULL);
+            }
+            else
+            {
+                gst_query_add_scheduling_mode(query, GST_PAD_MODE_PUSH);
+            }
+            break;
+        }
 
     default:
-        result = gst_pad_query_default(pad, query);
+        result = gst_pad_query_default(pad, parent, query);
         break;
     }
     return result;
@@ -721,31 +774,33 @@ static gboolean java_source_query (GstPad *pad, GstQuery *query)
 /***********************************************************************************
 * get_range stuff
 ***********************************************************************************/
-static gboolean java_source_checkgetrange(GstPad *pad)
-{
-    JavaSource *element = JAVA_SOURCE (GST_OBJECT_PARENT (pad));
-    return element->is_random_access;
-}
-
-static GstFlowReturn java_source_getrange(GstPad *pad, guint64 offset,
+static GstFlowReturn java_source_getrange(GstPad *pad, GstObject *parent, guint64 offset,
     guint length, GstBuffer **buffer)
 {
-    JavaSource *element = JAVA_SOURCE (GST_OBJECT_PARENT (pad));
+    JavaSource *element = JAVA_SOURCE (parent);
     gint     size = 0;
     GstFlowReturn ret = GST_FLOW_ERROR;
+    GstMapInfo info;
 
     g_signal_emit(element, JAVA_SOURCE_GET_CLASS(element)->signals[SIGNAL_READ_BLOCK], 0, offset, length, &size);
     if (size > 0 || size <= length)
     {
-        ret = gst_pad_alloc_buffer(element->srcpad, offset, size, GST_PAD_CAPS(element->srcpad), buffer);
-        if (ret == GST_FLOW_OK)
+        GstBuffer *buf = gst_buffer_new_allocate(NULL, size, NULL);
+        if (buf)
         {
-            g_signal_emit(element, JAVA_SOURCE_GET_CLASS(element)->signals[SIGNAL_COPY_BLOCK], 0, GST_BUFFER_DATA(*buffer), GST_BUFFER_SIZE(*buffer));
+            GST_BUFFER_OFFSET(buf) = offset;
+            if (gst_buffer_map(buf, &info, GST_MAP_READ))
+            {
+                g_signal_emit(element, JAVA_SOURCE_GET_CLASS(element)->signals[SIGNAL_COPY_BLOCK], 0, info.data, size);
+                gst_buffer_unmap(buf, &info);
+                *buffer = buf;
+                ret = GST_FLOW_OK;
+            }
         }
     }
     else if (size == EOS_CODE)
     {
-        ret = GST_FLOW_UNEXPECTED; // EOS
+        ret = GST_FLOW_EOS; // EOS
     }
 
     return ret;
@@ -764,7 +819,7 @@ static GstStateChangeReturn java_source_change_state (GstElement *e,
     case GST_STATE_CHANGE_READY_TO_PAUSED:
         {
             GST_PAD_STREAM_LOCK(element->srcpad);
-            element->pending_event = GST_EVENT_NEWSEGMENT;
+            element->pending_event = GST_EVENT_STREAM_START;
             element->position = 0;
             element->position_time = 0;
             element->discont = FALSE;
@@ -774,17 +829,17 @@ static GstStateChangeReturn java_source_change_state (GstElement *e,
                 element->update = TRUE;
             GST_PAD_STREAM_UNLOCK(element->srcpad);
 
-            g_mutex_lock(element->lock);
+            g_mutex_lock(&element->lock);
             element->srcresult = GST_FLOW_OK;
-            g_mutex_unlock(element->lock);
+            g_mutex_unlock(&element->lock);
         }
         break;
 
     case GST_STATE_CHANGE_PAUSED_TO_PLAYING:
-        g_mutex_lock(element->lock);
+        g_mutex_lock(&element->lock);
         if (element->stop_on_pause)
             element->srcresult = GST_FLOW_OK;
-        g_mutex_unlock(element->lock);
+        g_mutex_unlock(&element->lock);
         break;
 
     default:
@@ -799,19 +854,19 @@ static GstStateChangeReturn java_source_change_state (GstElement *e,
     switch (transition)
     {
     case GST_STATE_CHANGE_PLAYING_TO_PAUSED:
-        g_mutex_lock(element->lock);
+        g_mutex_lock(&element->lock);
         if (element->stop_on_pause)
-            element->srcresult = GST_FLOW_WRONG_STATE;
-        g_mutex_unlock(element->lock);
+            element->srcresult = GST_FLOW_FLUSHING;
+        g_mutex_unlock(&element->lock);
         break;
 
     case GST_STATE_CHANGE_READY_TO_NULL:
-        g_mutex_lock(element->lock);
+        g_mutex_lock(&element->lock);
         if (!element->stop_on_pause)
-            element->srcresult = GST_FLOW_WRONG_STATE;
+            element->srcresult = GST_FLOW_FLUSHING;
         element->size = -1;
         g_signal_emit(element, JAVA_SOURCE_GET_CLASS(element)->signals[SIGNAL_CLOSE_CONNECTION], 0);
-        g_mutex_unlock(element->lock);
+        g_mutex_unlock(&element->lock);
         break;
 
     default:

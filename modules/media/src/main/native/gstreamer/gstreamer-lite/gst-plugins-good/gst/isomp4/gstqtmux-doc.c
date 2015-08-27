@@ -16,8 +16,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 /*
  * Unless otherwise indicated, Source Code is licensed under MIT license.
@@ -61,50 +61,34 @@
  * ISO 14496-12 (except for some media specific parts).
  * In turn, the latter ISO Base Media format was further specialized as a
  * Motion JPEG-2000 file format in ISO 15444-3 (mj2mux)
- * and in various 3GPP(2) specs (gppmux).
+ * and in various 3GPP(2) specs (3gppmux).
  * The fragmented file features defined (only) in ISO Base Media are used by
  * ISMV files making up (a.o.) Smooth Streaming (ismlmux).
  *
- * A few properties (<link linkend="GstMP4Mux--movie-timescale">movie-timescale</link>,
- * <link linkend="GstMP4Mux--trak-timescale">trak-timescale</link>) allow adjusting
- * some technical parameters, which might be useful in (rare) cases to resolve
- * compatibility issues in some situations.
+ * A few properties (#GstMp4Mux:movie-timescale, #GstMp4Mux:trak-timescale)
+ * allow adjusting some technical parameters, which might be useful in (rare)
+ * cases to resolve compatibility issues in some situations.
  *
  * Some other properties influence the result more fundamentally.
- * A typical mov/mp4 file's metadata (aka moov) is located at the end of the file,
- * somewhat contrary to this usually being called "the header".
- * However, a <link linkend="GstMP4Mux--faststart">faststart</link> file will
- * (with some effort) arrange this to be located near start of the file,
- * which then allows it e.g. to be played while downloading.
- * Alternatively, rather than having one chunk of metadata at start (or end),
- * there can be some metadata at start and most of the other data can be spread
- * out into fragments of <link linkend="GstMP4Mux--fragment-duration">fragment-duration</link>.
+ * A typical mov/mp4 file's metadata (aka moov) is located at the end of the
+ * file, somewhat contrary to this usually being called "the header".
+ * However, a #GstMp4Mux:faststart file will (with some effort) arrange this to
+ * be located near start of the file, which then allows it e.g. to be played
+ * while downloading. Alternatively, rather than having one chunk of metadata at
+ * start (or end), there can be some metadata at start and most of the other
+ * data can be spread out into fragments of #GstMp4Mux:fragment-duration.
  * If such fragmented layout is intended for streaming purposes, then
- * <link linkend="GstMP4Mux--streamable">streamable</link> allows foregoing to add
- * index metadata (at the end of file).
- *
- * <link linkend="GstMP4Mux--dts-method">dts-method</link> allows selecting a
- * method for managing input timestamps (stay tuned for 0.11 to have this
- * automagically settled).  The default delta/duration method should handle nice
- * (aka perfect streams) just fine, but may experience problems otherwise
- * (e.g. input stream with re-ordered B-frames and/or with frame dropping).
- * The re-ordering approach re-assigns incoming timestamps in ascending order
- * to incoming buffers and offers an alternative in such cases.  In cases where
- * that might fail, the remaining method can be tried, which is exact and
- * according to specs, but might experience playback on not so spec-wise players.
- * Note that this latter approach also requires one to enable
- * <link linkend="GstMP4Mux--presentation-timestamp">presentation-timestamp</link>.
+ * #GstMp4Mux:streamable allows foregoing to add index metadata (at the end of
+ * file).
  *
  * <refsect2>
  * <title>Example pipelines</title>
  * |[
- * gst-launch gst-launch v4l2src num-buffers=50 ! queue ! x264enc ! mp4mux ! filesink location=video.mp4
+ * gst-launch-1.0 gst-launch-1.0 v4l2src num-buffers=50 ! queue ! x264enc ! mp4mux ! filesink location=video.mp4
  * ]|
  * Records a video stream captured from a v4l2 device, encodes it into H.264
  * and muxes it into an mp4 file.
  * </refsect2>
- *
- * Documentation last reviewed on 2011-04-21
  */
 
 /* ============================= 3gppmux ==================================== */
@@ -125,44 +109,30 @@
  * ISO 14496-12 (except for some media specific parts).
  * In turn, the latter ISO Base Media format was further specialized as a
  * Motion JPEG-2000 file format in ISO 15444-3 (mj2mux)
- * and in various 3GPP(2) specs (gppmux).
+ * and in various 3GPP(2) specs (3gppmux).
  * The fragmented file features defined (only) in ISO Base Media are used by
  * ISMV files making up (a.o.) Smooth Streaming (ismlmux).
  *
- * A few properties (<link linkend="Gst3GPPMux--movie-timescale">movie-timescale</link>,
- * <link linkend="Gst3GPPMux--trak-timescale">trak-timescale</link>) allow adjusting
- * some technical parameters, which might be useful in (rare) cases to resolve
- * compatibility issues in some situations.
+ * A few properties (#Gst3GPPMux:movie-timescale, #Gst3GPPMux:trak-timescale)
+ * allow adjusting some technical parameters, which might be useful in (rare)
+ * cases to resolve compatibility issues in some situations.
  *
  * Some other properties influence the result more fundamentally.
  * A typical mov/mp4 file's metadata (aka moov) is located at the end of the file,
- * somewhat contrary to this usually being called "the header".
- * However, a <link linkend="Gst3GPPMux--faststart">faststart</link> file will
- * (with some effort) arrange this to be located near start of the file,
- * which then allows it e.g. to be played while downloading.
- * Alternatively, rather than having one chunk of metadata at start (or end),
- * there can be some metadata at start and most of the other data can be spread
- * out into fragments of <link linkend="Gst3GPPMux--fragment-duration">fragment-duration</link>.
- * If such fragmented layout is intended for streaming purposes, then
- * <link linkend="Gst3GPPMux--streamable">streamable</link> allows foregoing to add
- * index metadata (at the end of file).
- *
- * <link linkend="Gst3GPPMux--dts-method">dts-method</link> allows selecting a
- * method for managing input timestamps (stay tuned for 0.11 to have this
- * automagically settled).  The default delta/duration method should handle nice
- * (aka perfect streams) just fine, but may experience problems otherwise
- * (e.g. input stream with re-ordered B-frames and/or with frame dropping).
- * The re-ordering approach re-assigns incoming timestamps in ascending order
- * to incoming buffers and offers an alternative in such cases.  In cases where
- * that might fail, the remaining method can be tried, which is exact and
- * according to specs, but might experience playback on not so spec-wise players.
- * Note that this latter approach also requires one to enable
- * <link linkend="Gst3GPPMux--presentation-timestamp">presentation-timestamp</link>.
+ * somewhat contrary to this usually being called "the header". However, a
+ * #Gst3GPPMux:faststart file will (with some effort) arrange this to be located
+ * near start of the file, which then allows it e.g. to be played while
+ * downloading. Alternatively, rather than having one chunk of metadata at start
+ * (or end), there can be some metadata at start and most of the other data can
+ * be spread out into fragments of #Gst3GPPMux:fragment-duration. If such
+ * fragmented layout is intended for streaming purposes, then
+ * #Gst3GPPMux:streamable allows foregoing to add index metadata (at the end of
+ * file).
  *
  * <refsect2>
  * <title>Example pipelines</title>
  * |[
- * gst-launch v4l2src num-buffers=50 ! queue ! ffenc_h263 ! gppmux ! filesink location=video.3gp
+ * gst-launch-1.0 v4l2src num-buffers=50 ! queue ! ffenc_h263 ! 3gppmux ! filesink location=video.3gp
  * ]|
  * Records a video stream captured from a v4l2 device, encodes it into H.263
  * and muxes it into an 3gp file.
@@ -189,44 +159,30 @@
  * ISO 14496-12 (except for some media specific parts).
  * In turn, the latter ISO Base Media format was further specialized as a
  * Motion JPEG-2000 file format in ISO 15444-3 (mj2mux)
- * and in various 3GPP(2) specs (gppmux).
+ * and in various 3GPP(2) specs (3gppmux).
  * The fragmented file features defined (only) in ISO Base Media are used by
  * ISMV files making up (a.o.) Smooth Streaming (ismlmux).
  *
- * A few properties (<link linkend="GstMJ2Mux--movie-timescale">movie-timescale</link>,
- * <link linkend="GstMJ2Mux--trak-timescale">trak-timescale</link>) allow adjusting
- * some technical parameters, which might be useful in (rare) cases to resolve
- * compatibility issues in some situations.
+ * A few properties (#GstMJ2Mux:movie-timescale, #GstMJ2Mux:trak-timescale)
+ * allow adjusting some technical parameters, which might be useful in (rare)
+ * cases to resolve compatibility issues in some situations.
  *
  * Some other properties influence the result more fundamentally.
  * A typical mov/mp4 file's metadata (aka moov) is located at the end of the file,
- * somewhat contrary to this usually being called "the header".
- * However, a <link linkend="GstMJ2Mux--faststart">faststart</link> file will
- * (with some effort) arrange this to be located near start of the file,
- * which then allows it e.g. to be played while downloading.
- * Alternatively, rather than having one chunk of metadata at start (or end),
- * there can be some metadata at start and most of the other data can be spread
- * out into fragments of <link linkend="GstMJ2Mux--fragment-duration">fragment-duration</link>.
- * If such fragmented layout is intended for streaming purposes, then
- * <link linkend="GstMJ2Mux--streamable">streamable</link> allows foregoing to add
- * index metadata (at the end of file).
- *
- * <link linkend="GstMJ2Mux--dts-method">dts-method</link> allows selecting a
- * method for managing input timestamps (stay tuned for 0.11 to have this
- * automagically settled).  The default delta/duration method should handle nice
- * (aka perfect streams) just fine, but may experience problems otherwise
- * (e.g. input stream with re-ordered B-frames and/or with frame dropping).
- * The re-ordering approach re-assigns incoming timestamps in ascending order
- * to incoming buffers and offers an alternative in such cases.  In cases where
- * that might fail, the remaining method can be tried, which is exact and
- * according to specs, but might experience playback on not so spec-wise players.
- * Note that this latter approach also requires one to enable
- * <link linkend="GstMJ2Mux--presentation-timestamp">presentation-timestamp</link>.
+ * somewhat contrary to this usually being called "the header". However, a
+ * #GstMJ2Mux:faststart file will (with some effort) arrange this to be located
+ * near start of the file, which then allows it e.g. to be played while
+ * downloading. Alternatively, rather than having one chunk of metadata at start
+ * (or end), there can be some metadata at start and most of the other data can
+ * be spread out into fragments of #GstMJ2Mux:fragment-duration. If such
+ * fragmented layout is intended for streaming purposes, then
+ * #GstMJ2Mux:streamable allows foregoing to add index metadata (at the end of
+ * file).
  *
  * <refsect2>
  * <title>Example pipelines</title>
  * |[
- * gst-launch v4l2src num-buffers=50 ! queue ! jp2kenc ! mj2mux ! filesink location=video.mj2
+ * gst-launch-1.0 v4l2src num-buffers=50 ! queue ! jp2kenc ! mj2mux ! filesink location=video.mj2
  * ]|
  * Records a video stream captured from a v4l2 device, encodes it into JPEG-2000
  * and muxes it into an mj2 file.
@@ -253,44 +209,30 @@
  * ISO 14496-12 (except for some media specific parts).
  * In turn, the latter ISO Base Media format was further specialized as a
  * Motion JPEG-2000 file format in ISO 15444-3 (mj2mux)
- * and in various 3GPP(2) specs (gppmux).
+ * and in various 3GPP(2) specs (3gppmux).
  * The fragmented file features defined (only) in ISO Base Media are used by
  * ISMV files making up (a.o.) Smooth Streaming (ismlmux).
  *
- * A few properties (<link linkend="GstISMLMux--movie-timescale">movie-timescale</link>,
- * <link linkend="GstISMLMux--trak-timescale">trak-timescale</link>) allow adjusting
- * some technical parameters, which might be useful in (rare) cases to resolve
- * compatibility issues in some situations.
+ * A few properties (#GstISMLMux:movie-timescale, #GstISMLMux:trak-timescale)
+ * allow adjusting some technical parameters, which might be useful in (rare)
+ * cases to resolve compatibility issues in some situations.
  *
  * Some other properties influence the result more fundamentally.
  * A typical mov/mp4 file's metadata (aka moov) is located at the end of the file,
- * somewhat contrary to this usually being called "the header".
- * However, a <link linkend="GstISMLMux--faststart">faststart</link> file will
- * (with some effort) arrange this to be located near start of the file,
- * which then allows it e.g. to be played while downloading.
- * Alternatively, rather than having one chunk of metadata at start (or end),
- * there can be some metadata at start and most of the other data can be spread
- * out into fragments of <link linkend="GstISMLMux--fragment-duration">fragment-duration</link>.
- * If such fragmented layout is intended for streaming purposes, then
- * <link linkend="GstISMLMux--streamable">streamable</link> allows foregoing to add
- * index metadata (at the end of file).
- *
- * <link linkend="GstISMLMux--dts-method">dts-method</link> allows selecting a
- * method for managing input timestamps (stay tuned for 0.11 to have this
- * automagically settled).  The default delta/duration method should handle nice
- * (aka perfect streams) just fine, but may experience problems otherwise
- * (e.g. input stream with re-ordered B-frames and/or with frame dropping).
- * The re-ordering approach re-assigns incoming timestamps in ascending order
- * to incoming buffers and offers an alternative in such cases.  In cases where
- * that might fail, the remaining method can be tried, which is exact and
- * according to specs, but might experience playback on not so spec-wise players.
- * Note that this latter approach also requires one to enable
- * <link linkend="GstISMLMux--presentation-timestamp">presentation-timestamp</link>.
+ * somewhat contrary to this usually being called "the header". However, a
+ * #GstISMLMux:faststart file will (with some effort) arrange this to be located
+ * near start of the file, which then allows it e.g. to be played while
+ * downloading. Alternatively, rather than having one chunk of metadata at start
+ * (or end), there can be some metadata at start and most of the other data can
+ * be spread out into fragments of #GstISMLMux:fragment-duration. If such
+ * fragmented layout is intended for streaming purposes, then
+ * #GstISMLMux:streamable allows foregoing to add index metadata (at the end of
+ * file).
  *
  * <refsect2>
  * <title>Example pipelines</title>
  * |[
- * gst-launch v4l2src num-buffers=50 ! queue ! jp2kenc ! mj2mux ! filesink location=video.mj2
+ * gst-launch-1.0 v4l2src num-buffers=50 ! queue ! jp2kenc ! mj2mux ! filesink location=video.mj2
  * ]|
  * Records a video stream captured from a v4l2 device, encodes it into JPEG-2000
  * and muxes it into an mj2 file.

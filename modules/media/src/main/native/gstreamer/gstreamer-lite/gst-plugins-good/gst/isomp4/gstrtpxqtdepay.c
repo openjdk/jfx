@@ -13,8 +13,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 /*
@@ -58,6 +58,7 @@
 #define QT_UINT64(a)  ((((guint64)QT_UINT32(a))<<32)|QT_UINT32(((guint8 *)a)+4))
 
 #define FOURCC_avc1     GST_MAKE_FOURCC('a','v','c','1')
+#define FOURCC_avc3     GST_MAKE_FOURCC('a','v','c','3')
 #define FOURCC_avcC     GST_MAKE_FOURCC('a','v','c','C')
 
 GST_DEBUG_CATEGORY_STATIC (rtpxqtdepay_debug);
@@ -91,45 +92,30 @@ GST_STATIC_PAD_TEMPLATE ("sink",
         "encoding-name = (string) { \"X-QT\", \"X-QUICKTIME\" }")
     );
 
-GST_BOILERPLATE (GstRtpXQTDepay, gst_rtp_xqt_depay, GstBaseRTPDepayload,
-    GST_TYPE_BASE_RTP_DEPAYLOAD);
+#define gst_rtp_xqt_depay_parent_class parent_class
+G_DEFINE_TYPE (GstRtpXQTDepay, gst_rtp_xqt_depay, GST_TYPE_RTP_BASE_DEPAYLOAD);
 
 static void gst_rtp_xqt_depay_finalize (GObject * object);
 
-static gboolean gst_rtp_xqt_depay_setcaps (GstBaseRTPDepayload * depayload,
+static gboolean gst_rtp_xqt_depay_setcaps (GstRTPBaseDepayload * depayload,
     GstCaps * caps);
-static GstBuffer *gst_rtp_xqt_depay_process (GstBaseRTPDepayload * depayload,
+static GstBuffer *gst_rtp_xqt_depay_process (GstRTPBaseDepayload * depayload,
     GstBuffer * buf);
 
 static GstStateChangeReturn gst_rtp_xqt_depay_change_state (GstElement *
     element, GstStateChange transition);
 
-static void
-gst_rtp_xqt_depay_base_init (gpointer klass)
-{
-  GstElementClass *element_class = GST_ELEMENT_CLASS (klass);
-
-  gst_element_class_add_pad_template (element_class,
-      gst_static_pad_template_get (&gst_rtp_xqt_depay_src_template));
-  gst_element_class_add_pad_template (element_class,
-      gst_static_pad_template_get (&gst_rtp_xqt_depay_sink_template));
-
-  gst_element_class_set_details_simple (element_class, "RTP packet depayloader",
-      "Codec/Depayloader/Network",
-      "Extracts Quicktime audio/video from RTP packets",
-      "Wim Taymans <wim@fluendo.com>");
-}
 
 static void
 gst_rtp_xqt_depay_class_init (GstRtpXQTDepayClass * klass)
 {
   GObjectClass *gobject_class;
   GstElementClass *gstelement_class;
-  GstBaseRTPDepayloadClass *gstbasertpdepayload_class;
+  GstRTPBaseDepayloadClass *gstrtpbasedepayload_class;
 
   gobject_class = (GObjectClass *) klass;
   gstelement_class = (GstElementClass *) klass;
-  gstbasertpdepayload_class = (GstBaseRTPDepayloadClass *) klass;
+  gstrtpbasedepayload_class = (GstRTPBaseDepayloadClass *) klass;
 
   parent_class = g_type_class_peek_parent (klass);
 
@@ -137,16 +123,25 @@ gst_rtp_xqt_depay_class_init (GstRtpXQTDepayClass * klass)
 
   gstelement_class->change_state = gst_rtp_xqt_depay_change_state;
 
-  gstbasertpdepayload_class->set_caps = gst_rtp_xqt_depay_setcaps;
-  gstbasertpdepayload_class->process = gst_rtp_xqt_depay_process;
+  gstrtpbasedepayload_class->set_caps = gst_rtp_xqt_depay_setcaps;
+  gstrtpbasedepayload_class->process = gst_rtp_xqt_depay_process;
 
   GST_DEBUG_CATEGORY_INIT (rtpxqtdepay_debug, "rtpxqtdepay", 0,
       "QT Media RTP Depayloader");
+
+  gst_element_class_add_pad_template (gstelement_class,
+      gst_static_pad_template_get (&gst_rtp_xqt_depay_src_template));
+  gst_element_class_add_pad_template (gstelement_class,
+      gst_static_pad_template_get (&gst_rtp_xqt_depay_sink_template));
+
+  gst_element_class_set_static_metadata (gstelement_class,
+      "RTP packet depayloader", "Codec/Depayloader/Network",
+      "Extracts Quicktime audio/video from RTP packets",
+      "Wim Taymans <wim@fluendo.com>");
 }
 
 static void
-gst_rtp_xqt_depay_init (GstRtpXQTDepay * rtpxqtdepay,
-    GstRtpXQTDepayClass * klass)
+gst_rtp_xqt_depay_init (GstRtpXQTDepay * rtpxqtdepay)
 {
   rtpxqtdepay->adapter = gst_adapter_new ();
 }
@@ -185,6 +180,7 @@ gst_rtp_quicktime_parse_sd (GstRtpXQTDepay * rtpxqtdepay, guint8 * data,
 
   switch (fourcc) {
     case FOURCC_avc1:
+    case FOURCC_avc3:
     {
       guint32 chlen;
 
@@ -212,11 +208,11 @@ gst_rtp_quicktime_parse_sd (GstRtpXQTDepay * rtpxqtdepay, guint8 * data,
             size = len - 8;
 
           buf = gst_buffer_new_and_alloc (size);
-          memcpy (GST_BUFFER_DATA (buf), data + 8, size);
+          gst_buffer_fill (buf, 0, data + 8, size);
           caps = gst_caps_new_simple ("video/x-h264",
               "codec_data", GST_TYPE_BUFFER, buf, NULL);
           gst_buffer_unref (buf);
-          gst_pad_set_caps (GST_BASE_RTP_DEPAYLOAD (rtpxqtdepay)->srcpad, caps);
+          gst_pad_set_caps (GST_RTP_BASE_DEPAYLOAD (rtpxqtdepay)->srcpad, caps);
           gst_caps_unref (caps);
           break;
         }
@@ -238,7 +234,7 @@ too_short:
 }
 
 static gboolean
-gst_rtp_xqt_depay_setcaps (GstBaseRTPDepayload * depayload, GstCaps * caps)
+gst_rtp_xqt_depay_setcaps (GstRTPBaseDepayload * depayload, GstCaps * caps)
 {
   GstStructure *structure;
   gint clock_rate = 90000;      /* default */
@@ -252,16 +248,16 @@ gst_rtp_xqt_depay_setcaps (GstBaseRTPDepayload * depayload, GstCaps * caps)
 }
 
 static GstBuffer *
-gst_rtp_xqt_depay_process (GstBaseRTPDepayload * depayload, GstBuffer * buf)
+gst_rtp_xqt_depay_process (GstRTPBaseDepayload * depayload, GstBuffer * buf)
 {
   GstRtpXQTDepay *rtpxqtdepay;
-  GstBuffer *outbuf;
+  GstBuffer *outbuf = NULL;
   gboolean m;
+  GstRTPBuffer rtp = { NULL };
 
   rtpxqtdepay = GST_RTP_XQT_DEPAY (depayload);
 
-  if (!gst_rtp_buffer_validate (buf))
-    goto bad_packet;
+  gst_rtp_buffer_map (buf, GST_MAP_READ, &rtp);
 
   if (GST_BUFFER_IS_DISCONT (buf)) {
     /* discont, clear adapter and try to find a new packet start */
@@ -270,7 +266,7 @@ gst_rtp_xqt_depay_process (GstBaseRTPDepayload * depayload, GstBuffer * buf)
     GST_DEBUG_OBJECT (rtpxqtdepay, "we need resync");
   }
 
-  m = gst_rtp_buffer_get_marker (buf);
+  m = gst_rtp_buffer_get_marker (&rtp);
   GST_LOG_OBJECT (rtpxqtdepay, "marker: %d", m);
 
   {
@@ -280,8 +276,8 @@ gst_rtp_xqt_depay_process (GstBaseRTPDepayload * depayload, GstBuffer * buf)
     guint8 ver, pck;
     gboolean s, q, l, d;
 
-    payload_len = gst_rtp_buffer_get_payload_len (buf);
-    payload = gst_rtp_buffer_get_payload (buf);
+    payload_len = gst_rtp_buffer_get_payload_len (&rtp);
+    payload = gst_rtp_buffer_get_payload (&rtp);
 
     /*                      1                   2                   3 
      *  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -545,8 +541,9 @@ gst_rtp_xqt_depay_process (GstBaseRTPDepayload * depayload, GstBuffer * buf)
       {
         /* multiple samples per packet. */
         outbuf = gst_buffer_new_and_alloc (payload_len);
-        memcpy (GST_BUFFER_DATA (outbuf), payload, payload_len);
-        return outbuf;
+        gst_buffer_fill (outbuf, 0, payload, payload_len);
+
+        goto done;
       }
       case 2:
       {
@@ -586,11 +583,11 @@ gst_rtp_xqt_depay_process (GstBaseRTPDepayload * depayload, GstBuffer * buf)
             slen = payload_len;
 
           outbuf = gst_buffer_new_and_alloc (slen);
-          memcpy (GST_BUFFER_DATA (outbuf), payload, slen);
+          gst_buffer_fill (outbuf, 0, payload, slen);
           if (!s)
             GST_BUFFER_FLAG_SET (outbuf, GST_BUFFER_FLAG_DELTA_UNIT);
 
-          gst_base_rtp_depayload_push (depayload, outbuf);
+          gst_rtp_base_depayload_push (depayload, outbuf);
 
           /* aligned on 32 bit boundary */
           slen = GST_ROUND_UP_4 (slen);
@@ -604,9 +601,10 @@ gst_rtp_xqt_depay_process (GstBaseRTPDepayload * depayload, GstBuffer * buf)
       {
         /* one sample per packet, use adapter to combine based on marker bit. */
         outbuf = gst_buffer_new_and_alloc (payload_len);
-        memcpy (GST_BUFFER_DATA (outbuf), payload, payload_len);
+        gst_buffer_fill (outbuf, 0, payload, payload_len);
 
         gst_adapter_push (rtpxqtdepay->adapter, outbuf);
+        outbuf = NULL;
 
         if (!m)
           goto done;
@@ -617,48 +615,43 @@ gst_rtp_xqt_depay_process (GstBaseRTPDepayload * depayload, GstBuffer * buf)
         GST_DEBUG_OBJECT (rtpxqtdepay,
             "gst_rtp_xqt_depay_chain: pushing buffer of size %u", avail);
 
-        return outbuf;
+        goto done;
       }
     }
   }
 
 done:
-  return NULL;
+  gst_rtp_buffer_unmap (&rtp);
+  return outbuf;
 
-bad_packet:
-  {
-    GST_ELEMENT_WARNING (rtpxqtdepay, STREAM, DECODE,
-        ("Packet did not validate."), (NULL));
-    return NULL;
-  }
 need_resync:
   {
     GST_DEBUG_OBJECT (rtpxqtdepay, "waiting for marker");
-    return NULL;
+    goto done;
   }
 wrong_version:
   {
     GST_ELEMENT_WARNING (rtpxqtdepay, STREAM, DECODE,
         ("Unknown payload version."), (NULL));
-    return NULL;
+    goto done;
   }
 pck_reserved:
   {
     GST_ELEMENT_WARNING (rtpxqtdepay, STREAM, DECODE,
         ("PCK reserved 0."), (NULL));
-    return NULL;
+    goto done;
   }
 wrong_length:
   {
     GST_ELEMENT_WARNING (rtpxqtdepay, STREAM, DECODE,
         ("Wrong payload length."), (NULL));
-    return NULL;
+    goto done;
   }
 unknown_format:
   {
     GST_ELEMENT_WARNING (rtpxqtdepay, STREAM, DECODE,
         ("Unknown payload format."), (NULL));
-    return NULL;
+    goto done;
   }
 }
 

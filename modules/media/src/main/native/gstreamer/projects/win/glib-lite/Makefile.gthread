@@ -28,17 +28,20 @@ CFLAGS =   -DWIN32 \
            -DGSTREAMER_LITE \
            -DHAVE_CONFIG_H \
            -DG_LOG_DOMAIN=\"GThread\" \
-           -DG_DISABLE_DEPRECATED \
            -D_MBCS \
+	   -DG_OS_WIN32 \
+	   -DFFI_BUILDING \
+           -DG_DISABLE_DEPRECATED \
 	   $(INCLUDES) \
            $(COMPILER_FLAGS)
+
 
 LIBFLAGS = -out:$(shell cygpath -ma $(TARGET)) -nologo
 
 ifeq ($(BUILD_TYPE), Release)
     CFLAGS += -DNDEBUG -DG_DISABLE_ASSERT -DG_DISABLE_CHECKS -O1 -Oy -MD -Gy -GF
 else # debug
-    CFLAGS += -D_DEBUG -DG_ENABLE_DEBUG -Od -Oy- -RTC1 -MDd -Zi -Fd$(PDB)
+    CFLAGS += -D_DEBUG -DG_DISABLE_ASSERT -DG_DISABLE_CHECKS -Od -Oy- -RTC1 -MDd -Zi -Fd$(PDB)
     LIBFLAGS +=  -libpath:strmiids.lib
 endif
 

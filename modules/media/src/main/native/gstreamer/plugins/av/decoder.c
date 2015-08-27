@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,43 +33,45 @@
 /***********************************************************************************
  * Static AVCodec library lock. One for all instances. Necessary for avcodec_open
  ***********************************************************************************/
-static GStaticMutex avlib_lock = G_STATIC_MUTEX_INIT;
+G_LOCK_DEFINE_STATIC(avlib_lock);
+
+static void basedecoder_init_context_default(BaseDecoder *decoder);
 
 /***********************************************************************************
  * Substitution for
- * GST_BOILERPLATE (BaseDecoder, basedecoder, AVElement, TYPE_AVELEMENT);
+ * G_DEFINE_TYPE(BaseDecoder, basedecoder, AVElement, TYPE_AVELEMENT);
  ***********************************************************************************/
-static void basedecoder_class_init(BaseDecoderClass *g_class);
-//static void basedecoder_init(BaseDecoder *decoder, BaseDecoderClass *g_class);
-static void basedecoder_init_context_default(BaseDecoder *decoder);
-
-static GstElementClass *parent_class = NULL;
-
-static void basedecoder_class_init_trampoline(gpointer g_class, gpointer data) {
-    parent_class = (GstElementClass *) g_type_class_peek_parent(g_class);
-    basedecoder_class_init(BASEDECODER_CLASS(g_class));
+#define basedecoder_parent_class parent_class
+static void basedecoder_init          (BaseDecoder      *self);
+static void basedecoder_class_init    (BaseDecoderClass *klass);
+static gpointer basedecoder_parent_class = NULL;
+static void     basedecoder_class_intern_init (gpointer klass)
+{
+    basedecoder_parent_class = g_type_class_peek_parent (klass);
+    basedecoder_class_init ((BaseDecoderClass*) klass);
 }
 
-GType basedecoder_get_type(void) {
+GType basedecoder_get_type (void)
+{
     static volatile gsize gonce_data = 0;
-    // INLINE - g_once_init_enter()
-    if (g_once_init_enter(&gonce_data)) {
-        GType _type = gst_type_register_static_full(TYPE_AVELEMENT,
-                g_intern_static_string("BaseDecoder"),
-                sizeof (BaseDecoderClass),
-                NULL, //basedecoder_base_init,
-                NULL,
-                basedecoder_class_init_trampoline,
-                NULL,
-                NULL,
-                sizeof (BaseDecoder),
-                0,
-                NULL, //(GInstanceInitFunc) basedecoder_init,
-                NULL,
-                (GTypeFlags) 0);
-        g_once_init_leave(&gonce_data, (gsize) _type);
+// INLINE - g_once_init_enter()
+    if (g_once_init_enter (&gonce_data))
+    {
+        GType _type;
+        _type = g_type_register_static_simple (TYPE_AVELEMENT,
+               g_intern_static_string ("BaseDecoder"),
+               sizeof (BaseDecoderClass),
+               (GClassInitFunc) basedecoder_class_intern_init,
+               sizeof(BaseDecoder),
+               (GInstanceInitFunc) basedecoder_init,               
+               (GTypeFlags) 0);
+        g_once_init_leave (&gonce_data, (gsize) _type);
     }
     return (GType) gonce_data;
+}
+
+static void basedecoder_init(BaseDecoder *self)
+{
 }
 
 static void basedecoder_class_init(BaseDecoderClass *g_class)
@@ -105,7 +107,7 @@ gboolean basedecoder_open_decoder(BaseDecoder *decoder, CodecIDType id)
     if (!decoder->frame)
         return FALSE; // Can't create frame
 
-    g_static_mutex_lock(&avlib_lock);
+    G_LOCK(avlib_lock);
 
     decoder->codec = avcodec_find_decoder(id);
     result = (decoder->codec != NULL);
@@ -131,7 +133,7 @@ gboolean basedecoder_open_decoder(BaseDecoder *decoder, CodecIDType id)
         }
     }
 
-    g_static_mutex_unlock(&avlib_lock);
+    G_UNLOCK(avlib_lock);
     return result;
 }
 
@@ -158,8 +160,16 @@ void basedecoder_set_codec_data(BaseDecoder *decoder, GstStructure *s)
     if (value)
     {
         GstBuffer* codec_data_buf = gst_value_get_buffer(value);
-        decoder->codec_data_size = GST_BUFFER_SIZE(codec_data_buf);
-        decoder->codec_data = g_memdup(GST_BUFFER_DATA(codec_data_buf), GST_BUFFER_SIZE(codec_data_buf));
+        if (codec_data_buf)
+        {
+            GstMapInfo info;
+            if (gst_buffer_map(codec_data_buf, &info, GST_MAP_READ))
+            {
+                decoder->codec_data_size = info.size;
+                decoder->codec_data = g_memdup(info.data, info.size);
+                gst_buffer_unmap(codec_data_buf, &info);
+            }
+        }        
     }
 }
 

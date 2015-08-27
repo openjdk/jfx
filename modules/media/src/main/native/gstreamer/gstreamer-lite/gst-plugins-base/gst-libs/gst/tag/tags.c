@@ -14,8 +14,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -26,6 +26,7 @@
 #include <gst/base/gsttypefindhelper.h>
 #include <gst/gst.h>
 #include "tag.h"
+#include "id3v2.h"
 
 #include <string.h>
 
@@ -74,120 +75,128 @@ gst_tag_register_tags_internal (gpointer unused)
 #endif
 
   /* musicbrainz tags */
-  gst_tag_register (GST_TAG_MUSICBRAINZ_TRACKID, GST_TAG_FLAG_META,
+  gst_tag_register_static (GST_TAG_MUSICBRAINZ_TRACKID, GST_TAG_FLAG_META,
       G_TYPE_STRING, _("track ID"), _("MusicBrainz track ID"), NULL);
-  gst_tag_register (GST_TAG_MUSICBRAINZ_ARTISTID, GST_TAG_FLAG_META,
+  gst_tag_register_static (GST_TAG_MUSICBRAINZ_ARTISTID, GST_TAG_FLAG_META,
       G_TYPE_STRING, _("artist ID"), _("MusicBrainz artist ID"), NULL);
-  gst_tag_register (GST_TAG_MUSICBRAINZ_ALBUMID, GST_TAG_FLAG_META,
+  gst_tag_register_static (GST_TAG_MUSICBRAINZ_ALBUMID, GST_TAG_FLAG_META,
       G_TYPE_STRING, _("album ID"), _("MusicBrainz album ID"), NULL);
-  gst_tag_register (GST_TAG_MUSICBRAINZ_ALBUMARTISTID, GST_TAG_FLAG_META,
+  gst_tag_register_static (GST_TAG_MUSICBRAINZ_ALBUMARTISTID, GST_TAG_FLAG_META,
       G_TYPE_STRING,
       _("album artist ID"), _("MusicBrainz album artist ID"), NULL);
-  gst_tag_register (GST_TAG_MUSICBRAINZ_TRMID, GST_TAG_FLAG_META,
+  gst_tag_register_static (GST_TAG_MUSICBRAINZ_TRMID, GST_TAG_FLAG_META,
       G_TYPE_STRING, _("track TRM ID"), _("MusicBrainz TRM ID"), NULL);
 
   /* CDDA tags */
-  gst_tag_register (GST_TAG_CDDA_CDDB_DISCID, GST_TAG_FLAG_META,
+  gst_tag_register_static (GST_TAG_CDDA_CDDB_DISCID, GST_TAG_FLAG_META,
       G_TYPE_STRING, "discid", "CDDB discid for metadata retrieval",
       gst_tag_merge_use_first);
 
-  gst_tag_register (GST_TAG_CDDA_CDDB_DISCID_FULL, GST_TAG_FLAG_META,
+  gst_tag_register_static (GST_TAG_CDDA_CDDB_DISCID_FULL, GST_TAG_FLAG_META,
       G_TYPE_STRING, "discid full",
       "CDDB discid for metadata retrieval (full)", gst_tag_merge_use_first);
 
-  gst_tag_register (GST_TAG_CDDA_MUSICBRAINZ_DISCID, GST_TAG_FLAG_META,
+  gst_tag_register_static (GST_TAG_CDDA_MUSICBRAINZ_DISCID, GST_TAG_FLAG_META,
       G_TYPE_STRING, "musicbrainz-discid",
       "Musicbrainz discid for metadata retrieval", gst_tag_merge_use_first);
 
-  gst_tag_register (GST_TAG_CDDA_MUSICBRAINZ_DISCID_FULL, GST_TAG_FLAG_META,
-      G_TYPE_STRING, "musicbrainz-discid-full",
+  gst_tag_register_static (GST_TAG_CDDA_MUSICBRAINZ_DISCID_FULL,
+      GST_TAG_FLAG_META, G_TYPE_STRING, "musicbrainz-discid-full",
       "Musicbrainz discid for metadata retrieval (full)",
       gst_tag_merge_use_first);
 
   /* photography tags */
-  gst_tag_register (GST_TAG_CAPTURING_SHUTTER_SPEED, GST_TAG_FLAG_META,
+  gst_tag_register_static (GST_TAG_CAPTURING_SHUTTER_SPEED, GST_TAG_FLAG_META,
       GST_TYPE_FRACTION, _("capturing shutter speed"),
       _("Shutter speed used when capturing an image, in seconds"), NULL);
 
-  gst_tag_register (GST_TAG_CAPTURING_FOCAL_RATIO, GST_TAG_FLAG_META,
+  gst_tag_register_static (GST_TAG_CAPTURING_FOCAL_RATIO, GST_TAG_FLAG_META,
       G_TYPE_DOUBLE, _("capturing focal ratio"),
       _("Focal ratio (f-number) used when capturing the image"), NULL);
 
-  gst_tag_register (GST_TAG_CAPTURING_FOCAL_LENGTH, GST_TAG_FLAG_META,
+  gst_tag_register_static (GST_TAG_CAPTURING_FOCAL_LENGTH, GST_TAG_FLAG_META,
       G_TYPE_DOUBLE, _("capturing focal length"),
       _("Focal length of the lens used capturing the image, in mm"), NULL);
 
-  gst_tag_register (GST_TAG_CAPTURING_DIGITAL_ZOOM_RATIO, GST_TAG_FLAG_META,
-      G_TYPE_DOUBLE, _("capturing digital zoom ratio"),
+  gst_tag_register_static (GST_TAG_CAPTURING_DIGITAL_ZOOM_RATIO,
+      GST_TAG_FLAG_META, G_TYPE_DOUBLE, _("capturing digital zoom ratio"),
       _("Digital zoom ratio used when capturing an image"), NULL);
 
-  gst_tag_register (GST_TAG_CAPTURING_ISO_SPEED, GST_TAG_FLAG_META,
+  gst_tag_register_static (GST_TAG_CAPTURING_ISO_SPEED, GST_TAG_FLAG_META,
       G_TYPE_INT, _("capturing iso speed"),
       _("The ISO speed used when capturing an image"), NULL);
 
-  gst_tag_register (GST_TAG_CAPTURING_EXPOSURE_PROGRAM, GST_TAG_FLAG_META,
-      G_TYPE_STRING, _("capturing exposure program"),
+  gst_tag_register_static (GST_TAG_CAPTURING_EXPOSURE_PROGRAM,
+      GST_TAG_FLAG_META, G_TYPE_STRING, _("capturing exposure program"),
       _("The exposure program used when capturing an image"), NULL);
 
-  gst_tag_register (GST_TAG_CAPTURING_EXPOSURE_MODE, GST_TAG_FLAG_META,
+  gst_tag_register_static (GST_TAG_CAPTURING_EXPOSURE_MODE, GST_TAG_FLAG_META,
       G_TYPE_STRING, _("capturing exposure mode"),
       _("The exposure mode used when capturing an image"), NULL);
 
-  gst_tag_register (GST_TAG_CAPTURING_EXPOSURE_COMPENSATION, GST_TAG_FLAG_META,
-      G_TYPE_DOUBLE, _("capturing exposure compensation"),
+  gst_tag_register_static (GST_TAG_CAPTURING_EXPOSURE_COMPENSATION,
+      GST_TAG_FLAG_META, G_TYPE_DOUBLE, _("capturing exposure compensation"),
       _("The exposure compensation used when capturing an image"), NULL);
 
-  gst_tag_register (GST_TAG_CAPTURING_SCENE_CAPTURE_TYPE, GST_TAG_FLAG_META,
-      G_TYPE_STRING, _("capturing scene capture type"),
+  gst_tag_register_static (GST_TAG_CAPTURING_SCENE_CAPTURE_TYPE,
+      GST_TAG_FLAG_META, G_TYPE_STRING, _("capturing scene capture type"),
       _("The scene capture mode used when capturing an image"), NULL);
 
-  gst_tag_register (GST_TAG_CAPTURING_GAIN_ADJUSTMENT, GST_TAG_FLAG_META,
+  gst_tag_register_static (GST_TAG_CAPTURING_GAIN_ADJUSTMENT, GST_TAG_FLAG_META,
       G_TYPE_STRING, _("capturing gain adjustment"),
       _("The overall gain adjustment applied on an image"), NULL);
 
-  gst_tag_register (GST_TAG_CAPTURING_WHITE_BALANCE, GST_TAG_FLAG_META,
+  gst_tag_register_static (GST_TAG_CAPTURING_WHITE_BALANCE, GST_TAG_FLAG_META,
       G_TYPE_STRING, _("capturing white balance"),
       _("The white balance mode set when capturing an image"), NULL);
 
-  gst_tag_register (GST_TAG_CAPTURING_CONTRAST, GST_TAG_FLAG_META,
+  gst_tag_register_static (GST_TAG_CAPTURING_CONTRAST, GST_TAG_FLAG_META,
       G_TYPE_STRING, _("capturing contrast"),
       _("The direction of contrast processing applied "
           "when capturing an image"), NULL);
 
-  gst_tag_register (GST_TAG_CAPTURING_SATURATION, GST_TAG_FLAG_META,
+  gst_tag_register_static (GST_TAG_CAPTURING_SATURATION, GST_TAG_FLAG_META,
       G_TYPE_STRING, _("capturing saturation"),
       _("The direction of saturation processing applied when "
           "capturing an image"), NULL);
 
-  gst_tag_register (GST_TAG_CAPTURING_SHARPNESS, GST_TAG_FLAG_META,
+  gst_tag_register_static (GST_TAG_CAPTURING_SHARPNESS, GST_TAG_FLAG_META,
       G_TYPE_STRING, _("capturing sharpness"),
       _("The direction of sharpness processing applied "
           "when capturing an image"), NULL);
 
-  gst_tag_register (GST_TAG_CAPTURING_FLASH_FIRED, GST_TAG_FLAG_META,
+  gst_tag_register_static (GST_TAG_CAPTURING_FLASH_FIRED, GST_TAG_FLAG_META,
       G_TYPE_BOOLEAN, _("capturing flash fired"),
       _("If the flash fired while capturing an image"), NULL);
 
-  gst_tag_register (GST_TAG_CAPTURING_FLASH_MODE, GST_TAG_FLAG_META,
+  gst_tag_register_static (GST_TAG_CAPTURING_FLASH_MODE, GST_TAG_FLAG_META,
       G_TYPE_STRING, _("capturing flash mode"),
       _("The selected flash mode while capturing an image"), NULL);
 
-  gst_tag_register (GST_TAG_CAPTURING_METERING_MODE, GST_TAG_FLAG_META,
+  gst_tag_register_static (GST_TAG_CAPTURING_METERING_MODE, GST_TAG_FLAG_META,
       G_TYPE_STRING, _("capturing metering mode"),
       _("The metering mode used while determining exposure for capturing an"
           " image"), NULL);
 
-  gst_tag_register (GST_TAG_CAPTURING_SOURCE, GST_TAG_FLAG_META,
+  gst_tag_register_static (GST_TAG_CAPTURING_SOURCE, GST_TAG_FLAG_META,
       G_TYPE_STRING, _("capturing source"),
       _("The source or type of device used for the capture"), NULL);
 
-  gst_tag_register (GST_TAG_IMAGE_HORIZONTAL_PPI, GST_TAG_FLAG_META,
+  gst_tag_register_static (GST_TAG_IMAGE_HORIZONTAL_PPI, GST_TAG_FLAG_META,
       G_TYPE_DOUBLE, _("image horizontal ppi"),
       _("Media (image/video) intended horizontal pixel density in ppi"), NULL);
 
-  gst_tag_register (GST_TAG_IMAGE_VERTICAL_PPI, GST_TAG_FLAG_META,
+  gst_tag_register_static (GST_TAG_IMAGE_VERTICAL_PPI, GST_TAG_FLAG_META,
       G_TYPE_DOUBLE, _("image vertical ppi"),
       _("Media (image/video) intended vertical pixel density in ppi"), NULL);
+
+  gst_tag_register_static (GST_TAG_ID3V2_FRAME, GST_TAG_FLAG_META,
+      GST_TYPE_SAMPLE, _("ID3v2 frame"), _("unparsed id3v2 tag frame"),
+      gst_tag_merge_use_first);
+
+  gst_tag_register_static (GST_TAG_MUSICAL_KEY, GST_TAG_FLAG_META,
+      G_TYPE_STRING, _("musical-key"), _("Initial key in which the "
+          "sound starts"), gst_tag_merge_use_first);
 
   return NULL;
 }
@@ -198,7 +207,7 @@ gst_tag_register_tags_internal (gpointer unused)
  * that the core can load+register tags automatically when needed. */
 
 /**
- * gst_tag_register_musicbrainz_tags
+ * gst_tag_register_musicbrainz_tags:
  *
  * Registers additional musicbrainz-specific tags with the GStreamer tag
  * system. Plugins and applications that use these tags should call this
@@ -302,8 +311,6 @@ gst_tag_image_type_is_valid (GstTagImageType type)
  * code in the extended comment string.
  *
  * Returns: TRUE if the string could be parsed, otherwise FALSE
- *
- * Since: 0.10.10
  */
 gboolean
 gst_tag_parse_extended_comment (const gchar * ext_comment, gchar ** key,
@@ -366,8 +373,6 @@ gst_tag_parse_extended_comment (const gchar * ext_comment, gchar ** key,
  * WINDOWS-1252/ISO-8859-1 is assumed (which will almost always succeed).
  *
  * Returns: a newly-allocated string in UTF-8 encoding, or NULL
- *
- * Since: 0.10.13
  */
 gchar *
 gst_tag_freeform_string_to_utf8 (const gchar * data, gint size,
@@ -496,6 +501,7 @@ gst_tag_freeform_string_to_utf8 (const gchar * data, gint size,
       /* fallback in case iconv implementation doesn't support windows-1252
        * for some reason */
       if (err->code == G_CONVERT_ERROR_NO_CONVERSION) {
+        g_free (utf8);
         utf8 = g_convert (data, size, "UTF-8", "ISO-8859-1", &bytes_read,
             NULL, NULL);
       }
@@ -522,14 +528,14 @@ beach:
 }
 
 /**
- * gst_tag_image_data_to_image_buffer:
+ * gst_tag_image_data_to_image_sample:
  * @image_data: the (encoded) image
  * @image_data_len: the length of the encoded image data at @image_data
  * @image_type: type of the image, or #GST_TAG_IMAGE_TYPE_UNDEFINED. Pass
  *     #GST_TAG_IMAGE_TYPE_NONE if no image type should be set at all (e.g.
  *     for preview images)
  *
- * Helper function for tag-reading plugins to create a #GstBuffer suitable to
+ * Helper function for tag-reading plugins to create a #GstSample suitable to
  * add to a #GstTagList as an image tag (such as #GST_TAG_IMAGE or
  * #GST_TAG_PREVIEW_IMAGE) from the encoded image data and an (optional) image
  * type.
@@ -541,9 +547,9 @@ beach:
  * back cover, artist, etc.). The image data may also be an URI to the image
  * rather than the image itself.
  *
- * In GStreamer, image tags are #GstBuffer<!-- -->s containing the raw image
- * data, with the buffer caps describing the content type of the image
- * (e.g. image/jpeg, image/png, text/uri-list). The buffer caps may contain
+ * In GStreamer, image tags are #GstSample<!-- -->s containing the raw image
+ * data, with the sample caps describing the content type of the image
+ * (e.g. image/jpeg, image/png, text/uri-list). The sample info may contain
  * an additional 'image-type' field of #GST_TYPE_TAG_IMAGE_TYPE to describe
  * the type of image (front cover, back cover etc.). #GST_TAG_PREVIEW_IMAGE
  * tags should not carry an image type, their type is already indicated via
@@ -552,19 +558,18 @@ beach:
  * This function will do various checks and typefind the encoded image
  * data (we can't trust the declared mime type).
  *
- * Returns: a newly-allocated image buffer for use in tag lists, or NULL
- *
- * Since: 0.10.20
+ * Returns: a newly-allocated image sample for use in tag lists, or NULL
  */
-GstBuffer *
-gst_tag_image_data_to_image_buffer (const guint8 * image_data,
+GstSample *
+gst_tag_image_data_to_image_sample (const guint8 * image_data,
     guint image_data_len, GstTagImageType image_type)
 {
   const gchar *name;
-
   GstBuffer *image;
-
+  GstSample *sample;
   GstCaps *caps;
+  GstMapInfo info;
+  GstStructure *image_info = NULL;
 
   g_return_val_if_fail (image_data != NULL, NULL);
   g_return_val_if_fail (image_data_len > 0, NULL);
@@ -573,14 +578,14 @@ gst_tag_image_data_to_image_buffer (const guint8 * image_data,
   GST_DEBUG ("image data len: %u bytes", image_data_len);
 
   /* allocate space for a NUL terminator for an uri too */
-  image = gst_buffer_try_new_and_alloc (image_data_len + 1);
-  if (image == NULL) {
-    GST_WARNING ("failed to allocate buffer of %d for image", image_data_len);
-    return NULL;
-  }
+  image = gst_buffer_new_and_alloc (image_data_len + 1);
+  if (image == NULL)
+    goto alloc_failed;
 
-  memcpy (GST_BUFFER_DATA (image), image_data, image_data_len);
-  GST_BUFFER_DATA (image)[image_data_len] = '\0';
+  gst_buffer_map (image, &info, GST_MAP_WRITE);
+  memcpy (info.data, image_data, image_data_len);
+  info.data[image_data_len] = '\0';
+  gst_buffer_unmap (image, &info);
 
   /* Find GStreamer media type, can't trust declared type */
   caps = gst_type_find_helper_for_buffer (NULL, image, NULL);
@@ -604,18 +609,18 @@ gst_tag_image_data_to_image_buffer (const guint8 * image_data,
    * to keep the original size of the image
    */
   if (!g_str_equal (name, "text/uri-list"))
-    GST_BUFFER_SIZE (image) = image_data_len;
+    gst_buffer_set_size (image, image_data_len);
 
   if (image_type != GST_TAG_IMAGE_TYPE_NONE) {
     GST_LOG ("Setting image type: %d", image_type);
-    caps = gst_caps_make_writable (caps);
-    gst_caps_set_simple (caps, "image-type", GST_TYPE_TAG_IMAGE_TYPE,
-        image_type, NULL);
+    image_info = gst_structure_new ("GstTagImageInfo",
+        "image-type", GST_TYPE_TAG_IMAGE_TYPE, image_type, NULL);
   }
-
-  gst_buffer_set_caps (image, caps);
+  sample = gst_sample_new (image, caps, NULL, image_info);
+  gst_buffer_unref (image);
   gst_caps_unref (caps);
-  return image;
+
+  return sample;
 
 /* ERRORS */
 no_type:
@@ -631,4 +636,11 @@ error:
       gst_caps_unref (caps);
     return NULL;
   }
+alloc_failed:
+  {
+    GST_WARNING ("failed to allocate buffer of %d for image", image_data_len);
+    gst_buffer_unref (image);
+    return NULL;
+  }
+
 }

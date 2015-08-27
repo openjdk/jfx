@@ -14,8 +14,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 /* FIXME 0.11: turn this into a proper base class */
@@ -27,7 +27,7 @@
 #include <gst/base/gstbasesink.h>
 
 G_BEGIN_DECLS
-  
+
 #define GST_TYPE_VIDEO_SINK (gst_video_sink_get_type())
 #define GST_VIDEO_SINK(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST ((obj), GST_TYPE_VIDEO_SINK, GstVideoSink))
@@ -45,8 +45,6 @@ G_BEGIN_DECLS
  * @obj: a #GstVideoSink or derived object
  *
  * Cast @obj to a #GstVideoSink without runtime type check.
- *
- * Since: 0.10.12
  */
 #define GST_VIDEO_SINK_CAST(obj)  ((GstVideoSink *) (obj))
 
@@ -60,7 +58,7 @@ G_BEGIN_DECLS
 
 #define GST_VIDEO_SINK_WIDTH(obj) (GST_VIDEO_SINK_CAST (obj)->width)
 #define GST_VIDEO_SINK_HEIGHT(obj) (GST_VIDEO_SINK_CAST (obj)->height)
-  
+
 typedef struct _GstVideoSink GstVideoSink;
 typedef struct _GstVideoSinkClass GstVideoSinkClass;
 typedef struct _GstVideoRectangle GstVideoRectangle;
@@ -84,7 +82,6 @@ struct _GstVideoRectangle {
 
 /**
  * GstVideoSink:
- * @element: the parent object structure (which is GstBaseSink)
  * @height: video height (derived class needs to set this)
  * @width: video width (derived class needs to set this)
  *
@@ -93,22 +90,23 @@ struct _GstVideoRectangle {
  */
 struct _GstVideoSink {
   GstBaseSink element;    /* FIXME 0.11: this should not be called 'element' */
-  
+
+  /*< public >*/
   gint width, height;
-  
+
   /*< private >*/
   GstVideoSinkPrivate *priv;
 
-  gpointer _gst_reserved[GST_PADDING - 1];
+  gpointer _gst_reserved[GST_PADDING];
 };
 
 /**
  * GstVideoSinkClass:
  * @parent_class: the parent class structure
- * @show_frame: render a video frame. Maps to #GstBaseSink::render and
- *     #GstBaseSink::preroll vfuncs. Rendering during preroll will be
- *     suppressed if the 'show-preroll-frame' property is set to #FALSE.
- *     Since: 0.10.25
+ * @show_frame: render a video frame. Maps to #GstBaseSinkClass.render() and
+ *     #GstBaseSinkClass.preroll() vfuncs. Rendering during preroll will be
+ *     suppressed if the #GstVideoSink:show-preroll-frame property is set to
+ *     %FALSE.
  *
  * The video sink class structure. Derived classes should override the
  * @show_frame virtual function.
@@ -119,7 +117,7 @@ struct _GstVideoSinkClass {
   GstFlowReturn  (*show_frame) (GstVideoSink *video_sink, GstBuffer *buf);
 
   /*< private >*/
-  gpointer _gst_reserved[GST_PADDING - 1];
+  gpointer _gst_reserved[GST_PADDING];
 };
 
 GType gst_video_sink_get_type (void);

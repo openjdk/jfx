@@ -13,14 +13,32 @@ gst_object_flags_get_type (void)
 {
   static gsize id = 0;
   static const GFlagsValue values[] = {
-    {C_FLAGS (GST_OBJECT_DISPOSING), "GST_OBJECT_DISPOSING", "disposing"},
-    {C_FLAGS (GST_OBJECT_FLOATING), "GST_OBJECT_FLOATING", "floating"},
-    {C_FLAGS (GST_OBJECT_FLAG_LAST), "GST_OBJECT_FLAG_LAST", "flag-last"},
+    {C_FLAGS (GST_OBJECT_FLAG_LAST), "GST_OBJECT_FLAG_LAST", "last"},
     {0, NULL, NULL}
   };
 
   if (g_once_init_enter (&id)) {
     GType tmp = g_flags_register_static ("GstObjectFlags", values);
+    g_once_init_leave (&id, tmp);
+  }
+
+  return (GType) id;
+}
+
+/* enumerations from "gstallocator.h" */
+GType
+gst_allocator_flags_get_type (void)
+{
+  static gsize id = 0;
+  static const GFlagsValue values[] = {
+    {C_FLAGS (GST_ALLOCATOR_FLAG_CUSTOM_ALLOC),
+        "GST_ALLOCATOR_FLAG_CUSTOM_ALLOC", "custom-alloc"},
+    {C_FLAGS (GST_ALLOCATOR_FLAG_LAST), "GST_ALLOCATOR_FLAG_LAST", "last"},
+    {0, NULL, NULL}
+  };
+
+  if (g_once_init_enter (&id)) {
+    GType tmp = g_flags_register_static ("GstAllocatorFlags", values);
     g_once_init_leave (&id, tmp);
   }
 
@@ -33,6 +51,7 @@ gst_bin_flags_get_type (void)
 {
   static gsize id = 0;
   static const GFlagsValue values[] = {
+    {C_FLAGS (GST_BIN_FLAG_NO_RESYNC), "GST_BIN_FLAG_NO_RESYNC", "no-resync"},
     {C_FLAGS (GST_BIN_FLAG_LAST), "GST_BIN_FLAG_LAST", "last"},
     {0, NULL, NULL}
   };
@@ -47,28 +66,32 @@ gst_bin_flags_get_type (void)
 
 /* enumerations from "gstbuffer.h" */
 GType
-gst_buffer_flag_get_type (void)
+gst_buffer_flags_get_type (void)
 {
   static gsize id = 0;
   static const GFlagsValue values[] = {
-    {C_FLAGS (GST_BUFFER_FLAG_READONLY), "GST_BUFFER_FLAG_READONLY",
-        "readonly"},
-    {C_FLAGS (GST_BUFFER_FLAG_MEDIA4), "GST_BUFFER_FLAG_MEDIA4", "media4"},
-    {C_FLAGS (GST_BUFFER_FLAG_PREROLL), "GST_BUFFER_FLAG_PREROLL", "preroll"},
+    {C_FLAGS (GST_BUFFER_FLAG_LIVE), "GST_BUFFER_FLAG_LIVE", "live"},
+    {C_FLAGS (GST_BUFFER_FLAG_DECODE_ONLY), "GST_BUFFER_FLAG_DECODE_ONLY",
+        "decode-only"},
     {C_FLAGS (GST_BUFFER_FLAG_DISCONT), "GST_BUFFER_FLAG_DISCONT", "discont"},
-    {C_FLAGS (GST_BUFFER_FLAG_IN_CAPS), "GST_BUFFER_FLAG_IN_CAPS", "in-caps"},
+    {C_FLAGS (GST_BUFFER_FLAG_RESYNC), "GST_BUFFER_FLAG_RESYNC", "resync"},
+    {C_FLAGS (GST_BUFFER_FLAG_CORRUPTED), "GST_BUFFER_FLAG_CORRUPTED",
+        "corrupted"},
+    {C_FLAGS (GST_BUFFER_FLAG_MARKER), "GST_BUFFER_FLAG_MARKER", "marker"},
+    {C_FLAGS (GST_BUFFER_FLAG_HEADER), "GST_BUFFER_FLAG_HEADER", "header"},
     {C_FLAGS (GST_BUFFER_FLAG_GAP), "GST_BUFFER_FLAG_GAP", "gap"},
+    {C_FLAGS (GST_BUFFER_FLAG_DROPPABLE), "GST_BUFFER_FLAG_DROPPABLE",
+        "droppable"},
     {C_FLAGS (GST_BUFFER_FLAG_DELTA_UNIT), "GST_BUFFER_FLAG_DELTA_UNIT",
         "delta-unit"},
-    {C_FLAGS (GST_BUFFER_FLAG_MEDIA1), "GST_BUFFER_FLAG_MEDIA1", "media1"},
-    {C_FLAGS (GST_BUFFER_FLAG_MEDIA2), "GST_BUFFER_FLAG_MEDIA2", "media2"},
-    {C_FLAGS (GST_BUFFER_FLAG_MEDIA3), "GST_BUFFER_FLAG_MEDIA3", "media3"},
+    {C_FLAGS (GST_BUFFER_FLAG_TAG_MEMORY), "GST_BUFFER_FLAG_TAG_MEMORY",
+        "tag-memory"},
     {C_FLAGS (GST_BUFFER_FLAG_LAST), "GST_BUFFER_FLAG_LAST", "last"},
     {0, NULL, NULL}
   };
 
   if (g_once_init_enter (&id)) {
-    GType tmp = g_flags_register_static ("GstBufferFlag", values);
+    GType tmp = g_flags_register_static ("GstBufferFlags", values);
     g_once_init_leave (&id, tmp);
   }
 
@@ -80,10 +103,14 @@ gst_buffer_copy_flags_get_type (void)
 {
   static gsize id = 0;
   static const GFlagsValue values[] = {
+    {C_FLAGS (GST_BUFFER_COPY_NONE), "GST_BUFFER_COPY_NONE", "none"},
     {C_FLAGS (GST_BUFFER_COPY_FLAGS), "GST_BUFFER_COPY_FLAGS", "flags"},
     {C_FLAGS (GST_BUFFER_COPY_TIMESTAMPS), "GST_BUFFER_COPY_TIMESTAMPS",
         "timestamps"},
-    {C_FLAGS (GST_BUFFER_COPY_CAPS), "GST_BUFFER_COPY_CAPS", "caps"},
+    {C_FLAGS (GST_BUFFER_COPY_META), "GST_BUFFER_COPY_META", "meta"},
+    {C_FLAGS (GST_BUFFER_COPY_MEMORY), "GST_BUFFER_COPY_MEMORY", "memory"},
+    {C_FLAGS (GST_BUFFER_COPY_MERGE), "GST_BUFFER_COPY_MERGE", "merge"},
+    {C_FLAGS (GST_BUFFER_COPY_DEEP), "GST_BUFFER_COPY_DEEP", "deep"},
     {0, NULL, NULL}
   };
 
@@ -95,21 +122,27 @@ gst_buffer_copy_flags_get_type (void)
   return (GType) id;
 }
 
-/* enumerations from "gstbufferlist.h" */
+/* enumerations from "gstbufferpool.h" */
 GType
-gst_buffer_list_item_get_type (void)
+gst_buffer_pool_acquire_flags_get_type (void)
 {
   static gsize id = 0;
-  static const GEnumValue values[] = {
-    {C_ENUM (GST_BUFFER_LIST_CONTINUE), "GST_BUFFER_LIST_CONTINUE", "continue"},
-    {C_ENUM (GST_BUFFER_LIST_SKIP_GROUP), "GST_BUFFER_LIST_SKIP_GROUP",
-        "skip-group"},
-    {C_ENUM (GST_BUFFER_LIST_END), "GST_BUFFER_LIST_END", "end"},
+  static const GFlagsValue values[] = {
+    {C_FLAGS (GST_BUFFER_POOL_ACQUIRE_FLAG_NONE),
+        "GST_BUFFER_POOL_ACQUIRE_FLAG_NONE", "none"},
+    {C_FLAGS (GST_BUFFER_POOL_ACQUIRE_FLAG_KEY_UNIT),
+        "GST_BUFFER_POOL_ACQUIRE_FLAG_KEY_UNIT", "key-unit"},
+    {C_FLAGS (GST_BUFFER_POOL_ACQUIRE_FLAG_DONTWAIT),
+        "GST_BUFFER_POOL_ACQUIRE_FLAG_DONTWAIT", "dontwait"},
+    {C_FLAGS (GST_BUFFER_POOL_ACQUIRE_FLAG_DISCONT),
+        "GST_BUFFER_POOL_ACQUIRE_FLAG_DISCONT", "discont"},
+    {C_FLAGS (GST_BUFFER_POOL_ACQUIRE_FLAG_LAST),
+        "GST_BUFFER_POOL_ACQUIRE_FLAG_LAST", "last"},
     {0, NULL, NULL}
   };
 
   if (g_once_init_enter (&id)) {
-    GType tmp = g_enum_register_static ("GstBufferListItem", values);
+    GType tmp = g_flags_register_static ("GstBufferPoolAcquireFlags", values);
     g_once_init_leave (&id, tmp);
   }
 
@@ -160,7 +193,7 @@ gst_caps_flags_get_type (void)
 {
   static gsize id = 0;
   static const GFlagsValue values[] = {
-    {C_FLAGS (GST_CAPS_FLAGS_ANY), "GST_CAPS_FLAGS_ANY", "any"},
+    {C_FLAGS (GST_CAPS_FLAG_ANY), "GST_CAPS_FLAG_ANY", "any"},
     {0, NULL, NULL}
   };
 
@@ -365,13 +398,17 @@ gst_element_flags_get_type (void)
 {
   static gsize id = 0;
   static const GFlagsValue values[] = {
-    {C_FLAGS (GST_ELEMENT_LOCKED_STATE), "GST_ELEMENT_LOCKED_STATE",
+    {C_FLAGS (GST_ELEMENT_FLAG_LOCKED_STATE), "GST_ELEMENT_FLAG_LOCKED_STATE",
         "locked-state"},
-    {C_FLAGS (GST_ELEMENT_IS_SINK), "GST_ELEMENT_IS_SINK", "is-sink"},
-    {C_FLAGS (GST_ELEMENT_UNPARENTING), "GST_ELEMENT_UNPARENTING",
-        "unparenting"},
-    {C_FLAGS (GST_ELEMENT_IS_SOURCE), "GST_ELEMENT_IS_SOURCE", "is-source"},
-    {C_FLAGS (GST_ELEMENT_FLAG_LAST), "GST_ELEMENT_FLAG_LAST", "flag-last"},
+    {C_FLAGS (GST_ELEMENT_FLAG_SINK), "GST_ELEMENT_FLAG_SINK", "sink"},
+    {C_FLAGS (GST_ELEMENT_FLAG_SOURCE), "GST_ELEMENT_FLAG_SOURCE", "source"},
+    {C_FLAGS (GST_ELEMENT_FLAG_PROVIDE_CLOCK), "GST_ELEMENT_FLAG_PROVIDE_CLOCK",
+        "provide-clock"},
+    {C_FLAGS (GST_ELEMENT_FLAG_REQUIRE_CLOCK), "GST_ELEMENT_FLAG_REQUIRE_CLOCK",
+        "require-clock"},
+    {C_FLAGS (GST_ELEMENT_FLAG_INDEXABLE), "GST_ELEMENT_FLAG_INDEXABLE",
+        "indexable"},
+    {C_FLAGS (GST_ELEMENT_FLAG_LAST), "GST_ELEMENT_FLAG_LAST", "last"},
     {0, NULL, NULL}
   };
 
@@ -473,6 +510,8 @@ gst_resource_error_get_type (void)
         "settings"},
     {C_ENUM (GST_RESOURCE_ERROR_NO_SPACE_LEFT),
         "GST_RESOURCE_ERROR_NO_SPACE_LEFT", "no-space-left"},
+    {C_ENUM (GST_RESOURCE_ERROR_NOT_AUTHORIZED),
+        "GST_RESOURCE_ERROR_NOT_AUTHORIZED", "not-authorized"},
     {C_ENUM (GST_RESOURCE_ERROR_NUM_ERRORS), "GST_RESOURCE_ERROR_NUM_ERRORS",
         "num-errors"},
     {0, NULL, NULL}
@@ -534,6 +573,9 @@ gst_event_type_flags_get_type (void)
         "downstream"},
     {C_FLAGS (GST_EVENT_TYPE_SERIALIZED), "GST_EVENT_TYPE_SERIALIZED",
         "serialized"},
+    {C_FLAGS (GST_EVENT_TYPE_STICKY), "GST_EVENT_TYPE_STICKY", "sticky"},
+    {C_FLAGS (GST_EVENT_TYPE_STICKY_MULTI), "GST_EVENT_TYPE_STICKY_MULTI",
+        "sticky-multi"},
     {0, NULL, NULL}
   };
 
@@ -553,22 +595,31 @@ gst_event_type_get_type (void)
     {C_ENUM (GST_EVENT_UNKNOWN), "GST_EVENT_UNKNOWN", "unknown"},
     {C_ENUM (GST_EVENT_FLUSH_START), "GST_EVENT_FLUSH_START", "flush-start"},
     {C_ENUM (GST_EVENT_FLUSH_STOP), "GST_EVENT_FLUSH_STOP", "flush-stop"},
-    {C_ENUM (GST_EVENT_EOS), "GST_EVENT_EOS", "eos"},
-    {C_ENUM (GST_EVENT_NEWSEGMENT), "GST_EVENT_NEWSEGMENT", "newsegment"},
+    {C_ENUM (GST_EVENT_STREAM_START), "GST_EVENT_STREAM_START", "stream-start"},
+    {C_ENUM (GST_EVENT_CAPS), "GST_EVENT_CAPS", "caps"},
+    {C_ENUM (GST_EVENT_SEGMENT), "GST_EVENT_SEGMENT", "segment"},
     {C_ENUM (GST_EVENT_TAG), "GST_EVENT_TAG", "tag"},
     {C_ENUM (GST_EVENT_BUFFERSIZE), "GST_EVENT_BUFFERSIZE", "buffersize"},
     {C_ENUM (GST_EVENT_SINK_MESSAGE), "GST_EVENT_SINK_MESSAGE", "sink-message"},
+    {C_ENUM (GST_EVENT_EOS), "GST_EVENT_EOS", "eos"},
+    {C_ENUM (GST_EVENT_TOC), "GST_EVENT_TOC", "toc"},
+    {C_ENUM (GST_EVENT_SEGMENT_DONE), "GST_EVENT_SEGMENT_DONE", "segment-done"},
+    {C_ENUM (GST_EVENT_GAP), "GST_EVENT_GAP", "gap"},
     {C_ENUM (GST_EVENT_QOS), "GST_EVENT_QOS", "qos"},
     {C_ENUM (GST_EVENT_SEEK), "GST_EVENT_SEEK", "seek"},
     {C_ENUM (GST_EVENT_NAVIGATION), "GST_EVENT_NAVIGATION", "navigation"},
     {C_ENUM (GST_EVENT_LATENCY), "GST_EVENT_LATENCY", "latency"},
     {C_ENUM (GST_EVENT_STEP), "GST_EVENT_STEP", "step"},
+    {C_ENUM (GST_EVENT_RECONFIGURE), "GST_EVENT_RECONFIGURE", "reconfigure"},
+    {C_ENUM (GST_EVENT_TOC_SELECT), "GST_EVENT_TOC_SELECT", "toc-select"},
     {C_ENUM (GST_EVENT_CUSTOM_UPSTREAM), "GST_EVENT_CUSTOM_UPSTREAM",
         "custom-upstream"},
     {C_ENUM (GST_EVENT_CUSTOM_DOWNSTREAM), "GST_EVENT_CUSTOM_DOWNSTREAM",
         "custom-downstream"},
     {C_ENUM (GST_EVENT_CUSTOM_DOWNSTREAM_OOB),
         "GST_EVENT_CUSTOM_DOWNSTREAM_OOB", "custom-downstream-oob"},
+    {C_ENUM (GST_EVENT_CUSTOM_DOWNSTREAM_STICKY),
+        "GST_EVENT_CUSTOM_DOWNSTREAM_STICKY", "custom-downstream-sticky"},
     {C_ENUM (GST_EVENT_CUSTOM_BOTH), "GST_EVENT_CUSTOM_BOTH", "custom-both"},
     {C_ENUM (GST_EVENT_CUSTOM_BOTH_OOB), "GST_EVENT_CUSTOM_BOTH_OOB",
         "custom-both-oob"},
@@ -577,48 +628,6 @@ gst_event_type_get_type (void)
 
   if (g_once_init_enter (&id)) {
     GType tmp = g_enum_register_static ("GstEventType", values);
-    g_once_init_leave (&id, tmp);
-  }
-
-  return (GType) id;
-}
-
-GType
-gst_seek_type_get_type (void)
-{
-  static gsize id = 0;
-  static const GEnumValue values[] = {
-    {C_ENUM (GST_SEEK_TYPE_NONE), "GST_SEEK_TYPE_NONE", "none"},
-    {C_ENUM (GST_SEEK_TYPE_CUR), "GST_SEEK_TYPE_CUR", "cur"},
-    {C_ENUM (GST_SEEK_TYPE_SET), "GST_SEEK_TYPE_SET", "set"},
-    {C_ENUM (GST_SEEK_TYPE_END), "GST_SEEK_TYPE_END", "end"},
-    {0, NULL, NULL}
-  };
-
-  if (g_once_init_enter (&id)) {
-    GType tmp = g_enum_register_static ("GstSeekType", values);
-    g_once_init_leave (&id, tmp);
-  }
-
-  return (GType) id;
-}
-
-GType
-gst_seek_flags_get_type (void)
-{
-  static gsize id = 0;
-  static const GFlagsValue values[] = {
-    {C_FLAGS (GST_SEEK_FLAG_NONE), "GST_SEEK_FLAG_NONE", "none"},
-    {C_FLAGS (GST_SEEK_FLAG_FLUSH), "GST_SEEK_FLAG_FLUSH", "flush"},
-    {C_FLAGS (GST_SEEK_FLAG_ACCURATE), "GST_SEEK_FLAG_ACCURATE", "accurate"},
-    {C_FLAGS (GST_SEEK_FLAG_KEY_UNIT), "GST_SEEK_FLAG_KEY_UNIT", "key-unit"},
-    {C_FLAGS (GST_SEEK_FLAG_SEGMENT), "GST_SEEK_FLAG_SEGMENT", "segment"},
-    {C_FLAGS (GST_SEEK_FLAG_SKIP), "GST_SEEK_FLAG_SKIP", "skip"},
-    {0, NULL, NULL}
-  };
-
-  if (g_once_init_enter (&id)) {
-    GType tmp = g_flags_register_static ("GstSeekFlags", values);
     g_once_init_leave (&id, tmp);
   }
 
@@ -638,6 +647,27 @@ gst_qos_type_get_type (void)
 
   if (g_once_init_enter (&id)) {
     GType tmp = g_enum_register_static ("GstQOSType", values);
+    g_once_init_leave (&id, tmp);
+  }
+
+  return (GType) id;
+}
+
+GType
+gst_stream_flags_get_type (void)
+{
+  static gsize id = 0;
+  static const GFlagsValue values[] = {
+    {C_FLAGS (GST_STREAM_FLAG_NONE), "GST_STREAM_FLAG_NONE", "none"},
+    {C_FLAGS (GST_STREAM_FLAG_SPARSE), "GST_STREAM_FLAG_SPARSE", "sparse"},
+    {C_FLAGS (GST_STREAM_FLAG_SELECT), "GST_STREAM_FLAG_SELECT", "select"},
+    {C_FLAGS (GST_STREAM_FLAG_UNSELECT), "GST_STREAM_FLAG_UNSELECT",
+        "unselect"},
+    {0, NULL, NULL}
+  };
+
+  if (g_once_init_enter (&id)) {
+    GType tmp = g_flags_register_static ("GstStreamFlags", values);
     g_once_init_leave (&id, tmp);
   }
 
@@ -667,126 +697,6 @@ gst_format_get_type (void)
   return (GType) id;
 }
 
-/* enumerations from "gstindex.h" */
-GType
-gst_index_certainty_get_type (void)
-{
-  static gsize id = 0;
-  static const GEnumValue values[] = {
-    {C_ENUM (GST_INDEX_UNKNOWN), "GST_INDEX_UNKNOWN", "unknown"},
-    {C_ENUM (GST_INDEX_CERTAIN), "GST_INDEX_CERTAIN", "certain"},
-    {C_ENUM (GST_INDEX_FUZZY), "GST_INDEX_FUZZY", "fuzzy"},
-    {0, NULL, NULL}
-  };
-
-  if (g_once_init_enter (&id)) {
-    GType tmp = g_enum_register_static ("GstIndexCertainty", values);
-    g_once_init_leave (&id, tmp);
-  }
-
-  return (GType) id;
-}
-
-GType
-gst_index_entry_type_get_type (void)
-{
-  static gsize id = 0;
-  static const GEnumValue values[] = {
-    {C_ENUM (GST_INDEX_ENTRY_ID), "GST_INDEX_ENTRY_ID", "id"},
-    {C_ENUM (GST_INDEX_ENTRY_ASSOCIATION), "GST_INDEX_ENTRY_ASSOCIATION",
-        "association"},
-    {C_ENUM (GST_INDEX_ENTRY_OBJECT), "GST_INDEX_ENTRY_OBJECT", "object"},
-    {C_ENUM (GST_INDEX_ENTRY_FORMAT), "GST_INDEX_ENTRY_FORMAT", "format"},
-    {0, NULL, NULL}
-  };
-
-  if (g_once_init_enter (&id)) {
-    GType tmp = g_enum_register_static ("GstIndexEntryType", values);
-    g_once_init_leave (&id, tmp);
-  }
-
-  return (GType) id;
-}
-
-GType
-gst_index_lookup_method_get_type (void)
-{
-  static gsize id = 0;
-  static const GEnumValue values[] = {
-    {C_ENUM (GST_INDEX_LOOKUP_EXACT), "GST_INDEX_LOOKUP_EXACT", "exact"},
-    {C_ENUM (GST_INDEX_LOOKUP_BEFORE), "GST_INDEX_LOOKUP_BEFORE", "before"},
-    {C_ENUM (GST_INDEX_LOOKUP_AFTER), "GST_INDEX_LOOKUP_AFTER", "after"},
-    {0, NULL, NULL}
-  };
-
-  if (g_once_init_enter (&id)) {
-    GType tmp = g_enum_register_static ("GstIndexLookupMethod", values);
-    g_once_init_leave (&id, tmp);
-  }
-
-  return (GType) id;
-}
-
-GType
-gst_assoc_flags_get_type (void)
-{
-  static gsize id = 0;
-  static const GFlagsValue values[] = {
-    {C_FLAGS (GST_ASSOCIATION_FLAG_NONE), "GST_ASSOCIATION_FLAG_NONE", "none"},
-    {C_FLAGS (GST_ASSOCIATION_FLAG_KEY_UNIT), "GST_ASSOCIATION_FLAG_KEY_UNIT",
-        "key-unit"},
-    {C_FLAGS (GST_ASSOCIATION_FLAG_DELTA_UNIT),
-        "GST_ASSOCIATION_FLAG_DELTA_UNIT", "delta-unit"},
-    {C_FLAGS (GST_ASSOCIATION_FLAG_LAST), "GST_ASSOCIATION_FLAG_LAST", "last"},
-    {0, NULL, NULL}
-  };
-
-  if (g_once_init_enter (&id)) {
-    GType tmp = g_flags_register_static ("GstAssocFlags", values);
-    g_once_init_leave (&id, tmp);
-  }
-
-  return (GType) id;
-}
-
-GType
-gst_index_resolver_method_get_type (void)
-{
-  static gsize id = 0;
-  static const GEnumValue values[] = {
-    {C_ENUM (GST_INDEX_RESOLVER_CUSTOM), "GST_INDEX_RESOLVER_CUSTOM", "custom"},
-    {C_ENUM (GST_INDEX_RESOLVER_GTYPE), "GST_INDEX_RESOLVER_GTYPE", "gtype"},
-    {C_ENUM (GST_INDEX_RESOLVER_PATH), "GST_INDEX_RESOLVER_PATH", "path"},
-    {0, NULL, NULL}
-  };
-
-  if (g_once_init_enter (&id)) {
-    GType tmp = g_enum_register_static ("GstIndexResolverMethod", values);
-    g_once_init_leave (&id, tmp);
-  }
-
-  return (GType) id;
-}
-
-GType
-gst_index_flags_get_type (void)
-{
-  static gsize id = 0;
-  static const GFlagsValue values[] = {
-    {C_FLAGS (GST_INDEX_WRITABLE), "GST_INDEX_WRITABLE", "writable"},
-    {C_FLAGS (GST_INDEX_READABLE), "GST_INDEX_READABLE", "readable"},
-    {C_FLAGS (GST_INDEX_FLAG_LAST), "GST_INDEX_FLAG_LAST", "flag-last"},
-    {0, NULL, NULL}
-  };
-
-  if (g_once_init_enter (&id)) {
-    GType tmp = g_flags_register_static ("GstIndexFlags", values);
-    g_once_init_leave (&id, tmp);
-  }
-
-  return (GType) id;
-}
-
 /* enumerations from "gstinfo.h" */
 GType
 gst_debug_level_get_type (void)
@@ -796,10 +706,10 @@ gst_debug_level_get_type (void)
     {C_ENUM (GST_LEVEL_NONE), "GST_LEVEL_NONE", "none"},
     {C_ENUM (GST_LEVEL_ERROR), "GST_LEVEL_ERROR", "error"},
     {C_ENUM (GST_LEVEL_WARNING), "GST_LEVEL_WARNING", "warning"},
+    {C_ENUM (GST_LEVEL_FIXME), "GST_LEVEL_FIXME", "fixme"},
     {C_ENUM (GST_LEVEL_INFO), "GST_LEVEL_INFO", "info"},
     {C_ENUM (GST_LEVEL_DEBUG), "GST_LEVEL_DEBUG", "debug"},
     {C_ENUM (GST_LEVEL_LOG), "GST_LEVEL_LOG", "log"},
-    {C_ENUM (GST_LEVEL_FIXME), "GST_LEVEL_FIXME", "fixme"},
     {C_ENUM (GST_LEVEL_TRACE), "GST_LEVEL_TRACE", "trace"},
     {C_ENUM (GST_LEVEL_MEMDUMP), "GST_LEVEL_MEMDUMP", "memdump"},
     {C_ENUM (GST_LEVEL_COUNT), "GST_LEVEL_COUNT", "count"},
@@ -842,6 +752,25 @@ gst_debug_color_flags_get_type (void)
 
   if (g_once_init_enter (&id)) {
     GType tmp = g_enum_register_static ("GstDebugColorFlags", values);
+    g_once_init_leave (&id, tmp);
+  }
+
+  return (GType) id;
+}
+
+GType
+gst_debug_color_mode_get_type (void)
+{
+  static gsize id = 0;
+  static const GEnumValue values[] = {
+    {C_ENUM (GST_DEBUG_COLOR_MODE_OFF), "GST_DEBUG_COLOR_MODE_OFF", "off"},
+    {C_ENUM (GST_DEBUG_COLOR_MODE_ON), "GST_DEBUG_COLOR_MODE_ON", "on"},
+    {C_ENUM (GST_DEBUG_COLOR_MODE_UNIX), "GST_DEBUG_COLOR_MODE_UNIX", "unix"},
+    {0, NULL, NULL}
+  };
+
+  if (g_once_init_enter (&id)) {
+    GType tmp = g_enum_register_static ("GstDebugColorMode", values);
     g_once_init_leave (&id, tmp);
   }
 
@@ -921,7 +850,8 @@ gst_message_type_get_type (void)
         "segment-start"},
     {C_FLAGS (GST_MESSAGE_SEGMENT_DONE), "GST_MESSAGE_SEGMENT_DONE",
         "segment-done"},
-    {C_FLAGS (GST_MESSAGE_DURATION), "GST_MESSAGE_DURATION", "duration"},
+    {C_FLAGS (GST_MESSAGE_DURATION_CHANGED), "GST_MESSAGE_DURATION_CHANGED",
+        "duration-changed"},
     {C_FLAGS (GST_MESSAGE_LATENCY), "GST_MESSAGE_LATENCY", "latency"},
     {C_FLAGS (GST_MESSAGE_ASYNC_START), "GST_MESSAGE_ASYNC_START",
         "async-start"},
@@ -931,6 +861,19 @@ gst_message_type_get_type (void)
     {C_FLAGS (GST_MESSAGE_STEP_START), "GST_MESSAGE_STEP_START", "step-start"},
     {C_FLAGS (GST_MESSAGE_QOS), "GST_MESSAGE_QOS", "qos"},
     {C_FLAGS (GST_MESSAGE_PROGRESS), "GST_MESSAGE_PROGRESS", "progress"},
+    {C_FLAGS (GST_MESSAGE_TOC), "GST_MESSAGE_TOC", "toc"},
+    {C_FLAGS (GST_MESSAGE_RESET_TIME), "GST_MESSAGE_RESET_TIME", "reset-time"},
+    {C_FLAGS (GST_MESSAGE_STREAM_START), "GST_MESSAGE_STREAM_START",
+        "stream-start"},
+    {C_FLAGS (GST_MESSAGE_NEED_CONTEXT), "GST_MESSAGE_NEED_CONTEXT",
+        "need-context"},
+    {C_FLAGS (GST_MESSAGE_HAVE_CONTEXT), "GST_MESSAGE_HAVE_CONTEXT",
+        "have-context"},
+    {C_FLAGS (GST_MESSAGE_EXTENDED), "GST_MESSAGE_EXTENDED", "extended"},
+    {C_FLAGS (GST_MESSAGE_DEVICE_ADDED), "GST_MESSAGE_DEVICE_ADDED",
+        "device-added"},
+    {C_FLAGS (GST_MESSAGE_DEVICE_REMOVED), "GST_MESSAGE_DEVICE_REMOVED",
+        "device-removed"},
     {C_FLAGS (GST_MESSAGE_ANY), "GST_MESSAGE_ANY", "any"},
     {0, NULL, NULL}
   };
@@ -1017,16 +960,87 @@ gst_progress_type_get_type (void)
   return (GType) id;
 }
 
+/* enumerations from "gstmeta.h" */
+GType
+gst_meta_flags_get_type (void)
+{
+  static gsize id = 0;
+  static const GFlagsValue values[] = {
+    {C_FLAGS (GST_META_FLAG_NONE), "GST_META_FLAG_NONE", "none"},
+    {C_FLAGS (GST_META_FLAG_READONLY), "GST_META_FLAG_READONLY", "readonly"},
+    {C_FLAGS (GST_META_FLAG_POOLED), "GST_META_FLAG_POOLED", "pooled"},
+    {C_FLAGS (GST_META_FLAG_LOCKED), "GST_META_FLAG_LOCKED", "locked"},
+    {C_FLAGS (GST_META_FLAG_LAST), "GST_META_FLAG_LAST", "last"},
+    {0, NULL, NULL}
+  };
+
+  if (g_once_init_enter (&id)) {
+    GType tmp = g_flags_register_static ("GstMetaFlags", values);
+    g_once_init_leave (&id, tmp);
+  }
+
+  return (GType) id;
+}
+
+/* enumerations from "gstmemory.h" */
+GType
+gst_memory_flags_get_type (void)
+{
+  static gsize id = 0;
+  static const GFlagsValue values[] = {
+    {C_FLAGS (GST_MEMORY_FLAG_READONLY), "GST_MEMORY_FLAG_READONLY",
+        "readonly"},
+    {C_FLAGS (GST_MEMORY_FLAG_NO_SHARE), "GST_MEMORY_FLAG_NO_SHARE",
+        "no-share"},
+    {C_FLAGS (GST_MEMORY_FLAG_ZERO_PREFIXED), "GST_MEMORY_FLAG_ZERO_PREFIXED",
+        "zero-prefixed"},
+    {C_FLAGS (GST_MEMORY_FLAG_ZERO_PADDED), "GST_MEMORY_FLAG_ZERO_PADDED",
+        "zero-padded"},
+    {C_FLAGS (GST_MEMORY_FLAG_PHYSICALLY_CONTIGUOUS),
+        "GST_MEMORY_FLAG_PHYSICALLY_CONTIGUOUS", "physically-contiguous"},
+    {C_FLAGS (GST_MEMORY_FLAG_NOT_MAPPABLE), "GST_MEMORY_FLAG_NOT_MAPPABLE",
+        "not-mappable"},
+    {C_FLAGS (GST_MEMORY_FLAG_LAST), "GST_MEMORY_FLAG_LAST", "last"},
+    {0, NULL, NULL}
+  };
+
+  if (g_once_init_enter (&id)) {
+    GType tmp = g_flags_register_static ("GstMemoryFlags", values);
+    g_once_init_leave (&id, tmp);
+  }
+
+  return (GType) id;
+}
+
+GType
+gst_map_flags_get_type (void)
+{
+  static gsize id = 0;
+  static const GFlagsValue values[] = {
+    {C_FLAGS (GST_MAP_READ), "GST_MAP_READ", "read"},
+    {C_FLAGS (GST_MAP_WRITE), "GST_MAP_WRITE", "write"},
+    {C_FLAGS (GST_MAP_FLAG_LAST), "GST_MAP_FLAG_LAST", "flag-last"},
+    {0, NULL, NULL}
+  };
+
+  if (g_once_init_enter (&id)) {
+    GType tmp = g_flags_register_static ("GstMapFlags", values);
+    g_once_init_leave (&id, tmp);
+  }
+
+  return (GType) id;
+}
+
 /* enumerations from "gstminiobject.h" */
 GType
 gst_mini_object_flags_get_type (void)
 {
   static gsize id = 0;
   static const GFlagsValue values[] = {
-    {C_FLAGS (GST_MINI_OBJECT_FLAG_READONLY), "GST_MINI_OBJECT_FLAG_READONLY",
-        "readonly"},
-    {C_FLAGS (GST_MINI_OBJECT_FLAG_RESERVED1), "GST_MINI_OBJECT_FLAG_RESERVED1",
-        "reserved1"},
+    {C_FLAGS (GST_MINI_OBJECT_FLAG_LOCKABLE), "GST_MINI_OBJECT_FLAG_LOCKABLE",
+        "lockable"},
+    {C_FLAGS (GST_MINI_OBJECT_FLAG_LOCK_READONLY),
+        "GST_MINI_OBJECT_FLAG_LOCK_READONLY", "lock-readonly"},
     {C_FLAGS (GST_MINI_OBJECT_FLAG_LAST), "GST_MINI_OBJECT_FLAG_LAST", "last"},
     {0, NULL, NULL}
   };
@@ -1039,7 +1053,65 @@ gst_mini_object_flags_get_type (void)
   return (GType) id;
 }
 
+GType
+gst_lock_flags_get_type (void)
+{
+  static gsize id = 0;
+  static const GFlagsValue values[] = {
+    {C_FLAGS (GST_LOCK_FLAG_READ), "GST_LOCK_FLAG_READ", "read"},
+    {C_FLAGS (GST_LOCK_FLAG_WRITE), "GST_LOCK_FLAG_WRITE", "write"},
+    {C_FLAGS (GST_LOCK_FLAG_EXCLUSIVE), "GST_LOCK_FLAG_EXCLUSIVE", "exclusive"},
+    {C_FLAGS (GST_LOCK_FLAG_LAST), "GST_LOCK_FLAG_LAST", "last"},
+    {0, NULL, NULL}
+  };
+
+  if (g_once_init_enter (&id)) {
+    GType tmp = g_flags_register_static ("GstLockFlags", values);
+    g_once_init_leave (&id, tmp);
+  }
+
+  return (GType) id;
+}
+
 /* enumerations from "gstpad.h" */
+GType
+gst_pad_direction_get_type (void)
+{
+  static gsize id = 0;
+  static const GEnumValue values[] = {
+    {C_ENUM (GST_PAD_UNKNOWN), "GST_PAD_UNKNOWN", "unknown"},
+    {C_ENUM (GST_PAD_SRC), "GST_PAD_SRC", "src"},
+    {C_ENUM (GST_PAD_SINK), "GST_PAD_SINK", "sink"},
+    {0, NULL, NULL}
+  };
+
+  if (g_once_init_enter (&id)) {
+    GType tmp = g_enum_register_static ("GstPadDirection", values);
+    g_once_init_leave (&id, tmp);
+  }
+
+  return (GType) id;
+}
+
+GType
+gst_pad_mode_get_type (void)
+{
+  static gsize id = 0;
+  static const GEnumValue values[] = {
+    {C_ENUM (GST_PAD_MODE_NONE), "GST_PAD_MODE_NONE", "none"},
+    {C_ENUM (GST_PAD_MODE_PUSH), "GST_PAD_MODE_PUSH", "push"},
+    {C_ENUM (GST_PAD_MODE_PULL), "GST_PAD_MODE_PULL", "pull"},
+    {0, NULL, NULL}
+  };
+
+  if (g_once_init_enter (&id)) {
+    GType tmp = g_enum_register_static ("GstPadMode", values);
+    g_once_init_leave (&id, tmp);
+  }
+
+  return (GType) id;
+}
+
 GType
 gst_pad_link_return_get_type (void)
 {
@@ -1076,11 +1148,10 @@ gst_flow_return_get_type (void)
         "custom-success-1"},
     {C_ENUM (GST_FLOW_CUSTOM_SUCCESS), "GST_FLOW_CUSTOM_SUCCESS",
         "custom-success"},
-    {C_ENUM (GST_FLOW_RESEND), "GST_FLOW_RESEND", "resend"},
     {C_ENUM (GST_FLOW_OK), "GST_FLOW_OK", "ok"},
     {C_ENUM (GST_FLOW_NOT_LINKED), "GST_FLOW_NOT_LINKED", "not-linked"},
-    {C_ENUM (GST_FLOW_WRONG_STATE), "GST_FLOW_WRONG_STATE", "wrong-state"},
-    {C_ENUM (GST_FLOW_UNEXPECTED), "GST_FLOW_UNEXPECTED", "unexpected"},
+    {C_ENUM (GST_FLOW_FLUSHING), "GST_FLOW_FLUSHING", "flushing"},
+    {C_ENUM (GST_FLOW_EOS), "GST_FLOW_EOS", "eos"},
     {C_ENUM (GST_FLOW_NOT_NEGOTIATED), "GST_FLOW_NOT_NEGOTIATED",
         "not-negotiated"},
     {C_ENUM (GST_FLOW_ERROR), "GST_FLOW_ERROR", "error"},
@@ -1114,6 +1185,8 @@ gst_pad_link_check_get_type (void)
     {C_FLAGS (GST_PAD_LINK_CHECK_TEMPLATE_CAPS),
         "GST_PAD_LINK_CHECK_TEMPLATE_CAPS", "template-caps"},
     {C_FLAGS (GST_PAD_LINK_CHECK_CAPS), "GST_PAD_LINK_CHECK_CAPS", "caps"},
+    {C_FLAGS (GST_PAD_LINK_CHECK_DEFAULT), "GST_PAD_LINK_CHECK_DEFAULT",
+        "default"},
     {0, NULL, NULL}
   };
 
@@ -1126,18 +1199,55 @@ gst_pad_link_check_get_type (void)
 }
 
 GType
-gst_activate_mode_get_type (void)
+gst_pad_probe_type_get_type (void)
 {
   static gsize id = 0;
-  static const GEnumValue values[] = {
-    {C_ENUM (GST_ACTIVATE_NONE), "GST_ACTIVATE_NONE", "none"},
-    {C_ENUM (GST_ACTIVATE_PUSH), "GST_ACTIVATE_PUSH", "push"},
-    {C_ENUM (GST_ACTIVATE_PULL), "GST_ACTIVATE_PULL", "pull"},
+  static const GFlagsValue values[] = {
+    {C_FLAGS (GST_PAD_PROBE_TYPE_INVALID), "GST_PAD_PROBE_TYPE_INVALID",
+        "invalid"},
+    {C_FLAGS (GST_PAD_PROBE_TYPE_IDLE), "GST_PAD_PROBE_TYPE_IDLE", "idle"},
+    {C_FLAGS (GST_PAD_PROBE_TYPE_BLOCK), "GST_PAD_PROBE_TYPE_BLOCK", "block"},
+    {C_FLAGS (GST_PAD_PROBE_TYPE_BUFFER), "GST_PAD_PROBE_TYPE_BUFFER",
+        "buffer"},
+    {C_FLAGS (GST_PAD_PROBE_TYPE_BUFFER_LIST), "GST_PAD_PROBE_TYPE_BUFFER_LIST",
+        "buffer-list"},
+    {C_FLAGS (GST_PAD_PROBE_TYPE_EVENT_DOWNSTREAM),
+        "GST_PAD_PROBE_TYPE_EVENT_DOWNSTREAM", "event-downstream"},
+    {C_FLAGS (GST_PAD_PROBE_TYPE_EVENT_UPSTREAM),
+        "GST_PAD_PROBE_TYPE_EVENT_UPSTREAM", "event-upstream"},
+    {C_FLAGS (GST_PAD_PROBE_TYPE_EVENT_FLUSH), "GST_PAD_PROBE_TYPE_EVENT_FLUSH",
+        "event-flush"},
+    {C_FLAGS (GST_PAD_PROBE_TYPE_QUERY_DOWNSTREAM),
+        "GST_PAD_PROBE_TYPE_QUERY_DOWNSTREAM", "query-downstream"},
+    {C_FLAGS (GST_PAD_PROBE_TYPE_QUERY_UPSTREAM),
+        "GST_PAD_PROBE_TYPE_QUERY_UPSTREAM", "query-upstream"},
+    {C_FLAGS (GST_PAD_PROBE_TYPE_PUSH), "GST_PAD_PROBE_TYPE_PUSH", "push"},
+    {C_FLAGS (GST_PAD_PROBE_TYPE_PULL), "GST_PAD_PROBE_TYPE_PULL", "pull"},
+    {C_FLAGS (GST_PAD_PROBE_TYPE_BLOCKING), "GST_PAD_PROBE_TYPE_BLOCKING",
+        "blocking"},
+    {C_FLAGS (GST_PAD_PROBE_TYPE_DATA_DOWNSTREAM),
+        "GST_PAD_PROBE_TYPE_DATA_DOWNSTREAM", "data-downstream"},
+    {C_FLAGS (GST_PAD_PROBE_TYPE_DATA_UPSTREAM),
+        "GST_PAD_PROBE_TYPE_DATA_UPSTREAM", "data-upstream"},
+    {C_FLAGS (GST_PAD_PROBE_TYPE_DATA_BOTH), "GST_PAD_PROBE_TYPE_DATA_BOTH",
+        "data-both"},
+    {C_FLAGS (GST_PAD_PROBE_TYPE_BLOCK_DOWNSTREAM),
+        "GST_PAD_PROBE_TYPE_BLOCK_DOWNSTREAM", "block-downstream"},
+    {C_FLAGS (GST_PAD_PROBE_TYPE_BLOCK_UPSTREAM),
+        "GST_PAD_PROBE_TYPE_BLOCK_UPSTREAM", "block-upstream"},
+    {C_FLAGS (GST_PAD_PROBE_TYPE_EVENT_BOTH), "GST_PAD_PROBE_TYPE_EVENT_BOTH",
+        "event-both"},
+    {C_FLAGS (GST_PAD_PROBE_TYPE_QUERY_BOTH), "GST_PAD_PROBE_TYPE_QUERY_BOTH",
+        "query-both"},
+    {C_FLAGS (GST_PAD_PROBE_TYPE_ALL_BOTH), "GST_PAD_PROBE_TYPE_ALL_BOTH",
+        "all-both"},
+    {C_FLAGS (GST_PAD_PROBE_TYPE_SCHEDULING), "GST_PAD_PROBE_TYPE_SCHEDULING",
+        "scheduling"},
     {0, NULL, NULL}
   };
 
   if (g_once_init_enter (&id)) {
-    GType tmp = g_enum_register_static ("GstActivateMode", values);
+    GType tmp = g_flags_register_static ("GstPadProbeType", values);
     g_once_init_leave (&id, tmp);
   }
 
@@ -1145,18 +1255,19 @@ gst_activate_mode_get_type (void)
 }
 
 GType
-gst_pad_direction_get_type (void)
+gst_pad_probe_return_get_type (void)
 {
   static gsize id = 0;
   static const GEnumValue values[] = {
-    {C_ENUM (GST_PAD_UNKNOWN), "GST_PAD_UNKNOWN", "unknown"},
-    {C_ENUM (GST_PAD_SRC), "GST_PAD_SRC", "src"},
-    {C_ENUM (GST_PAD_SINK), "GST_PAD_SINK", "sink"},
+    {C_ENUM (GST_PAD_PROBE_DROP), "GST_PAD_PROBE_DROP", "drop"},
+    {C_ENUM (GST_PAD_PROBE_OK), "GST_PAD_PROBE_OK", "ok"},
+    {C_ENUM (GST_PAD_PROBE_REMOVE), "GST_PAD_PROBE_REMOVE", "remove"},
+    {C_ENUM (GST_PAD_PROBE_PASS), "GST_PAD_PROBE_PASS", "pass"},
     {0, NULL, NULL}
   };
 
   if (g_once_init_enter (&id)) {
-    GType tmp = g_enum_register_static ("GstPadDirection", values);
+    GType tmp = g_enum_register_static ("GstPadProbeReturn", values);
     g_once_init_leave (&id, tmp);
   }
 
@@ -1168,12 +1279,27 @@ gst_pad_flags_get_type (void)
 {
   static gsize id = 0;
   static const GFlagsValue values[] = {
-    {C_FLAGS (GST_PAD_BLOCKED), "GST_PAD_BLOCKED", "blocked"},
-    {C_FLAGS (GST_PAD_FLUSHING), "GST_PAD_FLUSHING", "flushing"},
-    {C_FLAGS (GST_PAD_IN_GETCAPS), "GST_PAD_IN_GETCAPS", "in-getcaps"},
-    {C_FLAGS (GST_PAD_IN_SETCAPS), "GST_PAD_IN_SETCAPS", "in-setcaps"},
-    {C_FLAGS (GST_PAD_BLOCKING), "GST_PAD_BLOCKING", "blocking"},
-    {C_FLAGS (GST_PAD_FLAG_LAST), "GST_PAD_FLAG_LAST", "flag-last"},
+    {C_FLAGS (GST_PAD_FLAG_BLOCKED), "GST_PAD_FLAG_BLOCKED", "blocked"},
+    {C_FLAGS (GST_PAD_FLAG_FLUSHING), "GST_PAD_FLAG_FLUSHING", "flushing"},
+    {C_FLAGS (GST_PAD_FLAG_EOS), "GST_PAD_FLAG_EOS", "eos"},
+    {C_FLAGS (GST_PAD_FLAG_BLOCKING), "GST_PAD_FLAG_BLOCKING", "blocking"},
+    {C_FLAGS (GST_PAD_FLAG_NEED_PARENT), "GST_PAD_FLAG_NEED_PARENT",
+        "need-parent"},
+    {C_FLAGS (GST_PAD_FLAG_NEED_RECONFIGURE), "GST_PAD_FLAG_NEED_RECONFIGURE",
+        "need-reconfigure"},
+    {C_FLAGS (GST_PAD_FLAG_PENDING_EVENTS), "GST_PAD_FLAG_PENDING_EVENTS",
+        "pending-events"},
+    {C_FLAGS (GST_PAD_FLAG_FIXED_CAPS), "GST_PAD_FLAG_FIXED_CAPS",
+        "fixed-caps"},
+    {C_FLAGS (GST_PAD_FLAG_PROXY_CAPS), "GST_PAD_FLAG_PROXY_CAPS",
+        "proxy-caps"},
+    {C_FLAGS (GST_PAD_FLAG_PROXY_ALLOCATION), "GST_PAD_FLAG_PROXY_ALLOCATION",
+        "proxy-allocation"},
+    {C_FLAGS (GST_PAD_FLAG_PROXY_SCHEDULING), "GST_PAD_FLAG_PROXY_SCHEDULING",
+        "proxy-scheduling"},
+    {C_FLAGS (GST_PAD_FLAG_ACCEPT_INTERSECT), "GST_PAD_FLAG_ACCEPT_INTERSECT",
+        "accept-intersect"},
+    {C_FLAGS (GST_PAD_FLAG_LAST), "GST_PAD_FLAG_LAST", "last"},
     {0, NULL, NULL}
   };
 
@@ -1210,9 +1336,8 @@ gst_pad_template_flags_get_type (void)
 {
   static gsize id = 0;
   static const GFlagsValue values[] = {
-    {C_FLAGS (GST_PAD_TEMPLATE_FIXED), "GST_PAD_TEMPLATE_FIXED", "fixed"},
     {C_FLAGS (GST_PAD_TEMPLATE_FLAG_LAST), "GST_PAD_TEMPLATE_FLAG_LAST",
-        "flag-last"},
+        "last"},
     {0, NULL, NULL}
   };
 
@@ -1334,11 +1459,32 @@ gst_rank_get_type (void)
 
 /* enumerations from "gstquery.h" */
 GType
+gst_query_type_flags_get_type (void)
+{
+  static gsize id = 0;
+  static const GFlagsValue values[] = {
+    {C_FLAGS (GST_QUERY_TYPE_UPSTREAM), "GST_QUERY_TYPE_UPSTREAM", "upstream"},
+    {C_FLAGS (GST_QUERY_TYPE_DOWNSTREAM), "GST_QUERY_TYPE_DOWNSTREAM",
+        "downstream"},
+    {C_FLAGS (GST_QUERY_TYPE_SERIALIZED), "GST_QUERY_TYPE_SERIALIZED",
+        "serialized"},
+    {0, NULL, NULL}
+  };
+
+  if (g_once_init_enter (&id)) {
+    GType tmp = g_flags_register_static ("GstQueryTypeFlags", values);
+    g_once_init_leave (&id, tmp);
+  }
+
+  return (GType) id;
+}
+
+GType
 gst_query_type_get_type (void)
 {
   static gsize id = 0;
   static const GEnumValue values[] = {
-    {C_ENUM (GST_QUERY_NONE), "GST_QUERY_NONE", "none"},
+    {C_ENUM (GST_QUERY_UNKNOWN), "GST_QUERY_UNKNOWN", "unknown"},
     {C_ENUM (GST_QUERY_POSITION), "GST_QUERY_POSITION", "position"},
     {C_ENUM (GST_QUERY_DURATION), "GST_QUERY_DURATION", "duration"},
     {C_ENUM (GST_QUERY_LATENCY), "GST_QUERY_LATENCY", "latency"},
@@ -1351,6 +1497,12 @@ gst_query_type_get_type (void)
     {C_ENUM (GST_QUERY_BUFFERING), "GST_QUERY_BUFFERING", "buffering"},
     {C_ENUM (GST_QUERY_CUSTOM), "GST_QUERY_CUSTOM", "custom"},
     {C_ENUM (GST_QUERY_URI), "GST_QUERY_URI", "uri"},
+    {C_ENUM (GST_QUERY_ALLOCATION), "GST_QUERY_ALLOCATION", "allocation"},
+    {C_ENUM (GST_QUERY_SCHEDULING), "GST_QUERY_SCHEDULING", "scheduling"},
+    {C_ENUM (GST_QUERY_ACCEPT_CAPS), "GST_QUERY_ACCEPT_CAPS", "accept-caps"},
+    {C_ENUM (GST_QUERY_CAPS), "GST_QUERY_CAPS", "caps"},
+    {C_ENUM (GST_QUERY_DRAIN), "GST_QUERY_DRAIN", "drain"},
+    {C_ENUM (GST_QUERY_CONTEXT), "GST_QUERY_CONTEXT", "context"},
     {0, NULL, NULL}
   };
 
@@ -1382,6 +1534,96 @@ gst_buffering_mode_get_type (void)
   return (GType) id;
 }
 
+GType
+gst_scheduling_flags_get_type (void)
+{
+  static gsize id = 0;
+  static const GFlagsValue values[] = {
+    {C_FLAGS (GST_SCHEDULING_FLAG_SEEKABLE), "GST_SCHEDULING_FLAG_SEEKABLE",
+        "seekable"},
+    {C_FLAGS (GST_SCHEDULING_FLAG_SEQUENTIAL), "GST_SCHEDULING_FLAG_SEQUENTIAL",
+        "sequential"},
+    {C_FLAGS (GST_SCHEDULING_FLAG_BANDWIDTH_LIMITED),
+        "GST_SCHEDULING_FLAG_BANDWIDTH_LIMITED", "bandwidth-limited"},
+    {0, NULL, NULL}
+  };
+
+  if (g_once_init_enter (&id)) {
+    GType tmp = g_flags_register_static ("GstSchedulingFlags", values);
+    g_once_init_leave (&id, tmp);
+  }
+
+  return (GType) id;
+}
+
+/* enumerations from "gstsegment.h" */
+GType
+gst_seek_type_get_type (void)
+{
+  static gsize id = 0;
+  static const GEnumValue values[] = {
+    {C_ENUM (GST_SEEK_TYPE_NONE), "GST_SEEK_TYPE_NONE", "none"},
+    {C_ENUM (GST_SEEK_TYPE_SET), "GST_SEEK_TYPE_SET", "set"},
+    {C_ENUM (GST_SEEK_TYPE_END), "GST_SEEK_TYPE_END", "end"},
+    {0, NULL, NULL}
+  };
+
+  if (g_once_init_enter (&id)) {
+    GType tmp = g_enum_register_static ("GstSeekType", values);
+    g_once_init_leave (&id, tmp);
+  }
+
+  return (GType) id;
+}
+
+GType
+gst_seek_flags_get_type (void)
+{
+  static gsize id = 0;
+  static const GFlagsValue values[] = {
+    {C_FLAGS (GST_SEEK_FLAG_NONE), "GST_SEEK_FLAG_NONE", "none"},
+    {C_FLAGS (GST_SEEK_FLAG_FLUSH), "GST_SEEK_FLAG_FLUSH", "flush"},
+    {C_FLAGS (GST_SEEK_FLAG_ACCURATE), "GST_SEEK_FLAG_ACCURATE", "accurate"},
+    {C_FLAGS (GST_SEEK_FLAG_KEY_UNIT), "GST_SEEK_FLAG_KEY_UNIT", "key-unit"},
+    {C_FLAGS (GST_SEEK_FLAG_SEGMENT), "GST_SEEK_FLAG_SEGMENT", "segment"},
+    {C_FLAGS (GST_SEEK_FLAG_SKIP), "GST_SEEK_FLAG_SKIP", "skip"},
+    {C_FLAGS (GST_SEEK_FLAG_SNAP_BEFORE), "GST_SEEK_FLAG_SNAP_BEFORE",
+        "snap-before"},
+    {C_FLAGS (GST_SEEK_FLAG_SNAP_AFTER), "GST_SEEK_FLAG_SNAP_AFTER",
+        "snap-after"},
+    {C_FLAGS (GST_SEEK_FLAG_SNAP_NEAREST), "GST_SEEK_FLAG_SNAP_NEAREST",
+        "snap-nearest"},
+    {0, NULL, NULL}
+  };
+
+  if (g_once_init_enter (&id)) {
+    GType tmp = g_flags_register_static ("GstSeekFlags", values);
+    g_once_init_leave (&id, tmp);
+  }
+
+  return (GType) id;
+}
+
+GType
+gst_segment_flags_get_type (void)
+{
+  static gsize id = 0;
+  static const GFlagsValue values[] = {
+    {C_FLAGS (GST_SEGMENT_FLAG_NONE), "GST_SEGMENT_FLAG_NONE", "none"},
+    {C_FLAGS (GST_SEGMENT_FLAG_RESET), "GST_SEGMENT_FLAG_RESET", "reset"},
+    {C_FLAGS (GST_SEGMENT_FLAG_SKIP), "GST_SEGMENT_FLAG_SKIP", "skip"},
+    {C_FLAGS (GST_SEGMENT_FLAG_SEGMENT), "GST_SEGMENT_FLAG_SEGMENT", "segment"},
+    {0, NULL, NULL}
+  };
+
+  if (g_once_init_enter (&id)) {
+    GType tmp = g_flags_register_static ("GstSegmentFlags", values);
+    g_once_init_leave (&id, tmp);
+  }
+
+  return (GType) id;
+}
+
 /* enumerations from "gstsystemclock.h" */
 GType
 gst_clock_type_get_type (void)
@@ -1391,6 +1633,7 @@ gst_clock_type_get_type (void)
     {C_ENUM (GST_CLOCK_TYPE_REALTIME), "GST_CLOCK_TYPE_REALTIME", "realtime"},
     {C_ENUM (GST_CLOCK_TYPE_MONOTONIC), "GST_CLOCK_TYPE_MONOTONIC",
         "monotonic"},
+    {C_ENUM (GST_CLOCK_TYPE_OTHER), "GST_CLOCK_TYPE_OTHER", "other"},
     {0, NULL, NULL}
   };
 
@@ -1449,6 +1692,24 @@ gst_tag_flag_get_type (void)
   return (GType) id;
 }
 
+GType
+gst_tag_scope_get_type (void)
+{
+  static gsize id = 0;
+  static const GEnumValue values[] = {
+    {C_ENUM (GST_TAG_SCOPE_STREAM), "GST_TAG_SCOPE_STREAM", "stream"},
+    {C_ENUM (GST_TAG_SCOPE_GLOBAL), "GST_TAG_SCOPE_GLOBAL", "global"},
+    {0, NULL, NULL}
+  };
+
+  if (g_once_init_enter (&id)) {
+    GType tmp = g_enum_register_static ("GstTagScope", values);
+    g_once_init_leave (&id, tmp);
+  }
+
+  return (GType) id;
+}
+
 /* enumerations from "gsttask.h" */
 GType
 gst_task_state_get_type (void)
@@ -1469,20 +1730,66 @@ gst_task_state_get_type (void)
   return (GType) id;
 }
 
-/* enumerations from "gsttrace.h" */
+/* enumerations from "gsttoc.h" */
 GType
-gst_alloc_trace_flags_get_type (void)
+gst_toc_scope_get_type (void)
 {
   static gsize id = 0;
-  static const GFlagsValue values[] = {
-    {C_FLAGS (GST_ALLOC_TRACE_LIVE), "GST_ALLOC_TRACE_LIVE", "live"},
-    {C_FLAGS (GST_ALLOC_TRACE_MEM_LIVE), "GST_ALLOC_TRACE_MEM_LIVE",
-        "mem-live"},
+  static const GEnumValue values[] = {
+    {C_ENUM (GST_TOC_SCOPE_GLOBAL), "GST_TOC_SCOPE_GLOBAL", "global"},
+    {C_ENUM (GST_TOC_SCOPE_CURRENT), "GST_TOC_SCOPE_CURRENT", "current"},
     {0, NULL, NULL}
   };
 
   if (g_once_init_enter (&id)) {
-    GType tmp = g_flags_register_static ("GstAllocTraceFlags", values);
+    GType tmp = g_enum_register_static ("GstTocScope", values);
+    g_once_init_leave (&id, tmp);
+  }
+
+  return (GType) id;
+}
+
+GType
+gst_toc_entry_type_get_type (void)
+{
+  static gsize id = 0;
+  static const GEnumValue values[] = {
+    {C_ENUM (GST_TOC_ENTRY_TYPE_ANGLE), "GST_TOC_ENTRY_TYPE_ANGLE", "angle"},
+    {C_ENUM (GST_TOC_ENTRY_TYPE_VERSION), "GST_TOC_ENTRY_TYPE_VERSION",
+        "version"},
+    {C_ENUM (GST_TOC_ENTRY_TYPE_EDITION), "GST_TOC_ENTRY_TYPE_EDITION",
+        "edition"},
+    {C_ENUM (GST_TOC_ENTRY_TYPE_INVALID), "GST_TOC_ENTRY_TYPE_INVALID",
+        "invalid"},
+    {C_ENUM (GST_TOC_ENTRY_TYPE_TITLE), "GST_TOC_ENTRY_TYPE_TITLE", "title"},
+    {C_ENUM (GST_TOC_ENTRY_TYPE_TRACK), "GST_TOC_ENTRY_TYPE_TRACK", "track"},
+    {C_ENUM (GST_TOC_ENTRY_TYPE_CHAPTER), "GST_TOC_ENTRY_TYPE_CHAPTER",
+        "chapter"},
+    {0, NULL, NULL}
+  };
+
+  if (g_once_init_enter (&id)) {
+    GType tmp = g_enum_register_static ("GstTocEntryType", values);
+    g_once_init_leave (&id, tmp);
+  }
+
+  return (GType) id;
+}
+
+GType
+gst_toc_loop_type_get_type (void)
+{
+  static gsize id = 0;
+  static const GEnumValue values[] = {
+    {C_ENUM (GST_TOC_LOOP_NONE), "GST_TOC_LOOP_NONE", "none"},
+    {C_ENUM (GST_TOC_LOOP_FORWARD), "GST_TOC_LOOP_FORWARD", "forward"},
+    {C_ENUM (GST_TOC_LOOP_REVERSE), "GST_TOC_LOOP_REVERSE", "reverse"},
+    {C_ENUM (GST_TOC_LOOP_PING_PONG), "GST_TOC_LOOP_PING_PONG", "ping-pong"},
+    {0, NULL, NULL}
+  };
+
+  if (g_once_init_enter (&id)) {
+    GType tmp = g_enum_register_static ("GstTocLoopType", values);
     g_once_init_leave (&id, tmp);
   }
 
@@ -1495,6 +1802,7 @@ gst_type_find_probability_get_type (void)
 {
   static gsize id = 0;
   static const GEnumValue values[] = {
+    {C_ENUM (GST_TYPE_FIND_NONE), "GST_TYPE_FIND_NONE", "none"},
     {C_ENUM (GST_TYPE_FIND_MINIMUM), "GST_TYPE_FIND_MINIMUM", "minimum"},
     {C_ENUM (GST_TYPE_FIND_POSSIBLE), "GST_TYPE_FIND_POSSIBLE", "possible"},
     {C_ENUM (GST_TYPE_FIND_LIKELY), "GST_TYPE_FIND_LIKELY", "likely"},
@@ -1513,6 +1821,28 @@ gst_type_find_probability_get_type (void)
 }
 
 /* enumerations from "gsturi.h" */
+GType
+gst_uri_error_get_type (void)
+{
+  static gsize id = 0;
+  static const GEnumValue values[] = {
+    {C_ENUM (GST_URI_ERROR_UNSUPPORTED_PROTOCOL),
+        "GST_URI_ERROR_UNSUPPORTED_PROTOCOL", "unsupported-protocol"},
+    {C_ENUM (GST_URI_ERROR_BAD_URI), "GST_URI_ERROR_BAD_URI", "bad-uri"},
+    {C_ENUM (GST_URI_ERROR_BAD_STATE), "GST_URI_ERROR_BAD_STATE", "bad-state"},
+    {C_ENUM (GST_URI_ERROR_BAD_REFERENCE), "GST_URI_ERROR_BAD_REFERENCE",
+        "bad-reference"},
+    {0, NULL, NULL}
+  };
+
+  if (g_once_init_enter (&id)) {
+    GType tmp = g_enum_register_static ("GstURIError", values);
+    g_once_init_leave (&id, tmp);
+  }
+
+  return (GType) id;
+}
+
 GType
 gst_uri_type_get_type (void)
 {
@@ -1588,6 +1918,8 @@ gst_parse_flags_get_type (void)
     {C_FLAGS (GST_PARSE_FLAG_NONE), "GST_PARSE_FLAG_NONE", "none"},
     {C_FLAGS (GST_PARSE_FLAG_FATAL_ERRORS), "GST_PARSE_FLAG_FATAL_ERRORS",
         "fatal-errors"},
+    {C_FLAGS (GST_PARSE_FLAG_NO_SINGLE_ELEMENT_BINS),
+        "GST_PARSE_FLAG_NO_SINGLE_ELEMENT_BINS", "no-single-element-bins"},
     {0, NULL, NULL}
   };
 

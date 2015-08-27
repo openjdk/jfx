@@ -14,8 +14,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 /**
@@ -216,7 +216,7 @@
  *       urisource-$(PROTOCOL_REQUIRED), e.g. urisource-http or urisource-mms
  *     </para></listitem>
  *     <listitem><para>
- *       element-$(ELEMENT_REQUIRED), e.g. element-ffmpegcolorspace
+ *       element-$(ELEMENT_REQUIRED), e.g. element-videoconvert
  *     </para></listitem>
  *     <listitem><para>
  *       decoder-$(CAPS_REQUIRED), e.g. (do read below for more details!):
@@ -411,8 +411,6 @@ struct _GstInstallPluginsContext
  * ##endif
  * ...
  * </programlisting>
- *
- * Since: 0.10.12
  */
 void
 gst_install_plugins_context_set_xid (GstInstallPluginsContext * ctx, guint xid)
@@ -429,8 +427,6 @@ gst_install_plugins_context_set_xid (GstInstallPluginsContext * ctx, guint xid)
  *
  * Returns: a new #GstInstallPluginsContext. Free with
  * gst_install_plugins_context_free() when no longer needed
- *
- * Since: 0.10.12
  */
 GstInstallPluginsContext *
 gst_install_plugins_context_new (void)
@@ -443,8 +439,6 @@ gst_install_plugins_context_new (void)
  * @ctx: a #GstInstallPluginsContext
  *
  * Frees a #GstInstallPluginsContext.
- *
- * Since: 0.10.12
  */
 void
 gst_install_plugins_context_free (GstInstallPluginsContext * ctx)
@@ -465,18 +459,9 @@ gst_install_plugins_context_copy (GstInstallPluginsContext * ctx)
   return ret;
 }
 
-GType
-gst_install_plugins_context_get_type (void)
-{
-  static GType gst_ipc_type = 0;
-
-  if (G_UNLIKELY (gst_ipc_type == 0)) {
-    gst_ipc_type = g_boxed_type_register_static ("GstInstallPluginsContext",
-        (GBoxedCopyFunc) gst_install_plugins_context_copy,
-        (GBoxedFreeFunc) gst_install_plugins_context_free);
-  }
-  return gst_ipc_type;
-}
+G_DEFINE_BOXED_TYPE (GstInstallPluginsContext, gst_install_plugins_context,
+    (GBoxedCopyFunc) gst_install_plugins_context_copy,
+    (GBoxedFreeFunc) gst_install_plugins_context_free);
 
 static const gchar *
 gst_install_plugins_get_helper (void)
@@ -504,7 +489,7 @@ ptr_array_contains_string (GPtrArray * arr, const gchar * s)
 }
 
 static gboolean
-gst_install_plugins_spawn_child (gchar ** details,
+gst_install_plugins_spawn_child (const gchar * const *details,
     GstInstallPluginsContext * ctx, GPid * child_pid, gint * exit_status)
 {
   GPtrArray *arr;
@@ -526,7 +511,7 @@ gst_install_plugins_spawn_child (gchar ** details,
   /* finally, add the detail strings, but without duplicates */
   while (details != NULL && details[0] != NULL) {
     if (!ptr_array_contains_string (arr, details[0]))
-      g_ptr_array_add (arr, details[0]);
+      g_ptr_array_add (arr, (gpointer) details[0]);
     ++details;
   }
 
@@ -569,7 +554,7 @@ gst_install_plugins_return_from_status (gint status)
     ret = (GstInstallPluginsReturn) WEXITSTATUS (status);
 
     /* did the helper return an invalid status code? */
-    if ((ret < 0 || ret >= GST_INSTALL_PLUGINS_STARTED_OK) &&
+    if (((guint) ret) >= GST_INSTALL_PLUGINS_STARTED_OK &&
         ret != GST_INSTALL_PLUGINS_INTERNAL_FAILURE) {
       ret = GST_INSTALL_PLUGINS_INVALID;
     }
@@ -606,8 +591,9 @@ gst_install_plugins_installer_exited (GPid pid, gint status, gpointer data)
 
 /**
  * gst_install_plugins_async:
- * @details: NULL-terminated array of installer string details (see below)
- * @ctx: a #GstInstallPluginsContext, or NULL
+ * @details: (array zero-terminated=1) (transfer none): NULL-terminated array
+ *     of installer string details (see below)
+ * @ctx: (allow-none): a #GstInstallPluginsContext, or NULL
  * @func: (scope async): the function to call when the installer program returns
  * @user_data: (closure): the user data to pass to @func when called, or NULL
  * 
@@ -629,13 +615,12 @@ gst_install_plugins_installer_exited (GPid pid, gint status, gpointer data)
  * installed but no suitable video decoder and no suitable audio decoder).
  *
  * Returns: result code whether an external installer could be started
- *
- * Since: 0.10.12
  */
 
 GstInstallPluginsReturn
-gst_install_plugins_async (gchar ** details, GstInstallPluginsContext * ctx,
-    GstInstallPluginsResultFunc func, gpointer user_data)
+gst_install_plugins_async (const gchar * const *details,
+    GstInstallPluginsContext * ctx, GstInstallPluginsResultFunc func,
+    gpointer user_data)
 {
   GstInstallPluginsAsyncHelper *helper;
   GPid pid;
@@ -665,8 +650,9 @@ gst_install_plugins_async (gchar ** details, GstInstallPluginsContext * ctx,
 
 /**
  * gst_install_plugins_sync:
- * @details: NULL-terminated array of installer string details
- * @ctx: a #GstInstallPluginsContext, or NULL
+ * @details: (array zero-terminated=1) (transfer none): NULL-terminated array
+ *     of installer string details
+ * @ctx: (allow-none): a #GstInstallPluginsContext, or NULL
  * 
  * Requests plugin installation and block until the plugins have been
  * installed or installation has failed.
@@ -678,11 +664,10 @@ gst_install_plugins_async (gchar ** details, GstInstallPluginsContext * ctx,
  * gst_install_plugins_async() instead of this function.
  *
  * Returns: the result of the installation.
- *
- * Since: 0.10.12
  */
 GstInstallPluginsReturn
-gst_install_plugins_sync (gchar ** details, GstInstallPluginsContext * ctx)
+gst_install_plugins_sync (const gchar * const *details,
+    GstInstallPluginsContext * ctx)
 {
   gint status;
 
@@ -712,8 +697,6 @@ gst_install_plugins_sync (gchar ** details, GstInstallPluginsContext * ctx)
  * in debugging.
  *
  * Returns: a descriptive string for the status code in @ret
- *
- * Since: 0.10.12
  */
 const gchar *
 gst_install_plugins_return_get_name (GstInstallPluginsReturn ret)
@@ -754,8 +737,6 @@ gst_install_plugins_return_get_name (GstInstallPluginsReturn ret)
  * is currently in progress.
  *
  * Returns: TRUE if plugin installation is in progress, otherwise FALSE
- *
- * Since: 0.10.12
  */
 gboolean
 gst_install_plugins_installation_in_progress (void)
@@ -772,8 +753,6 @@ gst_install_plugins_installation_in_progress (void)
  * exists.
  *
  * Returns: TRUE if plugin installation is likely to be supported.
- *
- * Since: 0.10.15
  */
 gboolean
 gst_install_plugins_supported (void)

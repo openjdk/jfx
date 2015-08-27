@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -195,7 +195,7 @@ uint32_t CGstPipelineFactory::CreateSourceElement(CLocator* locator, GstElement*
         {
             CLocatorStream* streamLocator = (CLocatorStream*)locator;
             CStreamCallbacks *callbacks = streamLocator->GetCallbacks();
-            
+
 #if TARGET_OS_MAC
             if ((CONTENT_TYPE_M3U8 == locator->GetContentType() || CONTENT_TYPE_M3U == locator->GetContentType()) && callbacks->Property(HLS_PROP_GET_MIMETYPE, 0) != HLS_VALUE_MIMETYPE_MP3)
             {
@@ -476,43 +476,6 @@ uint32_t CGstPipelineFactory::AttachToSource(GstBin* bin, GstElement* source, Gs
     return ERROR_NONE;
 }
 
-GstFlowReturn CGstPipelineFactory::AVSinkAllocAlignedBuffer(GstPad *pad, guint64 offset, guint size, GstCaps *caps, GstBuffer **buf)
-{
-    // allocate a new GstBuffer of the given size plus some for padding and alignment
-    GstBuffer *newBuffer = NULL;
-    guint8 *newData;
-    guint8 *alignedData;
-    guint alignedSize;
-
-    // Don't fail catastrophically...
-    *buf = NULL;
-
-    // allocate a buffer large enough to accommodate 16 byte alignment
-    alignedSize = size;
-    size += 16;
-    newData = (guint8*)g_try_malloc(size);
-    if (NULL == newData) {
-        return GST_FLOW_ERROR;
-    }
-
-    // create empty GstBuffer
-    newBuffer = gst_buffer_new();
-    if (NULL == newBuffer) {
-        g_free(newData);
-        return GST_FLOW_ERROR;
-    }
-
-    // Now set data, size and mallocdata
-    alignedData = (guint8*)(((intptr_t)newData + 15) & ~15);
-    gst_buffer_set_data(newBuffer, alignedData, alignedSize);
-    GST_BUFFER_MALLOCDATA(newBuffer) = newData;
-    GST_BUFFER_OFFSET(newBuffer) = offset;
-    gst_buffer_set_caps(newBuffer, caps);
-    *buf = newBuffer;
-
-    return GST_FLOW_OK;
-}
-
 /**
     *  GstElement* CreateFLVPipeline(GstElement* source, char* demux_factory,
     *                              char* audiodec_factory, char* videodec_factory,
@@ -534,7 +497,7 @@ uint32_t CGstPipelineFactory::CreateFLVPipeline(GstElement* source, GstElement* 
     return CreateAVPipeline(source, "flvdemux", "dshowwrapper", false, "vp6decoder", pVideoSink,
                             pOptions, ppPipeline);
 #elif TARGET_OS_MAC
-    return CreateAVPipeline(source, "flvdemux", "audioconverter", false, "vp6decoder", pVideoSink,
+    return CreateAVPipeline(source, "flvdemux", "audioconverter", true, "vp6decoder", pVideoSink,
                             pOptions, ppPipeline);
 #elif TARGET_OS_LINUX
 #if ENABLE_GST_FFMPEG
@@ -569,7 +532,7 @@ uint32_t CGstPipelineFactory::CreateMP4Pipeline(GstElement* source, GstElement* 
 #if TARGET_OS_WIN32
     return CreateAVPipeline(source, "qtdemux", "dshowwrapper", true, "dshowwrapper", pVideoSink, pOptions, ppPipeline);
 #elif TARGET_OS_MAC
-    return CreateAVPipeline(source, "qtdemux", "audioconverter", false, "avcdecoder", pVideoSink, pOptions, ppPipeline);
+    return CreateAVPipeline(source, "qtdemux", "audioconverter", true, "avcdecoder", pVideoSink, pOptions, ppPipeline);
 #elif TARGET_OS_LINUX
 #if ENABLE_GST_FFMPEG
     return CreateAVPipeline(source, "qtdemux", "ffdec_aac", true,
@@ -597,7 +560,7 @@ uint32_t CGstPipelineFactory::CreateMp3AudioPipeline(GstElement* source, CPipeli
 #if TARGET_OS_WIN32
     return CreateAudioPipeline(source, "mpegaudioparse", "dshowwrapper", false, pOptions, ppPipeline);
 #elif TARGET_OS_MAC
-    return CreateAudioPipeline(source, "mpegaudioparse", "audioconverter", false, pOptions, ppPipeline);
+    return CreateAudioPipeline(source, "mpegaudioparse", "audioconverter", true, pOptions, ppPipeline);
 #elif TARGET_OS_LINUX
 #if ENABLE_GST_FFMPEG
     return CreateAudioPipeline(source, "mpegaudioparse", "ffdec_mp3", true,
@@ -631,7 +594,7 @@ uint32_t CGstPipelineFactory::CreateHLSPipeline(GstElement* source, GstElement* 
         return ERROR_PLATFORM_UNSUPPORTED;
 #elif TARGET_OS_MAC
     if (pOptions->GetStreamMimeType() == HLS_VALUE_MIMETYPE_MP3)
-        return CreateAudioPipeline(source, "mpegaudioparse", "audioconverter", false, pOptions, ppPipeline);
+        return CreateAudioPipeline(source, "mpegaudioparse", "audioconverter", true, pOptions, ppPipeline);
     return ERROR_PLATFORM_UNSUPPORTED;
 #elif TARGET_OS_LINUX
     if (pOptions->GetStreamMimeType() == HLS_VALUE_MIMETYPE_MP2T)
@@ -776,7 +739,8 @@ uint32_t CGstPipelineFactory::CreateAudioBin(const char* strParserName, const ch
         return ERROR_GSTREAMER_BIN_ADD_ELEMENT;
     if (NULL != audioparse)
     {
-        gst_element_link(audioparse, audioqueue);
+        if (!gst_element_link(audioparse, audioqueue))
+            return ERROR_GSTREAMER_ELEMENT_LINK_AUDIO_BIN;
     }
 
     GstElement* tail = audioqueue;
@@ -794,7 +758,8 @@ uint32_t CGstPipelineFactory::CreateAudioBin(const char* strParserName, const ch
 
         if (!gst_bin_add(GST_BIN(*ppAudiobin), audiodec))
             return ERROR_GSTREAMER_BIN_ADD_ELEMENT;
-        gst_element_link(audioqueue, audiodec);
+        if (!gst_element_link(audioqueue, audiodec))
+            return ERROR_GSTREAMER_ELEMENT_LINK_AUDIO_BIN;
         tail = audiodec;
     }
 
@@ -803,7 +768,8 @@ uint32_t CGstPipelineFactory::CreateAudioBin(const char* strParserName, const ch
         GstElement *audioconv  = CreateElement ("audioconvert");
         if (!gst_bin_add(GST_BIN(*ppAudiobin), audioconv))
             return ERROR_GSTREAMER_BIN_ADD_ELEMENT;
-        gst_element_link(tail, audioconv);
+        if (!gst_element_link(tail, audioconv))
+            return ERROR_GSTREAMER_ELEMENT_LINK_AUDIO_BIN;
         tail = audioconv;
     }
 
@@ -931,15 +897,7 @@ uint32_t CGstPipelineFactory::CreateVideoBin(const char* strDecoderName, GstElem
     if(!gst_element_link_many (videoqueue, videodec, pVideoSink, NULL))
         return ERROR_GSTREAMER_ELEMENT_LINK_VIDEO_BIN;
 #endif
-    // set bufferalloc function on videosink so we get aligned frames
-    GstPad* sink_pad = gst_element_get_static_pad(pVideoSink, "sink");
-    if (NULL != sink_pad)
-    {
-        gst_pad_set_bufferalloc_function(sink_pad, CGstPipelineFactory::AVSinkAllocAlignedBuffer);
-        gst_object_unref(sink_pad);
-    }
-
-    sink_pad = gst_element_get_static_pad(videoqueue, "sink");
+    GstPad* sink_pad = gst_element_get_static_pad(videoqueue, "sink");
     if (NULL == sink_pad)
         return ERROR_GSTREAMER_ELEMENT_GET_PAD;
 
@@ -979,19 +937,26 @@ GstElement* CGstPipelineFactory::GetByFactoryName(GstElement* bin, const char* s
         return NULL;
 
     GstIterator *it = gst_bin_iterate_elements(GST_BIN(bin));
-    GstElement  *item = NULL;
+    GValue item = { 0, };
+    GstElement  *element = NULL;
     gboolean    done = FALSE;
     while (!done)
     {
-        switch (gst_iterator_next (it, (gpointer*)&item))
+        switch (gst_iterator_next (it, &item))
         {
             case GST_ITERATOR_OK:
             {
-                GstElementFactory* factory = gst_element_get_factory(item);
-                if (g_str_has_prefix(GST_PLUGIN_FEATURE_NAME(factory), strFactoryName))
+                element = (GstElement*)g_value_get_object(&item);
+                GstElementFactory* factory = gst_element_get_factory(element);
+                if (g_str_has_prefix(GST_OBJECT_NAME(factory), strFactoryName))
+                {
                     done = TRUE;
+                }
                 else
-                    gst_object_unref (item);
+                {
+                    g_value_reset(&item);
+                    element = NULL;
+                }
                 break;
             }
             case GST_ITERATOR_RESYNC:
@@ -1000,11 +965,12 @@ GstElement* CGstPipelineFactory::GetByFactoryName(GstElement* bin, const char* s
 
             case GST_ITERATOR_ERROR:
             case GST_ITERATOR_DONE:
-                item = NULL;
                 done = TRUE;
                 break;
         }
     }
+    g_value_unset(&item);
     gst_iterator_free (it);
-    return item;
+
+    return element ? (GstElement*)gst_object_ref(element) : NULL;
 }

@@ -38,19 +38,19 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  *
  * The development of this code was made possible due to the involvement of
  * Pioneers of the Inevitable, the creators of the Songbird Music player
  *
  */
 
-#include <gst/gst.h>
 #include "gstosxaudioelement.h"
+#include <gst/gst.h>
 
 static void
-gst_osx_audio_element_class_init (GstOsxAudioElementInterface * klass);
+gst_osx_audio_element_interface_init (GstOsxAudioElementInterface * iface);
 
 GType
 gst_osx_audio_element_get_type (void)
@@ -60,7 +60,7 @@ gst_osx_audio_element_get_type (void)
   if (!gst_osxaudioelement_type) {
     static const GTypeInfo gst_osxaudioelement_info = {
       sizeof (GstOsxAudioElementInterface),
-      (GBaseInitFunc) gst_osx_audio_element_class_init,
+      (GBaseInitFunc) gst_osx_audio_element_interface_init,
       NULL,
       NULL,
       NULL,
@@ -79,7 +79,7 @@ gst_osx_audio_element_get_type (void)
 }
 
 static void
-gst_osx_audio_element_class_init (GstOsxAudioElementInterface * klass)
+gst_osx_audio_element_interface_init (GstOsxAudioElementInterface * iface)
 {
   static gboolean initialized = FALSE;
 
@@ -88,5 +88,5 @@ gst_osx_audio_element_class_init (GstOsxAudioElementInterface * klass)
   }
 
   /* default virtual functions */
-  klass->io_proc = NULL;
+  iface->io_proc = NULL;
 }

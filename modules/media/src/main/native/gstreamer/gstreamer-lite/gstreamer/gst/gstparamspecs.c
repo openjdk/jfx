@@ -13,8 +13,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 /**
  * SECTION:gstparamspec
@@ -22,8 +22,6 @@
  * to GStreamer
  *
  * GParamSpec implementations specific to GStreamer.
- *
- * Last reviewed on 2008-03-11 (0.10.18)
  */
 
 #ifdef HAVE_CONFIG_H
@@ -163,9 +161,7 @@ gst_param_spec_fraction_get_type (void)
  * used in connection with g_object_class_install_property() in a GObjects's
  * instance_init function.
  *
- * Returns: a newly created parameter specification
- *
- * Since: 0.10.14
+ * Returns: (transfer full): a newly created parameter specification
  */
 GParamSpec *
 gst_param_spec_fraction (const gchar * name, const gchar * nick,

@@ -48,17 +48,9 @@ C_SOURCES = gst-plugins-bad/gst/aiff/aiff.c \
 			gst-plugins-good/gst/isomp4/qtdemux_types.c \
 			gst-plugins-good/gst/spectrum/gstspectrum.c \
 			gst-plugins-good/gst/wavparse/gstwavparse.c \
-			gstreamer/plugins/elements/gstcapsfilter.c \
 			gstreamer/plugins/elements/gstelements.c \
-			gstreamer/plugins/elements/gstfakesink.c \
-			gstreamer/plugins/elements/gstfakesrc.c \
-			gstreamer/plugins/elements/gstfilesink.c \
-			gstreamer/plugins/elements/gstfilesrc.c \
-			gstreamer/plugins/elements/gstidentity.c \
 			gstreamer/plugins/elements/gstqueue.c \
 			gstreamer/plugins/elements/gsttypefindelement.c \
-			gstreamer/plugins/indexers/gstindexers.c \
-			gstreamer/plugins/indexers/gstmemindex.c \
 			projects/plugins/gstplugins-lite.c
 
 COMPILER_FLAGS = -nologo -W3 -WX- -EHsc -GS -fp:precise -Gm- \
@@ -101,7 +93,7 @@ LIBFLAGS = -out:$(shell cygpath -ma $(TARGET)) -nologo
 ifeq ($(BUILD_TYPE), Release)
     CFLAGS += -DNDEBUG -DG_DISABLE_DEPRECATED -DG_DISABLE_ASSERT -DG_DISABLE_CHECKS -O1 -Oy -MD -Gy -GF
 else # debug
-    CFLAGS += -D_DEBUG -Od -Oy- -RTC1 -MDd -Zi -Fd$(PDB)
+    CFLAGS += -D_DEBUG -DG_DISABLE_DEPRECATED -DG_DISABLE_ASSERT -DG_DISABLE_CHECKS -Od -Oy- -RTC1 -MDd -Zi -Fd$(PDB)
 endif
 
 ifeq ($(ARCH), x32)
