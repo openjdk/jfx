@@ -16,8 +16,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 #include "gst_private.h"
@@ -35,9 +35,11 @@
  *
  * The #GstAtomicQueue object implements a queue that can be used from multiple
  * threads without performing any blocking operations.
- *
- * Since: 0.10.33
  */
+
+G_DEFINE_BOXED_TYPE (GstAtomicQueue, gst_atomic_queue,
+    (GBoxedCopyFunc) gst_atomic_queue_ref,
+    (GBoxedFreeFunc) gst_atomic_queue_unref);
 
 /* By default the queue uses 2 * sizeof(gpointer) * clp2 (max_items) of
  * memory. clp2(x) is the next power of two >= than x.
@@ -56,7 +58,8 @@ struct _GstAQueueMem
   gint size;
   gpointer *array;
   volatile gint head;
-  volatile gint tail;
+  volatile gint tail_write;
+  volatile gint tail_read;
   GstAQueueMem *next;
   GstAQueueMem *free;
 };
@@ -83,7 +86,8 @@ new_queue_mem (guint size, gint pos)
   mem->size = clp2 (MAX (size, 16)) - 1;
   mem->array = g_new0 (gpointer, mem->size + 1);
   mem->head = pos;
-  mem->tail = pos;
+  mem->tail_write = pos;
+  mem->tail_read = pos;
   mem->next = NULL;
   mem->free = NULL;
 
@@ -113,7 +117,7 @@ add_to_free_list (GstAtomicQueue * queue, GstAQueueMem * mem)
 {
   do {
     mem->free = g_atomic_pointer_get (&queue->free_list);
-  } while (!G_ATOMIC_POINTER_COMPARE_AND_EXCHANGE (&queue->free_list,
+  } while (!g_atomic_pointer_compare_and_exchange (&queue->free_list,
           mem->free, mem));
 }
 
@@ -127,7 +131,7 @@ clear_free_list (GstAtomicQueue * queue)
     free_list = g_atomic_pointer_get (&queue->free_list);
     if (free_list == NULL)
       return;
-  } while (!G_ATOMIC_POINTER_COMPARE_AND_EXCHANGE (&queue->free_list, free_list,
+  } while (!g_atomic_pointer_compare_and_exchange (&queue->free_list, free_list,
           NULL));
 
   while (free_list) {
@@ -147,8 +151,6 @@ clear_free_list (GstAtomicQueue * queue)
  * nearest power of 2 and used as the initial size of the queue.
  *
  * Returns: a new #GstAtomicQueue
- *
- * Since: 0.10.33
  */
 GstAtomicQueue *
 gst_atomic_queue_new (guint initial_size)
@@ -172,8 +174,6 @@ gst_atomic_queue_new (guint initial_size)
  * @queue: a #GstAtomicQueue
  *
  * Increase the refcount of @queue.
- *
- * Since: 0.10.33
  */
 void
 gst_atomic_queue_ref (GstAtomicQueue * queue)
@@ -198,8 +198,6 @@ gst_atomic_queue_free (GstAtomicQueue * queue)
  * @queue: a #GstAtomicQueue
  *
  * Unref @queue and free the memory when the refcount reaches 0.
- *
- * Since: 0.10.33
  */
 void
 gst_atomic_queue_unref (GstAtomicQueue * queue)
@@ -216,9 +214,8 @@ gst_atomic_queue_unref (GstAtomicQueue * queue)
  *
  * Peek the head element of the queue without removing it from the queue.
  *
- * Returns: the head element of @queue or NULL when the queue is empty.
- *
- * Since: 0.10.33
+ * Returns: (transfer none) (nullable): the head element of @queue or
+ * %NULL when the queue is empty.
  */
 gpointer
 gst_atomic_queue_peek (GstAtomicQueue * queue)
@@ -234,7 +231,7 @@ gst_atomic_queue_peek (GstAtomicQueue * queue)
     head_mem = g_atomic_pointer_get (&queue->head_mem);
 
     head = g_atomic_int_get (&head_mem->head);
-    tail = g_atomic_int_get (&head_mem->tail);
+    tail = g_atomic_int_get (&head_mem->tail_read);
     size = head_mem->size;
 
     /* when we are not empty, we can continue */
@@ -248,7 +245,7 @@ gst_atomic_queue_peek (GstAtomicQueue * queue)
 
     /* now we try to move the next array as the head memory. If we fail to do that,
      * some other reader managed to do it first and we retry */
-    if (!G_ATOMIC_POINTER_COMPARE_AND_EXCHANGE (&queue->head_mem, head_mem,
+    if (!g_atomic_pointer_compare_and_exchange (&queue->head_mem, head_mem,
             next))
       continue;
 
@@ -267,9 +264,8 @@ gst_atomic_queue_peek (GstAtomicQueue * queue)
  *
  * Get the head element of the queue.
  *
- * Returns: the head element of @queue or NULL when the queue is empty.
- *
- * Since: 0.10.33
+ * Returns: (transfer full): the head element of @queue or %NULL when
+ * the queue is empty.
  */
 gpointer
 gst_atomic_queue_pop (GstAtomicQueue * queue)
@@ -291,12 +287,13 @@ gst_atomic_queue_pop (GstAtomicQueue * queue)
       head_mem = g_atomic_pointer_get (&queue->head_mem);
 
       head = g_atomic_int_get (&head_mem->head);
-      tail = g_atomic_int_get (&head_mem->tail);
+      tail = g_atomic_int_get (&head_mem->tail_read);
       size = head_mem->size;
 
       /* when we are not empty, we can continue */
-      if (G_LIKELY (head != tail))
-        break;
+      if G_LIKELY
+        (head != tail)
+            break;
 
       /* else array empty, try to take next */
       next = g_atomic_pointer_get (&head_mem->next);
@@ -305,9 +302,10 @@ gst_atomic_queue_pop (GstAtomicQueue * queue)
 
       /* now we try to move the next array as the head memory. If we fail to do that,
        * some other reader managed to do it first and we retry */
-      if (!G_ATOMIC_POINTER_COMPARE_AND_EXCHANGE (&queue->head_mem, head_mem,
-              next))
-        continue;
+      if G_UNLIKELY
+        (!g_atomic_pointer_compare_and_exchange (&queue->head_mem, head_mem,
+                next))
+            continue;
 
       /* when we managed to swing the head pointer the old head is now
        * useless and we add it to the freelist. We can't free the memory yet
@@ -316,8 +314,8 @@ gst_atomic_queue_pop (GstAtomicQueue * queue)
     }
 
     ret = head_mem->array[head & size];
-  } while (!g_atomic_int_compare_and_exchange (&head_mem->head, head,
-          head + 1));
+  } while G_UNLIKELY
+  (!g_atomic_int_compare_and_exchange (&head_mem->head, head, head + 1));
 
 #ifdef LOW_MEM
   /* decrement number of readers, when we reach 0 readers we can be sure that
@@ -335,8 +333,6 @@ gst_atomic_queue_pop (GstAtomicQueue * queue)
  * @data: the data
  *
  * Append @data to the tail of the queue.
- *
- * Since: 0.10.33
  */
 void
 gst_atomic_queue_push (GstAtomicQueue * queue, gpointer data)
@@ -352,34 +348,44 @@ gst_atomic_queue_push (GstAtomicQueue * queue, gpointer data)
 
       tail_mem = g_atomic_pointer_get (&queue->tail_mem);
       head = g_atomic_int_get (&tail_mem->head);
-      tail = g_atomic_int_get (&tail_mem->tail);
+      tail = g_atomic_int_get (&tail_mem->tail_write);
       size = tail_mem->size;
 
       /* we're not full, continue */
-      if (tail - head <= size)
-        break;
+      if G_LIKELY
+        (tail - head <= size)
+            break;
 
       /* else we need to grow the array, we store a mask so we have to add 1 */
       mem = new_queue_mem ((size << 1) + 1, tail);
 
       /* try to make our new array visible to other writers */
-      if (!G_ATOMIC_POINTER_COMPARE_AND_EXCHANGE (&queue->tail_mem, tail_mem,
-              mem)) {
+      if G_UNLIKELY
+        (!g_atomic_pointer_compare_and_exchange (&queue->tail_mem, tail_mem,
+                mem)) {
         /* we tried to swap the new writer array but something changed. This is
          * because some other writer beat us to it, we free our memory and try
          * again */
         free_queue_mem (mem);
         continue;
-      }
+        }
       /* make sure that readers can find our new array as well. The one who
        * manages to swap the pointer is the only one who can set the next
        * pointer to the new array */
       g_atomic_pointer_set (&tail_mem->next, mem);
     }
-  } while (!g_atomic_int_compare_and_exchange (&tail_mem->tail, tail,
-          tail + 1));
+  } while G_UNLIKELY
+  (!g_atomic_int_compare_and_exchange (&tail_mem->tail_write, tail, tail + 1));
 
   tail_mem->array[tail & size] = data;
+
+  /* now wait until all writers have completed their write before we move the
+   * tail_read to this new item. It is possible that other writers are still
+   * updating the previous array slots and we don't want to reveal their changes
+   * before they are done. FIXME, it would be nice if we didn't have to busy
+   * wait here. */
+  while G_UNLIKELY
+    (!g_atomic_int_compare_and_exchange (&tail_mem->tail_read, tail, tail + 1));
 }
 
 /**
@@ -389,8 +395,6 @@ gst_atomic_queue_push (GstAtomicQueue * queue, gpointer data)
  * Get the amount of items in the queue.
  *
  * Returns: the number of elements in the queue.
- *
- * Since: 0.10.33
  */
 guint
 gst_atomic_queue_length (GstAtomicQueue * queue)
@@ -408,7 +412,7 @@ gst_atomic_queue_length (GstAtomicQueue * queue)
   head = g_atomic_int_get (&head_mem->head);
 
   tail_mem = g_atomic_pointer_get (&queue->tail_mem);
-  tail = g_atomic_int_get (&tail_mem->tail);
+  tail = g_atomic_int_get (&tail_mem->tail_read);
 
 #ifdef LOW_MEM
   if (g_atomic_int_dec_and_test (&queue->num_readers))

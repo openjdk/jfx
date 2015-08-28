@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,40 +25,44 @@
 
 #include "avelement.h"
 
-/***********************************************************************************
- * Substitution for
- * GST_BOILERPLATE (AVElement, avelement, GstElement, GST_TYPE_ELEMENT);
- ***********************************************************************************/
-static void avelement_class_init(AVElementClass *g_class);
 static void avcodec_logger(void* ptr, int level, const char* fmt, va_list vl);
 
-static GstElementClass *parent_class = NULL;
-
-static void avelement_class_init_trampoline(gpointer g_class, gpointer data) {
-    parent_class = (GstElementClass *) g_type_class_peek_parent(g_class);
-    avelement_class_init(AVELEMENT_CLASS(g_class));
+/***********************************************************************************
+ * Substitution for
+ * G_DEFINE_TYPE(AVElement, avelement, GstElement, GST_TYPE_ELEMENT);
+ ***********************************************************************************/
+#define avelement_parent_class parent_class
+static void avelement_init          (AVElement      *self);
+static void avelement_class_init    (AVElementClass *klass);
+static gpointer avelement_parent_class = NULL;
+static void     avelement_class_intern_init (gpointer klass)
+{
+    avelement_parent_class = g_type_class_peek_parent (klass);
+    avelement_class_init ((AVElementClass*) klass);
 }
 
-GType avelement_get_type(void) {
+GType avelement_get_type (void)
+{
     static volatile gsize gonce_data = 0;
-    // INLINE - g_once_init_enter()
-    if (g_once_init_enter(&gonce_data)) {
-        GType _type = gst_type_register_static_full(GST_TYPE_ELEMENT,
-                g_intern_static_string("AVElement"),
-                sizeof (AVElementClass),
-                NULL, //avelement_base_init,
-                NULL,
-                avelement_class_init_trampoline,
-                NULL,
-                NULL,
-                sizeof (AVElement),
-                0,
-                NULL, //(GInstanceInitFunc) avelement_init,
-                NULL,
-                (GTypeFlags) 0);
-        g_once_init_leave(&gonce_data, (gsize) _type);
+// INLINE - g_once_init_enter()
+    if (g_once_init_enter (&gonce_data))
+    {
+        GType _type;
+        _type = g_type_register_static_simple (GST_TYPE_ELEMENT,
+               g_intern_static_string ("AVElement"),
+               sizeof (AVElementClass),
+               (GClassInitFunc) avelement_class_intern_init,
+               sizeof(AVElement),
+               (GInstanceInitFunc) avelement_init,               
+               (GTypeFlags) 0);
+        g_once_init_leave (&gonce_data, (gsize) _type);
     }
     return (GType) gonce_data;
+}
+
+static void avelement_init(AVElement *self)
+{
+    
 }
 
 // Init avcodec library and set the logger callback.
@@ -67,6 +71,7 @@ static void avelement_class_init(AVElementClass * klass)
     av_log_set_callback(avcodec_logger);
     av_log_set_level(AV_LOG_WARNING);
 }
+
 // libavcodec log callback.
 static void avcodec_logger(void* ptr, int level, const char* fmt, va_list vl)
 {

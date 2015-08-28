@@ -35,14 +35,14 @@
 #define DEFAULT_VISUALIZER "goom"
 
 /* Disable Orc */
-#undef DISABLE_ORC
+#define DISABLE_ORC 1
 
 /* Define to 1 if translation of program messages to the user's native
    language is requested. */
 #undef ENABLE_NLS
 
 /* gettext package name */
-#define GETTEXT_PACKAGE "gst-plugins-base-0.10"
+#define GETTEXT_PACKAGE "gst-plugins-base-1.0"
 
 /* The GIO library directory. */
 #undef GIO_LIBDIR
@@ -50,17 +50,23 @@
 /* The GIO modules directory. */
 #undef GIO_MODULE_DIR
 
-/* The GnomeVFS modules directory. */
-#undef GNOME_VFS_MODULES_DIR
+/* major/minor version */
+#define GST_API_VERSION "1.0"
 
 /* system wide data directory */
 #define GST_DATADIR PREFIX "\\share"
+
+/* Extra platform specific plugin suffix */
+#undef GST_EXTRA_MODULE_SUFFIX
 
 /* macro to use to show function name */
 #undef GST_FUNCTION
 
 /* Defined if gcov is enabled to force a rebuild due to config.h changing */
 #undef GST_GCOV_ENABLED
+
+/* Defined when registry scanning through fork is unsafe */
+#undef GST_HAVE_UNSAFE_FORK
 
 /* plugin install helper script */
 #define GST_INSTALL_PLUGINS_HELPER PREFIX "\\libexec\\gst-install-plugins-helper.exe"
@@ -71,9 +77,6 @@
 /* GStreamer license */
 #define GST_LICENSE "LGPL"
 
-/* major/minor version */
-#define GST_MAJORMINOR "0.10"
-
 /* package name in plugins */
 #define GST_PACKAGE_NAME "GStreamer Base Plug-ins source release"
 
@@ -81,13 +84,16 @@
 #define GST_PACKAGE_ORIGIN "Unknown package origin"
 
 /* GStreamer package release date/time for plugins as YYYY-MM-DD */
-#define GST_PACKAGE_RELEASE_DATETIME "2011-06-15"
+#define GST_PACKAGE_RELEASE_DATETIME "2014-11-06"
 
-/* I know the API is subject to change. */
-#undef G_UDEV_API_IS_SUBJECT_TO_CHANGE
+/* Define if static plugins should be built */
+#undef GST_PLUGIN_BUILD_STATIC
 
 /* Define to enable ALSA (used by alsa). */
 #undef HAVE_ALSA
+
+/* ARM NEON support is enabled */
+#undef HAVE_ARM_NEON
 
 /* Define to enable CDParanoia (used by cdparanoia). */
 #undef HAVE_CDPARANOIA
@@ -100,46 +106,46 @@
    the CoreFoundation framework. */
 #undef HAVE_CFPREFERENCESCOPYAPPVALUE
 
-/* Define if the host CPU is an Alpha */
+/* Define if the target CPU is an Alpha */
 #undef HAVE_CPU_ALPHA
 
-/* Define if the host CPU is an ARM */
+/* Define if the target CPU is an ARM */
 #undef HAVE_CPU_ARM
 
-/* Define if the host CPU is a CRIS */
+/* Define if the target CPU is a CRIS */
 #undef HAVE_CPU_CRIS
 
-/* Define if the host CPU is a CRISv32 */
+/* Define if the target CPU is a CRISv32 */
 #undef HAVE_CPU_CRISV32
 
-/* Define if the host CPU is a HPPA */
+/* Define if the target CPU is a HPPA */
 #undef HAVE_CPU_HPPA
 
-/* Define if the host CPU is an x86 */
+/* Define if the target CPU is an x86 */
 #define HAVE_CPU_I386 1
 
-/* Define if the host CPU is a IA64 */
+/* Define if the target CPU is a IA64 */
 #undef HAVE_CPU_IA64
 
-/* Define if the host CPU is a M68K */
+/* Define if the target CPU is a M68K */
 #undef HAVE_CPU_M68K
 
-/* Define if the host CPU is a MIPS */
+/* Define if the target CPU is a MIPS */
 #undef HAVE_CPU_MIPS
 
-/* Define if the host CPU is a PowerPC */
+/* Define if the target CPU is a PowerPC */
 #undef HAVE_CPU_PPC
 
-/* Define if the host CPU is a 64 bit PowerPC */
+/* Define if the target CPU is a 64 bit PowerPC */
 #undef HAVE_CPU_PPC64
 
-/* Define if the host CPU is a S390 */
+/* Define if the target CPU is a S390 */
 #undef HAVE_CPU_S390
 
-/* Define if the host CPU is a SPARC */
+/* Define if the target CPU is a SPARC */
 #undef HAVE_CPU_SPARC
 
-/* Define if the host CPU is a x86_64 */
+/* Define if the target CPU is a x86_64 */
 #undef HAVE_CPU_X86_64
 
 /* Define if the GNU dcgettext() function is already present or preinstalled.
@@ -149,17 +155,14 @@
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #undef HAVE_DLFCN_H
 
+/* Define to 1 if you have the <emmintrin.h> header file. */
+#undef HAVE_EMMINTRIN_H
+
 /* Define to enable building of experimental plug-ins. */
 #undef HAVE_EXPERIMENTAL
 
 /* Define to enable building of plug-ins with external deps. */
 #undef HAVE_EXTERNAL
-
-/* FIONREAD ioctl found in sys/filio.h */
-#undef HAVE_FIONREAD_IN_SYS_FILIO
-
-/* FIONREAD ioctl found in sys/ioclt.h */
-#undef HAVE_FIONREAD_IN_SYS_IOCTL
 
 /* Define to 1 if fseeko (and presumably ftello) exists and is declared. */
 #undef HAVE_FSEEKO
@@ -173,20 +176,8 @@
 /* Define if the GNU gettext() function is already present or preinstalled. */
 #undef HAVE_GETTEXT
 
-/* Define to enable GIO library (used by gio). */
-#undef HAVE_GIO
-
 /* Define to 1 if you have the `gmtime_r' function. */
 #undef HAVE_GMTIME_R
-
-/* Define to enable GNOME VFS (used by gnomevfs). */
-#undef HAVE_GNOME_VFS
-
-/* Define to enable Video 4 Linux (used by video4linux). */
-#undef HAVE_GST_V4L
-
-/* Whether gudev is available for device detection */
-#undef HAVE_GUDEV
 
 /* Define if you have the iconv() function and it works. */
 #undef HAVE_ICONV
@@ -203,15 +194,6 @@
 /* Define to 1 if you have the `asound' library (-lasound). */
 #undef HAVE_LIBASOUND
 
-/* Define to 1 if you have the `nsl' library (-lnsl). */
-#undef HAVE_LIBNSL
-
-/* Define to 1 if you have the `resolv' library (-lresolv). */
-#undef HAVE_LIBRESOLV
-
-/* Define to 1 if you have the `socket' library (-lsocket). */
-#undef HAVE_LIBSOCKET
-
 /* Define to enable libvisual visualization library (used by libvisual). */
 #undef HAVE_LIBVISUAL
 
@@ -227,17 +209,20 @@
 /* Define if you have C99's lrintf function. */
 #undef HAVE_LRINTF
 
-/* Define to 1 if you have the <malloc.h> header file. */
-#undef HAVE_MALLOC_H
-
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
+
+/* Defined if mmap is supported */
+#undef HAVE_MMAP
 
 /* Define to enable Xiph Ogg library (used by ogg). */
 #undef HAVE_OGG
 
 /* Use Orc */
 #undef HAVE_ORC
+
+/* Defined if compiling for OSX */
+#undef HAVE_OSX
 
 /* Define to enable Pango font rendering (used by pango). */
 #undef HAVE_PANGO
@@ -290,17 +275,26 @@
 /* defined if vorbis_synthesis_restart is present */
 #undef HAVE_VORBIS_SYNTHESIS_RESTART
 
+/* Defined if compiling for Windows */
+#define HAVE_WIN32 1
+
 /* Define to 1 if you have the <winsock2.h> header file. */
-#define HAVE_WINSOCK2_H 1
+#undef HAVE_WINSOCK2_H
 
 /* Define to enable X libraries and plugins (used by ximagesink). */
 #undef HAVE_X
+
+/* Define to 1 if you have the <xmmintrin.h> header file. */
+#undef HAVE_XMMINTRIN_H
 
 /* Define to enable X Shared Memory extension. */
 #undef HAVE_XSHM
 
 /* Define to enable X11 XVideo extensions (used by xvimagesink). */
 #undef HAVE_XVIDEO
+
+/* Define to enable zlib support for ID3 parsing in libgsttag. */
+#undef HAVE_ZLIB
 
 /* the host CPU */
 #define HOST_CPU "i686"
@@ -321,12 +315,6 @@
    */
 #undef LT_OBJDIR
 
-/* Define if you have no native hstrerror() function. */
-#undef NO_HSTRERROR
-
-/* Define to 1 if your C compiler doesn't accept -c and -o together. */
-#undef NO_MINUS_C_MINUS_O
-
 /* Name of package */
 #define PACKAGE "gst-plugins-base"
 
@@ -337,7 +325,7 @@
 #define PACKAGE_NAME "GStreamer Base Plug-ins"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "GStreamer Base Plug-ins 0.10.35"
+#define PACKAGE_STRING "GStreamer Base Plug-ins 1.4.4"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "gst-plugins-base"
@@ -346,13 +334,13 @@
 #undef PACKAGE_URL
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "0.10.35"
+#define PACKAGE_VERSION "1.4.4"
 
 /* directory where plugins are located */
 #ifdef _DEBUG
-#  define PLUGINDIR PREFIX "\\debug\\lib\\gstreamer-0.10"
+#  define PLUGINDIR PREFIX "\\debug\\lib\\gstreamer-0.11"
 #else
-#  define PLUGINDIR PREFIX "\\lib\\gstreamer-0.10"
+#  define PLUGINDIR PREFIX "\\lib\\gstreamer-0.11"
 #endif
 
 /* The size of `char', as computed by sizeof. */
@@ -373,11 +361,14 @@
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
 
+/* the target CPU */
+#undef TARGET_CPU
+
 /* "Define if building for android" */
 #undef USE_TREMOLO
 
 /* Version number of package */
-#define VERSION "0.10.35"
+#define VERSION "1.4.4"
 
 /* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
    significant byte first (like Motorola and SPARC, unlike Intel). */
@@ -394,6 +385,11 @@
 /* Define to 1 if the X Window System is missing or not being used. */
 #undef X_DISPLAY_MISSING
 
+/* Enable large inode numbers on Mac OS X 10.5.  */
+#ifndef _DARWIN_USE_64_BIT_INODE
+# define _DARWIN_USE_64_BIT_INODE 1
+#endif
+
 /* Number of bits in a file offset, on hosts where this is settable. */
 #undef _FILE_OFFSET_BITS
 
@@ -402,3 +398,6 @@
 
 /* Define for large files, on AIX-style hosts. */
 #undef _LARGE_FILES
+
+/* We need at least WinXP SP2 for __stat64 */
+#undef __MSVCRT_VERSION__

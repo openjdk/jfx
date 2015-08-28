@@ -15,8 +15,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -42,7 +42,6 @@ plugin_init (GstPlugin * plugin)
 #endif // GSTREAMER_LITE
 {
 #ifdef ENABLE_NLS
-  setlocale (LC_ALL, "");
   bindtextdomain (GETTEXT_PACKAGE, LOCALEDIR);
   bind_textdomain_codeset (GETTEXT_PACKAGE, "UTF-8");
 #endif /* ENABLE_NLS */
@@ -51,7 +50,7 @@ plugin_init (GstPlugin * plugin)
 
   /* ensure private tag is registered */
   gst_tag_register (GST_QT_DEMUX_PRIVATE_TAG, GST_TAG_FLAG_META,
-      GST_TYPE_BUFFER, "QT atom", "unparsed QT tag atom",
+      GST_TYPE_SAMPLE, "QT atom", "unparsed QT tag atom",
       gst_tag_merge_use_first);
 
   gst_tag_register (GST_QT_DEMUX_CLASSIFICATION_TAG, GST_TAG_FLAG_META,
@@ -79,7 +78,7 @@ plugin_init (GstPlugin * plugin)
 #ifndef GSTREAMER_LITE
 GST_PLUGIN_DEFINE (GST_VERSION_MAJOR,
     GST_VERSION_MINOR,
-    "isomp4",
+    isomp4,
     "ISO base media file format support (mp4, 3gpp, qt, mj2)",
     plugin_init, VERSION, "LGPL", GST_PACKAGE_NAME, GST_PACKAGE_ORIGIN);
 #endif // GSTREAMER_LITE

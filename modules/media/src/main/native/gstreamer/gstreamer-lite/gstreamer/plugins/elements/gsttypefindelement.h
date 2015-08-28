@@ -15,8 +15,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 
@@ -25,10 +25,9 @@
 
 #include <gst/gstinfo.h>
 #include <gst/gstelement.h>
+#include <gst/base/gstadapter.h>
 
 G_BEGIN_DECLS
-
-
 
 #define GST_TYPE_TYPE_FIND_ELEMENT		(gst_type_find_element_get_type ())
 #define GST_TYPE_FIND_ELEMENT(obj) 		(G_TYPE_CHECK_INSTANCE_CAST ((obj), GST_TYPE_TYPE_FIND_ELEMENT, GstTypeFindElement))
@@ -52,14 +51,19 @@ struct _GstTypeFindElement {
   GstPad *		src;
 
   guint			min_probability;
-  guint			max_probability;
   GstCaps *		caps;
 
   guint			mode;
-  GstBuffer *		store;
+  GstAdapter *		adapter;
 
   GList *               cached_events;
   GstCaps *             force_caps;
+
+  /* Only used when driving the pipeline */
+  gboolean need_segment;
+  gboolean need_stream_start;
+  GstSegment segment;
+  guint64 offset;
 };
 
 struct _GstTypeFindElementClass {
@@ -67,11 +71,11 @@ struct _GstTypeFindElementClass {
 
   /* signals */
   void 			(*have_type) 	(GstTypeFindElement *element,
-					 guint		probability,
-					 const GstCaps *	caps);
+					 guint		     probability,
+					 GstCaps            *caps);
 };
 
-GType gst_type_find_element_get_type (void);
+G_GNUC_INTERNAL GType gst_type_find_element_get_type (void);
 
 G_END_DECLS
 

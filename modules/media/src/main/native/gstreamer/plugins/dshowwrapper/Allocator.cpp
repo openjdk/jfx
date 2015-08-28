@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -65,8 +65,13 @@ HRESULT CAllocator::GetBuffer(IMediaSample **ppBuffer, REFERENCE_TIME *pStartTim
         return hr;
 
     pSample = (CSample*)*ppBuffer;
+    if (!gst_buffer_map(m_pBuffer, &m_MapInfo, GST_MAP_WRITE))
+        return hr;
+
     pSample->m_pGstBuffer = m_pBuffer;
-    hr = pSample->SetPointer(GST_BUFFER_DATA(m_pBuffer), GST_BUFFER_SIZE(m_pBuffer));
+    pSample->m_GstMapInfo = m_MapInfo;
+
+    hr = pSample->SetPointer(m_MapInfo.data, m_MapInfo.size);
     m_pBuffer = NULL;
     if (FAILED(hr))
         return hr;
@@ -81,6 +86,7 @@ HRESULT CAllocator::ReleaseBuffer(IMediaSample *pBuffer)
     CSample *pSample = (CSample*)pBuffer;
     if (ReleaseSample != NULL)
     {
+        gst_buffer_unmap(pSample->m_pGstBuffer, &pSample->m_GstMapInfo);
         ReleaseSample(pSample->m_pGstBuffer, &m_UserData);
         pSample->m_pGstBuffer = NULL;
     }
@@ -165,9 +171,9 @@ HRESULT CAllocator::SetGetGstBufferCallback(void (*function)(GstBuffer **ppBuffe
 
 STDMETHODIMP CAllocator::SetProperties(ALLOCATOR_PROPERTIES* pRequest, ALLOCATOR_PROPERTIES* pActual)
 {
-    // Do not allocate more then 1 buffers
-    if (pRequest->cBuffers > 1)
-        pRequest->cBuffers = 1;
+    // Do not allocate more then 10 buffers
+    if (pRequest->cBuffers > 10)
+        pRequest->cBuffers = 10;
 
     pActual->cbBuffer = m_lSize = pRequest->cbBuffer;
     pActual->cBuffers = m_lCount = pRequest->cBuffers;

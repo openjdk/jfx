@@ -1,7 +1,7 @@
 /* GStreamer
  * Copyright (C)  2005 Wim Taymans <wim@fluendo.com>
  *
- * gstalsasink.h: 
+ * gstalsasink.h:
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -15,8 +15,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 
@@ -24,7 +24,7 @@
 #define __GST_ALSASINK_H__
 
 #include <gst/gst.h>
-#include <gst/audio/gstaudiosink.h>
+#include <gst/audio/audio.h>
 #include <alsa/asoundlib.h>
 
 G_BEGIN_DECLS
@@ -39,9 +39,13 @@ G_BEGIN_DECLS
 typedef struct _GstAlsaSink GstAlsaSink;
 typedef struct _GstAlsaSinkClass GstAlsaSinkClass;
 
-#define GST_ALSA_SINK_GET_LOCK(obj)	(GST_ALSA_SINK_CAST (obj)->alsa_lock)
-#define GST_ALSA_SINK_LOCK(obj)	        (g_mutex_lock (GST_ALSA_SINK_GET_LOCK (obj)))
-#define GST_ALSA_SINK_UNLOCK(obj)	(g_mutex_unlock (GST_ALSA_SINK_GET_LOCK (obj)))
+#define GST_ALSA_SINK_GET_LOCK(obj)	(&GST_ALSA_SINK_CAST (obj)->alsa_lock)
+#define GST_ALSA_SINK_LOCK(obj)	    (g_mutex_lock (GST_ALSA_SINK_GET_LOCK (obj)))
+#define GST_ALSA_SINK_UNLOCK(obj)   (g_mutex_unlock (GST_ALSA_SINK_GET_LOCK (obj)))
+
+#define GST_DELAY_SINK_GET_LOCK(obj)	(&GST_ALSA_SINK_CAST (obj)->delay_lock)
+#define GST_DELAY_SINK_LOCK(obj)	        (g_mutex_lock (GST_DELAY_SINK_GET_LOCK (obj)))
+#define GST_DELAY_SINK_UNLOCK(obj)	(g_mutex_unlock (GST_DELAY_SINK_GET_LOCK (obj)))
 
 /**
  * GstAlsaSink:
@@ -61,7 +65,7 @@ struct _GstAlsaSink {
   snd_pcm_format_t format;
   guint rate;
   guint channels;
-  gint bytes_per_sample;
+  gint bpf;
   gboolean iec958;
   gboolean need_swap;
 
@@ -72,7 +76,8 @@ struct _GstAlsaSink {
 
   GstCaps *cached_caps;
 
-  GMutex *alsa_lock;
+  GMutex alsa_lock;
+  GMutex delay_lock;
 };
 
 struct _GstAlsaSinkClass {

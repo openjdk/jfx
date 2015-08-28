@@ -13,8 +13,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 #ifndef _GST_APP_SINK_H_
@@ -35,7 +35,6 @@ G_BEGIN_DECLS
   (G_TYPE_CHECK_INSTANCE_TYPE((obj),GST_TYPE_APP_SINK))
 #define GST_IS_APP_SINK_CLASS(klass) \
   (G_TYPE_CHECK_CLASS_TYPE((klass),GST_TYPE_APP_SINK))
-/* Since 0.10.23 */
 #define GST_APP_SINK_CAST(obj) \
   ((GstAppSink*)(obj))
 
@@ -44,38 +43,30 @@ typedef struct _GstAppSinkClass GstAppSinkClass;
 typedef struct _GstAppSinkPrivate GstAppSinkPrivate;
 
 /**
- * GstAppSinkCallbacks:
+ * GstAppSinkCallbacks: (skip)
  * @eos: Called when the end-of-stream has been reached. This callback
  *       is called from the steaming thread.
- * @new_preroll: Called when a new preroll buffer is available. 
+ * @new_preroll: Called when a new preroll sample is available.
  *       This callback is called from the steaming thread.
- *       The new preroll buffer can be retrieved with
+ *       The new preroll sample can be retrieved with
  *       gst_app_sink_pull_preroll() either from this callback
  *       or from any other thread.
- * @new_buffer: Called when a new buffer is available. 
+ * @new_sample: Called when a new sample is available.
  *       This callback is called from the steaming thread.
- *       The new buffer can be retrieved with
- *       gst_app_sink_pull_buffer() either from this callback
- *       or from any other thread.
- * @new_buffer_list: Called when a new bufferlist is available. 
- *       This callback is called from the steaming thread.
- *       The new bufferlist can be retrieved with
- *       gst_app_sink_pull_buffer_list() either from this callback
+ *       The new sample can be retrieved with
+ *       gst_app_sink_pull_sample() either from this callback
  *       or from any other thread.
  *
  * A set of callbacks that can be installed on the appsink with
  * gst_app_sink_set_callbacks().
- *
- * Since: 0.10.23
  */
 typedef struct {
-  void          (*eos)              (GstAppSink *sink, gpointer user_data);
-  GstFlowReturn (*new_preroll)      (GstAppSink *sink, gpointer user_data);
-  GstFlowReturn (*new_buffer)       (GstAppSink *sink, gpointer user_data);
-  GstFlowReturn (*new_buffer_list)  (GstAppSink *sink, gpointer user_data);
+  void          (*eos)              (GstAppSink *appsink, gpointer user_data);
+  GstFlowReturn (*new_preroll)      (GstAppSink *appsink, gpointer user_data);
+  GstFlowReturn (*new_sample)       (GstAppSink *appsink, gpointer user_data);
 
   /*< private >*/
-  gpointer     _gst_reserved[GST_PADDING - 1];
+  gpointer     _gst_reserved[GST_PADDING];
 } GstAppSinkCallbacks;
 
 struct _GstAppSink
@@ -94,20 +85,16 @@ struct _GstAppSinkClass
   GstBaseSinkClass basesink_class;
 
   /* signals */
-  void        (*eos)          (GstAppSink *sink);
-  void        (*new_preroll)  (GstAppSink *sink);
-  void        (*new_buffer)   (GstAppSink *sink);
+  void          (*eos)              (GstAppSink *appsink);
+  GstFlowReturn (*new_preroll)      (GstAppSink *appsink);
+  GstFlowReturn (*new_sample)       (GstAppSink *appsink);
 
   /* actions */
-  GstBuffer     * (*pull_preroll)      (GstAppSink *sink);
-  GstBuffer     * (*pull_buffer)       (GstAppSink *sink);
-
-  /* ABI added */
-  GstBufferList * (*new_buffer_list)   (GstAppSink *sink);
-  GstBufferList * (*pull_buffer_list)  (GstAppSink *sink);
+  GstSample *   (*pull_preroll)      (GstAppSink *appsink);
+  GstSample *   (*pull_sample)       (GstAppSink *appsink);
 
   /*< private >*/
-  gpointer     _gst_reserved[GST_PADDING - 2];
+  gpointer     _gst_reserved[GST_PADDING];
 };
 
 GType gst_app_sink_get_type(void);
@@ -126,14 +113,13 @@ guint           gst_app_sink_get_max_buffers  (GstAppSink *appsink);
 void            gst_app_sink_set_drop         (GstAppSink *appsink, gboolean drop);
 gboolean        gst_app_sink_get_drop         (GstAppSink *appsink);
 
-GstBuffer *     gst_app_sink_pull_preroll     (GstAppSink *appsink);
-GstBuffer *     gst_app_sink_pull_buffer      (GstAppSink *appsink);
-GstBufferList * gst_app_sink_pull_buffer_list (GstAppSink *appsink);
+GstSample *     gst_app_sink_pull_preroll     (GstAppSink *appsink);
+GstSample *     gst_app_sink_pull_sample      (GstAppSink *appsink);
 
 void            gst_app_sink_set_callbacks    (GstAppSink * appsink,
                                                GstAppSinkCallbacks *callbacks,
-					       gpointer user_data,
-					       GDestroyNotify notify);
+                                               gpointer user_data,
+                                               GDestroyNotify notify);
 
 G_END_DECLS
 

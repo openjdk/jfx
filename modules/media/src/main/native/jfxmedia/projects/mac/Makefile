@@ -10,7 +10,7 @@ OBJBASE_DIR = $(BUILD_DIR)/obj/jfxmedia
 
 BASE_DIR = ../../..
 GSTREAMER_LITE_DIR = $(BASE_DIR)/gstreamer/gstreamer-lite
-GLIB_LITE_DIR = $(BASE_DIR)/gstreamer/3rd_party/glib/glib-2.28.8
+GLIB_LITE_DIR = $(BASE_DIR)/gstreamer/3rd_party/glib/glib-2.42.1
 
 OSX_PLATFORM_BASE = $(SRCBASE_DIR)/platform/osx
 
@@ -68,6 +68,7 @@ JFXMEDIA_CFLAGS = $(CFLAGS) \
          -DGST_DISABLE_GST_DEBUG   \
          -DGST_DISABLE_LOADSAVE    \
          -DGST_DISABLE_XML         \
+         -DG_DISABLE_DEPRECATED    \
          -DGSTREAMER_LITE          \
          -DJFXMEDIA_JNI_EXPORTS    \
          -DHAVE_CONFIG_H           \

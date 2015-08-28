@@ -12,12 +12,12 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the Free
- * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
 #include "gstalsa.h"
 
-#include <gst/audio/multichannel.h>
+#include <gst/audio/audio.h>
 
 static GstCaps *
 gst_alsa_detect_rates (GstObject * obj, snd_pcm_hw_params_t * hw_params,
@@ -82,28 +82,86 @@ max_rate_err:
   }
 }
 
-static const struct
+static snd_pcm_format_t
+gst_alsa_get_pcm_format (GstAudioFormat fmt)
 {
-  const int width;
-  const int depth;
-  const int sformat;
-  const int uformat;
-} pcmformats[] = {
-  {
-  8, 8, SND_PCM_FORMAT_S8, SND_PCM_FORMAT_U8}, {
-  16, 16, SND_PCM_FORMAT_S16, SND_PCM_FORMAT_U16}, {
-  32, 24, SND_PCM_FORMAT_S24, SND_PCM_FORMAT_U24}, {
-#if (G_BYTE_ORDER == G_LITTLE_ENDIAN)   /* no endian-unspecific enum available */
-  24, 24, SND_PCM_FORMAT_S24_3LE, SND_PCM_FORMAT_U24_3LE}, {
-#else
-  24, 24, SND_PCM_FORMAT_S24_3BE, SND_PCM_FORMAT_U24_3BE}, {
-#endif
-  32, 32, SND_PCM_FORMAT_S32, SND_PCM_FORMAT_U32}
-};
+  switch (fmt) {
+    case GST_AUDIO_FORMAT_S8:
+      return SND_PCM_FORMAT_S8;
+    case GST_AUDIO_FORMAT_U8:
+      return SND_PCM_FORMAT_U8;
+      /* 16 bit */
+    case GST_AUDIO_FORMAT_S16LE:
+      return SND_PCM_FORMAT_S16_LE;
+    case GST_AUDIO_FORMAT_S16BE:
+      return SND_PCM_FORMAT_S16_BE;
+    case GST_AUDIO_FORMAT_U16LE:
+      return SND_PCM_FORMAT_U16_LE;
+    case GST_AUDIO_FORMAT_U16BE:
+      return SND_PCM_FORMAT_U16_BE;
+      /* 24 bit in low 3 bytes of 32 bits */
+    case GST_AUDIO_FORMAT_S24_32LE:
+      return SND_PCM_FORMAT_S24_LE;
+    case GST_AUDIO_FORMAT_S24_32BE:
+      return SND_PCM_FORMAT_S24_BE;
+    case GST_AUDIO_FORMAT_U24_32LE:
+      return SND_PCM_FORMAT_U24_LE;
+    case GST_AUDIO_FORMAT_U24_32BE:
+      return SND_PCM_FORMAT_U24_BE;
+      /* 24 bit in 3 bytes */
+    case GST_AUDIO_FORMAT_S24LE:
+      return SND_PCM_FORMAT_S24_3LE;
+    case GST_AUDIO_FORMAT_S24BE:
+      return SND_PCM_FORMAT_S24_3BE;
+    case GST_AUDIO_FORMAT_U24LE:
+      return SND_PCM_FORMAT_U24_3LE;
+    case GST_AUDIO_FORMAT_U24BE:
+      return SND_PCM_FORMAT_U24_3BE;
+      /* 32 bit */
+    case GST_AUDIO_FORMAT_S32LE:
+      return SND_PCM_FORMAT_S32_LE;
+    case GST_AUDIO_FORMAT_S32BE:
+      return SND_PCM_FORMAT_S32_BE;
+    case GST_AUDIO_FORMAT_U32LE:
+      return SND_PCM_FORMAT_U32_LE;
+    case GST_AUDIO_FORMAT_U32BE:
+      return SND_PCM_FORMAT_U32_BE;
+    default:
+      break;
+  }
+  return SND_PCM_FORMAT_UNKNOWN;
+}
+
+static gboolean
+format_supported (const GValue * format_val, snd_pcm_format_mask_t * mask,
+    int endianness)
+{
+  const GstAudioFormatInfo *finfo;
+  snd_pcm_format_t pcm_format;
+  GstAudioFormat format;
+
+  if (!G_VALUE_HOLDS_STRING (format_val))
+    return FALSE;
+
+  format = gst_audio_format_from_string (g_value_get_string (format_val));
+  if (format == GST_AUDIO_FORMAT_UNKNOWN)
+    return FALSE;
+
+  finfo = gst_audio_format_get_info (format);
+
+  if (GST_AUDIO_FORMAT_INFO_ENDIANNESS (finfo) != endianness)
+    return FALSE;
+
+  pcm_format = gst_alsa_get_pcm_format (format);
+  if (pcm_format == SND_PCM_FORMAT_UNKNOWN)
+    return FALSE;
+
+  return snd_pcm_format_mask_test (mask, pcm_format);
+}
 
 static GstCaps *
 gst_alsa_detect_formats (GstObject * obj, snd_pcm_hw_params_t * hw_params,
-    GstCaps * in_caps)
+    GstCaps * in_caps, int endianness)
 {
   snd_pcm_format_mask_t *mask;
   GstStructure *s;
@@ -113,47 +171,56 @@ gst_alsa_detect_formats (GstObject * obj, snd_pcm_hw_params_t * hw_params,
   snd_pcm_format_mask_malloc (&mask);
   snd_pcm_hw_params_get_format_mask (hw_params, mask);
 
-  caps = gst_caps_new_empty ();
+  caps = NULL;
 
   for (i = 0; i < gst_caps_get_size (in_caps); ++i) {
-    GstStructure *scopy;
-    gint w, width = 0, depth = 0;
+    const GValue *format;
+    GValue list = G_VALUE_INIT;
 
     s = gst_caps_get_structure (in_caps, i);
-    if (!gst_structure_has_name (s, "audio/x-raw-int")) {
-      GST_WARNING_OBJECT (obj, "skipping non-int format");
+    if (!gst_structure_has_name (s, "audio/x-raw")) {
+      GST_DEBUG_OBJECT (obj, "skipping non-raw format");
       continue;
     }
-    if (!gst_structure_get_int (s, "width", &width) ||
-        !gst_structure_get_int (s, "depth", &depth))
-      continue;
-    if (width == 0 || (width % 8) != 0)
-      continue;                 /* Only full byte widths are valid */
-    for (w = 0; w < G_N_ELEMENTS (pcmformats); w++)
-      if (pcmformats[w].width == width && pcmformats[w].depth == depth)
-        break;
-    if (w == G_N_ELEMENTS (pcmformats))
-      continue;                 /* Unknown format */
 
-    if (snd_pcm_format_mask_test (mask, pcmformats[w].sformat) &&
-        snd_pcm_format_mask_test (mask, pcmformats[w].uformat)) {
-      /* template contains { true, false } or just one, leave it as it is */
-      scopy = gst_structure_copy (s);
-    } else if (snd_pcm_format_mask_test (mask, pcmformats[w].sformat)) {
-      scopy = gst_structure_copy (s);
-      gst_structure_set (scopy, "signed", G_TYPE_BOOLEAN, TRUE, NULL);
-    } else if (snd_pcm_format_mask_test (mask, pcmformats[w].uformat)) {
-      scopy = gst_structure_copy (s);
-      gst_structure_set (scopy, "signed", G_TYPE_BOOLEAN, FALSE, NULL);
-    } else {
-      scopy = NULL;
-    }
-    if (scopy) {
-      if (width > 8) {
-        /* TODO: proper endianness detection, for now it's CPU endianness only */
-        gst_structure_set (scopy, "endianness", G_TYPE_INT, G_BYTE_ORDER, NULL);
+    format = gst_structure_get_value (s, "format");
+    if (format == NULL)
+      continue;
+
+    g_value_init (&list, GST_TYPE_LIST);
+
+    if (GST_VALUE_HOLDS_LIST (format)) {
+      gint i, len;
+
+      len = gst_value_list_get_size (format);
+      for (i = 0; i < len; i++) {
+        const GValue *val;
+
+        val = gst_value_list_get_value (format, i);
+        if (format_supported (val, mask, endianness))
+          gst_value_list_append_value (&list, val);
       }
-      gst_caps_append_structure (caps, scopy);
+    } else if (G_VALUE_HOLDS_STRING (format)) {
+      if (format_supported (format, mask, endianness))
+        gst_value_list_append_value (&list, format);
+    }
+
+    if (gst_value_list_get_size (&list) > 1) {
+      if (caps == NULL)
+        caps = gst_caps_new_empty ();
+      s = gst_structure_copy (s);
+      gst_structure_take_value (s, "format", &list);
+      gst_caps_append_structure (caps, s);
+    } else if (gst_value_list_get_size (&list) == 1) {
+      if (caps == NULL)
+        caps = gst_caps_new_empty ();
+      format = gst_value_list_get_value (&list, 0);
+      s = gst_structure_copy (s);
+      gst_structure_set_value (s, "format", format);
+      gst_caps_append_structure (caps, s);
+      g_value_unset (&list);
+    } else {
+      g_value_unset (&list);
     }
   }
 
@@ -174,83 +241,106 @@ get_channel_free_structure (const GstStructure * in_structure)
   return s;
 }
 
-static void
+#define ONE_64 G_GUINT64_CONSTANT (1)
+#define CHANNEL_MASK_STEREO ((ONE_64<<GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT) | (ONE_64<<GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT))
+#define CHANNEL_MASK_2_1    (CHANNEL_MASK_STEREO | (ONE_64<<GST_AUDIO_CHANNEL_POSITION_LFE1))
+#define CHANNEL_MASK_4_0    (CHANNEL_MASK_STEREO | (ONE_64<<GST_AUDIO_CHANNEL_POSITION_REAR_LEFT) | (ONE_64<<GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT))
+#define CHANNEL_MASK_5_1    (CHANNEL_MASK_4_0 | (ONE_64<<GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER) | (ONE_64<<GST_AUDIO_CHANNEL_POSITION_LFE1))
+#define CHANNEL_MASK_7_1    (CHANNEL_MASK_5_1 | (ONE_64<<GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT) | (ONE_64<<GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT))
+
+static GstCaps *
 caps_add_channel_configuration (GstCaps * caps,
     const GstStructure * in_structure, gint min_chans, gint max_chans)
 {
-  GstAudioChannelPosition pos[8] = {
-    GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
-    GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
-    GST_AUDIO_CHANNEL_POSITION_REAR_LEFT,
-    GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT,
-    GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
-    GST_AUDIO_CHANNEL_POSITION_LFE,
-    GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
-    GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT
-  };
   GstStructure *s = NULL;
   gint c;
 
-  if (min_chans == max_chans && max_chans <= 2) {
+  if (min_chans == max_chans && max_chans == 1) {
     s = get_channel_free_structure (in_structure);
-    gst_structure_set (s, "channels", G_TYPE_INT, max_chans, NULL);
-    gst_caps_append_structure (caps, s);
-    return;
+    gst_structure_set (s, "channels", G_TYPE_INT, 1, NULL);
+    caps = gst_caps_merge_structure (caps, s);
+    return caps;
   }
 
   g_assert (min_chans >= 1);
 
   /* mono and stereo don't need channel configurations */
+#ifndef GSTREAMER_LITE
+  if (min_chans == 2) {
+    s = get_channel_free_structure (in_structure);
+    gst_structure_set (s, "channels", G_TYPE_INT, 2, "channel-mask",
+        GST_TYPE_BITMASK, CHANNEL_MASK_STEREO, NULL);
+    caps = gst_caps_merge_structure (caps, s);
+  } else if (min_chans == 1 && max_chans >= 2) {
+    s = get_channel_free_structure (in_structure);
+    gst_structure_set (s, "channels", G_TYPE_INT, 2, "channel-mask",
+        GST_TYPE_BITMASK, CHANNEL_MASK_STEREO, NULL);
+    caps = gst_caps_merge_structure (caps, s);
+    s = get_channel_free_structure (in_structure);
+    gst_structure_set (s, "channels", G_TYPE_INT, 1, NULL);
+    caps = gst_caps_merge_structure (caps, s);
+  }
+#else // GSTREAMER_LITE
   if (min_chans == 2) {
     s = get_channel_free_structure (in_structure);
     gst_structure_set (s, "channels", G_TYPE_INT, 2, NULL);
-    gst_caps_append_structure (caps, s);
+    caps = gst_caps_merge_structure (caps, s);
   } else if (min_chans == 1 && max_chans >= 2) {
     s = get_channel_free_structure (in_structure);
-    gst_structure_set (s, "channels", GST_TYPE_INT_RANGE, 1, 2, NULL);
-    gst_caps_append_structure (caps, s);
+    gst_structure_set (s, "channels", G_TYPE_INT, 2, NULL);
+    caps = gst_caps_merge_structure (caps, s);
+    s = get_channel_free_structure (in_structure);
+    gst_structure_set (s, "channels", G_TYPE_INT, 1, NULL);
+    caps = gst_caps_merge_structure (caps, s);
   }
+  return caps;
+#endif // GSTREAMER_LITE
 
   /* don't know whether to use 2.1 or 3.0 here - but I suspect
    * alsa might work around that/fix it somehow. Can we tell alsa
    * what our channel layout is like? */
   if (max_chans >= 3 && min_chans <= 3) {
-    GstAudioChannelPosition pos_21[3] = {
-      GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
-      GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
-      GST_AUDIO_CHANNEL_POSITION_LFE
-    };
-
     s = get_channel_free_structure (in_structure);
-    gst_structure_set (s, "channels", G_TYPE_INT, 3, NULL);
-    gst_audio_set_channel_positions (s, pos_21);
-    gst_caps_append_structure (caps, s);
+    gst_structure_set (s, "channels", G_TYPE_INT, 3, "channel-mask",
+        GST_TYPE_BITMASK, CHANNEL_MASK_2_1, NULL);
+    caps = gst_caps_merge_structure (caps, s);
   }
 
   /* everything else (4, 6, 8 channels) needs a channel layout */
   for (c = MAX (4, min_chans); c <= 8; c += 2) {
     if (max_chans >= c) {
+      guint64 channel_mask;
+
       s = get_channel_free_structure (in_structure);
-      gst_structure_set (s, "channels", G_TYPE_INT, c, NULL);
-      gst_audio_set_channel_positions (s, pos);
-      gst_caps_append_structure (caps, s);
+      switch (c) {
+        case 4:
+          channel_mask = CHANNEL_MASK_4_0;
+          break;
+        case 6:
+          channel_mask = CHANNEL_MASK_5_1;
+          break;
+        case 8:
+          channel_mask = CHANNEL_MASK_7_1;
+          break;
+        default:
+          channel_mask = 0;
+          g_assert_not_reached ();
+          break;
+      }
+      gst_structure_set (s, "channels", G_TYPE_INT, c, "channel-mask",
+          GST_TYPE_BITMASK, channel_mask, NULL);
+      caps = gst_caps_merge_structure (caps, s);
     }
   }
 
+  /* NONE layouts for everything else */
   for (c = MAX (9, min_chans); c <= max_chans; ++c) {
-    GstAudioChannelPosition *ch_layout;
-    guint i;
-
-    ch_layout = g_new (GstAudioChannelPosition, c);
-    for (i = 0; i < c; ++i) {
-      ch_layout[i] = GST_AUDIO_CHANNEL_POSITION_NONE;
-    }
     s = get_channel_free_structure (in_structure);
-    gst_structure_set (s, "channels", G_TYPE_INT, c, NULL);
-    gst_audio_set_channel_positions (s, ch_layout);
-    gst_caps_append_structure (caps, s);
-    g_free (ch_layout);
+    gst_structure_set (s, "channels", G_TYPE_INT, c, "channel-mask",
+        GST_TYPE_BITMASK, G_GUINT64_CONSTANT (0), NULL);
+    caps = gst_caps_merge_structure (caps, s);
   }
+  return caps;
 }
 
 static GstCaps *
@@ -338,7 +428,7 @@ gst_alsa_detect_channels (GstObject * obj, snd_pcm_hw_params_t * hw_params,
       c_max = max_chans;
     }
 
-    caps_add_channel_configuration (caps, s, c_min, c_max);
+    caps = caps_add_channel_configuration (caps, s, c_min, c_max);
   }
 
   gst_caps_unref (in_caps);
@@ -361,7 +451,7 @@ max_chan_error:
 }
 
 snd_pcm_t *
-gst_alsa_open_iec958_pcm (GstObject * obj)
+gst_alsa_open_iec958_pcm (GstObject * obj, gchar * device)
 {
   char *iec958_pcm_name = NULL;
   snd_pcm_t *pcm = NULL;
@@ -380,7 +470,8 @@ gst_alsa_open_iec958_pcm (GstObject * obj)
    *    spdif:{AES0 0x2 AES1 0x82 AES2 0x0 AES3 0x2}
    */
   sprintf (devstr,
-      "iec958:{AES0 0x%02x AES1 0x%02x AES2 0x%02x AES3 0x%02x}",
+      "%s:{AES0 0x%02x AES1 0x%02x AES2 0x%02x AES3 0x%02x}",
+      device,
       IEC958_AES0_CON_EMPHASIS_NONE | IEC958_AES0_NONAUDIO,
       IEC958_AES1_CON_ORIGINAL | IEC958_AES1_CON_PCM_CODER,
       0, IEC958_AES3_CON_FS_48000);
@@ -408,8 +499,8 @@ gst_alsa_open_iec958_pcm (GstObject * obj)
  */
 
 GstCaps *
-gst_alsa_probe_supported_formats (GstObject * obj, snd_pcm_t * handle,
-    const GstCaps * template_caps)
+gst_alsa_probe_supported_formats (GstObject * obj, gchar * device,
+    snd_pcm_t * handle, const GstCaps * template_caps)
 {
   snd_pcm_hw_params_t *hw_params;
   snd_pcm_stream_t stream_type;
@@ -422,10 +513,20 @@ gst_alsa_probe_supported_formats (GstObject * obj, snd_pcm_t * handle,
 
   stream_type = snd_pcm_stream (handle);
 
-  caps = gst_caps_copy (template_caps);
+  caps = gst_alsa_detect_formats (obj, hw_params,
+      gst_caps_copy (template_caps), G_BYTE_ORDER);
 
-  if (!(caps = gst_alsa_detect_formats (obj, hw_params, caps)))
-    goto subroutine_error;
+  /* if there are no formats in native endianness, try non-native as well */
+  if (caps == NULL) {
+    GST_INFO_OBJECT (obj, "no formats in native endianness detected");
+
+    caps = gst_alsa_detect_formats (obj, hw_params,
+        gst_caps_copy (template_caps),
+        (G_BYTE_ORDER == G_LITTLE_ENDIAN) ? G_BIG_ENDIAN : G_LITTLE_ENDIAN);
+
+    if (caps == NULL)
+      goto subroutine_error;
+  }
 
   if (!(caps = gst_alsa_detect_rates (obj, hw_params, caps)))
     goto subroutine_error;
@@ -436,10 +537,10 @@ gst_alsa_probe_supported_formats (GstObject * obj, snd_pcm_t * handle,
   /* Try opening IEC958 device to see if we can support that format (playback
    * only for now but we could add SPDIF capture later) */
   if (stream_type == SND_PCM_STREAM_PLAYBACK) {
-    snd_pcm_t *pcm = gst_alsa_open_iec958_pcm (obj);
+    snd_pcm_t *pcm = gst_alsa_open_iec958_pcm (obj, device);
 
     if (G_LIKELY (pcm)) {
-      gst_caps_append (caps, gst_caps_new_simple ("audio/x-iec958", NULL));
+      gst_caps_append (caps, gst_caps_from_string (PASSTHROUGH_CAPS));
       snd_pcm_close (pcm);
     }
   }
@@ -458,6 +559,7 @@ subroutine_error:
   {
     GST_ERROR_OBJECT (obj, "failed to query formats");
     snd_pcm_hw_params_free (hw_params);
+    gst_caps_replace (&caps, NULL);
     return NULL;
   }
 }
@@ -569,3 +671,107 @@ gst_alsa_find_device_name (GstObject * obj, const gchar * device,
 
   return ret;
 }
+
+/* ALSA channel positions */
+const GstAudioChannelPosition alsa_position[][8] = {
+  {
+      GST_AUDIO_CHANNEL_POSITION_MONO},
+  {
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+      GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT},
+  {
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+      GST_AUDIO_CHANNEL_POSITION_LFE1},
+  {
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+        GST_AUDIO_CHANNEL_POSITION_REAR_LEFT,
+      GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT},
+  {
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+      GST_AUDIO_CHANNEL_POSITION_INVALID},
+  {
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+        GST_AUDIO_CHANNEL_POSITION_REAR_LEFT,
+        GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT,
+        GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+      GST_AUDIO_CHANNEL_POSITION_LFE1},
+  {
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+      GST_AUDIO_CHANNEL_POSITION_INVALID},
+  {
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+        GST_AUDIO_CHANNEL_POSITION_REAR_LEFT,
+        GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT,
+        GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+        GST_AUDIO_CHANNEL_POSITION_LFE1,
+        GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+      GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT}
+};
+
+#ifdef SND_CHMAP_API_VERSION
+/* +1 is to make zero as holes */
+#define ITEM(x, y) \
+  [SND_CHMAP_ ## x] = GST_AUDIO_CHANNEL_POSITION_ ## y + 1
+
+static GstAudioChannelPosition gst_pos[SND_CHMAP_LAST + 1] = {
+  ITEM(MONO, MONO),
+  ITEM(FL, FRONT_LEFT),
+  ITEM(FR, FRONT_RIGHT),
+  ITEM(FC, FRONT_CENTER),
+  ITEM(RL, REAR_LEFT),
+  ITEM(RR, REAR_RIGHT),
+  ITEM(RC, REAR_CENTER),
+  ITEM(LFE, LFE1),
+  ITEM(SL, SIDE_LEFT),
+  ITEM(SR, SIDE_RIGHT),
+  ITEM(FLC, FRONT_LEFT_OF_CENTER),
+  ITEM(FRC, FRONT_RIGHT_OF_CENTER),
+  ITEM(FLW, WIDE_LEFT),
+  ITEM(FRW, WIDE_RIGHT),
+  ITEM(TC, TOP_CENTER),
+  ITEM(TFL, TOP_FRONT_LEFT),
+  ITEM(TFR, TOP_FRONT_RIGHT),
+  ITEM(TFC, TOP_FRONT_CENTER),
+  ITEM(TRL, TOP_REAR_LEFT),
+  ITEM(TRR, TOP_REAR_RIGHT),
+  ITEM(TRC, TOP_REAR_CENTER),
+  ITEM(LLFE, LFE1),
+  ITEM(RLFE, LFE2),
+  ITEM(BC, BOTTOM_FRONT_CENTER),
+  ITEM(BLC, BOTTOM_FRONT_LEFT),
+  ITEM(BRC, BOTTOM_FRONT_LEFT),
+};
+#undef ITEM
+
+gboolean alsa_chmap_to_channel_positions (const snd_pcm_chmap_t *chmap,
+					  GstAudioChannelPosition *pos)
+{
+  int c;
+
+  for (c = 0; c < chmap->channels; c++) {
+    if (chmap->pos[c] > SND_CHMAP_LAST)
+      return FALSE;
+    pos[c] = gst_pos[chmap->pos[c]];
+    if (!pos[c])
+      return FALSE;
+    pos[c]--;
+  }
+  return TRUE;
+}
+#endif /* SND_CHMAP_API_VERSION */

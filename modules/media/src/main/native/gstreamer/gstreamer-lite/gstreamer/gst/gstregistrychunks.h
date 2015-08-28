@@ -17,8 +17,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 #ifndef __GST_REGISTRYCHUNKS_H__
 #define __GST_REGISTRYCHUNKS_H__
@@ -122,7 +122,7 @@ typedef struct _GstRegistryChunkElementFactory
  * GstRegistryChunkTypeFindFactory:
  * @nextensions: stores the number of typefind extensions
  *
- * A structure containing the element factory fields
+ * A structure containing the type find factory fields
  */
 typedef struct _GstRegistryChunkTypeFindFactory
 {
@@ -130,6 +130,17 @@ typedef struct _GstRegistryChunkTypeFindFactory
 
   guint nextensions;
 } GstRegistryChunkTypeFindFactory;
+
+/*
+ * GstRegistryChunkDeviceProviderFactory:
+ *
+ * A structure containing the device provider factory fields
+ */
+typedef struct _GstRegistryChunkDeviceProviderFactory
+{
+  GstRegistryChunkPluginFeature plugin_feature;
+
+} GstRegistryChunkDeviceProviderFactory;
 
 /*
  * GstRegistryChunkPadTemplate:

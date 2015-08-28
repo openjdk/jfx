@@ -15,8 +15,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 #ifndef __GST_BUS_H__
@@ -72,7 +72,7 @@ typedef enum
  * GstBusSyncHandler:
  * @bus: the #GstBus that sent the message
  * @message: the #GstMessage
- * @data: user data that has been given, when registering the handler
+ * @user_data: user data that has been given, when registering the handler
  *
  * Handler will be invoked synchronously, when a new message has been injected
  * into the bus. This function is mostly used internally. Only one sync handler
@@ -83,13 +83,13 @@ typedef enum
  *
  * Returns: #GstBusSyncReply stating what to do with the message
  */
-typedef GstBusSyncReply (*GstBusSyncHandler)    (GstBus * bus, GstMessage * message, gpointer data);
+typedef GstBusSyncReply (*GstBusSyncHandler)    (GstBus * bus, GstMessage * message, gpointer user_data);
 
 /**
  * GstBusFunc:
  * @bus: the #GstBus that sent the message
  * @message: the #GstMessage
- * @data: user data that has been given, when registering the handler
+ * @user_data: user data that has been given, when registering the handler
  *
  * Specifies the type of function passed to gst_bus_add_watch() or
  * gst_bus_add_watch_full(), which is called from the mainloop when a message
@@ -99,11 +99,11 @@ typedef GstBusSyncReply (*GstBusSyncHandler)    (GstBus * bus, GstMessage * mess
  * function so it should not be freed in the function.
  *
  * Note that this function is used as a GSourceFunc which means that returning
- * FALSE will remove the GSource from the mainloop.
+ * %FALSE will remove the GSource from the mainloop.
  *
  * Returns: %FALSE if the event source should be removed.
  */
-typedef gboolean        (*GstBusFunc)           (GstBus * bus, GstMessage * message, gpointer data);
+typedef gboolean        (*GstBusFunc)           (GstBus * bus, GstMessage * message, gpointer user_data);
 
 /**
  * GstBus:
@@ -115,18 +115,9 @@ struct _GstBus
   GstObject         object;
 
   /*< private >*/
-  GQueue           *queue;
-  GMutex           *queue_lock;
-
-  GstBusSyncHandler sync_handler;
-  gpointer          sync_handler_data;
-
-  guint             signal_watch_id;
-  guint             num_signal_watchers;
-
-  /*< private >*/
   GstBusPrivate    *priv;
-  gpointer _gst_reserved[GST_PADDING - 1];
+
+  gpointer _gst_reserved[GST_PADDING];
 };
 
 struct _GstBusClass
@@ -157,7 +148,7 @@ void                    gst_bus_set_flushing            (GstBus * bus, gboolean 
 
 /* synchronous dispatching */
 void                    gst_bus_set_sync_handler        (GstBus * bus, GstBusSyncHandler func,
-                                                         gpointer data);
+                                                         gpointer user_data, GDestroyNotify notify);
 /* GSource based dispatching */
 GSource *               gst_bus_create_watch            (GstBus * bus);
 guint                   gst_bus_add_watch_full          (GstBus * bus,
@@ -171,7 +162,7 @@ guint                   gst_bus_add_watch               (GstBus * bus,
 
 /* polling the bus */
 GstMessage*             gst_bus_poll                    (GstBus *bus, GstMessageType events,
-                                                         GstClockTimeDiff timeout);
+                                                         GstClockTime timeout);
 
 /* signal based dispatching helper functions. */
 gboolean                gst_bus_async_signal_func       (GstBus *bus, GstMessage *message,

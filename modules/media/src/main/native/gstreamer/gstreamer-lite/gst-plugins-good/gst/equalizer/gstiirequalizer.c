@@ -15,8 +15,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -24,6 +24,7 @@
 #endif
 
 #include <math.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "gstiirequalizer.h"
@@ -33,11 +34,13 @@
 #include "gstiirequalizer10bands.h"
 #endif
 
+#include "gst/glib-compat-private.h"
+
 GST_DEBUG_CATEGORY (equalizer_debug);
 #define GST_CAT_DEFAULT equalizer_debug
 
-#define BANDS_LOCK(equ) g_mutex_lock(equ->bands_lock)
-#define BANDS_UNLOCK(equ) g_mutex_unlock(equ->bands_lock)
+#define BANDS_LOCK(equ) g_mutex_lock(&equ->bands_lock)
+#define BANDS_UNLOCK(equ) g_mutex_unlock(&equ->bands_lock)
 
 static void gst_iir_equalizer_child_proxy_interface_init (gpointer g_iface,
     gpointer iface_data);
@@ -45,39 +48,30 @@ static void gst_iir_equalizer_child_proxy_interface_init (gpointer g_iface,
 static void gst_iir_equalizer_finalize (GObject * object);
 
 static gboolean gst_iir_equalizer_setup (GstAudioFilter * filter,
-    GstRingBufferSpec * fmt);
+    const GstAudioInfo * info);
 static GstFlowReturn gst_iir_equalizer_transform_ip (GstBaseTransform * btrans,
     GstBuffer * buf);
 
+#ifdef GSTREAMER_LITE
+static void set_passthrough (GstIirEqualizer * equ);
+static void update_coefficients (GstIirEqualizer * equ);
+#endif // GSTREAMER_LITE
+
 #define ALLOWED_CAPS \
-    "audio/x-raw-int,"                                                \
-    " depth=(int)16,"                                                 \
-    " width=(int)16,"                                                 \
-    " endianness=(int)BYTE_ORDER,"                                    \
-    " signed=(bool)TRUE,"                                             \
-    " rate=(int)[1000,MAX],"                                          \
-    " channels=(int)[1,MAX]; "                                        \
-    "audio/x-raw-float,"                                              \
-    " width=(int) { 32, 64 } ,"                                       \
-    " endianness=(int)BYTE_ORDER,"                                    \
-    " rate=(int)[1000,MAX],"                                          \
-    " channels=(int)[1,MAX]"
+    "audio/x-raw,"                                                \
+    " format=(string) {"GST_AUDIO_NE(S16)","GST_AUDIO_NE(F32)","  \
+                        GST_AUDIO_NE(F64)" }, "                   \
+    " rate=(int)[1000,MAX],"                                      \
+    " channels=(int)[1,MAX],"                                     \
+    " layout=(string)interleaved"
 
-static void
-_do_init (GType object_type)
-{
-  const GInterfaceInfo child_proxy_interface_info = {
-    (GInterfaceInitFunc) gst_iir_equalizer_child_proxy_interface_init,
-    NULL,                       /* interface_finalize */
-    NULL                        /* interface_data */
-  };
+#define gst_iir_equalizer_parent_class parent_class
+G_DEFINE_TYPE_WITH_CODE (GstIirEqualizer, gst_iir_equalizer,
+    GST_TYPE_AUDIO_FILTER,
+    G_IMPLEMENT_INTERFACE (GST_TYPE_CHILD_PROXY,
+        gst_iir_equalizer_child_proxy_interface_init)
+    G_IMPLEMENT_INTERFACE (GST_TYPE_PRESET, NULL));
 
-  g_type_add_interface_static (object_type, GST_TYPE_CHILD_PROXY,
-      &child_proxy_interface_info);
-}
-
-GST_BOILERPLATE_FULL (GstIirEqualizer, gst_iir_equalizer,
-    GstAudioFilter, GST_TYPE_AUDIO_FILTER, _do_init);
 
 /* child object */
 
@@ -224,6 +218,18 @@ gst_iir_equalizer_band_set_property (GObject * object, guint prop_id,
       break;
   }
 
+#ifdef GSTREAMER_LITE
+  // We need to update coefficients and disable passthrough
+  // if needed, otherwise after we disable passthrough equalizer will not
+  // get re-enabled.
+  BANDS_LOCK (equ);
+  if (equ->need_new_coefficients) {
+    update_coefficients (equ);
+    set_passthrough (equ);
+  }
+  BANDS_UNLOCK (equ);
+#endif // GSTREAMER_LITE
+
   gst_object_unref (equ);
 }
 
@@ -300,14 +306,14 @@ gst_iir_equalizer_band_get_type (void)
 {
 #ifdef GSTREAMER_LITE
   static volatile GType type = 0;
-  static GStaticMutex type_init_mutex = G_STATIC_MUTEX_INIT;
+  G_LOCK_DEFINE_STATIC(type_init_mutex);
 #else // !GSTREAMER_LITE
   static GType type = 0;
 #endif // GSTREAMER_LITE
 
   if (G_UNLIKELY (!type)) {
 #ifdef GSTREAMER_LITE
-     g_static_mutex_lock(&type_init_mutex);
+     G_LOCK(type_init_mutex);
      if(!type) // Use double check lock pattern
      {
 #endif // GSTREAMER_LITE
@@ -328,7 +334,7 @@ gst_iir_equalizer_band_get_type (void)
         &type_info, 0);
 #ifdef GSTREAMER_LITE
      }
-     g_static_mutex_unlock(&type_init_mutex);
+     G_UNLOCK(type_init_mutex);
 #endif // GSTREAMER_LITE
   }
   return (type);
@@ -336,12 +342,12 @@ gst_iir_equalizer_band_get_type (void)
 
 
 /* child proxy iface */
-static GstObject *
+static GObject *
 gst_iir_equalizer_child_proxy_get_child_by_index (GstChildProxy * child_proxy,
     guint index)
 {
   GstIirEqualizer *equ = GST_IIR_EQUALIZER (child_proxy);
-  GstObject *ret;
+  GObject *ret;
 
   BANDS_LOCK (equ);
   if (G_UNLIKELY (index >= equ->freq_band_count)) {
@@ -349,7 +355,7 @@ gst_iir_equalizer_child_proxy_get_child_by_index (GstChildProxy * child_proxy,
     g_return_val_if_fail (index < equ->freq_band_count, NULL);
   }
 
-  ret = gst_object_ref (equ->bands[index]);
+  ret = g_object_ref (equ->bands[index]);
   BANDS_UNLOCK (equ);
 
   GST_LOG_OBJECT (equ, "return child[%d] %" GST_PTR_FORMAT, index, ret);
@@ -377,19 +383,7 @@ gst_iir_equalizer_child_proxy_interface_init (gpointer g_iface,
   iface->get_children_count = gst_iir_equalizer_child_proxy_get_children_count;
 }
 
-
 /* equalizer implementation */
-
-static void
-gst_iir_equalizer_base_init (gpointer g_class)
-{
-  GstAudioFilterClass *audiofilter_class = GST_AUDIO_FILTER_CLASS (g_class);
-  GstCaps *caps;
-
-  caps = gst_caps_from_string (ALLOWED_CAPS);
-  gst_audio_filter_class_add_pad_templates (audiofilter_class, caps);
-  gst_caps_unref (caps);
-}
 
 static void
 gst_iir_equalizer_class_init (GstIirEqualizerClass * klass)
@@ -397,16 +391,22 @@ gst_iir_equalizer_class_init (GstIirEqualizerClass * klass)
   GstAudioFilterClass *audio_filter_class = (GstAudioFilterClass *) klass;
   GstBaseTransformClass *btrans_class = (GstBaseTransformClass *) klass;
   GObjectClass *gobject_class = (GObjectClass *) klass;
+  GstCaps *caps;
 
   gobject_class->finalize = gst_iir_equalizer_finalize;
   audio_filter_class->setup = gst_iir_equalizer_setup;
   btrans_class->transform_ip = gst_iir_equalizer_transform_ip;
+  btrans_class->transform_ip_on_passthrough = FALSE;
+
+  caps = gst_caps_from_string (ALLOWED_CAPS);
+  gst_audio_filter_class_add_pad_templates (audio_filter_class, caps);
+  gst_caps_unref (caps);
 }
 
 static void
-gst_iir_equalizer_init (GstIirEqualizer * eq, GstIirEqualizerClass * g_class)
+gst_iir_equalizer_init (GstIirEqualizer * eq)
 {
-  eq->bands_lock = g_mutex_new ();
+  g_mutex_init (&eq->bands_lock);
   eq->need_new_coefficients = TRUE;
 }
 
@@ -426,7 +426,7 @@ gst_iir_equalizer_finalize (GObject * object)
   g_free (equ->bands);
   g_free (equ->history);
 
-  g_mutex_free (equ->bands_lock);
+  g_mutex_clear (&equ->bands_lock);
 
   G_OBJECT_CLASS (parent_class)->finalize (object);
 }
@@ -497,15 +497,17 @@ calculate_bw (GstIirEqualizerBand * band, gint rate)
 static void
 setup_peak_filter (GstIirEqualizer * equ, GstIirEqualizerBand * band)
 {
-  g_return_if_fail (GST_AUDIO_FILTER (equ)->format.rate);
+  gint rate = GST_AUDIO_FILTER_RATE (equ);
+
+  g_return_if_fail (rate);
 
   {
     gdouble gain, omega, bw;
     gdouble alpha, alpha1, alpha2, b0;
 
     gain = arg_to_scale (band->gain);
-    omega = calculate_omega (band->freq, GST_AUDIO_FILTER (equ)->format.rate);
-    bw = calculate_bw (band, GST_AUDIO_FILTER (equ)->format.rate);
+    omega = calculate_omega (band->freq, rate);
+    bw = calculate_bw (band, rate);
     if (bw == 0.0)
       goto out;
 
@@ -533,7 +535,9 @@ setup_peak_filter (GstIirEqualizer * equ, GstIirEqualizerBand * band)
 static void
 setup_low_shelf_filter (GstIirEqualizer * equ, GstIirEqualizerBand * band)
 {
-  g_return_if_fail (GST_AUDIO_FILTER (equ)->format.rate);
+  gint rate = GST_AUDIO_FILTER_RATE (equ);
+
+  g_return_if_fail (rate);
 
   {
     gdouble gain, omega, bw;
@@ -541,8 +545,8 @@ setup_low_shelf_filter (GstIirEqualizer * equ, GstIirEqualizerBand * band)
     gdouble egp, egm;
 
     gain = arg_to_scale (band->gain);
-    omega = calculate_omega (band->freq, GST_AUDIO_FILTER (equ)->format.rate);
-    bw = calculate_bw (band, GST_AUDIO_FILTER (equ)->format.rate);
+    omega = calculate_omega (band->freq, rate);
+    bw = calculate_bw (band, rate);
     if (bw == 0.0)
       goto out;
 
@@ -571,7 +575,9 @@ setup_low_shelf_filter (GstIirEqualizer * equ, GstIirEqualizerBand * band)
 static void
 setup_high_shelf_filter (GstIirEqualizer * equ, GstIirEqualizerBand * band)
 {
-  g_return_if_fail (GST_AUDIO_FILTER (equ)->format.rate);
+  gint rate = GST_AUDIO_FILTER_RATE (equ);
+
+  g_return_if_fail (rate);
 
   {
     gdouble gain, omega, bw;
@@ -579,8 +585,8 @@ setup_high_shelf_filter (GstIirEqualizer * equ, GstIirEqualizerBand * band)
     gdouble egp, egm;
 
     gain = arg_to_scale (band->gain);
-    omega = calculate_omega (band->freq, GST_AUDIO_FILTER (equ)->format.rate);
-    bw = calculate_bw (band, GST_AUDIO_FILTER (equ)->format.rate);
+    omega = calculate_omega (band->freq, rate);
+    bw = calculate_bw (band, rate);
     if (bw == 0.0)
       goto out;
 
@@ -641,12 +647,12 @@ update_coefficients (GstIirEqualizer * equ)
 
 /* Must be called with transform lock! */
 static void
-alloc_history (GstIirEqualizer * equ)
+alloc_history (GstIirEqualizer * equ, const GstAudioInfo * info)
 {
   /* free + alloc = no memcpy */
   g_free (equ->history);
   equ->history =
-      g_malloc0 (equ->history_size * GST_AUDIO_FILTER (equ)->format.channels *
+      g_malloc0 (equ->history_size * GST_AUDIO_INFO_CHANNELS (info) *
       equ->freq_band_count);
 }
 
@@ -675,28 +681,28 @@ gst_iir_equalizer_compute_frequencies (GstIirEqualizer * equ, guint new_count)
     /* add new bands */
     equ->bands = g_realloc (equ->bands, sizeof (GstObject *) * new_count);
     for (i = old_count; i < new_count; i++) {
-      equ->bands[i] = g_object_new (GST_TYPE_IIR_EQUALIZER_BAND, NULL);
       /* otherwise they get names like 'iirequalizerband5' */
       sprintf (name, "band%u", i);
-      gst_object_set_name (GST_OBJECT (equ->bands[i]), name);
+      equ->bands[i] = g_object_new (GST_TYPE_IIR_EQUALIZER_BAND,
+          "name", name, NULL);
       GST_DEBUG ("adding band[%d]=%p", i, equ->bands[i]);
 
       gst_object_set_parent (GST_OBJECT (equ->bands[i]), GST_OBJECT (equ));
-      gst_child_proxy_child_added (GST_OBJECT (equ),
-          GST_OBJECT (equ->bands[i]));
+      gst_child_proxy_child_added (GST_CHILD_PROXY (equ),
+          G_OBJECT (equ->bands[i]), name);
     }
   } else {
     /* free unused bands */
     for (i = new_count; i < old_count; i++) {
       GST_DEBUG ("removing band[%d]=%p", i, equ->bands[i]);
-      gst_child_proxy_child_removed (GST_OBJECT (equ),
-          GST_OBJECT (equ->bands[i]));
+      gst_child_proxy_child_removed (GST_CHILD_PROXY (equ),
+          G_OBJECT (equ->bands[i]), GST_OBJECT_NAME (equ->bands[i]));
       gst_object_unparent (GST_OBJECT (equ->bands[i]));
       equ->bands[i] = NULL;
     }
   }
 
-  alloc_history (equ);
+  alloc_history (equ, GST_AUDIO_FILTER_INFO (equ));
 
   /* set center frequencies and name band objects
    * FIXME: arg! we can't change the name of parented objects :(
@@ -849,68 +855,71 @@ gst_iir_equalizer_transform_ip (GstBaseTransform * btrans, GstBuffer * buf)
   GstAudioFilter *filter = GST_AUDIO_FILTER (btrans);
   GstIirEqualizer *equ = GST_IIR_EQUALIZER (btrans);
   GstClockTime timestamp;
+  GstMapInfo map;
+  gint channels = GST_AUDIO_FILTER_CHANNELS (filter);
+  gboolean need_new_coefficients;
 
-  if (G_UNLIKELY (filter->format.channels < 1 || equ->process == NULL))
+  if (G_UNLIKELY (channels < 1 || equ->process == NULL))
     return GST_FLOW_NOT_NEGOTIATED;
 
   BANDS_LOCK (equ);
-  if (equ->need_new_coefficients) {
-    update_coefficients (equ);
-    set_passthrough (equ);
-  }
+  need_new_coefficients = equ->need_new_coefficients;
   BANDS_UNLOCK (equ);
-
-  if (gst_base_transform_is_passthrough (btrans))
-    return GST_FLOW_OK;
 
   timestamp = GST_BUFFER_TIMESTAMP (buf);
   timestamp =
       gst_segment_to_stream_time (&btrans->segment, GST_FORMAT_TIME, timestamp);
 
-  if (GST_CLOCK_TIME_IS_VALID (timestamp))
-    gst_object_sync_values (G_OBJECT (equ), timestamp);
+  if (GST_CLOCK_TIME_IS_VALID (timestamp)) {
+    GstIirEqualizerBand **filters = equ->bands;
+    guint f, nf = equ->freq_band_count;
 
-  equ->process (equ, GST_BUFFER_DATA (buf), GST_BUFFER_SIZE (buf),
-      filter->format.channels);
+    gst_object_sync_values (GST_OBJECT (equ), timestamp);
+
+    /* sync values for bands too */
+    /* FIXME: iterating equ->bands is not thread-safe here */
+    for (f = 0; f < nf; f++) {
+      gst_object_sync_values (GST_OBJECT (filters[f]), timestamp);
+    }
+  }
+
+  BANDS_LOCK (equ);
+  if (need_new_coefficients) {
+    update_coefficients (equ);
+    set_passthrough (equ);
+  }
+  BANDS_UNLOCK (equ);
+
+  gst_buffer_map (buf, &map, GST_MAP_READWRITE);
+  equ->process (equ, map.data, map.size, channels);
+  gst_buffer_unmap (buf, &map);
 
   return GST_FLOW_OK;
 }
 
 static gboolean
-gst_iir_equalizer_setup (GstAudioFilter * audio, GstRingBufferSpec * fmt)
+gst_iir_equalizer_setup (GstAudioFilter * audio, const GstAudioInfo * info)
 {
   GstIirEqualizer *equ = GST_IIR_EQUALIZER (audio);
 
-  switch (fmt->type) {
-    case GST_BUFTYPE_LINEAR:
-      switch (fmt->width) {
-        case 16:
+  switch (GST_AUDIO_INFO_FORMAT (info)) {
+    case GST_AUDIO_FORMAT_S16:
           equ->history_size = history_size_gint16;
           equ->process = gst_iir_equ_process_gint16;
           break;
-        default:
-          return FALSE;
-      }
-      break;
-    case GST_BUFTYPE_FLOAT:
-      switch (fmt->width) {
-        case 32:
+    case GST_AUDIO_FORMAT_F32:
           equ->history_size = history_size_gfloat;
           equ->process = gst_iir_equ_process_gfloat;
           break;
-        case 64:
+    case GST_AUDIO_FORMAT_F64:
           equ->history_size = history_size_gdouble;
           equ->process = gst_iir_equ_process_gdouble;
           break;
         default:
           return FALSE;
       }
-      break;
-    default:
-      return FALSE;
-  }
 
-  alloc_history (equ);
+  alloc_history (equ, info);
   return TRUE;
 }
 
@@ -944,7 +953,7 @@ plugin_init (GstPlugin * plugin)
 #ifndef GSTREAMER_LITE
 GST_PLUGIN_DEFINE (GST_VERSION_MAJOR,
     GST_VERSION_MINOR,
-    "equalizer",
+    equalizer,
     "GStreamer audio equalizers",
     plugin_init, VERSION, GST_LICENSE, GST_PACKAGE_NAME, GST_PACKAGE_ORIGIN)
 #endif // GSTREAMER_LITE

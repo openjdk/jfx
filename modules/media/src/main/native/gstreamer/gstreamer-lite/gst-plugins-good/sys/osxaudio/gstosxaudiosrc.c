@@ -38,8 +38,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 /**
@@ -50,7 +50,7 @@
  * <refsect2>
  * <title>Example launch line</title>
  * |[
- * gst-launch osxaudiosrc ! wavenc ! filesink location=audio.wav
+ * gst-launch-1.0 osxaudiosrc ! wavenc ! filesink location=audio.wav
  * ]|
  * </refsect2>
  */
@@ -60,8 +60,6 @@
 #endif
 
 #include <gst/gst.h>
-#include <CoreAudio/CoreAudio.h>
-#include <CoreAudio/AudioHardware.h>
 #include "gstosxaudiosrc.h"
 #include "gstosxaudioelement.h"
 
@@ -81,14 +79,18 @@ enum
   ARG_DEVICE
 };
 
+#if (G_BYTE_ORDER == G_LITTLE_ENDIAN)
+# define FORMATS "{ S32LE }"
+#else
+# define FORMATS "{ S32BE }"
+#endif
+
 static GstStaticPadTemplate src_factory = GST_STATIC_PAD_TEMPLATE ("src",
     GST_PAD_SRC,
     GST_PAD_ALWAYS,
-    GST_STATIC_CAPS ("audio/x-raw-float, "
-        "endianness = (int) {" G_STRINGIFY (G_BYTE_ORDER) " }, "
-        "signed = (boolean) { TRUE }, "
-        "width = (int) 32, "
-        "depth = (int) 32, "
+    GST_STATIC_CAPS ("audio/x-raw, "
+        "format = (string) " FORMATS ", "
+        "layout = (string) interleaved, "
         "rate = (int) [1, MAX], " "channels = (int) [1, MAX]")
     );
 
@@ -97,13 +99,13 @@ static void gst_osx_audio_src_set_property (GObject * object, guint prop_id,
 static void gst_osx_audio_src_get_property (GObject * object, guint prop_id,
     GValue * value, GParamSpec * pspec);
 
-static GstCaps *gst_osx_audio_src_get_caps (GstBaseSrc * src);
+static GstCaps *gst_osx_audio_src_get_caps (GstBaseSrc * src, GstCaps * filter);
 
-static GstRingBuffer *gst_osx_audio_src_create_ringbuffer (GstBaseAudioSrc *
-    src);
+static GstAudioRingBuffer *gst_osx_audio_src_create_ringbuffer (GstAudioBaseSrc
+    * src);
 static void gst_osx_audio_src_osxelement_init (gpointer g_iface,
     gpointer iface_data);
-static OSStatus gst_osx_audio_src_io_proc (GstOsxRingBuffer * buf,
+static OSStatus gst_osx_audio_src_io_proc (GstOsxAudioRingBuffer * buf,
     AudioUnitRenderActionFlags * ioActionFlags,
     const AudioTimeStamp * inTimeStamp, UInt32 inBusNumber,
     UInt32 inNumberFrames, AudioBufferList * bufferList);
@@ -125,22 +127,8 @@ gst_osx_audio_src_do_init (GType type)
       &osxelement_info);
 }
 
-GST_BOILERPLATE_FULL (GstOsxAudioSrc, gst_osx_audio_src, GstBaseAudioSrc,
-    GST_TYPE_BASE_AUDIO_SRC, gst_osx_audio_src_do_init);
-
-static void
-gst_osx_audio_src_base_init (gpointer g_class)
-{
-  GstElementClass *element_class = GST_ELEMENT_CLASS (g_class);
-
-  gst_element_class_add_pad_template (element_class,
-      gst_static_pad_template_get (&src_factory));
-
-  gst_element_class_set_details_simple (element_class, "Audio Source (OSX)",
-      "Source/Audio",
-      "Input from a sound card in OS X",
-      "Zaheer Abbas Merali <zaheerabbas at merali dot org>");
-}
+G_DEFINE_TYPE_WITH_CODE (GstOsxAudioSrc, gst_osx_audio_src,
+    GST_TYPE_AUDIO_BASE_SRC, gst_osx_audio_src_do_init (g_define_type_id));
 
 static void
 gst_osx_audio_src_class_init (GstOsxAudioSrcClass * klass)
@@ -148,14 +136,12 @@ gst_osx_audio_src_class_init (GstOsxAudioSrcClass * klass)
   GObjectClass *gobject_class;
   GstElementClass *gstelement_class;
   GstBaseSrcClass *gstbasesrc_class;
-  GstBaseAudioSrcClass *gstbaseaudiosrc_class;
+  GstAudioBaseSrcClass *gstaudiobasesrc_class;
 
   gobject_class = (GObjectClass *) klass;
   gstelement_class = (GstElementClass *) klass;
   gstbasesrc_class = (GstBaseSrcClass *) klass;
-  gstbaseaudiosrc_class = (GstBaseAudioSrcClass *) klass;
-
-  parent_class = g_type_class_peek_parent (klass);
+  gstaudiobasesrc_class = (GstAudioBaseSrcClass *) klass;
 
   gobject_class->set_property = gst_osx_audio_src_set_property;
   gobject_class->get_property = gst_osx_audio_src_get_property;
@@ -166,12 +152,20 @@ gst_osx_audio_src_class_init (GstOsxAudioSrcClass * klass)
       g_param_spec_int ("device", "Device ID", "Device ID of input device",
           0, G_MAXINT, 0, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
-  gstbaseaudiosrc_class->create_ringbuffer =
+  gstaudiobasesrc_class->create_ringbuffer =
       GST_DEBUG_FUNCPTR (gst_osx_audio_src_create_ringbuffer);
+
+  gst_element_class_add_pad_template (gstelement_class,
+      gst_static_pad_template_get (&src_factory));
+
+  gst_element_class_set_static_metadata (gstelement_class, "Audio Source (OSX)",
+      "Source/Audio",
+      "Input from a sound card in OS X",
+      "Zaheer Abbas Merali <zaheerabbas at merali dot org>");
 }
 
 static void
-gst_osx_audio_src_init (GstOsxAudioSrc * src, GstOsxAudioSrcClass * gclass)
+gst_osx_audio_src_init (GstOsxAudioSrc * src)
 {
   gst_base_src_set_live (GST_BASE_SRC (src), TRUE);
 
@@ -212,7 +206,7 @@ gst_osx_audio_src_get_property (GObject * object, guint prop_id,
 }
 
 static GstCaps *
-gst_osx_audio_src_get_caps (GstBaseSrc * src)
+gst_osx_audio_src_get_caps (GstBaseSrc * src, GstCaps * filter)
 {
   GstElementClass *gstelement_class;
   GstOsxAudioSrc *osxsrc;
@@ -250,31 +244,32 @@ gst_osx_audio_src_get_caps (GstBaseSrc * src)
   return caps;
 }
 
-static GstRingBuffer *
-gst_osx_audio_src_create_ringbuffer (GstBaseAudioSrc * src)
+static GstAudioRingBuffer *
+gst_osx_audio_src_create_ringbuffer (GstAudioBaseSrc * src)
 {
   GstOsxAudioSrc *osxsrc;
-  GstOsxRingBuffer *ringbuffer;
+  GstOsxAudioRingBuffer *ringbuffer;
 
   osxsrc = GST_OSX_AUDIO_SRC (src);
 
   gst_osx_audio_src_select_device (osxsrc);
 
   GST_DEBUG ("Creating ringbuffer");
-  ringbuffer = g_object_new (GST_TYPE_OSX_RING_BUFFER, NULL);
+  ringbuffer = g_object_new (GST_TYPE_OSX_AUDIO_RING_BUFFER, NULL);
   GST_DEBUG ("osx src 0x%p element 0x%p  ioproc 0x%p", osxsrc,
       GST_OSX_AUDIO_ELEMENT_GET_INTERFACE (osxsrc),
       (void *) gst_osx_audio_src_io_proc);
 
-  ringbuffer->element = GST_OSX_AUDIO_ELEMENT_GET_INTERFACE (osxsrc);
-  ringbuffer->is_src = TRUE;
-  ringbuffer->device_id = osxsrc->device_id;
+  ringbuffer->core_audio->element =
+      GST_OSX_AUDIO_ELEMENT_GET_INTERFACE (osxsrc);
+  ringbuffer->core_audio->is_src = TRUE;
+  ringbuffer->core_audio->device_id = osxsrc->device_id;
 
-  return GST_RING_BUFFER (ringbuffer);
+  return GST_AUDIO_RING_BUFFER (ringbuffer);
 }
 
 static OSStatus
-gst_osx_audio_src_io_proc (GstOsxRingBuffer * buf,
+gst_osx_audio_src_io_proc (GstOsxAudioRingBuffer * buf,
     AudioUnitRenderActionFlags * ioActionFlags,
     const AudioTimeStamp * inTimeStamp,
     UInt32 inBusNumber, UInt32 inNumberFrames, AudioBufferList * bufferList)
@@ -286,18 +281,18 @@ gst_osx_audio_src_io_proc (GstOsxRingBuffer * buf,
   gint remaining;
   gint offset = 0;
 
-  status = AudioUnitRender (buf->audiounit, ioActionFlags, inTimeStamp,
-      inBusNumber, inNumberFrames, buf->recBufferList);
+  status = AudioUnitRender (buf->core_audio->audiounit, ioActionFlags,
+      inTimeStamp, inBusNumber, inNumberFrames, buf->core_audio->recBufferList);
 
   if (status) {
     GST_WARNING_OBJECT (buf, "AudioUnitRender returned %d", (int) status);
     return status;
   }
 
-  remaining = buf->recBufferList->mBuffers[0].mDataByteSize;
+  remaining = buf->core_audio->recBufferList->mBuffers[0].mDataByteSize;
 
   while (remaining) {
-    if (!gst_ring_buffer_prepare_read (GST_RING_BUFFER (buf),
+    if (!gst_audio_ring_buffer_prepare_read (GST_AUDIO_RING_BUFFER (buf),
             &writeseg, &writeptr, &len))
       return 0;
 
@@ -307,15 +302,16 @@ gst_osx_audio_src_io_proc (GstOsxRingBuffer * buf,
       len = remaining;
 
     memcpy (writeptr + buf->segoffset,
-        (char *) buf->recBufferList->mBuffers[0].mData + offset, len);
+        (char *) buf->core_audio->recBufferList->mBuffers[0].mData + offset,
+        len);
 
     buf->segoffset += len;
     offset += len;
     remaining -= len;
 
-    if ((gint) buf->segoffset == GST_RING_BUFFER (buf)->spec.segsize) {
+    if ((gint) buf->segoffset == GST_AUDIO_RING_BUFFER (buf)->spec.segsize) {
       /* we wrote one segment */
-      gst_ring_buffer_advance (GST_RING_BUFFER (buf), 1);
+      gst_audio_ring_buffer_advance (GST_AUDIO_RING_BUFFER (buf), 1);
 
       buf->segoffset = 0;
     }
@@ -334,30 +330,5 @@ gst_osx_audio_src_osxelement_init (gpointer g_iface, gpointer iface_data)
 static void
 gst_osx_audio_src_select_device (GstOsxAudioSrc * osxsrc)
 {
-  OSStatus status;
-  UInt32 propertySize;
-
-  if (osxsrc->device_id == kAudioDeviceUnknown) {
-    /* If no specific device has been selected by the user, then pick the
-     * default device */
-    GST_DEBUG_OBJECT (osxsrc, "Selecting device for OSXAudioSrc");
-    propertySize = sizeof (osxsrc->device_id);
-    status = AudioHardwareGetProperty (kAudioHardwarePropertyDefaultInputDevice,
-        &propertySize, &osxsrc->device_id);
-
-    if (status) {
-      GST_WARNING_OBJECT (osxsrc,
-          "AudioHardwareGetProperty returned %d", (int) status);
-    } else {
-      GST_DEBUG_OBJECT (osxsrc, "AudioHardwareGetProperty returned 0");
-    }
-
-    if (osxsrc->device_id == kAudioDeviceUnknown) {
-      GST_WARNING_OBJECT (osxsrc,
-          "AudioHardwareGetProperty: device_id is kAudioDeviceUnknown");
-    }
-
-    GST_DEBUG_OBJECT (osxsrc, "AudioHardwareGetProperty: device_id is %lu",
-        (long) osxsrc->device_id);
-  }
+  gst_core_audio_select_source_device (&osxsrc->device_id);
 }

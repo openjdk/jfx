@@ -20,8 +20,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -33,6 +33,9 @@
 #include <gst/gstelement.h>
 #include <gst/gsttypefind.h>
 #include <gst/gsttypefindfactory.h>
+#ifndef GSTREAMER_LITE
+#include <gst/gstdeviceproviderfactory.h>
+#endif // GSTREAMER_LITE
 #include <gst/gsturi.h>
 #include <gst/gstinfo.h>
 #include <gst/gstenumtypes.h>
@@ -60,7 +63,7 @@ _strnlen (const gchar * str, gint maxlen)
 #define unpack_element(inptr, outptr, element, endptr, error_label) G_STMT_START{ \
   if (inptr + sizeof(element) > endptr) { \
     GST_ERROR ("Failed reading element " G_STRINGIFY (element)  \
-        ". Have %d bytes need %" G_GSSIZE_FORMAT, \
+        ". Have %d bytes need %" G_GSIZE_FORMAT, \
         (int) (endptr - inptr), sizeof(element)); \
     goto error_label; \
   } \
@@ -207,6 +210,16 @@ gst_registry_chunks_save_pad_template (GList ** list,
   return TRUE;
 }
 
+#define VALIDATE_UTF8(__details, __entry)                                   \
+G_STMT_START {                                                              \
+  if (!g_utf8_validate (__details->__entry, -1, NULL)) {                    \
+    g_warning ("Invalid UTF-8 in " G_STRINGIFY (__entry) ": %s",            \
+        __details->__entry);                                                \
+    g_free (__details->__entry);                                            \
+    __details->__entry = g_strdup ("[ERROR: invalid UTF-8]");               \
+  }                                                                         \
+} G_STMT_END
+
 /*
  * gst_registry_chunks_save_feature:
  *
@@ -217,10 +230,11 @@ gst_registry_chunks_save_pad_template (GList ** list,
 static gboolean
 gst_registry_chunks_save_feature (GList ** list, GstPluginFeature * feature)
 {
-  const gchar *type_name = g_type_name (G_OBJECT_TYPE (feature));
+  const gchar *type_name = G_OBJECT_TYPE_NAME (feature);
   GstRegistryChunkPluginFeature *pf = NULL;
   GstRegistryChunk *chk = NULL;
   GList *walk;
+  gsize pf_size = 0;
 
   if (!type_name) {
     GST_ERROR ("NULL feature type_name, aborting.");
@@ -235,9 +249,8 @@ gst_registry_chunks_save_feature (GList ** list, GstPluginFeature * feature)
      * valgrind complaining about copying unitialized memory
      */
     ef = g_slice_new0 (GstRegistryChunkElementFactory);
-    chk =
-        gst_registry_chunks_make_data (ef,
-        sizeof (GstRegistryChunkElementFactory));
+    pf_size = sizeof (GstRegistryChunkElementFactory);
+    chk = gst_registry_chunks_make_data (ef, pf_size);
     ef->npadtemplates = ef->ninterfaces = ef->nuriprotocols = 0;
     pf = (GstRegistryChunkPluginFeature *) ef;
 
@@ -246,8 +259,8 @@ gst_registry_chunks_save_feature (GList ** list, GstPluginFeature * feature)
         walk = g_list_next (walk), ef->ninterfaces++) {
       gst_registry_chunks_save_const_string (list, (gchar *) walk->data);
     }
-    GST_DEBUG ("Feature %s: saved %d interfaces %d pad templates",
-        feature->name, ef->ninterfaces, ef->npadtemplates);
+    GST_DEBUG_OBJECT (feature, "saved %d interfaces %d pad templates",
+        ef->ninterfaces, ef->npadtemplates);
 
     /* save uritypes */
     if (GST_URI_TYPE_IS_VALID (factory->uri_type)) {
@@ -266,10 +279,10 @@ gst_registry_chunks_save_feature (GList ** list, GstPluginFeature * feature)
           ef->nuriprotocols++;
         }
         *list = g_list_prepend (*list, subchk);
-        GST_DEBUG ("Saved %d UriTypes", ef->nuriprotocols);
+        GST_DEBUG_OBJECT (feature, "Saved %d UriTypes", ef->nuriprotocols);
       } else {
         g_warning ("GStreamer feature '%s' is URI handler but does not provide"
-            " any protocols it can handle", feature->name);
+            " any protocols it can handle", GST_OBJECT_NAME (feature));
       }
     }
 
@@ -279,22 +292,14 @@ gst_registry_chunks_save_feature (GList ** list, GstPluginFeature * feature)
       GstStaticPadTemplate *template = walk->data;
 
       if (!gst_registry_chunks_save_pad_template (list, template)) {
-        GST_ERROR ("Can't fill pad template, aborting.");
+        GST_ERROR_OBJECT (feature, "Can't fill pad template, aborting.");
         goto fail;
       }
     }
 
-    /* pack element factory strings */
-    gst_registry_chunks_save_const_string (list, factory->details.author);
-    gst_registry_chunks_save_const_string (list, factory->details.description);
-    gst_registry_chunks_save_const_string (list, factory->details.klass);
-    gst_registry_chunks_save_const_string (list, factory->details.longname);
-    if (factory->meta_data) {
-      gst_registry_chunks_save_string (list,
-          gst_structure_to_string (factory->meta_data));
-    } else {
-      gst_registry_chunks_save_const_string (list, "");
-    }
+    /* pack element metadata strings */
+    gst_registry_chunks_save_string (list,
+        gst_structure_to_string (factory->metadata));
   } else if (GST_IS_TYPE_FIND_FACTORY (feature)) {
     GstRegistryChunkTypeFindFactory *tff;
     GstTypeFindFactory *factory = GST_TYPE_FIND_FACTORY (feature);
@@ -304,9 +309,8 @@ gst_registry_chunks_save_feature (GList ** list, GstPluginFeature * feature)
      * valgrind complaining about copying unitialized memory
      */
     tff = g_slice_new0 (GstRegistryChunkTypeFindFactory);
-    chk =
-        gst_registry_chunks_make_data (tff,
-        sizeof (GstRegistryChunkTypeFindFactory));
+    pf_size = sizeof (GstRegistryChunkTypeFindFactory);
+    chk = gst_registry_chunks_make_data (tff, pf_size);
     tff->nextensions = 0;
     pf = (GstRegistryChunkPluginFeature *) tff;
 
@@ -317,31 +321,41 @@ gst_registry_chunks_save_feature (GList ** list, GstPluginFeature * feature)
             factory->extensions[tff->nextensions++]);
       }
     }
+    GST_DEBUG_OBJECT (feature, "saved %d extensions", tff->nextensions);
     /* save caps */
     if (factory->caps) {
-      /* we copy the caps here so we can simplify them before saving. This
-       * is a lot faster when loading them later on */
-      GstCaps *copy = gst_caps_copy (factory->caps);
+      GstCaps *fcaps = gst_caps_ref (factory->caps);
+      /* we simplify the caps before saving. This is a lot faster
+       * when loading them later on */
+      fcaps = gst_caps_simplify (fcaps);
+      str = gst_caps_to_string (fcaps);
+      gst_caps_unref (fcaps);
 
-      gst_caps_do_simplify (copy);
-      str = gst_caps_to_string (copy);
-      gst_caps_unref (copy);
       gst_registry_chunks_save_string (list, str);
     } else {
       gst_registry_chunks_save_const_string (list, "");
     }
-  } else if (GST_IS_INDEX_FACTORY (feature)) {
-    GstIndexFactory *factory = GST_INDEX_FACTORY (feature);
+#ifndef GSTREAMER_LITE
+  } else if (GST_IS_DEVICE_PROVIDER_FACTORY (feature)) {
+    GstRegistryChunkDeviceProviderFactory *tff;
+    GstDeviceProviderFactory *factory = GST_DEVICE_PROVIDER_FACTORY (feature);
 
-    pf = g_slice_new (GstRegistryChunkPluginFeature);
+    /* Initialize with zeroes because of struct padding and
+     * valgrind complaining about copying unitialized memory
+     */
+    tff = g_slice_new0 (GstRegistryChunkDeviceProviderFactory);
     chk =
-        gst_registry_chunks_make_data (pf,
-        sizeof (GstRegistryChunkPluginFeature));
+        gst_registry_chunks_make_data (tff,
+        sizeof (GstRegistryChunkDeviceProviderFactory));
+    pf = (GstRegistryChunkPluginFeature *) tff;
 
-    /* pack element factory strings */
-    gst_registry_chunks_save_const_string (list, factory->longdesc);
+
+    /* pack element metadata strings */
+    gst_registry_chunks_save_string (list,
+        gst_structure_to_string (factory->metadata));
+#endif // GSTREAMER_LITE
   } else {
-    GST_WARNING ("unhandled feature type '%s'", type_name);
+    GST_WARNING_OBJECT (feature, "unhandled feature type '%s'", type_name);
   }
 
   if (pf) {
@@ -349,7 +363,7 @@ gst_registry_chunks_save_feature (GList ** list, GstPluginFeature * feature)
     *list = g_list_prepend (*list, chk);
 
     /* pack plugin feature strings */
-    gst_registry_chunks_save_const_string (list, feature->name);
+    gst_registry_chunks_save_const_string (list, GST_OBJECT_NAME (feature));
     gst_registry_chunks_save_const_string (list, (gchar *) type_name);
 
     return TRUE;
@@ -357,8 +371,8 @@ gst_registry_chunks_save_feature (GList ** list, GstPluginFeature * feature)
 
   /* Errors */
 fail:
-  g_free (chk);
-  g_free (pf);
+  g_slice_free (GstRegistryChunk, chk);
+  g_slice_free1 (pf_size, pf);
   return FALSE;
 }
 
@@ -473,8 +487,8 @@ _priv_gst_registry_chunks_save_plugin (GList ** list, GstRegistry * registry,
   /* Errors */
 fail:
   gst_plugin_feature_list_free (plugin_features);
-  g_free (chk);
-  g_free (pe);
+  g_slice_free (GstRegistryChunk, chk);
+  g_slice_free (GstRegistryChunkPluginElement, pe);
   return FALSE;
 }
 
@@ -500,8 +514,8 @@ gst_registry_chunks_load_pad_template (GstElementFactory * factory, gchar ** in,
 
   template = g_slice_new (GstStaticPadTemplate);
   template->presence = pt->presence;
-  template->direction = pt->direction;
-  template->static_caps.caps.refcount = 0;
+  template->direction = (GstPadDirection) pt->direction;
+  template->static_caps.caps = NULL;
 
   /* unpack pad template strings */
   unpack_const_string (*in, template->name_template, end, fail);
@@ -532,8 +546,9 @@ gst_registry_chunks_load_feature (GstRegistry * registry, gchar ** in,
   GstRegistryChunkPluginFeature *pf = NULL;
   GstPluginFeature *feature = NULL;
   const gchar *const_str, *type_name;
+  const gchar *feature_name;
   const gchar *plugin_name;
-  gchar *str, *feature_name;
+  gchar *str;
   GType type;
   guint i;
 
@@ -548,7 +563,7 @@ gst_registry_chunks_load_feature (GstRegistry * registry, gchar ** in,
   }
 
   /* unpack more plugin feature strings */
-  unpack_string (*in, feature_name, end, fail);
+  unpack_string_nocopy (*in, feature_name, end, fail);
 
   GST_DEBUG ("Plugin '%s' feature '%s' typename : '%s'", plugin_name,
       feature_name, type_name);
@@ -556,16 +571,13 @@ gst_registry_chunks_load_feature (GstRegistry * registry, gchar ** in,
   if (G_UNLIKELY (!(type = g_type_from_name (type_name)))) {
     GST_ERROR ("Unknown type from typename '%s' for plugin '%s'", type_name,
         plugin_name);
-    g_free (feature_name);
     return FALSE;
   }
   if (G_UNLIKELY ((feature = g_object_newv (type, 0, NULL)) == NULL)) {
     GST_ERROR ("Can't create feature from type");
-    g_free (feature_name);
     return FALSE;
   }
-
-  feature->name = feature_name;
+  gst_plugin_feature_set_name (feature, feature_name);
 
   if (G_UNLIKELY (!GST_IS_PLUGIN_FEATURE (feature))) {
     GST_ERROR ("typename : '%s' is not a plugin feature", type_name);
@@ -588,21 +600,16 @@ gst_registry_chunks_load_feature (GstRegistry * registry, gchar ** in,
     /* unpack element factory strings */
     unpack_string_nocopy (*in, meta_data_str, end, fail);
     if (meta_data_str && *meta_data_str) {
-      factory->meta_data = gst_structure_from_string (meta_data_str, NULL);
-      if (!factory->meta_data) {
+      factory->metadata = gst_structure_from_string (meta_data_str, NULL);
+      if (!factory->metadata) {
         GST_ERROR
             ("Error when trying to deserialize structure for metadata '%s'",
             meta_data_str);
         goto fail;
       }
     }
-    unpack_string (*in, factory->details.longname, end, fail);
-    unpack_string (*in, factory->details.klass, end, fail);
-    unpack_string (*in, factory->details.description, end, fail);
-    unpack_string (*in, factory->details.author, end, fail);
     n = ef->npadtemplates;
-    GST_DEBUG ("Element factory : '%s' with npadtemplates=%d",
-        factory->details.longname, n);
+    GST_DEBUG ("Element factory : npadtemplates=%d", n);
 
     /* load pad templates */
     for (i = 0; i < n; i++) {
@@ -665,17 +672,32 @@ gst_registry_chunks_load_feature (GstRegistry * registry, gchar ** in,
         factory->extensions[i - 1] = str;
       }
     }
-  } else if (GST_IS_INDEX_FACTORY (feature)) {
-    GstIndexFactory *factory = GST_INDEX_FACTORY (feature);
+#ifndef GSTREAMER_LITE
+  } else if (GST_IS_DEVICE_PROVIDER_FACTORY (feature)) {
+    GstRegistryChunkDeviceProviderFactory *dmf;
+    GstDeviceProviderFactory *factory = GST_DEVICE_PROVIDER_FACTORY (feature);
+    const gchar *meta_data_str;
 
     align (*in);
     GST_DEBUG
         ("Reading/casting for GstRegistryChunkPluginFeature at address %p",
         *in);
-    unpack_element (*in, pf, GstRegistryChunkPluginFeature, end, fail);
+    unpack_element (*in, dmf, GstRegistryChunkDeviceProviderFactory, end, fail);
 
-    /* unpack index factory strings */
-    unpack_string (*in, factory->longdesc, end, fail);
+    pf = (GstRegistryChunkPluginFeature *) dmf;
+
+    /* unpack element factory strings */
+    unpack_string_nocopy (*in, meta_data_str, end, fail);
+    if (meta_data_str && *meta_data_str) {
+      factory->metadata = gst_structure_from_string (meta_data_str, NULL);
+      if (!factory->metadata) {
+        GST_ERROR
+            ("Error when trying to deserialize structure for metadata '%s'",
+            meta_data_str);
+        goto fail;
+      }
+    }
+#endif // GSTREAMER_LITE
   } else {
     GST_WARNING ("unhandled factory type : %s", G_OBJECT_TYPE_NAME (feature));
     goto fail;
@@ -689,8 +711,8 @@ gst_registry_chunks_load_feature (GstRegistry * registry, gchar ** in,
       (gpointer *) & feature->plugin);
 
   gst_registry_add_feature (registry, feature);
-  GST_DEBUG ("Added feature %s, plugin %p %s", feature->name, plugin,
-      plugin_name);
+  GST_DEBUG ("Added feature %s, plugin %p %s", GST_OBJECT_NAME (feature),
+      plugin, plugin_name);
 
   return TRUE;
 
@@ -742,7 +764,7 @@ gst_registry_chunks_load_plugin_dep (GstPlugin * plugin, gchar ** in,
   dep->env_hash = d->env_hash;
   dep->stat_hash = d->stat_hash;
 
-  dep->flags = d->flags;
+  dep->flags = (GstPluginDependencyFlags) d->flags;
 
   dep->names = gst_registry_chunks_load_plugin_dep_strv (in, end, d->n_names);
   dep->paths = gst_registry_chunks_load_plugin_dep_strv (in, end, d->n_paths);
@@ -794,7 +816,7 @@ _priv_gst_registry_chunks_load_plugin (GstRegistry * registry, gchar ** in,
   plugin = g_object_newv (GST_TYPE_PLUGIN, 0, NULL);
 
   /* TODO: also set GST_PLUGIN_FLAG_CONST */
-  plugin->flags |= GST_PLUGIN_FLAG_CACHED;
+  GST_OBJECT_FLAG_SET (plugin, GST_PLUGIN_FLAG_CACHED);
   plugin->file_mtime = pe->file_mtime;
   plugin->file_size = pe->file_size;
 
@@ -830,7 +852,7 @@ _priv_gst_registry_chunks_load_plugin (GstRegistry * registry, gchar ** in,
   /* If the license string is 'BLACKLIST', mark this as a blacklisted
    * plugin */
   if (strcmp (plugin->desc.license, "BLACKLIST") == 0)
-    plugin->flags |= GST_PLUGIN_FLAG_BLACKLISTED;
+    GST_OBJECT_FLAG_SET (plugin, GST_PLUGIN_FLAG_BLACKLISTED);
 
   plugin->basename = g_path_get_basename (plugin->filename);
 

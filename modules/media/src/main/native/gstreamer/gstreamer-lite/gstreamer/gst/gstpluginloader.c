@@ -16,8 +16,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -33,8 +33,13 @@
 #include <fcntl.h>
 #include <unistd.h>
 #else
+#define WIN32_LEAN_AND_MEAN
+
 #define fsync(fd) _commit(fd)
 #include <io.h>
+
+#include <windows.h>
+extern HMODULE _priv_gst_dll_handle;
 #endif
 
 #ifdef HAVE_SYS_UTSNAME_H
@@ -339,7 +344,7 @@ plugin_loader_create_blacklist_plugin (GstPluginLoader * l,
   plugin->filename = g_strdup (entry->filename);
   plugin->file_mtime = entry->file_mtime;
   plugin->file_size = entry->file_size;
-  plugin->flags |= GST_PLUGIN_FLAG_BLACKLISTED;
+  GST_OBJECT_FLAG_SET (plugin, GST_PLUGIN_FLAG_BLACKLISTED);
 
   plugin->basename = g_path_get_basename (plugin->filename);
   plugin->desc.name = g_intern_string (plugin->basename);
@@ -457,7 +462,9 @@ gst_plugin_loader_spawn (GstPluginLoader * loader)
 
   /* Find the gst-plugin-scanner: first try the env-var if it is set,
    * otherwise use the installed version */
-  env = g_getenv ("GST_PLUGIN_SCANNER");
+  env = g_getenv ("GST_PLUGIN_SCANNER_1_0");
+  if (env == NULL)
+    env = g_getenv ("GST_PLUGIN_SCANNER");
 
   if (env != NULL && *env != '\0') {
     GST_LOG ("Trying GST_PLUGIN_SCANNER env var: %s", env);
@@ -468,7 +475,22 @@ gst_plugin_loader_spawn (GstPluginLoader * loader)
 
   if (!res) {
     GST_LOG ("Trying installed plugin scanner");
+
+#ifdef G_OS_WIN32
+    {
+      gchar *basedir;
+
+      basedir = g_win32_get_package_installation_directory_of_module (_priv_gst_dll_handle);
+      helper_bin = g_build_filename (basedir,
+                                     "lib",
+                                     "gstreamer-" GST_API_VERSION,
+                                     "gst-plugin-scanner.exe",
+                                     NULL);
+      g_free (basedir);
+    }
+#else
     helper_bin = g_strdup (GST_PLUGIN_SCANNER_INSTALLED);
+#endif
     res = gst_plugin_loader_try_helper (loader, helper_bin);
     g_free (helper_bin);
 
@@ -506,6 +528,7 @@ plugin_loader_cleanup_child (GstPluginLoader * l)
 gboolean
 _gst_plugin_loader_client_run (void)
 {
+  gboolean res = TRUE;
   GstPluginLoader *l;
 
   l = plugin_loader_new (NULL);
@@ -522,7 +545,8 @@ _gst_plugin_loader_client_run (void)
     dup_fd = dup (0);           /* STDIN */
     if (dup_fd == -1) {
       GST_ERROR ("Failed to start. Could no dup STDIN, errno %d", errno);
-      return FALSE;
+      res = FALSE;
+      goto beach;
     }
     l->fd_r.fd = dup_fd;
     close (0);
@@ -530,7 +554,8 @@ _gst_plugin_loader_client_run (void)
     dup_fd = dup (1);           /* STDOUT */
     if (dup_fd == -1) {
       GST_ERROR ("Failed to start. Could no dup STDOUT, errno %d", errno);
-      return FALSE;
+      res = FALSE;
+      goto beach;
     }
     l->fd_w.fd = dup_fd;
     close (1);
@@ -556,9 +581,13 @@ _gst_plugin_loader_client_run (void)
   /* Loop, listening for incoming packets on the fd and writing responses */
   while (!l->rx_done && exchange_packets (l));
 
+#ifndef G_OS_WIN32
+beach:
+#endif
+
   plugin_loader_free (l);
 
-  return TRUE;
+  return res;
 }
 
 static void
@@ -584,7 +613,8 @@ put_packet (GstPluginLoader * l, guint type, guint32 tag,
   /* 4 bytes packet length */
   GST_WRITE_UINT32_BE (out + 4, payload_len);
   /* payload */
-  memcpy (out + HEADER_SIZE, payload, payload_len);
+  if (payload && payload_len)
+    memcpy (out + HEADER_SIZE, payload, payload_len);
   /* Write magic into the header */
   GST_WRITE_UINT32_BE (out + 8, HEADER_MAGIC);
 
@@ -701,7 +731,7 @@ do_plugin_load (GstPluginLoader * l, const gchar * filename, guint tag)
 
     /* Now serialise the plugin details and send */
     if (!_priv_gst_registry_chunks_save_plugin (&chunks,
-            gst_registry_get_default (), newplugin))
+            gst_registry_get (), newplugin))
       goto fail;
 
     /* Store where the header is, write an empty one, then write
@@ -849,7 +879,7 @@ handle_rx_packet (GstPluginLoader * l,
           return FALSE;
         }
 
-        newplugin->flags &= ~GST_PLUGIN_FLAG_CACHED;
+        GST_OBJECT_FLAG_UNSET (newplugin, GST_PLUGIN_FLAG_CACHED);
         GST_LOG_OBJECT (l->registry,
             "marking plugin %p as registered as %s", newplugin,
             newplugin->filename);
@@ -994,27 +1024,31 @@ exchange_packets (GstPluginLoader * l)
         l->tx_buf_write - l->tx_buf_read);
 
     if (!l->rx_done) {
-      if (gst_poll_fd_has_error (l->fdset, &l->fd_r) ||
-          gst_poll_fd_has_closed (l->fdset, &l->fd_r)) {
-        GST_LOG ("read fd %d closed/errored", l->fd_r.fd);
+      if (gst_poll_fd_has_error (l->fdset, &l->fd_r)) {
+        GST_LOG ("read fd %d errored", l->fd_r.fd);
         goto fail_and_cleanup;
       }
 
       if (gst_poll_fd_can_read (l->fdset, &l->fd_r)) {
         if (!read_one (l))
           goto fail_and_cleanup;
+      } else if (gst_poll_fd_has_closed (l->fdset, &l->fd_r)) {
+        GST_LOG ("read fd %d closed", l->fd_r.fd);
+        goto fail_and_cleanup;
       }
     }
 
     if (l->tx_buf_read < l->tx_buf_write) {
-      if (gst_poll_fd_has_error (l->fdset, &l->fd_w) ||
-          gst_poll_fd_has_closed (l->fdset, &l->fd_r)) {
-        GST_ERROR ("write fd %d closed/errored", l->fd_w.fd);
+      if (gst_poll_fd_has_error (l->fdset, &l->fd_w)) {
+        GST_ERROR ("write fd %d errored", l->fd_w.fd);
         goto fail_and_cleanup;
       }
       if (gst_poll_fd_can_write (l->fdset, &l->fd_w)) {
         if (!write_one (l))
           goto fail_and_cleanup;
+      } else if (gst_poll_fd_has_closed (l->fdset, &l->fd_w)) {
+        GST_LOG ("write fd %d closed", l->fd_w.fd);
+        goto fail_and_cleanup;
       }
     }
   } while (l->tx_buf_read < l->tx_buf_write);

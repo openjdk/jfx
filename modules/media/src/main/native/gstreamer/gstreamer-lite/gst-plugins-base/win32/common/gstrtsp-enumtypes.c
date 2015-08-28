@@ -279,6 +279,9 @@ gst_rtsp_header_field_get_type (void)
           "x-server-ip-address"},
       {GST_RTSP_HDR_X_SESSIONCOOKIE, "GST_RTSP_HDR_X_SESSIONCOOKIE",
           "x-sessioncookie"},
+      {GST_RTSP_HDR_RTCP_INTERVAL, "GST_RTSP_HDR_RTCP_INTERVAL",
+          "rtcp-interval"},
+      {GST_RTSP_HDR_KEYMGMT, "GST_RTSP_HDR_KEYMGMT", "keymgmt"},
       {GST_RTSP_HDR_LAST, "GST_RTSP_HDR_LAST", "last"},
       {0, NULL, NULL}
     };
@@ -365,6 +368,8 @@ gst_rtsp_status_code_get_type (void)
           "unsupported-transport"},
       {GST_RTSP_STS_DESTINATION_UNREACHABLE,
           "GST_RTSP_STS_DESTINATION_UNREACHABLE", "destination-unreachable"},
+      {GST_RTSP_STS_KEY_MANAGEMENT_FAILURE,
+          "GST_RTSP_STS_KEY_MANAGEMENT_FAILURE", "key-management-failure"},
       {GST_RTSP_STS_INTERNAL_SERVER_ERROR, "GST_RTSP_STS_INTERNAL_SERVER_ERROR",
           "internal-server-error"},
       {GST_RTSP_STS_NOT_IMPLEMENTED, "GST_RTSP_STS_NOT_IMPLEMENTED",

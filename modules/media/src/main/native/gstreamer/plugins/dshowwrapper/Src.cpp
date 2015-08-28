@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -78,7 +78,7 @@ HRESULT COutputPin::DecideBufferSize(IMemAllocator *pAlloc, ALLOCATOR_PROPERTIES
         ALLOCATOR_PROPERTIES actual;
 
         ppropInputRequest->cBuffers = 1;
-        ppropInputRequest->cbBuffer = 1;
+        ppropInputRequest->cbBuffer = 10;
 
         hr = m_pIAlloc->SetProperties(ppropInputRequest, &actual);
         if (FAILED(hr))
@@ -172,9 +172,6 @@ HRESULT COutputPin::DeliverSample(GstBuffer *pBuffer)
 
     if (GST_BUFFER_IS_DISCONT(pBuffer))
         pSample->SetDiscontinuity(TRUE);
-
-    if (GST_BUFFER_FLAG_IS_SET(pBuffer, GST_BUFFER_FLAG_PREROLL))
-        pSample->SetPreroll(TRUE);
 
     hr = Deliver(pSample);
     pSample->Release();

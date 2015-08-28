@@ -13,8 +13,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 
@@ -59,7 +59,6 @@ struct _GstAiffParse {
   GstPad      *sinkpad;
   GstPad      *srcpad;
 
-  GstCaps     *caps;
   GstEvent    *close_segment;
   GstEvent    *start_segment;
 
@@ -83,6 +82,7 @@ struct _GstAiffParse {
   guint32 bps;
 
   guint bytes_per_sample;
+  guint max_buf_size;
 
   guint32   total_frames;
 
@@ -113,6 +113,9 @@ struct _GstAiffParse {
 
   /* discont after seek */
   gboolean discont;
+
+  /* tags */
+  GstTagList *tags;
 };
 
 struct _GstAiffParseClass {

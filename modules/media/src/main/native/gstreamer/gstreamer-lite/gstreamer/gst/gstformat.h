@@ -17,8 +17,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 
@@ -50,12 +50,12 @@ G_BEGIN_DECLS
 /* NOTE: don't forget to update the table in gstformat.c when changing
  * this enum */
 typedef enum {
-  GST_FORMAT_UNDEFINED 	=  0, /* must be first in list */
-  GST_FORMAT_DEFAULT   	=  1,
-  GST_FORMAT_BYTES   	=  2,
-  GST_FORMAT_TIME 	=  3,
-  GST_FORMAT_BUFFERS	=  4,
-  GST_FORMAT_PERCENT	=  5
+  GST_FORMAT_UNDEFINED  =  0, /* must be first in list */
+  GST_FORMAT_DEFAULT    =  1,
+  GST_FORMAT_BYTES      =  2,
+  GST_FORMAT_TIME       =  3,
+  GST_FORMAT_BUFFERS    =  4,
+  GST_FORMAT_PERCENT    =  5
 } GstFormat;
 
 /* a percentage is always relative to 1000000 */
@@ -64,14 +64,14 @@ typedef enum {
  *
  * The PERCENT format is between 0 and this value
  */
-#define	GST_FORMAT_PERCENT_MAX		G_GINT64_CONSTANT (1000000)
+#define GST_FORMAT_PERCENT_MAX          G_GINT64_CONSTANT (1000000)
 /**
  * GST_FORMAT_PERCENT_SCALE:
  *
  * The value used to scale down the reported PERCENT format value to
  * its real value.
  */
-#define	GST_FORMAT_PERCENT_SCALE	G_GINT64_CONSTANT (10000)
+#define GST_FORMAT_PERCENT_SCALE        G_GINT64_CONSTANT (10000)
 
 typedef struct _GstFormatDefinition GstFormatDefinition;
 
@@ -96,17 +96,17 @@ const gchar*    gst_format_get_name             (GstFormat format);
 GQuark          gst_format_to_quark             (GstFormat format);
 
 /* register a new format */
-GstFormat	gst_format_register		(const gchar *nick,
-						 const gchar *description);
-GstFormat	gst_format_get_by_nick		(const gchar *nick);
+GstFormat       gst_format_register             (const gchar *nick,
+                                                 const gchar *description);
+GstFormat       gst_format_get_by_nick          (const gchar *nick);
 
 /* check if a format is in an array of formats */
-gboolean	gst_formats_contains		(const GstFormat *formats, GstFormat format);
+gboolean        gst_formats_contains            (const GstFormat *formats, GstFormat format);
 
 /* query for format details */
 const GstFormatDefinition*
-		gst_format_get_details		(GstFormat format);
-GstIterator* 	gst_format_iterate_definitions 	(void);
+                gst_format_get_details          (GstFormat format);
+GstIterator*    gst_format_iterate_definitions  (void);
 
 G_END_DECLS
 

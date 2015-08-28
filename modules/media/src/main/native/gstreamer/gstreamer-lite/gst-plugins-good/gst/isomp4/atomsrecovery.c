@@ -13,8 +13,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 /*
  * Unless otherwise indicated, Source Code is licensed under MIT license.
@@ -51,7 +51,7 @@
  *
  * 2) CRASH!
  *
- * 3) gst-launch qtmoovrecover recovery-input=path.mrf broken-input=moovie.mov \
+ * 3) gst-launch-1.0 qtmoovrecover recovery-input=path.mrf broken-input=moovie.mov \
         fixed-output=recovered.mov
  *
  * 4) (Hopefully) enjoy recovered.mov.
@@ -108,17 +108,23 @@ atoms_recov_write_ftyp_info (FILE * f, AtomFTYP * ftyp, GstBuffer * prefix)
   guint64 size = 0;
 
   if (prefix) {
-    if (fwrite (GST_BUFFER_DATA (prefix), 1, GST_BUFFER_SIZE (prefix), f) !=
-        GST_BUFFER_SIZE (prefix)) {
+    GstMapInfo map;
+
+    gst_buffer_map (prefix, &map, GST_MAP_READ);
+    if (fwrite (map.data, 1, map.size, f) != map.size) {
+      gst_buffer_unmap (prefix, &map);
       return FALSE;
     }
+    gst_buffer_unmap (prefix, &map);
   }
   if (!atom_ftyp_copy_data (ftyp, &data, &size, &offset)) {
     return FALSE;
   }
   if (fwrite (data, 1, offset, f) != offset) {
+    g_free (data);
     return FALSE;
   }
+  g_free (data);
   return TRUE;
 }
 
@@ -475,7 +481,8 @@ moov_recov_parse_tkhd (MoovRecovFile * moovrf, TrakRecovData * trakrd)
     return FALSE;
 
   /* advance the rest of tkhd */
-  fseek (moovrf->file, 68, SEEK_CUR);
+  if (fseek (moovrf->file, 68, SEEK_CUR) != 0)
+    return FALSE;
 
   trakrd->trak_id = GST_READ_UINT32_BE (data);
   return TRUE;
@@ -676,6 +683,13 @@ moov_recov_file_create (FILE * file, GError ** err)
   if (!moov_recov_parse_num_traks (moovrf)) {
     g_set_error (err, ATOMS_RECOV_QUARK, ATOMS_RECOV_ERR_PARSING,
         "Error while parsing parsing number of traks");
+    goto fail;
+  }
+
+  /* sanity check */
+  if (moovrf->num_traks > 1024) {
+    g_set_error (err, ATOMS_RECOV_QUARK, ATOMS_RECOV_ERR_PARSING,
+        "Unsupported number of traks");
     goto fail;
   }
 

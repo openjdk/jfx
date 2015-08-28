@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,13 +28,13 @@
 
 // According to ffmpeg Git they introduced
 // _decode_audio4  in version 53.25.0
-#define DECODE_AUDIO4   (LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(53,25,0))
+#define DECODE_AUDIO4          (LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(53,25,0))
 
 // New AVCodecID was introduced in 54.25.0
-#define NEW_CODEC_ID    (LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(54,25,0))
+#define NEW_CODEC_ID           (LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(54,25,0))
 
 // New Frame alloc functions were introduced in 55.28.0
-#define NEW_ALLOC_FRAME (LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55,28,0))
+#define NEW_ALLOC_FRAME        (LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55,28,0))
 
 #endif	/* AVDEFINES_H */
 

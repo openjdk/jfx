@@ -38,8 +38,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  *
  * The development of this code was made possible due to the involvement of
  * Pioneers of the Inevitable, the creators of the Songbird Music player
@@ -49,8 +49,16 @@
 #ifndef __GST_OSX_AUDIO_ELEMENT_H__
 #define __GST_OSX_AUDIO_ELEMENT_H__
 
+#ifdef HAVE_CONFIG_H
+#  include <config.h>
+#endif
+
 #include <gst/gst.h>
+#ifdef HAVE_IOS
+#include <CoreAudio/CoreAudioTypes.h>
+#else
 #include <CoreAudio/CoreAudio.h>
+#endif
 #include <AudioUnit/AudioUnit.h>
 
 G_BEGIN_DECLS

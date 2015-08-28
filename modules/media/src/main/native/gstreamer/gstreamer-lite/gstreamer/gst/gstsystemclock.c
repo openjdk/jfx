@@ -16,8 +16,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 /**
@@ -34,8 +34,6 @@
  * Subclasses can however override all of the important methods for sync and
  * async notifications to implement their own callback methods or blocking
  * wait operations.
- *
- * Last reviewed on 2006-03-08 (0.10.4)
  */
 
 #include "gst_private.h"
@@ -52,19 +50,32 @@
 #  define WIN32_LEAN_AND_MEAN   /* prevents from including too many things */
 #  include <windows.h>          /* QueryPerformance* stuff */
 #  undef WIN32_LEAN_AND_MEAN
+#  ifndef EWOULDBLOCK
 #  define EWOULDBLOCK EAGAIN    /* This is just to placate gcc */
+#  endif
 #endif /* G_OS_WIN32 */
 
-#define GET_ENTRY_STATUS(e)          (g_atomic_int_get(&GST_CLOCK_ENTRY_STATUS(e)))
+#define GET_ENTRY_STATUS(e)          ((GstClockReturn) g_atomic_int_get(&GST_CLOCK_ENTRY_STATUS(e)))
 #define SET_ENTRY_STATUS(e,val)      (g_atomic_int_set(&GST_CLOCK_ENTRY_STATUS(e),(val)))
-#define CAS_ENTRY_STATUS(e,old,val)  (G_ATOMIC_INT_COMPARE_AND_EXCHANGE(\
+#define CAS_ENTRY_STATUS(e,old,val)  (g_atomic_int_compare_and_exchange(\
                                        (&GST_CLOCK_ENTRY_STATUS(e)), (old), (val)))
 
 /* Define this to get some extra debug about jitter from each clock_wait */
 #undef WAIT_DEBUGGING
 
+#define GST_SYSTEM_CLOCK_GET_COND(clock)        (&GST_SYSTEM_CLOCK_CAST(clock)->priv->entries_changed)
+#define GST_SYSTEM_CLOCK_WAIT(clock)            g_cond_wait(GST_SYSTEM_CLOCK_GET_COND(clock),GST_OBJECT_GET_LOCK(clock))
+#define GST_SYSTEM_CLOCK_TIMED_WAIT(clock,tv)   g_cond_timed_wait(GST_SYSTEM_CLOCK_GET_COND(clock),GST_OBJECT_GET_LOCK(clock),tv)
+#define GST_SYSTEM_CLOCK_BROADCAST(clock)       g_cond_broadcast(GST_SYSTEM_CLOCK_GET_COND(clock))
+
 struct _GstSystemClockPrivate
 {
+  GThread *thread;              /* thread for async notify */
+  gboolean stopping;
+
+  GList *entries;
+  GCond entries_changed;
+
   GstClockType clock_type;
   GstPoll *timer;
   gint wakeup_count;            /* the number of entries with a pending wakeup */
@@ -99,6 +110,7 @@ enum
 
 /* the one instance of the systemclock */
 static GstClock *_the_system_clock = NULL;
+static gboolean _external_default_clock = FALSE;
 
 static void gst_system_clock_dispose (GObject * object);
 static void gst_system_clock_set_property (GObject * object, guint prop_id,
@@ -121,12 +133,11 @@ static void gst_system_clock_async_thread (GstClock * clock);
 static gboolean gst_system_clock_start_async (GstSystemClock * clock);
 static void gst_system_clock_add_wakeup (GstSystemClock * sysclock);
 
-static GStaticMutex _gst_sysclock_mutex = G_STATIC_MUTEX_INIT;
-
-static GstClockClass *parent_class = NULL;
+static GMutex _gst_sysclock_mutex;
 
 /* static guint gst_system_clock_signals[LAST_SIGNAL] = { 0 }; */
 
+#define gst_system_clock_parent_class parent_class
 G_DEFINE_TYPE (GstSystemClock, gst_system_clock, GST_TYPE_CLOCK);
 
 static void
@@ -137,8 +148,6 @@ gst_system_clock_class_init (GstSystemClockClass * klass)
 
   gobject_class = (GObjectClass *) klass;
   gstclock_class = (GstClockClass *) klass;
-
-  parent_class = g_type_class_peek_parent (klass);
 
   g_type_class_add_private (klass, sizeof (GstSystemClockPrivate));
 
@@ -154,7 +163,7 @@ gst_system_clock_class_init (GstSystemClockClass * klass)
 
   gstclock_class->get_internal_time = gst_system_clock_get_internal_time;
   gstclock_class->get_resolution = gst_system_clock_get_resolution;
-  gstclock_class->wait_jitter = gst_system_clock_id_wait_jitter;
+  gstclock_class->wait = gst_system_clock_id_wait_jitter;
   gstclock_class->wait_async = gst_system_clock_id_wait_async;
   gstclock_class->unschedule = gst_system_clock_id_unschedule;
 }
@@ -162,23 +171,28 @@ gst_system_clock_class_init (GstSystemClockClass * klass)
 static void
 gst_system_clock_init (GstSystemClock * clock)
 {
+  GstSystemClockPrivate *priv;
+
   GST_OBJECT_FLAG_SET (clock,
       GST_CLOCK_FLAG_CAN_DO_SINGLE_SYNC |
       GST_CLOCK_FLAG_CAN_DO_SINGLE_ASYNC |
       GST_CLOCK_FLAG_CAN_DO_PERIODIC_SYNC |
       GST_CLOCK_FLAG_CAN_DO_PERIODIC_ASYNC);
 
-  clock->priv = GST_SYSTEM_CLOCK_GET_PRIVATE (clock);
+  clock->priv = priv = GST_SYSTEM_CLOCK_GET_PRIVATE (clock);
 
-  clock->priv->clock_type = DEFAULT_CLOCK_TYPE;
-  clock->priv->timer = gst_poll_new_timer ();
+  priv->clock_type = DEFAULT_CLOCK_TYPE;
+  priv->timer = gst_poll_new_timer ();
+
+  priv->entries = NULL;
+  g_cond_init (&priv->entries_changed);
 
 #ifdef G_OS_WIN32
-  QueryPerformanceFrequency (&clock->priv->frequency);
+  QueryPerformanceFrequency (&priv->frequency);
   /* can be 0 if the hardware does not have hardware support */
-  if (clock->priv->frequency.QuadPart != 0)
+  if (priv->frequency.QuadPart != 0)
     /* we take a base time so that time starts from 0 to ease debugging */
-    QueryPerformanceCounter (&clock->priv->start);
+    QueryPerformanceCounter (&priv->start);
 #endif /* G_OS_WIN32 */
 
 #if 0
@@ -194,32 +208,34 @@ gst_system_clock_dispose (GObject * object)
 {
   GstClock *clock = (GstClock *) object;
   GstSystemClock *sysclock = GST_SYSTEM_CLOCK_CAST (clock);
+  GstSystemClockPrivate *priv = sysclock->priv;
   GList *entries;
 
   /* else we have to stop the thread */
   GST_OBJECT_LOCK (clock);
-  sysclock->stopping = TRUE;
+  priv->stopping = TRUE;
   /* unschedule all entries */
-  for (entries = clock->entries; entries; entries = g_list_next (entries)) {
+  for (entries = priv->entries; entries; entries = g_list_next (entries)) {
     GstClockEntry *entry = (GstClockEntry *) entries->data;
 
     GST_CAT_DEBUG (GST_CAT_CLOCK, "unscheduling entry %p", entry);
     SET_ENTRY_STATUS (entry, GST_CLOCK_UNSCHEDULED);
   }
-  GST_CLOCK_BROADCAST (clock);
+  GST_SYSTEM_CLOCK_BROADCAST (clock);
   gst_system_clock_add_wakeup (sysclock);
   GST_OBJECT_UNLOCK (clock);
 
-  if (sysclock->thread)
-    g_thread_join (sysclock->thread);
-  sysclock->thread = NULL;
+  if (priv->thread)
+    g_thread_join (priv->thread);
+  priv->thread = NULL;
   GST_CAT_DEBUG (GST_CAT_CLOCK, "joined thread");
 
-  g_list_foreach (clock->entries, (GFunc) gst_clock_id_unref, NULL);
-  g_list_free (clock->entries);
-  clock->entries = NULL;
+  g_list_foreach (priv->entries, (GFunc) gst_clock_id_unref, NULL);
+  g_list_free (priv->entries);
+  priv->entries = NULL;
 
-  gst_poll_free (sysclock->priv->timer);
+  gst_poll_free (priv->timer);
+  g_cond_clear (&priv->entries_changed);
 
   G_OBJECT_CLASS (parent_class)->dispose (object);
 
@@ -237,7 +253,7 @@ gst_system_clock_set_property (GObject * object, guint prop_id,
 
   switch (prop_id) {
     case PROP_CLOCK_TYPE:
-      sysclock->priv->clock_type = g_value_get_enum (value);
+      sysclock->priv->clock_type = (GstClockType) g_value_get_enum (value);
       GST_CAT_DEBUG (GST_CAT_CLOCK, "clock-type set to %d",
           sysclock->priv->clock_type);
       break;
@@ -264,6 +280,45 @@ gst_system_clock_get_property (GObject * object, guint prop_id, GValue * value,
 }
 
 /**
+ * gst_system_clock_set_default:
+ * @new_clock: a #GstClock
+ *
+ * Sets the default system clock that can be obtained with
+ * gst_system_clock_obtain().
+ *
+ * This is mostly used for testing and debugging purposes when you
+ * want to have control over the time reported by the default system
+ * clock.
+ *
+ * MT safe.
+ *
+ * Since: 1.4
+ */
+void
+gst_system_clock_set_default (GstClock * new_clock)
+{
+  GstClock *clock;
+
+  g_mutex_lock (&_gst_sysclock_mutex);
+  clock = _the_system_clock;
+
+  if (clock != NULL)
+    g_object_unref (clock);
+
+  if (new_clock == NULL) {
+    GST_CAT_DEBUG (GST_CAT_CLOCK, "resetting default system clock");
+    _external_default_clock = FALSE;
+  } else {
+    GST_CAT_DEBUG (GST_CAT_CLOCK, "setting new default system clock to %p",
+        new_clock);
+    _external_default_clock = TRUE;
+    g_object_ref (new_clock);
+  }
+  _the_system_clock = new_clock;
+  g_mutex_unlock (&_gst_sysclock_mutex);
+}
+
+/**
  * gst_system_clock_obtain:
  *
  * Get a handle to the default system clock. The refcount of the
@@ -279,22 +334,21 @@ gst_system_clock_obtain (void)
 {
   GstClock *clock;
 
-  g_static_mutex_lock (&_gst_sysclock_mutex);
+  g_mutex_lock (&_gst_sysclock_mutex);
   clock = _the_system_clock;
 
   if (clock == NULL) {
     GST_CAT_DEBUG (GST_CAT_CLOCK, "creating new static system clock");
+    g_assert (_external_default_clock == FALSE);
     clock = g_object_new (GST_TYPE_SYSTEM_CLOCK,
         "name", "GstSystemClock", NULL);
 
-    /* we created the global clock; take ownership so
-     * we can hand out instances later */
-    gst_object_ref_sink (clock);
+    g_assert (!g_object_is_floating (G_OBJECT (clock)));
 
     _the_system_clock = clock;
-    g_static_mutex_unlock (&_gst_sysclock_mutex);
+    g_mutex_unlock (&_gst_sysclock_mutex);
   } else {
-    g_static_mutex_unlock (&_gst_sysclock_mutex);
+    g_mutex_unlock (&_gst_sysclock_mutex);
     GST_CAT_DEBUG (GST_CAT_CLOCK, "returning static system clock");
   }
 
@@ -315,7 +369,7 @@ gst_system_clock_remove_wakeup (GstSystemClock * sysclock)
     while (!gst_poll_read_control (sysclock->priv->timer)) {
       g_warning ("gstsystemclock: read control failed, trying again\n");
     }
-    GST_CLOCK_BROADCAST (sysclock);
+    GST_SYSTEM_CLOCK_BROADCAST (sysclock);
   }
   GST_CAT_DEBUG (GST_CAT_CLOCK, "wakeup count %d",
       sysclock->priv->wakeup_count);
@@ -328,9 +382,16 @@ gst_system_clock_add_wakeup (GstSystemClock * sysclock)
   if (sysclock->priv->wakeup_count == 0) {
     GST_CAT_DEBUG (GST_CAT_CLOCK, "writing control");
     while (!gst_poll_write_control (sysclock->priv->timer)) {
-      g_warning
-          ("gstsystemclock: write control failed in wakeup_async, trying again : %d:%s\n",
-          errno, g_strerror (errno));
+      if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
+        g_warning
+            ("gstsystemclock: write control failed in wakeup_async, trying again: %d:%s\n",
+            errno, g_strerror (errno));
+      } else {
+        g_critical
+            ("gstsystemclock: write control failed in wakeup_async: %d:%s\n",
+            errno, g_strerror (errno));
+        return;
+      }
     }
   }
   sysclock->priv->wakeup_count++;
@@ -342,7 +403,7 @@ static void
 gst_system_clock_wait_wakeup (GstSystemClock * sysclock)
 {
   while (sysclock->priv->wakeup_count > 0) {
-    GST_CLOCK_WAIT (sysclock);
+    GST_SYSTEM_CLOCK_WAIT (sysclock);
   }
 }
 
@@ -362,38 +423,39 @@ static void
 gst_system_clock_async_thread (GstClock * clock)
 {
   GstSystemClock *sysclock = GST_SYSTEM_CLOCK_CAST (clock);
+  GstSystemClockPrivate *priv = sysclock->priv;
 
   GST_CAT_DEBUG (GST_CAT_CLOCK, "enter system clock thread");
   GST_OBJECT_LOCK (clock);
   /* signal spinup */
-  GST_CLOCK_BROADCAST (clock);
+  GST_SYSTEM_CLOCK_BROADCAST (clock);
   /* now enter our (almost) infinite loop */
-  while (!sysclock->stopping) {
+  while (!priv->stopping) {
     GstClockEntry *entry;
     GstClockTime requested;
     GstClockReturn res;
 
     /* check if something to be done */
-    while (clock->entries == NULL) {
+    while (priv->entries == NULL) {
       GST_CAT_DEBUG (GST_CAT_CLOCK, "no clock entries, waiting..");
       /* wait for work to do */
-      GST_CLOCK_WAIT (clock);
+      GST_SYSTEM_CLOCK_WAIT (clock);
       GST_CAT_DEBUG (GST_CAT_CLOCK, "got signal");
       /* clock was stopping, exit */
-      if (sysclock->stopping)
+      if (priv->stopping)
         goto exit;
     }
 
     /* see if we have a pending wakeup because the order of the list
      * changed. */
-    if (sysclock->priv->async_wakeup) {
+    if (priv->async_wakeup) {
       GST_CAT_DEBUG (GST_CAT_CLOCK, "clear async wakeup");
       gst_system_clock_remove_wakeup (sysclock);
-      sysclock->priv->async_wakeup = FALSE;
+      priv->async_wakeup = FALSE;
     }
 
     /* pick the next entry */
-    entry = clock->entries->data;
+    entry = priv->entries->data;
     GST_OBJECT_UNLOCK (clock);
 
     requested = entry->time;
@@ -428,8 +490,8 @@ gst_system_clock_async_thread (GstClock * clock)
           /* adjust time now */
           entry->time = requested + entry->interval;
           /* and resort the list now */
-          clock->entries =
-              g_list_sort (clock->entries, gst_clock_id_compare_func);
+          priv->entries =
+              g_list_sort (priv->entries, gst_clock_id_compare_func);
           /* and restart */
           continue;
         } else {
@@ -458,12 +520,12 @@ gst_system_clock_async_thread (GstClock * clock)
     }
   next_entry:
     /* we remove the current entry and unref it */
-    clock->entries = g_list_remove (clock->entries, entry);
+    priv->entries = g_list_remove (priv->entries, entry);
     gst_clock_id_unref ((GstClockID) entry);
   }
 exit:
   /* signal exit */
-  GST_CLOCK_BROADCAST (clock);
+  GST_SYSTEM_CLOCK_BROADCAST (clock);
   GST_OBJECT_UNLOCK (clock);
   GST_CAT_DEBUG (GST_CAT_CLOCK, "exit system clock thread");
 }
@@ -498,7 +560,7 @@ gst_system_clock_get_internal_time (GstClock * clock)
         GST_SECOND, sysclock->priv->frequency.QuadPart);
   } else
 #endif /* G_OS_WIN32 */
-#if !defined HAVE_POSIX_TIMERS
+#if !defined HAVE_POSIX_TIMERS || !defined HAVE_CLOCK_GETTIME
   {
     GTimeVal timeval;
 
@@ -532,7 +594,7 @@ gst_system_clock_get_resolution (GstClock * clock)
     return GST_SECOND / sysclock->priv->frequency.QuadPart;
   } else
 #endif /* G_OS_WIN32 */
-#ifdef HAVE_POSIX_TIMERS
+#if defined(HAVE_POSIX_TIMERS) && defined(HAVE_CLOCK_GETTIME)
   {
     GstSystemClock *sysclock = GST_SYSTEM_CLOCK_CAST (clock);
     clockid_t ptype;
@@ -575,7 +637,8 @@ gst_system_clock_id_wait_jitter_unlocked (GstClock * clock,
   GstClockTimeDiff diff;
   GstClockReturn status;
 
-  if (G_UNLIKELY (GET_ENTRY_STATUS (entry) == GST_CLOCK_UNSCHEDULED))
+  status = GET_ENTRY_STATUS (entry);
+  if (G_UNLIKELY (status == GST_CLOCK_UNSCHEDULED))
     return GST_CLOCK_UNSCHEDULED;
 
   /* need to call the overridden method because we want to sync against the time
@@ -675,8 +738,13 @@ gst_system_clock_id_wait_jitter_unlocked (GstClock * clock,
 
         if (diff <= 0) {
           /* timeout, this is fine, we can report success now */
-          status = GST_CLOCK_OK;
-          SET_ENTRY_STATUS (entry, status);
+          if (G_UNLIKELY (!CAS_ENTRY_STATUS (entry, GST_CLOCK_DONE, GST_CLOCK_OK))) {
+            GST_CAT_DEBUG (GST_CAT_CLOCK, "unexpected status for entry %p", entry);
+            status = GET_ENTRY_STATUS (entry);
+            goto done;
+          } else {
+            status = GST_CLOCK_OK;
+          }
 
           GST_CAT_DEBUG (GST_CAT_CLOCK,
               "entry %p finished, diff %" G_GINT64_FORMAT, entry, diff);
@@ -700,12 +768,21 @@ gst_system_clock_id_wait_jitter_unlocked (GstClock * clock,
     }
   } else {
     /* we are right on time or too late */
-    if (G_UNLIKELY (diff == 0))
-      status = GST_CLOCK_OK;
-    else
-      status = GST_CLOCK_EARLY;
-
-    SET_ENTRY_STATUS (entry, status);
+    if (G_UNLIKELY (diff == 0)) {
+      if (G_UNLIKELY (!CAS_ENTRY_STATUS (entry, status, GST_CLOCK_OK))) {
+        GST_CAT_DEBUG (GST_CAT_CLOCK, "unexpected status for entry %p", entry);
+        status = GET_ENTRY_STATUS (entry);
+      } else {
+        status = GST_CLOCK_OK;
+      }
+    } else {
+      if (G_UNLIKELY (!CAS_ENTRY_STATUS (entry, status, GST_CLOCK_EARLY))) {
+        GST_CAT_DEBUG (GST_CAT_CLOCK, "unexpected status for entry %p", entry);
+        status = GET_ENTRY_STATUS (entry);
+      } else {
+        status = GST_CLOCK_EARLY;
+      }
+    }
   }
 done:
   return status;
@@ -724,17 +801,19 @@ static gboolean
 gst_system_clock_start_async (GstSystemClock * clock)
 {
   GError *error = NULL;
+  GstSystemClockPrivate *priv = clock->priv;
 
-  if (G_LIKELY (clock->thread != NULL))
+  if (G_LIKELY (priv->thread != NULL))
     return TRUE;                /* Thread already running. Nothing to do */
 
-  clock->thread = g_thread_create ((GThreadFunc) gst_system_clock_async_thread,
-      clock, TRUE, &error);
+  priv->thread = g_thread_try_new ("GstSystemClock",
+      (GThreadFunc) gst_system_clock_async_thread, clock, &error);
+
   if (G_UNLIKELY (error))
     goto no_thread;
 
   /* wait for it to spin up */
-  GST_CLOCK_WAIT (clock);
+  GST_SYSTEM_CLOCK_WAIT (clock);
 
   return TRUE;
 
@@ -758,9 +837,11 @@ static GstClockReturn
 gst_system_clock_id_wait_async (GstClock * clock, GstClockEntry * entry)
 {
   GstSystemClock *sysclock;
+  GstSystemClockPrivate *priv;
   GstClockEntry *head;
 
   sysclock = GST_SYSTEM_CLOCK_CAST (clock);
+  priv = sysclock->priv;
 
   GST_CAT_DEBUG (GST_CAT_CLOCK, "adding async entry %p", entry);
 
@@ -772,27 +853,27 @@ gst_system_clock_id_wait_async (GstClock * clock, GstClockEntry * entry)
   if (G_UNLIKELY (GET_ENTRY_STATUS (entry) == GST_CLOCK_UNSCHEDULED))
     goto was_unscheduled;
 
-  if (clock->entries)
-    head = clock->entries->data;
+  if (priv->entries)
+    head = priv->entries->data;
   else
     head = NULL;
 
   /* need to take a ref */
   gst_clock_id_ref ((GstClockID) entry);
   /* insert the entry in sorted order */
-  clock->entries = g_list_insert_sorted (clock->entries, entry,
+  priv->entries = g_list_insert_sorted (priv->entries, entry,
       gst_clock_id_compare_func);
 
   /* only need to send the signal if the entry was added to the
    * front, else the thread is just waiting for another entry and
    * will get to this entry automatically. */
-  if (clock->entries->data == entry) {
+  if (priv->entries->data == entry) {
     GST_CAT_DEBUG (GST_CAT_CLOCK, "async entry added to head %p", head);
     if (head == NULL) {
       /* the list was empty before, signal the cond so that the async thread can
        * start taking a look at the queue */
       GST_CAT_DEBUG (GST_CAT_CLOCK, "first entry, sending signal");
-      GST_CLOCK_BROADCAST (clock);
+      GST_SYSTEM_CLOCK_BROADCAST (clock);
     } else {
       GstClockReturn status;
 
@@ -803,9 +884,9 @@ gst_system_clock_id_wait_async (GstClock * clock, GstClockEntry * entry)
         GST_CAT_DEBUG (GST_CAT_CLOCK, "head entry is busy");
         /* the async thread was waiting for an entry, unlock the wait so that it
          * looks at the new head entry instead, we only need to do this once */
-        if (!sysclock->priv->async_wakeup) {
+        if (!priv->async_wakeup) {
           GST_CAT_DEBUG (GST_CAT_CLOCK, "wakeup async thread");
-          sysclock->priv->async_wakeup = TRUE;
+          priv->async_wakeup = TRUE;
           gst_system_clock_add_wakeup (sysclock);
         }
       }

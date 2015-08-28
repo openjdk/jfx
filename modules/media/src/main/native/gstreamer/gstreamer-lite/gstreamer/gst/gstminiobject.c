@@ -15,19 +15,38 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 /**
  * SECTION:gstminiobject
  * @short_description: Lightweight base class for the GStreamer object hierarchy
  *
- * #GstMiniObject is a baseclass like #GObject, but has been stripped down of
- * features to be fast and small.
- * It offers sub-classing and ref-counting in the same way as #GObject does.
- * It has no properties and no signal-support though.
+ * #GstMiniObject is a simple structure that can be used to implement refcounted
+ * types.
  *
- * Last reviewed on 2005-11-23 (0.9.5)
+ * Subclasses will include #GstMiniObject as the first member in their structure
+ * and then call gst_mini_object_init() to initialize the #GstMiniObject fields.
+ *
+ * gst_mini_object_ref() and gst_mini_object_unref() increment and decrement the
+ * refcount respectively. When the refcount of a mini-object reaches 0, the
+ * dispose function is called first and when this returns %TRUE, the free
+ * function of the miniobject is called.
+ *
+ * A copy can be made with gst_mini_object_copy().
+ *
+ * gst_mini_object_is_writable() will return %TRUE when the refcount of the
+ * object is exactly 1, meaning the current caller has the only reference to the
+ * object. gst_mini_object_make_writable() will return a writable version of the
+ * object, which might be a new copy when the refcount was not 1.
+ *
+ * Opaque data can be associated with a #GstMiniObject with
+ * gst_mini_object_set_qdata() and gst_mini_object_get_qdata(). The data is
+ * meant to be specific to the particular object and is not automatically copied
+ * with gst_mini_object_copy() or similar methods.
+ *
+ * A weak reference can be added and remove with gst_mini_object_weak_ref()
+ * and gst_mini_object_weak_unref() respectively.
  */
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -43,171 +62,77 @@
 static GstAllocTrace *_gst_mini_object_trace;
 #endif
 
-#define GST_MINI_OBJECT_GET_CLASS_UNCHECKED(obj) \
-    ((GstMiniObjectClass *) (((GTypeInstance*)(obj))->g_class))
+/* Mutex used for weak referencing */
+G_LOCK_DEFINE_STATIC (qdata_mutex);
+static GQuark weak_ref_quark;
 
-#if 0
-static void gst_mini_object_base_init (gpointer g_class);
-static void gst_mini_object_base_finalize (gpointer g_class);
-#endif
-static void gst_mini_object_class_init (gpointer g_class, gpointer class_data);
-static void gst_mini_object_init (GTypeInstance * instance, gpointer klass);
+#define SHARE_ONE (1 << 16)
+#define SHARE_TWO (2 << 16)
+#define SHARE_MASK (~(SHARE_ONE - 1))
+#define IS_SHARED(state) (state >= SHARE_TWO)
+#define LOCK_ONE (GST_LOCK_FLAG_LAST)
+#define FLAG_MASK (GST_LOCK_FLAG_LAST - 1)
+#define LOCK_MASK ((SHARE_ONE - 1) - FLAG_MASK)
+#define LOCK_FLAG_MASK (SHARE_ONE - 1)
 
-static void gst_value_mini_object_init (GValue * value);
-static void gst_value_mini_object_free (GValue * value);
-static void gst_value_mini_object_copy (const GValue * src_value,
-    GValue * dest_value);
-static gpointer gst_value_mini_object_peek_pointer (const GValue * value);
-static gchar *gst_value_mini_object_collect (GValue * value,
-    guint n_collect_values, GTypeCValue * collect_values, guint collect_flags);
-static gchar *gst_value_mini_object_lcopy (const GValue * value,
-    guint n_collect_values, GTypeCValue * collect_values, guint collect_flags);
-
-static GstMiniObject *gst_mini_object_copy_default (const GstMiniObject * obj);
-static void gst_mini_object_finalize (GstMiniObject * obj);
-
-GType
-gst_mini_object_get_type (void)
+typedef struct
 {
-  static volatile GType _gst_mini_object_type = 0;
+  GQuark quark;
+  GstMiniObjectNotify notify;
+  gpointer data;
+  GDestroyNotify destroy;
+} GstQData;
 
-  if (g_once_init_enter (&_gst_mini_object_type)) {
-    GType _type;
-    static const GTypeValueTable value_table = {
-      gst_value_mini_object_init,
-      gst_value_mini_object_free,
-      gst_value_mini_object_copy,
-      gst_value_mini_object_peek_pointer,
-      (char *) "p",
-      gst_value_mini_object_collect,
-      (char *) "p",
-      gst_value_mini_object_lcopy
-    };
-    static const GTypeInfo mini_object_info = {
-      sizeof (GstMiniObjectClass),
-#if 0
-      gst_mini_object_base_init,
-      gst_mini_object_base_finalize,
-#else
-      NULL, NULL,
-#endif
-      gst_mini_object_class_init,
-      NULL,
-      NULL,
-      sizeof (GstMiniObject),
-      0,
-      (GInstanceInitFunc) gst_mini_object_init,
-      &value_table
-    };
-    static const GTypeFundamentalInfo mini_object_fundamental_info = {
-      (G_TYPE_FLAG_CLASSED | G_TYPE_FLAG_INSTANTIATABLE |
-          G_TYPE_FLAG_DERIVABLE | G_TYPE_FLAG_DEEP_DERIVABLE)
-    };
+#define QDATA(o,i)          ((GstQData *)(o)->qdata)[(i)]
+#define QDATA_QUARK(o,i)    (QDATA(o,i).quark)
+#define QDATA_NOTIFY(o,i)   (QDATA(o,i).notify)
+#define QDATA_DATA(o,i)     (QDATA(o,i).data)
+#define QDATA_DESTROY(o,i)  (QDATA(o,i).destroy)
 
-    _type = g_type_fundamental_next ();
-    g_type_register_fundamental (_type, "GstMiniObject",
-        &mini_object_info, &mini_object_fundamental_info, G_TYPE_FLAG_ABSTRACT);
+void
+_priv_gst_mini_object_initialize (void)
+{
+  weak_ref_quark = g_quark_from_static_string ("GstMiniObjectWeakRefQuark");
 
 #ifndef GST_DISABLE_TRACE
-    _gst_mini_object_trace = gst_alloc_trace_register (g_type_name (_type));
+  _gst_mini_object_trace = _gst_alloc_trace_register ("GstMiniObject", 0);
 #endif
-    g_once_init_leave (&_gst_mini_object_type, _type);
-  }
-
-  return _gst_mini_object_type;
-}
-
-#if 0
-static void
-gst_mini_object_base_init (gpointer g_class)
-{
-  /* do nothing */
-}
-
-static void
-gst_mini_object_base_finalize (gpointer g_class)
-{
-  /* do nothing */
-}
-#endif
-
-static void
-gst_mini_object_class_init (gpointer g_class, gpointer class_data)
-{
-  GstMiniObjectClass *mo_class = GST_MINI_OBJECT_CLASS (g_class);
-
-  mo_class->copy = gst_mini_object_copy_default;
-  mo_class->finalize = gst_mini_object_finalize;
-}
-
-static void
-gst_mini_object_init (GTypeInstance * instance, gpointer klass)
-{
-  GstMiniObject *mini_object = GST_MINI_OBJECT_CAST (instance);
-
-  mini_object->refcount = 1;
-}
-
-static GstMiniObject *
-gst_mini_object_copy_default (const GstMiniObject * obj)
-{
-  g_warning ("GstMiniObject classes must implement GstMiniObject::copy");
-  return NULL;
-}
-
-static void
-gst_mini_object_finalize (GstMiniObject * obj)
-{
-  /* do nothing */
-
-  /* WARNING: if anything is ever put in this method, make sure that the
-   * following sub-classes' finalize method chains up to this one:
-   * gstbuffer
-   * gstevent
-   * gstmessage
-   * gstquery
-   */
 }
 
 /**
- * gst_mini_object_new:
+ * gst_mini_object_init: (skip)
+ * @mini_object: a #GstMiniObject
+ * @flags: initial #GstMiniObjectFlags
  * @type: the #GType of the mini-object to create
+ * @copy_func: (allow-none): the copy function, or %NULL
+ * @dispose_func: (allow-none): the dispose function, or %NULL
+ * @free_func: (allow-none): the free function or %NULL
  *
- * Creates a new mini-object of the desired type.
- *
- * MT safe
- *
- * Returns: (transfer full): the new mini-object.
+ * Initializes a mini-object with the desired type and copy/dispose/free
+ * functions.
  */
-GstMiniObject *
-gst_mini_object_new (GType type)
+void
+gst_mini_object_init (GstMiniObject * mini_object, guint flags, GType type,
+    GstMiniObjectCopyFunction copy_func,
+    GstMiniObjectDisposeFunction dispose_func,
+    GstMiniObjectFreeFunction free_func)
 {
-  GstMiniObject *mini_object;
+  mini_object->type = type;
+  mini_object->refcount = 1;
+  mini_object->lockstate = 0;
+  mini_object->flags = flags;
 
-  /* we don't support dynamic types because they really aren't useful,
-   * and could cause refcount problems */
-  mini_object = (GstMiniObject *) g_type_create_instance (type);
+  mini_object->copy = copy_func;
+  mini_object->dispose = dispose_func;
+  mini_object->free = free_func;
+
+  mini_object->n_qdata = 0;
+  mini_object->qdata = NULL;
 
 #ifndef GST_DISABLE_TRACE
-  gst_alloc_trace_new (_gst_mini_object_trace, mini_object);
+  _gst_alloc_trace_new (_gst_mini_object_trace, mini_object);
 #endif
-
-  return mini_object;
 }
-
-/* FIXME 0.11: Current way of doing the copy makes it impossible
- * to currectly chain to the parent classes and do a copy in a
- * subclass without knowing all internals of the parent classes.
- *
- * For 0.11 we should do something like the following:
- *  - The GstMiniObjectClass::copy() implementation of GstMiniObject
- *    should call g_type_create_instance() with the type of the source
- *    object.
- *  - All GstMiniObjectClass::copy() implementations should as first
- *    thing chain up to the parent class and then do whatever they need
- *    to do to copy their type specific data. Note that this way the
- *    instance_init() functions are called!
- */
 
 /**
  * gst_mini_object_copy:
@@ -222,35 +147,153 @@ gst_mini_object_new (GType type)
 GstMiniObject *
 gst_mini_object_copy (const GstMiniObject * mini_object)
 {
-  GstMiniObjectClass *mo_class;
+  GstMiniObject *copy;
 
   g_return_val_if_fail (mini_object != NULL, NULL);
 
-  mo_class = GST_MINI_OBJECT_GET_CLASS (mini_object);
+  if (mini_object->copy)
+    copy = mini_object->copy (mini_object);
+  else
+    copy = NULL;
 
-  return mo_class->copy (mini_object);
+  return copy;
+}
+
+/**
+ * gst_mini_object_lock:
+ * @object: the mini-object to lock
+ * @flags: #GstLockFlags
+ *
+ * Lock the mini-object with the specified access mode in @flags.
+ *
+ * Returns: %TRUE if @object could be locked.
+ */
+gboolean
+gst_mini_object_lock (GstMiniObject * object, GstLockFlags flags)
+{
+  gint access_mode, state, newstate;
+
+  g_return_val_if_fail (object != NULL, FALSE);
+  g_return_val_if_fail (GST_MINI_OBJECT_IS_LOCKABLE (object), FALSE);
+
+  if (G_UNLIKELY (object->flags & GST_MINI_OBJECT_FLAG_LOCK_READONLY &&
+          flags & GST_LOCK_FLAG_WRITE))
+    return FALSE;
+
+  do {
+    access_mode = flags & FLAG_MASK;
+    newstate = state = g_atomic_int_get (&object->lockstate);
+
+    GST_CAT_TRACE (GST_CAT_LOCKING, "lock %p: state %08x, access_mode %d",
+        object, state, access_mode);
+
+    if (access_mode & GST_LOCK_FLAG_EXCLUSIVE) {
+      /* shared ref */
+      newstate += SHARE_ONE;
+      access_mode &= ~GST_LOCK_FLAG_EXCLUSIVE;
+    }
+
+    if (access_mode) {
+      /* shared counter > 1 and write access is not allowed */
+      if (access_mode & GST_LOCK_FLAG_WRITE && IS_SHARED (state))
+        goto lock_failed;
+
+      if ((state & LOCK_FLAG_MASK) == 0) {
+        /* nothing mapped, set access_mode */
+        newstate |= access_mode;
+      } else {
+        /* access_mode must match */
+        if ((state & access_mode) != access_mode)
+          goto lock_failed;
+      }
+      /* increase refcount */
+      newstate += LOCK_ONE;
+    }
+  } while (!g_atomic_int_compare_and_exchange (&object->lockstate, state,
+          newstate));
+
+  return TRUE;
+
+lock_failed:
+  {
+    GST_CAT_DEBUG (GST_CAT_LOCKING,
+        "lock failed %p: state %08x, access_mode %d", object, state,
+        access_mode);
+    return FALSE;
+  }
+}
+
+/**
+ * gst_mini_object_unlock:
+ * @object: the mini-object to unlock
+ * @flags: #GstLockFlags
+ *
+ * Unlock the mini-object with the specified access mode in @flags.
+ */
+void
+gst_mini_object_unlock (GstMiniObject * object, GstLockFlags flags)
+{
+  gint access_mode, state, newstate;
+
+  g_return_if_fail (object != NULL);
+  g_return_if_fail (GST_MINI_OBJECT_IS_LOCKABLE (object));
+
+  do {
+    access_mode = flags & FLAG_MASK;
+    newstate = state = g_atomic_int_get (&object->lockstate);
+
+    GST_CAT_TRACE (GST_CAT_LOCKING, "unlock %p: state %08x, access_mode %d",
+        object, state, access_mode);
+
+    if (access_mode & GST_LOCK_FLAG_EXCLUSIVE) {
+      /* shared counter */
+      g_return_if_fail (state >= SHARE_ONE);
+      newstate -= SHARE_ONE;
+      access_mode &= ~GST_LOCK_FLAG_EXCLUSIVE;
+    }
+
+    if (access_mode) {
+      g_return_if_fail ((state & access_mode) == access_mode);
+      /* decrease the refcount */
+      newstate -= LOCK_ONE;
+      /* last refcount, unset access_mode */
+      if ((newstate & LOCK_FLAG_MASK) == access_mode)
+        newstate &= ~LOCK_FLAG_MASK;
+    }
+  } while (!g_atomic_int_compare_and_exchange (&object->lockstate, state,
+          newstate));
 }
 
 /**
  * gst_mini_object_is_writable:
  * @mini_object: the mini-object to check
  *
- * Checks if a mini-object is writable.  A mini-object is writable
- * if the reference count is one and the #GST_MINI_OBJECT_FLAG_READONLY
- * flag is not set.  Modification of a mini-object should only be
- * done after verifying that it is writable.
+ * If @mini_object has the LOCKABLE flag set, check if the current EXCLUSIVE
+ * lock on @object is the only one, this means that changes to the object will
+ * not be visible to any other object.
  *
- * MT safe
+ * If the LOCKABLE flag is not set, check if the refcount of @mini_object is
+ * exactly 1, meaning that no other reference exists to the object and that the
+ * object is therefore writable.
  *
- * Returns: TRUE if the object is writable.
+ * Modification of a mini-object should only be done after verifying that it
+ * is writable.
+ *
+ * Returns: %TRUE if the object is writable.
  */
 gboolean
 gst_mini_object_is_writable (const GstMiniObject * mini_object)
 {
+  gboolean result;
+
   g_return_val_if_fail (mini_object != NULL, FALSE);
 
-  return (GST_MINI_OBJECT_REFCOUNT_VALUE (mini_object) == 1) &&
-      ((mini_object->flags & GST_MINI_OBJECT_FLAG_READONLY) == 0);
+  if (GST_MINI_OBJECT_IS_LOCKABLE (mini_object)) {
+    result = !IS_SHARED (g_atomic_int_get (&mini_object->lockstate));
+  } else {
+    result = (GST_MINI_OBJECT_REFCOUNT_VALUE (mini_object) == 1);
+  }
+  return result;
 }
 
 /**
@@ -276,9 +319,9 @@ gst_mini_object_make_writable (GstMiniObject * mini_object)
   if (gst_mini_object_is_writable (mini_object)) {
     ret = mini_object;
   } else {
-    GST_CAT_DEBUG (GST_CAT_PERFORMANCE, "copy %s miniobject",
-        g_type_name (G_TYPE_FROM_INSTANCE (mini_object)));
     ret = gst_mini_object_copy (mini_object);
+    GST_CAT_DEBUG (GST_CAT_PERFORMANCE, "copy %s miniobject %p -> %p",
+        g_type_name (GST_MINI_OBJECT_TYPE (mini_object)), mini_object, ret);
     gst_mini_object_unref (mini_object);
   }
 
@@ -291,7 +334,7 @@ gst_mini_object_make_writable (GstMiniObject * mini_object)
  *
  * Increase the reference count of the mini-object.
  *
- * Note that the refcount affects the writeability
+ * Note that the refcount affects the writability
  * of @mini-object, see gst_mini_object_is_writable(). It is
  * important to note that keeping additional references to
  * GstMiniObject instances can potentially increase the number
@@ -309,7 +352,6 @@ gst_mini_object_ref (GstMiniObject * mini_object)
    * the object
    g_return_val_if_fail (mini_object->refcount > 0, NULL);
    */
-  g_return_val_if_fail (GST_IS_MINI_OBJECT (mini_object), NULL);
 
   GST_CAT_TRACE (GST_CAT_REFCOUNTING, "%p ref %d->%d", mini_object,
       GST_MINI_OBJECT_REFCOUNT_VALUE (mini_object),
@@ -320,30 +362,61 @@ gst_mini_object_ref (GstMiniObject * mini_object)
   return mini_object;
 }
 
-static void
-gst_mini_object_free (GstMiniObject * mini_object)
+static gint
+find_notify (GstMiniObject * object, GQuark quark, gboolean match_notify,
+    GstMiniObjectNotify notify, gpointer data)
 {
-  GstMiniObjectClass *mo_class;
+  guint i;
 
-  /* At this point, the refcount of the object is 0. We increase the refcount
-   * here because if a subclass recycles the object and gives out a new
-   * reference we don't want to free the instance anymore. */
-  GST_CAT_TRACE (GST_CAT_REFCOUNTING, "%p ref %d->%d", mini_object,
-      GST_MINI_OBJECT_REFCOUNT_VALUE (mini_object),
-      GST_MINI_OBJECT_REFCOUNT_VALUE (mini_object) + 1);
+  for (i = 0; i < object->n_qdata; i++) {
+    if (QDATA_QUARK (object, i) == quark) {
+      /* check if we need to match the callback too */
+      if (!match_notify || (QDATA_NOTIFY (object, i) == notify &&
+              QDATA_DATA (object, i) == data))
+        return i;
+    }
+  }
+  return -1;
+}
 
-  g_atomic_int_inc (&mini_object->refcount);
+static void
+remove_notify (GstMiniObject * object, gint index)
+{
+  /* remove item */
+  if (--object->n_qdata == 0) {
+    /* we don't shrink but free when everything is gone */
+    g_free (object->qdata);
+    object->qdata = NULL;
+  } else if (index != object->n_qdata)
+    QDATA (object, index) = QDATA (object, object->n_qdata);
+}
 
-  mo_class = GST_MINI_OBJECT_GET_CLASS_UNCHECKED (mini_object);
-  mo_class->finalize (mini_object);
+static void
+set_notify (GstMiniObject * object, gint index, GQuark quark,
+    GstMiniObjectNotify notify, gpointer data, GDestroyNotify destroy)
+{
+  if (index == -1) {
+    /* add item */
+    index = object->n_qdata++;
+    object->qdata =
+        g_realloc (object->qdata, sizeof (GstQData) * object->n_qdata);
+  }
+  QDATA_QUARK (object, index) = quark;
+  QDATA_NOTIFY (object, index) = notify;
+  QDATA_DATA (object, index) = data;
+  QDATA_DESTROY (object, index) = destroy;
+}
 
-  /* decrement the refcount again, if the subclass recycled the object we don't
-   * want to free the instance anymore */
-  if (G_LIKELY (g_atomic_int_dec_and_test (&mini_object->refcount))) {
-#ifndef GST_DISABLE_TRACE
-    gst_alloc_trace_free (_gst_mini_object_trace, mini_object);
-#endif
-    g_type_free_instance ((GTypeInstance *) mini_object);
+static void
+call_finalize_notify (GstMiniObject * obj)
+{
+  guint i;
+
+  for (i = 0; i < obj->n_qdata; i++) {
+    if (QDATA_QUARK (obj, i) == weak_ref_quark)
+      QDATA_NOTIFY (obj, i) (QDATA_DATA (obj, i), obj);
+    if (QDATA_DESTROY (obj, i))
+      QDATA_DESTROY (obj, i) (QDATA_DATA (obj, i));
   }
 }
 
@@ -357,35 +430,63 @@ gst_mini_object_free (GstMiniObject * mini_object)
 void
 gst_mini_object_unref (GstMiniObject * mini_object)
 {
-  g_return_if_fail (GST_IS_MINI_OBJECT (mini_object));
-  g_return_if_fail (mini_object->refcount > 0);
+  g_return_if_fail (mini_object != NULL);
 
   GST_CAT_TRACE (GST_CAT_REFCOUNTING, "%p unref %d->%d",
       mini_object,
       GST_MINI_OBJECT_REFCOUNT_VALUE (mini_object),
       GST_MINI_OBJECT_REFCOUNT_VALUE (mini_object) - 1);
 
+  g_return_if_fail (mini_object->refcount > 0);
+
   if (G_UNLIKELY (g_atomic_int_dec_and_test (&mini_object->refcount))) {
-    gst_mini_object_free (mini_object);
+    gboolean do_free;
+
+    if (mini_object->dispose)
+      do_free = mini_object->dispose (mini_object);
+    else
+      do_free = TRUE;
+
+    /* if the subclass recycled the object (and returned FALSE) we don't
+     * want to free the instance anymore */
+    if (G_LIKELY (do_free)) {
+      /* there should be no outstanding locks */
+      g_return_if_fail ((g_atomic_int_get (&mini_object->lockstate) & LOCK_MASK)
+          < 4);
+
+      if (mini_object->n_qdata) {
+        call_finalize_notify (mini_object);
+        g_free (mini_object->qdata);
+      }
+#ifndef GST_DISABLE_TRACE
+      _gst_alloc_trace_free (_gst_mini_object_trace, mini_object);
+#endif
+      if (mini_object->free)
+        mini_object->free (mini_object);
+    }
   }
 }
 
 /**
  * gst_mini_object_replace:
- * @olddata: (inout) (transfer full): pointer to a pointer to a mini-object to
- *     be replaced
- * @newdata: pointer to new mini-object
+ * @olddata: (inout) (transfer full) (nullable): pointer to a pointer to a
+ *     mini-object to be replaced
+ * @newdata: (allow-none): pointer to new mini-object
  *
- * Modifies a pointer to point to a new mini-object.  The modification
- * is done atomically, and the reference counts are updated correctly.
- * Either @newdata and the value pointed to by @olddata may be NULL.
+ * Atomically modifies a pointer to point to a new mini-object.
+ * The reference count of @olddata is decreased and the reference count of
+ * @newdata is increased.
+ *
+ * Either @newdata and the value pointed to by @olddata may be %NULL.
+ *
+ * Returns: %TRUE if @newdata was different from @olddata
  */
-void
+gboolean
 gst_mini_object_replace (GstMiniObject ** olddata, GstMiniObject * newdata)
 {
   GstMiniObject *olddata_val;
 
-  g_return_if_fail (olddata != NULL);
+  g_return_val_if_fail (olddata != NULL, FALSE);
 
   GST_CAT_TRACE (GST_CAT_REFCOUNTING, "replace %p (%d) with %p (%d)",
       *olddata, *olddata ? (*olddata)->refcount : 0,
@@ -393,263 +494,254 @@ gst_mini_object_replace (GstMiniObject ** olddata, GstMiniObject * newdata)
 
   olddata_val = g_atomic_pointer_get ((gpointer *) olddata);
 
-  if (olddata_val == newdata)
-    return;
+  if (G_UNLIKELY (olddata_val == newdata))
+    return FALSE;
 
   if (newdata)
     gst_mini_object_ref (newdata);
 
-  while (!g_atomic_pointer_compare_and_exchange ((gpointer *) olddata,
-          olddata_val, newdata)) {
+  while (G_UNLIKELY (!g_atomic_pointer_compare_and_exchange ((gpointer *)
+              olddata, olddata_val, newdata))) {
     olddata_val = g_atomic_pointer_get ((gpointer *) olddata);
+    if (G_UNLIKELY (olddata_val == newdata))
+      break;
   }
 
   if (olddata_val)
     gst_mini_object_unref (olddata_val);
+
+  return olddata_val != newdata;
 }
 
-static void
-gst_value_mini_object_init (GValue * value)
+/**
+ * gst_mini_object_steal:
+ * @olddata: (inout) (transfer full): pointer to a pointer to a mini-object to
+ *     be stolen
+ *
+ * Replace the current #GstMiniObject pointer to by @olddata with %NULL and
+ * return the old value.
+ *
+ * Returns: the #GstMiniObject at @oldata
+ */
+GstMiniObject *
+gst_mini_object_steal (GstMiniObject ** olddata)
 {
-  value->data[0].v_pointer = NULL;
+  GstMiniObject *olddata_val;
+
+  g_return_val_if_fail (olddata != NULL, NULL);
+
+  GST_CAT_TRACE (GST_CAT_REFCOUNTING, "steal %p (%d)",
+      *olddata, *olddata ? (*olddata)->refcount : 0);
+
+  do {
+    olddata_val = g_atomic_pointer_get ((gpointer *) olddata);
+    if (olddata_val == NULL)
+      break;
+  } while (G_UNLIKELY (!g_atomic_pointer_compare_and_exchange ((gpointer *)
+              olddata, olddata_val, NULL)));
+
+  return olddata_val;
 }
 
-static void
-gst_value_mini_object_free (GValue * value)
+/**
+ * gst_mini_object_take:
+ * @olddata: (inout) (transfer full): pointer to a pointer to a mini-object to
+ *     be replaced
+ * @newdata: pointer to new mini-object
+ *
+ * Modifies a pointer to point to a new mini-object. The modification
+ * is done atomically. This version is similar to gst_mini_object_replace()
+ * except that it does not increase the refcount of @newdata and thus
+ * takes ownership of @newdata.
+ *
+ * Either @newdata and the value pointed to by @olddata may be %NULL.
+ *
+ * Returns: %TRUE if @newdata was different from @olddata
+ */
+gboolean
+gst_mini_object_take (GstMiniObject ** olddata, GstMiniObject * newdata)
 {
-  if (value->data[0].v_pointer) {
-    gst_mini_object_unref (GST_MINI_OBJECT_CAST (value->data[0].v_pointer));
-  }
+  GstMiniObject *olddata_val;
+
+  g_return_val_if_fail (olddata != NULL, FALSE);
+
+  GST_CAT_TRACE (GST_CAT_REFCOUNTING, "take %p (%d) with %p (%d)",
+      *olddata, *olddata ? (*olddata)->refcount : 0,
+      newdata, newdata ? newdata->refcount : 0);
+
+  do {
+    olddata_val = g_atomic_pointer_get ((gpointer *) olddata);
+    if (G_UNLIKELY (olddata_val == newdata))
+      break;
+  } while (G_UNLIKELY (!g_atomic_pointer_compare_and_exchange ((gpointer *)
+              olddata, olddata_val, newdata)));
+
+  if (olddata_val)
+    gst_mini_object_unref (olddata_val);
+
+  return olddata_val != newdata;
 }
 
-static void
-gst_value_mini_object_copy (const GValue * src_value, GValue * dest_value)
+/**
+ * gst_mini_object_weak_ref: (skip)
+ * @object: #GstMiniObject to reference weakly
+ * @notify: callback to invoke before the mini object is freed
+ * @data: extra data to pass to notify
+ *
+ * Adds a weak reference callback to a mini object. Weak references are
+ * used for notification when a mini object is finalized. They are called
+ * "weak references" because they allow you to safely hold a pointer
+ * to the mini object without calling gst_mini_object_ref()
+ * (gst_mini_object_ref() adds a strong reference, that is, forces the object
+ * to stay alive).
+ */
+void
+gst_mini_object_weak_ref (GstMiniObject * object,
+    GstMiniObjectNotify notify, gpointer data)
 {
-  if (src_value->data[0].v_pointer) {
-    dest_value->data[0].v_pointer =
-        gst_mini_object_ref (GST_MINI_OBJECT_CAST (src_value->
-            data[0].v_pointer));
+  g_return_if_fail (object != NULL);
+  g_return_if_fail (notify != NULL);
+  g_return_if_fail (GST_MINI_OBJECT_REFCOUNT_VALUE (object) >= 1);
+
+  G_LOCK (qdata_mutex);
+  set_notify (object, -1, weak_ref_quark, notify, data, NULL);
+  G_UNLOCK (qdata_mutex);
+}
+
+/**
+ * gst_mini_object_weak_unref: (skip)
+ * @object: #GstMiniObject to remove a weak reference from
+ * @notify: callback to search for
+ * @data: data to search for
+ *
+ * Removes a weak reference callback from a mini object.
+ */
+void
+gst_mini_object_weak_unref (GstMiniObject * object,
+    GstMiniObjectNotify notify, gpointer data)
+{
+  gint i;
+
+  g_return_if_fail (object != NULL);
+  g_return_if_fail (notify != NULL);
+
+  G_LOCK (qdata_mutex);
+  if ((i = find_notify (object, weak_ref_quark, TRUE, notify, data)) != -1) {
+    remove_notify (object, i);
   } else {
-    dest_value->data[0].v_pointer = NULL;
+    g_warning ("%s: couldn't find weak ref %p(%p)", G_STRFUNC, notify, data);
   }
+  G_UNLOCK (qdata_mutex);
 }
 
-static gpointer
-gst_value_mini_object_peek_pointer (const GValue * value)
+/**
+ * gst_mini_object_set_qdata:
+ * @object: a #GstMiniObject
+ * @quark: A #GQuark, naming the user data pointer
+ * @data: An opaque user data pointer
+ * @destroy: Function to invoke with @data as argument, when @data
+ *           needs to be freed
+ *
+ * This sets an opaque, named pointer on a miniobject.
+ * The name is specified through a #GQuark (retrieved e.g. via
+ * g_quark_from_static_string()), and the pointer
+ * can be gotten back from the @object with gst_mini_object_get_qdata()
+ * until the @object is disposed.
+ * Setting a previously set user data pointer, overrides (frees)
+ * the old pointer set, using %NULL as pointer essentially
+ * removes the data stored.
+ *
+ * @destroy may be specified which is called with @data as argument
+ * when the @object is disposed, or the data is being overwritten by
+ * a call to gst_mini_object_set_qdata() with the same @quark.
+ */
+void
+gst_mini_object_set_qdata (GstMiniObject * object, GQuark quark,
+    gpointer data, GDestroyNotify destroy)
 {
-  return value->data[0].v_pointer;
+  gint i;
+  gpointer old_data = NULL;
+  GDestroyNotify old_notify = NULL;
+
+  g_return_if_fail (object != NULL);
+  g_return_if_fail (quark > 0);
+
+  G_LOCK (qdata_mutex);
+  if ((i = find_notify (object, quark, FALSE, NULL, NULL)) != -1) {
+
+    old_data = QDATA_DATA (object, i);
+    old_notify = QDATA_DESTROY (object, i);
+
+    if (data == NULL)
+      remove_notify (object, i);
+  }
+  if (data != NULL)
+    set_notify (object, i, quark, NULL, data, destroy);
+  G_UNLOCK (qdata_mutex);
+
+  if (old_notify)
+    old_notify (old_data);
 }
 
-static gchar *
-gst_value_mini_object_collect (GValue * value, guint n_collect_values,
-    GTypeCValue * collect_values, guint collect_flags)
+/**
+ * gst_mini_object_get_qdata:
+ * @object: The GstMiniObject to get a stored user data pointer from
+ * @quark: A #GQuark, naming the user data pointer
+ *
+ * This function gets back user data pointers stored via
+ * gst_mini_object_set_qdata().
+ *
+ * Returns: (transfer none) (nullable): The user data pointer set, or
+ * %NULL
+ */
+gpointer
+gst_mini_object_get_qdata (GstMiniObject * object, GQuark quark)
 {
-  if (collect_values[0].v_pointer) {
-    value->data[0].v_pointer =
-        gst_mini_object_ref (collect_values[0].v_pointer);
-  } else {
-    value->data[0].v_pointer = NULL;
-  }
+  guint i;
+  gpointer result;
 
-  return NULL;
-}
+  g_return_val_if_fail (object != NULL, NULL);
+  g_return_val_if_fail (quark > 0, NULL);
 
-static gchar *
-gst_value_mini_object_lcopy (const GValue * value, guint n_collect_values,
-    GTypeCValue * collect_values, guint collect_flags)
-{
-  gpointer *mini_object_p = collect_values[0].v_pointer;
-
-  if (!mini_object_p) {
-    return g_strdup_printf ("value location for '%s' passed as NULL",
-        G_VALUE_TYPE_NAME (value));
-  }
-
-  if (!value->data[0].v_pointer)
-    *mini_object_p = NULL;
-  else if (collect_flags & G_VALUE_NOCOPY_CONTENTS)
-    *mini_object_p = value->data[0].v_pointer;
+  G_LOCK (qdata_mutex);
+  if ((i = find_notify (object, quark, FALSE, NULL, NULL)) != -1)
+    result = QDATA_DATA (object, i);
   else
-    *mini_object_p = gst_mini_object_ref (value->data[0].v_pointer);
+    result = NULL;
+  G_UNLOCK (qdata_mutex);
 
-  return NULL;
+  return result;
 }
 
 /**
- * gst_value_set_mini_object:
- * @value: a valid #GValue of %GST_TYPE_MINI_OBJECT derived type
- * @mini_object: (transfer none): mini object value to set
+ * gst_mini_object_steal_qdata:
+ * @object: The GstMiniObject to get a stored user data pointer from
+ * @quark: A #GQuark, naming the user data pointer
  *
- * Set the contents of a %GST_TYPE_MINI_OBJECT derived #GValue to
- * @mini_object.
- * The caller retains ownership of the reference.
+ * This function gets back user data pointers stored via gst_mini_object_set_qdata()
+ * and removes the data from @object without invoking its destroy() function (if
+ * any was set).
+ *
+ * Returns: (transfer full) (nullable): The user data pointer set, or
+ * %NULL
  */
-void
-gst_value_set_mini_object (GValue * value, GstMiniObject * mini_object)
+gpointer
+gst_mini_object_steal_qdata (GstMiniObject * object, GQuark quark)
 {
-  gpointer *pointer_p;
+  guint i;
+  gpointer result;
 
-  g_return_if_fail (GST_VALUE_HOLDS_MINI_OBJECT (value));
-  g_return_if_fail (mini_object == NULL || GST_IS_MINI_OBJECT (mini_object));
+  g_return_val_if_fail (object != NULL, NULL);
+  g_return_val_if_fail (quark > 0, NULL);
 
-  pointer_p = &value->data[0].v_pointer;
-  gst_mini_object_replace ((GstMiniObject **) pointer_p, mini_object);
-}
-
-/**
- * gst_value_take_mini_object:
- * @value: a valid #GValue of %GST_TYPE_MINI_OBJECT derived type
- * @mini_object: (transfer full): mini object value to take
- *
- * Set the contents of a %GST_TYPE_MINI_OBJECT derived #GValue to
- * @mini_object.
- * Takes over the ownership of the caller's reference to @mini_object;
- * the caller doesn't have to unref it any more.
- */
-void
-gst_value_take_mini_object (GValue * value, GstMiniObject * mini_object)
-{
-  gpointer *pointer_p;
-
-  g_return_if_fail (GST_VALUE_HOLDS_MINI_OBJECT (value));
-  g_return_if_fail (mini_object == NULL || GST_IS_MINI_OBJECT (mini_object));
-
-  pointer_p = &value->data[0].v_pointer;
-  /* takes additional refcount */
-  gst_mini_object_replace ((GstMiniObject **) pointer_p, mini_object);
-  /* remove additional refcount */
-  if (mini_object)
-    gst_mini_object_unref (mini_object);
-}
-
-/**
- * gst_value_get_mini_object:
- * @value:   a valid #GValue of %GST_TYPE_MINI_OBJECT derived type
- *
- * Get the contents of a %GST_TYPE_MINI_OBJECT derived #GValue.
- * Does not increase the refcount of the returned object.
- *
- * Returns: (transfer none): mini object contents of @value
- */
-GstMiniObject *
-gst_value_get_mini_object (const GValue * value)
-{
-  g_return_val_if_fail (GST_VALUE_HOLDS_MINI_OBJECT (value), NULL);
-
-  return value->data[0].v_pointer;
-}
-
-/**
- * gst_value_dup_mini_object:
- * @value:   a valid #GValue of %GST_TYPE_MINI_OBJECT derived type
- *
- * Get the contents of a %GST_TYPE_MINI_OBJECT derived #GValue,
- * increasing its reference count. If the contents of the #GValue
- * are %NULL, %NULL will be returned.
- *
- * Returns: (transfer full): mini object contents of @value
- *
- * Since: 0.10.20
- */
-GstMiniObject *
-gst_value_dup_mini_object (const GValue * value)
-{
-  g_return_val_if_fail (GST_VALUE_HOLDS_MINI_OBJECT (value), NULL);
-
-  return value->data[0].v_pointer ? gst_mini_object_ref (value->data[0].
-      v_pointer) : NULL;
-}
-
-
-/* param spec */
-
-static void
-param_mini_object_init (GParamSpec * pspec)
-{
-  /* GParamSpecMiniObject *ospec = G_PARAM_SPEC_MINI_OBJECT (pspec); */
-}
-
-static void
-param_mini_object_set_default (GParamSpec * pspec, GValue * value)
-{
-  value->data[0].v_pointer = NULL;
-}
-
-static gboolean
-param_mini_object_validate (GParamSpec * pspec, GValue * value)
-{
-  GstMiniObject *mini_object = value->data[0].v_pointer;
-  gboolean changed = FALSE;
-
-  if (mini_object
-      && !g_value_type_compatible (G_OBJECT_TYPE (mini_object),
-          pspec->value_type)) {
-    gst_mini_object_unref (mini_object);
-    value->data[0].v_pointer = NULL;
-    changed = TRUE;
+  G_LOCK (qdata_mutex);
+  if ((i = find_notify (object, quark, FALSE, NULL, NULL)) != -1) {
+    result = QDATA_DATA (object, i);
+    remove_notify (object, i);
+  } else {
+    result = NULL;
   }
+  G_UNLOCK (qdata_mutex);
 
-  return changed;
-}
-
-static gint
-param_mini_object_values_cmp (GParamSpec * pspec,
-    const GValue * value1, const GValue * value2)
-{
-  guint8 *p1 = value1->data[0].v_pointer;
-  guint8 *p2 = value2->data[0].v_pointer;
-
-  /* not much to compare here, try to at least provide stable lesser/greater result */
-
-  return p1 < p2 ? -1 : p1 > p2;
-}
-
-GType
-gst_param_spec_mini_object_get_type (void)
-{
-  static GType type;
-
-  if (G_UNLIKELY (type) == 0) {
-    static const GParamSpecTypeInfo pspec_info = {
-      sizeof (GstParamSpecMiniObject),  /* instance_size */
-      16,                       /* n_preallocs */
-      param_mini_object_init,   /* instance_init */
-      G_TYPE_OBJECT,            /* value_type */
-      NULL,                     /* finalize */
-      param_mini_object_set_default,    /* value_set_default */
-      param_mini_object_validate,       /* value_validate */
-      param_mini_object_values_cmp,     /* values_cmp */
-    };
-    /* FIXME 0.11: Should really be GstParamSpecMiniObject */
-    type = g_param_type_register_static ("GParamSpecMiniObject", &pspec_info);
-  }
-
-  return type;
-}
-
-/**
- * gst_param_spec_mini_object:
- * @name: the canonical name of the property
- * @nick: the nickname of the property
- * @blurb: a short description of the property
- * @object_type: the #GstMiniObject #GType for the property
- * @flags: a combination of #GParamFlags
- *
- * Creates a new #GParamSpec instance that hold #GstMiniObject references.
- *
- * Returns: (transfer full): a newly allocated #GParamSpec instance
- */
-GParamSpec *
-gst_param_spec_mini_object (const char *name, const char *nick,
-    const char *blurb, GType object_type, GParamFlags flags)
-{
-  GstParamSpecMiniObject *ospec;
-
-  g_return_val_if_fail (g_type_is_a (object_type, GST_TYPE_MINI_OBJECT), NULL);
-
-  ospec = g_param_spec_internal (GST_TYPE_PARAM_MINI_OBJECT,
-      name, nick, blurb, flags);
-  G_PARAM_SPEC (ospec)->value_type = object_type;
-
-  return G_PARAM_SPEC (ospec);
+  return result;
 }

@@ -14,8 +14,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 /**
@@ -85,6 +85,51 @@
  * </para>
  * </refsect2>
  * <refsect2>
+ * <title>Example: Using an encoder preset with a profile</title>
+ * <para>
+ * |[
+ * #include <gst/pbutils/encoding-profile.h>
+ * ...
+ * GstEncodingProfile *
+ * create_ogg_theora_profile(void)
+ *{
+ *  GstEncodingVideoProfile *v;
+ *  GstEncodingAudioProfile *a;
+ *  GstEncodingContainerProfile *prof;
+ *  GstCaps *caps;
+ *  GstPreset *preset;
+ *
+ *  caps = gst_caps_from_string ("application/ogg");
+ *  prof = gst_encoding_container_profile_new ("Ogg audio/video",
+ *     "Standard OGG/THEORA/VORBIS",
+ *     caps, NULL);
+ *  gst_caps_unref (caps);
+ *
+ *  preset = GST_PRESET (gst_element_factory_make ("theoraenc", "theorapreset"));
+ *  g_object_set (preset, "bitrate", 1000, NULL);
+ *  // The preset will be saved on the filesystem,
+ *  // so try to use a descriptive name
+ *  gst_preset_save_preset (preset, "theora_bitrate_preset");
+ *  gst_object_unref (preset);
+ *
+ *  caps = gst_caps_from_string ("video/x-theora");
+ *  v = gst_encoding_video_profile_new (caps, "theorapreset", NULL, 0);
+ *  gst_encoding_container_profile_add_profile (prof, (GstEncodingProfile*) v);
+ *  gst_caps_unref (caps);
+ *
+ *  caps = gst_caps_from_string ("audio/x-vorbis");
+ *  a = gst_encoding_audio_profile_new (caps, NULL, NULL, 0);
+ *  gst_encoding_container_profile_add_profile (prof, (GstEncodingProfile*) a);
+ *  gst_caps_unref (caps);
+ *
+ *  return (GstEncodingProfile*) prof;
+ *}
+ *
+ *
+ * ]|
+ * </para>
+ * </refsect2>
+ * <refsect2>
  * <title>Example: Listing categories, targets and profiles</title>
  * <para>
  * |[
@@ -94,7 +139,7 @@
  * GList *categories, *tmpc;
  * GList *targets, *tmpt;
  * ...
- * categories = gst_encoding_target_list_available_categories();
+ * categories = gst_encoding_list_available_categories ();
  *
  * ... Show available categories to user ...
  *
@@ -102,8 +147,8 @@
  *   gchar *category = (gchar *) tmpc->data;
  *
  *   ... and we can list all targets within that category ...
- *   
- *   targets = gst_encoding_target_list_all (category);
+ *
+ *   targets = gst_encoding_list_all_targets (category);
  *
  *   ... and show a list to our users ...
  *
@@ -118,8 +163,6 @@
  * ]|
  * </para>
  * </refsect2>
- *
- * Since: 0.10.32
  */
 
 #ifdef HAVE_CONFIG_H
@@ -129,20 +172,37 @@
 #include "encoding-profile.h"
 #include "encoding-target.h"
 
+#include <string.h>
+
 /* GstEncodingProfile API */
 
 struct _GstEncodingProfile
 {
-  GstMiniObject parent;
+  GObject parent;
 
   /*< public > */
   gchar *name;
   gchar *description;
   GstCaps *format;
   gchar *preset;
+  gchar *preset_name;
   guint presence;
   GstCaps *restriction;
 };
+
+struct _GstEncodingProfileClass
+{
+  GObjectClass parent_class;
+};
+
+enum
+{
+  FIRST_PROPERTY,
+  PROP_RESTRICTION_CAPS,
+  LAST_PROPERTY
+};
+
+static GParamSpec *_properties[LAST_PROPERTY];
 
 static void string_to_profile_transform (const GValue * src_value,
     GValue * dest_value);
@@ -165,8 +225,7 @@ gst_encoding_profile_get_type (void)
   static volatile gsize g_define_type_id__volatile = 0;
 
   if (g_once_init_enter (&g_define_type_id__volatile)) {
-    GType g_define_type_id =
-        g_type_register_static_simple (GST_TYPE_MINI_OBJECT,
+    GType g_define_type_id = g_type_register_static_simple (G_TYPE_OBJECT,
         g_intern_static_string ("GstEncodingProfile"),
         sizeof (GstEncodingProfileClass),
         (GClassInitFunc) gst_encoding_profile_class_intern_init,
@@ -193,9 +252,44 @@ gst_encoding_profile_get_type (void)
   return g_define_type_id__volatile;
 }
 
+
 static void
-gst_encoding_profile_finalize (GstEncodingProfile * prof)
+_encoding_profile_get_property (GObject * object, guint prop_id,
+    GValue * value, GParamSpec * pspec)
 {
+  GstEncodingProfile *prof = (GstEncodingProfile *) object;
+
+  switch (prop_id) {
+    case PROP_RESTRICTION_CAPS:
+      gst_value_set_caps (value, prof->restriction);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+_encoding_profile_set_property (GObject * object, guint prop_id,
+    const GValue * value, GParamSpec * pspec)
+{
+  GstEncodingProfile *prof = (GstEncodingProfile *) object;
+
+  switch (prop_id) {
+    case PROP_RESTRICTION_CAPS:
+      gst_encoding_profile_set_restriction (prof, gst_caps_copy
+          (gst_value_get_caps (value)));
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+gst_encoding_profile_finalize (GObject * object)
+{
+  GstEncodingProfile *prof = (GstEncodingProfile *) object;
   if (prof->name)
     g_free (prof->name);
   if (prof->format)
@@ -206,20 +300,33 @@ gst_encoding_profile_finalize (GstEncodingProfile * prof)
     g_free (prof->description);
   if (prof->restriction)
     gst_caps_unref (prof->restriction);
+  if (prof->preset_name)
+    g_free (prof->preset_name);
 }
 
 static void
-gst_encoding_profile_class_init (GstMiniObjectClass * klass)
+gst_encoding_profile_class_init (GstEncodingProfileClass * klass)
 {
-  klass->finalize =
-      (GstMiniObjectFinalizeFunction) gst_encoding_profile_finalize;
+  GObjectClass *gobject_class = (GObjectClass *) klass;
+
+  gobject_class->finalize = gst_encoding_profile_finalize;
+
+  gobject_class->set_property = _encoding_profile_set_property;
+  gobject_class->get_property = _encoding_profile_get_property;
+
+  _properties[PROP_RESTRICTION_CAPS] =
+      g_param_spec_boxed ("restriction-caps", "Restriction caps",
+      "The restriction caps to use", GST_TYPE_CAPS,
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+
+  g_object_class_install_property (gobject_class,
+      PROP_RESTRICTION_CAPS, _properties[PROP_RESTRICTION_CAPS]);
+
 }
 
 /**
  * gst_encoding_profile_get_name:
  * @profile: a #GstEncodingProfile
- *
- * Since: 0.10.32
  *
  * Returns: the name of the profile, can be %NULL.
  */
@@ -233,8 +340,6 @@ gst_encoding_profile_get_name (GstEncodingProfile * profile)
  * gst_encoding_profile_get_description:
  * @profile: a #GstEncodingProfile
  *
- * Since: 0.10.32
- *
  * Returns: the description of the profile, can be %NULL.
  */
 const gchar *
@@ -247,23 +352,21 @@ gst_encoding_profile_get_description (GstEncodingProfile * profile)
  * gst_encoding_profile_get_format:
  * @profile: a #GstEncodingProfile
  *
- * Since: 0.10.32
- *
- * Returns: the #GstCaps corresponding to the media format used in the profile.
+ * Returns: (transfer full): the #GstCaps corresponding to the media format used
+ * in the profile. Unref after usage.
  */
-const GstCaps *
+GstCaps *
 gst_encoding_profile_get_format (GstEncodingProfile * profile)
 {
-  return profile->format;
+  return (profile->format ? gst_caps_ref (profile->format) : NULL);
 }
 
 /**
  * gst_encoding_profile_get_preset:
  * @profile: a #GstEncodingProfile
  *
- * Since: 0.10.32
- *
  * Returns: the name of the #GstPreset to be used in the profile.
+ * This is the name that has been set when saving the preset.
  */
 const gchar *
 gst_encoding_profile_get_preset (GstEncodingProfile * profile)
@@ -272,10 +375,20 @@ gst_encoding_profile_get_preset (GstEncodingProfile * profile)
 }
 
 /**
- * gst_encoding_profile_get_presence:
+ * gst_encoding_profile_get_preset_name:
  * @profile: a #GstEncodingProfile
  *
- * Since: 0.10.32
+ * Returns: the name of the #GstPreset factory to be used in the profile.
+ */
+const gchar *
+gst_encoding_profile_get_preset_name (GstEncodingProfile * profile)
+{
+  return profile->preset_name;
+}
+
+/**
+ * gst_encoding_profile_get_presence:
+ * @profile: a #GstEncodingProfile
  *
  * Returns: The number of times the profile is used in its parent
  * container profile. If 0, it is not a mandatory stream.
@@ -290,19 +403,17 @@ gst_encoding_profile_get_presence (GstEncodingProfile * profile)
  * gst_encoding_profile_get_restriction:
  * @profile: a #GstEncodingProfile
  *
- * Since: 0.10.32
- *
- * Returns: The restriction #GstCaps to apply before the encoder
+ * Returns: (transfer full): The restriction #GstCaps to apply before the encoder
  * that will be used in the profile. The fields present in restriction caps are
  * properties of the raw stream (that is before encoding), such as height and
  * width for video and depth and sampling rate for audio. Does not apply to
  * #GstEncodingContainerProfile (since there is no corresponding raw stream).
- * Can be %NULL.
+ * Can be %NULL. Unref after usage.
  */
-const GstCaps *
+GstCaps *
 gst_encoding_profile_get_restriction (GstEncodingProfile * profile)
 {
-  return profile->restriction;
+  return (profile->restriction ? gst_caps_ref (profile->restriction) : NULL);
 }
 
 /**
@@ -312,8 +423,6 @@ gst_encoding_profile_get_restriction (GstEncodingProfile * profile)
  *
  * Set @name as the given name for the @profile. A copy of @name will be made
  * internally.
- *
- * Since: 0.10.32
  */
 void
 gst_encoding_profile_set_name (GstEncodingProfile * profile, const gchar * name)
@@ -328,10 +437,8 @@ gst_encoding_profile_set_name (GstEncodingProfile * profile, const gchar * name)
  * @profile: a #GstEncodingProfile
  * @description: the description to set on the profile
  *
- * Set @description as the given description for the @profile. A copy of @description will be made
- * internally.
- *
- * Since: 0.10.32
+ * Set @description as the given description for the @profile. A copy of
+ * @description will be made internally.
  */
 void
 gst_encoding_profile_set_description (GstEncodingProfile * profile,
@@ -348,8 +455,6 @@ gst_encoding_profile_set_description (GstEncodingProfile * profile,
  * @format: the media format to use in the profile.
  *
  * Sets the media format used in the profile.
- *
- * Since: 0.10.32
  */
 void
 gst_encoding_profile_set_format (GstEncodingProfile * profile, GstCaps * format)
@@ -364,9 +469,9 @@ gst_encoding_profile_set_format (GstEncodingProfile * profile, GstCaps * format)
  * @profile: a #GstEncodingProfile
  * @preset: the element preset to use
  *
- * Sets the preset to use for the profile.
- *
- * Since: 0.10.32
+ * Sets the name of the #GstElement that implements the #GstPreset interface
+ * to use for the profile.
+ * This is the name that has been set when saving the preset.
  */
 void
 gst_encoding_profile_set_preset (GstEncodingProfile * profile,
@@ -378,14 +483,28 @@ gst_encoding_profile_set_preset (GstEncodingProfile * profile,
 }
 
 /**
+ * gst_encoding_profile_set_preset_name:
+ * @profile: a #GstEncodingProfile
+ * @preset_name: The name of the preset to use in this @profile.
+ *
+ * Sets the name of the #GstPreset's factory to be used in the profile.
+ */
+void
+gst_encoding_profile_set_preset_name (GstEncodingProfile * profile,
+    const gchar * preset_name)
+{
+  if (profile->preset_name)
+    g_free (profile->preset_name);
+  profile->preset_name = g_strdup (preset_name);
+}
+
+/**
  * gst_encoding_profile_set_presence:
  * @profile: a #GstEncodingProfile
  * @presence: the number of time the profile can be used
  *
  * Set the number of time the profile is used in its parent
  * container profile. If 0, it is not a mandatory stream
- *
- * Since: 0.10.32
  */
 void
 gst_encoding_profile_set_presence (GstEncodingProfile * profile, guint presence)
@@ -396,13 +515,11 @@ gst_encoding_profile_set_presence (GstEncodingProfile * profile, guint presence)
 /**
  * gst_encoding_profile_set_restriction:
  * @profile: a #GstEncodingProfile
- * @restriction: the restriction to apply
+ * @restriction: (transfer full): the restriction to apply
  *
  * Set the restriction #GstCaps to apply before the encoder
- * that will be used in the profile. See gst_encoding_profile_set_restriction()
+ * that will be used in the profile. See gst_encoding_profile_get_restriction()
  * for more about restrictions. Does not apply to #GstEncodingContainerProfile.
- *
- * Since: 0.10.32
  */
 void
 gst_encoding_profile_set_restriction (GstEncodingProfile * profile,
@@ -411,6 +528,9 @@ gst_encoding_profile_set_restriction (GstEncodingProfile * profile,
   if (profile->restriction)
     gst_caps_unref (profile->restriction);
   profile->restriction = restriction;
+
+  g_object_notify_by_pspec (G_OBJECT (profile),
+      _properties[PROP_RESTRICTION_CAPS]);
 }
 
 /* Container profiles */
@@ -420,6 +540,11 @@ struct _GstEncodingContainerProfile
   GstEncodingProfile parent;
 
   GList *encodingprofiles;
+};
+
+struct _GstEncodingContainerProfileClass
+{
+  GstEncodingProfileClass parent;
 };
 
 G_DEFINE_TYPE (GstEncodingContainerProfile, gst_encoding_container_profile,
@@ -432,22 +557,32 @@ gst_encoding_container_profile_init (GstEncodingContainerProfile * prof)
 }
 
 static void
-gst_encoding_container_profile_finalize (GstEncodingContainerProfile * prof)
+gst_encoding_container_profile_finalize (GObject * object)
 {
-  g_list_foreach (prof->encodingprofiles, (GFunc) gst_mini_object_unref, NULL);
+  GstEncodingContainerProfile *prof = (GstEncodingContainerProfile *) object;
+
+  g_list_foreach (prof->encodingprofiles, (GFunc) g_object_unref, NULL);
   g_list_free (prof->encodingprofiles);
 
-  GST_MINI_OBJECT_CLASS (gst_encoding_container_profile_parent_class)->finalize
-      ((GstMiniObject *) prof);
+  G_OBJECT_CLASS (gst_encoding_container_profile_parent_class)->finalize
+      ((GObject *) prof);
 }
 
 static void
-gst_encoding_container_profile_class_init (GstMiniObjectClass * klass)
+gst_encoding_container_profile_class_init (GstEncodingContainerProfileClass * k)
 {
-  klass->finalize =
-      (GstMiniObjectFinalizeFunction) gst_encoding_container_profile_finalize;
+  GObjectClass *gobject_class = (GObjectClass *) k;
+
+  gobject_class->finalize = gst_encoding_container_profile_finalize;
 }
 
+/**
+ * gst_encoding_container_profile_get_profiles:
+ * @profile: a #GstEncodingContainerProfile
+ *
+ * Returns: (element-type GstPbutils.EncodingProfile) (transfer none):
+ * the list of contained #GstEncodingProfile.
+ */
 const GList *
 gst_encoding_container_profile_get_profiles (GstEncodingContainerProfile *
     profile)
@@ -465,6 +600,11 @@ struct _GstEncodingVideoProfile
   gboolean variableframerate;
 };
 
+struct _GstEncodingVideoProfileClass
+{
+  GstEncodingProfileClass parent;
+};
+
 G_DEFINE_TYPE (GstEncodingVideoProfile, gst_encoding_video_profile,
     GST_TYPE_ENCODING_PROFILE);
 
@@ -475,7 +615,7 @@ gst_encoding_video_profile_init (GstEncodingVideoProfile * prof)
 }
 
 static void
-gst_encoding_video_profile_class_init (GstMiniObjectClass * klass)
+gst_encoding_video_profile_class_init (GstEncodingVideoProfileClass * klass)
 {
 }
 
@@ -483,11 +623,11 @@ gst_encoding_video_profile_class_init (GstMiniObjectClass * klass)
  * gst_encoding_video_profile_get_pass:
  * @prof: a #GstEncodingVideoProfile
  *
- * Since: 0.10.32
+ * Get the pass number if this is part of a multi-pass profile.
  *
- * Returns: The pass number if this is part of a multi-pass profile. Starts at
- * 1 for multi-pass. 0 if this is not a multi-pass profile
- **/
+ * Returns: The pass number. Starts at 1 for multi-pass. 0 if this is
+ * not a multi-pass profile
+ */
 guint
 gst_encoding_video_profile_get_pass (GstEncodingVideoProfile * prof)
 {
@@ -497,8 +637,6 @@ gst_encoding_video_profile_get_pass (GstEncodingVideoProfile * prof)
 /**
  * gst_encoding_video_profile_get_variableframerate:
  * @prof: a #GstEncodingVideoProfile
- *
- * Since: 0.10.32
  *
  * Returns: Whether non-constant video framerate is allowed for encoding.
  */
@@ -517,8 +655,6 @@ gst_encoding_video_profile_get_variableframerate (GstEncodingVideoProfile *
  * Sets the pass number of this video profile. The first pass profile should have
  * this value set to 1. If this video profile isn't part of a multi-pass profile,
  * you may set it to 0 (the default value).
- *
- * Since: 0.10.32
  */
 void
 gst_encoding_video_profile_set_pass (GstEncodingVideoProfile * prof, guint pass)
@@ -531,12 +667,10 @@ gst_encoding_video_profile_set_pass (GstEncodingVideoProfile * prof, guint pass)
  * @prof: a #GstEncodingVideoProfile
  * @variableframerate: a boolean
  *
- * If set to %TRUE, then the incoming streamm will be allowed to have non-constant
+ * If set to %TRUE, then the incoming stream will be allowed to have non-constant
  * framerate. If set to %FALSE (default value), then the incoming stream will
  * be normalized by dropping/duplicating frames in order to produce a
  * constance framerate.
- *
- * Since: 0.10.32
  */
 void
 gst_encoding_video_profile_set_variableframerate (GstEncodingVideoProfile *
@@ -552,6 +686,11 @@ struct _GstEncodingAudioProfile
   GstEncodingProfile parent;
 };
 
+struct _GstEncodingAudioProfileClass
+{
+  GstEncodingProfileClass parent;
+};
+
 G_DEFINE_TYPE (GstEncodingAudioProfile, gst_encoding_audio_profile,
     GST_TYPE_ENCODING_PROFILE);
 
@@ -562,7 +701,7 @@ gst_encoding_audio_profile_init (GstEncodingAudioProfile * prof)
 }
 
 static void
-gst_encoding_audio_profile_class_init (GstMiniObjectClass * klass)
+gst_encoding_audio_profile_class_init (GstEncodingAudioProfileClass * klass)
 {
 }
 
@@ -631,8 +770,6 @@ _compare_encoding_profiles (const GstEncodingProfile * a,
  * Checks if @container contains a #GstEncodingProfile identical to
  * @profile.
  *
- * Since: 0.10.32
- *
  * Returns: %TRUE if @container contains a #GstEncodingProfile identical
  * to @profile, else %FALSE.
  */
@@ -650,14 +787,12 @@ gst_encoding_container_profile_contains_profile (GstEncodingContainerProfile *
 /**
  * gst_encoding_container_profile_add_profile:
  * @container: the #GstEncodingContainerProfile to use
- * @profile: the #GstEncodingProfile to add.
+ * @profile: (transfer full): the #GstEncodingProfile to add.
  *
  * Add a #GstEncodingProfile to the list of profiles handled by @container.
- * 
+ *
  * No copy of @profile will be made, if you wish to use it elsewhere after this
  * method you should increment its reference count.
- *
- * Since: 0.10.32
  *
  * Returns: %TRUE if the @stream was properly added, else %FALSE.
  */
@@ -688,7 +823,7 @@ common_creation (GType objtype, GstCaps * format, const gchar * preset,
 {
   GstEncodingProfile *prof;
 
-  prof = (GstEncodingProfile *) gst_mini_object_new (objtype);
+  prof = (GstEncodingProfile *) g_object_new (objtype, NULL);
 
   if (name)
     prof->name = g_strdup (name);
@@ -701,20 +836,20 @@ common_creation (GType objtype, GstCaps * format, const gchar * preset,
   if (restriction)
     prof->restriction = gst_caps_ref (restriction);
   prof->presence = presence;
+  prof->preset_name = NULL;
 
   return prof;
 }
 
 /**
  * gst_encoding_container_profile_new:
- * @name: The name of the container profile, can be %NULL
- * @description: The description of the container profile, can be %NULL
+ * @name: (allow-none): The name of the container profile, can be %NULL
+ * @description: (allow-none): The description of the container profile,
+ *     can be %NULL
  * @format: The format to use for this profile
- * @preset: The preset to use for this profile
+ * @preset: (allow-none): The preset to use for this profile.
  *
  * Creates a new #GstEncodingContainerProfile.
- *
- * Since: 0.10.32
  *
  * Returns: The newly created #GstEncodingContainerProfile.
  */
@@ -732,8 +867,8 @@ gst_encoding_container_profile_new (const gchar * name,
 /**
  * gst_encoding_video_profile_new:
  * @format: the #GstCaps
- * @preset: the preset(s) to use on the encoder, can be #NULL
- * @restriction: the #GstCaps used to restrict the input to the encoder, can be
+ * @preset: (allow-none): the preset(s) to use on the encoder, can be #NULL
+ * @restriction: (allow-none): the #GstCaps used to restrict the input to the encoder, can be
  * NULL. See gst_encoding_profile_get_restriction() for more details.
  * @presence: the number of time this stream must be used. 0 means any number of
  *  times (including never)
@@ -749,8 +884,6 @@ gst_encoding_container_profile_new (const gchar * name,
  * If you wish to use/force a constant framerate please refer to the
  * gst_encoding_video_profile_set_variableframerate() documentation.
  *
- * Since: 0.10.32
- *
  * Returns: the newly created #GstEncodingVideoProfile.
  */
 GstEncodingVideoProfile *
@@ -765,8 +898,8 @@ gst_encoding_video_profile_new (GstCaps * format, const gchar * preset,
 /**
  * gst_encoding_audio_profile_new:
  * @format: the #GstCaps
- * @preset: the preset(s) to use on the encoder, can be #NULL
- * @restriction: the #GstCaps used to restrict the input to the encoder, can be
+ * @preset: (allow-none): the preset(s) to use on the encoder, can be #NULL
+ * @restriction: (allow-none): the #GstCaps used to restrict the input to the encoder, can be
  * NULL. See gst_encoding_profile_get_restriction() for more details.
  * @presence: the number of time this stream must be used. 0 means any number of
  *  times (including never)
@@ -775,8 +908,6 @@ gst_encoding_video_profile_new (GstCaps * format, const gchar * preset,
  *
  * All provided allocatable arguments will be internally copied, so can be
  * safely freed/unreferenced after calling this method.
- *
- * Since: 0.10.32
  *
  * Returns: the newly created #GstEncodingAudioProfile.
  */
@@ -797,8 +928,6 @@ gst_encoding_audio_profile_new (GstCaps * format, const gchar * preset,
  *
  * Checks whether the two #GstEncodingProfile are equal
  *
- * Since: 0.10.32
- *
  * Returns: %TRUE if @a and @b are equal, else %FALSE.
  */
 gboolean
@@ -814,10 +943,8 @@ gst_encoding_profile_is_equal (GstEncodingProfile * a, GstEncodingProfile * b)
  *
  * Computes the full output caps that this @profile will be able to consume.
  *
- * Since: 0.10.32
- *
- * Returns: The full caps the given @profile can consume. Call gst_caps_unref()
- * when you are done with the caps.
+ * Returns: (transfer full): The full caps the given @profile can consume. Call
+ * gst_caps_unref() when you are done with the caps.
  */
 GstCaps *
 gst_encoding_profile_get_input_caps (GstEncodingProfile * profile)
@@ -827,7 +954,7 @@ gst_encoding_profile_get_input_caps (GstEncodingProfile * profile)
   GstStructure *st, *outst;
   GQuark out_name;
   guint i, len;
-  const GstCaps *fcaps;
+  GstCaps *fcaps;
 
   if (GST_IS_ENCODING_CONTAINER_PROFILE (profile)) {
     GstCaps *res = gst_caps_new_empty ();
@@ -835,7 +962,7 @@ gst_encoding_profile_get_input_caps (GstEncodingProfile * profile)
     for (ltmp = GST_ENCODING_CONTAINER_PROFILE (profile)->encodingprofiles;
         ltmp; ltmp = ltmp->next) {
       GstEncodingProfile *sprof = (GstEncodingProfile *) ltmp->data;
-      gst_caps_merge (res, gst_encoding_profile_get_input_caps (sprof));
+      res = gst_caps_merge (res, gst_encoding_profile_get_input_caps (sprof));
     }
     return res;
   }
@@ -844,7 +971,7 @@ gst_encoding_profile_get_input_caps (GstEncodingProfile * profile)
 
   /* fast-path */
   if ((profile->restriction == NULL) || gst_caps_is_any (profile->restriction))
-    return gst_caps_copy (fcaps);
+    return gst_caps_ref (fcaps);
 
   /* Combine the format with the restriction caps */
   outst = gst_caps_get_structure (fcaps, 0);
@@ -868,8 +995,6 @@ gst_encoding_profile_get_input_caps (GstEncodingProfile * profile)
  * gst_encoding_profile_get_type_nick:
  * @profile: a #GstEncodingProfile
  *
- * Since: 0.10.32
- *
  * Returns: the human-readable name of the type of @profile.
  */
 const gchar *
@@ -884,6 +1009,145 @@ gst_encoding_profile_get_type_nick (GstEncodingProfile * profile)
   return NULL;
 }
 
+extern const gchar *pb_utils_get_file_extension_from_caps (const GstCaps *
+    caps);
+gboolean pb_utils_is_tag (const GstCaps * caps);
+
+static gboolean
+gst_encoding_profile_has_format (GstEncodingProfile * profile,
+    const gchar * media_type)
+{
+  GstCaps *caps;
+  gboolean ret;
+
+  caps = gst_encoding_profile_get_format (profile);
+  ret = gst_structure_has_name (gst_caps_get_structure (caps, 0), media_type);
+  gst_caps_unref (caps);
+
+  return ret;
+}
+
+static gboolean
+gst_encoding_container_profile_has_video (GstEncodingContainerProfile * profile)
+{
+  const GList *l;
+
+  for (l = profile->encodingprofiles; l != NULL; l = l->next) {
+    if (GST_IS_ENCODING_VIDEO_PROFILE (l->data))
+      return TRUE;
+    if (GST_IS_ENCODING_CONTAINER_PROFILE (l->data) &&
+        gst_encoding_container_profile_has_video (l->data))
+      return TRUE;
+  }
+
+  return FALSE;
+}
+
+/**
+ * gst_encoding_profile_get_file_extension:
+ * @profile: a #GstEncodingProfile
+ *
+ * Returns: a suitable file extension for @profile, or NULL.
+ */
+const gchar *
+gst_encoding_profile_get_file_extension (GstEncodingProfile * profile)
+{
+  GstEncodingContainerProfile *cprofile;
+  const gchar *ext = NULL;
+  gboolean has_video;
+  GstCaps *caps;
+  guint num_children;
+
+  g_return_val_if_fail (GST_IS_ENCODING_PROFILE (profile), NULL);
+
+  caps = gst_encoding_profile_get_format (profile);
+  ext = pb_utils_get_file_extension_from_caps (caps);
+
+  if (!GST_IS_ENCODING_CONTAINER_PROFILE (profile))
+    goto done;
+
+  cprofile = GST_ENCODING_CONTAINER_PROFILE (profile);
+
+  num_children = g_list_length (cprofile->encodingprofiles);
+
+  /* if it's a tag container profile (e.g. id3mux/apemux), we need
+   * to look at what's inside it */
+  if (pb_utils_is_tag (caps)) {
+    GST_DEBUG ("tag container profile");
+    if (num_children == 1) {
+      GstEncodingProfile *child_profile = cprofile->encodingprofiles->data;
+
+      ext = gst_encoding_profile_get_file_extension (child_profile);
+    } else {
+      GST_WARNING ("expected exactly one child profile with tag profile");
+    }
+    goto done;
+  }
+
+  if (num_children == 0)
+    goto done;
+
+  /* special cases */
+  has_video = gst_encoding_container_profile_has_video (cprofile);
+
+  /* Ogg */
+  if (strcmp (ext, "ogg") == 0) {
+    /* ogg with video => .ogv */
+    if (has_video) {
+      ext = "ogv";
+      goto done;
+    }
+    /* ogg with just speex audio => .spx */
+    if (num_children == 1) {
+      GstEncodingProfile *child_profile = cprofile->encodingprofiles->data;
+
+      if (GST_IS_ENCODING_AUDIO_PROFILE (child_profile) &&
+          gst_encoding_profile_has_format (child_profile, "audio/x-speex")) {
+        ext = "spx";
+        goto done;
+      }
+    }
+    /* does anyone actually use .oga for ogg audio files? */
+    goto done;
+  }
+
+  /* Matroska */
+  if (has_video && strcmp (ext, "mka") == 0) {
+    ext = "mkv";
+    goto done;
+  }
+
+  /* Windows Media / ASF */
+  if (gst_encoding_profile_has_format (profile, "video/x-ms-asf")) {
+    const GList *l;
+    guint num_wmv = 0, num_wma = 0, num_other = 0;
+
+    for (l = cprofile->encodingprofiles; l != NULL; l = l->next) {
+      if (gst_encoding_profile_has_format (l->data, "video/x-wmv"))
+        ++num_wmv;
+      else if (gst_encoding_profile_has_format (l->data, "audio/x-wma"))
+        ++num_wma;
+      else
+        ++num_other;
+    }
+
+    if (num_other > 0)
+      ext = "asf";
+    else if (num_wmv > 0)
+      ext = "wmv";
+    else if (num_wma > 0)
+      ext = "wma";
+
+    goto done;
+  }
+
+done:
+
+  GST_INFO ("caps %" GST_PTR_FORMAT ", ext: %s", caps, GST_STR_NULL (ext));
+  gst_caps_unref (caps);
+  return ext;
+}
+
 /**
  * gst_encoding_profile_find:
  * @targetname: (transfer none): The name of the target
@@ -893,8 +1157,6 @@ gst_encoding_profile_get_type_nick (GstEncodingProfile * profile)
  * Find the #GstEncodingProfile with the specified name and category.
  *
  * Returns: (transfer full): The matching #GstEncodingProfile or %NULL.
- *
- * Since: 0.10.32
  */
 GstEncodingProfile *
 gst_encoding_profile_find (const gchar * targetname, const gchar * profilename,
@@ -947,7 +1209,7 @@ string_to_profile_transform (const GValue * src_value, GValue * dest_value)
   profile = combo_search (profilename);
 
   if (profile)
-    gst_value_take_mini_object (dest_value, (GstMiniObject *) profile);
+    g_value_take_object (dest_value, (GObject *) profile);
 }
 
 static gboolean
@@ -958,9 +1220,77 @@ gst_encoding_profile_deserialize_valfunc (GValue * value, const gchar * s)
   profile = combo_search (s);
 
   if (profile) {
-    gst_value_take_mini_object (value, (GstMiniObject *) profile);
+    g_value_take_object (value, (GObject *) profile);
     return TRUE;
   }
 
   return FALSE;
+}
+
+/**
+ * gst_encoding_profile_from_discoverer:
+ * @info: (transfer none): The #GstDiscovererInfo to read from
+ *
+ * Creates a #GstEncodingProfile matching the formats from the given
+ * #GstDiscovererInfo. Streams other than audio or video (eg,
+ * subtitles), are currently ignored.
+ *
+ * Returns: (transfer full): The new #GstEncodingProfile or %NULL.
+ */
+GstEncodingProfile *
+gst_encoding_profile_from_discoverer (GstDiscovererInfo * info)
+{
+  GstEncodingContainerProfile *profile;
+  GstDiscovererStreamInfo *sinfo;
+  GList *streams, *stream;
+  GstCaps *caps = NULL;
+
+  if (!info || gst_discoverer_info_get_result (info) != GST_DISCOVERER_OK)
+    return NULL;
+
+  sinfo = gst_discoverer_info_get_stream_info (info);
+  if (!sinfo)
+    return NULL;
+
+  caps = gst_discoverer_stream_info_get_caps (sinfo);
+  GST_LOG ("Container: %" GST_PTR_FORMAT "\n", caps);
+  profile =
+      gst_encoding_container_profile_new ("auto-generated",
+      "Automatically generated from GstDiscovererInfo", caps, NULL);
+  gst_caps_unref (caps);
+  if (!profile) {
+    GST_ERROR ("Failed to create container profile from caps %" GST_PTR_FORMAT,
+        caps);
+    return NULL;
+  }
+
+  streams =
+      gst_discoverer_container_info_get_streams (GST_DISCOVERER_CONTAINER_INFO
+      (sinfo));
+  for (stream = streams; stream; stream = stream->next) {
+    GstEncodingProfile *sprofile = NULL;
+    sinfo = (GstDiscovererStreamInfo *) stream->data;
+    caps = gst_discoverer_stream_info_get_caps (sinfo);
+    GST_LOG ("Stream: %" GST_PTR_FORMAT "\n", caps);
+    if (GST_IS_DISCOVERER_AUDIO_INFO (sinfo)) {
+      sprofile =
+          (GstEncodingProfile *) gst_encoding_audio_profile_new (caps, NULL,
+          NULL, 0);
+    } else if (GST_IS_DISCOVERER_VIDEO_INFO (sinfo)) {
+      sprofile =
+          (GstEncodingProfile *) gst_encoding_video_profile_new (caps, NULL,
+          NULL, 0);
+    } else {
+      /* subtitles or other ? ignore for now */
+    }
+    if (sprofile)
+      gst_encoding_container_profile_add_profile (profile, sprofile);
+    else
+      GST_ERROR ("Failed to create stream profile from caps %" GST_PTR_FORMAT,
+          caps);
+    gst_caps_unref (caps);
+  }
+  gst_discoverer_stream_info_list_free (streams);
+
+  return (GstEncodingProfile *) profile;
 }

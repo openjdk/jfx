@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -60,11 +60,9 @@ GST_STATIC_PAD_TEMPLATE ("sink",
  * The output capabilities.
  */
 #define AUDIOCONVERTER_SRC_CAPS \
-"audio/x-raw-float, " \
-"endianness = (int) " G_STRINGIFY (G_LITTLE_ENDIAN) ", " \
-"signed = (boolean) true, " \
-"width = (int) 32, " \
-"depth = (int) 32, " \
+"audio/x-raw, " \
+"format = (string) F32LE, " \
+"layout = (string) interleaved, " \
 "rate = (int) { 8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000 }, " \
 "channels = (int) [ 1, 2 ]"
 
@@ -76,40 +74,32 @@ GST_STATIC_PAD_TEMPLATE ("src",
 
 /***********************************************************************************
  * Substitution for
- * GST_BOILERPLATE (GstMpaDec, gst_mpadec, GstElement, GST_TYPE_ELEMENT);
+ * G_DEFINE_TYPE (AudioConverter, audioconverter, GstElement, GST_TYPE_ELEMENT);
  ***********************************************************************************/
-static void audioconverter_base_init  (gpointer g_class);
-static void audioconverter_class_init (AudioConverterClass *g_class);
-static void audioconverter_init (AudioConverter *object, AudioConverterClass *g_class);
-
-static GstElementClass *parent_class = NULL;
-
-static void audioconverter_class_init_trampoline (gpointer g_class, gpointer data)
+#define audioconverter_parent_class parent_class
+static void audioconverter_init          (AudioConverter      *self);
+static void audioconverter_class_init    (AudioConverterClass *klass);
+static gpointer audioconverter_parent_class = NULL;
+static void     audioconverter_class_intern_init (gpointer klass)
 {
-    parent_class = (GstElementClass *)  g_type_class_peek_parent (g_class);
-    audioconverter_class_init ((AudioConverterClass *)g_class);
+    audioconverter_parent_class = g_type_class_peek_parent (klass);
+    audioconverter_class_init ((AudioConverterClass*) klass);
 }
 
 GType audioconverter_get_type (void)
 {
     static volatile gsize gonce_data = 0;
-    // INLINE - g_once_init_enter()
+// INLINE - g_once_init_enter()
     if (g_once_init_enter (&gonce_data))
     {
         GType _type;
-        _type = gst_type_register_static_full (GST_TYPE_ELEMENT,
-                                               g_intern_static_string ("AudioConverter"),
-                                               sizeof (AudioConverterClass),
-                                               audioconverter_base_init,
-                                               NULL,
-                                               audioconverter_class_init_trampoline,
-                                               NULL,
-                                               NULL,
-                                               sizeof (AudioConverter),
-                                               0,
-                                               (GInstanceInitFunc) audioconverter_init,
-                                               NULL,
-                                               (GTypeFlags) 0);
+        _type = g_type_register_static_simple (GST_TYPE_ELEMENT,
+               g_intern_static_string ("AudioConverter"),
+               sizeof (AudioConverterClass),
+               (GClassInitFunc) audioconverter_class_intern_init,
+               sizeof(AudioConverter),
+               (GInstanceInitFunc) audioconverter_init,               
+               (GTypeFlags) 0);
         g_once_init_leave (&gonce_data, (gsize) _type);
     }
     return (GType) gonce_data;
@@ -120,11 +110,10 @@ GType audioconverter_get_type (void)
  */
 static GstStateChangeReturn audioconverter_change_state (GstElement* element,
                                                          GstStateChange transition);
-static gboolean audioconverter_sink_event (GstPad * pad, GstEvent * event);
-static GstFlowReturn audioconverter_chain (GstPad * pad, GstBuffer * buf);
-static gboolean audioconverter_src_event (GstPad * pad, GstEvent * event);
-static gboolean audioconverter_src_query (GstPad * pad, GstQuery* query);
-static const GstQueryType * audioconverter_get_src_query_types (GstPad * pad);
+static gboolean audioconverter_sink_event (GstPad * pad, GstObject *parent, GstEvent * event);
+static GstFlowReturn audioconverter_chain (GstPad * pad, GstObject *parent, GstBuffer * buf);
+static gboolean audioconverter_src_event (GstPad * pad, GstObject *parent, GstEvent * event);
+static gboolean audioconverter_src_query (GstPad * pad, GstObject *parent, GstQuery* query);
 static void audioconverter_state_init(AudioConverter *decode);
 
 static void initAudioFormatPCM(Float64 sampleRate, AudioStreamBasicDescription* outputFormat);
@@ -145,12 +134,13 @@ static OSStatus retrieveInputData(AudioConverterRef audioConverter,
 
 /* --- GObject vmethod implementations --- */
 
+/*
+ * Initialize mpadec's class.
+ */
 static void
-audioconverter_base_init (gpointer gclass)
+audioconverter_class_init (AudioConverterClass * klass)
 {
-    GstElementClass *element_class;
-
-    element_class = GST_ELEMENT_CLASS (gclass);
+    GstElementClass *element_class = GST_ELEMENT_CLASS (klass);
 
     gst_element_class_set_details_simple(element_class,
         "AudioConverter",
@@ -162,17 +152,8 @@ audioconverter_base_init (gpointer gclass)
                                         gst_static_pad_template_get (&src_factory));
     gst_element_class_add_pad_template (element_class,
                                         gst_static_pad_template_get (&sink_factory));
-}
 
-/*
- * Initialize mpadec's class.
- */
-static void
-audioconverter_class_init (AudioConverterClass * klass)
-{
-    GstElementClass *gstelement_class = (GstElementClass *) klass;
-
-    gstelement_class->change_state = audioconverter_change_state;
+    element_class->change_state = audioconverter_change_state;
 }
 
 /*
@@ -182,8 +163,7 @@ audioconverter_class_init (AudioConverterClass * klass)
  * Initialize instance structure.
  */
 static void
-audioconverter_init (AudioConverter * decode,
-                     AudioConverterClass * gclass)
+audioconverter_init (AudioConverter * decode)
 {
     // Input.
     decode->sinkpad = gst_pad_new_from_static_template (&sink_factory, "sink");
@@ -198,7 +178,6 @@ audioconverter_init (AudioConverter * decode,
         g_warning ("audioconverter element failed to add source pad!\n");
     gst_pad_set_event_function(decode->srcpad, audioconverter_src_event);
     gst_pad_set_query_function(decode->srcpad, audioconverter_src_query);
-    gst_pad_set_query_type_function(decode->srcpad, audioconverter_get_src_query_types);
     gst_pad_use_fixed_caps (decode->srcpad);
 }
 
@@ -215,6 +194,9 @@ audioconverter_state_init(AudioConverter *decode)
     decode->inputData = NULL;
 
     decode->enable_parser = TRUE;
+    
+    decode->sink_caps = NULL;
+    decode->segment_event = NULL;
 
     decode->audioStreamID = NULL;
 
@@ -316,7 +298,7 @@ audioconverter_change_state (GstElement* element, GstStateChange transition)
     }
 
     // Change state.
-    ret = parent_class->change_state(element, transition);
+    ret = GST_ELEMENT_CLASS(parent_class)->change_state(element, transition);
     if(GST_STATE_CHANGE_FAILURE == ret)
     {
         return ret;
@@ -367,6 +349,17 @@ audioconverter_change_state (GstElement* element, GstStateChange transition)
                 g_free(decode->previousDesc);
                 decode->previousDesc = NULL;
             }
+            
+            if (decode->sink_caps != NULL) {
+                gst_caps_unref(decode->sink_caps);
+                decode->sink_caps = NULL;
+            }
+            
+            if (decode->segment_event != NULL) {
+                // INLINE - gst_event_unref()
+                gst_event_unref (decode->segment_event);
+                decode->segment_event = NULL;
+            }
             break;
         case GST_STATE_CHANGE_READY_TO_NULL:
             break;
@@ -382,10 +375,9 @@ audioconverter_change_state (GstElement* element, GstStateChange transition)
  * FLUSH_START, FLUSH_STOP, and NEWSEGMENT; all others are forwarded.
  */
 static gboolean
-audioconverter_sink_event (GstPad * pad, GstEvent * event)
+audioconverter_sink_event (GstPad * pad, GstObject *parent, GstEvent * event)
 {
-    gboolean ret;
-    GstObject *parent = gst_object_get_parent((GstObject*)pad);
+    gboolean ret = FALSE;
     AudioConverter *decode = AUDIOCONVERTER(parent);
 
 #if ENABLE_PRINT_SPEW
@@ -429,15 +421,49 @@ audioconverter_sink_event (GstPad * pad, GstEvent * event)
             ret = gst_pad_push_event (decode->srcpad, event);
             break;
         }
+        
+        case GST_EVENT_CAPS:
+        {
+            GstCaps *caps;
+
+            gst_event_parse_caps (event, &caps);
+            if (decode->sink_caps != NULL)
+                gst_caps_unref(decode->sink_caps);
+            
+            decode->sink_caps = gst_caps_copy(caps);
+
+            // INLINE - gst_event_unref()
+            gst_event_unref (event);
+            ret = TRUE;
+            break;
+        }
+        
+        case GST_EVENT_SEGMENT:
+        {
+            if (!decode->has_pad_caps)
+            {
+                if (decode->segment_event != NULL)
+                {
+                    // INLINE - gst_event_unref()
+                    gst_event_unref (decode->segment_event);
+                }
+                decode->segment_event = gst_event_copy(event);
+                // INLINE - gst_event_unref()
+                gst_event_unref (event);
+                ret = TRUE;
+            }
+            else
+            {
+                ret = gst_pad_push_event (decode->srcpad, event);
+            }
+            break;
+        }
 
         default:
             // Push the event downstream.
             ret = gst_pad_push_event (decode->srcpad, event);
             break;
     }
-
-    // Unlock the parent object.
-    gst_object_unref(parent);
 
     return ret;
 }
@@ -447,10 +473,9 @@ audioconverter_sink_event (GstPad * pad, GstEvent * event)
  * that only to convert the event from TIME to BYTE format.
  */
 static gboolean
-audioconverter_src_event (GstPad * pad, GstEvent * event)
+audioconverter_src_event (GstPad * pad, GstObject *parent, GstEvent * event)
 {
     gboolean result = FALSE;
-    GstObject *parent = gst_object_get_parent((GstObject*)pad);
     AudioConverter *decode = AUDIOCONVERTER(parent);
 
     if (GST_EVENT_TYPE(event) == GST_EVENT_SEEK)
@@ -468,8 +493,7 @@ audioconverter_src_event (GstPad * pad, GstEvent * event)
         if (format == GST_FORMAT_TIME)
         {
             gint64 start_byte = 0;
-            GstFormat format = GST_FORMAT_BYTES;
-            if (gst_pad_query_peer_convert(decode->sinkpad, GST_FORMAT_TIME, start, &format, &start_byte))
+            if (gst_pad_peer_query_convert(decode->sinkpad, GST_FORMAT_TIME, start, GST_FORMAT_BYTES, &start_byte))
             {
                 result = gst_pad_push_event(decode->sinkpad,
                                             gst_event_new_seek(rate, GST_FORMAT_BYTES,
@@ -508,30 +532,14 @@ audioconverter_src_event (GstPad * pad, GstEvent * event)
     if (!result)
         result = gst_pad_push_event(decode->sinkpad, event);
 
-    // Unlock the parent object.
-    gst_object_unref(parent);
-
     return result;
 }
 
-static const GstQueryType *
-audioconverter_get_src_query_types (GstPad * pad)
-{
-    static const GstQueryType audioconverter_src_query_types[] = {
-        GST_QUERY_POSITION,
-        GST_QUERY_DURATION,
-        0
-    };
-
-    return audioconverter_src_query_types;
-}
-
 static gboolean
-audioconverter_src_query (GstPad * pad, GstQuery * query)
+audioconverter_src_query (GstPad * pad, GstObject *parent, GstQuery * query)
 {
     // Set flag indicating that the query has not been handled.
     gboolean result = FALSE;
-    GstObject *parent = gst_object_get_parent((GstObject*)pad);
     AudioConverter *decode = AUDIOCONVERTER(parent);
     GstFormat format;
     gint64 value;
@@ -546,8 +554,6 @@ audioconverter_src_query (GstPad * pad, GstQuery * query)
 
             // Do not handle query if the stream offset is unknown.
             if ((guint64)-1 == decode->initial_offset) {
-                // Unref the parent object.
-                gst_object_unref(parent);
                 return FALSE;
             }
 
@@ -562,7 +568,7 @@ audioconverter_src_query (GstPad * pad, GstQuery * query)
 #endif
                     gst_query_set_duration(query, GST_FORMAT_TIME, decode->duration);
                     result = TRUE;
-                } else if (gst_pad_query_peer_duration(decode->sinkpad, &format, &value) &&
+                } else if (gst_pad_peer_query_duration(decode->sinkpad, GST_FORMAT_TIME, &value) &&
                            format == GST_FORMAT_TIME) {
                     // Get the duration from the sinkpad.
                     gst_query_set_duration(query, GST_FORMAT_TIME, value);
@@ -572,13 +578,11 @@ audioconverter_src_query (GstPad * pad, GstQuery * query)
                     g_print("SINK PAD TIME DURATION\n");
 #endif
                 } else {
-                    GstFormat fmt = GST_FORMAT_BYTES;
                     gint64 data_length;
-                    if (gst_pad_query_peer_duration(decode->sinkpad, &fmt, &data_length)) {
+                    if (gst_pad_peer_query_duration(decode->sinkpad, GST_FORMAT_BYTES, &data_length)) {
                         data_length -= decode->initial_offset;
 
-                        fmt = GST_FORMAT_TIME;
-                        if (gst_pad_query_peer_convert(decode->sinkpad, GST_FORMAT_BYTES, data_length, &fmt, &value)) {
+                        if (gst_pad_peer_query_convert(decode->sinkpad, GST_FORMAT_BYTES, data_length, GST_FORMAT_TIME, &value)) {
 #if ENABLE_PRINT_SPEW
                             g_print("SINK PAD BYTE DURATION\n");
 #endif
@@ -620,11 +624,8 @@ audioconverter_src_query (GstPad * pad, GstQuery * query)
     // Use default query if flag indicates query not handled.
     if(result == FALSE)
     {
-        result = gst_pad_query_default(pad, query);
+        result = gst_pad_query_default(pad, parent, query);
     }
-
-    // Unref the parent object.
-    gst_object_unref(parent);
 
     return result;
 }
@@ -633,18 +634,21 @@ audioconverter_src_query (GstPad * pad, GstQuery * query)
  * Processes a buffer of MPEG audio data pushed to the sink pad.
  */
 static GstFlowReturn
-audioconverter_chain (GstPad * pad, GstBuffer * buf)
+audioconverter_chain (GstPad * pad, GstObject *parent, GstBuffer * buf)
 {
-    AudioConverter *decode = AUDIOCONVERTER(GST_OBJECT_PARENT(pad));
+    AudioConverter *decode = AUDIOCONVERTER(parent);
     GstFlowReturn ret      = GST_FLOW_OK;
-    guint8 *buf_data       = GST_BUFFER_DATA(buf);
-    guint buf_size         = GST_BUFFER_SIZE(buf);
+    GstMapInfo info;
+    gboolean unmap_buf = FALSE;
+    guint8 *buf_data       = NULL;
+    guint buf_size         = 0;
     GstClockTime buf_time  = GST_BUFFER_TIMESTAMP(buf);
+    GstEvent *caps_event = NULL;
 
     // If between FLUSH_START and FLUSH_STOP, reject new buffers.
     if (decode->is_flushing)
     {
-        ret = GST_FLOW_WRONG_STATE;
+        ret = GST_FLOW_FLUSHING;
         goto _exit;
     }
 
@@ -652,12 +656,22 @@ audioconverter_chain (GstPad * pad, GstBuffer * buf)
     if (GST_BUFFER_IS_DISCONT(buf) && TRUE == decode->is_synced) {
         audioconverter_state_reset(decode);
     }
-
+    
+    // Get memory pointers from buffer
+    if (gst_buffer_map(buf, &info, GST_MAP_READ)) {
+        buf_data = info.data;
+        buf_size = info.size;
+        unmap_buf = TRUE;
+    } else {        
+        ret = GST_FLOW_ERROR;
+        goto _exit;
+    }
+    
     if (decode->enable_parser && NULL == decode->audioStreamID) {
         AudioFileTypeID audioStreamTypeHint = kAudioFileM4AType;
 
         // Try to set a better parser hint from the sink pad caps.
-        GstCaps* sink_peer_caps = gst_pad_peer_get_caps(decode->sinkpad);
+        GstCaps* sink_peer_caps = decode->sink_caps;
         if(NULL != sink_peer_caps) {
             if(gst_caps_get_size(sink_peer_caps) > 0) {
                 GstStructure* caps_struct = gst_caps_get_structure(sink_peer_caps, 0);
@@ -677,8 +691,18 @@ audioconverter_chain (GstPad * pad, GstBuffer * buf)
 
                                 const GValue* codec_data_value = gst_structure_get_value (caps_struct, "codec_data");
                                 GstBuffer* codec_data_buf = gst_value_get_buffer (codec_data_value);
-                                guint8* codec_data = GST_BUFFER_DATA(codec_data_buf);
-                                guint codec_data_size = GST_BUFFER_SIZE(codec_data_buf);
+                                GstMapInfo info;
+                                GstMapInfo info2;
+                                guint8* codec_data = NULL;
+                                guint codec_data_size = 0;
+                                
+                                if (gst_buffer_map(codec_data_buf, &info, GST_MAP_READ)) {
+                                    codec_data = info.data;
+                                    codec_data_size = info.size;
+                                } else {
+                                    ret = GST_FLOW_ERROR;
+                                    goto _exit;
+                                }
 
                                 //
                                 // Get the number of channels from the Audio Specific Config
@@ -697,6 +721,8 @@ audioconverter_chain (GstPad * pad, GstBuffer * buf)
                                         channel_config = (codec_data[1]&0x78) >> 3;
                                     }
                                 }
+                                
+                                gst_buffer_unmap(codec_data_buf, &info);
 
                                 const GValue* esds_value = gst_structure_get_value (caps_struct, "esds_data");
                                 if(esds_value) {
@@ -711,8 +737,16 @@ audioconverter_chain (GstPad * pad, GstBuffer * buf)
                                     }
 
                                     GstBuffer* esds_buf = gst_value_get_buffer (esds_value);
-                                    guint8* esds_data = GST_BUFFER_DATA(esds_buf);
-                                    guint esds_size = GST_BUFFER_SIZE(esds_buf);
+                                    guint8* esds_data = NULL;
+                                    guint esds_size = 0;
+                                    
+                                    if (gst_buffer_map(esds_buf, &info2, GST_MAP_READ)) {
+                                      esds_data = info2.data;
+                                      esds_size = info2.size;
+                                    } else {
+                                        ret = GST_FLOW_ERROR;
+                                        goto _exit;
+                                    }
 
                                     decode->sampling_rate = rate;
                                     if (channel_config > 0 && channel_config < 7) {
@@ -742,9 +776,9 @@ audioconverter_chain (GstPad * pad, GstBuffer * buf)
 
                                     decode->isFormatInitialized = TRUE;
                                     decode->isAudioConverterReady = TRUE;
-                                } else {
-                                    gst_caps_unref(sink_peer_caps);
-
+                                    
+                                    gst_buffer_unmap(esds_buf, &info2);
+                                } else {       
                                     ret = GST_FLOW_ERROR;
                                     goto _exit;
                                 }
@@ -771,7 +805,6 @@ audioconverter_chain (GstPad * pad, GstBuffer * buf)
                     }
                 }
             }
-            gst_caps_unref(sink_peer_caps);
         }
 
         if(decode->enable_parser) {
@@ -864,10 +897,9 @@ audioconverter_chain (GstPad * pad, GstBuffer * buf)
             // Query for the stream length if it was not set from a header.
             if (AUDIOCONVERTER_STREAM_LENGTH_UNKNOWN == decode->stream_length)
             {
-                GstFormat sink_format = GST_FORMAT_BYTES;
                 gint64 sink_length;
 
-                if (gst_pad_query_peer_duration(decode->sinkpad, &sink_format, &sink_length))
+                if (gst_pad_peer_query_duration(decode->sinkpad, GST_FORMAT_BYTES, &sink_length))
                 {
                     decode->stream_length = sink_length;
                 }
@@ -918,15 +950,19 @@ audioconverter_chain (GstPad * pad, GstBuffer * buf)
                 goto _exit;
             }
 
-            if(gst_pad_set_caps (decode->sinkpad, caps) == FALSE)
+            caps_event = gst_event_new_caps (caps);
+            if (caps_event)
             {
+                if(!gst_pad_send_event(decode->sinkpad, caps_event))
+                {
 #if ENABLE_PRINT_SPEW
-                g_print("WARNING: COULD NOT SET sinkpad CAPS\n");
+                    g_print("WARNING: COULD NOT SET sinkpad CAPS\n");
+#endif
+                }
+#if ENABLE_PRINT_SPEW
+                g_print("sink_caps %s\n", gst_caps_to_string(caps));
 #endif
             }
-#if ENABLE_PRINT_SPEW
-            g_print("sink_caps %s\n", gst_caps_to_string(caps));
-#endif
 
             gst_caps_unref (caps);
             caps = NULL;
@@ -934,29 +970,37 @@ audioconverter_chain (GstPad * pad, GstBuffer * buf)
             // Source caps: PCM audio.
 
             // Create the source caps.
-            caps = gst_caps_new_simple ("audio/x-raw-float",
+            caps = gst_caps_new_simple ("audio/x-raw",
                                         "rate", G_TYPE_INT, (gint)decode->sampling_rate,
                                         "channels", G_TYPE_INT,
                                         decode->audioOutputFormat.mChannelsPerFrame, // may not equal num_channels
-                                        "endianness", G_TYPE_INT, G_LITTLE_ENDIAN,
-                                        "width", G_TYPE_INT, 32,
-                                        "depth", G_TYPE_INT, 32,
-                                        "signed", G_TYPE_BOOLEAN, TRUE,
+                                        "format", G_TYPE_STRING, "F32LE",
+                                        "layout", G_TYPE_STRING, "interleaved",
                                         NULL);
 
             // Set the source caps.
-            if(gst_pad_set_caps (decode->srcpad, caps) == FALSE)
+            caps_event = gst_event_new_caps (caps);
+            if (caps_event)
             {
+                if(!gst_pad_push_event(decode->srcpad, caps_event))
+                {
 #if ENABLE_PRINT_SPEW
-                g_print("WARNING: COULD NOT SET srcpad CAPS\n");
+                    g_print("WARNING: COULD NOT SET srcpad CAPS\n");
+#endif
+                }
+#if ENABLE_PRINT_SPEW
+                g_print("src_caps %s\n", gst_caps_to_string(caps));
 #endif
             }
-#if ENABLE_PRINT_SPEW
-            g_print("src_caps %s\n", gst_caps_to_string(caps));
-#endif
 
             gst_caps_unref (caps);
             caps = NULL;
+            
+            if (decode->segment_event)
+            {
+                gst_pad_push_event (decode->srcpad, decode->segment_event);
+                decode->segment_event = NULL;
+            }
 
             // Set the source caps flag.
             decode->has_pad_caps = TRUE;
@@ -1018,15 +1062,13 @@ audioconverter_chain (GstPad * pad, GstBuffer * buf)
         UInt32 outputDataPacketSize = decode->samples_per_frame;
 
         guint outbuf_size = outputDataPacketSize*decode->audioOutputFormat.mBytesPerPacket;
-        GstBuffer *outbuf = NULL;
-        ret = gst_pad_alloc_buffer_and_set_caps (decode->srcpad, GST_BUFFER_OFFSET_NONE,
-                                                 outbuf_size,
-                                                 GST_PAD_CAPS(decode->srcpad), &outbuf);
+        GstMapInfo info2;
+        GstBuffer *outbuf = gst_buffer_new_allocate(NULL, outbuf_size, NULL);
 
         // Bail out on error.
-        if(ret != GST_FLOW_OK)
+        if(outbuf == NULL || !gst_buffer_map(outbuf, &info2, GST_MAP_WRITE))
         {
-            if (ret != GST_FLOW_WRONG_STATE)
+            if (ret != GST_FLOW_FLUSHING)
             {
                 gst_element_message_full(GST_ELEMENT(decode), GST_MESSAGE_ERROR, GST_CORE_ERROR, GST_CORE_ERROR_SEEK, g_strdup("Decoded audio buffer allocation failed"), NULL, ("audioconverter.c"), ("audioconverter_chain"), 0);
             }
@@ -1038,13 +1080,14 @@ audioconverter_chain (GstPad * pad, GstBuffer * buf)
         outputData.mNumberBuffers = 1;
         outputData.mBuffers[0].mNumberChannels = decode->audioOutputFormat.mChannelsPerFrame;
         outputData.mBuffers[0].mDataByteSize = (UInt32)outputDataPacketSize*decode->audioOutputFormat.mBytesPerFrame;
-        outputData.mBuffers[0].mData = GST_BUFFER_DATA(outbuf);
+        outputData.mBuffers[0].mData = info2.data;
         OSStatus err = AudioConverterFillComplexBuffer(decode->audioConverter,
                                                        retrieveInputData,
                                                        (void*)decode,
                                                        &outputDataPacketSize,
                                                        &outputData,
                                                        decode->outPacketDescription);
+        gst_buffer_unmap(outbuf, &info2);
         if(noErr != err) {
 #if ENABLE_PRINT_SPEW
             g_print("AudioConverterFillComplexBuffer err: %u\n", err);
@@ -1069,7 +1112,7 @@ audioconverter_chain (GstPad * pad, GstBuffer * buf)
         // Set output buffer properties.
         GST_BUFFER_TIMESTAMP(outbuf) = timestamp;
         GST_BUFFER_DURATION(outbuf) = decode->frame_duration;
-        GST_BUFFER_SIZE(outbuf) = outputDataPacketSize*decode->audioOutputFormat.mBytesPerPacket;
+        gst_buffer_set_size(outbuf, outputDataPacketSize*decode->audioOutputFormat.mBytesPerPacket);
         GST_BUFFER_OFFSET(outbuf) = decode->total_samples;
         GST_BUFFER_OFFSET_END(outbuf) = (decode->total_samples += outputDataPacketSize);
         if(decode->is_discont)
@@ -1094,6 +1137,9 @@ audioconverter_chain (GstPad * pad, GstBuffer * buf)
     }
 
 _exit:
+    if (unmap_buf) {
+        gst_buffer_unmap(buf, &info);                                                     
+    }
     // Unref the input buffer.
     // INLINE - gst_buffer_unref()
     gst_buffer_unref(buf);

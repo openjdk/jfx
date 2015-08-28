@@ -14,8 +14,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 #ifndef __GST_QTDEMUX_DUMP_H__
@@ -74,6 +74,8 @@ gboolean qtdemux_dump_trex (GstQTDemux * qtdemux, GstByteReader * data,
 gboolean qtdemux_dump_mehd (GstQTDemux * qtdemux, GstByteReader * data,
     int depth);
 gboolean qtdemux_dump_sdtp (GstQTDemux * qtdemux, GstByteReader * data,
+    int depth);
+gboolean qtdemux_dump_tfdt (GstQTDemux * qtdemux, GstByteReader * data,
     int depth);
 gboolean qtdemux_dump_unknown (GstQTDemux * qtdemux, GstByteReader * data,
     int depth);

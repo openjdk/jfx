@@ -14,8 +14,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 #ifndef __GST_PROFILE_REGISTRY_H__
@@ -36,10 +36,10 @@ G_BEGIN_DECLS
  * GST_ENCODING_CATEGORY_DEVICE:
  *
  * #GstEncodingTarget category for device-specific targets.
- * The name of the target will usually be the contructor and model of the device,
+ * The name of the target will usually be the constructor and model of the device,
  * and that target will contain #GstEncodingProfiles suitable for that device.
  */
-#define GST_ENCODING_CATEGORY_DEVICE		"device"
+#define GST_ENCODING_CATEGORY_DEVICE            "device"
 
 /**
  * GST_ENCODING_CATEGORY_ONLINE_SERVICE:
@@ -50,7 +50,7 @@ G_BEGIN_DECLS
  * service.
  */
 
-#define GST_ENCODING_CATEGORY_ONLINE_SERVICE	"online-service"
+#define GST_ENCODING_CATEGORY_ONLINE_SERVICE    "online-service"
 
 /**
  * GST_ENCODING_CATEGORY_STORAGE_EDITING:
@@ -69,7 +69,7 @@ G_BEGIN_DECLS
  * #GstEncodingTarget category for recording and capture.
  * Targets within this category are optimized for low latency encoding.
  */
-#define GST_ENCODING_CATEGORY_CAPTURE		"capture"
+#define GST_ENCODING_CATEGORY_CAPTURE           "capture"
 
 /**
  * GstEncodingTarget:
@@ -78,18 +78,16 @@ G_BEGIN_DECLS
  *
  * When being stored/loaded, targets come from a specific category, like
  * #GST_ENCODING_CATEGORY_DEVICE.
- *
- * Since: 0.10.32
  */
-#define GST_TYPE_ENCODING_TARGET			\
+#define GST_TYPE_ENCODING_TARGET                        \
   (gst_encoding_target_get_type ())
-#define GST_ENCODING_TARGET(obj)			\
+#define GST_ENCODING_TARGET(obj)                        \
   (G_TYPE_CHECK_INSTANCE_CAST((obj),GST_TYPE_ENCODING_TARGET, GstEncodingTarget))
-#define GST_IS_ENCODING_TARGET(obj)			\
+#define GST_IS_ENCODING_TARGET(obj)                     \
   (G_TYPE_CHECK_INSTANCE_TYPE((obj),GST_TYPE_ENCODING_TARGET))
 
 typedef struct _GstEncodingTarget GstEncodingTarget;
-typedef GstMiniObjectClass GstEncodingTargetClass;
+typedef GObjectClass GstEncodingTargetClass;
 
 GType gst_encoding_target_get_type (void);
 
@@ -98,50 +96,48 @@ GType gst_encoding_target_get_type (void);
  * @target: a #GstEncodingTarget
  *
  * Decreases the reference count of the @target, possibly freeing it.
- *
- * Since: 0.10.32
  */
 #define gst_encoding_target_unref(target) \
-  (gst_mini_object_unref ((GstMiniObject*) target))
+  (g_object_unref ((GObject*) target))
 
 /**
  * gst_encoding_target_ref:
  * @target: a #GstEncodingTarget
  *
  * Increases the reference count of the @target.
- *
- * Since: 0.10.32
  */
 #define gst_encoding_target_ref(target) \
-  (gst_mini_object_ref ((GstMiniObject*) target))
+  (g_object_ref ((GObject*) target))
 
-GstEncodingTarget *
-gst_encoding_target_new (const gchar *name, const gchar *category,
-			 const gchar *description, const GList *profiles);
-const gchar *gst_encoding_target_get_name (GstEncodingTarget *target);
-const gchar *gst_encoding_target_get_category (GstEncodingTarget *target);
-const gchar *gst_encoding_target_get_description (GstEncodingTarget *target);
-const GList *gst_encoding_target_get_profiles (GstEncodingTarget *target);
-GstEncodingProfile *gst_encoding_target_get_profile (GstEncodingTarget *target,
-						     const gchar *name);
+GstEncodingTarget *     gst_encoding_target_new                 (const gchar *name,
+                                                                 const gchar *category,
+                                                                 const gchar *description,
+                                                                 const GList *profiles);
 
-gboolean
-gst_encoding_target_add_profile (GstEncodingTarget *target, GstEncodingProfile *profile);
+const gchar *           gst_encoding_target_get_name            (GstEncodingTarget *target);
+const gchar *           gst_encoding_target_get_category        (GstEncodingTarget *target);
+const gchar *           gst_encoding_target_get_description     (GstEncodingTarget *target);
+const GList *           gst_encoding_target_get_profiles        (GstEncodingTarget *target);
+GstEncodingProfile *    gst_encoding_target_get_profile         (GstEncodingTarget *target,
+                                                                 const gchar *name);
 
-gboolean gst_encoding_target_save (GstEncodingTarget *target,
-				   GError **error);
-gboolean gst_encoding_target_save_to_file (GstEncodingTarget *target,
-					   const gchar *filepath,
-					   GError **error);
-GstEncodingTarget *gst_encoding_target_load (const gchar *name,
-					     const gchar *category,
-					     GError **error);
-GstEncodingTarget *gst_encoding_target_load_from_file (const gchar *filepath,
-						       GError **error);
+gboolean                gst_encoding_target_add_profile         (GstEncodingTarget *target,
+                                                                 GstEncodingProfile *profile);
 
-GList *gst_encoding_list_available_categories (void);
-GList *gst_encoding_list_all_targets (const gchar * categoryname);
+gboolean                gst_encoding_target_save                (GstEncodingTarget *target,
+                                                                 GError **error);
+gboolean                gst_encoding_target_save_to_file        (GstEncodingTarget *target,
+                                                                 const gchar *filepath,
+                                                                 GError **error);
+GstEncodingTarget *     gst_encoding_target_load                (const gchar *name,
+                                                                 const gchar *category,
+                                                                 GError **error);
+GstEncodingTarget *     gst_encoding_target_load_from_file      (const gchar *filepath,
+                                                                 GError **error);
+
+GList *                 gst_encoding_list_available_categories  (void);
+GList *                 gst_encoding_list_all_targets           (const gchar * categoryname);
 
 G_END_DECLS
 
-#endif	/* __GST_PROFILE_REGISTRY_H__ */
+#endif  /* __GST_PROFILE_REGISTRY_H__ */

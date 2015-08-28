@@ -15,8 +15,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 #ifndef __GST_RIFF_IDS_H__
@@ -46,6 +46,9 @@ G_BEGIN_DECLS
 #define GST_RIFF_TAG_JUNQ GST_MAKE_FOURCC ('J','U','N','Q')
 #define GST_RIFF_TAG_idx1 GST_MAKE_FOURCC ('i','d','x','1')
 #define GST_RIFF_TAG_dmlh GST_MAKE_FOURCC ('d','m','l','h')
+#define GST_RIFF_TAG_ID32 GST_MAKE_FOURCC ('I','D','3','2')
+#define GST_RIFF_TAG_id3  GST_MAKE_FOURCC ('i','d','3',' ')
+#define GST_RIFF_TAG_IDVX GST_MAKE_FOURCC ('I','D','V','X')
 /* WAV stuff */
 #define GST_RIFF_TAG_fmt  GST_MAKE_FOURCC ('f','m','t',' ')
 #define GST_RIFF_TAG_data GST_MAKE_FOURCC ('d','a','t','a')
@@ -55,6 +58,10 @@ G_BEGIN_DECLS
 #define GST_RIFF_TAG_BEXT GST_MAKE_FOURCC ('B','E','X','T')
 #define GST_RIFF_TAG_fact GST_MAKE_FOURCC ('f','a','c','t')
 #define GST_RIFF_TAG_acid GST_MAKE_FOURCC ('a','c','i','d')
+#define GST_RIFF_TAG_labl GST_MAKE_FOURCC ('l','a','b','l')
+#define GST_RIFF_TAG_note GST_MAKE_FOURCC ('n','o','t','e')
+#define GST_RIFF_TAG_smpl GST_MAKE_FOURCC ('s','m','p','l')
+#define GST_RIFF_TAG_inst GST_MAKE_FOURCC ('i','n','s','t')
 
 /* LIST types */
 #define GST_RIFF_LIST_movi GST_MAKE_FOURCC ('m','o','v','i')
@@ -64,6 +71,7 @@ G_BEGIN_DECLS
 #define GST_RIFF_LIST_INFO GST_MAKE_FOURCC ('I','N','F','O')
 #define GST_RIFF_LIST_AVIX GST_MAKE_FOURCC ('A','V','I','X')
 #define GST_RIFF_LIST_adtl GST_MAKE_FOURCC ('a','d','t','l')
+#define GST_RIFF_LIST_ncdt GST_MAKE_FOURCC ('n','c','d','t')
 
 /* fcc types */
 #define GST_RIFF_FCC_vids GST_MAKE_FOURCC ('v','i','d','s')
@@ -94,13 +102,19 @@ G_BEGIN_DECLS
 #define GST_RIFF_INFO_IMED GST_MAKE_FOURCC ('I','M','E','D') /* medium */
 #define GST_RIFF_INFO_INAM GST_MAKE_FOURCC ('I','N','A','M') /* name */
 #define GST_RIFF_INFO_IPLT GST_MAKE_FOURCC ('I','P','L','T') /* palette setting */
-#define GST_RIFF_INFO_IPRD GST_MAKE_FOURCC ('I','P','R','D') /* product */
+#define GST_RIFF_INFO_IPRD GST_MAKE_FOURCC ('I','P','R','D') /* product (album) */
 #define GST_RIFF_INFO_ISBJ GST_MAKE_FOURCC ('I','S','B','J') /* subject */
 #define GST_RIFF_INFO_ISFT GST_MAKE_FOURCC ('I','S','F','T') /* software */
 #define GST_RIFF_INFO_ISHP GST_MAKE_FOURCC ('I','S','H','P') /* sharpness */
 #define GST_RIFF_INFO_ISRC GST_MAKE_FOURCC ('I','S','R','C') /* source */
 #define GST_RIFF_INFO_ISRF GST_MAKE_FOURCC ('I','S','R','F') /* source form */
 #define GST_RIFF_INFO_ITCH GST_MAKE_FOURCC ('I','T','C','H') /* technician(s) */
+
+#define GST_RIFF_INFO_IAAR GST_MAKE_FOURCC ('I','A','A','R') /* album artist */
+#define GST_RIFF_INFO_ITRK GST_MAKE_FOURCC ('I','T','R','K') /* track number */
+
+/* ncdt types - see http://www.sno.phy.queensu.ca/~phil/exiftool/TagNames/Nikon.html#NCDT */
+#define GST_RIFF_LIST_nctg GST_MAKE_FOURCC ('n','c','t','g')
 
 /*********Chunk Names***************/
 #define GST_RIFF_FF00 GST_MAKE_FOURCC (0xFF,0xFF,0x00,0x00)
@@ -310,7 +324,7 @@ typedef struct _gst_riff_strf_auds {       /* == WaveHeader (?) */
 #define GST_RIFF_WAVE_FORMAT_DOLBY_AC2      (0x0030)
 #define GST_RIFF_WAVE_FORMAT_GSM610         (0x0031)
 #define GST_RIFF_WAVE_FORMAT_MSN            (0x0032)
-#define GST_RIFF_WAVE_FORMAT_ANTEX_ADPCME   (0x0033 
+#define GST_RIFF_WAVE_FORMAT_ANTEX_ADPCME   (0x0033
 #define GST_RIFF_WAVE_FORMAT_CONTROL_RES_VQLPC (0x0034)
 #define GST_RIFF_WAVE_FORMAT_DIGIREAL       (0x0035)
 #define GST_RIFF_WAVE_FORMAT_DIGIADPCM      (0x0036)
@@ -324,6 +338,7 @@ typedef struct _gst_riff_strf_auds {       /* == WaveHeader (?) */
 #define GST_RIFF_WAVE_FORMAT_ITU_G721_ADPCM (0x0040)
 #define GST_RIFF_WAVE_FORMAT_G728_CELP      (0x0041)
 #define GST_RIFF_WAVE_FORMAT_MSG723         (0x0042)
+#define GST_RIFF_WAVE_FORMAT_ITU_G726_ADPCM (0x0045)
 #define GST_RIFF_WAVE_FORMAT_MPEGL12        (0x0050)
 #define GST_RIFF_WAVE_FORMAT_RT24           (0x0052)
 #define GST_RIFF_WAVE_FORMAT_PAC            (0x0053)
@@ -444,14 +459,14 @@ typedef struct _gst_riff_strf_auds {       /* == WaveHeader (?) */
   guint32 rate;
   guint32 av_bps;
   guint16 blockalign;
-#if 0
-  /* missing field: */
   guint16 bits_per_sample;
+#if 0
+  /* missing field */
+  guint16 extra_size;
 #endif
-  guint16 size;
 } gst_riff_strf_auds;
 
-typedef struct _gst_riff_strf_iavs {    
+typedef struct _gst_riff_strf_iavs {
   guint32 DVAAuxSrc;
   guint32 DVAAuxCtl;
   guint32 DVAAuxSrc1;
@@ -462,7 +477,7 @@ typedef struct _gst_riff_strf_iavs {
   guint32 DVReserved2;
 } gst_riff_strf_iavs;
 
-typedef struct _gst_riff_index_entry {  
+typedef struct _gst_riff_index_entry {
   guint32 id;
   guint32 flags;
 #define GST_RIFF_IF_LIST                (0x00000001L)

@@ -115,6 +115,7 @@ struct _GstDShowWrapper
     gboolean is_eos_received;
 
     GstBuffer *out_buffer[MAX_OUTPUT_DS_STREAMS];
+    GstEvent *caps_event[MAX_OUTPUT_DS_STREAMS];
 
     gboolean enable_pts;
 

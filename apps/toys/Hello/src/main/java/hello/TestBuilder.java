@@ -447,7 +447,7 @@ public class TestBuilder {
                 new CheckMenuItem("Use _System Menu Bar");
             useSystemMenuBarCB.setSelected(true);
             menuBar.useSystemMenuBarProperty().
-                bind(useSystemMenuBarCB.selectedProperty());
+                bindBidirectional(useSystemMenuBarCB.selectedProperty());
             systemMenuBarMenu.getItems().add(useSystemMenuBarCB);
 
             menuBar.getMenus().add(systemMenuBarMenu);

@@ -17,8 +17,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 #ifndef __GST_TYPEFINDHELPER_H__
@@ -30,6 +30,10 @@ G_BEGIN_DECLS
 
 GstCaps * gst_type_find_helper (GstPad *src, guint64 size);
 
+GstCaps * gst_type_find_helper_for_data   (GstObject              *obj,
+                                           const guint8           *data,
+                                           gsize                   size,
+                                           GstTypeFindProbability *prob);
 GstCaps * gst_type_find_helper_for_buffer (GstObject              *obj,
                                            GstBuffer              *buf,
                                            GstTypeFindProbability *prob);
@@ -40,6 +44,7 @@ GstCaps * gst_type_find_helper_for_extension (GstObject * obj,
 /**
  * GstTypeFindHelperGetRangeFunction:
  * @obj: a #GstObject that will handle the getrange request
+ * @parent: (allow-none): the parent of @obj or %NULL
  * @offset: the offset of the range
  * @length: the length of the range
  * @buffer: a memory location to hold the result buffer
@@ -55,20 +60,17 @@ GstCaps * gst_type_find_helper_for_extension (GstObject * obj,
  * Returns: GST_FLOW_OK for success
  */
 typedef GstFlowReturn (*GstTypeFindHelperGetRangeFunction) (GstObject  *obj,
+                                                            GstObject  *parent,
                                                             guint64     offset,
                                                             guint       length,
                                                             GstBuffer **buffer);
 
-GstCaps * gst_type_find_helper_get_range (GstObject                        * obj,
+GstCaps * gst_type_find_helper_get_range (GstObject                         *obj,
+                                          GstObject                         *parent,
                                           GstTypeFindHelperGetRangeFunction  func,
                                           guint64                            size,
+                                          const gchar                       *extension,
                                           GstTypeFindProbability            *prob);
-
-GstCaps * gst_type_find_helper_get_range_ext (GstObject                        * obj,
-                                              GstTypeFindHelperGetRangeFunction  func,
-                                              guint64                            size,
-                                              const gchar                       *extension,
-                                              GstTypeFindProbability            *prob);
 
 G_END_DECLS
 

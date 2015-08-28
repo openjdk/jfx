@@ -16,8 +16,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 
@@ -25,6 +25,7 @@
 #define __GST_QUEUE_H__
 
 #include <gst/gst.h>
+#include <gst/base/gstqueuearray.h>
 
 G_BEGIN_DECLS
 
@@ -38,6 +39,8 @@ G_BEGIN_DECLS
   (G_TYPE_CHECK_INSTANCE_TYPE((obj),GST_TYPE_QUEUE))
 #define GST_IS_QUEUE_CLASS(klass) \
   (G_TYPE_CHECK_CLASS_TYPE((klass),GST_TYPE_QUEUE))
+#define GST_QUEUE_CAST(obj) \
+  ((GstQueue *)(obj))
 
 typedef struct _GstQueue GstQueue;
 typedef struct _GstQueueSize GstQueueSize;
@@ -105,7 +108,7 @@ struct _GstQueue {
   gboolean      eos;
 
   /* the queue of data we're keeping our grubby hands on */
-  GQueue *queue;
+  GstQueueArray *queue;
 
   GstQueueSize
     cur_level,          /* currently in the queue */
@@ -116,11 +119,11 @@ struct _GstQueue {
   /* whether we leak data, and at which end */
   gint leaky;
 
-  GMutex *qlock;        /* lock for queue (vs object lock) */
+  GMutex qlock;        /* lock for queue (vs object lock) */
   gboolean waiting_add;
-  GCond *item_add;      /* signals buffers now available for reading */
+  GCond item_add;      /* signals buffers now available for reading */
   gboolean waiting_del;
-  GCond *item_del;      /* signals space now available for writing */
+  GCond item_del;      /* signals space now available for writing */
 
   gboolean head_needs_discont, tail_needs_discont;
   gboolean push_newsegment;
@@ -129,6 +132,11 @@ struct _GstQueue {
 
   /* whether the first new segment has been applied to src */
   gboolean newseg_applied_to_src;
+
+  GCond query_handled;
+  gboolean last_query;
+
+  gboolean flush_on_eos; /* flush on EOS */
 };
 
 struct _GstQueueClass {
@@ -143,7 +151,7 @@ struct _GstQueueClass {
   void (*pushing)       (GstQueue *queue);
 };
 
-GType gst_queue_get_type (void);
+G_GNUC_INTERNAL GType gst_queue_get_type (void);
 
 G_END_DECLS
 

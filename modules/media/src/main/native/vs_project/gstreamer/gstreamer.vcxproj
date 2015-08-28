@@ -23,39 +23,24 @@
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\app\gstappsink.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\audio-enumtypes.c">
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\audio.c">
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudioclock.c">
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiofilter.c">
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiosink.c">
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiosrc.c">
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstbaseaudiosink.c">
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstbaseaudiosrc.c">
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstringbuffer.c">
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\mixerutils.c">
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\multichannel.c">
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\audio-channels.c" />
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\audio-enumtypes.c" />
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\audio-format.c" />
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\audio-info.c" />
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\audio.c" />
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiobasesink.c" />
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiobasesrc.c" />
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudioclock.c" />
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiodecoder.c" />
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudioencoder.c" />
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiofilter.c" />
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudioiec61937.c" />
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiometa.c" />
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiopack-dist.c" />
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudioringbuffer.c" />
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiosink.c" />
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiosrc.c" />
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\streamvolume.c" />
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\fft\gstfft.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -455,6 +440,26 @@
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\projects\plugins\gstplugins-lite.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTELEMENTS_EXPORTS;HAVE_CONFIG_H;_WIN32_DCOM;COBJMACROS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\audio-channels.h" />
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\audio-enumtypes.h" />
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\audio-format.h" />
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\audio-info.h" />
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\audio.h" />
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiobasesink.h" />
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiobasesrc.h" />
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudioclock.h" />
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiodecoder.h" />
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudioencoder.h" />
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiofilter.h" />
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudioiec61937.h" />
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiometa.h" />
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiopack-dist.h" />
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudioringbuffer.h" />
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiosink.h" />
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiosrc.h" />
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\streamvolume.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{FC533698-F232-42DC-980E-2171DFF660E3}</ProjectGuid>

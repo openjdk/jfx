@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -69,14 +69,12 @@ struct _ProgressBuffer
     GstPad        *sinkpad;
     GstPad        *srcpad;
 
-    GMutex        *lock;
-    GCond         *add_cond;
+    GMutex        lock;
+    GCond         add_cond;
 
     // Cache infrastructure
     Cache         *cache;
     GstEvent      *pending_src_event;
-    guint8        *incoming_buffer;
-    int            incoming_buffer_size;
     gint64         cache_read_offset;
 
     GstSegment    sink_segment;
@@ -110,18 +108,16 @@ struct _ProgressBufferClass
 
 /***********************************************************************************
  * Substitution for
- * GST_BOILERPLATE(ProgressBuffer, progress_buffer, GstElement, GST_TYPE_ELEMENT);
+ * G_DEFINE_TYPE(ProgressBuffer, progress_buffer, GstElement, GST_TYPE_ELEMENT);
  ***********************************************************************************/
-static void progress_buffer_base_init     (gpointer             g_class);
-static void progress_buffer_class_init    (ProgressBufferClass *g_class);
-static void progress_buffer_init          (ProgressBuffer      *object,
-                                           ProgressBufferClass *g_class);
-static GstElementClass *parent_class = NULL;
-
-static void progress_buffer_class_init_trampoline (gpointer g_class, gpointer data)
+#define progress_buffer_parent_class parent_class
+static void progress_buffer_init          (ProgressBuffer      *self);
+static void progress_buffer_class_init    (ProgressBufferClass *klass);
+static gpointer progress_buffer_parent_class = NULL;
+static void     progress_buffer_class_intern_init (gpointer klass)
 {
-    parent_class = (GstElementClass *)g_type_class_peek_parent (g_class);
-    progress_buffer_class_init ((ProgressBufferClass *)g_class);
+    progress_buffer_parent_class = g_type_class_peek_parent (klass);
+    progress_buffer_class_init ((ProgressBufferClass*) klass);
 }
 
 GType progress_buffer_get_type (void)
@@ -131,19 +127,13 @@ GType progress_buffer_get_type (void)
     if (g_once_init_enter (&gonce_data))
     {
         GType _type;
-        _type = gst_type_register_static_full (GST_TYPE_ELEMENT,
-            g_intern_static_string ("ProgressBuffer"),
-            sizeof (ProgressBufferClass),
-            progress_buffer_base_init,
-            NULL,
-            progress_buffer_class_init_trampoline,
-            NULL,
-            NULL,
-            sizeof (ProgressBuffer),
-            0,
-            (GInstanceInitFunc) progress_buffer_init,
-            NULL,
-            (GTypeFlags) 0);
+        _type = g_type_register_static_simple (GST_TYPE_ELEMENT,
+               g_intern_static_string ("ProgressBuffer"),
+               sizeof (ProgressBufferClass),
+               (GClassInitFunc) progress_buffer_class_intern_init,
+               sizeof(ProgressBuffer),
+               (GInstanceInitFunc) progress_buffer_init,               
+               (GTypeFlags) 0);
         g_once_init_leave (&gonce_data, (gsize) _type);
     }
     return (GType) gonce_data;
@@ -158,22 +148,6 @@ static GstStaticPadTemplate sink_template = GST_STATIC_PAD_TEMPLATE ("sink",
 static GstStaticPadTemplate source_template = GST_STATIC_PAD_TEMPLATE ("src",
     GST_PAD_SRC, GST_PAD_SOMETIMES, GST_STATIC_CAPS_ANY);
 
-static void progress_buffer_base_init (gpointer g_class)
-{
-    GstElementClass *element_class = GST_ELEMENT_CLASS (g_class);
-
-    gst_element_class_set_details_simple (element_class,
-        "Progressive download plugin",
-        "Element",
-        "Progressively stores incoming data in memory or file",
-        "Oracle Corporation");
-
-    gst_element_class_add_pad_template (element_class,
-                                        gst_static_pad_template_get (&sink_template));
-    gst_element_class_add_pad_template (element_class,
-                                        gst_static_pad_template_get (&source_template));
-}
-
 /***********************************************************************************
  * Instance init and forward declarations
  ***********************************************************************************/
@@ -184,18 +158,15 @@ static void             progress_buffer_get_property (GObject *object, guint pro
 static void             progress_buffer_finalize (GObject *object);
 static GstStateChangeReturn progress_buffer_change_state (GstElement *element,
                                                           GstStateChange transition);
-static GstFlowReturn    progress_buffer_chain(GstPad *pad, GstBuffer *data);
-static gboolean         progress_buffer_activatepush_src(GstPad *pad, gboolean active);
-static gboolean         progress_buffer_activatepull_src(GstPad *pad, gboolean active);
-static gboolean         progress_buffer_sink_event(GstPad *pad, GstEvent *event);
-static gboolean         progress_buffer_src_event(GstPad *pad, GstEvent *event);
-static GstFlowReturn    progress_buffer_bufferalloc (GstPad * pad, guint64 offset,
-                                                     guint size, GstCaps * caps, GstBuffer ** buf);
+static GstFlowReturn    progress_buffer_chain(GstPad *pad, GstObject *parent, GstBuffer *data);
+static gboolean         progress_buffer_activatemode(GstPad *pad, GstObject *parent, GstPadMode mode, gboolean active);
+static gboolean         progress_buffer_sink_event(GstPad *pad, GstObject *parent, GstEvent *event);
+static gboolean         progress_buffer_src_event(GstPad *pad, GstObject *parent, GstEvent *event);
 static void             progress_buffer_loop(void *data);
 static void             progress_buffer_flush_data(ProgressBuffer *buffer);
 
 static gboolean         progress_buffer_checkgetrange(GstPad *pad);
-static GstFlowReturn    progress_buffer_getrange(GstPad *pad, guint64 start_position,
+static GstFlowReturn    progress_buffer_getrange(GstPad *pad, GstObject *parent, guint64 start_position,
                                                  guint length, GstBuffer **data);
 #if ENABLE_PULL_MODE
 static gpointer         progress_buffer_range_monitor(ProgressBuffer *element);
@@ -211,6 +182,18 @@ static void             progress_buffer_set_pending_event(ProgressBuffer *elemen
 static void progress_buffer_class_init (ProgressBufferClass *klass)
 {
     GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
+    GstElementClass *element_class = GST_ELEMENT_CLASS (klass);
+
+    gst_element_class_set_static_metadata (element_class,
+        "Progressive download plugin",
+        "Element",
+        "Progressively stores incoming data in memory or file",
+        "Oracle Corporation");
+
+    gst_element_class_add_pad_template (element_class,
+                                        gst_static_pad_template_get (&sink_template));
+    gst_element_class_add_pad_template (element_class,
+                                        gst_static_pad_template_get (&source_template));
 
     gobject_class->set_property = GST_DEBUG_FUNCPTR(progress_buffer_set_property);
     gobject_class->get_property = GST_DEBUG_FUNCPTR(progress_buffer_get_property);
@@ -259,28 +242,22 @@ static void progress_buffer_class_init (ProgressBufferClass *klass)
 /**
  * progress_buffer_init()
  *
- * Initializer.  Automatically declared in the GST_BOILERPLATE macro above.  Should be
+ * Initializer.  Automatically declared in the G_DEFINE_TYPE macro above.  Should be
  * only called by GStreamer.
  */
-static void progress_buffer_init(ProgressBuffer *element, ProgressBufferClass *element_klass)
+static void progress_buffer_init(ProgressBuffer *element)
 {
-    GstElementClass *klass = GST_ELEMENT_CLASS (element_klass);
-
-    element->sinkpad = gst_pad_new_from_template (gst_element_class_get_pad_template (klass, "sink"), "sink");
+    element->sinkpad = gst_pad_new_from_template (gst_element_class_get_pad_template (GST_ELEMENT_GET_CLASS(element), "sink"), "sink");
     gst_pad_set_chain_function       (element->sinkpad, GST_DEBUG_FUNCPTR(progress_buffer_chain));
     gst_pad_set_event_function       (element->sinkpad, GST_DEBUG_FUNCPTR(progress_buffer_sink_event));
-    gst_pad_set_bufferalloc_function (element->sinkpad, GST_DEBUG_FUNCPTR(progress_buffer_bufferalloc));
     gst_element_add_pad (GST_ELEMENT (element), element->sinkpad);
 
     element->srcpad = NULL;
     element->cache = NULL;
     element->cache_read_offset = 0;
-    element->lock = g_mutex_new();
-    element->add_cond = g_cond_new();
+    g_mutex_init(&element->lock);
+    g_cond_init(&element->add_cond);
     element->bandwidth_timer = g_timer_new();
-
-    element->incoming_buffer = NULL;
-    element->incoming_buffer_size = 0;
 
 #if ENABLE_PULL_MODE
     element->monitor_thread = NULL;
@@ -362,11 +339,8 @@ static void progress_buffer_finalize (GObject *object)
     if (element->cache)
         destroy_cache(element->cache);
 
-    if (element->incoming_buffer)
-        g_free(element->incoming_buffer);
-
-    g_mutex_free(element->lock);
-    g_cond_free(element->add_cond);
+    g_mutex_clear(&element->lock);
+    g_cond_clear(&element->add_cond);
     g_timer_destroy(element->bandwidth_timer);
 
     G_OBJECT_CLASS (parent_class)->finalize (object);
@@ -378,7 +352,8 @@ static inline void reset_eos(ProgressBuffer *element)
     element->eos_status.eos = FALSE;
     element->eos_status.signal_limit = EOS_SIGNAL_LIMIT;
 
-    progress_buffer_set_pending_event(element, NULL);
+    // Do not clear pending events here, since we might get events before
+    // pad is activated.
 }
 
 static inline gboolean pending_eos(ProgressBuffer *element)
@@ -399,30 +374,30 @@ static inline gboolean pending_eos(ProgressBuffer *element)
  *
  * Set the source pad's pull mode.
  */
-static gboolean progress_buffer_activatepull_src(GstPad *pad, gboolean active)
+static gboolean progress_buffer_activatepull_src(GstPad *pad, GstObject *parent, gboolean active)
 {
 #if ENABLE_PULL_MODE
-    ProgressBuffer *element = PROGRESS_BUFFER(GST_PAD_PARENT(pad));
+    ProgressBuffer *element = PROGRESS_BUFFER(parent);
 
     if (active) // Start a custom task in pull mode for monitoring pull_range requests
     {
-        g_mutex_lock(element->lock);
+        g_mutex_lock(&element->lock);
         element->srcresult = GST_FLOW_OK;
         reset_eos(element);
         element->unexpected = FALSE;
-        g_mutex_unlock(element->lock);
+        g_mutex_unlock(&element->lock);
 
         if (element->monitor_thread == NULL)
-            element->monitor_thread = g_thread_create((GThreadFunc)progress_buffer_range_monitor,
-                                                        element, TRUE, NULL);
+            element->monitor_thread = g_thread_new(NULL, (GThreadFunc)progress_buffer_range_monitor,
+                                                        element);
         return (element->monitor_thread != NULL);
     }
     else if (!active && element->monitor_thread != NULL) // Stop the custom task if it's been created
     {
-        g_mutex_lock(element->lock);
-        element->srcresult = GST_FLOW_WRONG_STATE;
-        g_cond_signal(element->add_cond);
-        g_mutex_unlock(element->lock);
+        g_mutex_lock(&element->lock);
+        element->srcresult = GST_FLOW_FLUSHING;
+        g_cond_signal(&element->add_cond);
+        g_mutex_unlock(&element->lock);
 
         g_thread_join(element->monitor_thread);
         element->monitor_thread = NULL;
@@ -439,32 +414,52 @@ static gboolean progress_buffer_activatepull_src(GstPad *pad, gboolean active)
  *
  * Set the source pad's push mode.
  */
-static gboolean progress_buffer_activatepush_src(GstPad *pad, gboolean active)
+static gboolean progress_buffer_activatepush_src(GstPad *pad, GstObject *parent, gboolean active)
 {
-    ProgressBuffer *element = PROGRESS_BUFFER(GST_PAD_PARENT(pad));
+    ProgressBuffer *element = PROGRESS_BUFFER(parent);
 
     if (active)
     {
-        g_mutex_lock(element->lock);
+        g_mutex_lock(&element->lock);
         element->srcresult = GST_FLOW_OK;
         reset_eos(element);
         element->unexpected = FALSE;
-        g_mutex_unlock(element->lock);
+        g_mutex_unlock(&element->lock);
 
         if (gst_pad_is_linked(pad))
-            return gst_pad_start_task(pad, progress_buffer_loop, element);
+            return gst_pad_start_task(pad, progress_buffer_loop, element, NULL);
         else
             return TRUE;
     }
     else
     {
-        g_mutex_lock(element->lock);
-        element->srcresult = GST_FLOW_WRONG_STATE;
-        g_cond_signal(element->add_cond);
-        g_mutex_unlock(element->lock);
+        g_mutex_lock(&element->lock);
+        element->srcresult = GST_FLOW_FLUSHING;
+        g_cond_signal(&element->add_cond);
+        g_mutex_unlock(&element->lock);
 
         return gst_pad_stop_task(pad);
     }
+}
+
+static gboolean progress_buffer_activatemode(GstPad *pad, GstObject *parent, GstPadMode mode, gboolean active)
+{
+    gboolean res = FALSE;
+
+    switch (mode) {
+        case GST_PAD_MODE_PUSH:
+            res = progress_buffer_activatepush_src(pad, parent, active);
+            break;
+        case GST_PAD_MODE_PULL:
+            res = progress_buffer_activatepull_src(pad, parent, active);
+            break;
+        default:
+            /* unknown scheduling mode */
+            res = FALSE;
+            break;
+    }
+
+    return res;
 }
 
 /**
@@ -475,9 +470,7 @@ static void progress_buffer_create_sourcepad(ProgressBuffer *element)
 {
     element->srcpad = gst_pad_new_from_template (gst_element_class_get_pad_template (GST_ELEMENT_GET_CLASS(element), "src"), "src");
 
-    gst_pad_set_activatepush_function  (element->srcpad, GST_DEBUG_FUNCPTR(progress_buffer_activatepush_src));
-    gst_pad_set_activatepull_function  (element->srcpad, GST_DEBUG_FUNCPTR(progress_buffer_activatepull_src));
-    gst_pad_set_checkgetrange_function (element->srcpad, GST_DEBUG_FUNCPTR(progress_buffer_checkgetrange));
+    gst_pad_set_activatemode_function  (element->srcpad, GST_DEBUG_FUNCPTR(progress_buffer_activatemode));
     gst_pad_set_event_function         (element->srcpad, GST_DEBUG_FUNCPTR(progress_buffer_src_event));
     gst_pad_set_getrange_function      (element->srcpad, GST_DEBUG_FUNCPTR(progress_buffer_getrange));
     GST_PAD_UNSET_FLUSHING(element->srcpad);
@@ -530,14 +523,14 @@ static void progress_buffer_set_pending_event(ProgressBuffer *element, GstEvent*
  */
 static gboolean send_position_message(ProgressBuffer *element, gboolean mandatory)
 {
-    gdouble percent = (double)element->sink_segment.last_stop/element->sink_segment.stop * 100;
+    gdouble percent = (double)element->sink_segment.position/element->sink_segment.stop * 100;
     mandatory |= (percent - element->last_update) > element->threshold; // Prevent sending update messages to often
 
     if (mandatory)
     {
         GstStructure *s = gst_structure_new(PB_MESSAGE_BUFFERING,
                                             "start", G_TYPE_INT64, element->sink_segment.start,
-                                            "position", G_TYPE_INT64, element->sink_segment.last_stop,
+                                            "position", G_TYPE_INT64, element->sink_segment.position,
                                             "stop", G_TYPE_INT64, element->sink_segment.stop,
                                             "eos", G_TYPE_BOOLEAN, element->eos_status.eos,
                                             NULL);
@@ -562,16 +555,15 @@ static GstFlowReturn progress_buffer_enqueue_item(ProgressBuffer *element, GstMi
     {
         gdouble elapsed;
         // update sink segment position
-        gst_segment_set_last_stop (&element->sink_segment, GST_FORMAT_BYTES,
-                                   GST_BUFFER_OFFSET(item) + GST_BUFFER_SIZE(item));
+        element->sink_segment.position = GST_BUFFER_OFFSET(GST_BUFFER(item)) + gst_buffer_get_size (GST_BUFFER(item));
 
-        if(element->sink_segment.stop < element->sink_segment.last_stop) // This must never happen.
+        if(element->sink_segment.stop < element->sink_segment.position) // This must never happen.
             return  GST_FLOW_ERROR;
 
         cache_write_buffer(element->cache, GST_BUFFER(item));
 
         elapsed = g_timer_elapsed(element->bandwidth_timer, NULL);
-        element->subtotal += GST_BUFFER_SIZE(item);
+        element->subtotal += gst_buffer_get_size (GST_BUFFER(item));
 
         if (elapsed > 1.0)
         {
@@ -591,25 +583,24 @@ static GstFlowReturn progress_buffer_enqueue_item(ProgressBuffer *element, GstMi
         {
             case GST_EVENT_EOS:
                 element->eos_status.eos = TRUE;
-                if (element->sink_segment.last_stop < element->sink_segment.stop)
-                    element->sink_segment.stop = element->sink_segment.last_stop;
+                if (element->sink_segment.position < element->sink_segment.stop)
+                    element->sink_segment.stop = element->sink_segment.position;
+                
+                progress_buffer_set_pending_event(element, NULL);
 
                 signal = send_position_message(element, TRUE);
                 gst_event_unref(event); // INLINE - gst_event_unref()
                 break;
 
-            case GST_EVENT_NEWSEGMENT:
+            case GST_EVENT_SEGMENT:
             {
-                gboolean update;
-                GstFormat format;
-                gdouble rate, arate;
-                gint64 start, stop, time;
+                GstSegment segment;
 
                 element->unexpected = FALSE;
 
-                gst_event_parse_new_segment_full (event, &update, &rate, &arate,
-                                                  &format, &start, &stop, &time);
-                if (format != GST_FORMAT_BYTES)
+                gst_event_copy_segment (event, &segment);
+                
+                if (segment.format != GST_FORMAT_BYTES)
                 {
                     gst_element_message_full(GST_ELEMENT(element), GST_MESSAGE_ERROR, GST_STREAM_ERROR, GST_STREAM_ERROR_FORMAT,
                                              g_strdup("GST_FORMAT_BYTES buffers expected."), NULL,
@@ -618,7 +609,7 @@ static GstFlowReturn progress_buffer_enqueue_item(ProgressBuffer *element, GstMi
                     return GST_FLOW_ERROR;
                  }
 
-                if (stop - start <= 0)
+                if (segment.stop - segment.start <= 0)
                 {
                     gst_element_message_full(GST_ELEMENT(element), GST_MESSAGE_ERROR, GST_STREAM_ERROR, GST_STREAM_ERROR_WRONG_TYPE,
                                              g_strdup("Only limited content is supported by progressbuffer."), NULL,
@@ -627,7 +618,7 @@ static GstFlowReturn progress_buffer_enqueue_item(ProgressBuffer *element, GstMi
                     return GST_FLOW_ERROR;
                 }
 
-                if (update) // Updating segments create new cache.
+                if ((segment.flags & GST_SEGMENT_FLAG_UPDATE) == GST_SEGMENT_FLAG_UPDATE) // Updating segments create new cache.
                 {
                     if (element->cache)
                         destroy_cache(element->cache);
@@ -646,11 +637,10 @@ static GstFlowReturn progress_buffer_enqueue_item(ProgressBuffer *element, GstMi
                 {
                     cache_set_write_position(element->cache, 0);
                     cache_set_read_position(element->cache, 0);
-                    element->cache_read_offset = start;
+                    element->cache_read_offset = segment.start;
                 }
 
-                gst_segment_set_newsegment_full (&element->sink_segment, update, rate, arate,
-                                                 GST_FORMAT_BYTES, start, stop, time);
+                gst_segment_copy_into (&segment, &element->sink_segment);
                 progress_buffer_set_pending_event(element, event);
                 element->instant_seek = TRUE;
 
@@ -665,7 +655,7 @@ static GstFlowReturn progress_buffer_enqueue_item(ProgressBuffer *element, GstMi
     }
 
     if (signal)
-        g_cond_signal(element->add_cond);
+        g_cond_signal(&element->add_cond);
 
     return GST_FLOW_OK;
 }
@@ -680,6 +670,7 @@ static gboolean progress_buffer_perform_push_seek(ProgressBuffer *element, GstPa
     GstSeekFlags flags;
     GstSeekType  start_type, stop_type;
     gint64       position;
+    GstSegment   segment;
 
     gst_event_parse_seek(event, &rate, &format, &flags, &start_type, &position, &stop_type, NULL);
 
@@ -700,36 +691,46 @@ static gboolean progress_buffer_perform_push_seek(ProgressBuffer *element, GstPa
         gst_pad_push_event(pad, gst_event_new_flush_start());
 
     // Signal the task to stop if it's waiting.
-    g_mutex_lock(element->lock);
-    element->srcresult = GST_FLOW_WRONG_STATE;
-    g_cond_signal(element->add_cond);
-    g_mutex_unlock(element->lock);
+    g_mutex_lock(&element->lock);
+    element->srcresult = GST_FLOW_FLUSHING;
+    g_cond_signal(&element->add_cond);
+    g_mutex_unlock(&element->lock);
 
     GST_PAD_STREAM_LOCK(pad); // Wait for task to stop
 
-    g_mutex_lock(element->lock);
+    g_mutex_lock(&element->lock);
     element->srcresult = GST_FLOW_OK;
 
 #ifdef ENABLE_SOURCE_SEEKING
     element->instant_seek = (position >= element->sink_segment.start &&
-                             position - element->sink_segment.last_stop <= element->bandwidth * element->wait_tolerance);
+                             (position - (gint64)element->sink_segment.position) <= element->bandwidth * element->wait_tolerance);
 
     if (element->instant_seek)
     {
         cache_set_read_position(element->cache, position - element->cache_read_offset);
-        progress_buffer_set_pending_event(element, gst_event_new_new_segment(FALSE, rate, GST_FORMAT_BYTES, position, element->sink_segment.stop, position));
+        gst_segment_init(&segment, GST_FORMAT_BYTES);
+        segment.rate = rate;
+        segment.start = position;
+        segment.stop = element->sink_segment.stop;
+        segment.position = position;
+        progress_buffer_set_pending_event(element, gst_event_new_segment(&segment));
     }
     else
         reset_eos(element);
 #else
     cache_set_read_position(element->cache, position - element->cache_read_offset);
-    progress_buffer_set_pending_event(element, gst_event_new_new_segment(FALSE, rate, GST_FORMAT_BYTES, position, element->sink_segment.stop, position));
+    gst_segment_init(&segment, GST_FORMAT_BYTES);
+    segment.rate = rate;
+    segment.start = position;
+    segment.stop = element->sink_segment.stop;
+    segment.position = position;
+    progress_buffer_set_pending_event(element, gst_event_new_segment(&segment));
 #endif
 
-    g_mutex_unlock(element->lock);
+    g_mutex_unlock(&element->lock);
 
     if (flags & GST_SEEK_FLAG_FLUSH)
-        gst_pad_push_event(pad, gst_event_new_flush_stop());
+        gst_pad_push_event(pad, gst_event_new_flush_stop(TRUE));
 
 #ifdef ENABLE_SOURCE_SEEKING
     if (!element->instant_seek)
@@ -738,12 +739,17 @@ static gboolean progress_buffer_perform_push_seek(ProgressBuffer *element, GstPa
         {
             element->instant_seek = TRUE;
             cache_set_read_position(element->cache, position - element->cache_read_offset);
-            progress_buffer_set_pending_event(element, gst_event_new_new_segment(FALSE, rate, GST_FORMAT_BYTES, position, element->sink_segment.stop, position));
+            gst_segment_init(&segment, GST_FORMAT_BYTES);
+            segment.rate = rate;
+            segment.start = position;
+            segment.stop = element->sink_segment.stop;
+            segment.position = position;
+            progress_buffer_set_pending_event(element, gst_event_new_segment(&segment));
         }
     }
 #endif
 
-    gst_pad_start_task(element->srcpad, progress_buffer_loop, element);
+    gst_pad_start_task(element->srcpad, progress_buffer_loop, element, NULL);
     GST_PAD_STREAM_UNLOCK(pad);
 
 // INLINE - gst_event_unref()
@@ -759,20 +765,20 @@ static gboolean progress_buffer_perform_push_seek(ProgressBuffer *element, GstPa
  *
  * Primary function for push-mode.  Receives data from progressbuffer's sink pad.
  */
-static GstFlowReturn progress_buffer_chain(GstPad *pad, GstBuffer *data)
+static GstFlowReturn progress_buffer_chain(GstPad *pad, GstObject *parent, GstBuffer *data)
 {
-    ProgressBuffer *element = PROGRESS_BUFFER(GST_PAD_PARENT(pad));
+    ProgressBuffer *element = PROGRESS_BUFFER(parent);
     GstFlowReturn  result = GST_FLOW_OK;
 
     //Try to enqueue the data
-    g_mutex_lock(element->lock);
+    g_mutex_lock(&element->lock);
 
     if (element->eos_status.eos || element->unexpected)
-        result = GST_FLOW_UNEXPECTED;
+        result = GST_FLOW_EOS;
     else
         result = progress_buffer_enqueue_item(element, GST_MINI_OBJECT_CAST(data));
 
-    g_mutex_unlock(element->lock);
+    g_mutex_unlock(&element->lock);
 
 // INLINE - gst_buffer_unref()
     gst_buffer_unref(data);
@@ -791,7 +797,7 @@ static GstFlowReturn progress_buffer_chain(GstPad *pad, GstBuffer *data)
  */
 static void send_underrun_message(ProgressBuffer* element)
 {
-    GstStructure *s = gst_structure_empty_new(PB_MESSAGE_UNDERRUN);
+    GstStructure *s = gst_structure_new_empty(PB_MESSAGE_UNDERRUN);
     GstMessage *msg = gst_message_new_application(GST_OBJECT(element), s);
 
     gst_element_post_message(GST_ELEMENT(element), msg);
@@ -808,7 +814,7 @@ static void progress_buffer_loop(void *data)
     GstFlowReturn  result;
     gboolean       skip = FALSE;
 
-    g_mutex_lock(element->lock);
+    g_mutex_lock(&element->lock);
 
 next_item:
     while (element->srcresult == GST_FLOW_OK &&
@@ -817,7 +823,7 @@ next_item:
     {
         if (element->instant_seek)
             send_underrun_message(element);
-        g_cond_wait(element->add_cond, element->lock);
+        g_cond_wait(&element->add_cond, &element->lock);
     }
 
     result = element->srcresult;
@@ -832,9 +838,9 @@ next_item:
             switch(GST_EVENT_TYPE (event))
             {
                 case GST_EVENT_EOS:
-                    result = GST_FLOW_UNEXPECTED;
+                    result = GST_FLOW_EOS;
                     break;
-                case GST_EVENT_NEWSEGMENT:
+                case GST_EVENT_SEGMENT:
                     skip = FALSE;
                     break;
                 default:
@@ -846,7 +852,7 @@ next_item:
                     break;
             }
             element->srcresult = result;
-            g_mutex_unlock(element->lock);
+            g_mutex_unlock(&element->lock);
             gst_pad_push_event (element->srcpad, event);
         }
         else // create a buffer
@@ -854,7 +860,7 @@ next_item:
             GstBuffer *buffer = NULL;
             guint64 read_position = cache_read_buffer(element->cache, &buffer);
             read_position += element->cache_read_offset;
-            GST_BUFFER_OFFSET(buffer) = read_position - GST_BUFFER_SIZE(buffer);
+            GST_BUFFER_OFFSET(buffer) = read_position - gst_buffer_get_size(buffer);
 
             if (read_position == element->sink_segment.stop)
                 progress_buffer_set_pending_event(element, gst_event_new_eos());
@@ -866,28 +872,22 @@ next_item:
             }
             else
             {
-                GstCaps *caps;
-
-                g_mutex_unlock(element->lock);
-
-                caps = GST_BUFFER_CAPS(buffer);
-                if (caps && caps != GST_PAD_CAPS(element->srcpad))
-                    gst_pad_set_caps (element->srcpad, caps);
+                g_mutex_unlock(&element->lock);
 
                 // Send the data to the progressbuffer source pad
                 result = gst_pad_push(element->srcpad, buffer);
 
                 // Switch to skip mode. No we can only pass EOS and NEWSEGMENT events.
-                if (result == GST_FLOW_UNEXPECTED)
+                if (result == GST_FLOW_EOS)
                 {
-                    g_mutex_lock(element->lock);
+                    g_mutex_lock(&element->lock);
                     skip = TRUE;
                     goto next_item;
                 }
 
-                g_mutex_lock(element->lock);
+                g_mutex_lock(&element->lock);
                 element->srcresult = result;
-                g_mutex_unlock(element->lock);
+                g_mutex_unlock(&element->lock);
             }
         }
     }
@@ -898,7 +898,7 @@ next_item:
             element->unexpected = TRUE;
             result = GST_FLOW_OK;
         }
-        g_mutex_unlock(element->lock);
+        g_mutex_unlock(&element->lock);
     }
 
     if (result != GST_FLOW_OK)
@@ -911,14 +911,14 @@ next_item:
  * Receives event from the sink pad (currently, data from javasource).  When an event comes in,
  * we get the data from the pad by getting at the ProgressBuffer* object associated with the pad.
  */
-static gboolean progress_buffer_sink_event(GstPad *pad, GstEvent *event)
+static gboolean progress_buffer_sink_event(GstPad *pad, GstObject *parent, GstEvent *event)
 {
-    ProgressBuffer *element = PROGRESS_BUFFER(GST_PAD_PARENT(pad));
+    ProgressBuffer *element = PROGRESS_BUFFER(parent);
     gboolean       result = TRUE;
 
     if (GST_EVENT_IS_SERIALIZED (event) && GST_EVENT_TYPE(event) != GST_EVENT_FLUSH_STOP)
     {
-        g_mutex_lock(element->lock);
+        g_mutex_lock(&element->lock);
 
         if (element->eos_status.eos)
         {
@@ -929,7 +929,7 @@ static gboolean progress_buffer_sink_event(GstPad *pad, GstEvent *event)
         else
             progress_buffer_enqueue_item(element, GST_MINI_OBJECT_CAST(event));
 
-        g_mutex_unlock(element->lock);
+        g_mutex_unlock(&element->lock);
     }
     else
         result = gst_pad_push_event(element->srcpad, event);
@@ -938,10 +938,10 @@ static gboolean progress_buffer_sink_event(GstPad *pad, GstEvent *event)
 
 }
 
-static gboolean progress_buffer_src_event(GstPad *pad, GstEvent *event)
+static gboolean progress_buffer_src_event(GstPad *pad, GstObject *parent, GstEvent *event)
 {
-    ProgressBuffer *element = PROGRESS_BUFFER(GST_PAD_PARENT(pad));
-    if (pad->mode == GST_ACTIVATE_PUSH)
+    ProgressBuffer *element = PROGRESS_BUFFER(parent);
+    if (GST_PAD_MODE(pad) == GST_PAD_MODE_PUSH)
     {
         switch (GST_EVENT_TYPE (event))
         {
@@ -951,34 +951,14 @@ static gboolean progress_buffer_src_event(GstPad *pad, GstEvent *event)
                 break;
         }
     }
-    else if (pad->mode == GST_ACTIVATE_PULL) // Isolate the source element from all upcoming events
+    else if (GST_PAD_MODE(pad) == GST_PAD_MODE_PULL) // Isolate the source element from all upcoming events
     {
 // INLINE - gst_event_unref()
         gst_event_unref(event);
         return TRUE;
     }
 
-    return gst_pad_event_default(pad, event);
-}
-
-static GstFlowReturn
-progress_buffer_bufferalloc (GstPad *pad, guint64 offset, guint size,
-                             GstCaps *caps, GstBuffer **buffer)
-{
-    ProgressBuffer *element = PROGRESS_BUFFER(GST_PAD_PARENT(pad));
-
-    *buffer = gst_buffer_new ();
-    GST_BUFFER_SIZE(*buffer) = size;
-    GST_BUFFER_OFFSET(*buffer) = offset;
-
-    if (size > element->incoming_buffer_size)
-    {
-        element->incoming_buffer = (guint8*)g_realloc(element->incoming_buffer, size);
-        element->incoming_buffer_size = size;
-    }
-    GST_BUFFER_DATA(*buffer) = element->incoming_buffer;
-    GST_BUFFER_CAPS(*buffer) = caps;
-    return GST_FLOW_OK;
+    return gst_pad_event_default(pad, parent, event);
 }
 
 /***********************************************************************************
@@ -996,51 +976,51 @@ static inline gboolean pending_range_start(ProgressBuffer *element)
 static inline gboolean pending_range_stop(ProgressBuffer *element)
 {
     return (VALID_RANGE(element->range_stop) &&
-            element->sink_segment.last_stop < element->range_stop);
+            element->sink_segment.position < element->range_stop);
 }
 
 static gpointer progress_buffer_range_monitor(ProgressBuffer *element)
 {
-    g_mutex_lock(element->lock);
+    g_mutex_lock(&element->lock);
 
 check_loop:
     while (element->srcresult == GST_FLOW_OK && !pending_eos(element) &&
            (pending_range_start(element) || pending_range_stop(element) ||
            !VALID_RANGE(element->range_start) && !VALID_RANGE(element->range_stop)))
     {
-        g_cond_wait(element->add_cond, element->lock);
+        g_cond_wait(&element->add_cond, &element->lock);
     }
 
     if (element->srcresult == GST_FLOW_OK && (VALID_RANGE(element->range_start) || VALID_RANGE(element->range_stop)))
     {
         element->range_stop = element->range_start = NO_RANGE_REQUEST;
-        g_mutex_unlock(element->lock);
+        g_mutex_unlock(&element->lock);
         gst_pad_push_event(element->srcpad, gst_event_new_custom(FX_EVENT_RANGE_READY, NULL));
-        g_mutex_lock(element->lock);
+        g_mutex_lock(&element->lock);
         goto check_loop;
     }
     else
-        g_mutex_unlock(element->lock);
+        g_mutex_unlock(&element->lock);
 
     return NULL;
 }
 #endif
 
-static GstFlowReturn progress_buffer_getrange(GstPad *pad, guint64 start_position,
+static GstFlowReturn progress_buffer_getrange(GstPad *pad, GstObject *parent, guint64 start_position,
                                               guint size, GstBuffer **buffer)
 {
 #if ENABLE_PULL_MODE
-    ProgressBuffer *element = PROGRESS_BUFFER(GST_PAD_PARENT(pad));
+    ProgressBuffer *element = PROGRESS_BUFFER(parent);
     GstFlowReturn  result = GST_FLOW_OK;
     guint64        end_position = start_position + size;
     gboolean       needs_seeking = FALSE;
 
-    g_mutex_lock(element->lock); // Use one lock for push and pull modes
+    g_mutex_lock(&element->lock); // Use one lock for push and pull modes
 
     if (element->sink_segment.stop < (gint64)end_position)
-        result = GST_FLOW_UNEXPECTED;
+        result = GST_FLOW_EOS;
     else if (element->sink_segment.start <= (gint64)start_position &&
-             element->sink_segment.last_stop >= (gint64)end_position)
+             element->sink_segment.position >= (gint64)end_position)
         result = cache_read_buffer_from_position(element->cache, start_position, size, buffer);
     else
     {
@@ -1052,7 +1032,7 @@ static GstFlowReturn progress_buffer_getrange(GstPad *pad, guint64 start_positio
             reset_eos(element);
         }
 #endif
-        if (element->sink_segment.last_stop < (gint64)end_position)
+        if (element->sink_segment.position < (gint64)end_position)
         {
             element->range_stop = end_position + (gint64)(element->bandwidth * element->prebuffer_time);
 
@@ -1061,15 +1041,15 @@ static GstFlowReturn progress_buffer_getrange(GstPad *pad, guint64 start_positio
 
 #if ENABLE_SOURCE_SEEKING
             needs_seeking = element->bandwidth > 0 &&
-                end_position - element->sink_segment.last_stop > element->bandwidth * element->wait_tolerance;
+                end_position - element->sink_segment.position > element->bandwidth * element->wait_tolerance;
 #endif
         }
 
         send_underrun_message(element);
-        result = GST_FLOW_WRONG_STATE;
+        result = GST_FLOW_FLUSHING;
     }
 
-    g_mutex_unlock(element->lock);
+    g_mutex_unlock(&element->lock);
 
     if (needs_seeking)
         gst_pad_push_event(element->sinkpad, gst_event_new_seek(element->sink_segment.rate, GST_FORMAT_BYTES, GST_SEEK_FLAG_NONE,
@@ -1078,7 +1058,7 @@ static GstFlowReturn progress_buffer_getrange(GstPad *pad, guint64 start_positio
     return result;
 #else
     ProgressBuffer *element = PROGRESS_BUFFER(GST_PAD_PARENT(pad));
-    return gst_pad_pull_range(element->sinkpad, start_position, size, buffer);
+    return gst_pad_pull_range(element->sinkpad, parent, start_position, size, buffer);
 #endif
 }
 
@@ -1087,8 +1067,8 @@ static gboolean progress_buffer_checkgetrange(GstPad *pad)
     ProgressBuffer *element = PROGRESS_BUFFER(GST_PAD_PARENT(pad));
 #if ENABLE_PULL_MODE
     gboolean    result = FALSE;
-    GstStructure *s = gst_structure_new(GETRANGE_QUERY_NAME, NULL);
-    GstQuery *query = gst_query_new_application(GST_QUERY_CUSTOM, s);
+    GstStructure *s = gst_structure_new(GETRANGE_QUERY_NAME, NULL, NULL);
+    GstQuery *query = gst_query_new_custom(GST_QUERY_CUSTOM, s);
     if (gst_pad_peer_query(pad, query))
         result = gst_structure_get_boolean(s, GETRANGE_QUERY_SUPPORTS_FIELDNANE, &result) && result;
 // INLINE - gst_query_unref()
@@ -1114,11 +1094,11 @@ static GstStateChangeReturn progress_buffer_change_state (GstElement *e,
     switch (transition)
     {
         case GST_STATE_CHANGE_PAUSED_TO_READY:
-            g_mutex_lock(element->lock);
-            element->srcresult = GST_FLOW_WRONG_STATE;
+            g_mutex_lock(&element->lock);
+            element->srcresult = GST_FLOW_FLUSHING;
             progress_buffer_flush_data(element);
-            g_cond_signal(element->add_cond); // Signal the task to stop if it's waiting.
-            g_mutex_unlock(element->lock);
+            g_cond_signal(&element->add_cond); // Signal the task to stop if it's waiting.
+            g_mutex_unlock(&element->lock);
             break;
 
         default:

@@ -16,21 +16,19 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 /**
  * SECTION:gstaudioclock
  * @short_description: Helper object for implementing audio clocks
- * @see_also: #GstBaseAudioSink, #GstSystemClock
+ * @see_also: #GstAudioBaseSink, #GstSystemClock
  *
  * #GstAudioClock makes it easy for elements to implement a #GstClock, they
  * simply need to provide a function that returns the current clock time.
  *
- * This object is internally used to implement the clock in #GstBaseAudioSink.
- *
- * Last reviewed on 2006-09-27 (0.10.12)
+ * This object is internally used to implement the clock in #GstAudioBaseSink.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -102,7 +100,7 @@ gst_audio_clock_init (GstAudioClock * clock)
 {
   GST_DEBUG_OBJECT (clock, "init");
   clock->last_time = 0;
-  clock->abidata.ABI.time_offset = 0;
+  clock->time_offset = 0;
   GST_OBJECT_FLAG_SET (clock, GST_CLOCK_FLAG_CAN_SET_MASTER);
 }
 
@@ -111,9 +109,9 @@ gst_audio_clock_dispose (GObject * object)
 {
   GstAudioClock *clock = GST_AUDIO_CLOCK (object);
 
-  if (clock->abidata.ABI.destroy_notify && clock->user_data)
-    clock->abidata.ABI.destroy_notify (clock->user_data);
-  clock->abidata.ABI.destroy_notify = NULL;
+  if (clock->destroy_notify && clock->user_data)
+    clock->destroy_notify (clock->user_data);
+  clock->destroy_notify = NULL;
   clock->user_data = NULL;
 
   G_OBJECT_CLASS (parent_class)->dispose (object);
@@ -124,6 +122,7 @@ gst_audio_clock_dispose (GObject * object)
  * @name: the name of the clock
  * @func: a function
  * @user_data: user data
+ * @destroy_notify: #GDestroyNotify for @user_data
  *
  * Create a new #GstAudioClock instance. Whenever the clock time should be
  * calculated it will call @func with @user_data. When @func returns
@@ -133,42 +132,15 @@ gst_audio_clock_dispose (GObject * object)
  */
 GstClock *
 gst_audio_clock_new (const gchar * name, GstAudioClockGetTimeFunc func,
-    gpointer user_data)
-{
-  GstAudioClock *aclock =
-      GST_AUDIO_CLOCK (g_object_new (GST_TYPE_AUDIO_CLOCK, "name", name, NULL));
-
-  aclock->func = func;
-  aclock->user_data = user_data;
-
-  return (GstClock *) aclock;
-}
-
-/**
- * gst_audio_clock_new_full:
- * @name: the name of the clock
- * @func: a function
- * @user_data: user data
- * @destroy_notify: #GDestroyNotify for @user_data
- *
- * Create a new #GstAudioClock instance. Whenever the clock time should be
- * calculated it will call @func with @user_data. When @func returns
- * #GST_CLOCK_TIME_NONE, the clock will return the last reported time.
- *
- * Returns: a new #GstAudioClock casted to a #GstClock.
- *
- * Since: 0.10.31
- */
-GstClock *
-gst_audio_clock_new_full (const gchar * name, GstAudioClockGetTimeFunc func,
     gpointer user_data, GDestroyNotify destroy_notify)
 {
   GstAudioClock *aclock =
-      GST_AUDIO_CLOCK (g_object_new (GST_TYPE_AUDIO_CLOCK, "name", name, NULL));
+      GST_AUDIO_CLOCK (g_object_new (GST_TYPE_AUDIO_CLOCK, "name", name,
+          "clock-type", GST_CLOCK_TYPE_OTHER, NULL));
 
   aclock->func = func;
   aclock->user_data = user_data;
-  aclock->abidata.ABI.destroy_notify = destroy_notify;
+  aclock->destroy_notify = destroy_notify;
 
   return (GstClock *) aclock;
 }
@@ -193,7 +165,7 @@ gst_audio_clock_reset (GstAudioClock * clock, GstClockTime time)
   else
     time_offset = -(time - clock->last_time);
 
-  clock->abidata.ABI.time_offset = time_offset;
+  clock->time_offset = time_offset;
 
   GST_DEBUG_OBJECT (clock,
       "reset clock to %" GST_TIME_FORMAT ", last %" GST_TIME_FORMAT ", offset %"
@@ -219,7 +191,7 @@ gst_audio_clock_get_internal_time (GstClock * clock)
   if (result == GST_CLOCK_TIME_NONE) {
     result = aclock->last_time;
   } else {
-    result += aclock->abidata.ABI.time_offset;
+    result += aclock->time_offset;
     /* clock must be increasing */
     if (aclock->last_time < result)
       aclock->last_time = result;
@@ -242,8 +214,6 @@ gst_audio_clock_get_internal_time (GstClock * clock)
  * any offsets.
  *
  * Returns: the time as reported by the time function of the audio clock
- *
- * Since: 0.10.23
  */
 GstClockTime
 gst_audio_clock_get_time (GstClock * clock)
@@ -256,7 +226,7 @@ gst_audio_clock_get_time (GstClock * clock)
   result = aclock->func (clock, aclock->user_data);
   if (result == GST_CLOCK_TIME_NONE) {
     GST_DEBUG_OBJECT (clock, "no time, reuse last");
-    result = aclock->last_time - aclock->abidata.ABI.time_offset;
+    result = aclock->last_time - aclock->time_offset;
   }
 
   GST_DEBUG_OBJECT (clock,
@@ -274,8 +244,6 @@ gst_audio_clock_get_time (GstClock * clock)
  * Adjust @time with the internal offset of the audio clock.
  *
  * Returns: @time adjusted with the internal offset.
- *
- * Since: 0.10.23
  */
 GstClockTime
 gst_audio_clock_adjust (GstClock * clock, GstClockTime time)
@@ -285,7 +253,7 @@ gst_audio_clock_adjust (GstClock * clock, GstClockTime time)
 
   aclock = GST_AUDIO_CLOCK_CAST (clock);
 
-  result = time + aclock->abidata.ABI.time_offset;
+  result = time + aclock->time_offset;
 
   return result;
 }
@@ -300,8 +268,6 @@ gst_audio_clock_adjust (GstClock * clock, GstClockTime time)
  *
  * After calling this function, @clock will return the last returned time for
  * the rest of its lifetime.
- *
- * Since: 0.10.31
  */
 void
 gst_audio_clock_invalidate (GstClock * clock)

@@ -17,29 +17,25 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 
 #ifndef __GST_EVENT_H__
 #define __GST_EVENT_H__
 
-#include <gst/gstminiobject.h>
-#include <gst/gstformat.h>
-#include <gst/gstobject.h>
-#include <gst/gstclock.h>
-#include <gst/gststructure.h>
-#include <gst/gsttaglist.h>
-
-G_BEGIN_DECLS
+typedef struct _GstEvent GstEvent;
 
 /**
  * GstEventTypeFlags:
- * @GST_EVENT_TYPE_UPSTREAM:   Set if the event can travel upstream.
- * @GST_EVENT_TYPE_DOWNSTREAM: Set if the event can travel downstream.
- * @GST_EVENT_TYPE_SERIALIZED: Set if the event should be serialized with data
- *                             flow.
+ * @GST_EVENT_TYPE_UPSTREAM:     Set if the event can travel upstream.
+ * @GST_EVENT_TYPE_DOWNSTREAM:   Set if the event can travel downstream.
+ * @GST_EVENT_TYPE_SERIALIZED:   Set if the event should be serialized with data
+ *                               flow.
+ * @GST_EVENT_TYPE_STICKY:       Set if the event is sticky on the pads.
+ * @GST_EVENT_TYPE_STICKY_MULTI: Multiple sticky events can be on a pad, each
+ *                               identified by the event name.
  *
  * #GstEventTypeFlags indicate the aspects of the different #GstEventType
  * values. You can get the type flags of a #GstEventType with the
@@ -48,7 +44,9 @@ G_BEGIN_DECLS
 typedef enum {
   GST_EVENT_TYPE_UPSTREAM       = 1 << 0,
   GST_EVENT_TYPE_DOWNSTREAM     = 1 << 1,
-  GST_EVENT_TYPE_SERIALIZED     = 1 << 2
+  GST_EVENT_TYPE_SERIALIZED     = 1 << 2,
+  GST_EVENT_TYPE_STICKY         = 1 << 3,
+  GST_EVENT_TYPE_STICKY_MULTI   = 1 << 4
 } GstEventTypeFlags;
 
 /**
@@ -59,7 +57,7 @@ typedef enum {
 #define GST_EVENT_TYPE_BOTH \
     (GST_EVENT_TYPE_UPSTREAM | GST_EVENT_TYPE_DOWNSTREAM)
 
-#define GST_EVENT_TYPE_SHIFT    4
+#define GST_EVENT_NUM_SHIFT     (8)
 
 /**
  * GST_EVENT_MAKE_TYPE:
@@ -70,7 +68,7 @@ typedef enum {
  * the given flags
  */
 #define GST_EVENT_MAKE_TYPE(num,flags) \
-    (((num) << GST_EVENT_TYPE_SHIFT) | (flags))
+    (((num) << GST_EVENT_NUM_SHIFT) | (flags))
 
 #define FLAG(name) GST_EVENT_TYPE_##name
 
@@ -81,9 +79,11 @@ typedef enum {
  *                 from the pipeline and unblock all streaming threads.
  * @GST_EVENT_FLUSH_STOP: Stop a flush operation. This event resets the
  *                 running-time of the pipeline.
- * @GST_EVENT_EOS: End-Of-Stream. No more data is to be expected to follow
- *                 without a NEWSEGMENT event.
- * @GST_EVENT_NEWSEGMENT: A new media segment follows in the dataflow. The
+ * @GST_EVENT_STREAM_START: Event to mark the start of a new stream. Sent before any
+ *                 other serialized event and only sent at the start of a new stream,
+ *                 not after flushing seeks.
+ * @GST_EVENT_CAPS: #GstCaps event. Notify the pad of a new media type.
+ * @GST_EVENT_SEGMENT: A new media segment follows in the dataflow. The
  *                 segment events contains information for clipping buffers and
  *                 converting buffer timestamps to running-time and
  *                 stream-time.
@@ -93,7 +93,12 @@ typedef enum {
  * @GST_EVENT_SINK_MESSAGE: An event that sinks turn into a message. Used to
  *                          send messages that should be emitted in sync with
  *                          rendering.
- *                          Since: 0.10.26
+ * @GST_EVENT_EOS: End-Of-Stream. No more data is to be expected to follow
+ *                 without a SEGMENT event.
+ * @GST_EVENT_SEGMENT_DONE: Marks the end of a segment playback.
+ * @GST_EVENT_GAP: Marks a gap in the datastream.
+ * @GST_EVENT_TOC: An event which indicates that a new table of contents (TOC)
+ *                 was found or updated.
  * @GST_EVENT_QOS: A quality message. Used to indicate to upstream elements
  *                 that the downstream elements should adjust their processing
  *                 rate.
@@ -103,13 +108,16 @@ typedef enum {
  *                        to upstream elements.
  * @GST_EVENT_LATENCY: Notification of new latency adjustment. Sinks will use
  *                     the latency information to adjust their synchronisation.
- *                     Since: 0.10.12
  * @GST_EVENT_STEP: A request for stepping through the media. Sinks will usually
- *                  execute the step operation. Since: 0.10.24
+ *                  execute the step operation.
+ * @GST_EVENT_RECONFIGURE: A request for upstream renegotiating caps and reconfiguring.
+ * @GST_EVENT_TOC_SELECT: A request for a new playback position based on TOC
+ *                        entry's UID.
  * @GST_EVENT_CUSTOM_UPSTREAM: Upstream custom event
  * @GST_EVENT_CUSTOM_DOWNSTREAM: Downstream custom event that travels in the
  *                        data flow.
  * @GST_EVENT_CUSTOM_DOWNSTREAM_OOB: Custom out-of-band downstream event.
+ * @GST_EVENT_CUSTOM_DOWNSTREAM_STICKY: Custom sticky downstream event.
  * @GST_EVENT_CUSTOM_BOTH: Custom upstream or downstream event.
  *                         In-band when travelling downstream.
  * @GST_EVENT_CUSTOM_BOTH_OOB: Custom upstream or downstream out-of-band event.
@@ -125,48 +133,63 @@ typedef enum {
 /* NOTE: keep in sync with quark registration in gstevent.c */
 typedef enum {
   GST_EVENT_UNKNOWN               = GST_EVENT_MAKE_TYPE (0, 0),
+
   /* bidirectional events */
-  GST_EVENT_FLUSH_START           = GST_EVENT_MAKE_TYPE (1, FLAG(BOTH)),
-  GST_EVENT_FLUSH_STOP            = GST_EVENT_MAKE_TYPE (2, FLAG(BOTH) | FLAG(SERIALIZED)),
+  GST_EVENT_FLUSH_START           = GST_EVENT_MAKE_TYPE (10, FLAG(BOTH)),
+  GST_EVENT_FLUSH_STOP            = GST_EVENT_MAKE_TYPE (20, FLAG(BOTH) | FLAG(SERIALIZED)),
+
   /* downstream serialized events */
-  GST_EVENT_EOS                   = GST_EVENT_MAKE_TYPE (5, FLAG(DOWNSTREAM) | FLAG(SERIALIZED)),
-  GST_EVENT_NEWSEGMENT            = GST_EVENT_MAKE_TYPE (6, FLAG(DOWNSTREAM) | FLAG(SERIALIZED)),
-  GST_EVENT_TAG                   = GST_EVENT_MAKE_TYPE (7, FLAG(DOWNSTREAM) | FLAG(SERIALIZED)),
-  GST_EVENT_BUFFERSIZE            = GST_EVENT_MAKE_TYPE (8, FLAG(DOWNSTREAM) | FLAG(SERIALIZED)),
-  GST_EVENT_SINK_MESSAGE          = GST_EVENT_MAKE_TYPE (9, FLAG(DOWNSTREAM) | FLAG(SERIALIZED)),
+  GST_EVENT_STREAM_START          = GST_EVENT_MAKE_TYPE (40, FLAG(DOWNSTREAM) | FLAG(SERIALIZED) | FLAG(STICKY)),
+  GST_EVENT_CAPS                  = GST_EVENT_MAKE_TYPE (50, FLAG(DOWNSTREAM) | FLAG(SERIALIZED) | FLAG(STICKY)),
+  GST_EVENT_SEGMENT               = GST_EVENT_MAKE_TYPE (70, FLAG(DOWNSTREAM) | FLAG(SERIALIZED) | FLAG(STICKY)),
+  GST_EVENT_TAG                   = GST_EVENT_MAKE_TYPE (80, FLAG(DOWNSTREAM) | FLAG(SERIALIZED) | FLAG(STICKY) | FLAG(STICKY_MULTI)),
+  GST_EVENT_BUFFERSIZE            = GST_EVENT_MAKE_TYPE (90, FLAG(DOWNSTREAM) | FLAG(SERIALIZED) | FLAG(STICKY)),
+  GST_EVENT_SINK_MESSAGE          = GST_EVENT_MAKE_TYPE (100, FLAG(DOWNSTREAM) | FLAG(SERIALIZED) | FLAG(STICKY) | FLAG(STICKY_MULTI)),
+  GST_EVENT_EOS                   = GST_EVENT_MAKE_TYPE (110, FLAG(DOWNSTREAM) | FLAG(SERIALIZED) | FLAG(STICKY)),
+  GST_EVENT_TOC                   = GST_EVENT_MAKE_TYPE (120, FLAG(DOWNSTREAM) | FLAG(SERIALIZED) | FLAG(STICKY) | FLAG(STICKY_MULTI)),
+
+  /* non-sticky downstream serialized */
+  GST_EVENT_SEGMENT_DONE          = GST_EVENT_MAKE_TYPE (150, FLAG(DOWNSTREAM) | FLAG(SERIALIZED)),
+  GST_EVENT_GAP                   = GST_EVENT_MAKE_TYPE (160, FLAG(DOWNSTREAM) | FLAG(SERIALIZED)),
+
   /* upstream events */
-  GST_EVENT_QOS                   = GST_EVENT_MAKE_TYPE (15, FLAG(UPSTREAM)),
-  GST_EVENT_SEEK                  = GST_EVENT_MAKE_TYPE (16, FLAG(UPSTREAM)),
-  GST_EVENT_NAVIGATION            = GST_EVENT_MAKE_TYPE (17, FLAG(UPSTREAM)),
-  GST_EVENT_LATENCY               = GST_EVENT_MAKE_TYPE (18, FLAG(UPSTREAM)),
-  GST_EVENT_STEP                  = GST_EVENT_MAKE_TYPE (19, FLAG(UPSTREAM)),
+  GST_EVENT_QOS                   = GST_EVENT_MAKE_TYPE (190, FLAG(UPSTREAM)),
+  GST_EVENT_SEEK                  = GST_EVENT_MAKE_TYPE (200, FLAG(UPSTREAM)),
+  GST_EVENT_NAVIGATION            = GST_EVENT_MAKE_TYPE (210, FLAG(UPSTREAM)),
+  GST_EVENT_LATENCY               = GST_EVENT_MAKE_TYPE (220, FLAG(UPSTREAM)),
+  GST_EVENT_STEP                  = GST_EVENT_MAKE_TYPE (230, FLAG(UPSTREAM)),
+  GST_EVENT_RECONFIGURE           = GST_EVENT_MAKE_TYPE (240, FLAG(UPSTREAM)),
+  GST_EVENT_TOC_SELECT            = GST_EVENT_MAKE_TYPE (250, FLAG(UPSTREAM)),
 
   /* custom events start here */
-  GST_EVENT_CUSTOM_UPSTREAM       = GST_EVENT_MAKE_TYPE (32, FLAG(UPSTREAM)),
-  GST_EVENT_CUSTOM_DOWNSTREAM     = GST_EVENT_MAKE_TYPE (32, FLAG(DOWNSTREAM) | FLAG(SERIALIZED)),
-  GST_EVENT_CUSTOM_DOWNSTREAM_OOB = GST_EVENT_MAKE_TYPE (32, FLAG(DOWNSTREAM)),
-  GST_EVENT_CUSTOM_BOTH           = GST_EVENT_MAKE_TYPE (32, FLAG(BOTH) | FLAG(SERIALIZED)),
-  GST_EVENT_CUSTOM_BOTH_OOB       = GST_EVENT_MAKE_TYPE (32, FLAG(BOTH))
+  GST_EVENT_CUSTOM_UPSTREAM          = GST_EVENT_MAKE_TYPE (270, FLAG(UPSTREAM)),
+  GST_EVENT_CUSTOM_DOWNSTREAM        = GST_EVENT_MAKE_TYPE (280, FLAG(DOWNSTREAM) | FLAG(SERIALIZED)),
+  GST_EVENT_CUSTOM_DOWNSTREAM_OOB    = GST_EVENT_MAKE_TYPE (290, FLAG(DOWNSTREAM)),
+  GST_EVENT_CUSTOM_DOWNSTREAM_STICKY = GST_EVENT_MAKE_TYPE (300, FLAG(DOWNSTREAM) | FLAG(SERIALIZED) | FLAG(STICKY) | FLAG(STICKY_MULTI)),
+  GST_EVENT_CUSTOM_BOTH              = GST_EVENT_MAKE_TYPE (310, FLAG(BOTH) | FLAG(SERIALIZED)),
+  GST_EVENT_CUSTOM_BOTH_OOB          = GST_EVENT_MAKE_TYPE (320, FLAG(BOTH))
 } GstEventType;
 #undef FLAG
 
-/**
- * GST_EVENT_TRACE_NAME:
- *
- * The name used for memory allocation tracing
- */
-#define GST_EVENT_TRACE_NAME    "GstEvent"
+#include <gst/gstminiobject.h>
+#include <gst/gstformat.h>
+#include <gst/gstobject.h>
+#include <gst/gstclock.h>
+#include <gst/gststructure.h>
+#include <gst/gsttaglist.h>
+#include <gst/gstsegment.h>
+#include <gst/gstsegment.h>
+#include <gst/gstmessage.h>
+#include <gst/gstcontext.h>
 
-typedef struct _GstEvent GstEvent;
-typedef struct _GstEventClass GstEventClass;
+G_BEGIN_DECLS
 
-#define GST_TYPE_EVENT                  (gst_event_get_type())
-#define GST_IS_EVENT(obj)               (G_TYPE_CHECK_INSTANCE_TYPE ((obj), GST_TYPE_EVENT))
-#define GST_IS_EVENT_CLASS(klass)       (G_TYPE_CHECK_CLASS_TYPE ((klass), GST_TYPE_EVENT))
-#define GST_EVENT_GET_CLASS(obj)        (G_TYPE_INSTANCE_GET_CLASS ((obj), GST_TYPE_EVENT, GstEventClass))
-#define GST_EVENT(obj)                  (G_TYPE_CHECK_INSTANCE_CAST ((obj), GST_TYPE_EVENT, GstEvent))
-#define GST_EVENT_CLASS(klass)          (G_TYPE_CHECK_CLASS_CAST ((klass), GST_TYPE_EVENT, GstEventClass))
+GST_EXPORT GType _gst_event_type;
+
+#define GST_TYPE_EVENT                  (_gst_event_type)
+#define GST_IS_EVENT(obj)               (GST_IS_MINI_OBJECT_TYPE (obj, GST_TYPE_EVENT))
 #define GST_EVENT_CAST(obj)             ((GstEvent *)(obj))
+#define GST_EVENT(obj)                  (GST_EVENT_CAST(obj))
 
 /**
  * GST_EVENT_TYPE:
@@ -194,12 +217,12 @@ typedef struct _GstEventClass GstEventClass;
 #define GST_EVENT_TIMESTAMP(event)      (GST_EVENT_CAST(event)->timestamp)
 
 /**
- * GST_EVENT_SRC:
+ * GST_EVENT_SEQNUM:
  * @event: the event to query
  *
- * The source #GstObject that generated this event.
+ * The sequence number of @event.
  */
-#define GST_EVENT_SRC(event)            (GST_EVENT_CAST(event)->src)
+#define GST_EVENT_SEQNUM(event)         (GST_EVENT_CAST(event)->seqnum)
 
 /**
  * GST_EVENT_IS_UPSTREAM:
@@ -222,11 +245,38 @@ typedef struct _GstEventClass GstEventClass;
  * Check if an event is serialized with the data stream.
  */
 #define GST_EVENT_IS_SERIALIZED(ev)     !!(GST_EVENT_TYPE (ev) & GST_EVENT_TYPE_SERIALIZED)
+/**
+ * GST_EVENT_IS_STICKY:
+ * @ev: the event to query
+ *
+ * Check if an event is sticky on the pads.
+ */
+#define GST_EVENT_IS_STICKY(ev)     !!(GST_EVENT_TYPE (ev) & GST_EVENT_TYPE_STICKY)
 
 /**
+ * gst_event_is_writable:
+ * @ev: a #GstEvent
+ *
+ * Tests if you can safely write data into a event's structure or validly
+ * modify the seqnum and timestamp field.
+ */
+#define         gst_event_is_writable(ev)     gst_mini_object_is_writable (GST_MINI_OBJECT_CAST (ev))
+/**
+ * gst_event_make_writable:
+ * @ev: (transfer full): a #GstEvent
+ *
+ * Makes a writable event from the given event. If the source event is
+ * already writable, this will simply return the same event. A copy will
+ * otherwise be made using gst_event_copy().
+ *
+ * Returns: (transfer full): a writable event which may or may not be the
+ *     same as @ev
+ */
+#define         gst_event_make_writable(ev)   GST_EVENT_CAST (gst_mini_object_make_writable (GST_MINI_OBJECT_CAST (ev)))
+/**
  * gst_event_replace:
- * @old_event: (inout) (transfer full): pointer to a pointer to a #GstEvent
- *     to be replaced.
+ * @old_event: (inout) (transfer full) (nullable): pointer to a
+ *     pointer to a #GstEvent to be replaced.
  * @new_event: (allow-none) (transfer none): pointer to a #GstEvent that will
  *     replace the event pointed to by @old_event.
  *
@@ -235,83 +285,64 @@ typedef struct _GstEventClass GstEventClass;
  * in some cases), and the reference counts are updated appropriately (the old
  * event is unreffed, the new one is reffed).
  *
- * Either @new_event or the #GstEvent pointed to by @old_event may be NULL.
+ * Either @new_event or the #GstEvent pointed to by @old_event may be %NULL.
  *
- * Since: 0.10.3
+ * Returns: %TRUE if @new_event was different from @old_event
  */
-#define         gst_event_replace(old_event,new_event) \
-    gst_mini_object_replace ((GstMiniObject **)(old_event), GST_MINI_OBJECT_CAST (new_event))
+#ifdef _FOOL_GTK_DOC_
+G_INLINE_FUNC gboolean gst_event_replace (GstEvent **old_event, GstEvent *new_event);
+#endif
+
+static inline gboolean
+gst_event_replace (GstEvent **old_event, GstEvent *new_event)
+{
+  return gst_mini_object_replace ((GstMiniObject **) old_event, (GstMiniObject *) new_event);
+}
 
 /**
- * GstSeekType:
- * @GST_SEEK_TYPE_NONE: no change in position is required
- * @GST_SEEK_TYPE_CUR: change relative to currently configured segment. This
- *    can't be used to seek relative to the current playback position - do a
- *    position query, calculate the desired position and then do an absolute
- *    position seek instead if that's what you want to do.
- * @GST_SEEK_TYPE_SET: absolute position is requested
- * @GST_SEEK_TYPE_END: relative position to duration is requested
+ * gst_event_steal:
+ * @old_event: (inout) (transfer full) (nullable): pointer to a
+ *     pointer to a #GstEvent to be stolen.
  *
- * The different types of seek events. When constructing a seek event with
- * gst_event_new_seek(), a format, a seek method and optional flags are to
- * be provided. The seek event is then inserted into the graph with
- * gst_pad_send_event() or gst_element_send_event().
+ * Atomically replace the #GstEvent pointed to by @old_event with %NULL and
+ * return the original event.
+ *
+ * Returns: the #GstEvent that was in @old_event
  */
-typedef enum {
-  /* one of these */
-  GST_SEEK_TYPE_NONE            = 0,
-  GST_SEEK_TYPE_CUR             = 1,
-  GST_SEEK_TYPE_SET             = 2,
-  GST_SEEK_TYPE_END             = 3
-} GstSeekType;
+#ifdef _FOOL_GTK_DOC_
+G_INLINE_FUNC GstEvent * gst_event_steal (GstEvent **old_event);
+#endif
+
+static inline GstEvent *
+gst_event_steal (GstEvent **old_event)
+{
+  return GST_EVENT_CAST (gst_mini_object_steal ((GstMiniObject **) old_event));
+}
 
 /**
- * GstSeekFlags:
- * @GST_SEEK_FLAG_NONE: no flag
- * @GST_SEEK_FLAG_FLUSH: flush pipeline
- * @GST_SEEK_FLAG_ACCURATE: accurate position is requested, this might
- *                     be considerably slower for some formats.
- * @GST_SEEK_FLAG_KEY_UNIT: seek to the nearest keyframe. This might be
- *                     faster but less accurate.
- * @GST_SEEK_FLAG_SEGMENT: perform a segment seek.
- * @GST_SEEK_FLAG_SKIP: when doing fast foward or fast reverse playback, allow
- *                     elements to skip frames instead of generating all
- *                     frames. Since 0.10.22.
+ * gst_event_take:
+ * @old_event: (inout) (transfer full) (nullable): pointer to a
+ *     pointer to a #GstEvent to be stolen.
+ * @new_event: (allow-none) (transfer full): pointer to a #GstEvent that will
+ *     replace the event pointed to by @old_event.
  *
- * Flags to be used with gst_element_seek() or gst_event_new_seek(). All flags
- * can be used together.
+ * Modifies a pointer to a #GstEvent to point to a different #GstEvent. This
+ * function is similar to gst_event_replace() except that it takes ownership of
+ * @new_event.
  *
- * A non flushing seek might take some time to perform as the currently
- * playing data in the pipeline will not be cleared.
+ * Either @new_event or the #GstEvent pointed to by @old_event may be %NULL.
  *
- * An accurate seek might be slower for formats that don't have any indexes
- * or timestamp markers in the stream. Specifying this flag might require a
- * complete scan of the file in those cases.
- *
- * When performing a segment seek: after the playback of the segment completes,
- * no EOS will be emmited by the element that performed the seek, but a
- * #GST_MESSAGE_SEGMENT_DONE message will be posted on the bus by the element.
- * When this message is posted, it is possible to send a new seek event to
- * continue playback. With this seek method it is possible to perform seemless
- * looping or simple linear editing.
- *
- * When doing fast forward (rate > 1.0) or fast reverse (rate < -1.0) trickmode
- * playback, the @GST_SEEK_FLAG_SKIP flag can be used to instruct decoders
- * and demuxers to adjust the playback rate by skipping frames. This can improve
- * performance and decrease CPU usage because not all frames need to be decoded.
- *
- * Also see part-seeking.txt in the GStreamer design documentation for more
- * details on the meaning of these flags and the behaviour expected of
- * elements that handle them.
+ * Returns: %TRUE if @new_event was different from @old_event
  */
-typedef enum {
-  GST_SEEK_FLAG_NONE            = 0,
-  GST_SEEK_FLAG_FLUSH           = (1 << 0),
-  GST_SEEK_FLAG_ACCURATE        = (1 << 1),
-  GST_SEEK_FLAG_KEY_UNIT        = (1 << 2),
-  GST_SEEK_FLAG_SEGMENT         = (1 << 3),
-  GST_SEEK_FLAG_SKIP            = (1 << 4)
-} GstSeekFlags;
+#ifdef _FOOL_GTK_DOC_
+G_INLINE_FUNC gboolean gst_event_take (GstEvent **old_event, GstEvent *new_event);
+#endif
+
+static inline gboolean
+gst_event_take (GstEvent **old_event, GstEvent *new_event)
+{
+  return gst_mini_object_take ((GstMiniObject **) old_event, (GstMiniObject *) new_event);
+}
 
 /**
  * GstQOSType:
@@ -321,14 +352,12 @@ typedef enum {
  *    type is also used when buffers arrive early or in time.
  * @GST_QOS_TYPE_UNDERFLOW: The QoS event type that is produced when downstream
  *    elements are producing data too slowly and need to speed up their processing
- *    rate. 
+ *    rate.
  * @GST_QOS_TYPE_THROTTLE: The QoS event type that is produced when the
  *    application enabled throttling to limit the datarate.
  *
- * The different types of QoS events that can be given to the 
- * gst_event_new_qos_full() method. 
- *
- * Since: 0.10.33
+ * The different types of QoS events that can be given to the
+ * gst_event_new_qos() method.
  */
 typedef enum {
   GST_QOS_TYPE_OVERFLOW        = 0,
@@ -337,12 +366,35 @@ typedef enum {
 } GstQOSType;
 
 /**
+ * GstStreamFlags:
+ * @GST_STREAM_FLAG_NONE: This stream has no special attributes
+ * @GST_STREAM_FLAG_SPARSE: This stream is a sparse stream (e.g. a subtitle
+ *    stream), data may flow only in irregular intervals with large gaps in
+ *    between.
+ * @GST_STREAM_FLAG_SELECT: This stream should be selected by default. This
+ *    flag may be used by demuxers to signal that a stream should be selected
+ *    by default in a playback scenario.
+ * @GST_STREAM_FLAG_UNSELECT: This stream should not be selected by default.
+ *    This flag may be used by demuxers to signal that a stream should not
+ *    be selected by default in a playback scenario, but only if explicitly
+ *    selected by the user (e.g. an audio track for the hard of hearing or
+ *    a director's commentary track).
+ *
+ * Since: 1.2
+ */
+typedef enum {
+  GST_STREAM_FLAG_NONE,
+  GST_STREAM_FLAG_SPARSE       = (1 << 0),
+  GST_STREAM_FLAG_SELECT       = (1 << 1),
+  GST_STREAM_FLAG_UNSELECT     = (1 << 2)
+} GstStreamFlags;
+
+/**
  * GstEvent:
  * @mini_object: the parent structure
  * @type: the #GstEventType of the event
  * @timestamp: the timestamp of the event
- * @src: the src of the event
- * @structure: the #GstStructure containing the event info.
+ * @seqnum: the sequence number of the event
  *
  * A #GstEvent.
  */
@@ -352,22 +404,7 @@ struct _GstEvent {
   /*< public >*/ /* with COW */
   GstEventType  type;
   guint64       timestamp;
-  GstObject     *src;
-
-  GstStructure  *structure;
-
-  /*< private >*/
-  union {
-    guint32 seqnum;
-    gpointer _gst_reserved;
-  } abidata;
-};
-
-struct _GstEventClass {
-  GstMiniObjectClass mini_object_class;
-
-  /*< private >*/
-  gpointer _gst_reserved[GST_PADDING];
+  guint32       seqnum;
 };
 
 const gchar*    gst_event_type_get_name         (GstEventType type);
@@ -375,8 +412,6 @@ GQuark          gst_event_type_to_quark         (GstEventType type);
 GstEventTypeFlags
                 gst_event_type_get_flags        (GstEventType type);
 
-
-GType           gst_event_get_type              (void);
 
 /* refcounting */
 /**
@@ -432,12 +467,14 @@ gst_event_copy (const GstEvent * event)
   return GST_EVENT_CAST (gst_mini_object_copy (GST_MINI_OBJECT_CONST_CAST (event)));
 }
 
+GType           gst_event_get_type              (void);
 
 /* custom event */
-GstEvent*       gst_event_new_custom            (GstEventType type, GstStructure *structure);
+GstEvent*       gst_event_new_custom            (GstEventType type, GstStructure *structure) G_GNUC_MALLOC;
 
 const GstStructure *
                 gst_event_get_structure         (GstEvent *event);
+GstStructure *  gst_event_writable_structure    (GstEvent *event);
 
 gboolean        gst_event_has_name              (GstEvent *event, const gchar *name);
 
@@ -445,77 +482,103 @@ gboolean        gst_event_has_name              (GstEvent *event, const gchar *n
 guint32         gst_event_get_seqnum            (GstEvent *event);
 void            gst_event_set_seqnum            (GstEvent *event, guint32 seqnum);
 
+/* accumulated pad offsets for the event */
+gint64          gst_event_get_running_time_offset (GstEvent *event);
+void            gst_event_set_running_time_offset (GstEvent *event, gint64 offset);
+
+/* Stream start event */
+GstEvent *      gst_event_new_stream_start      (const gchar *stream_id) G_GNUC_MALLOC;
+void            gst_event_parse_stream_start    (GstEvent *event, const gchar **stream_id);
+
+void            gst_event_set_stream_flags      (GstEvent *event, GstStreamFlags flags);
+void            gst_event_parse_stream_flags    (GstEvent *event, GstStreamFlags *flags);
+
+void            gst_event_set_group_id          (GstEvent *event, guint group_id);
+gboolean        gst_event_parse_group_id        (GstEvent *event, guint *group_id);
+
 /* flush events */
-GstEvent *      gst_event_new_flush_start       (void);
-GstEvent *      gst_event_new_flush_stop        (void);
+GstEvent *      gst_event_new_flush_start       (void) G_GNUC_MALLOC;
+
+GstEvent *      gst_event_new_flush_stop        (gboolean reset_time) G_GNUC_MALLOC;
+void            gst_event_parse_flush_stop      (GstEvent *event, gboolean *reset_time);
 
 /* EOS event */
-GstEvent *      gst_event_new_eos               (void);
+GstEvent *      gst_event_new_eos               (void) G_GNUC_MALLOC;
 
-/* newsegment events */
-GstEvent*       gst_event_new_new_segment       (gboolean update, gdouble rate,
-                                                 GstFormat format,
-                                                 gint64 start, gint64 stop,
-                                                 gint64 position);
-GstEvent*       gst_event_new_new_segment_full  (gboolean update, gdouble rate,
-                                                 gdouble applied_rate,
-                                                 GstFormat format,
-                                                 gint64 start, gint64 stop,
-                                                 gint64 position);
-void            gst_event_parse_new_segment     (GstEvent *event,
-                                                 gboolean *update,
-                                                 gdouble *rate,
-                                                 GstFormat *format,
-                                                 gint64 *start, gint64 *stop,
-                                                 gint64 *position);
-void            gst_event_parse_new_segment_full (GstEvent *event,
-                                                 gboolean *update,
-                                                 gdouble *rate,
-                                                 gdouble *applied_rate,
-                                                 GstFormat *format,
-                                                 gint64 *start, gint64 *stop,
-                                                 gint64 *position);
+/* GAP event */
+GstEvent *      gst_event_new_gap               (GstClockTime   timestamp,
+                                                 GstClockTime   duration) G_GNUC_MALLOC;
+
+void            gst_event_parse_gap             (GstEvent     * event,
+                                                 GstClockTime * timestamp,
+                                                 GstClockTime * duration);
+
+/* Caps events */
+GstEvent *      gst_event_new_caps              (GstCaps *caps) G_GNUC_MALLOC;
+void            gst_event_parse_caps            (GstEvent *event, GstCaps **caps);
+
+/* segment event */
+GstEvent*       gst_event_new_segment           (const GstSegment *segment) G_GNUC_MALLOC;
+void            gst_event_parse_segment         (GstEvent *event, const GstSegment **segment);
+void            gst_event_copy_segment          (GstEvent *event, GstSegment *segment);
 
 /* tag event */
-GstEvent*       gst_event_new_tag               (GstTagList *taglist);
+GstEvent*       gst_event_new_tag               (GstTagList *taglist) G_GNUC_MALLOC;
 void            gst_event_parse_tag             (GstEvent *event, GstTagList **taglist);
+
+/* TOC event */
+GstEvent*      gst_event_new_toc                (GstToc *toc, gboolean updated);
+void           gst_event_parse_toc              (GstEvent *event, GstToc **toc, gboolean *updated);
+
 
 /* buffer */
 GstEvent *      gst_event_new_buffer_size       (GstFormat format, gint64 minsize, gint64 maxsize,
-                                                 gboolean async);
+                                                 gboolean async) G_GNUC_MALLOC;
 void            gst_event_parse_buffer_size     (GstEvent *event, GstFormat *format, gint64 *minsize,
                                                  gint64 *maxsize, gboolean *async);
 
+/* sink message */
+GstEvent*       gst_event_new_sink_message      (const gchar *name, GstMessage *msg) G_GNUC_MALLOC;
+void            gst_event_parse_sink_message    (GstEvent *event, GstMessage **msg);
+
 /* QOS events */
-GstEvent*       gst_event_new_qos               (gdouble proportion, GstClockTimeDiff diff,
-                                                 GstClockTime timestamp);
-GstEvent*       gst_event_new_qos_full          (GstQOSType type, gdouble proportion,
-                                                 GstClockTimeDiff diff, GstClockTime timestamp);
-void            gst_event_parse_qos             (GstEvent *event, gdouble *proportion, GstClockTimeDiff *diff,
-                                                 GstClockTime *timestamp);
-void            gst_event_parse_qos_full        (GstEvent *event, GstQOSType *type,
+GstEvent*       gst_event_new_qos               (GstQOSType type, gdouble proportion,
+                                                 GstClockTimeDiff diff, GstClockTime timestamp) G_GNUC_MALLOC;
+void            gst_event_parse_qos             (GstEvent *event, GstQOSType *type,
                                                  gdouble *proportion, GstClockTimeDiff *diff,
                                                  GstClockTime *timestamp);
 /* seek event */
 GstEvent*       gst_event_new_seek              (gdouble rate, GstFormat format, GstSeekFlags flags,
                                                  GstSeekType start_type, gint64 start,
-                                                 GstSeekType stop_type, gint64 stop);
+                                                 GstSeekType stop_type, gint64 stop) G_GNUC_MALLOC;
 void            gst_event_parse_seek            (GstEvent *event, gdouble *rate, GstFormat *format,
                                                  GstSeekFlags *flags,
                                                  GstSeekType *start_type, gint64 *start,
                                                  GstSeekType *stop_type, gint64 *stop);
+
 /* navigation event */
-GstEvent*       gst_event_new_navigation        (GstStructure *structure);
+GstEvent*       gst_event_new_navigation        (GstStructure *structure) G_GNUC_MALLOC;
 
 /* latency event */
-GstEvent*       gst_event_new_latency           (GstClockTime latency);
+GstEvent*       gst_event_new_latency           (GstClockTime latency) G_GNUC_MALLOC;
 void            gst_event_parse_latency         (GstEvent *event, GstClockTime *latency);
 
 /* step event */
 GstEvent*       gst_event_new_step              (GstFormat format, guint64 amount, gdouble rate,
-                                                 gboolean flush, gboolean intermediate);
+                                                 gboolean flush, gboolean intermediate) G_GNUC_MALLOC;
 void            gst_event_parse_step            (GstEvent *event, GstFormat *format, guint64 *amount,
                                                  gdouble *rate, gboolean *flush, gboolean *intermediate);
+
+/* renegotiate event */
+GstEvent*       gst_event_new_reconfigure       (void) G_GNUC_MALLOC;
+
+/* TOC select event */
+GstEvent*       gst_event_new_toc_select        (const gchar *uid) G_GNUC_MALLOC;
+void            gst_event_parse_toc_select      (GstEvent *event, gchar **uid);
+
+/* segment-done event */
+GstEvent*       gst_event_new_segment_done      (GstFormat format, gint64 position) G_GNUC_MALLOC;
+void            gst_event_parse_segment_done    (GstEvent *event, GstFormat *format, gint64 *position);
 
 G_END_DECLS
 

@@ -152,6 +152,8 @@ uint32_t CGstAudioPlaybackPipeline::Init()
         return ERROR_GSTREAMER_BUS_SOURCE_ATTACH;
     }
 
+    ((CGstMediaManager*)pManager)->StartMainLoop();
+
     // Check if we have static pipeline
 #if TARGET_OS_LINUX | TARGET_OS_MAC | TARGET_OS_WIN32
     if (m_Elements[AV_DEMUXER] == NULL)
@@ -188,7 +190,7 @@ uint32_t CGstAudioPlaybackPipeline::PostBuildInit()
             GstPad *pPad = gst_element_get_static_pad(m_Elements[AUDIO_PARSER], "src");
             if (NULL == pPad)
                 return ERROR_GSTREAMER_ELEMENT_GET_PAD;
-            m_audioSourcePadProbeHID = gst_pad_add_buffer_probe(pPad, G_CALLBACK(AudioSourcePadProbe), this);
+            m_audioSourcePadProbeHID = gst_pad_add_probe(pPad, GST_PAD_PROBE_TYPE_BUFFER, (GstPadProbeCallback)AudioSourcePadProbe, this, NULL);
             gst_object_unref(pPad);
         }
         else if (m_Elements[AUDIO_DECODER])
@@ -198,7 +200,7 @@ uint32_t CGstAudioPlaybackPipeline::PostBuildInit()
                 GstPad *pPad = gst_element_get_static_pad(m_Elements[AUDIO_DECODER], "sink");
                 if (NULL == pPad)
                     return ERROR_GSTREAMER_AUDIO_DECODER_SINK_PAD;
-                m_audioSinkPadProbeHID = gst_pad_add_buffer_probe(pPad, G_CALLBACK(AudioSinkPadProbe), this);
+                m_audioSinkPadProbeHID = gst_pad_add_probe(pPad, GST_PAD_PROBE_TYPE_BUFFER, (GstPadProbeCallback)AudioSinkPadProbe, this, NULL);
                 gst_object_unref(pPad);
             }
 
@@ -207,7 +209,7 @@ uint32_t CGstAudioPlaybackPipeline::PostBuildInit()
                 GstPad *pPad = gst_element_get_static_pad(m_Elements[AUDIO_DECODER], "src");
                 if (NULL == pPad)
                     return ERROR_GSTREAMER_AUDIO_DECODER_SRC_PAD;
-                m_audioSourcePadProbeHID = gst_pad_add_buffer_probe(pPad, G_CALLBACK(AudioSourcePadProbe), this);
+                m_audioSourcePadProbeHID = gst_pad_add_probe(pPad, GST_PAD_PROBE_TYPE_BUFFER, (GstPadProbeCallback)AudioSourcePadProbe, this, NULL);
                 gst_object_unref(pPad);
             }
         }
@@ -239,7 +241,7 @@ void CGstAudioPlaybackPipeline::OnParserSrcPadAdded(GstElement *element, GstPad 
         return;
     }
 
-    GstCaps *pCaps = gst_pad_get_caps(pad);
+    GstCaps *pCaps = gst_pad_get_current_caps(pad);
 
     if (pPipeline->IsCodecSupported(pCaps))
     {
@@ -391,9 +393,9 @@ void CGstAudioPlaybackPipeline::Dispose()
 
         gst_object_unref (m_Elements[PIPELINE]);
     }
-    
+
     if (m_pBusCallbackContent != NULL)
-    {    
+    {
         bool bFreeBusCallbackContent = m_pBusCallbackContent->m_bFreeMe;
 
         m_pBusCallbackContent->m_bIsDisposed = true;
@@ -638,10 +640,9 @@ uint32_t CGstAudioPlaybackPipeline::Seek(double dSeekTime)
  */
 uint32_t CGstAudioPlaybackPipeline::GetDuration(double* dDuration)
 {
-    GstFormat format = GST_FORMAT_TIME;
     gint64    duration = GST_CLOCK_TIME_NONE;
 
-    if (IsPlayerState(Error) || !gst_element_query_duration(m_Elements[PIPELINE], &format, &duration))
+    if (IsPlayerState(Error) || !gst_element_query_duration(m_Elements[PIPELINE], GST_FORMAT_TIME, &duration))
     {
         *dDuration = -1.0;
         return ERROR_GSTREAMER_PIPELINE_QUERY_LENGTH;
@@ -666,7 +667,6 @@ uint32_t CGstAudioPlaybackPipeline::GetDuration(double* dDuration)
  */
 uint32_t CGstAudioPlaybackPipeline::GetStreamTime(double* streamTime)
 {
-    GstFormat format = GST_FORMAT_TIME;
     gint64    position = GST_CLOCK_TIME_NONE;
 
 #if JFXMEDIA_ENABLE_GST_TRACE
@@ -688,7 +688,7 @@ uint32_t CGstAudioPlaybackPipeline::GetStreamTime(double* streamTime)
         return ERROR_NONE;
     }
 
-    if (!gst_element_query_position(m_Elements[PIPELINE], &format, &position))
+    if (!gst_element_query_position(m_Elements[PIPELINE], GST_FORMAT_TIME, &position))
     {
         // Position query failed: use timestamp of most recent buffer instead.
         position = (gint64)m_ulLastStreamTime;
@@ -980,6 +980,26 @@ bool CGstAudioPlaybackPipeline::IsCodecSupported(GstCaps *pCaps)
 
     return TRUE;
 #else // TARGET_OS_WIN32
+    GstStructure *s = NULL;
+    const gchar *mimetype = NULL;
+
+    if (pCaps)
+    {
+        s = gst_caps_get_structure (pCaps, 0);
+        if (s != NULL)
+        {
+            mimetype = gst_structure_get_name (s);
+            if (mimetype != NULL)
+            {
+                if (strstr(mimetype, "audio/unsupported") != NULL)
+                {
+                    m_audioCodecErrorCode = ERROR_MEDIA_AUDIO_FORMAT_UNSUPPORTED;
+                    return FALSE;
+                }
+            }
+        }
+    }
+
     return TRUE;
 #endif // TRAGET_OS_WIN32
 }
@@ -994,9 +1014,9 @@ bool CGstAudioPlaybackPipeline::CheckCodecSupport()
             {
                 LOGGER_LOGMSG(LOGGER_ERROR, "Cannot send media error event.\n");
             }
-        }
 
-        return FALSE;
+            return FALSE;
+        }
     }
 
     return TRUE;
@@ -1069,8 +1089,10 @@ gboolean CGstAudioPlaybackPipeline::BusCallback(GstBus* bus, GstMessage* msg, sB
                 // Set the state to Finished which may only be exited by seeking back before the finish time.
                 pPipeline->SetPlayerState(Finished, false);
 
+#if ENABLE_PROGRESS_BUFFER
                 if (pPipeline->m_pOptions->GetHLSModeEnabled())
                     pPipeline->m_bLastProgressValueEOS = FALSE; // Otherwise we will resume playback if we loop and user hits stop
+#endif // ENABLE_PROGRESS_BUFFER
             }
         }
             break;
@@ -1081,6 +1103,12 @@ gboolean CGstAudioPlaybackPipeline::BusCallback(GstBus* bus, GstMessage* msg, sB
             GError *error = NULL;
 
             gst_message_parse_error (msg, &error, &debug);
+
+            if (error && error->message)
+                LOGGER_LOGMSG(LOGGER_ERROR, error->message);
+
+            if (debug)
+                LOGGER_LOGMSG(LOGGER_DEBUG, debug);
 
             // Handle connection lost error
             if (error)
@@ -1107,7 +1135,7 @@ gboolean CGstAudioPlaybackPipeline::BusCallback(GstBus* bus, GstMessage* msg, sB
                         g_free(debug);
                     break;
                 }
-                else if (pPipeline != NULL && pPipeline->m_pEventDispatcher != NULL && error->domain == GST_STREAM_ERROR && 
+                else if (pPipeline != NULL && pPipeline->m_pEventDispatcher != NULL && error->domain == GST_STREAM_ERROR &&
                     (error->code == GST_STREAM_ERROR_DECODE || error->code == GST_STREAM_ERROR_WRONG_TYPE))
                 {
                     if (!pPipeline->m_pEventDispatcher->SendPlayerMediaErrorEvent(ERROR_MEDIA_INVALID))
@@ -1182,10 +1210,7 @@ gboolean CGstAudioPlaybackPipeline::BusCallback(GstBus* bus, GstMessage* msg, sB
             }
 
             if (debug)
-            {
-                LOGGER_LOGMSG(LOGGER_DEBUG, debug);
                 g_free (debug);
-            }
         }
             break;
 
@@ -1498,8 +1523,13 @@ void CGstAudioPlaybackPipeline::SetPlayerState(PlayerState newPlayerState, bool 
 
     m_StateLock->Exit();
 
+#if ENABLE_PROGRESS_BUFFER
     if ((updateState && newPlayerState == Stalled && m_bLastProgressValueEOS) ||
         (updateState && newPlayerState == Stalled && m_bHLSPBFull))
+#else // ENABLE_PROGRESS_BUFFER
+    if ((updateState && newPlayerState == Stalled) ||
+        (updateState && newPlayerState == Stalled && m_bHLSPBFull))
+#endif // ENABLE_PROGRESS_BUFFER
     {
        Play();
     }
@@ -1793,12 +1823,18 @@ void CGstAudioPlaybackPipeline::SendTrackEvent()
     }
 }
 
-gboolean CGstAudioPlaybackPipeline::AudioSinkPadProbe(GstPad* pPad, GstBuffer *pBuffer, CGstAudioPlaybackPipeline* pPipeline)
+GstPadProbeReturn CGstAudioPlaybackPipeline::AudioSinkPadProbe(GstPad* pPad, GstPadProbeInfo *pInfo, CGstAudioPlaybackPipeline* pPipeline)
 {
-    GstCaps* pCaps = GST_BUFFER_CAPS(pBuffer);
+    // Make sure we got requested probe
+    if ((pInfo->type & GST_PAD_PROBE_TYPE_BUFFER) != GST_PAD_PROBE_TYPE_BUFFER || pInfo->data == NULL)
+        return GST_PAD_PROBE_OK;
+
+    GstCaps* pCaps = gst_pad_get_current_caps(pPad);
     if (NULL == pCaps || gst_caps_get_size(pCaps) < 1)
     {
-        return TRUE;
+        if (pCaps != NULL)
+            gst_caps_unref(pCaps);
+        return GST_PAD_PROBE_OK;
     }
 
     GstStructure *pStructure = gst_caps_get_structure(pCaps, 0);
@@ -1832,25 +1868,32 @@ gboolean CGstAudioPlaybackPipeline::AudioSinkPadProbe(GstPad* pPad, GstBuffer *p
         if (pPipeline->m_audioSourcePadProbeHID)    // Remove source probe if any because we've got all we need.
         {
             GstPad *pPad = gst_element_get_static_pad(pPipeline->m_Elements[AUDIO_DECODER], "src");
-            gst_pad_remove_data_probe (pPad, pPipeline->m_audioSourcePadProbeHID);
+            gst_pad_remove_probe (pPad, pPipeline->m_audioSourcePadProbeHID);
             gst_object_unref(pPad);
         }
     }
 
-    gst_pad_remove_data_probe (pPad, pPipeline->m_audioSinkPadProbeHID);
+    if (pCaps != NULL)
+        gst_caps_unref(pCaps);
 
-    return TRUE;
+    return GST_PAD_PROBE_REMOVE;
 }
 
-gboolean CGstAudioPlaybackPipeline::AudioSourcePadProbe(GstPad* pPad, GstBuffer *pBuffer, CGstAudioPlaybackPipeline* pPipeline)
+GstPadProbeReturn CGstAudioPlaybackPipeline::AudioSourcePadProbe(GstPad* pPad, GstPadProbeInfo *pInfo, CGstAudioPlaybackPipeline* pPipeline)
 {
-    GstCaps* pCaps = GST_BUFFER_CAPS(pBuffer);
-    if (NULL == pCaps || gst_caps_get_size(pCaps) < 1)
-    {
-        return TRUE;
-    }
+    GstPadProbeReturn ret = GST_PAD_PROBE_OK;
+    GstStructure *pStructure = NULL;
+    GstCaps* pCaps = NULL;
 
-    GstStructure *pStructure = gst_caps_get_structure(pCaps, 0);
+    // Make sure we got requested probe
+    if ((pInfo->type & GST_PAD_PROBE_TYPE_BUFFER) != GST_PAD_PROBE_TYPE_BUFFER || pInfo->data == NULL)
+        goto exit;
+
+    pCaps = gst_pad_get_current_caps(pPad);
+    if (NULL == pCaps || gst_caps_get_size(pCaps) < 1)
+        goto exit;
+
+    pStructure = gst_caps_get_structure(pCaps, 0);
 
     // Here we only fill in empty fields. All fields would be empty if this is the only track test probe.
     if (pPipeline->m_AudioTrackInfo.mimeType.empty())
@@ -1873,8 +1916,13 @@ gboolean CGstAudioPlaybackPipeline::AudioSourcePadProbe(GstPad* pPad, GstBuffer 
 
     pPipeline->SendTrackEvent(); // Send track event anyways. We won't get any more information.
 
-    gst_pad_remove_data_probe (pPad, pPipeline->m_audioSourcePadProbeHID);
-    return TRUE; // Don't discard the data.
+    ret = GST_PAD_PROBE_REMOVE; // Don't discard the data.
+
+exit:
+    if (pCaps != NULL)
+        gst_caps_unref(pCaps);
+
+    return ret;
 }
 
 #if ENABLE_PROGRESS_BUFFER

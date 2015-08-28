@@ -1,5 +1,5 @@
 /* -*- c-basic-offset: 2 -*-
- * 
+ *
  * GStreamer
  * Copyright (C) 1999-2001 Erik Walthinsen <omega@cse.ogi.edu>
  *               2006 Dreamlab Technologies Ltd. <mathis.hofer@dreamlab.net>
@@ -17,9 +17,9 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
- * 
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
+ *
  */
 
 #ifndef __GST_AUDIO_FX_BASE_FIR_FILTER_H__
@@ -84,6 +84,8 @@ struct _GstAudioFXBaseFIRFilter {
   guint64 start_off;            /* start offset after a discont */
   guint64 nsamples_out;         /* number of output samples since last discont */
   guint64 nsamples_in;          /* number of input samples since last discont */
+
+  GMutex lock;
 };
 
 struct _GstAudioFXBaseFIRFilterClass {
@@ -91,7 +93,8 @@ struct _GstAudioFXBaseFIRFilterClass {
 };
 
 GType gst_audio_fx_base_fir_filter_get_type (void);
-void gst_audio_fx_base_fir_filter_set_kernel (GstAudioFXBaseFIRFilter *filter, gdouble *kernel, guint kernel_length, guint64 latency);
+void gst_audio_fx_base_fir_filter_set_kernel (GstAudioFXBaseFIRFilter *filter, gdouble *kernel,
+                                              guint kernel_length, guint64 latency, const GstAudioInfo * info);
 void gst_audio_fx_base_fir_filter_push_residue (GstAudioFXBaseFIRFilter *filter);
 
 G_END_DECLS

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,10 +40,16 @@ static inline guint32 swap_uint32(guint32 x)
         ((x & 0xff000000U) >> 24);
 }
 
+static void free_aligned_buffer(gpointer ptr)
+{
+    if (ptr != NULL) {
+        g_free(ptr);
+    }
+}
+
 static GstBuffer *alloc_aligned_buffer(guint size)
 {
     // allocate a new GstBuffer of the given size plus some for padding and alignment
-    GstBuffer *newBuffer = NULL;
     guint8 *newData;
     guint8 *alignedData;
     guint alignedSize;
@@ -56,19 +62,9 @@ static GstBuffer *alloc_aligned_buffer(guint size)
         return NULL;
     }
 
-    // create empty GstBuffer
-    newBuffer = gst_buffer_new();
-    if (NULL == newBuffer) {
-        g_free(newData);
-        return NULL;
-    }
-
-    // Now set data, size and mallocdata
     alignedData = (guint8*)(((intptr_t)newData + 15) & ~15);
-    gst_buffer_set_data(newBuffer, alignedData, alignedSize);
-    GST_BUFFER_MALLOCDATA(newBuffer) = newData;
 
-    return newBuffer;
+    return gst_buffer_new_wrapped_full((GstMemoryFlags)0, alignedData, alignedSize, 0, 0, newData, free_aligned_buffer);
 }
 
 GstCaps *create_RGB_caps(CVideoFrame::FrameType type, gint width, gint height, gint encodedWidth, gint encodedHeight, gint stride)
@@ -106,37 +102,12 @@ GstCaps *create_RGB_caps(CVideoFrame::FrameType type, gint width, gint height, g
     return newCaps;
 }
 
-CGstVideoFrame::CGstVideoFrame(guint size)
-    : m_bIsValid(false), m_pBuffer(NULL)
+CGstVideoFrame::CGstVideoFrame()
 {
-    m_pBuffer = alloc_aligned_buffer(size);
-    if (!m_pBuffer) {
-        throw GST_FLOW_ERROR;
-    }
-}
-
-CGstVideoFrame::CGstVideoFrame(GstBuffer* buffer)
-    : m_bIsValid(true)
-{
-    LOWLEVELPERF_COUNTERINC("CGstVideoFrame", 1, 1);
-
-    // Increment the ref count as this object will be created
-    // by the video sink and pushed into the FrameQueue.
-    m_pBuffer = gst_buffer_ref(buffer);
-
-    GstCaps* caps = GST_BUFFER_CAPS(m_pBuffer);
-
-    m_ulBufferSize = (unsigned long)GST_BUFFER_SIZE(m_pBuffer);
-    m_pvBufferBaseAddress = (void*)GST_BUFFER_DATA(m_pBuffer);
-
-    if (GST_BUFFER_TIMESTAMP_IS_VALID (m_pBuffer)) {
-        m_dTime = (double)GST_BUFFER_TIMESTAMP(m_pBuffer) / GST_SECOND;
-    } else {
-        m_dTime = 0.0;
-        m_bIsValid = false;
-    }
-
-    SetFrameCaps(caps);
+    m_bIsValid = false;
+    m_pSample = NULL;
+    m_pBuffer = NULL;
+    m_bIsI420 = false;
 }
 
 CGstVideoFrame::~CGstVideoFrame()
@@ -147,11 +118,47 @@ CGstVideoFrame::~CGstVideoFrame()
         Dispose();
 }
 
+bool CGstVideoFrame::Init(GstSample* sample)
+{
+    LOWLEVELPERF_COUNTERINC("CGstVideoFrame", 1, 1);
+
+    // Increment the ref count as this object will be created
+    // by the video sink and pushed into the FrameQueue.
+    m_pSample = gst_sample_ref(sample);
+    m_pBuffer = gst_sample_get_buffer(m_pSample);
+    if (m_pBuffer == NULL) {
+        return false;
+    }
+
+    if (!gst_buffer_map(m_pBuffer, &m_Info, GST_MAP_READ)) {
+        m_pBuffer = NULL;
+        return false;
+    }
+
+    m_ulBufferSize = (unsigned long)m_Info.size;
+    m_pvBufferBaseAddress = (void*)m_Info.data;
+
+    if (GST_BUFFER_TIMESTAMP_IS_VALID (m_pBuffer)) {
+        m_dTime = (double)GST_BUFFER_TIMESTAMP(m_pBuffer) / GST_SECOND;
+    } else {
+        m_dTime = 0.0;
+        m_bIsValid = false;
+    }
+
+    GstCaps* caps = gst_sample_get_caps(m_pSample);
+    if (caps == NULL) {
+        return false;
+    }
+
+    SetFrameCaps(caps);
+
+    return true;
+}
+
 void CGstVideoFrame::SetFrameCaps(GstCaps *newCaps)
 {
-    GstCaps *bufCaps = NULL;
     const GstStructure* str = gst_caps_get_structure(newCaps, 0);
-    gst_structure_get_fourcc(str, "format", &m_uFormatFourCC); // ignore return
+    const gchar* sFormatFourCC = gst_structure_get_string(str, "format");
 
     // default to success
     m_bIsValid = true;
@@ -164,9 +171,12 @@ void CGstVideoFrame::SetFrameCaps(GstCaps *newCaps)
         m_typeFrame = YCbCr_422;
         m_bHasAlpha = false;
     } else if (gst_structure_has_name(str, "video/x-raw-yuv")) {
-        if (FOURCC_UYVY == m_uFormatFourCC) {
+        if (sFormatFourCC != NULL && g_ascii_strcasecmp(sFormatFourCC, FOURCC_UYVY) == 0) {
             m_typeFrame = YCbCr_422;
         } else {
+            if (sFormatFourCC != NULL && g_ascii_strcasecmp(sFormatFourCC, FOURCC_I420) == 0) {
+                m_bIsI420 = true;
+            }
             m_typeFrame = YCbCr_420p;
         }
         m_bHasAlpha = false;
@@ -276,7 +286,7 @@ void CGstVideoFrame::SetFrameCaps(GstCaps *newCaps)
             //
             // Swap chroma planes for I420.
             //
-            if(FOURCC_I420 == m_uFormatFourCC) {
+            if (m_bIsI420) {
                 // Swap Cb/Cr plane data
                 SwapPlanes(1, 2);
             }
@@ -296,12 +306,6 @@ void CGstVideoFrame::SetFrameCaps(GstCaps *newCaps)
             m_pvPlaneData[0] = m_pvBufferBaseAddress;
             break;
     }
-
-    bufCaps = GST_BUFFER_CAPS(m_pBuffer);
-    if (bufCaps != newCaps) {
-        // Updating caps externally
-        gst_buffer_set_caps(m_pBuffer, newCaps);
-    }
 }
 
 bool CGstVideoFrame::IsValid()
@@ -315,9 +319,17 @@ void CGstVideoFrame::Dispose()
     // A reference to this object should be held by its Java
     // peer which should invoke this dispose() method in its
     // finalizer.
-// INLINE - gst_buffer_unref()
-    gst_buffer_unref(m_pBuffer);
-    m_pBuffer = NULL;
+
+    if (m_pBuffer != NULL) {
+        gst_buffer_unmap(m_pBuffer, &m_Info);
+        m_pBuffer = NULL;
+    }
+
+    if (m_pSample != NULL) {
+        // INLINE - gst_sample_unref()
+        gst_sample_unref(m_pSample);
+        m_pSample = NULL;
+    }
 }
 
 CVideoFrame *CGstVideoFrame::ConvertToFormat(FrameType type)
@@ -357,13 +369,15 @@ CVideoFrame *CGstVideoFrame::ConvertToFormat(FrameType type)
 
 CGstVideoFrame *CGstVideoFrame::ConvertFromYCbCr420p(FrameType destType)
 {
-    GstBuffer *destBuffer;
-    GstCaps *destCaps;
+    GstSample *destSample = NULL;
+    GstBuffer *destBuffer = NULL;
+    GstCaps *destCaps = NULL;
+    GstMapInfo info;
     gint stride = m_iEncodedWidth * 4;
     int u_index, v_index;
     int status;
 
-    if (FOURCC_I420 == m_uFormatFourCC) {
+    if (m_bIsI420) {
         u_index = 1;
         v_index = 2;
     } else {
@@ -377,25 +391,22 @@ CGstVideoFrame *CGstVideoFrame::ConvertFromYCbCr420p(FrameType destType)
         return NULL;
     }
 
-    destCaps = create_RGB_caps(destType, m_iWidth, m_iHeight, m_iEncodedWidth, m_iEncodedHeight, stride);
-    if (!destCaps) {
-        // INLINE - gst_buffer_unref()
-        gst_buffer_unref(destBuffer);
-        return NULL;
-    }
-    gst_buffer_set_caps(destBuffer, destCaps);
-    gst_caps_unref(destCaps);
-
     // copy buffer info
     GST_BUFFER_TIMESTAMP(destBuffer) = GST_BUFFER_TIMESTAMP(m_pBuffer);
     GST_BUFFER_OFFSET(destBuffer) = GST_BUFFER_OFFSET(m_pBuffer);
     GST_BUFFER_DURATION(destBuffer) = GST_BUFFER_DURATION(m_pBuffer);
 
+    if (!gst_buffer_map(destBuffer, &info, GST_MAP_WRITE)) {
+        // INLINE - gst_buffer_unref()
+        gst_buffer_unref(destBuffer);
+        return NULL;
+    }
+
     // now do the conversion
     if (destType == ARGB) {
         if (m_bHasAlpha) {
             status = ColorConvert_YCbCr420p_to_ARGB32(
-                        GST_BUFFER_DATA(destBuffer), stride,
+                        info.data, stride,
                         m_iEncodedWidth, m_iEncodedHeight,
                         (const uint8_t*)m_pvPlaneData[0],
                         (const uint8_t*)m_pvPlaneData[v_index],
@@ -405,7 +416,7 @@ CGstVideoFrame *CGstVideoFrame::ConvertFromYCbCr420p(FrameType destType)
                         m_piPlaneStrides[u_index], m_piPlaneStrides[3]);
         } else {
             status = ColorConvert_YCbCr420p_to_ARGB32_no_alpha(
-                        GST_BUFFER_DATA(destBuffer), stride,
+                        info.data, stride,
                         m_iEncodedWidth, m_iEncodedHeight,
                         (const uint8_t*)m_pvPlaneData[0],
                         (const uint8_t*)m_pvPlaneData[v_index],
@@ -416,7 +427,7 @@ CGstVideoFrame *CGstVideoFrame::ConvertFromYCbCr420p(FrameType destType)
     } else {
         if (m_bHasAlpha) {
             status = ColorConvert_YCbCr420p_to_BGRA32(
-                        GST_BUFFER_DATA(destBuffer), stride,
+                        info.data, stride,
                         m_iEncodedWidth, m_iEncodedHeight,
                         (const uint8_t*)m_pvPlaneData[0],
                         (const uint8_t*)m_pvPlaneData[v_index],
@@ -426,7 +437,7 @@ CGstVideoFrame *CGstVideoFrame::ConvertFromYCbCr420p(FrameType destType)
                         m_piPlaneStrides[u_index], m_piPlaneStrides[3]);
         } else {
             status = ColorConvert_YCbCr420p_to_BGRA32_no_alpha(
-                        GST_BUFFER_DATA(destBuffer), stride,
+                        info.data, stride,
                         m_iEncodedWidth, m_iEncodedHeight,
                         (const uint8_t*)m_pvPlaneData[0],
                         (const uint8_t*)m_pvPlaneData[v_index],
@@ -436,11 +447,33 @@ CGstVideoFrame *CGstVideoFrame::ConvertFromYCbCr420p(FrameType destType)
         }
     }
 
-    if (0 == status && destBuffer) {
-        CGstVideoFrame *newFrame = new CGstVideoFrame(destBuffer);
-// INLINE - gst_buffer_unref()
+    gst_buffer_unmap(destBuffer, &info);
+
+    destCaps = create_RGB_caps(destType, m_iWidth, m_iHeight, m_iEncodedWidth, m_iEncodedHeight, stride);
+    if (!destCaps) {
+        // INLINE - gst_buffer_unref()
+        gst_buffer_unref(destBuffer);
+        return NULL;
+    }
+
+    destSample = gst_sample_new(destBuffer, destCaps, NULL, NULL);
+    if (!destSample) {
+        gst_caps_unref(destCaps);
+        // INLINE - gst_buffer_unref()
+        gst_buffer_unref(destBuffer);
+        return NULL;
+    }
+
+    gst_caps_unref(destCaps);
+
+    if (0 == status && destSample) {
+        CGstVideoFrame *newFrame = new CGstVideoFrame();
+        bool result = newFrame->Init(destSample);
+        // INLINE - gst_sample_unref()
         gst_buffer_unref(destBuffer); // else we'll have a massive memory leak!
-        return newFrame;
+        // INLINE - gst_sample_unref()
+        gst_sample_unref(destSample); // else we'll have a massive memory leak!
+        return result ? newFrame : NULL;
     }
 
     return NULL;
@@ -448,8 +481,10 @@ CGstVideoFrame *CGstVideoFrame::ConvertFromYCbCr420p(FrameType destType)
 
 CGstVideoFrame *CGstVideoFrame::ConvertFromYCbCr422(FrameType destType)
 {
+    GstSample *destSample;
     GstBuffer *destBuffer;
     GstCaps *destCaps;
+    GstMapInfo info;
     gint stride = m_iEncodedWidth * 4;
     int status = 1;
 
@@ -464,30 +499,29 @@ CGstVideoFrame *CGstVideoFrame::ConvertFromYCbCr422(FrameType destType)
         return NULL;
     }
 
-    destCaps = create_RGB_caps(destType, m_iWidth, m_iHeight, m_iEncodedWidth, m_iEncodedHeight, stride);
-    if (!destCaps) {
-        // INLINE - gst_buffer_unref()
-        gst_buffer_unref(destBuffer);
-        return NULL;
-    }
-    gst_buffer_set_caps(destBuffer, destCaps);
-    gst_caps_unref(destCaps);
-
     // copy buffer info
     GST_BUFFER_TIMESTAMP(destBuffer) = GST_BUFFER_TIMESTAMP(m_pBuffer);
     GST_BUFFER_OFFSET(destBuffer) = GST_BUFFER_OFFSET(m_pBuffer);
     GST_BUFFER_DURATION(destBuffer) = GST_BUFFER_DURATION(m_pBuffer);
 
+    if (!gst_buffer_map(m_pBuffer, &info, GST_MAP_WRITE)) {
+        // INLINE - gst_buffer_unref()
+        gst_buffer_unref(destBuffer);
+        // INLINE - gst_sample_unref()
+        gst_sample_unref(destSample);
+        return NULL;
+    }
+
     // now do the conversion
     if (destType == ARGB) {
-        status = ColorConvert_YCbCr422p_to_ARGB32_no_alpha(GST_BUFFER_DATA(destBuffer), stride,
+        status = ColorConvert_YCbCr422p_to_ARGB32_no_alpha(info.data, stride,
                                                            m_iEncodedWidth, m_iEncodedHeight,
                                                            (uint8_t*)m_pvPlaneData[0] + 1,
                                                            (uint8_t*)m_pvPlaneData[0] + 2,
                                                            (uint8_t*)m_pvPlaneData[0],
                                                            m_piPlaneStrides[0], m_piPlaneStrides[0]);
     } else {
-        status = ColorConvert_YCbCr422p_to_BGRA32_no_alpha(GST_BUFFER_DATA(destBuffer), stride,
+        status = ColorConvert_YCbCr422p_to_BGRA32_no_alpha(info.data, stride,
                                                            m_iEncodedWidth, m_iEncodedHeight,
                                                            (uint8_t*)m_pvPlaneData[0] + 1,
                                                            (uint8_t*)m_pvPlaneData[0] + 2,
@@ -495,11 +529,33 @@ CGstVideoFrame *CGstVideoFrame::ConvertFromYCbCr422(FrameType destType)
                                                            m_piPlaneStrides[0], m_piPlaneStrides[0]);
     }
 
+    gst_buffer_unmap(destBuffer, &info);
+
+    destCaps = create_RGB_caps(destType, m_iWidth, m_iHeight, m_iEncodedWidth, m_iEncodedHeight, stride);
+    if (!destCaps) {
+        // INLINE - gst_buffer_unref()
+        gst_buffer_unref(destBuffer);
+        return NULL;
+    }
+
+    destSample = gst_sample_new(destBuffer, destCaps, NULL, NULL);
+    if (!destSample) {
+        gst_caps_unref(destCaps);
+        // INLINE - gst_buffer_unref()
+        gst_buffer_unref(destBuffer);
+        return NULL;
+    }
+
+    gst_caps_unref(destCaps);
+
     if (0 == status && destBuffer) {
-        CGstVideoFrame *newFrame = new CGstVideoFrame(destBuffer);
+        CGstVideoFrame *newFrame = new CGstVideoFrame();
+        bool result = newFrame->Init(destSample);
         // INLINE - gst_buffer_unref()
         gst_buffer_unref(destBuffer); // else we'll have a massive memory leak!
-        return newFrame;
+        // INLINE - gst_sample_unref()
+        gst_sample_unref(destSample); // else we'll have a massive memory leak!
+        return result ? newFrame : NULL;
     }
 
     return NULL;
@@ -507,19 +563,23 @@ CGstVideoFrame *CGstVideoFrame::ConvertFromYCbCr422(FrameType destType)
 
 CGstVideoFrame *CGstVideoFrame::ConvertSwapRGB(FrameType destType)
 {
+    GstSample *destSample;
     GstBuffer *destBuffer;
     GstCaps *srcCaps, *dstCaps;
+    GstMapInfo srcInfo, destInfo;
     GstStructure* str;
-    gint xx, yy;
+    gint xx, yy, size;
     guint32 *srcData, *dstData;
 
-    destBuffer = alloc_aligned_buffer(GST_BUFFER_SIZE(m_pBuffer));
+    size = gst_buffer_get_size(m_pBuffer);
+
+    destBuffer = alloc_aligned_buffer(size);
     if (!destBuffer) {
         return NULL;
     }
 
     // Create and set buffer caps for the new format
-    srcCaps = gst_buffer_get_caps(m_pBuffer);
+    srcCaps = gst_sample_get_caps(m_pSample);
     dstCaps = gst_caps_copy(srcCaps); // Should make caps writable
     gst_caps_unref(srcCaps);
     str = gst_caps_get_structure(dstCaps, 0);
@@ -549,15 +609,40 @@ CGstVideoFrame *CGstVideoFrame::ConvertSwapRGB(FrameType destType)
             gst_caps_unref(dstCaps);
             return NULL;
     }
-    gst_buffer_set_caps(destBuffer, dstCaps);
+
+    destSample = gst_sample_new(destBuffer, dstCaps, NULL, NULL);
+    if (!destSample) {
+        gst_caps_unref(dstCaps);
+        // INLINE - gst_buffer_unref()
+        gst_buffer_unref(destBuffer);
+        return NULL;
+    }
+
     gst_caps_unref(dstCaps);
 
+    if (!gst_buffer_map(m_pBuffer, &srcInfo, GST_MAP_READ)) {
+        // INLINE - gst_buffer_unref()
+        gst_buffer_unref(destBuffer);
+        // INLINE - gst_sample_unref()
+        gst_sample_unref(destSample);
+        return NULL;
+    }
+
+    if (!gst_buffer_map(destBuffer, &destInfo, GST_MAP_WRITE)) {
+        gst_buffer_unmap(m_pBuffer, &srcInfo);
+        // INLINE - gst_buffer_unref()
+        gst_buffer_unref(destBuffer);
+        // INLINE - gst_sample_unref()
+        gst_sample_unref(destSample);
+        return NULL;
+    }
+
     // Now copy data from src to dest, byteswapping as we copy
-    srcData = (guint32*)GST_BUFFER_DATA(m_pBuffer);
-    dstData = (guint32*)GST_BUFFER_DATA(destBuffer);
+    srcData = (guint32*)srcInfo.data;
+    dstData = (guint32*)destInfo.data;
     if (!(m_piPlaneStrides[0] & 3)) {
         // four byte alignment on the entire buffer, we can just loop once
-        for (xx = 0; xx < GST_BUFFER_SIZE(m_pBuffer); xx += 4) {
+        for (xx = 0; xx < size; xx += 4) {
             *dstData++ = swap_uint32(*srcData++); // NOTE: SSE could be used here instead
         }
     } else {
@@ -570,11 +655,17 @@ CGstVideoFrame *CGstVideoFrame::ConvertSwapRGB(FrameType destType)
         }
     }
 
+    gst_buffer_unmap(m_pBuffer, &srcInfo);
+    gst_buffer_unmap(destBuffer, &destInfo);
+
     if (destBuffer) {
-        CGstVideoFrame *newFrame = new CGstVideoFrame(destBuffer);
-// INLINE - gst_buffer_unref()
+        CGstVideoFrame *newFrame = new CGstVideoFrame();
+        bool result = newFrame->Init(destSample);
+        // INLINE - gst_buffer_unref()
         gst_buffer_unref(destBuffer); // else we'll have a massive memory leak!
-        return newFrame;
+        // INLINE - gst_sample_unref()
+        gst_sample_unref(destSample); // else we'll have a massive memory leak!
+        return result ? newFrame : NULL;
     }
     return NULL;
 }

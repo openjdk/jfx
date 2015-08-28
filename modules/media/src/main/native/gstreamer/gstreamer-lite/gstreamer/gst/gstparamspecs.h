@@ -1,4 +1,4 @@
-/* GStreamer - GParamSpecs for for some of our types
+/* GStreamer - GParamSpecs for some of our types
  * Copyright (C) 2007 Tim-Philipp Müller  <tim centricular net>
  *
  * This library is free software; you can redistribute it and/or
@@ -13,8 +13,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 #ifndef __GST_PARAMSPECS_H__
@@ -39,8 +39,6 @@ G_BEGIN_DECLS
  *
  * Use this flag on GObject properties of GstElements to indicate that
  * they can be changed when the element is in the READY or lower state.
- *
- * Since: 0.10.23
  */
 #define GST_PARAM_MUTABLE_READY  (1 << (G_PARAM_USER_SHIFT + 2))
 
@@ -50,8 +48,6 @@ G_BEGIN_DECLS
  * Use this flag on GObject properties of GstElements to indicate that
  * they can be changed when the element is in the PAUSED or lower state.
  * This flag implies GST_PARAM_MUTABLE_READY.
- *
- * Since: 0.10.23
  */
 #define GST_PARAM_MUTABLE_PAUSED  (1 << (G_PARAM_USER_SHIFT + 3))
 
@@ -61,8 +57,6 @@ G_BEGIN_DECLS
  * Use this flag on GObject properties of GstElements to indicate that
  * they can be changed when the element is in the PLAYING or lower state.
  * This flag implies GST_PARAM_MUTABLE_PAUSED.
- *
- * Since: 0.10.23
  */
 #define GST_PARAM_MUTABLE_PLAYING  (1 << (G_PARAM_USER_SHIFT + 4))
 
@@ -105,7 +99,7 @@ typedef struct _GstParamSpecFraction GstParamSpecFraction;
  */
 struct _GstParamSpecFraction {
   GParamSpec    parent_instance;
-  
+
   gint          min_num, min_den;
   gint          max_num, max_den;
   gint          def_num, def_den;
@@ -120,7 +114,7 @@ GParamSpec  * gst_param_spec_fraction (const gchar * name,
                                        gint min_num, gint min_denom,
                                        gint max_num, gint max_denom,
                                        gint default_num, gint default_denom,
-                                       GParamFlags flags);
+                                       GParamFlags flags) G_GNUC_MALLOC;
 
 G_END_DECLS
 

@@ -1,7 +1,9 @@
 /* GStreamer base utils library codec-specific utility functions
  * Copyright (C) 2010 Arun Raghavan <arun.raghavan@collabora.co.uk>
+ *               2013 Sreerenj Balachandran <sreerenj.balachandran@intel.com>
  *               2010 Collabora Multimedia
  *               2010 Nokia Corporation
+ *               2013 Intel Corporation
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -15,8 +17,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 /**
@@ -37,11 +39,17 @@
 
 #include "pbutils.h"
 
+#include <string.h>
+
 #define GST_SIMPLE_CAPS_HAS_NAME(caps,name) \
     gst_structure_has_name(gst_caps_get_structure((caps),0),(name))
 
 #define GST_SIMPLE_CAPS_HAS_FIELD(caps,field) \
     gst_structure_has_field(gst_caps_get_structure((caps),0),(field))
+
+static const guint aac_sample_rates[] = { 96000, 88200, 64000, 48000, 44100,
+  32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350
+};
 
 static const gchar *
 digit_to_string (guint digit)
@@ -65,21 +73,37 @@ digit_to_string (guint digit)
  * rate.
  *
  * Returns: The sample rate if @sr_idx is valid, 0 otherwise.
- *
- * Since: 0.10.31
  */
 guint
 gst_codec_utils_aac_get_sample_rate_from_index (guint sr_idx)
 {
-  static const guint aac_sample_rates[] = { 96000, 88200, 64000, 48000, 44100,
-    32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350
-  };
-
   if (G_LIKELY (sr_idx < G_N_ELEMENTS (aac_sample_rates)))
     return aac_sample_rates[sr_idx];
 
   GST_WARNING ("Invalid sample rate index %u", sr_idx);
   return 0;
+}
+
+/**
+ * gst_codec_utils_aac_get_index_from_sample_rate:
+ * @rate: Sample rate
+ *
+ * Translates the sample rate to the index corresponding to it in AAC spec.
+ *
+ * Returns: The AAC index for this sample rate, -1 if the rate is not a
+ * valid AAC sample rate.
+ */
+gint
+gst_codec_utils_aac_get_index_from_sample_rate (guint rate)
+{
+  guint n;
+
+  for (n = 0; n < G_N_ELEMENTS (aac_sample_rates); n++)
+    if (aac_sample_rates[n] == rate)
+      return n;
+
+  GST_WARNING ("Invalid sample rate %u", rate);
+  return -1;
 }
 
 /**
@@ -99,8 +123,6 @@ gst_codec_utils_aac_get_sample_rate_from_index (guint sr_idx)
  *
  * Returns: The profile as a const string and %NULL if the profile could not be
  * determined.
- *
- * Since: 0.10.31
  */
 const gchar *
 gst_codec_utils_aac_get_profile (const guint8 * audio_config, guint len)
@@ -163,8 +185,6 @@ gst_codec_utils_aac_get_profile (const guint8 * audio_config, guint len)
  *
  * Returns: The level as a const string and %NULL if the level could not be
  * determined.
- *
- * Since: 0.10.31
  */
 const gchar *
 gst_codec_utils_aac_get_level (const guint8 * audio_config, guint len)
@@ -337,8 +357,6 @@ gst_codec_utils_aac_get_level (const guint8 * audio_config, guint len)
  * If mpegversion is 4, the "base-profile" field is also set in @caps.
  *
  * Returns: %TRUE if the level and profile could be set, %FALSE otherwise.
- *
- * Since: 0.10.31
  */
 gboolean
 gst_codec_utils_aac_caps_set_level_and_profile (GstCaps * caps,
@@ -404,14 +422,12 @@ gst_codec_utils_aac_caps_set_level_and_profile (GstCaps * caps,
  * </itemizedlist>
  *
  * Returns: The profile as a const string, or %NULL if there is an error.
- *
- * Since: 0.10.31
  */
 const gchar *
 gst_codec_utils_h264_get_profile (const guint8 * sps, guint len)
 {
   const gchar *profile = NULL;
-  gint csf1, csf3;
+  gint csf1, csf3, csf5;
 
   g_return_val_if_fail (sps != NULL, NULL);
 
@@ -422,6 +438,7 @@ gst_codec_utils_h264_get_profile (const guint8 * sps, guint len)
 
   csf1 = (sps[1] & 0x40) >> 6;
   csf3 = (sps[1] & 0x10) >> 4;
+  csf5 = (sps[1] & 0x04) >> 2;
 
   switch (sps[0]) {
     case 66:
@@ -460,6 +477,21 @@ gst_codec_utils_h264_get_profile (const guint8 * sps, guint len)
     case 44:
       profile = "cavlc-4:4:4-intra";
       break;
+    case 118:
+      profile = "multiview-high";
+      break;
+    case 128:
+      profile = "stereo-high";
+      break;
+    case 83:
+      if (csf5)
+        profile = "scalable-constrained-baseline";
+      else
+        profile = "scalable-baseline";
+      break;
+    case 86:
+      profile = "scalable-high";
+      break;
     default:
       return NULL;
   }
@@ -477,8 +509,6 @@ gst_codec_utils_h264_get_profile (const guint8 * sps, guint len)
  * same format as for gst_codec_utils_h264_get_profile().
  *
  * Returns: The level as a const string, or %NULL if there is an error.
- *
- * Since: 0.10.31
  */
 const gchar *
 gst_codec_utils_h264_get_level (const guint8 * sps, guint len)
@@ -494,7 +524,7 @@ gst_codec_utils_h264_get_level (const guint8 * sps, guint len)
 
   csf3 = (sps[1] & 0x10) >> 4;
 
-  if (sps[2] == 11 && csf3)
+  if ((sps[2] == 11 && csf3) || sps[2] == 9)
     return "1b";
   else if (sps[2] % 10 == 0)
     return digit_to_string (sps[2] / 10);
@@ -520,10 +550,64 @@ gst_codec_utils_h264_get_level (const guint8 * sps, guint len)
         return "4.2";
       case 51:
         return "5.1";
+      case 52:
+        return "5.2";
       default:
         return NULL;
     }
   }
+}
+
+/**
+ * gst_codec_utils_h264_get_level_idc:
+ * @level: A level string from caps
+ *
+ * Transform a level string from the caps into the level_idc
+ *
+ * Returns: the level_idc or 0 if the level is unknown
+ */
+guint8
+gst_codec_utils_h264_get_level_idc (const gchar * level)
+{
+  g_return_val_if_fail (level != NULL, 0);
+
+  if (!strcmp (level, "1"))
+    return 10;
+  else if (!strcmp (level, "1b"))
+    return 9;
+  else if (!strcmp (level, "1.1"))
+    return 11;
+  else if (!strcmp (level, "1.2"))
+    return 12;
+  else if (!strcmp (level, "1.3"))
+    return 13;
+  else if (!strcmp (level, "2"))
+    return 20;
+  else if (!strcmp (level, "2.1"))
+    return 21;
+  else if (!strcmp (level, "2.2"))
+    return 22;
+  else if (!strcmp (level, "3"))
+    return 30;
+  else if (!strcmp (level, "3.1"))
+    return 31;
+  else if (!strcmp (level, "3.2"))
+    return 32;
+  else if (!strcmp (level, "4"))
+    return 40;
+  else if (!strcmp (level, "4.1"))
+    return 41;
+  else if (!strcmp (level, "4.2"))
+    return 42;
+  else if (!strcmp (level, "5"))
+    return 50;
+  else if (!strcmp (level, "5.1"))
+    return 51;
+  else if (!strcmp (level, "5.2"))
+    return 52;
+
+  GST_WARNING ("Invalid level %s", level);
+  return 0;
 }
 
 /**
@@ -537,8 +621,6 @@ gst_codec_utils_h264_get_level (const guint8 * sps, guint len)
  * for more details on the parameters.
  *
  * Returns: %TRUE if the level and profile could be set, %FALSE otherwise.
- *
- * Since: 0.10.31
  */
 gboolean
 gst_codec_utils_h264_caps_set_level_and_profile (GstCaps * caps,
@@ -568,6 +650,250 @@ gst_codec_utils_h264_caps_set_level_and_profile (GstCaps * caps,
 }
 
 /**
+ * gst_codec_utils_h265_get_profile:
+ * @profile_tier_level: Pointer to the profile_tier_level
+ *   structure for the stream.
+ * @len: Length of the data available in @profile_tier_level
+ *
+ * Converts the profile indication (general_profile_idc) in the stream's
+ * profile_level_tier structure into a string. The profile_tier_level is
+ * expected to have the following format, as defined in the H.265
+ * specification. The profile_tier_level is viewed as a bitstream here,
+ * with bit 0 being the most significant bit of the first byte.
+ *
+ * <itemizedlist>
+ * <listitem><para>Bit 0:1   - general_profile_space</para></listitem>
+ * <listitem><para>Bit 2     - general_tier_flag</para></listitem>
+ * <listitem><para>Bit 3:7   - general_profile_idc</para></listitem>
+ * <listitem><para>Bit 8:39  - gernal_profile_compatibility_flags</para></listitem>
+ * <listitem><para>Bit 40    - general_progressive_source_flag</para></listitem>
+ * <listitem><para>Bit 41    - general_interlaced_source_flag</para></listitem>
+ * <listitem><para>Bit 42    - general_non_packed_constraint_flag</para></listitem>
+ * <listitem><para>Bit 43    - general_frame_only_constraint_flag</para></listitem>
+ * <listitem><para>Bit 44:87 - general_reserved_zero_44bits</para></listitem>
+ * <listitem><para>Bit 88:95 - general_level_idc</para></listitem>
+ * </itemizedlist>
+ *
+ * Returns: The profile as a const string, or %NULL if there is an error.
+ *
+ * Since 1.4
+ */
+const gchar *
+gst_codec_utils_h265_get_profile (const guint8 * profile_tier_level, guint len)
+{
+  const gchar *profile = NULL;
+  gint gpcf1 = 0, gpcf2 = 0, gpcf3 = 0;
+  gint profile_idc;
+
+  g_return_val_if_fail (profile_tier_level != NULL, NULL);
+
+  if (len < 2)
+    return NULL;
+
+  GST_MEMDUMP ("ProfileTierLevel", profile_tier_level, len);
+
+  profile_idc = (profile_tier_level[0] & 0x1f);
+
+  gpcf1 = (profile_tier_level[1] & 0x40) >> 6;
+  gpcf2 = (profile_tier_level[1] & 0x20) >> 5;
+  gpcf3 = (profile_tier_level[1] & 0x10) >> 4;
+
+  if (profile_idc == 1 || gpcf1)
+    profile = "main";
+  else if (profile_idc == 2 || gpcf2)
+    profile = "main-10";
+  else if (profile_idc == 3 || gpcf3)
+    profile = "main-still-picture";
+  else
+    profile = NULL;
+
+  return profile;
+}
+
+/**
+ * gst_codec_utils_h265_get_tier:
+ * @profile_tier_level: Pointer to the profile_tier_level structure
+ *   for the stream.
+ * @len: Length of the data available in @profile_tier_level.
+ *
+ * Converts the tier indication (general_tier_flag) in the stream's
+ * profile_tier_level structure into a string. The profile_tier_level
+ * is expected to have the same format as for gst_codec_utils_h264_get_profile().
+ *
+ * Returns: The tier as a const string, or %NULL if there is an error.
+ *
+ * Since 1.4
+ */
+const gchar *
+gst_codec_utils_h265_get_tier (const guint8 * profile_tier_level, guint len)
+{
+  const gchar *tier = NULL;
+  gint tier_flag = 0;
+
+  g_return_val_if_fail (profile_tier_level != NULL, NULL);
+
+  if (len < 1)
+    return NULL;
+
+  GST_MEMDUMP ("ProfileTierLevel", profile_tier_level, len);
+
+  tier_flag = (profile_tier_level[0] & 0x20) >> 5;
+
+  if (tier_flag)
+    tier = "high";
+  else
+    tier = "main";
+
+  return tier;
+}
+
+/**
+ * gst_codec_utils_h265_get_level:
+ * @profile_tier_level: Pointer to the profile_tier_level structure
+ *   for the stream
+ * @len: Length of the data available in @profile_tier_level.
+ *
+ * Converts the level indication (general_level_idc) in the stream's
+ * profile_tier_level structure into a string. The profiel_tier_level is
+ * expected to have the same format as for gst_codec_utils_h264_get_profile().
+ *
+ * Returns: The level as a const string, or %NULL if there is an error.
+ *
+ * Since 1.4
+ */
+const gchar *
+gst_codec_utils_h265_get_level (const guint8 * profile_tier_level, guint len)
+{
+  g_return_val_if_fail (profile_tier_level != NULL, NULL);
+
+  if (len < 12)
+    return NULL;
+
+  GST_MEMDUMP ("ProfileTierLevel", profile_tier_level, len);
+
+  if (profile_tier_level[11] % 30 == 0)
+    return digit_to_string (profile_tier_level[11] / 30);
+  else {
+    switch (profile_tier_level[11]) {
+      case 63:
+        return "2.1";
+        break;
+      case 93:
+        return "3.1";
+        break;
+      case 123:
+        return "4.1";
+        break;
+      case 153:
+        return "5.1";
+        break;
+      case 156:
+        return "5.2";
+        break;
+      case 183:
+        return "6.1";
+        break;
+      case 186:
+        return "6.2";
+        break;
+      default:
+        return NULL;
+    }
+  }
+}
+
+/**
+ * gst_codec_utils_h265_get_level_idc:
+ * @level: A level string from caps
+ *
+ * Transform a level string from the caps into the level_idc
+ *
+ * Returns: the level_idc or 0 if the level is unknown
+ *
+ * Since 1.4
+ */
+guint8
+gst_codec_utils_h265_get_level_idc (const gchar * level)
+{
+  g_return_val_if_fail (level != NULL, 0);
+
+  if (!strcmp (level, "1"))
+    return 30;
+  else if (!strcmp (level, "2"))
+    return 60;
+  else if (!strcmp (level, "2.1"))
+    return 63;
+  else if (!strcmp (level, "3"))
+    return 90;
+  else if (!strcmp (level, "3.1"))
+    return 93;
+  else if (!strcmp (level, "4"))
+    return 120;
+  else if (!strcmp (level, "4.1"))
+    return 123;
+  else if (!strcmp (level, "5"))
+    return 150;
+  else if (!strcmp (level, "5.1"))
+    return 153;
+  else if (!strcmp (level, "5.2"))
+    return 156;
+  else if (!strcmp (level, "6"))
+    return 180;
+  else if (!strcmp (level, "6.1"))
+    return 183;
+  else if (!strcmp (level, "6.2"))
+    return 186;
+
+  GST_WARNING ("Invalid level %s", level);
+  return 0;
+}
+
+/**
+ * gst_codec_utils_h265_caps_set_level_tier_and_profile:
+ * @caps: the #GstCaps to which the level, tier and profile are to be added
+ * @profile_tier_level: Pointer to the profile_tier_level struct
+ * @len: Length of the data available in @profile_tier_level.
+ *
+ * Sets the level, tier and profile in @caps if it can be determined from
+ * @profile_tier_level. See gst_codec_utils_h265_get_level(),
+ * gst_codec_utils_h265_get_tier() and gst_codec_utils_h265_get_profile()
+ * for more details on the parameters.
+ *
+ * Returns: %TRUE if the level, tier, profile could be set, %FALSE otherwise.
+ *
+ * Since 1.4
+ */
+gboolean
+gst_codec_utils_h265_caps_set_level_tier_and_profile (GstCaps * caps,
+    const guint8 * profile_tier_level, guint len)
+{
+  const gchar *level, *tier, *profile;
+
+  g_return_val_if_fail (GST_IS_CAPS (caps), FALSE);
+  g_return_val_if_fail (GST_CAPS_IS_SIMPLE (caps), FALSE);
+  g_return_val_if_fail (GST_SIMPLE_CAPS_HAS_NAME (caps, "video/x-h265"), FALSE);
+  g_return_val_if_fail (profile_tier_level != NULL, FALSE);
+
+  level = gst_codec_utils_h265_get_level (profile_tier_level, len);
+  if (level != NULL)
+    gst_caps_set_simple (caps, "level", G_TYPE_STRING, level, NULL);
+
+  tier = gst_codec_utils_h265_get_tier (profile_tier_level, len);
+  if (tier != NULL)
+    gst_caps_set_simple (caps, "tier", G_TYPE_STRING, tier, NULL);
+
+  profile = gst_codec_utils_h265_get_profile (profile_tier_level, len);
+  if (profile != NULL)
+    gst_caps_set_simple (caps, "profile", G_TYPE_STRING, profile, NULL);
+
+  GST_LOG ("profile : %s", (profile) ? profile : "---");
+  GST_LOG ("tier    : %s", (tier) ? tier : "---");
+  GST_LOG ("level   : %s", (level) ? level : "---");
+
+  return (level != NULL && tier != NULL && profile != NULL);
+}
+
+/**
  * gst_codec_utils_mpeg4video_get_profile:
  * @vis_obj_seq: Pointer to the visual object sequence for the stream.
  * @len: Length of the data available in @sps.
@@ -578,8 +904,6 @@ gst_codec_utils_h264_caps_set_level_and_profile (GstCaps * caps,
  * (profile_and_level_indication) is used.
  *
  * Returns: The profile as a const string, or NULL if there is an error.
- *
- * Since: 0.10.31
  */
 const gchar *
 gst_codec_utils_mpeg4video_get_profile (const guint8 * vis_obj_seq, guint len)
@@ -652,19 +976,20 @@ gst_codec_utils_mpeg4video_get_profile (const guint8 * vis_obj_seq, guint len)
  * (profile_and_level_indication) is used.
  *
  * Returns: The level as a const string, or NULL if there is an error.
- *
- * Since: 0.10.31
  */
 const gchar *
 gst_codec_utils_mpeg4video_get_level (const guint8 * vis_obj_seq, guint len)
 {
-  /* The profile/level codes are from 14496-2, table G-1, and the Wireshark
-   * sources: epan/dissectors/packet-mp4ves.c
+  /* The profile/level codes are from 14496-2, table G-1, the Wireshark
+   * sources: epan/dissectors/packet-mp4ves.c and the Xvid Sources:
+   * src/xvid.h.
+   * Levels 4a and 5 for SP were added in Amendment 2, level 6 in Amendment 4
+   * (see Xvid sources vfw/config.c)
    *
    * Each profile has a different maximum level it defines. Some of them still
    * need special case handling, because not all levels start from 1, and the
    * Simple profile defines an intermediate level as well. */
-  static const int level_max[] = { 3, 2, 2, 4, 2, 1, 2, 2, 2, 4, 3, 4, 2, 3, 4,
+  static const int level_max[] = { 6, 2, 2, 4, 2, 1, 2, 2, 2, 4, 3, 4, 2, 3, 4,
     5
   };
   int profile_id, level_id;
@@ -707,7 +1032,7 @@ gst_codec_utils_mpeg4video_get_level (const guint8 * vis_obj_seq, guint len)
       break;
 
     case 0xf:
-      if (level_id == 7 && level_id > 0xd)
+      if (level_id == 6 || level_id == 7 || level_id > 0xd)
         return NULL;
       break;
   }
@@ -718,6 +1043,12 @@ gst_codec_utils_mpeg4video_get_level (const guint8 * vis_obj_seq, guint len)
   else if (profile_id == 0 && level_id == 9)
     /* Simple Profile / Level 0b */
     return "0b";
+  else if (profile_id == 0 && level_id == 4)
+    /* Simple Profile / Level 4a */
+    return "4a";
+  else if (profile_id == 0xf && level_id > 7)
+    /* Fine Granularity Scalable Profile */
+    return digit_to_string (level_id - 8);
   else if (level_id <= level_max[profile_id])
     /* Levels for all other cases */
     return digit_to_string (level_id);
@@ -737,8 +1068,6 @@ gst_codec_utils_mpeg4video_get_level (const guint8 * vis_obj_seq, guint len)
  * parameters.
  *
  * Returns: %TRUE if the level and profile could be set, %FALSE otherwise.
- *
- * Since: 0.10.31
  */
 gboolean
 gst_codec_utils_mpeg4video_caps_set_level_and_profile (GstCaps * caps,

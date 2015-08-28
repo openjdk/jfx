@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -52,6 +52,8 @@ public:
 
     virtual void CheckQueueSize(GstElement *element);
 
+    void         SetEncodedVideoFrameRate(float frameRate);
+
 protected:
     CGstAVPlaybackPipeline(const GstElementContainer& elements, int audioFlags, CPipelineOptions* pOptions);
     virtual ~CGstAVPlaybackPipeline();
@@ -62,12 +64,11 @@ private:
     static void     queue_overrun(GstElement *element, CGstAVPlaybackPipeline *pPipeline);
     static void     queue_underrun(GstElement *element, CGstAVPlaybackPipeline *pPipeline);
 
-    static void     OnAppSinkPreroll(GstElement* pElem, CGstAVPlaybackPipeline* pPipeline);
-    static void     OnAppSinkHaveFrame(GstElement* pElem, CGstAVPlaybackPipeline* pPipeline);
-    static void     OnAppSinkVideoFrameDiscont(CGstAVPlaybackPipeline* pPipeline, GstBuffer *pBuffer);
-    static gboolean VideoDecoderSrcProbe(GstPad* pPad, GstBuffer *pBuffer, CGstAVPlaybackPipeline* pPipeline);
+    static GstFlowReturn     OnAppSinkPreroll(GstElement* pElem, CGstAVPlaybackPipeline* pPipeline);
+    static GstFlowReturn     OnAppSinkHaveFrame(GstElement* pElem, CGstAVPlaybackPipeline* pPipeline);
+    static void     OnAppSinkVideoFrameDiscont(CGstAVPlaybackPipeline* pPipeline, GstSample *pSample);
+    static GstPadProbeReturn VideoDecoderSrcProbe(GstPad* pPad, GstPadProbeInfo *pInfo, CGstAVPlaybackPipeline* pPipeline);
 
-    void            SetEncodedVideoFrameRate(float frameRate);
     inline float    GetEncodedVideoFrameRate()
     {
         return m_EncodedVideoFrameRate;

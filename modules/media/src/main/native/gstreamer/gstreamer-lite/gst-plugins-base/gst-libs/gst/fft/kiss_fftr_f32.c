@@ -11,6 +11,9 @@ Redistribution and use in source and binary forms, with or without modification,
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include "kiss_fftr_f32.h"
 #include "_kiss_fft_guts_f32.h"
@@ -77,10 +80,8 @@ kiss_fftr_f32 (kiss_fftr_f32_cfg st, const kiss_fft_f32_scalar * timedata,
   int k, ncfft;
   kiss_fft_f32_cpx fpnk, fpk, f1k, f2k, tw, tdc;
 
-  if (st->substate->inverse) {
-    fprintf (stderr, "kiss fft usage error: improper alloc\n");
-    exit (1);
-  }
+  /* kiss fft usage error: improper alloc */
+  g_return_if_fail (st->substate->inverse == 0);
 
   ncfft = st->substate->nfft;
 
@@ -134,10 +135,8 @@ kiss_fftri_f32 (kiss_fftr_f32_cfg st, const kiss_fft_f32_cpx * freqdata,
   /* input buffer timedata is stored row-wise */
   int k, ncfft;
 
-  if (st->substate->inverse == 0) {
-    fprintf (stderr, "kiss fft usage error: improper alloc\n");
-    exit (1);
-  }
+  /* kiss fft usage error: improper alloc */
+  g_return_if_fail (st->substate->inverse != 0);
 
   ncfft = st->substate->nfft;
 

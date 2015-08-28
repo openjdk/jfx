@@ -14,8 +14,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 #ifndef __GST_TAG_DEMUX_H__
@@ -42,8 +42,6 @@ typedef struct _GstTagDemuxPrivate GstTagDemuxPrivate;
  * @GST_TAG_DEMUX_RESULT_OK	   : parsed tag successfully
  *
  * Result values from the parse_tag virtual function.
- *
- * Since: 0.10.15
  */
 typedef enum {
   GST_TAG_DEMUX_RESULT_BROKEN_TAG,
@@ -59,8 +57,6 @@ GType gst_tag_demux_result_get_type (void);
  * @element: parent element
  *
  * Opaque #GstTagDemux structure.
- *
- * Since: 0.10.15
  */
 struct _GstTagDemux
 {
@@ -97,8 +93,6 @@ struct _GstTagDemux
  *
  * The #GstTagDemuxClass structure.  See documentation at beginning of section
  * for details about what subclasses need to override and do.
- *
- * Since: 0.10.15
  */
 struct _GstTagDemuxClass
 {

@@ -13,8 +13,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 #include <gst/gst.h>
@@ -38,68 +38,44 @@ G_BEGIN_DECLS
 #define GST_IS_ADAPTER_CLASS(klass) \
   (G_TYPE_CHECK_CLASS_TYPE((klass), GST_TYPE_ADAPTER))
 
-typedef struct _GstAdapter GstAdapter;
-typedef struct _GstAdapterClass GstAdapterClass;
-typedef struct _GstAdapterPrivate GstAdapterPrivate;
-
 /**
  * GstAdapter:
  *
  * The opaque #GstAdapter data structure.
  */
-struct _GstAdapter {
-  GObject       object;
-
-  /*< private >*/
-  GSList *      buflist;
-  guint         size;
-  guint         skip;
-
-  /* we keep state of assembled pieces */
-  guint8 *      assembled_data;
-  guint         assembled_size;
-  guint         assembled_len;
-
-  /* ABI added */
-  /* Remember where the end of our buffer list is to
-   * speed up the push */
-  GSList *buflist_end;
-
-  GstAdapterPrivate *priv;
-
-  gpointer _gst_reserved[GST_PADDING - 2];
-};
-
-struct _GstAdapterClass {
-  GObjectClass  parent_class;
-
-  /*< private >*/
-  gpointer _gst_reserved[GST_PADDING];
-};
+typedef struct _GstAdapter GstAdapter;
+typedef struct _GstAdapterClass GstAdapterClass;
 
 GType                   gst_adapter_get_type            (void);
 
-GstAdapter *            gst_adapter_new                 (void);
+GstAdapter *            gst_adapter_new                 (void) G_GNUC_MALLOC;
 
 void                    gst_adapter_clear               (GstAdapter *adapter);
 void                    gst_adapter_push                (GstAdapter *adapter, GstBuffer* buf);
-const guint8 *          gst_adapter_peek                (GstAdapter *adapter, guint size);
-void                    gst_adapter_copy                (GstAdapter *adapter, guint8 *dest,
-                                                         guint offset, guint size);
-void                    gst_adapter_flush               (GstAdapter *adapter, guint flush);
-guint8*                 gst_adapter_take                (GstAdapter *adapter, guint nbytes);
-GstBuffer*              gst_adapter_take_buffer         (GstAdapter *adapter, guint nbytes);
-GList*                  gst_adapter_take_list           (GstAdapter *adapter, guint nbytes);
-guint                   gst_adapter_available           (GstAdapter *adapter);
-guint                   gst_adapter_available_fast      (GstAdapter *adapter);
+gconstpointer           gst_adapter_map                 (GstAdapter *adapter, gsize size);
+void                    gst_adapter_unmap               (GstAdapter *adapter);
+void                    gst_adapter_copy                (GstAdapter *adapter, gpointer dest,
+                                                         gsize offset, gsize size);
+GBytes *                gst_adapter_copy_bytes          (GstAdapter *adapter,
+                                                         gsize offset, gsize size);
+void                    gst_adapter_flush               (GstAdapter *adapter, gsize flush);
+gpointer                gst_adapter_take                (GstAdapter *adapter, gsize nbytes);
+GstBuffer*              gst_adapter_take_buffer         (GstAdapter *adapter, gsize nbytes);
+GList*                  gst_adapter_take_list           (GstAdapter *adapter, gsize nbytes);
+GstBuffer *             gst_adapter_take_buffer_fast    (GstAdapter *adapter, gsize nbytes);
+gsize                   gst_adapter_available           (GstAdapter *adapter);
+gsize                   gst_adapter_available_fast      (GstAdapter *adapter);
 
-GstClockTime            gst_adapter_prev_timestamp      (GstAdapter *adapter, guint64 *distance);
+GstClockTime            gst_adapter_prev_pts            (GstAdapter *adapter, guint64 *distance);
+GstClockTime            gst_adapter_prev_dts            (GstAdapter *adapter, guint64 *distance);
+GstClockTime            gst_adapter_prev_pts_at_offset  (GstAdapter * adapter, gsize offset, guint64 * distance);
+GstClockTime            gst_adapter_prev_dts_at_offset  (GstAdapter * adapter, gsize offset, guint64 * distance);
 
-guint                   gst_adapter_masked_scan_uint32  (GstAdapter * adapter, guint32 mask,
-                                                         guint32 pattern, guint offset, guint size);
+gssize                  gst_adapter_masked_scan_uint32  (GstAdapter * adapter, guint32 mask,
+                                                         guint32 pattern, gsize offset, gsize size);
 
-guint                   gst_adapter_masked_scan_uint32_peek  (GstAdapter * adapter, guint32 mask,
-                                                         guint32 pattern, guint offset, guint size, guint32 * value);
+gssize                  gst_adapter_masked_scan_uint32_peek  (GstAdapter * adapter, guint32 mask,
+                                                         guint32 pattern, gsize offset, gsize size, guint32 * value);
 
 G_END_DECLS
 

@@ -15,8 +15,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 #ifndef __GST_TASK_POOL_H__
@@ -40,13 +40,11 @@ typedef struct _GstTaskPoolClass GstTaskPoolClass;
 
 /**
  * GstTaskPoolFunction:
- * @data: user data for the task function
+ * @user_data: user data for the task function
  *
  * Task function, see gst_task_pool_push().
- *
- * Since: 0.10.24
  */
-typedef void   (*GstTaskPoolFunction)          (void *data);
+typedef void   (*GstTaskPoolFunction)          (void *user_data);
 
 /**
  * GstTaskPool:
@@ -92,7 +90,7 @@ GType           gst_task_pool_get_type    (void);
 GstTaskPool *   gst_task_pool_new         (void);
 void            gst_task_pool_prepare     (GstTaskPool *pool, GError **error);
 
-gpointer        gst_task_pool_push        (GstTaskPool *pool, GstTaskPoolFunction func, 
+gpointer        gst_task_pool_push        (GstTaskPool *pool, GstTaskPoolFunction func,
                                            gpointer user_data, GError **error);
 void            gst_task_pool_join        (GstTaskPool *pool, gpointer id);
 

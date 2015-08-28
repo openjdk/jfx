@@ -15,8 +15,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 #ifndef __GST_PB_UTILS_CODEC_UTILS_H__
@@ -29,6 +29,7 @@ G_BEGIN_DECLS
 /* AAC */
 
 guint         gst_codec_utils_aac_get_sample_rate_from_index (guint sr_idx);
+gint          gst_codec_utils_aac_get_index_from_sample_rate (guint rate);
 
 const gchar * gst_codec_utils_aac_get_profile (const guint8 * audio_config, guint len);
 
@@ -44,10 +45,28 @@ const gchar * gst_codec_utils_h264_get_profile (const guint8 * sps, guint len);
 
 const gchar * gst_codec_utils_h264_get_level   (const guint8 * sps, guint len);
 
+guint8        gst_codec_utils_h264_get_level_idc (const gchar * level);
+
 gboolean      gst_codec_utils_h264_caps_set_level_and_profile (GstCaps      * caps,
                                                                const guint8 * sps,
                                                                guint          len);
 
+/* H.265 */
+
+const gchar * gst_codec_utils_h265_get_profile                     (const guint8 * profile_tier_level,
+                                                                    guint len);
+
+const gchar * gst_codec_utils_h265_get_tier                        (const guint8 * profile_tier_level,
+                                                                    guint len);
+
+const gchar * gst_codec_utils_h265_get_level                       (const guint8 * profile_tier_level,
+                                                                    guint len);
+
+guint8        gst_codec_utils_h265_get_level_idc                   (const gchar  * level);
+
+gboolean      gst_codec_utils_h265_caps_set_level_tier_and_profile (GstCaps      * caps,
+                                                                    const guint8 * profile_tier_level,
+                                                                    guint          len);
 /* MPEG-4 part 2 */
 
 const gchar * gst_codec_utils_mpeg4video_get_profile (const guint8 * vis_obj_seq, guint len);

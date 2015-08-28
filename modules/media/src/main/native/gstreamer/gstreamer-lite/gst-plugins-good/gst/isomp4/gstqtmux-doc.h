@@ -16,8 +16,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 /*
  * Unless otherwise indicated, Source Code is licensed under MIT license.
@@ -46,7 +46,7 @@
 #error "This header is for gtk-doc only and not supposed to be included"
 
 typedef struct _GstMP4Mux GstMP4Mux;
-typedef struct _Gst3GPPMux GstMP4Mux;
-typedef struct _GstISMLMux GstMP4Mux;
+typedef struct _Gst3GPPMux Gst3GPPMux;
+typedef struct _GstISMLMux GstISMLMux;
 typedef struct _GstMJ2Mux GstMJ2Mux;
 

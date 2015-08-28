@@ -14,8 +14,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 /**
@@ -145,12 +145,10 @@ gst_video_sink_class_init (GstVideoSinkClass * klass)
   gobject_class->get_property = gst_video_sink_get_property;
 
   /**
-   * GstVideoSink:show-preroll-frame
+   * GstVideoSink:show-preroll-frame:
    *
    * Whether to show video frames during preroll. If set to #FALSE, video
    * frames will only be rendered in PLAYING state.
-   *
-   * Since: 0.10.25
    */
   g_object_class_install_property (gobject_class, PROP_SHOW_PREROLL_FRAME,
       g_param_spec_boolean ("show-preroll-frame", "Show preroll frame",

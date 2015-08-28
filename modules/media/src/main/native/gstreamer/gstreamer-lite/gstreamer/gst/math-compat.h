@@ -13,8 +13,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 #ifndef __GST_MATH_COMPAT_H__
@@ -36,15 +36,18 @@ G_BEGIN_DECLS
 
 #define __GST_MATH_COMPAT_NEED_RINT
 #define __GST_MATH_COMPAT_NEED_RINTF
+#define __GST_MATH_COMPAT_NEED_ISNAN
 
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
 #undef __GST_MATH_COMPAT_NEED_RINT
 #undef __GST_MATH_COMPAT_NEED_RINTF
+#undef __GST_MATH_COMPAT_NEED_ISNAN
 #endif
 
 #if defined(_POSIX_VERSION) && _POSIX_VERSION >= 200112L
 #undef __GST_MATH_COMPAT_NEED_RINT
 #undef __GST_MATH_COMPAT_NEED_RINTF
+#undef __GST_MATH_COMPAT_NEED_ISNAN
 #endif
 
 #ifndef M_PI
@@ -71,12 +74,37 @@ __gst_math_compat_rintf (float x)
   return floorf (x + 0.5);
 }
 
+static inline gboolean
+__gst_math_compat_isnan (double x)
+{
+  return x != x;
+}
+
 #if defined (__GST_MATH_COMPAT_NEED_RINT) && !defined (rint)
 #define rint(x) __gst_math_compat_rint(x)
 #endif
 
 #if defined (__GST_MATH_COMPAT_NEED_RINTF) && !defined (rintf)
 #define rintf(x) __gst_math_compat_rintf(x)
+#endif
+
+#if defined (__GST_MATH_COMPAT_NEED_ISNAN) && !defined (isnan)
+#define isnan(x) __gst_math_compat_isnan (x)
+#endif
+
+#ifndef NAN
+#if G_BYTE_ORDER == G_BIG_ENDIAN
+#define __GST_NAN_BYTES        { 0x7f, 0xc0, 0, 0 }
+#elif G_BYTE_ORDER == G_LITTLE_ENDIAN
+#define __GST_NAN_BYTES        { 0, 0, 0xc0, 0x7f }
+#endif
+static union {
+  unsigned char __c[4];
+  float __d;
+} __gst_nan_union G_GNUC_UNUSED = {
+  __GST_NAN_BYTES
+};
+#define NAN    (__gst_nan_union.__d)
 #endif
 
 G_END_DECLS

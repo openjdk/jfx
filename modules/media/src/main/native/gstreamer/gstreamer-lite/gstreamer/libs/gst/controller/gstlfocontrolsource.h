@@ -17,8 +17,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 #ifndef __GST_LFO_CONTROL_SOURCE_H__
@@ -26,8 +26,6 @@
 
 #include <glib-object.h>
 #include <gst/gst.h>
-
-#include <gst/controller/gstcontrolsource.h>
 
 G_BEGIN_DECLS
 
@@ -79,13 +77,13 @@ struct _GstLFOControlSource {
 
   /* <private> */
   GstLFOControlSourcePrivate *priv;
-  GMutex *lock;
+  GMutex lock;
   gpointer _gst_reserved[GST_PADDING];
 };
 
 struct _GstLFOControlSourceClass {
   GstControlSourceClass parent_class;
-  
+
   /*< private >*/
   gpointer _gst_reserved[GST_PADDING];
 };
@@ -95,7 +93,7 @@ GType gst_lfo_waveform_get_type (void);
 
 /* Functions */
 
-GstLFOControlSource *gst_lfo_control_source_new (void);
+GstControlSource *gst_lfo_control_source_new (void);
 
 G_END_DECLS
 

@@ -4,18 +4,33 @@
 /* Define if building universal (internal helper macro) */
 /* #undef AC_APPLE_UNIVERSAL_BUILD */
 
+/* poll doesn't work on devices */
+#define BROKEN_POLL 1
+
 /* Define to 1 if translation of program messages to the user's native
    language is requested. */
 /* #undef ENABLE_NLS */
 
+/* Subunit protocol result output */
+#define ENABLE_SUBUNIT 0
+
 /* gettext package name */
 #define GETTEXT_PACKAGE "NULL"
+
+/* The GIO library directory. */
+/* #undef GIO_LIBDIR */
+
+/* The GIO modules directory. */
+/* #undef GIO_MODULE_DIR */
+
+/* GStreamer API Version */
+#define GST_API_VERSION "1.0"
 
 /* data dir */
 #define GST_DATADIR "/usr/local/share"
 
 /* Define if option parsing is disabled */
-/* #undef GST_DISABLE_OPTION_PARSING */
+#define GST_DISABLE_OPTION_PARSING 1
 
 /* Define if pipeline parsing code is disabled */
 #define GST_DISABLE_PARSE 1
@@ -38,9 +53,6 @@
 /* GStreamer license */
 #define GST_LICENSE "LGPL"
 
-/* library major.minor version */
-#define GST_MAJORMINOR "0.10"
-
 /* package name in plugins */
 #define GST_PACKAGE_NAME "GStreamer source release"
 
@@ -48,10 +60,13 @@
 #define GST_PACKAGE_ORIGIN "Unknown package origin"
 
 /* GStreamer package release date/time for plugins as YYYY-MM-DD */
-#define GST_PACKAGE_RELEASE_DATETIME "2011-06-15"
+#define GST_PACKAGE_RELEASE_DATETIME "2014-11-06"
 
-/* Location of installed gst-plugin-scanner */
-#define GST_PLUGIN_SCANNER_INSTALLED "/usr/local/libexec/gstreamer-0.10/gst-plugins-scanner"
+/* Define if static plugins should be built */
+/* #undef GST_PLUGIN_BUILD_STATIC */
+
+/* location of the installed gst-plugin-scanner */
+#define GST_PLUGIN_SCANNER_INSTALLED "/usr/local/libexec/gstreamer-1.0/gst-plugin-scanner"
 
 /* Define to 1 if you have the MacOS X function CFLocaleCopyCurrent in the
    CoreFoundation framework. */
@@ -64,46 +79,46 @@
 /* Define to 1 if you have the `clock_gettime' function. */
 /* #undef HAVE_CLOCK_GETTIME */
 
-/* Define if the host CPU is an Alpha */
+/* Define if the target CPU is an Alpha */
 /* #undef HAVE_CPU_ALPHA */
 
-/* Define if the host CPU is an ARM */
+/* Define if the target CPU is an ARM */
 /* #undef HAVE_CPU_ARM */
 
-/* Define if the host CPU is a CRIS */
+/* Define if the target CPU is a CRIS */
 /* #undef HAVE_CPU_CRIS */
 
-/* Define if the host CPU is a CRISv32 */
+/* Define if the target CPU is a CRISv32 */
 /* #undef HAVE_CPU_CRISV32 */
 
-/* Define if the host CPU is a HPPA */
+/* Define if the target CPU is a HPPA */
 /* #undef HAVE_CPU_HPPA */
 
-/* Define if the host CPU is an x86 */
-/* #define HAVE_CPU_I386 1 */
+/* Define if the target CPU is an x86 */
+/* #undef HAVE_CPU_I386 */
 
-/* Define if the host CPU is a IA64 */
+/* Define if the target CPU is a IA64 */
 /* #undef HAVE_CPU_IA64 */
 
-/* Define if the host CPU is a M68K */
+/* Define if the target CPU is a M68K */
 /* #undef HAVE_CPU_M68K */
 
-/* Define if the host CPU is a MIPS */
+/* Define if the target CPU is a MIPS */
 /* #undef HAVE_CPU_MIPS */
 
-/* Define if the host CPU is a PowerPC */
+/* Define if the target CPU is a PowerPC */
 /* #undef HAVE_CPU_PPC */
 
-/* Define if the host CPU is a 64 bit PowerPC */
+/* Define if the target CPU is a 64 bit PowerPC */
 /* #undef HAVE_CPU_PPC64 */
 
-/* Define if the host CPU is a S390 */
+/* Define if the target CPU is a S390 */
 /* #undef HAVE_CPU_S390 */
 
-/* Define if the host CPU is a SPARC */
+/* Define if the target CPU is a SPARC */
 /* #undef HAVE_CPU_SPARC */
 
-/* Define if the host CPU is a x86_64 */
+/* Define if the target CPU is a x86_64 */
 #define HAVE_CPU_X86_64 1
 
 /* Define if the GNU dcgettext() function is already present or preinstalled.
@@ -118,9 +133,6 @@
 
 /* Define to 1 if you have the `fgetpos' function. */
 #define HAVE_FGETPOS 1
-
-/* Define to 1 if you have the `fork' function. */
-#define HAVE_FORK 1
 
 /* Define to 1 if fseeko (and presumably ftello) exists and is declared. */
 #define HAVE_FSEEKO 1
@@ -146,26 +158,33 @@
 /* Have GMP library */
 /* #undef HAVE_GMP */
 
+/* Define to 1 if you have the `gmtime_r' function. */
+#define HAVE_GMTIME_R 1
+
 /* Have GSL library */
 /* #undef HAVE_GSL */
 
 /* Define if you have the iconv() function and it works. */
-/* #undef HAVE_ICONV */
+#define HAVE_ICONV 1
+
+/* Define to 1 if the system has the type `intmax_t'. */
+/* #undef HAVE_INTMAX_T */
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #define HAVE_INTTYPES_H 1
 
-/* Define to 1 if you have the `nsl' library (-lnsl). */
-/* #undef HAVE_LIBNSL */
+/* Define if <inttypes.h> exists, doesn't clash with <sys/types.h>, and
+   declares uintmax_t. */
+/* #undef HAVE_INTTYPES_H_WITH_UINTMAX */
 
-/* Define to 1 if you have the `resolv' library (-lresolv). */
-/* #undef HAVE_LIBRESOLV */
+/* Define to 1 if you have the `localtime_r' function. */
+#define HAVE_LOCALTIME_R 1
 
-/* Define to 1 if you have the `socket' library (-lsocket). */
-/* #undef HAVE_LIBSOCKET */
+/* Define to 1 if the system has the type long long */
+/* #undef HAVE_LONG_LONG */
 
-/* Define if libxml2 is available */
-/* #undef HAVE_LIBXML2 */
+/* Define to 1 if the system has the type `long long int'. */
+/* #undef HAVE_LONG_LONG_INT */
 
 /* Define to 1 if you have the <memory.h> header file. */
 #define HAVE_MEMORY_H 1
@@ -182,6 +201,12 @@
 /* Define to 1 if you have the `poll' function. */
 #define HAVE_POLL 1
 
+/* Define to 1 if you have the <poll.h> header file. */
+#define HAVE_POLL_H 1
+
+/* Define to 1 if you have the `posix_memalign' function. */
+#define HAVE_POSIX_MEMALIGN 1
+
 /* Have posix timers */
 /* #undef HAVE_POSIX_TIMERS */
 
@@ -191,32 +216,33 @@
 /* defined if the compiler implements __PRETTY_FUNCTION__ */
 #define HAVE_PRETTY_FUNCTION 1
 
-/* Defined if we have printf specifier extensions available */
-/* #undef HAVE_PRINTF_EXTENSION */
-
 /* Define to 1 if you have the <process.h> header file. */
 /* #undef HAVE_PROCESS_H */
 
 /* Define to 1 if you have the `pselect' function. */
 #define HAVE_PSELECT 1
 
-/* Define to 1 if you have the <pthread.h> header file. */
-#define HAVE_PTHREAD_H 1
+/* Define if you have POSIX threads libraries and header files. */
+/* #undef HAVE_PTHREAD */
+
+/* Have PTHREAD_PRIO_INHERIT. */
+#define HAVE_PTHREAD_PRIO_INHERIT 1
+
+/* Define to 1 if the system has the type `ptrdiff_t'. */
+/* #undef HAVE_PTRDIFF_T */
 
 /* Define if RDTSC is available */
 /* #undef HAVE_RDTSC */
-
-/* Define to 1 if you have the `register_printf_function' function. */
-/* #undef HAVE_REGISTER_PRINTF_FUNCTION */
-
-/* Define to 1 if you have the `register_printf_specifier' function. */
-/* #undef HAVE_REGISTER_PRINTF_SPECIFIER */
 
 /* Define to 1 if you have the `sigaction' function. */
 #define HAVE_SIGACTION 1
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #define HAVE_STDINT_H 1
+
+/* Define if <stdint.h> exists, doesn't clash with <sys/types.h>, and declares
+   uintmax_t. */
+/* #undef HAVE_STDINT_H_WITH_UINTMAX */
 
 /* Define to 1 if you have the <stdio_ext.h> header file. */
 /* #undef HAVE_STDIO_EXT_H */
@@ -230,6 +256,15 @@
 /* Define to 1 if you have the <string.h> header file. */
 #define HAVE_STRING_H 1
 
+/* Define to 1 if you have the <sys/param.h> header file. */
+#define HAVE_SYS_PARAM_H 1
+
+/* Define to 1 if you have the <sys/poll.h> header file. */
+#define HAVE_SYS_POLL_H 1
+
+/* Define to 1 if you have the <sys/prctl.h> header file. */
+/* #undef HAVE_SYS_PRCTL_H */
+
 /* Define to 1 if you have the <sys/socket.h> header file. */
 #define HAVE_SYS_SOCKET_H 1
 
@@ -239,16 +274,25 @@
 /* Define to 1 if you have the <sys/times.h> header file. */
 #define HAVE_SYS_TIMES_H 1
 
+/* Define to 1 if you have the <sys/time.h> header file. */
+#define HAVE_SYS_TIME_H 1
+
 /* Define to 1 if you have the <sys/types.h> header file. */
 #define HAVE_SYS_TYPES_H 1
 
 /* Define to 1 if you have the <sys/utsname.h> header file. */
 #define HAVE_SYS_UTSNAME_H 1
 
+/* Define to 1 if you have the <sys/wait.h> header file. */
+#define HAVE_SYS_WAIT_H 1
+
+/* Have tm_gmtoff field in struct tm */
+#define HAVE_TM_GMTOFF 1
+
 /* Define to 1 if you have the <ucontext.h> header file. */
 /* #undef HAVE_UCONTEXT_H */
 
-/* Have __uint128_t type (_Win64 and __LP64__ except PA) */
+/* Have __uint128_t type */
 #define HAVE_UINT128_T 1
 
 /* defined if unaligned memory access works correctly */
@@ -256,6 +300,9 @@
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #define HAVE_UNISTD_H 1
+
+/* Define to 1 if the system has the type `unsigned long long int'. */
+/* #undef HAVE_UNSIGNED_LONG_LONG_INT */
 
 /* Define if valgrind should be used */
 /* #undef HAVE_VALGRIND */
@@ -270,7 +317,7 @@
 /* #undef HAVE_WINSOCK2_H */
 
 /* the host CPU */
-#define HOST_CPU "i386"
+#define HOST_CPU "x86_64"
 
 /* library dir */
 #define LIBDIR "/usr/local/lib"
@@ -282,11 +329,14 @@
    */
 #define LT_OBJDIR ".libs/"
 
-/* Define if you have no native inet_aton() function. */
-/* #undef NO_INET_ATON */
+/* Memory alignment to use */
+/* #undef MEMORY_ALIGNMENT */
 
-/* Define to 1 if your C compiler doesn't accept -c and -o together. */
-/* #undef NO_MINUS_C_MINUS_O */
+/* Memory alignment by malloc default */
+#define MEMORY_ALIGNMENT_MALLOC 1
+
+/* Memory alignment by pagesize */
+/* #undef MEMORY_ALIGNMENT_PAGESIZE */
 
 /* Name of package */
 #define PACKAGE "gstreamer"
@@ -298,16 +348,23 @@
 #define PACKAGE_NAME "GStreamer"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "GStreamer 0.10.35"
+#define PACKAGE_STRING "GStreamer 1.4.4"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "gstreamer"
 
+/* Define to the home page for this package. */
+#define PACKAGE_URL ""
+
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "0.10.35"
+#define PACKAGE_VERSION "1.4.4"
 
 /* directory where plugins are located */
-#define PLUGINDIR "/usr/local/lib/gstreamer-0.10"
+#define PLUGINDIR "/usr/local/lib/gstreamer-1.0"
+
+/* Define to necessary symbol if this constant uses a non-standard name on
+   your system. */
+/* #undef PTHREAD_CREATE_JOINABLE */
 
 /* The size of `char', as computed by sizeof. */
 #define SIZEOF_CHAR 1
@@ -327,11 +384,14 @@
 /* Define to 1 if you have the ANSI C header files. */
 #define STDC_HEADERS 1
 
+/* the target CPU */
+#define TARGET_CPU "x86_64"
+
 /* Define if we should poison deallocated memory */
 /* #undef USE_POISONING */
 
 /* Version number of package */
-#define VERSION "0.10.35"
+#define VERSION "1.4.4"
 
 /* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
    significant byte first (like Motorola and SPARC, unlike Intel). */
@@ -345,6 +405,11 @@
 # endif
 #endif
 
+/* Enable large inode numbers on Mac OS X 10.5.  */
+#ifndef _DARWIN_USE_64_BIT_INODE
+# define _DARWIN_USE_64_BIT_INODE 1
+#endif
+
 /* Number of bits in a file offset, on hosts where this is settable. */
 /* #undef _FILE_OFFSET_BITS */
 
@@ -356,5 +421,12 @@
 
 /* We need at least WinXP SP2 for __stat64 */
 /* #undef __MSVCRT_VERSION__ */
+
+/* Define to the widest signed integer type if <stdint.h> and <inttypes.h> do
+   not define. */
+/* #undef intmax_t */
+
+/* Define to `unsigned int' if <sys/types.h> does not define. */
+/* #undef size_t */
 
 #define DISABLE_ORC

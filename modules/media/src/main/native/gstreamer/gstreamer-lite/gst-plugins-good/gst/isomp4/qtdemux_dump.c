@@ -15,12 +15,13 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 #include "qtdemux_types.h"
 #include "qtdemux_dump.h"
+#include "fourcc.h"
 
 #include "qtatomparser.h"
 
@@ -64,7 +65,7 @@ qtdemux_dump_mvhd (GstQTDemux * qtdemux, GstByteReader * data, int depth)
 
   GST_LOG ("%*s  pref. rate:    %g", depth, "", GET_FP32 (data));
   GST_LOG ("%*s  pref. volume:  %g", depth, "", GET_FP16 (data));
-  gst_byte_reader_skip (data, 46);
+  gst_byte_reader_skip_unchecked (data, 46);
   GST_LOG ("%*s  preview time:  %u", depth, "", GET_UINT32 (data));
   GST_LOG ("%*s  preview dur.:  %u", depth, "", GET_UINT32 (data));
   GST_LOG ("%*s  poster time:   %u", depth, "", GET_UINT32 (data));
@@ -253,6 +254,52 @@ qtdemux_dump_dref (GstQTDemux * qtdemux, GstByteReader * data, int depth)
   return TRUE;
 }
 
+static gboolean
+qtdemux_dump_stsd_avc1 (GstQTDemux * qtdemux, GstByteReader * data, guint size,
+    int depth)
+{
+  guint32 fourcc;
+
+  /* Size of avc1 = 78 bytes */
+  if (size < (6 + 2 + 4 + 4 + 4 + 4 + 2 + 2 + 4 + 4 + 4 + 2 + 1 + 31 + 2 + 2))
+    return FALSE;
+
+  gst_byte_reader_skip_unchecked (data, 6);
+  GST_LOG_OBJECT (qtdemux, "%*s    data reference:%d", depth, "",
+      GET_UINT16 (data));
+  GST_LOG_OBJECT (qtdemux, "%*s    version/rev.:  %08x", depth, "",
+      GET_UINT32 (data));
+  fourcc = GET_FOURCC (data);
+  GST_LOG_OBJECT (qtdemux, "%*s    vendor:        %" GST_FOURCC_FORMAT, depth,
+      "", GST_FOURCC_ARGS (fourcc));
+  GST_LOG_OBJECT (qtdemux, "%*s    temporal qual: %u", depth, "",
+      GET_UINT32 (data));
+  GST_LOG_OBJECT (qtdemux, "%*s    spatial qual:  %u", depth, "",
+      GET_UINT32 (data));
+  GST_LOG_OBJECT (qtdemux, "%*s    width:         %u", depth, "",
+      GET_UINT16 (data));
+  GST_LOG_OBJECT (qtdemux, "%*s    height:        %u", depth, "",
+      GET_UINT16 (data));
+  GST_LOG_OBJECT (qtdemux, "%*s    horiz. resol:  %g", depth, "",
+      GET_FP32 (data));
+  GST_LOG_OBJECT (qtdemux, "%*s    vert. resol.:  %g", depth, "",
+      GET_FP32 (data));
+  GST_LOG_OBJECT (qtdemux, "%*s    data size:     %u", depth, "",
+      GET_UINT32 (data));
+  GST_LOG_OBJECT (qtdemux, "%*s    frame count:   %u", depth, "",
+      GET_UINT16 (data));
+  /* something is not right with this, it's supposed to be a string but it's
+   * not apparently, so just skip this for now */
+  gst_byte_reader_skip_unchecked (data, 1 + 31);
+  GST_LOG_OBJECT (qtdemux, "%*s    compressor:    (skipped)", depth, "");
+  GST_LOG_OBJECT (qtdemux, "%*s    depth:         %u", depth, "",
+      GET_UINT16 (data));
+  GST_LOG_OBJECT (qtdemux, "%*s    color table ID:%u", depth, "",
+      GET_UINT16 (data));
+
+  return TRUE;
+}
+
 gboolean
 qtdemux_dump_stsd (GstQTDemux * qtdemux, GstByteReader * data, int depth)
 {
@@ -267,40 +314,46 @@ qtdemux_dump_stsd (GstQTDemux * qtdemux, GstByteReader * data, int depth)
 
   for (i = 0; i < num_entries; i++) {
     GstByteReader sub;
-    guint32 size = 0, fourcc;
+    guint32 size, remain;
+    guint32 fourcc;
 
     if (!gst_byte_reader_get_uint32_be (data, &size) ||
         !qt_atom_parser_get_fourcc (data, &fourcc))
       return FALSE;
 
-    GST_LOG ("%*s    size:          %u", depth, "", size);
-    GST_LOG ("%*s    type:          %" GST_FOURCC_FORMAT, depth, "",
-        GST_FOURCC_ARGS (fourcc));
+    GST_LOG_OBJECT (qtdemux, "%*s    size:          %u", depth, "", size);
+    GST_LOG_OBJECT (qtdemux, "%*s    type:          %" GST_FOURCC_FORMAT, depth,
+        "", GST_FOURCC_ARGS (fourcc));
 
-    if (size < (6 + 2 + 4 + 4 + 4 + 4 + 2 + 2 + 4 + 4 + 4 + 2 + 1 + 31 + 2 + 2))
+    remain = gst_byte_reader_get_remaining (data);
+    /* Size includes the 8 bytes we just read: len & fourcc, then 8 bytes
+     * version, flags, entries_count */
+    if (size > remain + 8) {
+      GST_LOG_OBJECT (qtdemux,
+          "Not enough data left for this atom (have %u need %u)", remain, size);
       return FALSE;
+    }
 
-    qt_atom_parser_peek_sub (data, 0, 78, &sub);
-    gst_byte_reader_skip (&sub, 6);
-    GST_LOG ("%*s    data reference:%d", depth, "", GET_UINT16 (&sub));
-    GST_LOG ("%*s    version/rev.:  %08x", depth, "", GET_UINT32 (&sub));
-    fourcc = GET_FOURCC (&sub);
-    GST_LOG ("%*s    vendor:        %" GST_FOURCC_FORMAT, depth, "",
-        GST_FOURCC_ARGS (fourcc));
-    GST_LOG ("%*s    temporal qual: %u", depth, "", GET_UINT32 (&sub));
-    GST_LOG ("%*s    spatial qual:  %u", depth, "", GET_UINT32 (&sub));
-    GST_LOG ("%*s    width:         %u", depth, "", GET_UINT16 (&sub));
-    GST_LOG ("%*s    height:        %u", depth, "", GET_UINT16 (&sub));
-    GST_LOG ("%*s    horiz. resol:  %g", depth, "", GET_FP32 (&sub));
-    GST_LOG ("%*s    vert. resol.:  %g", depth, "", GET_FP32 (&sub));
-    GST_LOG ("%*s    data size:     %u", depth, "", GET_UINT32 (&sub));
-    GST_LOG ("%*s    frame count:   %u", depth, "", GET_UINT16 (&sub));
-    /* something is not right with this, it's supposed to be a string but it's
-     * not apparently, so just skip this for now */
-    gst_byte_reader_skip (&sub, 1 + 31);
-    GST_LOG ("%*s    compressor:    (skipped)", depth, "");
-    GST_LOG ("%*s    depth:         %u", depth, "", GET_UINT16 (&sub));
-    GST_LOG ("%*s    color table ID:%u", depth, "", GET_UINT16 (&sub));
+    qt_atom_parser_peek_sub (data, 0, size, &sub);
+    switch (fourcc) {
+      case FOURCC_avc1:
+        if (!qtdemux_dump_stsd_avc1 (qtdemux, &sub, size, depth + 1))
+          return FALSE;
+        break;
+      case FOURCC_mp4s:
+        if (!gst_byte_reader_get_uint32_be (&sub, &ver_flags) ||
+            !gst_byte_reader_get_uint32_be (&sub, &num_entries))
+          return FALSE;
+        if (!qtdemux_dump_unknown (qtdemux, &sub, depth + 1))
+          return FALSE;
+        break;
+      default:
+        /* Unknown stsd data, dump the bytes */
+        if (!qtdemux_dump_unknown (qtdemux, &sub, depth + 1))
+          return FALSE;
+        break;
+    }
+
     if (!gst_byte_reader_skip (data, size - (4 + 4)))
       return FALSE;
   }
@@ -721,6 +774,28 @@ qtdemux_dump_mehd (GstQTDemux * qtdemux, GstByteReader * data, int depth)
 }
 
 gboolean
+qtdemux_dump_tfdt (GstQTDemux * qtdemux, GstByteReader * data, int depth)
+{
+  guint32 version = 0;
+  guint64 decode_time;
+  guint value_size;
+
+  if (!gst_byte_reader_get_uint32_be (data, &version))
+    return FALSE;
+
+  GST_LOG ("%*s  version/flags: %08x", depth, "", version);
+
+  value_size = ((version >> 24) == 1) ? sizeof (guint64) : sizeof (guint32);
+  if (qt_atom_parser_get_offset (data, value_size, &decode_time)) {
+    GST_LOG ("%*s  Track fragment decode time: %" G_GUINT64_FORMAT,
+        depth, "", decode_time);
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+gboolean
 qtdemux_dump_sdtp (GstQTDemux * qtdemux, GstByteReader * data, int depth)
 {
   guint32 version;
@@ -742,6 +817,8 @@ qtdemux_dump_sdtp (GstQTDemux * qtdemux, GstByteReader * data, int depth)
         ((guint16) (val >> 2)) & 0x3);
     GST_LOG ("%*s     sample_has_redundancy: %d", depth, "",
         ((guint16) (val >> 4)) & 0x3);
+    GST_LOG ("%*s     early display: %d", depth, "",
+        ((guint16) (val >> 6)) & 0x1);
     ++i;
   }
   return TRUE;
@@ -800,7 +877,7 @@ qtdemux_node_dump_foreach (GNode * node, gpointer qtdemux)
 gboolean
 qtdemux_node_dump (GstQTDemux * qtdemux, GNode * node)
 {
-  if (__gst_debug_min < GST_LEVEL_LOG)
+  if (_gst_debug_min < GST_LEVEL_LOG)
     return TRUE;
 
   g_node_traverse (node, G_PRE_ORDER, G_TRAVERSE_ALL, -1,

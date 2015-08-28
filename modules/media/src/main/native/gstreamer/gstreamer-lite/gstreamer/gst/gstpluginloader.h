@@ -15,8 +15,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 #ifndef __GST_PLUGINLOADER_H__
 #define __GST_PLUGINLOADER_H__
@@ -26,10 +26,10 @@ G_BEGIN_DECLS
 typedef struct _GstPluginLoader GstPluginLoader;
 
 typedef struct _GstPluginLoaderFuncs {
-  GstPluginLoader * (*create)(GstRegistry *registry);
-  gboolean (*destroy)(GstPluginLoader *loader);
-  gboolean (*load)(GstPluginLoader *loader, const gchar *filename,
-      off_t file_size, time_t file_mtime);
+  GstPluginLoader * (*create)   (GstRegistry *registry);
+  gboolean          (*destroy)  (GstPluginLoader *loader);
+  gboolean          (*load)     (GstPluginLoader *loader, const gchar *filename,
+                                 off_t file_size, time_t file_mtime);
 } GstPluginLoaderFuncs;
 
 extern const GstPluginLoaderFuncs _priv_gst_plugin_loader_funcs;

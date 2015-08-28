@@ -15,8 +15,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 
@@ -24,8 +24,8 @@
 #define __GST_TAGLIST_H__
 
 #include <gst/gstdatetime.h>
+#include <gst/gstsample.h>
 #include <gst/gstbuffer.h>
-#include <gst/gststructure.h>
 #include <gst/glib-compat.h>
 
 G_BEGIN_DECLS
@@ -132,6 +132,7 @@ typedef enum {
  *
  * Extra tag flags used when registering tags.
  */
+/* FIXME: these are not really flags .. */
 typedef enum {
   GST_TAG_FLAG_UNDEFINED,
   GST_TAG_FLAG_META,
@@ -142,28 +143,22 @@ typedef enum {
 
 #define GST_TAG_FLAG_IS_VALID(flag)     (((flag) > GST_TAG_FLAG_UNDEFINED) && ((flag) < GST_TAG_FLAG_COUNT))
 
-/* FIXME 0.11: Don't typedef GstTagList to be a GstStructure, they're
- *             internally the same but not from an API point of view.
- *             See bug #518934.
- */
 /**
  * GstTagList:
+ * @mini_object: the parent type
  *
- * Opaque #GstTagList data structure.
+ * Object describing tags / metadata.
  */
-#ifdef _FOOL_GTK_DOC_
 typedef struct _GstTagList GstTagList;
-#else
-#ifdef IN_GOBJECT_INTROSPECTION
-typedef struct _GstTagList GstTagList;
-#else
-typedef GstStructure GstTagList;
-#endif
-#endif
+struct _GstTagList {
+  GstMiniObject mini_object;
+};
+
+GST_EXPORT GType _gst_tag_list_type;
 
 #define GST_TAG_LIST(x)       ((GstTagList *) (x))
-#define GST_IS_TAG_LIST(x)    ((x) != NULL && gst_is_tag_list (GST_TAG_LIST (x)))
-#define GST_TYPE_TAG_LIST     (gst_tag_list_get_type ())
+#define GST_TYPE_TAG_LIST     (_gst_tag_list_type)
+#define GST_IS_TAG_LIST(obj)  (GST_IS_MINI_OBJECT_TYPE((obj), GST_TYPE_TAG_LIST))
 
 /**
  * GstTagForeachFunc:
@@ -198,6 +193,13 @@ void         gst_tag_register      (const gchar     * name,
                                     const gchar     * blurb,
                                     GstTagMergeFunc   func);
 
+void         gst_tag_register_static (const gchar   * name,
+                                      GstTagFlag      flag,
+                                      GType           type,
+                                      const gchar   * nick,
+                                      const gchar   * blurb,
+                                      GstTagMergeFunc func);
+
 /* some default merging functions */
 void      gst_tag_merge_use_first          (GValue * dest, const GValue * src);
 void      gst_tag_merge_strings_with_comma (GValue * dest, const GValue * src);
@@ -211,20 +213,41 @@ GstTagFlag             gst_tag_get_flag        (const gchar * tag);
 gboolean               gst_tag_is_fixed        (const gchar * tag);
 
 /* tag lists */
-GstTagList * gst_tag_list_new               (void);
-GstTagList * gst_tag_list_new_full          (const gchar * tag, ...);
-GstTagList * gst_tag_list_new_full_valist   (va_list var_args);
 
-gboolean     gst_is_tag_list                (gconstpointer p);
-GstTagList * gst_tag_list_copy              (const GstTagList * list);
+/**
+ * GstTagScope:
+ * @GST_TAG_SCOPE_STREAM: tags specific to this single stream
+ * @GST_TAG_SCOPE_GLOBAL: global tags for the complete medium
+ *
+ * GstTagScope specifies if a taglist applies to the complete
+ * medium or only to one single stream.
+ */
+typedef enum {
+  GST_TAG_SCOPE_STREAM,
+  GST_TAG_SCOPE_GLOBAL
+} GstTagScope;
+
+GstTagList * gst_tag_list_new_empty         (void) G_GNUC_MALLOC;
+GstTagList * gst_tag_list_new               (const gchar * tag, ...) G_GNUC_MALLOC;
+GstTagList * gst_tag_list_new_valist        (va_list var_args) G_GNUC_MALLOC;
+
+void         gst_tag_list_set_scope         (GstTagList * list, GstTagScope scope);
+GstTagScope  gst_tag_list_get_scope         (const GstTagList * list);
+
+gchar      * gst_tag_list_to_string         (const GstTagList * list) G_GNUC_MALLOC;
+GstTagList * gst_tag_list_new_from_string   (const gchar      * str) G_GNUC_MALLOC;
+
+gint         gst_tag_list_n_tags            (const GstTagList * list);
+const gchar* gst_tag_list_nth_tag_name      (const GstTagList * list, guint index);
 gboolean     gst_tag_list_is_empty          (const GstTagList * list);
+gboolean     gst_tag_list_is_equal          (const GstTagList * list1,
+                                             const GstTagList * list2);
 void         gst_tag_list_insert            (GstTagList       * into,
                                              const GstTagList * from,
                                              GstTagMergeMode    mode);
 GstTagList * gst_tag_list_merge             (const GstTagList * list1,
                                              const GstTagList * list2,
-                                             GstTagMergeMode    mode);
-void         gst_tag_list_free              (GstTagList       * list);
+                                             GstTagMergeMode    mode) G_GNUC_MALLOC;
 guint        gst_tag_list_get_tag_size      (const GstTagList * list,
                                              const gchar      * tag);
 void         gst_tag_list_add               (GstTagList       * list,
@@ -262,20 +285,6 @@ gboolean     gst_tag_list_copy_value        (GValue           * dest,
                                              const gchar      * tag);
 
 /* simplifications (FIXME: do we want them?) */
-gboolean     gst_tag_list_get_char          (const GstTagList * list,
-                                             const gchar      * tag,
-                                             gchar            * value);
-gboolean     gst_tag_list_get_char_index    (const GstTagList * list,
-                                             const gchar      * tag,
-                                             guint              index,
-                                             gchar            * value);
-gboolean     gst_tag_list_get_uchar         (const GstTagList * list,
-                                             const gchar      * tag,
-                                             guchar           * value);
-gboolean     gst_tag_list_get_uchar_index   (const GstTagList * list,
-                                             const gchar      * tag,
-                                             guint              index,
-                                             guchar           * value);
 gboolean     gst_tag_list_get_boolean       (const GstTagList * list,
                                              const gchar      * tag,
                                              gboolean         * value);
@@ -297,20 +306,6 @@ gboolean     gst_tag_list_get_uint_index    (const GstTagList * list,
                                              const gchar      * tag,
                                              guint              index,
                                              guint            * value);
-gboolean     gst_tag_list_get_long          (const GstTagList * list,
-                                             const gchar      * tag,
-                                             glong            * value);
-gboolean     gst_tag_list_get_long_index    (const GstTagList * list,
-                                             const gchar      * tag,
-                                             guint              index,
-                                             glong            * value);
-gboolean     gst_tag_list_get_ulong         (const GstTagList * list,
-                                             const gchar      * tag,
-                                             gulong           * value);
-gboolean     gst_tag_list_get_ulong_index   (const GstTagList * list,
-                                             const gchar      * tag,
-                                             guint              index,
-                                             gulong           * value);
 gboolean     gst_tag_list_get_int64         (const GstTagList * list,
                                              const gchar      * tag,
                                              gint64           * value);
@@ -371,13 +366,111 @@ gboolean     gst_tag_list_get_date_time_index (const GstTagList * list,
                                              const gchar      * tag,
                                              guint              index,
                                              GstDateTime     ** value);
-gboolean     gst_tag_list_get_buffer        (const GstTagList * list,
+gboolean     gst_tag_list_get_sample        (const GstTagList * list,
                                              const gchar      * tag,
-                                             GstBuffer       ** value);
-gboolean     gst_tag_list_get_buffer_index  (const GstTagList * list,
+                                             GstSample       ** sample);
+gboolean     gst_tag_list_get_sample_index  (const GstTagList * list,
                                              const gchar      * tag,
                                              guint              index,
-                                             GstBuffer       ** value);
+                                             GstSample       ** sample);
+
+/* refcounting */
+/**
+ * gst_tag_list_ref:
+ * @taglist: the #GstTagList to reference
+ *
+ * Add a reference to a #GstTagList mini object.
+ *
+ * From this point on, until the caller calls gst_tag_list_unref() or
+ * gst_tag_list_make_writable(), it is guaranteed that the taglist object will
+ * not change. To use a #GstTagList object, you must always have a refcount on
+ * it -- either the one made implicitly by e.g. gst_tag_list_new(), or via
+ * taking one explicitly with this function.
+ *
+ * Returns: the same #GstTagList mini object.
+ */
+#ifdef _FOOL_GTK_DOC_
+G_INLINE_FUNC GstTagList * gst_tag_list_ref (GstTagList * taglist);
+#endif
+
+static inline GstTagList *
+gst_tag_list_ref (GstTagList * taglist)
+{
+  return (GstTagList *) gst_mini_object_ref (GST_MINI_OBJECT_CAST (taglist));
+}
+
+/**
+ * gst_tag_list_unref:
+ * @taglist: a #GstTagList.
+ *
+ * Unref a #GstTagList, and and free all its memory when the refcount reaches 0.
+ */
+#ifdef _FOOL_GTK_DOC_
+G_INLINE_FUNC void gst_tag_list_unref (GstTagList * taglist);
+#endif
+
+static inline void
+gst_tag_list_unref (GstTagList * taglist)
+{
+  gst_mini_object_unref (GST_MINI_OBJECT_CAST (taglist));
+}
+
+/**
+ * gst_tag_list_copy:
+ * @taglist: a #GstTagList.
+ *
+ * Creates a new #GstTagList as a copy of the old @taglist. The new taglist
+ * will have a refcount of 1, owned by the caller, and will be writable as
+ * a result.
+ *
+ * Note that this function is the semantic equivalent of a gst_tag_list_ref()
+ * followed by a gst_tag_list_make_writable(). If you only want to hold on to a
+ * reference to the data, you should use gst_tag_list_ref().
+ *
+ * When you are finished with the taglist, call gst_tag_list_unref() on it.
+ *
+ * Returns: the new #GstTagList
+ */
+#ifdef _FOOL_GTK_DOC_
+G_INLINE_FUNC GstTagList * gst_tag_list_copy (const GstTagList * taglist);
+#endif
+
+static inline GstTagList *
+gst_tag_list_copy (const GstTagList * taglist)
+{
+  return GST_TAG_LIST (gst_mini_object_copy (GST_MINI_OBJECT_CAST (taglist)));
+}
+
+/**
+ * gst_tag_list_is_writable:
+ * @taglist: a #GstTagList
+ *
+ * Tests if you can safely modify @taglist. It is only safe to modify taglist
+ * when there is only one owner of the taglist - ie, the refcount is 1.
+ */
+#define gst_tag_list_is_writable(taglist)    gst_mini_object_is_writable (GST_MINI_OBJECT_CAST (taglist))
+
+/**
+ * gst_tag_list_make_writable:
+ * @taglist: (transfer full): a #GstTagList
+ *
+ * Returns a writable copy of @taglist.
+ *
+ * If there is only one reference count on @taglist, the caller must be the
+ * owner, and so this function will return the taglist object unchanged. If on
+ * the other hand there is more than one reference on the object, a new taglist
+ * object will be returned (which will be a copy of @taglist). The caller's
+ * reference on @taglist will be removed, and instead the caller will own a
+ * reference to the returned object.
+ *
+ * In short, this function unrefs the taglist in the argument and refs the
+ * taglist that it returns. Don't access the argument after calling this
+ * function. See also: gst_tag_list_ref().
+ *
+ * Returns: (transfer full): a writable taglist which may or may not be the
+ *     same as @taglist
+ */
+#define gst_tag_list_make_writable(taglist)   GST_TAG_LIST (gst_mini_object_make_writable (GST_MINI_OBJECT_CAST (taglist)))
 
 /* GStreamer core tags */
 /**
@@ -394,8 +487,6 @@ gboolean     gst_tag_list_get_buffer_index  (const GstTagList * list,
  * commonly used title, as used for sorting (string)
  *
  * The title as it should be sorted, e.g. 'Doll House, The'
- *
- * Since: 0.10.15
  */
 #define GST_TAG_TITLE_SORTNAME         "title-sortname"
 /**
@@ -414,11 +505,8 @@ gboolean     gst_tag_list_get_buffer_index  (const GstTagList * list,
  *
  * The artist name as it should be sorted, e.g. 'Hendrix, Jimi' or
  * 'Guitar Heroes, The'
- *
- * Since: 0.10.15
  */
-/* FIXME 0.11: change to "artist-sortname" */
-#define GST_TAG_ARTIST_SORTNAME        "musicbrainz-sortname"
+#define GST_TAG_ARTIST_SORTNAME        "artist-sortname"
 /**
  * GST_TAG_ALBUM:
  *
@@ -433,32 +521,24 @@ gboolean     gst_tag_list_get_buffer_index  (const GstTagList * list,
  * album containing this data, as used for sorting (string)
  *
  * The album name as it should be sorted, e.g. 'Jazz Guitar, The'
- *
- * Since: 0.10.15
  */
 #define GST_TAG_ALBUM_SORTNAME         "album-sortname"
 /**
  * GST_TAG_ALBUM_ARTIST:
  *
  * The artist of the entire album, as it should be displayed.
- *
- * Since: 0.10.25
  */
 #define GST_TAG_ALBUM_ARTIST           "album-artist"
 /**
  * GST_TAG_ALBUM_ARTIST_SORTNAME:
  *
  * The artist of the entire album, as it should be sorted.
- *
- * Since: 0.10.25
  */
 #define GST_TAG_ALBUM_ARTIST_SORTNAME  "album-artist-sortname"
 /**
  * GST_TAG_COMPOSER:
  *
  * person(s) who composed the recording (string)
- *
- * Since: 0.10.15
  */
 #define GST_TAG_COMPOSER               "composer"
 /**
@@ -471,8 +551,6 @@ gboolean     gst_tag_list_get_buffer_index  (const GstTagList * list,
  * GST_TAG_DATE_TIME:
  *
  * date and time the data was created (#GstDateTime structure)
- *
- * Since: 0.10.31
  */
 #define GST_TAG_DATE_TIME              "datetime"
 /**
@@ -498,8 +576,6 @@ gboolean     gst_tag_list_get_buffer_index  (const GstTagList * list,
  *
  * This tag is used for unknown Vorbis comment tags,
  * unknown APE tags and certain ID3v2 comment fields.
- *
- * Since: 0.10.10
  */
 #define GST_TAG_EXTENDED_COMMENT       "extended-comment"
 /**
@@ -537,8 +613,6 @@ gboolean     gst_tag_list_get_buffer_index  (const GstTagList * list,
  * GST_TAG_HOMEPAGE:
  *
  * Homepage for this media (i.e. artist or movie homepage) (string)
- *
- * Since: 0.10.23
  */
 #define GST_TAG_HOMEPAGE               "homepage"
 /**
@@ -575,8 +649,6 @@ gboolean     gst_tag_list_get_buffer_index  (const GstTagList * list,
  * GST_TAG_COPYRIGHT_URI:
  *
  * URI to location where copyright details can be found (string)
- *
- * Since: 0.10.14
  */
 #define GST_TAG_COPYRIGHT_URI          "copyright-uri"
 /**
@@ -588,8 +660,6 @@ gboolean     gst_tag_list_get_buffer_index  (const GstTagList * list,
  *
  * Note: do not use this field to describe the encoding application. Use
  * #GST_TAG_APPLICATION_NAME or #GST_TAG_COMMENT for that.
- *
- * Since: 0.10.33
  */
 #define GST_TAG_ENCODED_BY             "encoded-by"
 /**
@@ -608,8 +678,6 @@ gboolean     gst_tag_list_get_buffer_index  (const GstTagList * list,
  * GST_TAG_LICENSE_URI:
  *
  * URI to location where license details can be found (string)
- *
- * Since: 0.10.14
  */
 #define GST_TAG_LICENSE_URI            "license-uri"
 /**
@@ -646,16 +714,12 @@ gboolean     gst_tag_list_get_buffer_index  (const GstTagList * list,
  * GST_TAG_SUBTITLE_CODEC:
  *
  * codec/format the subtitle data is stored in (string)
- *
- * Since: 0.10.23
  */
 #define GST_TAG_SUBTITLE_CODEC         "subtitle-codec"
 /**
  * GST_TAG_CONTAINER_FORMAT:
  *
  * container format the data is stored in (string)
- *
- * Since: 0.10.24
  */
 #define GST_TAG_CONTAINER_FORMAT       "container-format"
 /**
@@ -729,43 +793,48 @@ gboolean     gst_tag_list_get_buffer_index  (const GstTagList * list,
  * GST_TAG_REFERENCE_LEVEL:
  *
  * reference level of track and album gain values (double)
- *
- * Since: 0.10.12
  */
 #define GST_TAG_REFERENCE_LEVEL        "replaygain-reference-level"
 /**
  * GST_TAG_LANGUAGE_CODE:
  *
- * Language code (ISO-639-1) (string) of the content
+ * ISO-639-2 or ISO-639-1 code for the language the content is in (string)
+ *
+ * There is utility API in libgsttag in gst-plugins-base to obtain a translated
+ * language name from the language code: gst_tag_get_language_name()
  */
 #define GST_TAG_LANGUAGE_CODE          "language-code"
 /**
+ * GST_TAG_LANGUAGE_NAME:
+ *
+ * Name of the language the content is in (string)
+ *
+ * Free-form name of the language the content is in, if a language code
+ * is not available. This tag should not be set in addition to a language
+ * code. It is undefined what language or locale the language name is in.
+ */
+#define GST_TAG_LANGUAGE_NAME          "language-name"
+/**
  * GST_TAG_IMAGE:
  *
- * image (buffer) (buffer caps should specify the content type and preferably
+ * image (sample) (sample taglist should specify the content type and preferably
  * also set "image-type" field as #GstTagImageType)
- *
- * Since: 0.10.6
  */
 #define GST_TAG_IMAGE                  "image"
 /**
  * GST_TAG_PREVIEW_IMAGE:
  *
  * image that is meant for preview purposes, e.g. small icon-sized version
- * (buffer) (buffer caps should specify the content type)
- *
- * Since: 0.10.7
+ * (sample) (sample taglist should specify the content type)
  */
 #define GST_TAG_PREVIEW_IMAGE          "preview-image"
 
 /**
  * GST_TAG_ATTACHMENT:
  *
- * generic file attachment (buffer) (buffer caps should specify the content
+ * generic file attachment (sample) (sample taglist should specify the content
  * type and if possible set "filename" to the file name of the
  * attachment)
- *
- * Since: 0.10.21
  */
 #define GST_TAG_ATTACHMENT             "attachment"
 
@@ -773,8 +842,6 @@ gboolean     gst_tag_list_get_buffer_index  (const GstTagList * list,
  * GST_TAG_BEATS_PER_MINUTE:
  *
  * number of beats per minute in audio (double)
- *
- * Since: 0.10.12
  */
 #define GST_TAG_BEATS_PER_MINUTE       "beats-per-minute"
 
@@ -782,8 +849,6 @@ gboolean     gst_tag_list_get_buffer_index  (const GstTagList * list,
  * GST_TAG_KEYWORDS:
  *
  * comma separated keywords describing the content (string).
- *
- * Since: 0.10.21
  */
 #define GST_TAG_KEYWORDS               "keywords"
 
@@ -792,8 +857,6 @@ gboolean     gst_tag_list_get_buffer_index  (const GstTagList * list,
  *
  * human readable descriptive location of where the media has been recorded or
  * produced. (string).
- *
- * Since: 0.10.21
  */
 #define GST_TAG_GEO_LOCATION_NAME               "geo-location-name"
 
@@ -803,8 +866,6 @@ gboolean     gst_tag_list_get_buffer_index  (const GstTagList * list,
  * geo latitude location of where the media has been recorded or produced in
  * degrees according to WGS84 (zero at the equator, negative values for southern
  * latitudes) (double).
- *
- * Since: 0.10.21
  */
 #define GST_TAG_GEO_LOCATION_LATITUDE               "geo-location-latitude"
 
@@ -814,8 +875,6 @@ gboolean     gst_tag_list_get_buffer_index  (const GstTagList * list,
  * geo longitude location of where the media has been recorded or produced in
  * degrees according to WGS84 (zero at the prime meridian in Greenwich/UK,
  * negative values for western longitudes). (double).
- *
- * Since: 0.10.21
  */
 #define GST_TAG_GEO_LOCATION_LONGITUDE               "geo-location-longitude"
 
@@ -824,24 +883,18 @@ gboolean     gst_tag_list_get_buffer_index  (const GstTagList * list,
  *
  * geo elevation of where the media has been recorded or produced in meters
  * according to WGS84 (zero is average sea level) (double).
- *
- * Since: 0.10.21
  */
 #define GST_TAG_GEO_LOCATION_ELEVATION               "geo-location-elevation"
 /**
  * GST_TAG_GEO_LOCATION_COUNTRY:
  *
  * The country (english name) where the media has been produced (string).
- *
- * Since: 0.10.29
  */
 #define GST_TAG_GEO_LOCATION_COUNTRY                 "geo-location-country"
 /**
  * GST_TAG_GEO_LOCATION_CITY:
  *
  * The city (english name) where the media has been produced (string).
- *
- * Since: 0.10.29
  */
 #define GST_TAG_GEO_LOCATION_CITY                    "geo-location-city"
 /**
@@ -852,8 +905,6 @@ gboolean     gst_tag_list_get_buffer_index  (const GstTagList * list,
  *
  * This tag has been added as this is how it is handled/named in XMP's
  * Iptc4xmpcore schema.
- *
- * Since: 0.10.29
  */
 #define GST_TAG_GEO_LOCATION_SUBLOCATION             "geo-location-sublocation"
 /**
@@ -861,8 +912,6 @@ gboolean     gst_tag_list_get_buffer_index  (const GstTagList * list,
  *
  * Represents the expected error on the horizontal positioning in
  * meters (double).
- *
- * Since: 0.10.31
  */
 #define GST_TAG_GEO_LOCATION_HORIZONTAL_ERROR   "geo-location-horizontal-error"
 /**
@@ -872,8 +921,6 @@ gboolean     gst_tag_list_get_buffer_index  (const GstTagList * list,
  * Represented in m/s. (double)
  *
  * See also #GST_TAG_GEO_LOCATION_MOVEMENT_DIRECTION
- *
- * Since 0.10.30
  */
 #define GST_TAG_GEO_LOCATION_MOVEMENT_SPEED       "geo-location-movement-speed"
 /**
@@ -884,8 +931,6 @@ gboolean     gst_tag_list_get_buffer_index  (const GstTagList * list,
  * 0 means the geographic north, and increases clockwise (double from 0 to 360)
  *
  * See also #GST_TAG_GEO_LOCATION_CAPTURE_DIRECTION
- *
- * Since: 0.10.30
  */
 #define GST_TAG_GEO_LOCATION_MOVEMENT_DIRECTION "geo-location-movement-direction"
 /**
@@ -896,56 +941,42 @@ gboolean     gst_tag_list_get_buffer_index  (const GstTagList * list,
  * 0 means the geographic north, and increases clockwise (double from 0 to 360)
  *
  * See also #GST_TAG_GEO_LOCATION_MOVEMENT_DIRECTION
- *
- * Since: 0.10.30
  */
 #define GST_TAG_GEO_LOCATION_CAPTURE_DIRECTION  "geo-location-capture-direction"
 /**
  * GST_TAG_SHOW_NAME:
  *
  * Name of the show, used for displaying (string)
- *
- * Since: 0.10.26
  */
 #define GST_TAG_SHOW_NAME                         "show-name"
 /**
  * GST_TAG_SHOW_SORTNAME:
  *
  * Name of the show, used for sorting (string)
- *
- * Since: 0.10.26
  */
 #define GST_TAG_SHOW_SORTNAME                     "show-sortname"
 /**
  * GST_TAG_SHOW_EPISODE_NUMBER:
  *
  * Number of the episode within a season/show (unsigned integer)
- *
- * Since: 0.10.26
  */
 #define GST_TAG_SHOW_EPISODE_NUMBER               "show-episode-number"
 /**
  * GST_TAG_SHOW_SEASON_NUMBER:
  *
  * Number of the season of a show/series (unsigned integer)
- *
- * Since: 0.10.26
  */
 #define GST_TAG_SHOW_SEASON_NUMBER                "show-season-number"
 /**
  * GST_TAG_LYRICS:
  *
  * The lyrics of the media (string)
- *
- * Since: 0.10.26
  */
 #define GST_TAG_LYRICS                            "lyrics"
 /**
  * GST_TAG_COMPOSER_SORTNAME:
  *
  * The composer's name, used for sorting (string)
- *
- * Since: 0.10.26
  */
 #define GST_TAG_COMPOSER_SORTNAME                 "composer-sortname"
 /**
@@ -953,8 +984,6 @@ gboolean     gst_tag_list_get_buffer_index  (const GstTagList * list,
  *
  * Groups together media that are related and spans multiple tracks. An
  * example are multiple pieces of a concerto. (string)
- *
- * Since: 0.10.26
  */
 #define GST_TAG_GROUPING                          "grouping"
 /**
@@ -963,43 +992,33 @@ gboolean     gst_tag_list_get_buffer_index  (const GstTagList * list,
  * Rating attributed by a person (likely the application user).
  * The higher the value, the more the user likes this media
  * (unsigned int from 0 to 100)
- *
- * Since: 0.10.29
  */
 #define GST_TAG_USER_RATING                       "user-rating"
 /**
  * GST_TAG_DEVICE_MANUFACTURER:
  *
  * Manufacturer of the device used to create the media (string)
- *
- * Since: 0.10.30
  */
 #define GST_TAG_DEVICE_MANUFACTURER               "device-manufacturer"
 /**
  * GST_TAG_DEVICE_MODEL:
  *
  * Model of the device used to create the media (string)
- *
- * Since: 0.10.30
  */
 #define GST_TAG_DEVICE_MODEL                      "device-model"
 /**
  * GST_TAG_APPLICATION_NAME:
  *
  * Name of the application used to create the media (string)
- *
- * Since: 0.10.31
  */
 #define GST_TAG_APPLICATION_NAME                  "application-name"
 /**
  * GST_TAG_APPLICATION_DATA:
  *
- * Arbitrary application data (buffer)
+ * Arbitrary application data (sample)
  *
- * Some formats allow application's to add their own arbitrary data
- * into files. This data is application's dependent.
- *
- * Since: 0.10.31
+ * Some formats allow applications to add their own arbitrary data
+ * into files. This data is application dependent.
  */
 #define GST_TAG_APPLICATION_DATA          "application-data"
 /**
@@ -1024,10 +1043,35 @@ gboolean     gst_tag_list_get_buffer_index  (const GstTagList * list,
  *
  * Rotations indicated by the values are in clockwise direction and
  * 'flip' means an horizontal mirroring.
- *
- * Since: 0.10.30
  */
 #define GST_TAG_IMAGE_ORIENTATION            "image-orientation"
+/**
+ * GST_TAG_PUBLISHER:
+ *
+ * Name of the label or publisher (string)
+ *
+ * Since: 1.2
+ */
+#define GST_TAG_PUBLISHER                         "publisher"
+/**
+ * GST_TAG_INTERPRETED_BY:
+ *
+ * Information about the people behind a remix and similar
+ * interpretations of another existing piece (string)
+ *
+ * Since: 1.2
+ */
+#define GST_TAG_INTERPRETED_BY                    "interpreted-by"
+/**
+ * GST_TAG_MIDI_BASE_NOTE:
+ *
+ * <ulink url="http://en.wikipedia.org/wiki/Note#Note_designation_in_accordance_with_octave_name">Midi note number</ulink>
+ * of the audio track. This is useful for sample instruments and in particular
+ * for multi-samples.
+ *
+ * Since: 1.4
+ */
+#define GST_TAG_MIDI_BASE_NOTE                    "midi-base-note"
 
 G_END_DECLS
 

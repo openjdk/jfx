@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,25 +54,23 @@ static GstStaticPadTemplate sink_factory = GST_STATIC_PAD_TEMPLATE ("sink",
 static GstStaticPadTemplate src_factory = GST_STATIC_PAD_TEMPLATE ("src",
     GST_PAD_SRC,
     GST_PAD_ALWAYS,
-    GST_STATIC_CAPS ("video/x-raw-yuv, format=(fourcc)YV12; "
-                     "video/x-raw-yvua420p, format=(fourcc)YVUA")
+    GST_STATIC_CAPS ("video/x-raw-yuv, format=(string)YV12; "
+                     "video/x-raw-yvua420p, format=(string)YVUA")
     );
 
 
 /***********************************************************************************
  * Substitution for
- * GST_BOILERPLATE (VP6Decoder, vp6decoder, GstElement, GST_TYPE_ELEMENT);
+ * G_DEFINE_TYPE (VP6Decoder, vp6decoder, GstElement, GST_TYPE_ELEMENT);
  ***********************************************************************************/
-static void vp6decoder_base_init  (gpointer         g_class);
-static void vp6decoder_class_init (VP6DecoderClass *g_class);
-static void vp6decoder_init       (VP6Decoder      *object,
-                                   VP6DecoderClass *g_class);
-static GstElementClass *parent_class = NULL;
-
-static void vp6decoder_class_init_trampoline (gpointer g_class, gpointer data)
+#define vp6decoder_parent_class parent_class
+static void vp6decoder_init          (VP6Decoder      *self);
+static void vp6decoder_class_init    (VP6DecoderClass *klass);
+static gpointer vp6decoder_parent_class = NULL;
+static void     vp6decoder_class_intern_init (gpointer klass)
 {
-    parent_class = (GstElementClass *)  g_type_class_peek_parent (g_class);
-    vp6decoder_class_init ((VP6DecoderClass *)g_class);
+    vp6decoder_parent_class = g_type_class_peek_parent (klass);
+    vp6decoder_class_init ((VP6DecoderClass*) klass);
 }
 
 GType vp6decoder_get_type (void)
@@ -82,19 +80,13 @@ GType vp6decoder_get_type (void)
     if (g_once_init_enter (&gonce_data))
     {
         GType _type;
-        _type = gst_type_register_static_full (GST_TYPE_ELEMENT,
-                                               g_intern_static_string ("VP6Decoder"),
-                                               sizeof (VP6DecoderClass),
-                                               vp6decoder_base_init,
-                                               NULL,
-                                               vp6decoder_class_init_trampoline,
-                                               NULL,
-                                               NULL,
-                                               sizeof (VP6Decoder),
-                                               0,
-                                               (GInstanceInitFunc) vp6decoder_init,
-                                               NULL,
-                                               (GTypeFlags) 0);
+        _type = g_type_register_static_simple (GST_TYPE_ELEMENT,
+               g_intern_static_string ("VP6Decoder"),
+               sizeof (VP6DecoderClass),
+               (GClassInitFunc) vp6decoder_class_intern_init,
+               sizeof(VP6Decoder),
+               (GInstanceInitFunc) vp6decoder_init,               
+               (GTypeFlags) 0);
         g_once_init_leave (&gonce_data, (gsize) _type);
     }
     return (GType) gonce_data;
@@ -105,13 +97,12 @@ GType vp6decoder_get_type (void)
  ***********************************************************************************/
 static GstStateChangeReturn vp6decoder_change_state (GstElement* element, GstStateChange transition);
 
-static gboolean vp6decoder_sink_event (GstPad * pad, GstEvent * event);
-static gboolean vp6decoder_set_caps (GstPad * pad, GstCaps * caps);
-static GstFlowReturn vp6decoder_chain (GstPad * pad, GstBuffer * buf);
+static gboolean vp6decoder_sink_event (GstPad * pad, GstObject *parent, GstEvent * event);
+static gboolean vp6decoder_set_caps (GstPad * pad, GstObject *parent, GstCaps * caps);
+static GstFlowReturn vp6decoder_chain (GstPad * pad, GstObject *parent, GstBuffer * buf);
 
-static const GstQueryType *vp6decoder_src_query_types (GstPad * pad);
-static gboolean vp6decoder_src_query (GstPad * pad, GstQuery * query);
-static gboolean vp6decoder_src_event (GstPad * pad, GstEvent * event);
+static gboolean vp6decoder_src_query (GstPad * pad, GstObject *parent, GstQuery * query);
+static gboolean vp6decoder_src_event (GstPad * pad, GstObject *parent, GstEvent * event);
 
 /* QoS helper functions */
 static void vp6decoder_reset_qos(VP6Decoder *filter);
@@ -291,36 +282,29 @@ static void destroy_vp6_decoders(VP6Decoder *filter)
     }
 }
 
-static void
-vp6decoder_base_init (gpointer gclass)
-{
-    //fprintf(stderr, "===vp6decoder_base_init()\n");
-    GstElementClass *element_class = GST_ELEMENT_CLASS (gclass);
-
-    gst_element_class_set_details_simple(element_class,
-    "VP6Decoder",
-    "Codec/Decoder/Video",
-    "ON2 based VP6 decoder",
-    "Oracle Corporation");
-
-    gst_element_class_add_pad_template (element_class,
-        gst_static_pad_template_get (&src_factory));
-    gst_element_class_add_pad_template (element_class,
-        gst_static_pad_template_get (&sink_factory));
-}
-
 /* initialize the vp6decoderfilter's class */
 static void
 vp6decoder_class_init (VP6DecoderClass * klass)
 {
     //fprintf(stderr, "===vp6decoder_class_init()\n");
-    GObjectClass *gobject_class = NULL;
-    GstElementClass *gstelement_class = NULL;
+    GObjectClass *gobject_class;
+    GstElementClass *element_class;
 
-    gobject_class = (GObjectClass *) klass;
-    gstelement_class = (GstElementClass *) klass;
+    gobject_class = G_OBJECT_CLASS (klass);
+    element_class = GST_ELEMENT_CLASS (klass);
 
-    gstelement_class->change_state = vp6decoder_change_state;
+    gst_element_class_set_details_simple(element_class,
+        "VP6Decoder",
+        "Codec/Decoder/Video",
+        "ON2 based VP6 decoder",
+        "Oracle Corporation");
+
+    gst_element_class_add_pad_template (element_class,
+        gst_static_pad_template_get (&src_factory));
+    gst_element_class_add_pad_template (element_class,
+        gst_static_pad_template_get (&sink_factory));
+
+    element_class->change_state = vp6decoder_change_state;
 }
 
 /* initialize the new element
@@ -329,21 +313,19 @@ vp6decoder_class_init (VP6DecoderClass * klass)
  * initialize instance structure
  */
 static void
-vp6decoder_init (VP6Decoder * filter, VP6DecoderClass * gclass)
+vp6decoder_init (VP6Decoder * filter)
 {
     //fprintf(stderr, "===vp6decoder_init()\n");
 
     //Create sink
     filter->sinkpad = gst_pad_new_from_static_template (&sink_factory, "sink");
     gst_pad_set_event_function (filter->sinkpad, vp6decoder_sink_event);
-    gst_pad_set_setcaps_function (filter->sinkpad, vp6decoder_set_caps);
     gst_pad_set_chain_function (filter->sinkpad, vp6decoder_chain);
 
     gst_element_add_pad (GST_ELEMENT (filter), filter->sinkpad);
 
     //Create src
     filter->srcpad = gst_pad_new_from_static_template (&src_factory, "src");
-    gst_pad_set_query_type_function (filter->srcpad, vp6decoder_src_query_types);
     gst_pad_set_query_function (filter->srcpad, vp6decoder_src_query);
     gst_pad_set_event_function (filter->srcpad, vp6decoder_src_event);
     gst_pad_use_fixed_caps (filter->srcpad);
@@ -366,9 +348,10 @@ vp6decoder_init (VP6Decoder * filter, VP6DecoderClass * gclass)
 
     filter->decoder = NULL;
     filter->alphaDecoder = NULL;
-
+    
     //Segment
     gst_segment_init(&filter->segment, GST_FORMAT_TIME);
+    filter->segment_event = NULL;
 
     //QoS
     vp6decoder_reset_qos(filter);
@@ -420,6 +403,12 @@ static GstStateChangeReturn vp6decoder_change_state (GstElement* element, GstSta
                 filter->tmp_input_buf = NULL;
                 filter->tmp_input_buf_size = 0;
             }
+            
+            if (filter->segment_event != NULL) {
+                // INLINE - gst_event_unref()
+                gst_event_unref (filter->segment_event);
+                filter->segment_event = NULL;
+            }
 
             // Destroy decoder
             destroy_vp6_decoders(filter);
@@ -431,14 +420,14 @@ static GstStateChangeReturn vp6decoder_change_state (GstElement* element, GstSta
     return ret;
 }
 
-static gboolean vp6decoder_sink_event (GstPad * pad, GstEvent * event)
+static gboolean vp6decoder_sink_event (GstPad * pad, GstObject *parent, GstEvent * event)
 {
     gboolean ret = FALSE;
     VP6Decoder *filter = NULL;
 
     //fprintf(stderr, "===vp6decoder_sink_event() : %s\n",  gst_event_type_get_name(GST_EVENT_TYPE(event)));
 
-    filter = VP6_DECODER (GST_OBJECT_PARENT (pad));
+    filter = VP6_DECODER (parent);
     switch (GST_EVENT_TYPE (event)) {
     case GST_EVENT_FLUSH_START:
         //fprintf(stderr, "===vp6decoder_sink_event() : GST_EVENT_FLUSH_START\n");
@@ -452,22 +441,41 @@ static gboolean vp6decoder_sink_event (GstPad * pad, GstEvent * event)
         //fprintf(stderr, "===vp6decoder_sink_event() : GST_EVENT_EOS\n");
         ret = gst_pad_push_event (filter->srcpad, event);
         break;
-    case GST_EVENT_NEWSEGMENT: {
-        GstFormat format;
-        gdouble rate;
-        gint64 start, stop, time;
-        gboolean update;
+    case GST_EVENT_SEGMENT: {
+        GstSegment segment;
 
-        gst_event_parse_new_segment (event, &update, &rate, &format, &start,
-                &stop, &time);
+        gst_event_copy_segment (event, &segment);
 
         //Use segment if it has time format, mark that segment needed otherwise.
-        if (format == GST_FORMAT_TIME) {
-            gst_segment_set_newsegment (&filter->segment, update, rate, format,
-                    start, stop, time);
+        if (segment.format == GST_FORMAT_TIME) {
+            gst_segment_copy_into (&segment, &filter->segment);
         }
+
         vp6decoder_reset_qos(filter);
-        ret = gst_pad_push_event (filter->srcpad, event);
+        if (filter->need_set_caps) {
+            if (filter->segment_event != NULL) {
+                // INLINE - gst_event_unref()
+                gst_event_unref (filter->segment_event);
+            }
+            filter->segment_event = gst_event_copy(event);
+            // INLINE - gst_event_unref()
+            gst_event_unref (event);
+            ret = TRUE;
+        } else {
+            ret = gst_pad_push_event (filter->srcpad, event);
+        }
+        
+        break;
+    }
+    case GST_EVENT_CAPS: {
+        GstCaps *caps;
+
+        gst_event_parse_caps (event, &caps);
+        vp6decoder_set_caps(pad, parent, caps);
+
+        // INLINE - gst_event_unref()
+        gst_event_unref (event);
+        ret = TRUE;
         break;
     }
     default:
@@ -478,13 +486,13 @@ static gboolean vp6decoder_sink_event (GstPad * pad, GstEvent * event)
 }
 
 /* this function handles the link with other elements */
-static gboolean vp6decoder_set_caps (GstPad * pad, GstCaps * caps)
+static gboolean vp6decoder_set_caps (GstPad * pad, GstObject *parent, GstCaps * caps)
 {
     VP6Decoder *filter = NULL;
     GstStructure *s = NULL;
     const gchar *sinkCapsName = NULL;
-
-    filter = VP6_DECODER (GST_OBJECT_PARENT (pad));
+    
+    filter = VP6_DECODER (parent);
     if (pad == filter->sinkpad) {
         s = gst_caps_get_structure (caps, 0);
 
@@ -530,9 +538,10 @@ static gboolean vp6decoder_set_caps (GstPad * pad, GstCaps * caps)
 /* chain function
  * this function does the actual processing
  */
-static GstFlowReturn vp6decoder_chain (GstPad * pad, GstBuffer * buf)
+static GstFlowReturn vp6decoder_chain (GstPad * pad, GstObject *parent, GstBuffer * buf)
 {
     VP6Decoder *filter = NULL;
+    GstMapInfo info;
     GstBuffer *out = NULL;
     GstCaps *caps = NULL;
     guint8 *colorBits = NULL;
@@ -564,14 +573,25 @@ static GstFlowReturn vp6decoder_chain (GstPad * pad, GstBuffer * buf)
 
     guchar *dest = NULL;        //Destination buffer
     gboolean is_keyframe = FALSE;
+    
+    GstEvent *caps_event = NULL;
 
-    filter = VP6_DECODER (GST_OBJECT_PARENT (pad));
+    filter = VP6_DECODER (parent);
 
     is_keyframe = !GST_BUFFER_FLAG_IS_SET(buf, GST_BUFFER_FLAG_DELTA_UNIT);
 
+    if (!gst_buffer_map(buf, &info, GST_MAP_READ)) {
+        // INLINE - gst_buffer_unref()
+        gst_buffer_unref (buf);
+
+        gst_element_message_full(GST_ELEMENT(filter), GST_MESSAGE_ERROR, GST_STREAM_ERROR, GST_STREAM_ERROR_DECODE, g_strdup("Failed to check or create decoder context!"), NULL, ("vp6decoder.c"), ("vp6decoder_chain"), 0);
+        return GST_FLOW_ERROR;
+    }
+    
     // probe and allocate proper decoder context
-    if (!check_vp6_decoders(filter, GST_BUFFER_DATA(buf), GST_BUFFER_SIZE(buf))) {
-// INLINE - gst_buffer_unref()
+    if (!check_vp6_decoders(filter, info.data, info.size)) {
+        gst_buffer_unmap(buf, &info);
+        // INLINE - gst_buffer_unref()
         gst_buffer_unref (buf);
 
         gst_element_message_full(GST_ELEMENT(filter), GST_MESSAGE_ERROR, GST_STREAM_ERROR, GST_STREAM_ERROR_DECODE, g_strdup("Failed to check or create decoder context!"), NULL, ("vp6decoder.c"), ("vp6decoder_chain"), 0);
@@ -582,14 +602,15 @@ static GstFlowReturn vp6decoder_chain (GstPad * pad, GstBuffer * buf)
     if (!vp6decoder_do_qos(filter, GST_BUFFER_TIMESTAMP(buf), is_keyframe)) {
         filter->qos_discont = TRUE;
         //fprintf(stderr, "vp6decoder: QoS skipping frame\n");
-// INLINE - gst_buffer_unref()
+        gst_buffer_unmap(buf, &info);
+        // INLINE - gst_buffer_unref()
         gst_buffer_unref (buf);
         return GST_FLOW_OK;
     }
 
     /* Workaround for VP6 decoder buffer underflow bug:
      * copy data to intermediate buffer of larger size */
-    src_len = GST_BUFFER_SIZE(buf);
+    src_len = info.size;
     if (filter->tmp_input_buf_size < (src_len + TMP_INPUT_BUF_PADDING))
     {
       filter->tmp_input_buf = (guint8*)g_realloc((gpointer)filter->tmp_input_buf, (src_len + TMP_INPUT_BUF_PADDING));
@@ -599,16 +620,19 @@ static GstFlowReturn vp6decoder_chain (GstPad * pad, GstBuffer * buf)
     if (!filter->tmp_input_buf)
     {
         GST_ERROR("Unable to reallocate tmp buffer");
+        gst_buffer_unmap(buf, &info);
+        // INLINE - gst_buffer_unref()
         gst_buffer_unref (buf);
         return GST_FLOW_ERROR;
     }
 
-    memcpy(filter->tmp_input_buf, GST_BUFFER_DATA (buf), src_len);
+    memcpy(filter->tmp_input_buf, info.data, src_len);
     memset(filter->tmp_input_buf+src_len, 0, (filter->tmp_input_buf_size - src_len));
+    gst_buffer_unmap(buf, &info);
 
     if (filter->decodeAlpha) {
         if (!parse_vp6alpha_header(filter->tmp_input_buf, src_len, &colorBits, &colorSize, &alphaBits, &alphaSize)) {
-// INLINE - gst_buffer_unref()
+            // INLINE - gst_buffer_unref()
             gst_buffer_unref (buf);
 
             gst_element_message_full(GST_ELEMENT(filter), GST_MESSAGE_ERROR, GST_STREAM_ERROR, GST_STREAM_ERROR_DECODE, g_strdup("Failed to parse VP6A header"), NULL, ("vp6decoder.c"), ("vp6decoder_chain"), 0);
@@ -721,7 +745,7 @@ static GstFlowReturn vp6decoder_chain (GstPad * pad, GstBuffer * buf)
     if (filter->need_set_caps) {
         if (filter->decodeAlpha) {
             caps = gst_caps_new_simple ("video/x-raw-yvua420p",
-                                        "format", GST_TYPE_FOURCC, GST_MAKE_FOURCC('Y','V','U','A'),
+                                        "format", G_TYPE_STRING, "YVUA",
                                         "framerate", GST_TYPE_FRACTION, filter->framerate_num, filter->framerate_den,
                                         "pixel-aspect-ratio", GST_TYPE_FRACTION, filter->par_num, filter->par_den,
 
@@ -744,7 +768,7 @@ static GstFlowReturn vp6decoder_chain (GstPad * pad, GstBuffer * buf)
                                         NULL);
         } else {
             caps = gst_caps_new_simple ("video/x-raw-yuv",
-                                        "format", GST_TYPE_FOURCC, GST_MAKE_FOURCC ('Y', 'V', '1', '2'),
+                                        "format", G_TYPE_STRING, "YV12",
                                         "framerate", GST_TYPE_FRACTION, filter->framerate_num, filter->framerate_den,
                                         "pixel-aspect-ratio", GST_TYPE_FRACTION, filter->par_num, filter->par_den,
 
@@ -765,8 +789,16 @@ static GstFlowReturn vp6decoder_chain (GstPad * pad, GstBuffer * buf)
                                         NULL);
         }
 
-        gst_pad_set_caps (filter->srcpad, caps);
+        
+        caps_event = gst_event_new_caps(caps);
+        if (caps_event)
+            gst_pad_push_event(filter->srcpad, caps_event);
         gst_caps_unref (caps);
+        
+        if (filter->segment_event != NULL) {
+            gst_pad_push_event (filter->srcpad, filter->segment_event);
+            filter->segment_event = NULL;
+        }
 
         filter->need_set_caps = FALSE;
     }
@@ -775,53 +807,43 @@ static GstFlowReturn vp6decoder_chain (GstPad * pad, GstBuffer * buf)
 
     /* now copy over the area contained in offset_x,offset_y,
     * frame_width, frame_height */
-    result = gst_pad_alloc_buffer_and_set_caps (filter->srcpad, GST_BUFFER_OFFSET_NONE,
-        out_size, GST_PAD_CAPS (filter->srcpad), &out);
+    out = gst_buffer_new_allocate(NULL, out_size, NULL);
+    if (out != NULL) {
+        GstMapInfo info;
+        if (gst_buffer_map(out, &info, GST_MAP_WRITE)) {
+            dest = info.data;
+            GST_BUFFER_TIMESTAMP(out) = GST_BUFFER_TIMESTAMP(buf);
+            GST_BUFFER_DURATION(out) = GST_BUFFER_DURATION(buf);
+            GST_BUFFER_OFFSET(out) = GST_BUFFER_OFFSET(buf);
+            GST_BUFFER_OFFSET_END(out) = GST_BUFFER_OFFSET_END(buf);
+            if (filter->qos_discont || GST_BUFFER_FLAG_IS_SET(buf, GST_BUFFER_FLAG_DISCONT)) {
+                GST_BUFFER_FLAG_SET(out, GST_BUFFER_FLAG_DISCONT);
+                filter->qos_discont = FALSE;
+            }
 
-    if (result == GST_FLOW_OK) {
-        dest = GST_BUFFER_DATA (out);
-        GST_BUFFER_TIMESTAMP(out) = GST_BUFFER_TIMESTAMP(buf);
-        GST_BUFFER_DURATION(out) = GST_BUFFER_DURATION(buf);
-        GST_BUFFER_OFFSET(out) = GST_BUFFER_OFFSET(buf);
-        GST_BUFFER_OFFSET_END(out) = GST_BUFFER_OFFSET_END(buf);
-        if (filter->qos_discont || GST_BUFFER_FLAG_IS_SET(buf, GST_BUFFER_FLAG_DISCONT)) {
-            GST_BUFFER_FLAG_SET(out, GST_BUFFER_FLAG_DISCONT);
-            filter->qos_discont = FALSE;
+            memcpy(dest + offset_y, img->planes[PLANE_Y], out_size_y);
+            memcpy(dest + offset_v, img->planes[PLANE_V], out_size_v);
+            memcpy(dest + offset_u, img->planes[PLANE_U], out_size_u);
+
+            if (alphaImg) {
+                memcpy(dest + offset_a, alphaImg->planes[PLANE_Y], out_size_a);
+            }
+            
+            gst_buffer_unmap(out, &info);
+
+            //Push decoded frame
+            result = gst_pad_push (filter->srcpad, out);
         }
-
-        memcpy(dest + offset_y, img->planes[PLANE_Y], out_size_y);
-        memcpy(dest + offset_v, img->planes[PLANE_V], out_size_v);
-        memcpy(dest + offset_u, img->planes[PLANE_U], out_size_u);
-
-        if (alphaImg) {
-            memcpy(dest + offset_a, alphaImg->planes[PLANE_Y], out_size_a);
-        }
-
-        //Push decoded frame
-        result = gst_pad_push (filter->srcpad, out);
     }
 
     /* don't need it anymore now */
-// INLINE - gst_buffer_unref()
+    // INLINE - gst_buffer_unref()
     gst_buffer_unref (buf);
 
     return GST_FLOW_OK;
 }
 
-static const GstQueryType *
-vp6decoder_src_query_types (GstPad * pad)
-{
-  static const GstQueryType vp6decoder_src_query_types[] = {
-    GST_QUERY_POSITION,
-    GST_QUERY_DURATION,
-    GST_QUERY_CONVERT,
-    GST_QUERY_NONE
-  };
-
-  return vp6decoder_src_query_types;
-}
-
-static gboolean vp6decoder_src_query (GstPad * pad, GstQuery * query)
+static gboolean vp6decoder_src_query (GstPad * pad, GstObject *parent, GstQuery * query)
 {
     VP6Decoder *filter = NULL;
     GstPad *peer = NULL;
@@ -829,7 +851,7 @@ static gboolean vp6decoder_src_query (GstPad * pad, GstQuery * query)
 
     //fprintf(stderr, "===vp6decoder_src_query %s()\n",  gst_query_type_get_name(GST_QUERY_TYPE(query)));
 
-    filter = VP6_DECODER (GST_OBJECT_PARENT (pad));
+    filter = VP6_DECODER (parent);
 
     if (!(peer = gst_pad_get_peer (filter->sinkpad))) {
         return FALSE;
@@ -843,21 +865,22 @@ static gboolean vp6decoder_src_query (GstPad * pad, GstQuery * query)
     return res;
 }
 
-static gboolean vp6decoder_src_event (GstPad * pad, GstEvent * event)
+static gboolean vp6decoder_src_event (GstPad * pad, GstObject *parent, GstEvent * event)
 {
     VP6Decoder *filter = NULL;
     gboolean res = FALSE;
+    GstQOSType type;
     gdouble proportion;
     GstClockTimeDiff diff;
     GstClockTime ts;
 
     //fprintf(stderr, "===vp6decoder_src_event() %s\n",  gst_event_type_get_name(GST_EVENT_TYPE(event)));
 
-    filter = VP6_DECODER (GST_OBJECT_PARENT (pad));
+    filter = VP6_DECODER (parent);
 
     switch (GST_EVENT_TYPE(event)) {
-    case GST_EVENT_QOS:
-        gst_event_parse_qos(event, &proportion, &diff, &ts);
+    case GST_EVENT_QOS:        
+        gst_event_parse_qos(event, &type, &proportion, &diff, &ts);
         vp6decoder_update_qos(filter, proportion, diff, ts);
         res = gst_pad_push_event (filter->sinkpad, event);
         break;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,6 +42,7 @@ class CSample : public CMediaSample
 public:
     CSample(TCHAR *pName, CBaseAllocator *pAllocator, HRESULT *phr) : CMediaSample(pName, pAllocator, phr) { m_pGstBuffer = NULL; }
     GstBuffer *m_pGstBuffer;
+    GstMapInfo m_GstMapInfo;
 };
 
 class CAllocator : public CBaseAllocator
@@ -63,6 +64,7 @@ public:
 
 private:
     GstBuffer *m_pBuffer;
+    GstMapInfo m_MapInfo;
     sUserData m_UserData;
     void (*ReleaseSample)(GstBuffer *pBuffer, sUserData *pUserData);
     void (*GetGstBuffer)(GstBuffer **ppBuffer, long lSize, sUserData *pUserData); // This function will be called before GetBuffer() (before CBaseOutputPin::GetDeliveryBuffer()) if SetGstBuffer was not called

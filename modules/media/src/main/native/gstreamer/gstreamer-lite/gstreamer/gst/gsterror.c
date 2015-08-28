@@ -13,8 +13,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 /**
@@ -23,7 +23,7 @@
  * @see_also: #GstMessage
  *
  * GStreamer elements can throw non-fatal warnings and fatal errors.
- * Higher-level elements and applications can programatically filter
+ * Higher-level elements and applications can programmatically filter
  * the ones they are interested in or can recover from,
  * and have a default handler handle the rest of them.
  *
@@ -80,7 +80,7 @@
  *     currently provided should be enough.  If you find your type of error
  *     does not fit the current codes, you should use FAILED.</para></listitem>
  *   <listitem><para>Don't provide a message if the default one suffices.
- *     this keeps messages more uniform.  Use (NULL) - not forgetting the
+ *     this keeps messages more uniform.  Use (%NULL) - not forgetting the
  *     parentheses.</para></listitem>
  *   <listitem><para>If you do supply a custom message, it should be
  *     marked for translation.  The message should start with a capital
@@ -89,13 +89,11 @@
  *     A user interface will present this message as the first thing a user
  *     sees.  Details, technical info, ... should go in the debug string.
  *   </para></listitem>
- *   <listitem><para>The debug string can be as you like.  Again, use (NULL)
+ *   <listitem><para>The debug string can be as you like.  Again, use (%NULL)
  *     if there's nothing to add - file and line number will still be
  *     passed.  #GST_ERROR_SYSTEM can be used as a shortcut to give
  *     debug information on a system call error.</para></listitem>
  * </itemizedlist>
- *
- * Last reviewed on 2006-09-15 (0.10.10)
  */
 
 /* FIXME 0.11: the entire error system needs an overhaul - it's not very
@@ -122,22 +120,6 @@ GQuark gst_ ## string ## _error_quark (void) {                          \
     quark = g_quark_from_static_string ("gst-" # string "-error-quark"); \
   return quark; }
 
-/* FIXME: Deprecate when we depend on GLib 2.26 */
-GType
-gst_g_error_get_type (void)
-{
-#if GLIB_CHECK_VERSION(2,25,2)
-  return g_error_get_type ();
-#else
-  static GType type = 0;
-
-  if (G_UNLIKELY (type == 0))
-    type = g_boxed_type_register_static ("GstGError",
-        (GBoxedCopyFunc) g_error_copy, (GBoxedFreeFunc) g_error_free);
-  return type;
-#endif
-}
-
 #define FILE_A_BUG "  Please file a bug at " PACKAGE_BUGREPORT "."
 
 static const gchar *
@@ -159,7 +141,7 @@ gst_error_get_core_error (GstCoreError code)
     case GST_CORE_ERROR_THREAD:
       return _("Internal GStreamer error: thread problem." FILE_A_BUG);
     case GST_CORE_ERROR_NEGOTIATION:
-      return _("Internal GStreamer error: negotiation problem." FILE_A_BUG);
+      return _("GStreamer error: negotiation problem.");
     case GST_CORE_ERROR_EVENT:
       return _("Internal GStreamer error: event problem." FILE_A_BUG);
     case GST_CORE_ERROR_SEEK:
@@ -171,7 +153,7 @@ gst_error_get_core_error (GstCoreError code)
     case GST_CORE_ERROR_MISSING_PLUGIN:
       return _("Your GStreamer installation is missing a plug-in.");
     case GST_CORE_ERROR_CLOCK:
-      return _("Internal GStreamer error: clock problem." FILE_A_BUG);
+      return _("GStreamer error: clock problem.");
     case GST_CORE_ERROR_DISABLED:
       return _("This application is trying to use GStreamer functionality "
           "that has been disabled.");
@@ -239,6 +221,8 @@ gst_error_get_resource_error (GstResourceError code)
       return _("Could not get/set settings from/on resource.");
     case GST_RESOURCE_ERROR_NO_SPACE_LEFT:
       return _("No space left on the resource.");
+    case GST_RESOURCE_ERROR_NOT_AUTHORIZED:
+      return _("Not authorized to access resource.");
     case GST_RESOURCE_ERROR_NUM_ERRORS:
     default:
       break;
@@ -309,13 +293,13 @@ gst_error_get_message (GQuark domain, gint code)
   const gchar *message = NULL;
 
   if (domain == GST_CORE_ERROR)
-    message = gst_error_get_core_error (code);
+    message = gst_error_get_core_error ((GstCoreError) code);
   else if (domain == GST_LIBRARY_ERROR)
-    message = gst_error_get_library_error (code);
+    message = gst_error_get_library_error ((GstLibraryError) code);
   else if (domain == GST_RESOURCE_ERROR)
-    message = gst_error_get_resource_error (code);
+    message = gst_error_get_resource_error ((GstResourceError) code);
   else if (domain == GST_STREAM_ERROR)
-    message = gst_error_get_stream_error (code);
+    message = gst_error_get_stream_error ((GstStreamError) code);
   else {
     g_warning ("No error messages for domain %s", g_quark_to_string (domain));
     return g_strdup_printf (_("No error message for domain %s."),

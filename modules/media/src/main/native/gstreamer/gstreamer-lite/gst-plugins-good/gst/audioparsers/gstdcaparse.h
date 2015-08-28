@@ -13,8 +13,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 #ifndef __GST_DCA_PARSE_H__
@@ -51,14 +51,18 @@ struct _GstDcaParse {
   GstBaseParse baseparse;
 
   /*< private >*/
-  gint         rate;
-  gint         channels;
-  gint         depth;
-  gint         endianness;
-  gint         block_size;
-  gint         frame_size;
+  gint                  rate;
+  gint                  channels;
+  gint                  depth;
+  gint                  endianness;
+  gint                  block_size;
+  gint                  frame_size;
 
-  guint32      last_sync;
+  gboolean              sent_codec_tag;
+
+  guint32               last_sync;
+
+  GstPadChainFunction   baseparse_chainfunc;
 };
 
 /**

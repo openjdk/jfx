@@ -58,6 +58,10 @@ void *createPixelFormat(jint *ivalues) {
     attribs[index++] = NSOpenGLPFADepthSize;
     attribs[index++] = ivalues[com_sun_prism_es2_GLPixelFormat_Attributes_DEPTH_SIZE];
 
+
+    // Lets OpenGL know this context is offline renderer aware.
+    attribs[index++] = NSOpenGLPFAAllowOfflineRenderers;
+
     // Zero-terminate
     attribs[index++] = 0;
 

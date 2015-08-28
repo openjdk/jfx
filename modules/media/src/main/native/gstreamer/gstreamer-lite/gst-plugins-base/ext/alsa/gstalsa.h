@@ -16,7 +16,7 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the Free
- * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
 
@@ -31,6 +31,7 @@
 #include <alsa/control.h>
 #include <alsa/error.h>
 #include <gst/gst.h>
+#include <gst/audio/audio.h>
 
 #define GST_CHECK_ALSA_VERSION(major,minor,micro) \
     (SND_LIB_MAJOR > (major) || \
@@ -38,12 +39,22 @@
      (SND_LIB_MAJOR == (major) && SND_LIB_MINOR == (minor) && \
       SND_LIB_SUBMINOR >= (micro)))
 
+#define PASSTHROUGH_CAPS \
+    "audio/x-ac3, framed = (boolean) true;" \
+    "audio/x-eac3, framed = (boolean) true; " \
+    "audio/x-dts, framed = (boolean) true, " \
+      "block-size = (int) { 512, 1024, 2048 }; " \
+    "audio/mpeg, mpegversion = (int) 1, " \
+      "mpegaudioversion = (int) [ 1, 2 ], parsed = (boolean) true;"
+
+
 GST_DEBUG_CATEGORY_EXTERN (alsa_debug);
 #define GST_CAT_DEFAULT alsa_debug
 
-snd_pcm_t * gst_alsa_open_iec958_pcm (GstObject * obj);
+snd_pcm_t * gst_alsa_open_iec958_pcm (GstObject * obj, gchar *device);
 
 GstCaps * gst_alsa_probe_supported_formats (GstObject      * obj,
+                                            gchar          * device,
                                             snd_pcm_t      * handle,
                                             const GstCaps  * template_caps);
 
@@ -56,5 +67,13 @@ gchar *   gst_alsa_find_card_name   (GstObject        * obj,
                                      const gchar      * devcard,
                                      snd_pcm_stream_t   stream);
 
+void      gst_alsa_add_channel_reorder_map (GstObject * obj,
+                                            GstCaps   * caps);
+
+extern const GstAudioChannelPosition alsa_position[][8];
+#ifdef SND_CHMAP_API_VERSION
+gboolean alsa_chmap_to_channel_positions (const snd_pcm_chmap_t *chmap,
+					  GstAudioChannelPosition *pos);
+#endif
 
 #endif /* __GST_ALSA_H__ */

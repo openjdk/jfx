@@ -13,8 +13,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 /**
@@ -26,7 +26,7 @@
  * if you need to check at runtime what version of the gst-plugins-base
  * libraries are being used / you are currently linked against.
  *
- * The version macros get defined by including <gst/pbutils/pbutils.h>.
+ * The version macros get defined by including &lt;gst/pbutils/pbutils.h&gt;.
  */
 
 #include "gstpluginsbaseversion.h"
@@ -39,8 +39,6 @@
  * @nano:  (out): pointer to a guint to store the nano version number, or %NULL
  *
  * Gets the version number of the GStreamer Plugins Base libraries.
- *
- * Since: 0.10.31
  */
 void
 gst_plugins_base_version (guint * major, guint * minor, guint * micro,
@@ -64,8 +62,6 @@ gst_plugins_base_version (guint * major, guint * minor, guint * micro,
  * strings, logging, about dialogs ...
  *
  * Returns: a newly allocated string describing this version of gst-plugins-base
- *
- * Since: 0.10.31
  */
 gchar *
 gst_plugins_base_version_string (void)

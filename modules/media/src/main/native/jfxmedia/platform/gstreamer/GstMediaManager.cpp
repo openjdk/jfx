@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,8 +41,13 @@ volatile bool CGstMediaManager::m_bStopGlibLogFunc = false;
  * Constructor
  */
 CGstMediaManager::CGstMediaManager()
-    : m_bMainLoopCreateFailed(false), m_pMainContext(NULL), m_pMainLoop(NULL), m_pMainLoopThread(NULL)
-{}
+    : m_bMainLoopCreateFailed(false), m_pMainContext(NULL), m_pMainLoop(NULL),
+      m_pMainLoopThread(NULL), m_bClearRunloopMutex(false), m_bClearRunloopCond(false)
+{
+    m_bClearStartLoopMutex = false;
+    m_bClearStartLoopCond = false;
+    m_bStartMainLoop = false;
+}
 
 /**
  * CGstMediaManager::~CGstMediaManager()
@@ -56,16 +61,16 @@ CGstMediaManager::~CGstMediaManager()
 #endif
     m_bStopGlibLogFunc = true;
 
-    if (NULL != m_pRunloopCond)
+    if (m_bClearRunloopCond)
     {
-        g_cond_free(m_pRunloopCond);
-        m_pRunloopCond = NULL;
+        g_cond_clear(&m_RunloopCond);
+        m_bClearRunloopCond = false;
     }
 
-    if (NULL != m_pRunloopMutex)
+    if (m_bClearRunloopMutex)
     {
-        g_mutex_free(m_pRunloopMutex);
-        m_pRunloopMutex = NULL;
+        g_mutex_clear(&m_RunloopMutex);
+        m_bClearRunloopMutex = false;
     }
 
     if (NULL != m_pMainLoop)
@@ -81,7 +86,22 @@ CGstMediaManager::~CGstMediaManager()
         m_pMainContext = NULL;
     }
 
-    gst_deinit();
+    if (m_bClearStartLoopMutex)
+    {
+        g_mutex_clear(&m_StartLoopMutex);
+        m_bClearStartLoopMutex = false;
+    }
+
+    if (m_bClearStartLoopCond)
+    {
+        g_cond_clear(&m_StartLoopCond);
+        m_bClearStartLoopCond = false;
+    }
+
+    // We do not call gst_deinit() anymore, due to deadlock when GLib tries to
+    // free memory and pipeline is not shutdown. Also, it is not required to
+    // call this function.
+    // gst_deinit();
 
 #if ENABLE_LOWLEVELPERF && TARGET_OS_MAC
     g_mem_profile ();
@@ -96,7 +116,6 @@ CGstMediaManager::~CGstMediaManager()
  */
 uint32_t CGstMediaManager::Init()
 {
-    GError*     pError = NULL;
     uint32_t    uRetCode = ERROR_NONE;
 
 #if ENABLE_LOWLEVELPERF && TARGET_OS_MAC
@@ -108,9 +127,6 @@ uint32_t CGstMediaManager::Init()
 #endif // ENABLE_VISUAL_STUDIO_MEMORY_LEAKS_DETECTION
 
     //***** Try to initialize the GStreamer system
-    if (!g_thread_supported())
-        g_thread_init (NULL);
-
     LOWLEVELPERF_EXECTIMESTART("gst_init_check()");
     // disable installing SIGSEGV signal handling as it interferes with Java's signal handling
     gst_segtrap_set_enabled(false);
@@ -126,19 +142,24 @@ uint32_t CGstMediaManager::Init()
 #endif // ENABLE_VISUAL_STUDIO_MEMORY_LEAKS_DETECTION
 
     //***** Create mutex and condition variable
-    m_pRunloopCond = g_cond_new();
-    m_pRunloopMutex = g_mutex_new();
+    g_cond_init(&m_RunloopCond);
+    m_bClearRunloopCond = true;
+    g_mutex_init(&m_RunloopMutex);
+    m_bClearRunloopMutex = true;
+    g_mutex_init(&m_StartLoopMutex);
+    m_bClearStartLoopMutex = true;
+    g_cond_init(&m_StartLoopCond);
+    m_bClearStartLoopCond = true;
 
 #if ENABLE_VISUAL_STUDIO_MEMORY_LEAKS_DETECTION && TARGET_OS_WIN32
     _CrtSetDbgFlag(0);
 #endif // ENABLE_VISUAL_STUDIO_MEMORY_LEAKS_DETECTION
 
     //***** Create the primary run loop
-    m_pMainLoopThread = g_thread_create((GThreadFunc)run_loop, this, FALSE, &pError);
+    m_pMainLoopThread = g_thread_new("MainLoop", (GThreadFunc)run_loop, this);
     if (m_pMainLoopThread == NULL)
     {
         LOGGER_LOGMSG(LOGGER_DEBUG, "Could not create main GThread!!\n");
-        LOGGER_LOGMSG(LOGGER_DEBUG, pError->message);
         return ERROR_MANAGER_RUNLOOP_FAIL;
     }
 
@@ -147,32 +168,45 @@ uint32_t CGstMediaManager::Init()
 #endif // ENABLE_VISUAL_STUDIO_MEMORY_LEAKS_DETECTION
 
     //***** Wait till the run loop has fully initialized.  Bad things happen if we do not do this, including crashers.
-    g_mutex_lock(m_pRunloopMutex);
+    g_mutex_lock(&m_RunloopMutex);
     while (NULL == m_pMainLoop)
-        g_cond_wait(m_pRunloopCond, m_pRunloopMutex);
-    g_mutex_unlock(m_pRunloopMutex);
+        g_cond_wait(&m_RunloopCond, &m_RunloopMutex);
+    g_mutex_unlock(&m_RunloopMutex);
 
     if (m_bMainLoopCreateFailed)
+    {
         uRetCode = ERROR_GSTREAMER_MAIN_LOOP_CREATE;
+    }
 
     // Free no longer needed GCond.
-    if (NULL != m_pRunloopCond)
+    if (m_bClearRunloopCond)
     {
-        g_cond_free(m_pRunloopCond);
-        m_pRunloopCond = NULL;
+        g_cond_clear(&m_RunloopCond);
+        m_bClearRunloopCond = false;
     }
 
     // Free no longer needed GMutex.
-    if (NULL != m_pRunloopMutex)
+    if (m_bClearRunloopMutex)
     {
-        g_mutex_free(m_pRunloopMutex);
-        m_pRunloopMutex = NULL;
+        g_mutex_clear(&m_RunloopMutex);
+        m_bClearRunloopMutex = false;
     }
 
     // Set the default Glib log handler.
     g_log_set_default_handler (GlibLogFunc, this);
 
     return uRetCode;
+}
+
+void CGstMediaManager::StartMainLoop()
+{
+    if (m_bStartMainLoop)
+        return;
+
+    g_mutex_lock(&m_StartLoopMutex);
+    m_bStartMainLoop = true;
+    g_cond_signal(&m_StartLoopCond);
+    g_mutex_unlock(&m_StartLoopMutex);
 }
 
 /**
@@ -184,7 +218,7 @@ uint32_t CGstMediaManager::Init()
 
 gpointer CGstMediaManager::run_loop(CGstMediaManager *manager)
 {
-    g_mutex_lock(manager->m_pRunloopMutex);
+    g_mutex_lock(&manager->m_RunloopMutex);
 
 #if ENABLE_VISUAL_STUDIO_MEMORY_LEAKS_DETECTION && TARGET_OS_WIN32
     _CrtSetDbgFlag(0);
@@ -198,11 +232,18 @@ gpointer CGstMediaManager::run_loop(CGstMediaManager *manager)
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 #endif // ENABLE_VISUAL_STUDIO_MEMORY_LEAKS_DETECTION
 
-    g_cond_signal(manager->m_pRunloopCond);
-    g_mutex_unlock(manager->m_pRunloopMutex);
+    g_cond_signal(&manager->m_RunloopCond);
+    g_mutex_unlock(&manager->m_RunloopMutex);
 
     if (NULL != manager->m_pMainLoop)
+    {
+        g_mutex_lock(&manager->m_StartLoopMutex);
+        while (!manager->m_bStartMainLoop)
+            g_cond_wait(&manager->m_StartLoopCond, &manager->m_StartLoopMutex);
+        g_mutex_unlock(&manager->m_StartLoopMutex);
+
         g_main_loop_run(manager->m_pMainLoop);
+    }
 
     return NULL;
 }

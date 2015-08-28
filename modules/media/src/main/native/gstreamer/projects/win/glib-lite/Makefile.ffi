@@ -1,0 +1,79 @@
+#
+# LibFFI Makefile
+#
+CC = cl.exe
+AR = lib.exe
+
+OBJBASE_DIR = $(BUILD_DIR)/obj/$(THIRD_PARTY_DIR)/libffi
+SRCBASE_DIR = ../../../$(THIRD_PARTY_DIR)/libffi
+
+DIRLIST = src src/x86
+
+DEP_DIRS = $(BUILD_DIR) $(addprefix $(OBJBASE_DIR)/,$(DIRLIST))
+
+C_SOURCES = src/closures.c \
+	    src/java_raw_api.c \
+	    src/prep_cif.c \
+	    src/raw_api.c \
+	    src/types.c
+
+COMPILER_FLAGS = -nologo -W3 -WX- -EHsc -GS -fp:precise -Gm- \
+                 -Zc:wchar_t -Zc:forScope -Gd -wd"4430" -analyze- -errorReport:queue
+
+INCLUDES = -I$(SRCBASE_DIR)/include
+
+CFLAGS = -DFFI_BUILDING \
+	 $(INCLUDES) \
+	 $(COMPILER_FLAGS)
+
+LIBFLAGS = -out:$(shell cygpath -ma $(TARGET)) -nologo
+
+ifeq ($(BUILD_TYPE), Release)
+    CFLAGS += -O1 -Oy -MD -Gy -GF
+else # debug
+    CFLAGS += -Od -Oy- -RTC1 -MDd -Zi -Fd$(PDB)
+endif
+
+ifeq ($(ARCH), x32)
+    INCLUDES += -I$(SRCBASE_DIR)/include/x86
+    CFLAGS += -DX86_WIN32
+    LIBFLAGS += -MACHINE:x86
+
+    C_SOURCES += src/x86/ffi.c
+    ASM_SOURCES = src/x86/win32.S
+    ASM_FLAGS = -DX86_WIN32
+
+    ML = ml.exe
+else
+    INCLUDES += -I$(SRCBASE_DIR)/include/x64
+    CFLAGS += -DX86_WIN64 -DGSTREAMER_LITE
+    LIBFLAGS += -MACHINE:x64
+
+    C_SOURCES += src/x86/ffi.c
+    ASM_SOURCES = src/x86/win64.S
+    ASM_FLAGS = -DX86_WIN64
+
+    ML = ml64.exe
+endif
+
+OBJECTS = $(patsubst %.c,$(OBJBASE_DIR)/%.obj,$(C_SOURCES)) \
+	  $(patsubst %.S,$(OBJBASE_DIR)/%.obj,$(ASM_SOURCES))
+
+.PHONY: default list
+
+default: $(TARGET)
+
+$(TARGET): $(OBJECTS)
+	$(AR) $(LIBFLAGS) $(foreach object,$(OBJECTS),$(shell cygpath -ma $(object))) 
+
+$(OBJECTS): | $(DEP_DIRS)
+
+$(DEP_DIRS):
+	@mkdir -p $(DEP_DIRS)
+
+$(OBJBASE_DIR)/%.obj: $(SRCBASE_DIR)/%.c
+	$(CC) $(CFLAGS) -TC -c -Fo$(shell cygpath -ma $@) $<
+
+$(OBJBASE_DIR)/%.obj: $(SRCBASE_DIR)/%.S
+	$(CC) -EP $(INCLUDES) $(CFLAGS) $(shell cygpath -ma $(SRCBASE_DIR)/$(ASM_SOURCES)) > $(shell cygpath -ma $@.asm)
+	$(ML) -c -Fo$(shell cygpath -ma $@) $(shell cygpath -ma $@.asm)

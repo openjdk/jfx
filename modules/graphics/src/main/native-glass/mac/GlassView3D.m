@@ -88,6 +88,7 @@
             kCGLPFAColorSize, 32,
             kCGLPFAAlphaSize, 8,
             kCGLPFADepthSize, depth,
+	    kCGLPFAAllowOfflineRenderers, // lets OpenGL know this context is offline renderer aware
             (CGLPixelFormatAttribute)0
         };
         GLint npix = 0;
@@ -207,7 +208,19 @@
 - (id)initWithFrame:(NSRect)frame withJview:(jobject)jView withJproperties:(jobject)jproperties
 {
     LOG("GlassView3D initWithFrame:withJview:withJproperties");
-    self = [super initWithFrame:frame pixelFormat:[NSOpenGLView defaultPixelFormat]];
+
+    NSOpenGLPixelFormatAttribute pixelFormatAttributes[] =
+    {
+        NSOpenGLPFAAllowOfflineRenderers, // Lets OpenGL know this context is offline renderer aware
+        (NSOpenGLPixelFormatAttribute)0
+    };
+    NSOpenGLPixelFormat *pFormat = [[[NSOpenGLPixelFormat alloc] initWithAttributes:pixelFormatAttributes] autorelease];
+    if (!pFormat)
+    {
+        pFormat = [NSOpenGLView defaultPixelFormat];
+        LOG("GlassView3D initWithFrame: initWithAttributes failed! Set pixel format to default pixel format");
+    }
+    self = [super initWithFrame:frame pixelFormat:pFormat];
     if (self != nil)
     {
         [self _initialize3dWithJproperties:jproperties];

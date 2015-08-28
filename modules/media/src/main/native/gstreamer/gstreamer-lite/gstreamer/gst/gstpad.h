@@ -16,8 +16,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 
@@ -26,10 +26,48 @@
 
 #include <gst/gstconfig.h>
 
+typedef struct _GstPad GstPad;
+typedef struct _GstPadPrivate GstPadPrivate;
+typedef struct _GstPadClass GstPadClass;
+typedef struct _GstPadProbeInfo GstPadProbeInfo;
+
+/**
+ * GstPadDirection:
+ * @GST_PAD_UNKNOWN: direction is unknown.
+ * @GST_PAD_SRC: the pad is a source pad.
+ * @GST_PAD_SINK: the pad is a sink pad.
+ *
+ * The direction of a pad.
+ */
+typedef enum {
+  GST_PAD_UNKNOWN,
+  GST_PAD_SRC,
+  GST_PAD_SINK
+} GstPadDirection;
+
+/**
+ * GstPadMode:
+ * @GST_PAD_MODE_NONE: Pad will not handle dataflow
+ * @GST_PAD_MODE_PUSH: Pad handles dataflow in downstream push mode
+ * @GST_PAD_MODE_PULL: Pad handles dataflow in upstream pull mode
+ *
+ * The status of a GstPad. After activating a pad, which usually happens when the
+ * parent element goes from READY to PAUSED, the GstPadMode defines if the
+ * pad operates in push or pull mode.
+ */
+typedef enum {
+  GST_PAD_MODE_NONE,
+  GST_PAD_MODE_PUSH,
+  GST_PAD_MODE_PULL
+} GstPadMode;
+
+const gchar   * gst_pad_mode_get_name (GstPadMode mode);
+
 #include <gst/gstobject.h>
 #include <gst/gstbuffer.h>
 #include <gst/gstbufferlist.h>
 #include <gst/gstcaps.h>
+#include <gst/gstpadtemplate.h>
 #include <gst/gstevent.h>
 #include <gst/gstquery.h>
 #include <gst/gsttask.h>
@@ -47,9 +85,6 @@ G_BEGIN_DECLS
 #define GST_PAD_CAST(obj)		((GstPad*)(obj))
 
 
-typedef struct _GstPad GstPad;
-typedef struct _GstPadPrivate GstPadPrivate;
-typedef struct _GstPadClass GstPadClass;
 
 /**
  * GstPadLinkReturn:
@@ -93,38 +128,34 @@ typedef enum {
 
 /**
  * GstFlowReturn:
- * @GST_FLOW_RESEND:		 Resend buffer, possibly with new caps (not
- *                                 sent yet) (unused/unimplemented).
  * @GST_FLOW_OK:		 Data passing was ok.
  * @GST_FLOW_NOT_LINKED:	 Pad is not linked.
- * @GST_FLOW_WRONG_STATE:	 Pad is in wrong state.
- * @GST_FLOW_UNEXPECTED:	 Did not expect anything, like after EOS.
+ * @GST_FLOW_FLUSHING:	         Pad is flushing.
+ * @GST_FLOW_EOS:                Pad is EOS.
  * @GST_FLOW_NOT_NEGOTIATED:	 Pad is not negotiated.
- * @GST_FLOW_ERROR:		 Some (fatal) error occured. Element generating
+ * @GST_FLOW_ERROR:		 Some (fatal) error occurred. Element generating
  *                               this error should post an error message with more
  *                               details.
  * @GST_FLOW_NOT_SUPPORTED:	 This operation is not supported.
  * @GST_FLOW_CUSTOM_SUCCESS:	 Elements can use values starting from
  *                               this (and higher) to define custom success
- *                               codes. Since 0.10.7.
+ *                               codes.
  * @GST_FLOW_CUSTOM_SUCCESS_1:	 Pre-defined custom success code (define your
  *                               custom success code to this to avoid compiler
- *                               warnings). Since 0.10.29.
- * @GST_FLOW_CUSTOM_SUCCESS_2:	 Pre-defined custom success code. Since 0.10.29.
+ *                               warnings).
+ * @GST_FLOW_CUSTOM_SUCCESS_2:	 Pre-defined custom success code.
  * @GST_FLOW_CUSTOM_ERROR:	 Elements can use values starting from
  *                               this (and lower) to define custom error codes.
- *                               Since 0.10.7.
  * @GST_FLOW_CUSTOM_ERROR_1:	 Pre-defined custom error code (define your
  *                               custom error code to this to avoid compiler
- *                               warnings). Since 0.10.29.
- * @GST_FLOW_CUSTOM_ERROR_2:	 Pre-defined custom error code. Since 0.10.29.
+ *                               warnings).
+ * @GST_FLOW_CUSTOM_ERROR_2:	 Pre-defined custom error code.
  *
  * The result of passing data to a pad.
  *
  * Note that the custom return values should not be exposed outside of the
- * element scope and are available since 0.10.7.
+ * element scope.
  */
-/* FIXME 0.11: remove custom flow returns */
 typedef enum {
   /* custom success starts here */
   GST_FLOW_CUSTOM_SUCCESS_2 = 102,
@@ -132,13 +163,12 @@ typedef enum {
   GST_FLOW_CUSTOM_SUCCESS = 100,
 
   /* core predefined */
-  GST_FLOW_RESEND	  =  1,
   GST_FLOW_OK		  =  0,
   /* expected failures */
   GST_FLOW_NOT_LINKED     = -1,
-  GST_FLOW_WRONG_STATE    = -2,
+  GST_FLOW_FLUSHING       = -2,
   /* error cases */
-  GST_FLOW_UNEXPECTED     = -3,
+  GST_FLOW_EOS            = -3,
   GST_FLOW_NOT_NEGOTIATED = -4,
   GST_FLOW_ERROR	  = -5,
   GST_FLOW_NOT_SUPPORTED  = -6,
@@ -149,55 +179,23 @@ typedef enum {
   GST_FLOW_CUSTOM_ERROR_2 = -102
 } GstFlowReturn;
 
-/**
- * GST_FLOW_IS_FATAL:
- * @ret: a #GstFlowReturn value
- *
- * Macro to test if the given #GstFlowReturn value indicates a fatal
- * error. This macro is mainly used in elements driving the pipeline to decide
- * whether an error message should be posted on the bus. Note that such
- * elements may also need to post an error message in the #GST_FLOW_NOT_LINKED
- * case which is not caught by this macro.
- *
- * Deprecated: This macro is badly named and can't be used in any real
- * scenarios without additional checks.
- */
-#ifndef GST_DISABLE_DEPRECATED
-#define GST_FLOW_IS_FATAL(ret) ((ret) <= GST_FLOW_UNEXPECTED)
-#endif
-
-/**
- * GST_FLOW_IS_SUCCESS:
- * @ret: a #GstFlowReturn value
- *
- * Macro to test if the given #GstFlowReturn value indicates a
- * successfull result
- * This macro is mainly used in elements to decide if the processing
- * of a buffer was successfull.
- *
- * Since: 0.10.7
- *
- * Deprecated: This macro is badly named and can't be used in any real
- * scenarios without additional checks.
- */
-#ifndef GST_DISABLE_DEPRECATED
-#define GST_FLOW_IS_SUCCESS(ret) ((ret) >= GST_FLOW_OK)
-#endif
-
-const gchar*	        gst_flow_get_name	(GstFlowReturn ret);
-GQuark			gst_flow_to_quark	(GstFlowReturn ret);
+const gchar*	        gst_flow_get_name (GstFlowReturn ret);
+GQuark			          gst_flow_to_quark (GstFlowReturn ret);
+const gchar*          gst_pad_link_get_name (GstPadLinkReturn ret);
 
 /**
  * GstPadLinkCheck:
  * @GST_PAD_LINK_CHECK_NOTHING: Don't check hierarchy or caps compatibility.
  * @GST_PAD_LINK_CHECK_HIERARCHY: Check the pads have same parents/grandparents.
  *   Could be omitted if it is already known that the two elements that own the
- *   pads are in the same bin. 
+ *   pads are in the same bin.
  * @GST_PAD_LINK_CHECK_TEMPLATE_CAPS: Check if the pads are compatible by using
  *   their template caps. This is much faster than @GST_PAD_LINK_CHECK_CAPS, but
  *   would be unsafe e.g. if one pad has %GST_CAPS_ANY.
  * @GST_PAD_LINK_CHECK_CAPS: Check if the pads are compatible by comparing the
- *   caps returned by gst_pad_get_caps().
+ *   caps returned by gst_pad_query_caps().
+ * @GST_PAD_LINK_CHECK_DEFAULT: The default checks done when linking
+ *   pads (i.e. the ones used by gst_pad_link()).
  *
  * The amount of checking to be done when linking pads. @GST_PAD_LINK_CHECK_CAPS
  * and @GST_PAD_LINK_CHECK_TEMPLATE_CAPS are mutually exclusive. If both are
@@ -209,81 +207,53 @@ GQuark			gst_flow_to_quark	(GstFlowReturn ret);
  * use the default checks (%GST_PAD_LINK_CHECK_DEFAULT) or the regular methods
  * for linking the pads.
  * </para></warning>
- *
- * Since: 0.10.30
  */
 
 typedef enum {
   GST_PAD_LINK_CHECK_NOTHING       = 0,
   GST_PAD_LINK_CHECK_HIERARCHY     = 1 << 0,
   GST_PAD_LINK_CHECK_TEMPLATE_CAPS = 1 << 1,
-  GST_PAD_LINK_CHECK_CAPS          = 1 << 2
+  GST_PAD_LINK_CHECK_CAPS          = 1 << 2,
+
+  GST_PAD_LINK_CHECK_DEFAULT       = GST_PAD_LINK_CHECK_HIERARCHY | GST_PAD_LINK_CHECK_CAPS
 } GstPadLinkCheck;
-
-/**
- * GST_PAD_LINK_CHECK_DEFAULT:
- *
- * The default checks done when linking pads (i.e. the ones used by 
- * gst_pad_link()).
- *
- * Since: 0.10.30
- */
-#define GST_PAD_LINK_CHECK_DEFAULT (GST_PAD_LINK_CHECK_HIERARCHY | GST_PAD_LINK_CHECK_CAPS)
-
-/**
- * GstActivateMode:
- * @GST_ACTIVATE_NONE:	  	 Pad will not handle dataflow
- * @GST_ACTIVATE_PUSH:		 Pad handles dataflow in downstream push mode
- * @GST_ACTIVATE_PULL:     	 Pad handles dataflow in upstream pull mode
- *
- * The status of a GstPad. After activating a pad, which usually happens when the
- * parent element goes from READY to PAUSED, the GstActivateMode defines if the
- * pad operates in push or pull mode.
- */
-typedef enum {
-  GST_ACTIVATE_NONE,
-  GST_ACTIVATE_PUSH,
-  GST_ACTIVATE_PULL
-} GstActivateMode;
-
-/**
- * GST_PAD_MODE_ACTIVATE:
- * @mode: a #GstActivateMode
- *
- * Macro to test if the given #GstActivateMode value indicates that datapassing
- * is possible or not.
- */
-#define GST_PAD_MODE_ACTIVATE(mode) ((mode) != GST_ACTIVATE_NONE)
 
 /* pad states */
 /**
  * GstPadActivateFunction:
  * @pad: a #GstPad
+ * @parent: the parent of @pad
  *
  * This function is called when the pad is activated during the element
  * READY to PAUSED state change. By default this function will call the
  * activate function that puts the pad in push mode but elements can
  * override this function to activate the pad in pull mode if they wish.
  *
- * Returns: TRUE if the pad could be activated.
+ * Returns: %TRUE if the pad could be activated.
  */
-typedef gboolean		(*GstPadActivateFunction)	(GstPad *pad);
+typedef gboolean		(*GstPadActivateFunction)	(GstPad *pad, GstObject *parent);
 /**
  * GstPadActivateModeFunction:
  * @pad: a #GstPad
+ * @parent: the parent of @pad
+ * @mode: the requested activation mode of @pad
  * @active: activate or deactivate the pad.
  *
  * The prototype of the push and pull activate functions.
  *
- * Returns: TRUE if the pad could be activated or deactivated.
+ * Returns: %TRUE if the pad could be activated or deactivated.
  */
-typedef gboolean		(*GstPadActivateModeFunction)	(GstPad *pad, gboolean active);
+typedef gboolean		(*GstPadActivateModeFunction)	(GstPad *pad, GstObject *parent,
+                                                                 GstPadMode mode, gboolean active);
 
 
 /* data passing */
 /**
  * GstPadChainFunction:
  * @pad: the sink #GstPad that performed the chain.
+ * @parent: (allow-none): the parent of @pad. If the #GST_PAD_FLAG_NEED_PARENT
+ *          flag is set, @parent is guaranteed to be not-%NULL and remain valid
+ *          during the execution of this function.
  * @buffer: the #GstBuffer that is chained, not %NULL.
  *
  * A function that will be called on sinkpads when chaining buffers.
@@ -298,11 +268,15 @@ typedef gboolean		(*GstPadActivateModeFunction)	(GstPad *pad, gboolean active);
  *
  * Returns: #GST_FLOW_OK for success
  */
-typedef GstFlowReturn		(*GstPadChainFunction)		(GstPad *pad, GstBuffer *buffer);
+typedef GstFlowReturn		(*GstPadChainFunction)		(GstPad *pad, GstObject *parent,
+                                                                 GstBuffer *buffer);
 
 /**
  * GstPadChainListFunction:
  * @pad: the sink #GstPad that performed the chain.
+ * @parent: (allow-none): the parent of @pad. If the #GST_PAD_FLAG_NEED_PARENT
+ *          flag is set, @parent is guaranteed to be not-%NULL and remain valid
+ *          during the execution of this function.
  * @list: the #GstBufferList that is chained, not %NULL.
  *
  * A function that will be called on sinkpads when chaining buffer lists.
@@ -317,14 +291,18 @@ typedef GstFlowReturn		(*GstPadChainFunction)		(GstPad *pad, GstBuffer *buffer);
  *
  * Returns: #GST_FLOW_OK for success
  */
-typedef GstFlowReturn		(*GstPadChainListFunction)	(GstPad *pad, GstBufferList *list);
+typedef GstFlowReturn		(*GstPadChainListFunction)	(GstPad *pad, GstObject *parent,
+                                                                 GstBufferList *list);
 
 /**
  * GstPadGetRangeFunction:
  * @pad: the src #GstPad to perform the getrange on.
+ * @parent: (allow-none): the parent of @pad. If the #GST_PAD_FLAG_NEED_PARENT
+ *          flag is set, @parent is guaranteed to be not-%NULL and remain valid
+ *          during the execution of this function.
  * @offset: the offset of the range
  * @length: the length of the range
- * @buffer: a memory location to hold the result buffer, cannot be NULL.
+ * @buffer: a memory location to hold the result buffer, cannot be %NULL.
  *
  * This function will be called on source pads when a peer element
  * request a buffer at the specified @offset and @length. If this function
@@ -333,7 +311,8 @@ typedef GstFlowReturn		(*GstPadChainListFunction)	(GstPad *pad, GstBufferList *l
  *
  * This function is installed on a source pad with
  * gst_pad_set_getrange_function() and can only be called on source pads after
- * they are successfully activated with gst_pad_activate_pull().
+ * they are successfully activated with gst_pad_activate_mode() with the
+ * #GST_PAD_MODE_PULL.
  *
  * @offset and @length are always given in byte units. @offset must normally be a value
  * between 0 and the length in bytes of the data available on @pad. The
@@ -341,7 +320,7 @@ typedef GstFlowReturn		(*GstPadChainListFunction)	(GstPad *pad, GstBufferList *l
  * #GST_QUERY_SEEKING.
  *
  * Any @offset larger or equal than the length will make the function return
- * #GST_FLOW_UNEXPECTED, which corresponds to EOS. In this case @buffer does not
+ * #GST_FLOW_EOS, which corresponds to EOS. In this case @buffer does not
  * contain a valid buffer.
  *
  * The buffer size of @buffer will only be smaller than @length when @offset is
@@ -362,54 +341,33 @@ typedef GstFlowReturn		(*GstPadChainListFunction)	(GstPad *pad, GstBufferList *l
  * Returns: #GST_FLOW_OK for success and a valid buffer in @buffer. Any other
  * return value leaves @buffer undefined.
  */
-typedef GstFlowReturn		(*GstPadGetRangeFunction)	(GstPad *pad, guint64 offset,
-		                                                 guint length, GstBuffer **buffer);
+typedef GstFlowReturn		(*GstPadGetRangeFunction)	(GstPad *pad, GstObject *parent,
+                                                                 guint64 offset, guint length,
+                                                                 GstBuffer **buffer);
 
 /**
  * GstPadEventFunction:
  * @pad: the #GstPad to handle the event.
+ * @parent: (allow-none): the parent of @pad. If the #GST_PAD_FLAG_NEED_PARENT
+ *          flag is set, @parent is guaranteed to be not-%NULL and remain valid
+ *          during the execution of this function.
  * @event: the #GstEvent to handle.
  *
  * Function signature to handle an event for the pad.
  *
- * Returns: TRUE if the pad could handle the event.
+ * Returns: %TRUE if the pad could handle the event.
  */
-typedef gboolean		(*GstPadEventFunction)		(GstPad *pad, GstEvent *event);
+typedef gboolean		(*GstPadEventFunction)		(GstPad *pad, GstObject *parent,
+                                                                 GstEvent *event);
 
-
-/* FIXME: 0.11: deprecate me, check range should use seeking query */
-/**
- * GstPadCheckGetRangeFunction:
- * @pad: a #GstPad
- *
- * Check if @pad can be activated in pull mode.
- *
- * This function will be deprecated after 0.10; use the seeking query to check
- * if a pad can support random access.
- *
- * Returns: TRUE if the pad can operate in pull mode.
- */
-typedef gboolean		(*GstPadCheckGetRangeFunction)	(GstPad *pad);
 
 /* internal links */
 /**
- * GstPadIntLinkFunction:
- * @pad: The #GstPad to query.
- *
- * The signature of the internal pad link function.
- *
- * Returns: (element-type Gst.Pad) (transfer container): a newly allocated #GList of pads that are linked to the given pad on
- * the inside of the parent element.
- *
- * The caller must call g_list_free() on it after use.
- *
- * Deprecated: use the threadsafe #GstPadIterIntLinkFunction instead.
- */
-typedef GList*			(*GstPadIntLinkFunction)	(GstPad *pad);
-
-/**
  * GstPadIterIntLinkFunction:
  * @pad: The #GstPad to query.
+ * @parent: (allow-none): the parent of @pad. If the #GST_PAD_FLAG_NEED_PARENT
+ *          flag is set, @parent is guaranteed to be not-%NULL and remain valid
+ *          during the execution of this function.
  *
  * The signature of the internal pad link iterator function.
  *
@@ -417,199 +375,278 @@ typedef GList*			(*GstPadIntLinkFunction)	(GstPad *pad);
  * linked to the given pad on the inside of the parent element.
  *
  * the caller must call gst_iterator_free() after usage.
- *
- * Since 0.10.21
  */
-typedef GstIterator*           (*GstPadIterIntLinkFunction)    (GstPad *pad);
+typedef GstIterator*           (*GstPadIterIntLinkFunction)    (GstPad *pad, GstObject *parent);
 
 /* generic query function */
 /**
- * GstPadQueryTypeFunction:
- * @pad: a #GstPad to query
- *
- * The signature of the query types function.
- *
- * Returns: a constant array of query types
- */
-typedef const GstQueryType*	(*GstPadQueryTypeFunction)	(GstPad *pad);
-
-/**
  * GstPadQueryFunction:
  * @pad: the #GstPad to query.
+ * @parent: (allow-none): the parent of @pad. If the #GST_PAD_FLAG_NEED_PARENT
+ *          flag is set, @parent is guaranteed to be not-%NULL and remain valid
+ *          during the execution of this function.
  * @query: the #GstQuery object to execute
  *
  * The signature of the query function.
  *
- * Returns: TRUE if the query could be performed.
+ * Returns: %TRUE if the query could be performed.
  */
-typedef gboolean		(*GstPadQueryFunction)		(GstPad *pad, GstQuery *query);
+typedef gboolean		(*GstPadQueryFunction)		(GstPad *pad, GstObject *parent,
+                                                                 GstQuery *query);
 
 
 /* linking */
 /**
- * GstPadLinkFunction
+ * GstPadLinkFunction:
  * @pad: the #GstPad that is linked.
+ * @parent: (allow-none): the parent of @pad. If the #GST_PAD_FLAG_NEED_PARENT
+ *          flag is set, @parent is guaranteed to be not-%NULL and remain valid
+ *          during the execution of this function.
  * @peer: the peer #GstPad of the link
  *
  * Function signature to handle a new link on the pad.
  *
  * Returns: the result of the link with the specified peer.
  */
-typedef GstPadLinkReturn	(*GstPadLinkFunction)		(GstPad *pad, GstPad *peer);
+typedef GstPadLinkReturn	(*GstPadLinkFunction)		(GstPad *pad, GstObject *parent, GstPad *peer);
 /**
- * GstPadUnlinkFunction
+ * GstPadUnlinkFunction:
  * @pad: the #GstPad that is linked.
+ * @parent: (allow-none): the parent of @pad. If the #GST_PAD_FLAG_NEED_PARENT
+ *          flag is set, @parent is guaranteed to be not-%NULL and remain valid
+ *          during the execution of this function.
  *
  * Function signature to handle a unlinking the pad prom its peer.
  */
-typedef void			(*GstPadUnlinkFunction)		(GstPad *pad);
+typedef void			(*GstPadUnlinkFunction)		(GstPad *pad, GstObject *parent);
 
-
-/* caps nego */
-/**
- * GstPadGetCapsFunction:
- * @pad: the #GstPad to get the capabilities of.
- *
- * Returns a copy of the capabilities of the specified pad. By default this
- * function will return the pad template capabilities, but can optionally
- * be overridden by elements.
- *
- * Returns: a newly allocated copy #GstCaps of the pad.
- */
-typedef GstCaps*		(*GstPadGetCapsFunction)	(GstPad *pad);
-
-/**
- * GstPadSetCapsFunction:
- * @pad: the #GstPad to set the capabilities of.
- * @caps: the #GstCaps to set
- *
- * Set @caps on @pad. By default this function updates the caps of the
- * pad but the function can be overriden by elements to perform extra
- * actions or verifications.
- *
- * Returns: TRUE if the caps could be set on the pad.
- */
-typedef gboolean		(*GstPadSetCapsFunction)	(GstPad *pad, GstCaps *caps);
-/**
- * GstPadAcceptCapsFunction:
- * @pad: the #GstPad to check
- * @caps: the #GstCaps to check
- *
- * Check if @pad can accept @caps. By default this function will see if @caps
- * intersect with the result from gst_pad_get_caps() by can be overridden to
- * perform extra checks.
- *
- * Returns: TRUE if the caps can be accepted by the pad.
- */
-typedef gboolean		(*GstPadAcceptCapsFunction)	(GstPad *pad, GstCaps *caps);
-/**
- * GstPadFixateCapsFunction:
- * @pad: a #GstPad
- * @caps: the #GstCaps to fixate
- *
- * Given possibly unfixed caps @caps, let @pad use its default prefered
- * format to make a fixed caps. @caps should be writable. By default this
- * function will pick the first value of any ranges or lists in the caps but
- * elements can override this function to perform other behaviour.
- */
-typedef void			(*GstPadFixateCapsFunction)	(GstPad *pad, GstCaps *caps);
-/**
- * GstPadBufferAllocFunction:
- * @pad: a sink #GstPad
- * @offset: the desired offset of the buffer
- * @size: the desired size of the buffer
- * @caps: the desired caps of the buffer
- * @buf: pointer to hold the allocated buffer.
- *
- * Ask the sinkpad @pad to allocate a buffer with @offset, @size and @caps.
- * The result will be stored in @buf.
- *
- * The purpose of this function is to allocate a buffer that is optimal to
- * be processed by @pad. The function is mostly overridden by elements that can
- * provide a hardware buffer in order to avoid additional memcpy operations.
- *
- * The function can return a buffer that has caps different from the requested
- * @caps, in which case the upstream element requests a format change to this
- * new caps.
- * If a format change was requested, the returned buffer will be one to hold
- * the data of said new caps, so its size might be different from the requested
- * @size.
- *
- * When this function returns anything else than #GST_FLOW_OK, the buffer allocation
- * failed and @buf does not contain valid data. If the function returns #GST_FLOW_OK and
- * the @buf is NULL, a #GstBuffer will be created with @caps, @offset and @size.
- *
- * By default this function returns a new buffer of @size and with @caps containing
- * purely malloced data. The buffer should be freed with gst_buffer_unref()
- * after usage.
- *
- * Returns: #GST_FLOW_OK if @buf contains a valid buffer, any other return
- *  value means @buf does not hold a valid buffer.
- */
-typedef GstFlowReturn		(*GstPadBufferAllocFunction)	(GstPad *pad, guint64 offset, guint size,
-								 GstCaps *caps, GstBuffer **buf);
 
 /* misc */
 /**
- * GstPadDispatcherFunction:
- * @pad: the #GstPad that is dispatched.
- * @data: the gpointer to optional user data.
- *
- * A dispatcher function is called for all internally linked pads, see
- * gst_pad_dispatcher().
- *
- * Returns: TRUE if the dispatching procedure has to be stopped.
- */
-typedef gboolean		(*GstPadDispatcherFunction)	(GstPad *pad, gpointer data);
-
-/**
- * GstPadBlockCallback:
- * @pad: the #GstPad that is blockend or unblocked.
- * @blocked: blocking state for the pad
+ * GstPadForwardFunction:
+ * @pad: the #GstPad that is forwarded.
  * @user_data: the gpointer to optional user data.
  *
- * Callback used by gst_pad_set_blocked_async(). Gets called when the blocking
- * operation succeeds.
+ * A forward function is called for all internally linked pads, see
+ * gst_pad_forward().
+ *
+ * Returns: %TRUE if the dispatching procedure has to be stopped.
  */
-typedef void			(*GstPadBlockCallback)		(GstPad *pad, gboolean blocked, gpointer user_data);
+typedef gboolean		(*GstPadForwardFunction)	(GstPad *pad, gpointer user_data);
 
 /**
- * GstPadDirection:
- * @GST_PAD_UNKNOWN: direction is unknown.
- * @GST_PAD_SRC: the pad is a source pad.
- * @GST_PAD_SINK: the pad is a sink pad.
+ * GstPadProbeType:
+ * @GST_PAD_PROBE_TYPE_INVALID: invalid probe type
+ * @GST_PAD_PROBE_TYPE_IDLE: probe idle pads and block
+ * @GST_PAD_PROBE_TYPE_BLOCK: probe and block pads
+ * @GST_PAD_PROBE_TYPE_BUFFER: probe buffers
+ * @GST_PAD_PROBE_TYPE_BUFFER_LIST: probe buffer lists
+ * @GST_PAD_PROBE_TYPE_EVENT_DOWNSTREAM: probe downstream events
+ * @GST_PAD_PROBE_TYPE_EVENT_UPSTREAM: probe upstream events
+ * @GST_PAD_PROBE_TYPE_EVENT_FLUSH: probe flush events. This probe has to be
+ *     explicitly enabled and is not included in the
+ *     @@GST_PAD_PROBE_TYPE_EVENT_DOWNSTREAM or
+ *     @@GST_PAD_PROBE_TYPE_EVENT_UPSTREAM probe types.
+ * @GST_PAD_PROBE_TYPE_QUERY_DOWNSTREAM: probe downstream queries
+ * @GST_PAD_PROBE_TYPE_QUERY_UPSTREAM: probe upstream queries
+ * @GST_PAD_PROBE_TYPE_PUSH: probe push
+ * @GST_PAD_PROBE_TYPE_PULL: probe pull
+ * @GST_PAD_PROBE_TYPE_BLOCKING: probe and block at the next opportunity, at data flow or when idle
+ * @GST_PAD_PROBE_TYPE_DATA_DOWNSTREAM: probe downstream data (buffers, buffer lists, and events)
+ * @GST_PAD_PROBE_TYPE_DATA_UPSTREAM: probe upstream data (events)
+ * @GST_PAD_PROBE_TYPE_DATA_BOTH: probe upstream and downstream data (buffers, buffer lists, and events)
+ * @GST_PAD_PROBE_TYPE_BLOCK_DOWNSTREAM: probe and block downstream data (buffers, buffer lists, and events)
+ * @GST_PAD_PROBE_TYPE_BLOCK_UPSTREAM: probe and block upstream data (events)
+ * @GST_PAD_PROBE_TYPE_EVENT_BOTH: probe upstream and downstream events
+ * @GST_PAD_PROBE_TYPE_QUERY_BOTH: probe upstream and downstream queries
+ * @GST_PAD_PROBE_TYPE_ALL_BOTH: probe upstream events and queries and downstream buffers, buffer lists, events and queries
+ * @GST_PAD_PROBE_TYPE_SCHEDULING: probe push and pull
  *
- * The direction of a pad.
+ * The different probing types that can occur. When either one of
+ * @GST_PAD_PROBE_TYPE_IDLE or @GST_PAD_PROBE_TYPE_BLOCK is used, the probe will be a
+ * blocking probe.
  */
-typedef enum {
-  GST_PAD_UNKNOWN,
-  GST_PAD_SRC,
-  GST_PAD_SINK
-} GstPadDirection;
+typedef enum
+{
+  GST_PAD_PROBE_TYPE_INVALID          = 0,
+  /* flags to control blocking */
+  GST_PAD_PROBE_TYPE_IDLE             = (1 << 0),
+  GST_PAD_PROBE_TYPE_BLOCK            = (1 << 1),
+  /* flags to select datatypes */
+  GST_PAD_PROBE_TYPE_BUFFER           = (1 << 4),
+  GST_PAD_PROBE_TYPE_BUFFER_LIST      = (1 << 5),
+  GST_PAD_PROBE_TYPE_EVENT_DOWNSTREAM = (1 << 6),
+  GST_PAD_PROBE_TYPE_EVENT_UPSTREAM   = (1 << 7),
+  GST_PAD_PROBE_TYPE_EVENT_FLUSH      = (1 << 8),
+  GST_PAD_PROBE_TYPE_QUERY_DOWNSTREAM = (1 << 9),
+  GST_PAD_PROBE_TYPE_QUERY_UPSTREAM   = (1 << 10),
+  /* flags to select scheduling mode */
+  GST_PAD_PROBE_TYPE_PUSH             = (1 << 12),
+  GST_PAD_PROBE_TYPE_PULL             = (1 << 13),
+
+  /* flag combinations */
+  GST_PAD_PROBE_TYPE_BLOCKING         = GST_PAD_PROBE_TYPE_IDLE | GST_PAD_PROBE_TYPE_BLOCK,
+  GST_PAD_PROBE_TYPE_DATA_DOWNSTREAM  = GST_PAD_PROBE_TYPE_BUFFER | GST_PAD_PROBE_TYPE_BUFFER_LIST | GST_PAD_PROBE_TYPE_EVENT_DOWNSTREAM,
+  GST_PAD_PROBE_TYPE_DATA_UPSTREAM    = GST_PAD_PROBE_TYPE_EVENT_UPSTREAM,
+  GST_PAD_PROBE_TYPE_DATA_BOTH        = GST_PAD_PROBE_TYPE_DATA_DOWNSTREAM | GST_PAD_PROBE_TYPE_DATA_UPSTREAM,
+  GST_PAD_PROBE_TYPE_BLOCK_DOWNSTREAM = GST_PAD_PROBE_TYPE_BLOCK | GST_PAD_PROBE_TYPE_DATA_DOWNSTREAM,
+  GST_PAD_PROBE_TYPE_BLOCK_UPSTREAM   = GST_PAD_PROBE_TYPE_BLOCK | GST_PAD_PROBE_TYPE_DATA_UPSTREAM,
+  GST_PAD_PROBE_TYPE_EVENT_BOTH       = GST_PAD_PROBE_TYPE_EVENT_DOWNSTREAM | GST_PAD_PROBE_TYPE_EVENT_UPSTREAM,
+  GST_PAD_PROBE_TYPE_QUERY_BOTH       = GST_PAD_PROBE_TYPE_QUERY_DOWNSTREAM | GST_PAD_PROBE_TYPE_QUERY_UPSTREAM,
+  GST_PAD_PROBE_TYPE_ALL_BOTH         = GST_PAD_PROBE_TYPE_DATA_BOTH | GST_PAD_PROBE_TYPE_QUERY_BOTH,
+  GST_PAD_PROBE_TYPE_SCHEDULING       = GST_PAD_PROBE_TYPE_PUSH | GST_PAD_PROBE_TYPE_PULL
+} GstPadProbeType;
+
+
+/**
+ * GstPadProbeReturn:
+ * @GST_PAD_PROBE_OK: normal probe return value
+ * @GST_PAD_PROBE_DROP: drop data in data probes. For push mode this means that
+ *        the data item is not sent downstream. For pull mode, it means that the
+ *        data item is not passed upstream. In both cases, this result code
+ *        means that #GST_FLOW_OK or %TRUE is returned to the caller.
+ * @GST_PAD_PROBE_REMOVE: remove probe
+ * @GST_PAD_PROBE_PASS: pass the data item in the block probe and block on
+ *                         the next item
+ *
+ * Different return values for the #GstPadProbeCallback.
+ */
+typedef enum
+{
+  GST_PAD_PROBE_DROP,
+  GST_PAD_PROBE_OK,
+  GST_PAD_PROBE_REMOVE,
+  GST_PAD_PROBE_PASS,
+} GstPadProbeReturn;
+
+
+/**
+ * GstPadProbeInfo:
+ * @type: the current probe type
+ * @id: the id of the probe
+ * @data: (allow-none): type specific data, check the @type field to know the
+ *    datatype.  This field can be %NULL.
+ * @offset: offset of pull probe, this field is valid when @type contains
+ *    #GST_PAD_PROBE_TYPE_PULL
+ * @size: size of pull probe, this field is valid when @type contains
+ *    #GST_PAD_PROBE_TYPE_PULL
+ *
+ * Info passed in the #GstPadProbeCallback.
+ */
+struct _GstPadProbeInfo
+{
+  GstPadProbeType type;
+  gulong id;
+  gpointer data;
+  guint64 offset;
+  guint size;
+
+  /*< private >*/
+  gpointer _gst_reserved[GST_PADDING];
+};
+
+#define GST_PAD_PROBE_INFO_TYPE(d)         ((d)->type)
+#define GST_PAD_PROBE_INFO_ID(d)           ((d)->id)
+#define GST_PAD_PROBE_INFO_DATA(d)         ((d)->data)
+
+#define GST_PAD_PROBE_INFO_BUFFER(d)       GST_BUFFER_CAST(GST_PAD_PROBE_INFO_DATA(d))
+#define GST_PAD_PROBE_INFO_BUFFER_LIST(d)  GST_BUFFER_LIST_CAST(GST_PAD_PROBE_INFO_DATA(d))
+#define GST_PAD_PROBE_INFO_EVENT(d)        GST_EVENT_CAST(GST_PAD_PROBE_INFO_DATA(d))
+#define GST_PAD_PROBE_INFO_QUERY(d)        GST_QUERY_CAST(GST_PAD_PROBE_INFO_DATA(d))
+
+#define GST_PAD_PROBE_INFO_OFFSET(d)       ((d)->offset)
+#define GST_PAD_PROBE_INFO_SIZE(d)         ((d)->size)
+
+GstEvent*      gst_pad_probe_info_get_event       (GstPadProbeInfo * info);
+GstQuery*      gst_pad_probe_info_get_query       (GstPadProbeInfo * info);
+GstBuffer*     gst_pad_probe_info_get_buffer      (GstPadProbeInfo * info);
+GstBufferList* gst_pad_probe_info_get_buffer_list (GstPadProbeInfo * info);
+
+/**
+ * GstPadProbeCallback:
+ * @pad: the #GstPad that is blocked
+ * @info: #GstPadProbeInfo
+ * @user_data: the gpointer to optional user data.
+ *
+ * Callback used by gst_pad_add_probe(). Gets called to notify about the current
+ * blocking type.
+ *
+ * The callback is allowed to modify the data pointer in @info.
+ *
+ * Returns: a #GstPadProbeReturn
+ */
+typedef GstPadProbeReturn   (*GstPadProbeCallback)   (GstPad *pad, GstPadProbeInfo *info,
+                                                      gpointer user_data);
+
+/**
+ * GstPadStickyEventsForeachFunction:
+ * @pad: the #GstPad.
+ * @event: (allow-none): a sticky #GstEvent.
+ * @user_data: the #gpointer to optional user data.
+ *
+ * Callback used by gst_pad_sticky_events_foreach().
+ *
+ * When this function returns %TRUE, the next event will be
+ * returned. When %FALSE is returned, gst_pad_sticky_events_foreach() will return.
+ *
+ * When @event is set to %NULL, the item will be removed from the list of sticky events.
+ * @event can be replaced by assigning a new reference to it.
+ * This function is responsible for unreffing the old event when
+ * removing or modifying.
+ *
+ * Returns: %TRUE if the iteration should continue
+ */
+typedef gboolean  (*GstPadStickyEventsForeachFunction) (GstPad *pad, GstEvent **event,
+                                                        gpointer user_data);
 
 /**
  * GstPadFlags:
- * @GST_PAD_BLOCKED: is dataflow on a pad blocked
- * @GST_PAD_FLUSHING: is pad refusing buffers
- * @GST_PAD_IN_GETCAPS: GstPadGetCapsFunction() is running now
- * @GST_PAD_IN_SETCAPS: GstPadSetCapsFunction() is running now
- * @GST_PAD_BLOCKING: is pad currently blocking on a buffer or event
+ * @GST_PAD_FLAG_BLOCKED: is dataflow on a pad blocked
+ * @GST_PAD_FLAG_FLUSHING: is pad flushing
+ * @GST_PAD_FLAG_EOS: is pad in EOS state
+ * @GST_PAD_FLAG_BLOCKING: is pad currently blocking on a buffer or event
+ * @GST_PAD_FLAG_NEED_PARENT: ensure that there is a parent object before calling
+ *                       into the pad callbacks.
+ * @GST_PAD_FLAG_NEED_RECONFIGURE: the pad should be reconfigured/renegotiated.
+ *                            The flag has to be unset manually after
+ *                            reconfiguration happened.
+ * @GST_PAD_FLAG_PENDING_EVENTS: the pad has pending events
+ * @GST_PAD_FLAG_FIXED_CAPS: the pad is using fixed caps. This means that
+ *     once the caps are set on the pad, the default caps query function
+ *     will only return those caps.
+ * @GST_PAD_FLAG_PROXY_CAPS: the default event and query handler will forward
+ *                      all events and queries to the internally linked pads
+ *                      instead of discarding them.
+ * @GST_PAD_FLAG_PROXY_ALLOCATION: the default query handler will forward
+ *                      allocation queries to the internally linked pads
+ *                      instead of discarding them.
+ * @GST_PAD_FLAG_PROXY_SCHEDULING: the default query handler will forward
+ *                      scheduling queries to the internally linked pads
+ *                      instead of discarding them.
+ * @GST_PAD_FLAG_ACCEPT_INTERSECT: the default accept-caps handler will check
+ *                      it the caps intersect the query-caps result instead
+ *                      of checking for a subset. This is interesting for
+ *                      parsers that can accept incompletely specified caps.
  * @GST_PAD_FLAG_LAST: offset to define more flags
  *
  * Pad state flags
  */
 typedef enum {
-  GST_PAD_BLOCKED       = (GST_OBJECT_FLAG_LAST << 0),
-  GST_PAD_FLUSHING      = (GST_OBJECT_FLAG_LAST << 1),
-  GST_PAD_IN_GETCAPS    = (GST_OBJECT_FLAG_LAST << 2),
-  GST_PAD_IN_SETCAPS    = (GST_OBJECT_FLAG_LAST << 3),
-  GST_PAD_BLOCKING	= (GST_OBJECT_FLAG_LAST << 4),
+  GST_PAD_FLAG_BLOCKED          = (GST_OBJECT_FLAG_LAST << 0),
+  GST_PAD_FLAG_FLUSHING         = (GST_OBJECT_FLAG_LAST << 1),
+  GST_PAD_FLAG_EOS              = (GST_OBJECT_FLAG_LAST << 2),
+  GST_PAD_FLAG_BLOCKING         = (GST_OBJECT_FLAG_LAST << 3),
+  GST_PAD_FLAG_NEED_PARENT      = (GST_OBJECT_FLAG_LAST << 4),
+  GST_PAD_FLAG_NEED_RECONFIGURE = (GST_OBJECT_FLAG_LAST << 5),
+  GST_PAD_FLAG_PENDING_EVENTS   = (GST_OBJECT_FLAG_LAST << 6),
+  GST_PAD_FLAG_FIXED_CAPS       = (GST_OBJECT_FLAG_LAST << 7),
+  GST_PAD_FLAG_PROXY_CAPS       = (GST_OBJECT_FLAG_LAST << 8),
+  GST_PAD_FLAG_PROXY_ALLOCATION = (GST_OBJECT_FLAG_LAST << 9),
+  GST_PAD_FLAG_PROXY_SCHEDULING = (GST_OBJECT_FLAG_LAST << 10),
+  GST_PAD_FLAG_ACCEPT_INTERSECT = (GST_OBJECT_FLAG_LAST << 11),
   /* padding */
-  GST_PAD_FLAG_LAST     = (GST_OBJECT_FLAG_LAST << 8)
+  GST_PAD_FLAG_LAST        = (GST_OBJECT_FLAG_LAST << 16)
 } GstPadFlags;
-
-/* FIXME: this awful circular dependency need to be resolved properly (see padtemplate.h) */
-typedef struct _GstPadTemplate GstPadTemplate;
 
 /**
  * GstPad:
@@ -617,121 +654,84 @@ typedef struct _GstPadTemplate GstPadTemplate;
  * @padtemplate: padtemplate for this pad
  * @direction: the direction of the pad, cannot change after creating
  *             the pad.
- * @stream_rec_lock: recursive stream lock of the pad, used to protect
- *                   the data used in streaming.
- * @task: task for this pad if the pad is actively driving dataflow.
- * @preroll_lock: lock used when prerolling
- * @preroll_cond: conf to signal preroll
- * @block_cond: conditional to signal pad block
- * @block_callback: callback for the pad block if any
- * @block_data: user data for @block_callback
- * @caps: the current caps of the pad
- * @getcapsfunc: function to get caps of the pad
- * @setcapsfunc: function to set caps on the pad
- * @acceptcapsfunc: function to check if pad can accept caps
- * @fixatecapsfunc: function to fixate caps
- * @activatefunc: pad activation function
- * @activatepushfunc: function to activate/deactivate pad in push mode
- * @activatepullfunc: function to activate/deactivate pad in pull mode
- * @linkfunc: function called when pad is linked
- * @unlinkfunc: function called when pad is unlinked
- * @peer: the pad this pad is linked to
- * @sched_private: private storage for the scheduler
- * @chainfunc: function to chain buffer to pad
- * @checkgetrangefunc: function to check if pad can operate in pull mode
- * @getrangefunc: function to get a range of data from a pad
- * @eventfunc: function to send an event to a pad
- * @mode: current activation mode of the pad
- * @querytypefunc: get list of supported queries
- * @queryfunc: perform a query on the pad
- * @intlinkfunc: get the internal links of this pad
- * @bufferallocfunc: function to allocate a buffer for this pad
- * @do_buffer_signals: counter counting installed buffer signals
- * @do_event_signals: counter counting installed event signals
- * @iterintlinkfunc: get the internal links iterator of this pad
- * @block_destroy_data: notify function for gst_pad_set_blocked_async_full()
  *
  * The #GstPad structure. Use the functions to update the variables.
  */
 struct _GstPad {
-  GstObject			object;
+  GstObject                      object;
 
   /*< public >*/
-  gpointer			element_private;
+  gpointer                       element_private;
 
-  GstPadTemplate		*padtemplate;
+  GstPadTemplate                *padtemplate;
 
-  GstPadDirection		 direction;
+  GstPadDirection                direction;
 
-  /*< public >*/ /* with STREAM_LOCK */
+  /*< private >*/
   /* streaming rec_lock */
-  GStaticRecMutex		*stream_rec_lock;
+  GRecMutex		         stream_rec_lock;
   GstTask			*task;
-  /*< public >*/ /* with PREROLL_LOCK */
-  GMutex			*preroll_lock;
-  GCond				*preroll_cond;
 
-  /*< public >*/ /* with LOCK */
   /* block cond, mutex is from the object */
-  GCond				*block_cond;
-  GstPadBlockCallback		 block_callback;
-  gpointer			 block_data;
+  GCond				 block_cond;
+  GHookList                      probes;
 
-  /* the pad capabilities */
-  GstCaps			*caps;
-  GstPadGetCapsFunction		getcapsfunc;
-  GstPadSetCapsFunction		setcapsfunc;
-  GstPadAcceptCapsFunction	 acceptcapsfunc;
-  GstPadFixateCapsFunction	 fixatecapsfunc;
-
+  GstPadMode		         mode;
   GstPadActivateFunction	 activatefunc;
-  GstPadActivateModeFunction	 activatepushfunc;
-  GstPadActivateModeFunction	 activatepullfunc;
+  gpointer                       activatedata;
+  GDestroyNotify                 activatenotify;
+  GstPadActivateModeFunction	 activatemodefunc;
+  gpointer                       activatemodedata;
+  GDestroyNotify                 activatemodenotify;
 
   /* pad link */
-  GstPadLinkFunction		 linkfunc;
-  GstPadUnlinkFunction		 unlinkfunc;
   GstPad			*peer;
-
-  gpointer			 sched_private;
+  GstPadLinkFunction		 linkfunc;
+  gpointer                       linkdata;
+  GDestroyNotify                 linknotify;
+  GstPadUnlinkFunction		 unlinkfunc;
+  gpointer                       unlinkdata;
+  GDestroyNotify                 unlinknotify;
 
   /* data transport functions */
   GstPadChainFunction		 chainfunc;
-  GstPadCheckGetRangeFunction	 checkgetrangefunc;
+  gpointer                       chaindata;
+  GDestroyNotify                 chainnotify;
+  GstPadChainListFunction        chainlistfunc;
+  gpointer                       chainlistdata;
+  GDestroyNotify                 chainlistnotify;
   GstPadGetRangeFunction	 getrangefunc;
+  gpointer                       getrangedata;
+  GDestroyNotify                 getrangenotify;
   GstPadEventFunction		 eventfunc;
+  gpointer                       eventdata;
+  GDestroyNotify                 eventnotify;
 
-  GstActivateMode		 mode;
+  /* pad offset */
+  gint64                         offset;
 
   /* generic query method */
-  GstPadQueryTypeFunction	 querytypefunc;
   GstPadQueryFunction		 queryfunc;
+  gpointer                       querydata;
+  GDestroyNotify                 querynotify;
 
   /* internal links */
-  GstPadIntLinkFunction		 intlinkfunc;
+  GstPadIterIntLinkFunction      iterintlinkfunc;
+  gpointer                       iterintlinkdata;
+  GDestroyNotify                 iterintlinknotify;
 
-  GstPadBufferAllocFunction      bufferallocfunc;
+  /* counts number of probes attached. */
+  gint				 num_probes;
+  gint				 num_blocked;
 
-  /* whether to emit signals for have-data. counts number
-   * of handlers attached. */
-  gint				 do_buffer_signals;
-  gint				 do_event_signals;
+  GstPadPrivate                 *priv;
 
-  /* ABI added */
-  /* iterate internal links */
-  GstPadIterIntLinkFunction     iterintlinkfunc;
-
-  /* free block_data */
-  GDestroyNotify block_destroy_data;
-
-  /*< private >*/
   union {
+    gpointer _gst_reserved[GST_PADDING];
     struct {
-      gboolean                      block_callback_called;
-      GstPadPrivate                *priv;
-    } ABI;
-    gpointer _gst_reserved[GST_PADDING - 2];
-  } abidata;
+      GstFlowReturn last_flowret;
+    } abi;
+  } ABI;
 };
 
 struct _GstPadClass {
@@ -740,8 +740,6 @@ struct _GstPadClass {
   /* signal callbacks */
   void		(*linked)		(GstPad *pad, GstPad *peer);
   void		(*unlinked)		(GstPad *pad, GstPad *peer);
-  void		(*request_link)		(GstPad *pad);
-  gboolean	(*have_data)		(GstPad *pad, GstMiniObject *data);
 
   /*< private >*/
   gpointer _gst_reserved[GST_PADDING];
@@ -750,128 +748,417 @@ struct _GstPadClass {
 
 /***** helper macros *****/
 /* GstPad */
-#define GST_PAD_NAME(pad)		(GST_OBJECT_NAME(pad))
-#define GST_PAD_PARENT(pad)		(GST_ELEMENT_CAST(GST_OBJECT_PARENT(pad)))
-#define GST_PAD_ELEMENT_PRIVATE(pad)	(GST_PAD_CAST(pad)->element_private)
-#define GST_PAD_PAD_TEMPLATE(pad)	(GST_PAD_CAST(pad)->padtemplate)
-#define GST_PAD_DIRECTION(pad)		(GST_PAD_CAST(pad)->direction)
-#define GST_PAD_TASK(pad)		(GST_PAD_CAST(pad)->task)
-#define GST_PAD_ACTIVATE_MODE(pad)	(GST_PAD_CAST(pad)->mode)
-
-#define GST_PAD_ACTIVATEFUNC(pad)	(GST_PAD_CAST(pad)->activatefunc)
-#define GST_PAD_ACTIVATEPUSHFUNC(pad)	(GST_PAD_CAST(pad)->activatepushfunc)
-#define GST_PAD_ACTIVATEPULLFUNC(pad)	(GST_PAD_CAST(pad)->activatepullfunc)
-#define GST_PAD_CHAINFUNC(pad)		(GST_PAD_CAST(pad)->chainfunc)
-#define GST_PAD_CHECKGETRANGEFUNC(pad)	(GST_PAD_CAST(pad)->checkgetrangefunc)
-#define GST_PAD_GETRANGEFUNC(pad)	(GST_PAD_CAST(pad)->getrangefunc)
-#define GST_PAD_EVENTFUNC(pad)		(GST_PAD_CAST(pad)->eventfunc)
-#define GST_PAD_QUERYTYPEFUNC(pad)	(GST_PAD_CAST(pad)->querytypefunc)
-#define GST_PAD_QUERYFUNC(pad)		(GST_PAD_CAST(pad)->queryfunc)
-#ifndef GST_DISABLE_DEPRECATED
-#define GST_PAD_INTLINKFUNC(pad)	(GST_PAD_CAST(pad)->intlinkfunc)
-#endif
-#define GST_PAD_ITERINTLINKFUNC(pad)    (GST_PAD_CAST(pad)->iterintlinkfunc)
-
-#define GST_PAD_PEER(pad)		(GST_PAD_CAST(pad)->peer)
-#define GST_PAD_LINKFUNC(pad)		(GST_PAD_CAST(pad)->linkfunc)
-#define GST_PAD_UNLINKFUNC(pad)		(GST_PAD_CAST(pad)->unlinkfunc)
 
 /**
- * GST_PAD_CAPS:
- * @pad: a #GstPad.
+ * GST_PAD_NAME:
+ * @pad: a #GstPad
  *
- * The caps for this pad.
+ * Get name of the given pad.
+ * No locking is performed in this function, use gst_pad_get_name() instead.
  */
-#define GST_PAD_CAPS(pad)		(GST_PAD_CAST(pad)->caps)
-#define GST_PAD_GETCAPSFUNC(pad)	(GST_PAD_CAST(pad)->getcapsfunc)
-#define GST_PAD_SETCAPSFUNC(pad)	(GST_PAD_CAST(pad)->setcapsfunc)
-#define GST_PAD_ACCEPTCAPSFUNC(pad)	(GST_PAD_CAST(pad)->acceptcapsfunc)
-#define GST_PAD_FIXATECAPSFUNC(pad)	(GST_PAD_CAST(pad)->fixatecapsfunc)
-
-#define GST_PAD_BUFFERALLOCFUNC(pad)	(GST_PAD_CAST(pad)->bufferallocfunc)
-
-#define GST_PAD_DO_BUFFER_SIGNALS(pad) 	(GST_PAD_CAST(pad)->do_buffer_signals)
-#define GST_PAD_DO_EVENT_SIGNALS(pad) 	(GST_PAD_CAST(pad)->do_event_signals)
-
-#define GST_PAD_IS_LINKED(pad)		(GST_PAD_PEER(pad) != NULL)
-#define GST_PAD_IS_BLOCKED(pad)		(GST_OBJECT_FLAG_IS_SET (pad, GST_PAD_BLOCKED))
-#define GST_PAD_IS_BLOCKING(pad)	(GST_OBJECT_FLAG_IS_SET (pad, GST_PAD_BLOCKING))
-#define GST_PAD_IS_FLUSHING(pad)	(GST_OBJECT_FLAG_IS_SET (pad, GST_PAD_FLUSHING))
-#define GST_PAD_IS_IN_GETCAPS(pad)	(GST_OBJECT_FLAG_IS_SET (pad, GST_PAD_IN_GETCAPS))
-#define GST_PAD_IS_IN_SETCAPS(pad)	(GST_OBJECT_FLAG_IS_SET (pad, GST_PAD_IN_SETCAPS))
+#define GST_PAD_NAME(pad)		(GST_OBJECT_NAME(pad))
+/**
+ * GST_PAD_PARENT:
+ * @pad: a #GstPad
+ *
+ * Get the @pad parent.
+ * No locking is performed in this function, use gst_pad_get_parent() instead.
+ */
+#define GST_PAD_PARENT(pad)		(GST_ELEMENT_CAST(GST_OBJECT_PARENT(pad)))
+/**
+ * GST_PAD_ELEMENT_PRIVATE:
+ * @pad: a #GstPad
+ *
+ * Get the private data of @pad, which is usually some pad- or stream-specific
+ * structure created by the element and set on the pad when creating it.
+ * No locking is performed in this function.
+ */
+#define GST_PAD_ELEMENT_PRIVATE(pad)    (GST_PAD_CAST(pad)->element_private)
+/**
+ * GST_PAD_PAD_TEMPLATE:
+ * @pad: a #GstPad
+ *
+ * Get the @pad #GstPadTemplate. It describes the possible media types
+ * a @pad or an element factory can handle.
+ */
+#define GST_PAD_PAD_TEMPLATE(pad)	(GST_PAD_CAST(pad)->padtemplate)
+/**
+ * GST_PAD_DIRECTION:
+ * @pad: a #GstPad
+ *
+ * Get the #GstPadDirection of the given @pad. Accessor macro, use
+ * gst_pad_get_direction() instead.
+ */
+#define GST_PAD_DIRECTION(pad)		(GST_PAD_CAST(pad)->direction)
+/**
+ * GST_PAD_TASK:
+ * @pad: a #GstPad
+ *
+ * Get the #GstTask of @pad. Accessor macro used by GStreamer. Use the
+ * gst_pad_start_task(), gst_pad_stop_task() and gst_pad_pause_task()
+ * functions instead.
+ */
+#define GST_PAD_TASK(pad)		(GST_PAD_CAST(pad)->task)
+/**
+ * GST_PAD_MODE:
+ * @pad: a #GstPad
+ *
+ * Get the #GstPadMode of pad, which will be GST_PAD_MODE_NONE if the pad
+ * has not been activated yet, and otherwise either GST_PAD_MODE_PUSH or
+ * GST_PAD_MODE_PULL depending on which mode the pad was activated in.
+ */
+#define GST_PAD_MODE(pad)	        (GST_PAD_CAST(pad)->mode)
+/**
+ * GST_PAD_ACTIVATEFUNC:
+ * @pad: a #GstPad
+ *
+ * Get the #GstPadActivateFunction from @pad.
+ */
+#define GST_PAD_ACTIVATEFUNC(pad)	(GST_PAD_CAST(pad)->activatefunc)
+/**
+ * GST_PAD_ACTIVATEMODEFUNC:
+ * @pad: a #GstPad
+ *
+ * Get the #GstPadActivateModeFunction from the given @pad.
+ */
+#define GST_PAD_ACTIVATEMODEFUNC(pad)	(GST_PAD_CAST(pad)->activatemodefunc)
+/**
+ * GST_PAD_CHAINFUNC:
+ * @pad: a #GstPad
+ *
+ * Get the #GstPadChainFunction from the given @pad.
+ */
+#define GST_PAD_CHAINFUNC(pad)		(GST_PAD_CAST(pad)->chainfunc)
+/**
+ * GST_PAD_CHAINLISTFUNC:
+ * @pad: a #GstPad
+ *
+ * Get the #GstPadChainListFunction from the given @pad.
+ */
+#define GST_PAD_CHAINLISTFUNC(pad)      (GST_PAD_CAST(pad)->chainlistfunc)
+/**
+ * GST_PAD_GETRANGEFUNC:
+ * @pad: a #GstPad
+ *
+ * Get the #GstPadGetRangeFunction from the given @pad.
+ */
+#define GST_PAD_GETRANGEFUNC(pad)	(GST_PAD_CAST(pad)->getrangefunc)
+/**
+ * GST_PAD_EVENTFUNC:
+ * @pad: a #GstPad
+ *
+ * Get the #GstPadEventFunction from the given @pad, which
+ * is the function that handles events on the pad. You can
+ * use this to set your own event handling function on a pad
+ * after you create it.  If your element derives from a base
+ * class, use the base class's virtual functions instead.
+ */
+#define GST_PAD_EVENTFUNC(pad)		(GST_PAD_CAST(pad)->eventfunc)
+/**
+ * GST_PAD_QUERYFUNC:
+ * @pad: a #GstPad
+ *
+ * Get the #GstPadQueryFunction from @pad, which is the function
+ * that handles queries on the pad. You can  use this to set your
+ * own query handling function on a pad after you create it. If your
+ * element derives from a base class, use the base class's virtual
+ * functions instead.
+ */
+#define GST_PAD_QUERYFUNC(pad)		(GST_PAD_CAST(pad)->queryfunc)
+/**
+ * GST_PAD_ITERINTLINKFUNC:
+ * @pad: a #GstPad
+ *
+ * Get the #GstPadIterIntLinkFunction from the given @pad.
+ */
+#define GST_PAD_ITERINTLINKFUNC(pad)    (GST_PAD_CAST(pad)->iterintlinkfunc)
+/**
+ * GST_PAD_PEER:
+ * @pad: a #GstPad
+ *
+ * Return the pad's peer member. This member is a pointer to the linked @pad.
+ * No locking is performed in this function, use gst_pad_get_peer() instead.
+ */
+#define GST_PAD_PEER(pad)		(GST_PAD_CAST(pad)->peer)
+/**
+ * GST_PAD_LINKFUNC:
+ * @pad: a #GstPad
+ *
+ * Get the #GstPadLinkFunction for the given @pad.
+ */
+#define GST_PAD_LINKFUNC(pad)		(GST_PAD_CAST(pad)->linkfunc)
+/**
+ * GST_PAD_UNLINKFUNC:
+ * @pad: a #GstPad
+ *
+ * Get the #GstPadUnlinkFunction from the given @pad.
+ */
+#define GST_PAD_UNLINKFUNC(pad)		(GST_PAD_CAST(pad)->unlinkfunc)
+/**
+ * GST_PAD_IS_SRC:
+ * @pad: a #GstPad
+ *
+ * Returns: %TRUE if the pad is a source pad (i.e. produces data).
+ */
 #define GST_PAD_IS_SRC(pad)		(GST_PAD_DIRECTION(pad) == GST_PAD_SRC)
+/**
+ * GST_PAD_IS_SINK:
+ * @pad: a #GstPad
+ *
+ * Returns: %TRUE if the pad is a sink pad (i.e. consumes data).
+ */
 #define GST_PAD_IS_SINK(pad)		(GST_PAD_DIRECTION(pad) == GST_PAD_SINK)
-
-#define GST_PAD_SET_FLUSHING(pad)	(GST_OBJECT_FLAG_SET (pad, GST_PAD_FLUSHING))
-#define GST_PAD_UNSET_FLUSHING(pad)	(GST_OBJECT_FLAG_UNSET (pad, GST_PAD_FLUSHING))
-
+/**
+ * GST_PAD_IS_LINKED:
+ * @pad: a #GstPad
+ *
+ * Returns: %TRUE if the pad is linked to another pad. Use gst_pad_is_linked()
+ * instead.
+ */
+#define GST_PAD_IS_LINKED(pad)		(GST_PAD_PEER(pad) != NULL)
+/**
+ * GST_PAD_IS_ACTIVE:
+ * @pad: a #GstPad
+ *
+ * Returns: %TRUE if the pad has been activated.
+ */
+#define GST_PAD_IS_ACTIVE(pad)          (GST_PAD_MODE(pad) != GST_PAD_MODE_NONE)
+/**
+ * GST_PAD_IS_BLOCKED:
+ * @pad: a #GstPad
+ *
+ * Check if the dataflow on a @pad is blocked. Use gst_pad_is_blocked() instead.
+ */
+#define GST_PAD_IS_BLOCKED(pad)		(GST_OBJECT_FLAG_IS_SET (pad, GST_PAD_FLAG_BLOCKED))
+/**
+ * GST_PAD_IS_BLOCKING:
+ * @pad: a #GstPad
+ *
+ * Check if the @pad is currently blocking on a buffer or event. Use
+ * gst_pad_is_blocking() instead.
+ */
+#define GST_PAD_IS_BLOCKING(pad)	(GST_OBJECT_FLAG_IS_SET (pad, GST_PAD_FLAG_BLOCKING))
+/**
+ * GST_PAD_IS_FLUSHING:
+ * @pad: a #GstPad
+ *
+ * Check if the given @pad is flushing.
+ */
+#define GST_PAD_IS_FLUSHING(pad)	(GST_OBJECT_FLAG_IS_SET (pad, GST_PAD_FLAG_FLUSHING))
+/**
+ * GST_PAD_SET_FLUSHING:
+ * @pad: a #GstPad
+ *
+ * Set the given @pad to flushing state, which means it will not accept any
+ * more events, queries or buffers, and return GST_FLOW_FLUSHING if any buffers
+ * are pushed on it. This usually happens when the pad is shut down or when
+ * a flushing seek happens. This is used inside GStreamer when flush start/stop
+ * events pass through pads, or when an element state is changed and pads are
+ * activated or deactivated.
+ */
+#define GST_PAD_SET_FLUSHING(pad)	(GST_OBJECT_FLAG_SET (pad, GST_PAD_FLAG_FLUSHING))
+/**
+ * GST_PAD_UNSET_FLUSHING:
+ * @pad: a #GstPad
+ *
+ * Unset the flushing flag.
+ */
+#define GST_PAD_UNSET_FLUSHING(pad)	(GST_OBJECT_FLAG_UNSET (pad, GST_PAD_FLAG_FLUSHING))
+/**
+ * GST_PAD_IS_EOS:
+ * @pad: a #GstPad
+ *
+ * Check if the @pad is in EOS state.
+ */
+#define GST_PAD_IS_EOS(pad)	        (GST_OBJECT_FLAG_IS_SET (pad, GST_PAD_FLAG_EOS))
+/**
+ * GST_PAD_NEEDS_RECONFIGURE:
+ * @pad: a #GstPad
+ *
+ * Check if the @pad should be reconfigured/renegotiated.
+ * The flag has to be unset manually after reconfiguration happened.
+ * Use gst_pad_needs_reconfigure() or gst_pad_check_reconfigure() instead.
+ */
+#define GST_PAD_NEEDS_RECONFIGURE(pad)  (GST_OBJECT_FLAG_IS_SET (pad, GST_PAD_FLAG_NEED_RECONFIGURE))
+/**
+ * GST_PAD_HAS_PENDING_EVENTS:
+ * @pad: a #GstPad
+ *
+ * Check if the given @pad has pending events. This is used internally by
+ * GStreamer.
+ */
+#define GST_PAD_HAS_PENDING_EVENTS(pad) (GST_OBJECT_FLAG_IS_SET (pad, GST_PAD_FLAG_PENDING_EVENTS))
+/**
+ * GST_PAD_IS_FIXED_CAPS:
+ * @pad: a #GstPad
+ *
+ * Check if the given @pad is using fixed caps, which means that
+ * once the caps are set on the @pad, the caps query function will
+ * only return those caps. See gst_pad_use_fixed_caps().
+ */
+#define GST_PAD_IS_FIXED_CAPS(pad)	(GST_OBJECT_FLAG_IS_SET (pad, GST_PAD_FLAG_FIXED_CAPS))
+/**
+ * GST_PAD_NEEDS_PARENT:
+ * @pad: a #GstPad
+ *
+ * Check if there is a parent object before calling into the @pad callbacks.
+ * This is used internally by GStreamer.
+ */
+#define GST_PAD_NEEDS_PARENT(pad)       (GST_OBJECT_FLAG_IS_SET (pad, GST_PAD_FLAG_NEED_PARENT))
+/**
+ * GST_PAD_IS_PROXY_CAPS:
+ * @pad: a #GstPad
+ *
+ * Check if the given @pad is set to proxy caps. This means that the default
+ * event and query handler will forward all events and queries to the
+ * internally linked @pads instead of discarding them.
+ */
+#define GST_PAD_IS_PROXY_CAPS(pad)      (GST_OBJECT_FLAG_IS_SET (pad, GST_PAD_FLAG_PROXY_CAPS))
+/**
+ * GST_PAD_SET_PROXY_CAPS:
+ * @pad: a #GstPad
+ *
+ * Set @pad to proxy caps, so that all caps-related events and queries are
+ * proxied down- or upstream to the other side of the element automatically.
+ * Set this if the element always outputs data in the exact same format as it
+ * receives as input. This is just for convenience to avoid implementing some
+ * standard event and query handling code in an element.
+ */
+#define GST_PAD_SET_PROXY_CAPS(pad)     (GST_OBJECT_FLAG_SET (pad, GST_PAD_FLAG_PROXY_CAPS))
+/**
+ * GST_PAD_UNSET_PROXY_CAPS:
+ * @pad: a #GstPad
+ *
+ * Unset proxy caps flag.
+ */
+#define GST_PAD_UNSET_PROXY_CAPS(pad)   (GST_OBJECT_FLAG_UNSET (pad, GST_PAD_FLAG_PROXY_CAPS))
+/**
+ * GST_PAD_IS_PROXY_ALLOCATION:
+ * @pad: a #GstPad
+ *
+ * Check if the given @pad is set as proxy allocation which means
+ * that the default query handler will forward allocation queries to the
+ * internally linked @pads instead of discarding them.
+ */
+#define GST_PAD_IS_PROXY_ALLOCATION(pad)    (GST_OBJECT_FLAG_IS_SET (pad, GST_PAD_FLAG_PROXY_ALLOCATION))
+/**
+ * GST_PAD_SET_PROXY_ALLOCATION:
+ * @pad: a #GstPad
+ *
+ * Set @pad to proxy allocation queries, which means that the default query
+ * handler will forward allocation queries to the internally linked @pads
+ * instead of discarding them.
+ * Set this if the element always outputs data in the exact same format as it
+ * receives as input. This is just for convenience to avoid implementing some
+ * standard query handling code in an element.
+ */
+#define GST_PAD_SET_PROXY_ALLOCATION(pad)   (GST_OBJECT_FLAG_SET (pad, GST_PAD_FLAG_PROXY_ALLOCATION))
+/**
+ * GST_PAD_UNSET_PROXY_ALLOCATION:
+ * @pad: a #GstPad
+ *
+ * Unset proxy allocation flag.
+ */
+#define GST_PAD_UNSET_PROXY_ALLOCATION(pad) (GST_OBJECT_FLAG_UNSET (pad, GST_PAD_FLAG_PROXY_ALLOCATION))
+/**
+ * GST_PAD_IS_PROXY_SCHEDULING:
+ * @pad: a #GstPad
+ *
+ * Check if the given @pad is set to proxy scheduling queries, which means that
+ * the default query handler will forward scheduling queries to the internally
+ * linked @pads instead of discarding them.
+ */
+#define GST_PAD_IS_PROXY_SCHEDULING(pad)    (GST_OBJECT_FLAG_IS_SET (pad, GST_PAD_FLAG_PROXY_SCHEDULING))
+/**
+ * GST_PAD_SET_PROXY_SCHEDULING:
+ * @pad: a #GstPad
+ *
+ * Set @pad to proxy scheduling queries, which means that the default query
+ * handler will forward scheduling queries to the internally linked @pads
+ * instead of discarding them. You will usually want to handle scheduling
+ * queries explicitly if your element supports multiple scheduling modes.
+ */
+#define GST_PAD_SET_PROXY_SCHEDULING(pad)   (GST_OBJECT_FLAG_SET (pad, GST_PAD_FLAG_PROXY_SCHEDULING))
+/**
+ * GST_PAD_UNSET_PROXY_SCHEDULING:
+ * @pad: a #GstPad
+ *
+ * Unset proxy scheduling flag.
+ */
+#define GST_PAD_UNSET_PROXY_SCHEDULING(pad) (GST_OBJECT_FLAG_UNSET (pad, GST_PAD_FLAG_PROXY_SCHEDULING))
+/**
+ * GST_PAD_IS_ACCEPT_INTERSECT:
+ * @pad: a #GstPad
+ *
+ * Check if the pad's accept intersect flag is set. The default accept-caps
+ * handler will check it the caps intersect the query-caps result instead of
+ * checking for a subset. This is interesting for parser elements that can
+ * accept incompletely specified caps.
+ */
+#define GST_PAD_IS_ACCEPT_INTERSECT(pad)    (GST_OBJECT_FLAG_IS_SET (pad, GST_PAD_FLAG_ACCEPT_INTERSECT))
+/**
+ * GST_PAD_SET_ACCEPT_INTERSECT:
+ * @pad: a #GstPad
+ *
+ * Set @pad to by default accept caps by intersecting the result instead of
+ * checking for a subset. This is interesting for parser elements that can
+ * accept incompletely specified caps.
+ */
+#define GST_PAD_SET_ACCEPT_INTERSECT(pad)   (GST_OBJECT_FLAG_SET (pad, GST_PAD_FLAG_ACCEPT_INTERSECT))
+/**
+ * GST_PAD_UNSET_ACCEPT_INTERSECT:
+ * @pad: a #GstPad
+ *
+ * Unset accept intersect flag.
+ */
+#define GST_PAD_UNSET_ACCEPT_INTERSECT(pad) (GST_OBJECT_FLAG_UNSET (pad, GST_PAD_FLAG_ACCEPT_INTERSECT))
 /**
  * GST_PAD_GET_STREAM_LOCK:
  * @pad: a #GstPad
  *
  * Get the stream lock of @pad. The stream lock is protecting the
- * resources used in the data processing functions of @pad.
+ * resources used in the data processing functions of @pad. Accessor
+ * macro, use GST_PAD_STREAM_LOCK() and GST_PAD_STREAM_UNLOCK() instead
+ * to take/release the pad's stream lock.
  */
-#define GST_PAD_GET_STREAM_LOCK(pad)    (GST_PAD_CAST(pad)->stream_rec_lock)
+#define GST_PAD_GET_STREAM_LOCK(pad)    (&(GST_PAD_CAST(pad)->stream_rec_lock))
 /**
  * GST_PAD_STREAM_LOCK:
  * @pad: a #GstPad
  *
- * Lock the stream lock of @pad.
+ * Take the pad's stream lock. The stream lock is recursive and will be taken
+ * when buffers or serialized downstream events are pushed on a pad.
  */
-#define GST_PAD_STREAM_LOCK(pad)        (g_static_rec_mutex_lock(GST_PAD_GET_STREAM_LOCK(pad)))
-/**
- * GST_PAD_STREAM_LOCK_FULL:
- * @pad: a #GstPad
- * @t: the number of times to recursively lock
- *
- * Lock the stream lock of @pad @t times.
- */
-#define GST_PAD_STREAM_LOCK_FULL(pad,t) (g_static_rec_mutex_lock_full(GST_PAD_GET_STREAM_LOCK(pad), t))
+#define GST_PAD_STREAM_LOCK(pad)        g_rec_mutex_lock(GST_PAD_GET_STREAM_LOCK(pad))
 /**
  * GST_PAD_STREAM_TRYLOCK:
  * @pad: a #GstPad
  *
- * Try to Lock the stream lock of the pad, return TRUE if the lock could be
- * taken.
+ * Try to take the pad's stream lock, and return %TRUE if the lock could be
+ * taken, and otherwise %FALSE.
  */
-#define GST_PAD_STREAM_TRYLOCK(pad)     (g_static_rec_mutex_trylock(GST_PAD_GET_STREAM_LOCK(pad)))
+#define GST_PAD_STREAM_TRYLOCK(pad)     g_rec_mutex_trylock(GST_PAD_GET_STREAM_LOCK(pad))
 /**
  * GST_PAD_STREAM_UNLOCK:
  * @pad: a #GstPad
  *
- * Unlock the stream lock of @pad.
+ * Release the pad's stream lock.
  */
-#define GST_PAD_STREAM_UNLOCK(pad)      (g_static_rec_mutex_unlock(GST_PAD_GET_STREAM_LOCK(pad)))
+#define GST_PAD_STREAM_UNLOCK(pad)      g_rec_mutex_unlock(GST_PAD_GET_STREAM_LOCK(pad))
 /**
- * GST_PAD_STREAM_UNLOCK_FULL:
+ * GST_PAD_LAST_FLOW_RETURN:
  * @pad: a #GstPad
  *
- * Fully unlock the recursive stream lock of @pad, return the number of times
- * @pad was locked.
+ * Gets the last flow return on this pad
+ *
+ * Since: 1.4
  */
-#define GST_PAD_STREAM_UNLOCK_FULL(pad) (g_static_rec_mutex_unlock_full(GST_PAD_GET_STREAM_LOCK(pad)))
+#define GST_PAD_LAST_FLOW_RETURN(pad)   (GST_PAD_CAST(pad)->ABI.abi.last_flowret)
 
-#define GST_PAD_GET_PREROLL_LOCK(pad)   (GST_PAD_CAST(pad)->preroll_lock)
-#define GST_PAD_PREROLL_LOCK(pad)       (g_mutex_lock(GST_PAD_GET_PREROLL_LOCK(pad)))
-#define GST_PAD_PREROLL_TRYLOCK(pad)    (g_mutex_trylock(GST_PAD_GET_PREROLL_LOCK(pad)))
-#define GST_PAD_PREROLL_UNLOCK(pad)     (g_mutex_unlock(GST_PAD_GET_PREROLL_LOCK(pad)))
-
-#define GST_PAD_GET_PREROLL_COND(pad)   (GST_PAD_CAST(pad)->preroll_cond)
-#define GST_PAD_PREROLL_WAIT(pad)       \
-    g_cond_wait (GST_PAD_GET_PREROLL_COND (pad), GST_PAD_GET_PREROLL_LOCK (pad))
-#define GST_PAD_PREROLL_TIMED_WAIT(pad, timeval) \
-    g_cond_timed_wait (GST_PAD_GET_PREROLL_COND (pad), GST_PAD_GET_PREROLL_LOCK (pad), timeval)
-#define GST_PAD_PREROLL_SIGNAL(pad)     g_cond_signal (GST_PAD_GET_PREROLL_COND (pad));
-#define GST_PAD_PREROLL_BROADCAST(pad)  g_cond_broadcast (GST_PAD_GET_PREROLL_COND (pad));
-
-#define GST_PAD_BLOCK_GET_COND(pad)     (GST_PAD_CAST(pad)->block_cond)
+#define GST_PAD_BLOCK_GET_COND(pad)     (&GST_PAD_CAST(pad)->block_cond)
 #define GST_PAD_BLOCK_WAIT(pad)         (g_cond_wait(GST_PAD_BLOCK_GET_COND (pad), GST_OBJECT_GET_LOCK (pad)))
 #define GST_PAD_BLOCK_SIGNAL(pad)       (g_cond_signal(GST_PAD_BLOCK_GET_COND (pad)))
 #define GST_PAD_BLOCK_BROADCAST(pad)    (g_cond_broadcast(GST_PAD_BLOCK_GET_COND (pad)))
-
-/* FIXME: this awful circular dependency need to be resolved properly (see padtemplate.h) */
-#include <gst/gstpadtemplate.h>
 
 GType			gst_pad_get_type			(void);
 
@@ -896,9 +1183,11 @@ GstPad*			gst_pad_new_from_static_template	(GstStaticPadTemplate *templ, const g
  *
  * Get the parent of @pad. This function increases the refcount
  * of the parent object so you should gst_object_unref() it after usage.
- * Can return NULL if the pad did not have a parent.
+ * Can return %NULL if the pad did not have a parent.
  *
  * MT safe.
+ *
+ * Returns: (nullable): the parent
  */
 #define gst_pad_get_parent(pad) gst_object_get_parent (GST_OBJECT_CAST (pad))
 
@@ -906,42 +1195,79 @@ GstPadDirection		gst_pad_get_direction			(GstPad *pad);
 
 gboolean		gst_pad_set_active			(GstPad *pad, gboolean active);
 gboolean		gst_pad_is_active			(GstPad *pad);
-gboolean		gst_pad_activate_pull			(GstPad *pad, gboolean active);
-gboolean		gst_pad_activate_push			(GstPad *pad, gboolean active);
+gboolean		gst_pad_activate_mode			(GstPad *pad, GstPadMode mode,
+                                                                 gboolean active);
 
-gboolean		gst_pad_set_blocked			(GstPad *pad, gboolean blocked);
-gboolean		gst_pad_set_blocked_async		(GstPad *pad, gboolean blocked,
-								 GstPadBlockCallback callback, gpointer user_data);
-gboolean		gst_pad_set_blocked_async_full		(GstPad *pad, gboolean blocked,
-								 GstPadBlockCallback callback, gpointer user_data,
+gulong                  gst_pad_add_probe                       (GstPad *pad,
+								 GstPadProbeType mask,
+								 GstPadProbeCallback callback,
+                                                                 gpointer user_data,
                                                                  GDestroyNotify destroy_data);
+void                    gst_pad_remove_probe                    (GstPad *pad, gulong id);
+
 gboolean		gst_pad_is_blocked			(GstPad *pad);
 gboolean		gst_pad_is_blocking			(GstPad *pad);
+
+void                    gst_pad_mark_reconfigure                (GstPad *pad);
+gboolean		gst_pad_needs_reconfigure               (GstPad *pad);
+gboolean		gst_pad_check_reconfigure               (GstPad *pad);
 
 void			gst_pad_set_element_private		(GstPad *pad, gpointer priv);
 gpointer		gst_pad_get_element_private		(GstPad *pad);
 
 GstPadTemplate*		gst_pad_get_pad_template		(GstPad *pad);
 
-void			gst_pad_set_bufferalloc_function	(GstPad *pad, GstPadBufferAllocFunction bufalloc);
-GstFlowReturn		gst_pad_alloc_buffer			(GstPad *pad, guint64 offset, gint size,
-								 GstCaps *caps, GstBuffer **buf);
-GstFlowReturn		gst_pad_alloc_buffer_and_set_caps	(GstPad *pad, guint64 offset, gint size,
-								 GstCaps *caps, GstBuffer **buf);
+GstFlowReturn           gst_pad_store_sticky_event              (GstPad *pad, GstEvent *event);
+GstEvent*               gst_pad_get_sticky_event                (GstPad *pad, GstEventType event_type,
+                                                                 guint idx);
+void                    gst_pad_sticky_events_foreach           (GstPad *pad, GstPadStickyEventsForeachFunction foreach_func, gpointer user_data);
 
 /* data passing setup functions */
-void			gst_pad_set_activate_function		(GstPad *pad, GstPadActivateFunction activate);
-void			gst_pad_set_activatepull_function	(GstPad *pad, GstPadActivateModeFunction activatepull);
-void			gst_pad_set_activatepush_function	(GstPad *pad, GstPadActivateModeFunction activatepush);
-void			gst_pad_set_chain_function		(GstPad *pad, GstPadChainFunction chain);
-void			gst_pad_set_chain_list_function	(GstPad *pad, GstPadChainListFunction chainlist);
-void			gst_pad_set_getrange_function		(GstPad *pad, GstPadGetRangeFunction get);
-void			gst_pad_set_checkgetrange_function	(GstPad *pad, GstPadCheckGetRangeFunction check);
-void			gst_pad_set_event_function		(GstPad *pad, GstPadEventFunction event);
+void			gst_pad_set_activate_function_full	(GstPad *pad,
+                                                                 GstPadActivateFunction activate,
+                                                                 gpointer user_data,
+                                                                 GDestroyNotify notify);
+void			gst_pad_set_activatemode_function_full	(GstPad *pad,
+                                                                 GstPadActivateModeFunction activatemode,
+                                                                 gpointer user_data,
+                                                                 GDestroyNotify notify);
+/* data passing functions */
+void			gst_pad_set_chain_function_full		(GstPad *pad,
+                                                                 GstPadChainFunction chain,
+                                                                 gpointer user_data,
+                                                                 GDestroyNotify notify);
+void			gst_pad_set_chain_list_function_full	(GstPad *pad,
+                                                                 GstPadChainListFunction chainlist,
+                                                                 gpointer user_data,
+                                                                 GDestroyNotify notify);
+void			gst_pad_set_getrange_function_full	(GstPad *pad,
+                                                                 GstPadGetRangeFunction get,
+                                                                 gpointer user_data,
+                                                                 GDestroyNotify notify);
+void			gst_pad_set_event_function_full		(GstPad *pad,
+                                                                 GstPadEventFunction event,
+                                                                 gpointer user_data,
+                                                                 GDestroyNotify notify);
+
+#define gst_pad_set_activate_function(p,f)      gst_pad_set_activate_function_full((p),(f),NULL,NULL)
+#define gst_pad_set_activatemode_function(p,f)  gst_pad_set_activatemode_function_full((p),(f),NULL,NULL)
+#define gst_pad_set_chain_function(p,f)         gst_pad_set_chain_function_full((p),(f),NULL,NULL)
+#define gst_pad_set_chain_list_function(p,f)    gst_pad_set_chain_list_function_full((p),(f),NULL,NULL)
+#define gst_pad_set_getrange_function(p,f)      gst_pad_set_getrange_function_full((p),(f),NULL,NULL)
+#define gst_pad_set_event_function(p,f)         gst_pad_set_event_function_full((p),(f),NULL,NULL)
 
 /* pad links */
-void			gst_pad_set_link_function		(GstPad *pad, GstPadLinkFunction link);
-void			gst_pad_set_unlink_function		(GstPad *pad, GstPadUnlinkFunction unlink);
+void			gst_pad_set_link_function_full		(GstPad *pad,
+                                                                 GstPadLinkFunction link,
+                                                                 gpointer user_data,
+                                                                 GDestroyNotify notify);
+void			gst_pad_set_unlink_function_full        (GstPad *pad,
+                                                                 GstPadUnlinkFunction unlink,
+                                                                 gpointer user_data,
+                                                                 GDestroyNotify notify);
+
+#define gst_pad_set_link_function(p,f)          gst_pad_set_link_function_full((p),(f),NULL,NULL)
+#define gst_pad_set_unlink_function(p,f)        gst_pad_set_unlink_function_full((p),(f),NULL,NULL)
 
 gboolean                gst_pad_can_link                        (GstPad *srcpad, GstPad *sinkpad);
 GstPadLinkReturn        gst_pad_link				(GstPad *srcpad, GstPad *sinkpad);
@@ -951,37 +1277,28 @@ gboolean		gst_pad_is_linked			(GstPad *pad);
 
 GstPad*			gst_pad_get_peer			(GstPad *pad);
 
-/* capsnego functions */
-void			gst_pad_set_getcaps_function		(GstPad *pad, GstPadGetCapsFunction getcaps);
-void			gst_pad_set_acceptcaps_function		(GstPad *pad, GstPadAcceptCapsFunction acceptcaps);
-void			gst_pad_set_fixatecaps_function		(GstPad *pad, GstPadFixateCapsFunction fixatecaps);
-void			gst_pad_set_setcaps_function		(GstPad *pad, GstPadSetCapsFunction setcaps);
-
-const GstCaps*	        gst_pad_get_pad_template_caps		(GstPad *pad);
+GstCaps*                gst_pad_get_pad_template_caps		(GstPad *pad);
 
 /* capsnego function for linked/unlinked pads */
-GstCaps *		gst_pad_get_caps_reffed                 (GstPad * pad);
-GstCaps *		gst_pad_get_caps			(GstPad * pad);
-void			gst_pad_fixate_caps			(GstPad * pad, GstCaps *caps);
-gboolean		gst_pad_accept_caps			(GstPad * pad, GstCaps *caps);
-gboolean		gst_pad_set_caps			(GstPad * pad, GstCaps *caps);
-
-GstCaps *		gst_pad_peer_get_caps_reffed		(GstPad * pad);
-GstCaps *		gst_pad_peer_get_caps			(GstPad * pad);
-gboolean		gst_pad_peer_accept_caps		(GstPad * pad, GstCaps *caps);
+GstCaps *		gst_pad_get_current_caps                (GstPad * pad);
+gboolean		gst_pad_has_current_caps                (GstPad * pad);
 
 /* capsnego for linked pads */
 GstCaps *		gst_pad_get_allowed_caps		(GstPad * pad);
-GstCaps *		gst_pad_get_negotiated_caps		(GstPad * pad);
+
+/* pad offsets */
+gint64                  gst_pad_get_offset                      (GstPad *pad);
+void                    gst_pad_set_offset                      (GstPad *pad, gint64 offset);
 
 /* data passing functions to peer */
 GstFlowReturn		gst_pad_push				(GstPad *pad, GstBuffer *buffer);
 GstFlowReturn		gst_pad_push_list			(GstPad *pad, GstBufferList *list);
-gboolean		gst_pad_check_pull_range		(GstPad *pad);
 GstFlowReturn		gst_pad_pull_range			(GstPad *pad, guint64 offset, guint size,
 								 GstBuffer **buffer);
 gboolean		gst_pad_push_event			(GstPad *pad, GstEvent *event);
-gboolean		gst_pad_event_default			(GstPad *pad, GstEvent *event);
+gboolean		gst_pad_event_default			(GstPad *pad, GstObject *parent,
+                                                                 GstEvent *event);
+GstFlowReturn           gst_pad_get_last_flow_return            (GstPad *pad);
 
 /* data passing functions on pad */
 GstFlowReturn		gst_pad_chain				(GstPad *pad, GstBuffer *buffer);
@@ -992,44 +1309,34 @@ gboolean		gst_pad_send_event			(GstPad *pad, GstEvent *event);
 
 /* pad tasks */
 gboolean		gst_pad_start_task			(GstPad *pad, GstTaskFunction func,
-								 gpointer data);
+								 gpointer user_data, GDestroyNotify notify);
 gboolean		gst_pad_pause_task			(GstPad *pad);
 gboolean		gst_pad_stop_task			(GstPad *pad);
 
 /* internal links */
-#ifdef GSTREAMER_LITE
-void			gst_pad_set_internal_link_function	(GstPad *pad, GstPadIntLinkFunction intlink);
-#else // GSTREAMER_LITE
-#ifndef GST_DISABLE_DEPRECATED
-void			gst_pad_set_internal_link_function	(GstPad *pad, GstPadIntLinkFunction intlink);
-GList*			gst_pad_get_internal_links		(GstPad *pad);
-GList*			gst_pad_get_internal_links_default	(GstPad *pad);
-#endif
-#endif // GSTREAMER_LITE
-
-void                    gst_pad_set_iterate_internal_links_function (GstPad * pad,
-                                                                 GstPadIterIntLinkFunction iterintlink);
+void                    gst_pad_set_iterate_internal_links_function_full (GstPad * pad,
+                                                                 GstPadIterIntLinkFunction iterintlink,
+                                                                 gpointer user_data,
+                                                                 GDestroyNotify notify);
 GstIterator *           gst_pad_iterate_internal_links          (GstPad * pad);
-GstIterator *           gst_pad_iterate_internal_links_default  (GstPad * pad);
+GstIterator *           gst_pad_iterate_internal_links_default  (GstPad * pad, GstObject *parent);
 
+#define gst_pad_set_iterate_internal_links_function(p,f) gst_pad_set_iterate_internal_links_function_full((p),(f),NULL,NULL)
 
 /* generic query function */
-void			gst_pad_set_query_type_function		(GstPad *pad, GstPadQueryTypeFunction type_func);
-const GstQueryType*	gst_pad_get_query_types			(GstPad *pad);
-const GstQueryType*	gst_pad_get_query_types_default		(GstPad *pad);
-
 gboolean		gst_pad_query				(GstPad *pad, GstQuery *query);
 gboolean		gst_pad_peer_query			(GstPad *pad, GstQuery *query);
-void			gst_pad_set_query_function		(GstPad *pad, GstPadQueryFunction query);
-gboolean		gst_pad_query_default			(GstPad *pad, GstQuery *query);
+void			gst_pad_set_query_function_full		(GstPad *pad, GstPadQueryFunction query,
+                                                                 gpointer user_data,
+                                                                 GDestroyNotify notify);
+gboolean		gst_pad_query_default			(GstPad *pad, GstObject *parent,
+                                                                 GstQuery *query);
+
+#define gst_pad_set_query_function(p,f)   gst_pad_set_query_function_full((p),(f),NULL,NULL)
 
 /* misc helper functions */
-gboolean		gst_pad_dispatcher			(GstPad *pad, GstPadDispatcherFunction dispatch,
-								 gpointer data);
-
-#if !defined(GST_DISABLE_LOADSAVE) && !defined(GST_DISABLE_DEPRECATED)
-void			gst_pad_load_and_link			(xmlNodePtr self, GstObject *parent);
-#endif
+gboolean		gst_pad_forward                         (GstPad *pad, GstPadForwardFunction forward,
+								 gpointer user_data);
 
 G_END_DECLS
 

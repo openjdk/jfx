@@ -321,39 +321,6 @@
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\app\gstappsink.c">
       <Filter>gst-plugins-base\gst-libs\gst\app</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\audio.c">
-      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\audio-enumtypes.c">
-      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudioclock.c">
-      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiofilter.c">
-      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiosink.c">
-      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiosrc.c">
-      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstbaseaudiosink.c">
-      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstbaseaudiosrc.c">
-      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstringbuffer.c">
-      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\mixerutils.c">
-      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\multichannel.c">
-      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\fft\gstfft.c">
       <Filter>gst-plugins-base\gst-libs\gst\fft</Filter>
     </ClCompile>
@@ -558,5 +525,115 @@
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\projects\plugins\gstplugins-lite.c">
       <Filter>projects\plugins</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\audio.c">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\audio-channels.c">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\audio-enumtypes.c">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\audio-format.c">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\audio-info.c">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiobasesink.c">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiobasesrc.c">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudioclock.c">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiodecoder.c">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudioencoder.c">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiofilter.c">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudioiec61937.c">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiometa.c">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiopack-dist.c">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudioringbuffer.c">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiosink.c">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiosrc.c">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\streamvolume.c">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\audio.h">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\audio-channels.h">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\audio-enumtypes.h">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\audio-format.h">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\audio-info.h">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiobasesink.h">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiobasesrc.h">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudioclock.h">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiodecoder.h">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudioencoder.h">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiofilter.h">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudioiec61937.h">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiometa.h">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiopack-dist.h">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudioringbuffer.h">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiosink.h">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\gstaudiosrc.h">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\streamvolume.h">
+      <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

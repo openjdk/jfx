@@ -14,8 +14,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 /* 
@@ -46,18 +46,18 @@
  * be at most this value. A lower ripple value will allow a faster rolloff.
  *
  * As a special case, a Chebyshev type 1 filter with no ripple is a Butterworth filter.
- * </para>
+ *
  * <note><para>
  * Be warned that a too large number of poles can produce noise. The most poles are possible with
  * a cutoff frequency at a quarter of the sampling rate.
  * </para></note>
- * <para>
+ *
  * <refsect2>
  * <title>Example launch line</title>
  * |[
- * gst-launch audiotestsrc freq=1500 ! audioconvert ! audiocheblimit mode=low-pass cutoff=1000 poles=4 ! audioconvert ! alsasink
- * gst-launch filesrc location="melo1.ogg" ! oggdemux ! vorbisdec ! audioconvert ! audiocheblimit mode=high-pass cutoff=400 ripple=0.2 ! audioconvert ! alsasink
- * gst-launch audiotestsrc wave=white-noise ! audioconvert ! audiocheblimit mode=low-pass cutoff=800 type=2 ! audioconvert ! alsasink
+ * gst-launch-1.0 audiotestsrc freq=1500 ! audioconvert ! audiocheblimit mode=low-pass cutoff=1000 poles=4 ! audioconvert ! alsasink
+ * gst-launch-1.0 filesrc location="melo1.ogg" ! oggdemux ! vorbisdec ! audioconvert ! audiocheblimit mode=high-pass cutoff=400 ripple=0.2 ! audioconvert ! alsasink
+ * gst-launch-1.0 audiotestsrc wave=white-noise ! audioconvert ! audiocheblimit mode=low-pass cutoff=800 type=2 ! audioconvert ! alsasink
  * ]|
  * </refsect2>
  */
@@ -66,17 +66,20 @@
 #include "config.h"
 #endif
 
+#include <string.h>
+
 #include <gst/gst.h>
 #include <gst/base/gstbasetransform.h>
 #include <gst/audio/audio.h>
 #include <gst/audio/gstaudiofilter.h>
-#include <gst/controller/gstcontroller.h>
 
 #include <math.h>
 
 #include "math_compat.h"
 
 #include "audiocheblimit.h"
+
+#include "gst/glib-compat-private.h"
 
 #define GST_CAT_DEFAULT gst_audio_cheb_limit_debug
 GST_DEBUG_CATEGORY_STATIC (GST_CAT_DEFAULT);
@@ -91,12 +94,9 @@ enum
   PROP_POLES
 };
 
-#define DEBUG_INIT(bla) \
-  GST_DEBUG_CATEGORY_INIT (gst_audio_cheb_limit_debug, "audiocheblimit", 0, "audiocheblimit element");
-
-GST_BOILERPLATE_FULL (GstAudioChebLimit,
-    gst_audio_cheb_limit, GstAudioFXBaseIIRFilter,
-    GST_TYPE_AUDIO_FX_BASE_IIR_FILTER, DEBUG_INIT);
+#define gst_audio_cheb_limit_parent_class parent_class
+G_DEFINE_TYPE (GstAudioChebLimit,
+    gst_audio_cheb_limit, GST_TYPE_AUDIO_FX_BASE_IIR_FILTER);
 
 static void gst_audio_cheb_limit_set_property (GObject * object,
     guint prop_id, const GValue * value, GParamSpec * pspec);
@@ -105,7 +105,7 @@ static void gst_audio_cheb_limit_get_property (GObject * object,
 static void gst_audio_cheb_limit_finalize (GObject * object);
 
 static gboolean gst_audio_cheb_limit_setup (GstAudioFilter * filter,
-    GstRingBufferSpec * format);
+    const GstAudioInfo * info);
 
 enum
 {
@@ -136,22 +136,14 @@ gst_audio_cheb_limit_mode_get_type (void)
 /* GObject vmethod implementations */
 
 static void
-gst_audio_cheb_limit_base_init (gpointer klass)
-{
-  GstElementClass *element_class = GST_ELEMENT_CLASS (klass);
-
-  gst_element_class_set_details_simple (element_class,
-      "Low pass & high pass filter",
-      "Filter/Effect/Audio",
-      "Chebyshev low pass and high pass filter",
-      "Sebastian Dröge <sebastian.droege@collabora.co.uk>");
-}
-
-static void
 gst_audio_cheb_limit_class_init (GstAudioChebLimitClass * klass)
 {
   GObjectClass *gobject_class = (GObjectClass *) klass;
+  GstElementClass *gstelement_class = (GstElementClass *) klass;
   GstAudioFilterClass *filter_class = (GstAudioFilterClass *) klass;
+
+  GST_DEBUG_CATEGORY_INIT (gst_audio_cheb_limit_debug, "audiocheblimit", 0,
+      "audiocheblimit element");
 
   gobject_class->set_property = gst_audio_cheb_limit_set_property;
   gobject_class->get_property = gst_audio_cheb_limit_get_property;
@@ -186,12 +178,17 @@ gst_audio_cheb_limit_class_init (GstAudioChebLimitClass * klass)
           2, 32, 4,
           G_PARAM_READWRITE | GST_PARAM_CONTROLLABLE | G_PARAM_STATIC_STRINGS));
 
+  gst_element_class_set_static_metadata (gstelement_class,
+      "Low pass & high pass filter",
+      "Filter/Effect/Audio",
+      "Chebyshev low pass and high pass filter",
+      "Sebastian Dröge <sebastian.droege@collabora.co.uk>");
+
   filter_class->setup = GST_DEBUG_FUNCPTR (gst_audio_cheb_limit_setup);
 }
 
 static void
-gst_audio_cheb_limit_init (GstAudioChebLimit * filter,
-    GstAudioChebLimitClass * klass)
+gst_audio_cheb_limit_init (GstAudioChebLimit * filter)
 {
   filter->cutoff = 0.0;
   filter->mode = MODE_LOW_PASS;
@@ -199,13 +196,13 @@ gst_audio_cheb_limit_init (GstAudioChebLimit * filter,
   filter->poles = 4;
   filter->ripple = 0.25;
 
-  filter->lock = g_mutex_new ();
+  g_mutex_init (&filter->lock);
 }
 
 static void
 generate_biquad_coefficients (GstAudioChebLimit * filter,
-    gint p, gdouble * a0, gdouble * a1, gdouble * a2,
-    gdouble * b1, gdouble * b2)
+    gint p, gint rate, gdouble * b0, gdouble * b1, gdouble * b2,
+    gdouble * a1, gdouble * a2)
 {
   gint np = filter->poles;
   gdouble ripple = filter->ripple;
@@ -323,8 +320,7 @@ generate_biquad_coefficients (GstAudioChebLimit * filter,
    */
   {
     gdouble k, d;
-    gdouble omega =
-        2.0 * G_PI * (filter->cutoff / GST_AUDIO_FILTER (filter)->format.rate);
+    gdouble omega = 2.0 * G_PI * (filter->cutoff / rate);
 
     if (filter->mode == MODE_LOW_PASS)
       k = sin ((1.0 - omega) / 2.0) / sin ((1.0 + omega) / 2.0);
@@ -332,11 +328,11 @@ generate_biquad_coefficients (GstAudioChebLimit * filter,
       k = -cos ((omega + 1.0) / 2.0) / cos ((omega - 1.0) / 2.0);
 
     d = 1.0 + y1 * k - y2 * k * k;
-    *a0 = (x0 + k * (-x1 + k * x2)) / d;
-    *a1 = (x1 + k * k * x1 - 2.0 * k * (x0 + x2)) / d;
-    *a2 = (x0 * k * k - x1 * k + x2) / d;
-    *b1 = (2.0 * k + y1 + y1 * k * k - 2.0 * y2 * k) / d;
-    *b2 = (-k * k - y1 * k + y2) / d;
+    *b0 = (x0 + k * (-x1 + k * x2)) / d;
+    *b1 = (x1 + k * k * x1 - 2.0 * k * (x0 + x2)) / d;
+    *b2 = (x0 * k * k - x1 * k + x2) / d;
+    *a1 = (2.0 * k + y1 + y1 * k * k - 2.0 * y2 * k) / d;
+    *a2 = (-k * k - y1 * k + y2) / d;
 
     if (filter->mode == MODE_HIGH_PASS) {
       *a1 = -*a1;
@@ -346,33 +342,49 @@ generate_biquad_coefficients (GstAudioChebLimit * filter,
 }
 
 static void
-generate_coefficients (GstAudioChebLimit * filter)
+generate_coefficients (GstAudioChebLimit * filter, const GstAudioInfo * info)
 {
-  if (GST_AUDIO_FILTER (filter)->format.rate == 0) {
+  gint rate;
+
+  if (info) {
+    rate = GST_AUDIO_INFO_RATE (info);
+  } else {
+    rate = GST_AUDIO_FILTER_RATE (filter);
+  }
+
+  GST_LOG_OBJECT (filter, "cutoff %f", filter->cutoff);
+
+  if (rate == 0) {
     gdouble *a = g_new0 (gdouble, 1);
+    gdouble *b = g_new0 (gdouble, 1);
 
     a[0] = 1.0;
+    b[0] = 1.0;
     gst_audio_fx_base_iir_filter_set_coefficients (GST_AUDIO_FX_BASE_IIR_FILTER
-        (filter), a, 1, NULL, 0);
+        (filter), a, 1, b, 1);
 
     GST_LOG_OBJECT (filter, "rate was not set yet");
     return;
   }
 
-  if (filter->cutoff >= GST_AUDIO_FILTER (filter)->format.rate / 2.0) {
+  if (filter->cutoff >= rate / 2.0) {
     gdouble *a = g_new0 (gdouble, 1);
+    gdouble *b = g_new0 (gdouble, 1);
 
-    a[0] = (filter->mode == MODE_LOW_PASS) ? 1.0 : 0.0;
+    a[0] = 1.0;
+    b[0] = (filter->mode == MODE_LOW_PASS) ? 1.0 : 0.0;
     gst_audio_fx_base_iir_filter_set_coefficients (GST_AUDIO_FX_BASE_IIR_FILTER
-        (filter), a, 1, NULL, 0);
+        (filter), a, 1, b, 1);
     GST_LOG_OBJECT (filter, "cutoff was higher than nyquist frequency");
     return;
   } else if (filter->cutoff <= 0.0) {
     gdouble *a = g_new0 (gdouble, 1);
+    gdouble *b = g_new0 (gdouble, 1);
 
-    a[0] = (filter->mode == MODE_LOW_PASS) ? 0.0 : 1.0;
+    a[0] = 1.0;
+    b[0] = (filter->mode == MODE_LOW_PASS) ? 0.0 : 1.0;
     gst_audio_fx_base_iir_filter_set_coefficients (GST_AUDIO_FX_BASE_IIR_FILTER
-        (filter), a, 1, NULL, 0);
+        (filter), a, 1, b, 1);
     GST_LOG_OBJECT (filter, "cutoff is lower than zero");
     return;
   }
@@ -391,11 +403,11 @@ generate_coefficients (GstAudioChebLimit * filter)
     b[2] = 1.0;
 
     for (p = 1; p <= np / 2; p++) {
-      gdouble a0, a1, a2, b1, b2;
+      gdouble b0, b1, b2, a1, a2;
       gdouble *ta = g_new0 (gdouble, np + 3);
       gdouble *tb = g_new0 (gdouble, np + 3);
 
-      generate_biquad_coefficients (filter, p, &a0, &a1, &a2, &b1, &b2);
+      generate_biquad_coefficients (filter, p, rate, &b0, &b1, &b2, &a1, &a2);
 
       memcpy (ta, a, sizeof (gdouble) * (np + 3));
       memcpy (tb, b, sizeof (gdouble) * (np + 3));
@@ -404,21 +416,19 @@ generate_coefficients (GstAudioChebLimit * filter)
        * to the cascade by multiplication of the transfer
        * functions */
       for (i = 2; i < np + 3; i++) {
-        a[i] = a0 * ta[i] + a1 * ta[i - 1] + a2 * ta[i - 2];
-        b[i] = tb[i] - b1 * tb[i - 1] - b2 * tb[i - 2];
+        b[i] = b0 * tb[i] + b1 * tb[i - 1] + b2 * tb[i - 2];
+        a[i] = ta[i] - a1 * ta[i - 1] - a2 * ta[i - 2];
       }
       g_free (ta);
       g_free (tb);
     }
 
-    /* Move coefficients to the beginning of the array
-     * and multiply the b coefficients with -1 to move from
+    /* Move coefficients to the beginning of the array to move from
      * the transfer function's coefficients to the difference
      * equation's coefficients */
-    b[2] = 0.0;
     for (i = 0; i <= np; i++) {
       a[i] = a[i + 2];
-      b[i] = -b[i + 2];
+      b[i] = b[i + 2];
     }
 
     /* Normalize to unity gain at frequency 0 for lowpass
@@ -436,7 +446,7 @@ generate_coefficients (GstAudioChebLimit * filter)
             -1.0, 0.0);
 
       for (i = 0; i <= np; i++) {
-        a[i] /= gain;
+        b[i] /= gain;
       }
     }
 
@@ -455,9 +465,7 @@ generate_coefficients (GstAudioChebLimit * filter)
 
 #ifndef GST_DISABLE_GST_DEBUG
     {
-      gdouble wc =
-          2.0 * G_PI * (filter->cutoff /
-          GST_AUDIO_FILTER (filter)->format.rate);
+      gdouble wc = 2.0 * G_PI * (filter->cutoff / rate);
       gdouble zr = cos (wc), zi = sin (wc);
 
       GST_LOG_OBJECT (filter, "%.2f dB gain @ %d Hz",
@@ -468,8 +476,7 @@ generate_coefficients (GstAudioChebLimit * filter)
 
     GST_LOG_OBJECT (filter, "%.2f dB gain @ %d Hz",
         20.0 * log10 (gst_audio_fx_base_iir_filter_calculate_gain (a, np + 1, b,
-                np + 1, -1.0, 0.0)),
-        GST_AUDIO_FILTER (filter)->format.rate / 2);
+                np + 1, -1.0, 0.0)), rate);
   }
 }
 
@@ -478,8 +485,7 @@ gst_audio_cheb_limit_finalize (GObject * object)
 {
   GstAudioChebLimit *filter = GST_AUDIO_CHEB_LIMIT (object);
 
-  g_mutex_free (filter->lock);
-  filter->lock = NULL;
+  g_mutex_clear (&filter->lock);
 
   G_OBJECT_CLASS (parent_class)->finalize (object);
 }
@@ -492,34 +498,34 @@ gst_audio_cheb_limit_set_property (GObject * object, guint prop_id,
 
   switch (prop_id) {
     case PROP_MODE:
-      g_mutex_lock (filter->lock);
+      g_mutex_lock (&filter->lock);
       filter->mode = g_value_get_enum (value);
-      generate_coefficients (filter);
-      g_mutex_unlock (filter->lock);
+      generate_coefficients (filter, NULL);
+      g_mutex_unlock (&filter->lock);
       break;
     case PROP_TYPE:
-      g_mutex_lock (filter->lock);
+      g_mutex_lock (&filter->lock);
       filter->type = g_value_get_int (value);
-      generate_coefficients (filter);
-      g_mutex_unlock (filter->lock);
+      generate_coefficients (filter, NULL);
+      g_mutex_unlock (&filter->lock);
       break;
     case PROP_CUTOFF:
-      g_mutex_lock (filter->lock);
+      g_mutex_lock (&filter->lock);
       filter->cutoff = g_value_get_float (value);
-      generate_coefficients (filter);
-      g_mutex_unlock (filter->lock);
+      generate_coefficients (filter, NULL);
+      g_mutex_unlock (&filter->lock);
       break;
     case PROP_RIPPLE:
-      g_mutex_lock (filter->lock);
+      g_mutex_lock (&filter->lock);
       filter->ripple = g_value_get_float (value);
-      generate_coefficients (filter);
-      g_mutex_unlock (filter->lock);
+      generate_coefficients (filter, NULL);
+      g_mutex_unlock (&filter->lock);
       break;
     case PROP_POLES:
-      g_mutex_lock (filter->lock);
+      g_mutex_lock (&filter->lock);
       filter->poles = GST_ROUND_UP_2 (g_value_get_int (value));
-      generate_coefficients (filter);
-      g_mutex_unlock (filter->lock);
+      generate_coefficients (filter, NULL);
+      g_mutex_unlock (&filter->lock);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -558,11 +564,11 @@ gst_audio_cheb_limit_get_property (GObject * object, guint prop_id,
 /* GstAudioFilter vmethod implementations */
 
 static gboolean
-gst_audio_cheb_limit_setup (GstAudioFilter * base, GstRingBufferSpec * format)
+gst_audio_cheb_limit_setup (GstAudioFilter * base, const GstAudioInfo * info)
 {
   GstAudioChebLimit *filter = GST_AUDIO_CHEB_LIMIT (base);
 
-  generate_coefficients (filter);
+  generate_coefficients (filter, info);
 
-  return GST_AUDIO_FILTER_CLASS (parent_class)->setup (base, format);
+  return GST_AUDIO_FILTER_CLASS (parent_class)->setup (base, info);
 }

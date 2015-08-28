@@ -76,6 +76,7 @@ struct _FlvDemux
     gboolean        copied_metadata_keyframes;  /* Set to TRUE once we've processed the keyframe list from metadata */
     GstSegment      segment;
     gboolean        is_flushing;
+    gboolean        is_eos_received;
 
     //Source pads
     GstPad          *audio_src_pad;

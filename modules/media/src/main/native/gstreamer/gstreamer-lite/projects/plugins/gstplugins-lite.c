@@ -46,8 +46,7 @@ gboolean lite_plugins_init (GstPlugin * plugin)
     return FALSE;
 
 #ifdef WIN32
-  if (!plugin_init_directsound(plugin) ||
-      !plugin_init_indexers(plugin))
+  if (!plugin_init_directsound(plugin))
     return FALSE;  
 #endif
 

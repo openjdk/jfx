@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -77,14 +77,15 @@ struct _MpegTSDemuxer
     volatile gboolean is_eos;
     volatile gboolean is_reading;
     volatile gboolean is_flushing;
+    volatile gboolean is_closing;
     gboolean          update;
 
     AVFormatContext   *context;
 
     GThread           *reader_thread;
-    GMutex            *lock;
-    GCond             *add_cond;
-    GCond             *del_cond;
+    GMutex            lock;
+    GCond             add_cond;
+    GCond             del_cond;
 
     gint              numpads;
 
@@ -152,85 +153,54 @@ static GstStaticPadTemplate video_source_template =
 
 /***********************************************************************************
  * Substitution for
- * GST_BOILERPLATE (MpegTSDemuxer, mpegts_demuxer, AVElement, TYPE_AVELEMENT);
+ * G_DEFINE_TYPE(MpegTSDemuxer, mpegts_demuxer, AVElement, TYPE_AVELEMENT);
  ***********************************************************************************/
-static void mpegts_demuxer_base_init(MpegTSDemuxerClass *g_class);
-static void mpegts_demuxer_class_init(MpegTSDemuxerClass *g_class);
-static void mpegts_demuxer_init(MpegTSDemuxer *object, MpegTSDemuxerClass *g_class);
-
-static GstElementClass *parent_class = NULL;
-
-static void mpegts_demuxer_class_init_trampoline(gpointer g_class, gpointer data)
+#define mpegts_demuxer_parent_class parent_class
+static void mpegts_demuxer_init          (MpegTSDemuxer      *self);
+static void mpegts_demuxer_class_init    (MpegTSDemuxerClass *klass);
+static gpointer mpegts_demuxer_parent_class = NULL;
+static void     mpegts_demuxer_class_intern_init (gpointer klass)
 {
-    parent_class = (GstElementClass *) g_type_class_peek_parent(g_class);
-    mpegts_demuxer_class_init((MpegTSDemuxerClass *) g_class);
+    mpegts_demuxer_parent_class = g_type_class_peek_parent (klass);
+    mpegts_demuxer_class_init ((MpegTSDemuxerClass*) klass);
 }
 
-GType mpegts_demuxer_get_type(void)
+GType mpegts_demuxer_get_type (void)
 {
     static volatile gsize gonce_data = 0;
-    // INLINE - g_once_init_enter()
-    if (g_once_init_enter(&gonce_data))
+// INLINE - g_once_init_enter()
+    if (g_once_init_enter (&gonce_data))
     {
-        GType _type = gst_type_register_static_full(TYPE_AVELEMENT,
-                g_intern_static_string("MpegTSDemuxer"),
-                sizeof (MpegTSDemuxerClass),
-                (GBaseInitFunc)mpegts_demuxer_base_init,
-                NULL,
-                mpegts_demuxer_class_init_trampoline,
-                NULL,
-                NULL,
-                sizeof (MpegTSDemuxer),
-                0,
-                (GInstanceInitFunc) mpegts_demuxer_init,
-                NULL,
-                (GTypeFlags) 0);
-
-        g_once_init_leave(&gonce_data, (gsize) _type);
+        GType _type;
+        _type = g_type_register_static_simple (TYPE_AVELEMENT,
+               g_intern_static_string ("MpegTSDemuxer"),
+               sizeof (MpegTSDemuxerClass),
+               (GClassInitFunc) mpegts_demuxer_class_intern_init,
+               sizeof(MpegTSDemuxer),
+               (GInstanceInitFunc) mpegts_demuxer_init,               
+               (GTypeFlags) 0);
+        g_once_init_leave (&gonce_data, (gsize) _type);
     }
     return (GType) gonce_data;
-}
-
-/***********************************************************************************
- * Base init
- ***********************************************************************************/
-
-static void mpegts_demuxer_base_init(MpegTSDemuxerClass *g_class)
-{
-    GstElementClass *element_class = GST_ELEMENT_CLASS(g_class);
-
-    g_class->audio_source_template = gst_static_pad_template_get (&audio_source_template);
-    g_class->video_source_template = gst_static_pad_template_get (&video_source_template);
-
-    gst_element_class_add_pad_template(element_class, g_class->audio_source_template);
-    gst_element_class_add_pad_template(element_class, g_class->video_source_template);
-    gst_element_class_add_pad_template(element_class, gst_static_pad_template_get (&sink_template));
-
-    gst_element_class_set_details_simple(element_class,
-                "MPEG2 transport stream parser",
-        "Codec/Parser",
-                "Parses MPEG2 transport streams",
-                "Oracle Corporation");
 }
 
 /***********************************************************************************
  * Calss and instance init and forward declarations
  ***********************************************************************************/
 static GstStateChangeReturn mpegts_demuxer_change_state(GstElement* element, GstStateChange transition);
-static gboolean             mpegts_demuxer_sink_event(GstPad *pad, GstEvent *event);
-static const GstQueryType*  mpegts_demuxer_sink_query_type(GstPad * pad);
-static gboolean             mpegts_demuxer_sink_query (GstPad *pad, GstQuery *query);
-static GstFlowReturn        mpegts_demuxer_chain(GstPad *pad, GstBuffer *buf);
-static gboolean             mpegts_demuxer_activate_push(GstPad *pad, gboolean active);
+static gboolean             mpegts_demuxer_sink_event(GstPad *pad, GstObject *parent, GstEvent *event);
+static gboolean             mpegts_demuxer_sink_query (GstPad *pad, GstObject *parent, GstQuery *query);
+static GstFlowReturn        mpegts_demuxer_chain(GstPad *pad, GstObject *parent, GstBuffer *buf);
+static gboolean             mpegts_demuxer_activatemode(GstPad *pad, GstObject *parent, GstPadMode mode, gboolean active);
 static void                 mpegts_demuxer_finalize(GObject *object);
 static gpointer             mpegts_demuxer_process_input(gpointer data);
 
-static gboolean             mpegts_demuxer_src_query (GstPad *pad, GstQuery *query);
+static gboolean             mpegts_demuxer_src_query (GstPad *pad, GstObject *parent, GstQuery *query);
 static void                 mpegts_demuxer_init_state(MpegTSDemuxer *demuxer);
 static void                 mpegts_demuxer_close(MpegTSDemuxer *demuxer);
 //static void                 mpegts_demuxer_state_reset(MpegTSDemuxer *decoder);
 static void                 mpegts_demuxer_flush(MpegTSDemuxer *demuxer);
-static gboolean             mpegts_demuxer_src_event(GstPad *pad, GstEvent *event);
+static gboolean             mpegts_demuxer_src_event(GstPad *pad, GstObject *parent, GstEvent *event);
 
 static int                  mpegts_demuxer_read_packet(void *demuxer, uint8_t *buf, int buf_size);
 static int64_t              mpegts_demuxer_seek(void *opaque, int64_t offset, int whence);
@@ -238,26 +208,39 @@ static int64_t              mpegts_demuxer_seek(void *opaque, int64_t offset, in
 static void mpegts_demuxer_class_init(MpegTSDemuxerClass *g_class)
 {
     GstElementClass *gstelement_class = GST_ELEMENT_CLASS(g_class);
+    
+    g_class->audio_source_template = gst_static_pad_template_get (&audio_source_template);
+    g_class->video_source_template = gst_static_pad_template_get (&video_source_template);
+
+    gst_element_class_add_pad_template(gstelement_class, g_class->audio_source_template);
+    gst_element_class_add_pad_template(gstelement_class, g_class->video_source_template);
+    gst_element_class_add_pad_template(gstelement_class, gst_static_pad_template_get (&sink_template));
+
+    gst_element_class_set_details_simple(gstelement_class,
+                "MPEG2 transport stream parser",
+                "Codec/Parser",
+                "Parses MPEG2 transport streams",
+                "Oracle Corporation");
+    
     G_OBJECT_CLASS (g_class)->finalize = GST_DEBUG_FUNCPTR(mpegts_demuxer_finalize);
     gstelement_class->change_state = mpegts_demuxer_change_state;
 
     av_register_all();
 }
 
-static void mpegts_demuxer_init(MpegTSDemuxer *demuxer, MpegTSDemuxerClass *g_class)
+static void mpegts_demuxer_init(MpegTSDemuxer *demuxer)
 {
     // Input.
     demuxer->sinkpad = gst_pad_new_from_static_template(&sink_template, "sink");
     gst_pad_set_chain_function(demuxer->sinkpad, GST_DEBUG_FUNCPTR(mpegts_demuxer_chain));
-    gst_pad_set_query_type_function (demuxer->sinkpad, GST_DEBUG_FUNCPTR(mpegts_demuxer_sink_query_type));
     gst_pad_set_query_function (demuxer->sinkpad, GST_DEBUG_FUNCPTR(mpegts_demuxer_sink_query));
     gst_pad_set_event_function(demuxer->sinkpad, GST_DEBUG_FUNCPTR(mpegts_demuxer_sink_event));
-    gst_pad_set_activatepush_function(demuxer->sinkpad, GST_DEBUG_FUNCPTR(mpegts_demuxer_activate_push));
+    gst_pad_set_activatemode_function(demuxer->sinkpad, GST_DEBUG_FUNCPTR(mpegts_demuxer_activatemode));
     gst_element_add_pad(GST_ELEMENT(demuxer), demuxer->sinkpad);
 
-    demuxer->lock = g_mutex_new();
-    demuxer->add_cond = g_cond_new();
-    demuxer->del_cond = g_cond_new();
+    g_mutex_init(&demuxer->lock);
+    g_cond_init(&demuxer->add_cond);
+    g_cond_init(&demuxer->del_cond);
     demuxer->sink_adapter = gst_adapter_new();
     demuxer->reader_thread = NULL;
     demuxer->numpads = 0;
@@ -268,9 +251,9 @@ static void mpegts_demuxer_finalize(GObject *object)
 {
     MpegTSDemuxer *demuxer = MPEGTS_DEMUXER(object);
 
-    g_mutex_free(demuxer->lock);
-    g_cond_free(demuxer->add_cond);
-    g_cond_free(demuxer->del_cond);
+    g_mutex_clear(&demuxer->lock);
+    g_cond_clear(&demuxer->add_cond);
+    g_cond_clear(&demuxer->del_cond);
     g_object_unref(demuxer->sink_adapter);
 
     G_OBJECT_CLASS (parent_class)->finalize (object);
@@ -307,59 +290,74 @@ static inline void post_unsupported_warning(MpegTSDemuxer *demuxer)
 /***********************************************************************************
  * Chain and activatepush
  ***********************************************************************************/
-static gboolean mpegts_demuxer_activate_push(GstPad *pad, gboolean active)
+static gboolean mpegts_demuxer_activatemode(GstPad *pad, GstObject *parent, GstPadMode mode, gboolean active)
 {
-    MpegTSDemuxer *demuxer = MPEGTS_DEMUXER(GST_PAD_PARENT(pad));
+    gboolean res = FALSE;
+    MpegTSDemuxer *demuxer = MPEGTS_DEMUXER(parent);
 
 #ifdef DEBUG_OUTPUT
     g_print("MpegTS activate_push: %s\n", active ? "ACTIVATE" : "DEACTIVATE");
 #endif
 
-    if (active)
-    {
-        g_mutex_lock(demuxer->lock);
-        demuxer->sink_result = GST_FLOW_OK;
-        g_mutex_unlock(demuxer->lock);
+    switch (mode) {
+        case GST_PAD_MODE_PUSH:
+            if (active)
+            {
+                g_mutex_lock(&demuxer->lock);
+                demuxer->sink_result = GST_FLOW_OK;
+                g_mutex_unlock(&demuxer->lock);
+            }
+            else
+            {
+                g_mutex_lock(&demuxer->lock);
+                demuxer->sink_result = GST_FLOW_FLUSHING;
+                g_cond_signal(&demuxer->del_cond);
+                g_mutex_unlock(&demuxer->lock);
+            }
+            res = TRUE;
+
+            break;
+        case GST_PAD_MODE_PULL:
+            res = TRUE;
+            break;
+        default:
+            /* unknown scheduling mode */
+            res = FALSE;
+            break;
     }
-    else
-    {
-        g_mutex_lock(demuxer->lock);
-        demuxer->sink_result = GST_FLOW_WRONG_STATE;
-        g_cond_signal(demuxer->del_cond);
-        g_mutex_unlock(demuxer->lock);
-    }
-    return TRUE;
+
+  return res;
 }
 
 static GstFlowReturn get_locked_result(MpegTSDemuxer *demuxer)
 {
     if (demuxer->is_flushing)
-        return GST_FLOW_WRONG_STATE;
+        return GST_FLOW_FLUSHING;
 
     if (demuxer->is_eos)
-        return GST_FLOW_UNEXPECTED;
+        return GST_FLOW_EOS;
 
     return demuxer->sink_result;
 }
 
-static GstFlowReturn mpegts_demuxer_chain(GstPad *pad, GstBuffer *buf)
+static GstFlowReturn mpegts_demuxer_chain(GstPad *pad, GstObject *parent, GstBuffer *buf)
 {
-    MpegTSDemuxer *demuxer = MPEGTS_DEMUXER(GST_PAD_PARENT(pad));
+    MpegTSDemuxer *demuxer = MPEGTS_DEMUXER(parent);
 
-    g_mutex_lock(demuxer->lock);
+    g_mutex_lock(&demuxer->lock);
 
     GstFlowReturn result = get_locked_result(demuxer);
-    while (((gint64)gst_adapter_available(demuxer->sink_adapter) + GST_BUFFER_SIZE(buf)) >= demuxer->adapter_limit_size &&
+    while (((gint64)gst_adapter_available(demuxer->sink_adapter) + gst_buffer_get_size(buf)) >= demuxer->adapter_limit_size &&
            result == GST_FLOW_OK)
     {
-        g_cond_wait(demuxer->del_cond, demuxer->lock);
+        g_cond_wait(&demuxer->del_cond, &demuxer->lock);
         result = get_locked_result(demuxer);
     }
 
     if (result == GST_FLOW_OK)
     {
         gst_adapter_push(demuxer->sink_adapter, buf);
-        g_cond_signal(demuxer->add_cond);
+        g_cond_signal(&demuxer->add_cond);
     }
     else
     {
@@ -367,7 +365,7 @@ static GstFlowReturn mpegts_demuxer_chain(GstPad *pad, GstBuffer *buf)
         gst_buffer_unref(buf);
     }
 
-    g_mutex_unlock(demuxer->lock);
+    g_mutex_unlock(&demuxer->lock);
 
     return result;
 }
@@ -390,9 +388,9 @@ static gboolean mpegts_demuxer_push_to_sources(MpegTSDemuxer *demuxer, GstEvent 
     return ret;
 }
 
-static gboolean mpegts_demuxer_sink_event(GstPad *pad, GstEvent *event)
+static gboolean mpegts_demuxer_sink_event(GstPad *pad, GstObject *parent, GstEvent *event)
 {
-    MpegTSDemuxer *demuxer = MPEGTS_DEMUXER(GST_PAD_PARENT(pad));
+    MpegTSDemuxer *demuxer = MPEGTS_DEMUXER(parent);
     gboolean      result = TRUE;
 
     switch (GST_EVENT_TYPE(event))
@@ -401,10 +399,10 @@ static gboolean mpegts_demuxer_sink_event(GstPad *pad, GstEvent *event)
 #ifdef DEBUG_OUTPUT
             g_print("MpegTS sinkEvent: EOS\n");
 #endif
-            g_mutex_lock(demuxer->lock);
+            g_mutex_lock(&demuxer->lock);
             demuxer->is_eos = TRUE;
-            g_cond_signal(demuxer->add_cond); // Signal read callback to read up remaining data.
-            g_mutex_unlock(demuxer->lock);
+            g_cond_signal(&demuxer->add_cond); // Signal read callback to read up remaining data.
+            g_mutex_unlock(&demuxer->lock);
 
             gst_event_unref(event);
             break;
@@ -413,16 +411,19 @@ static gboolean mpegts_demuxer_sink_event(GstPad *pad, GstEvent *event)
 #ifdef DEBUG_OUTPUT
             g_print("MpegTS sinkEvent: FLUSH_START ...");
 #endif
-            result = gst_pad_event_default(demuxer->sinkpad, event);
+            result = gst_pad_event_default(demuxer->sinkpad, parent, event);
 
-            g_mutex_lock(demuxer->lock);
+            g_mutex_lock(&demuxer->lock);
             demuxer->is_flushing = TRUE;
-            g_cond_signal(demuxer->del_cond); // Signal _chain() and read callback to wake them up and update state.
-            g_cond_signal(demuxer->add_cond);
-            g_mutex_unlock(demuxer->lock);
+            g_cond_signal(&demuxer->del_cond); // Signal _chain() and read callback to wake them up and update state.
+            g_cond_signal(&demuxer->add_cond);
+            g_mutex_unlock(&demuxer->lock);
 
-            g_thread_join(demuxer->reader_thread);
-            demuxer->reader_thread = NULL;
+            if (demuxer->reader_thread)
+            {
+                g_thread_join(demuxer->reader_thread);
+                demuxer->reader_thread = NULL;
+            }
 
 #ifdef DEBUG_OUTPUT
             g_print("done.\n");
@@ -430,52 +431,51 @@ static gboolean mpegts_demuxer_sink_event(GstPad *pad, GstEvent *event)
             break;
 
         case GST_EVENT_FLUSH_STOP: // Stop flushing buffers.
-            g_mutex_lock(demuxer->lock);
+            g_mutex_lock(&demuxer->lock);
             mpegts_demuxer_flush(demuxer);
             demuxer->is_flushing = FALSE; // Unset flag so chain function accepts buffers.
-            g_mutex_unlock(demuxer->lock);
-            result = gst_pad_event_default(demuxer->sinkpad, event);
+            g_mutex_unlock(&demuxer->lock);
+            result = gst_pad_event_default(demuxer->sinkpad, parent, event);
 
 #ifdef DEBUG_OUTPUT
             g_print("MpegTS sinkEvent: FLUSH_STOP\n");
 #endif
             break;
 
-        case GST_EVENT_NEWSEGMENT:
+        case GST_EVENT_SEGMENT:
         {
-            GstFormat format;
-            gdouble rate, applied_rate;
-            gint64 start, stop, time;
-
-            gst_event_parse_new_segment_full (event, &demuxer->update, &rate, &applied_rate, &format, &start, &stop, &time);
+            GstSegment segment;
+            gst_event_copy_segment(event, &segment);
             gst_event_unref(event);
 
-            g_mutex_lock(demuxer->lock);
-#ifdef DEBUG_OUTPUT
-            g_print("MpegTS sinkEvent: NEW_SEGMENT, time=%.2f\n",
-                    time != GST_CLOCK_TIME_NONE ? (double)time/GST_SECOND : -1.0);
-#endif
-            if (format == GST_FORMAT_TIME)
+            g_mutex_lock(&demuxer->lock);
+            if (!demuxer->is_closing)
             {
-                gst_segment_set_newsegment_full (&demuxer->audio.segment, demuxer->update, rate, applied_rate, format, start, stop, time);
-                gst_segment_set_newsegment_full (&demuxer->video.segment, demuxer->update, rate, applied_rate, format, start, stop, time);
-            }
-
-            demuxer->audio.discont = demuxer->video.discont = TRUE;
-            demuxer->is_eos = FALSE;
-            demuxer->is_reading = TRUE;
-
-            if (!demuxer->reader_thread)
-            {
-                demuxer->reader_thread = g_thread_create(mpegts_demuxer_process_input, demuxer, TRUE, NULL);
 #ifdef DEBUG_OUTPUT
-                g_print("MpegTS: Process_input thread created\n");
+                g_print("MpegTS sinkEvent: NEW_SEGMENT, time=%.2f\n",
+                        time != GST_CLOCK_TIME_NONE ? (double)time/GST_SECOND : -1.0);
 #endif
-            }
-            else
-                post_message(demuxer, "Demuxer thread is not null", GST_MESSAGE_ERROR, GST_CORE_ERROR, GST_CORE_ERROR_THREAD);
+                if (segment.format == GST_FORMAT_TIME)
+                {
+                    gst_segment_copy_into(&segment, &demuxer->audio.segment);
+                    gst_segment_copy_into(&segment, &demuxer->video.segment);
+                }
 
-            g_mutex_unlock(demuxer->lock);
+                demuxer->audio.discont = demuxer->video.discont = TRUE;
+                demuxer->is_eos = FALSE;
+                demuxer->is_reading = TRUE;
+
+                if (!demuxer->reader_thread)
+                {
+                    demuxer->reader_thread = g_thread_new(NULL, mpegts_demuxer_process_input, demuxer);
+#ifdef DEBUG_OUTPUT
+                    g_print("MpegTS: Process_input thread created\n");
+#endif
+                }
+                else
+                    post_message(demuxer, "Demuxer thread is not null", GST_MESSAGE_ERROR, GST_CORE_ERROR, GST_CORE_ERROR_THREAD);
+            }
+            g_mutex_unlock(&demuxer->lock);
             break;
         }
 
@@ -487,9 +487,9 @@ static gboolean mpegts_demuxer_sink_event(GstPad *pad, GstEvent *event)
     return result;
 }
 
-static gboolean mpegts_demuxer_src_event(GstPad *pad, GstEvent *event)
+static gboolean mpegts_demuxer_src_event(GstPad *pad, GstObject *parent, GstEvent *event)
 {
-    MpegTSDemuxer *demuxer = MPEGTS_DEMUXER(GST_PAD_PARENT(pad));
+    MpegTSDemuxer *demuxer = MPEGTS_DEMUXER(parent);
     return gst_pad_push_event (demuxer->sinkpad, event);
 }
 
@@ -503,12 +503,15 @@ static inline gboolean mpegts_demuxer_expect_more_pads(MpegTSDemuxer *demuxer)
 
 static void mpegts_demuxer_add_pad(MpegTSDemuxer *demuxer, GstPad *pad, GstCaps *caps)
 {
+    GstEvent *caps_event = NULL;
     gst_pad_set_query_function (pad, mpegts_demuxer_src_query);
     gst_pad_set_event_function (pad, mpegts_demuxer_src_event);
-    gst_pad_use_fixed_caps (pad);
-    gst_pad_set_caps (pad, caps);
-    gst_caps_unref (caps);
     gst_pad_set_active(pad, TRUE);
+    gst_pad_use_fixed_caps (pad);
+    caps_event = gst_event_new_caps(caps);
+    if (caps_event)
+        gst_pad_push_event (pad, caps_event);
+    gst_caps_unref (caps);    
     gst_element_add_pad(GST_ELEMENT(demuxer), pad);
 }
 
@@ -517,9 +520,11 @@ static GstBuffer* get_codec_extradata(AVCodecContext *codec)
     GstBuffer *codec_data = NULL;
     if (codec->extradata)
     {
-        codec_data = gst_buffer_new();
-        GST_BUFFER_DATA(codec_data) = codec->extradata;
-        GST_BUFFER_SIZE(codec_data) = codec->extradata_size;
+        codec_data = gst_buffer_new_allocate(NULL, codec->extradata_size, NULL);
+        if (codec_data != NULL)
+        {
+            gst_buffer_fill(codec_data, 0, codec->extradata, codec->extradata_size);
+        }
     }
 
     return codec_data;
@@ -618,8 +623,9 @@ static void mpegts_demuxer_check_streams(MpegTSDemuxer *demuxer)
  ***********************************************************************************/
 static inline GstBuffer* packet_to_buffer(AVPacket *packet)
 {
-    GstBuffer* result = gst_buffer_new_and_alloc(packet->size);
-    memcpy (GST_BUFFER_DATA(result), packet->data, packet->size);
+    GstBuffer* result = gst_buffer_new_allocate(NULL, packet->size, NULL);
+    if (result != NULL)
+        gst_buffer_fill(result, 0, packet->data, packet->size);
     return result;
 }
 
@@ -637,93 +643,88 @@ static GstFlowReturn process_video_packet(MpegTSDemuxer *demuxer, AVPacket *pack
         return result;
 
     GstBuffer     *buffer = NULL;
-    result = gst_pad_alloc_buffer(stream->sourcepad, GST_BUFFER_OFFSET_NONE, 0, GST_PAD_CAPS(stream->sourcepad), &buffer);
 
-    if (result == GST_FLOW_OK)
+    GstEvent *newsegment_event = NULL;
+    void *buffer_data = av_mallocz(packet->size);
+    if (buffer_data != NULL)
     {
-        GstEvent  *newsegment_event = NULL;
-        void *buffer_data = av_mallocz(packet->size);
-        if (buffer_data != NULL)
+        memcpy(buffer_data, packet->data, packet->size);
+        buffer = gst_buffer_new_wrapped_full(0, buffer_data, packet->size, 0, packet->size, buffer_data, &av_free);
+
+        if (packet->pts != AV_NOPTS_VALUE)
         {
-            GST_BUFFER_DATA(buffer) = buffer_data;
-            GST_BUFFER_SIZE(buffer) = packet->size;
-            GST_BUFFER_MALLOCDATA(buffer) = buffer_data;
-            GST_BUFFER_FREE_FUNC(buffer) = &av_free;
-            memcpy(GST_BUFFER_DATA(buffer), packet->data, packet->size);
-
-            if (packet->pts != AV_NOPTS_VALUE)
+            if (demuxer->base_pts == GST_CLOCK_TIME_NONE)
             {
-                if (demuxer->base_pts == GST_CLOCK_TIME_NONE)
-                {
-                    demuxer->base_pts = PTS_TO_GSTTIME(packet->pts) + stream->offset_time;
-                }
-
-                gint64 time = PTS_TO_GSTTIME(packet->pts) + stream->offset_time - demuxer->base_pts;
-                if (time < 0)
-                    time = 0;
-
-                if (stream->last_time > 0 && time < (gint64)(stream->last_time - PTS_TO_GSTTIME(G_MAXUINT32)))
-                {
-                    gint64 diff = PTS_TO_GSTTIME(MAX_PTS + 1); // Wraparound occured
-
-#ifdef VERBOSE_DEBUG_VIDEO
-                    g_print("[Video wraparound]: diff=%lld\n", diff);
-#endif
-
-                    // Update offset only on second wraparound and continue to count time with diff.
-                    if (time < ((gint64)stream->last_time - PTS_TO_GSTTIME(MAX_PTS)))
-                    {
-                        stream->offset_time += diff;
-#ifdef VERBOSE_DEBUG_VIDEO
-                        g_print("[Video wraparound] updating offset_time to %lld: %lld < %lld\n", stream->offset_time, time, ((gint64)stream->last_time - PTS_TO_GSTTIME(MAX_PTS)));
-#endif
-                    }
-
-                    time += diff;
-                }
-#ifdef VERBOSE_DEBUG_VIDEO
-                g_print("[Video]: time=%lld (%.4f) offset_time=%lld, last_time=%lld\n", time, (double)time/GST_SECOND, stream->offset_time, stream->last_time);
-#endif
-
-                stream->last_time = time;
-                GST_BUFFER_TIMESTAMP(buffer) = time;
+                demuxer->base_pts = PTS_TO_GSTTIME(packet->pts) + stream->offset_time;
             }
 
-            if (packet->duration != 0)
-                GST_BUFFER_DURATION(buffer) = PTS_TO_GSTTIME(packet->duration);
+            gint64 time = PTS_TO_GSTTIME(packet->pts) + stream->offset_time - demuxer->base_pts;
+            if (time < 0)
+                time = 0;
 
-            g_mutex_lock(demuxer->lock);
-            gst_segment_set_last_stop (&stream->segment, GST_FORMAT_TIME, GST_BUFFER_TIMESTAMP(buffer));
-
-            if (stream->discont)
+            if (stream->last_time > 0 && time < (gint64) (stream->last_time - PTS_TO_GSTTIME(G_MAXUINT32)))
             {
-                newsegment_event = gst_event_new_new_segment_full (demuxer->update, stream->segment.rate, stream->segment.applied_rate,
-                                                                   stream->segment.format, stream->segment.last_stop,
-                                                                   stream->segment.stop, stream->segment.time);
-                GST_BUFFER_FLAG_SET(buffer, GST_BUFFER_FLAG_DISCONT);
-                stream->discont = FALSE;
+                gint64 diff = PTS_TO_GSTTIME(MAX_PTS + 1); // Wraparound occured
+
+#ifdef VERBOSE_DEBUG_VIDEO
+                g_print("[Video wraparound]: diff=%lld\n", diff);
+#endif
+
+                // Update offset only on second wraparound and continue to count time with diff.
+                if (time < ((gint64) stream->last_time - PTS_TO_GSTTIME(MAX_PTS)))
+                {
+                    stream->offset_time += diff;
+#ifdef VERBOSE_DEBUG_VIDEO
+                    g_print("[Video wraparound] updating offset_time to %lld: %lld < %lld\n", stream->offset_time, time, ((gint64) stream->last_time - PTS_TO_GSTTIME(MAX_PTS)));
+#endif
+                }
+
+                time += diff;
+            }
+#ifdef VERBOSE_DEBUG_VIDEO
+            g_print("[Video]: time=%lld (%.4f) offset_time=%lld, last_time=%lld\n", time, (double) time / GST_SECOND, stream->offset_time, stream->last_time);
+#endif
+
+            stream->last_time = time;
+            GST_BUFFER_TIMESTAMP(buffer) = time;
+        }
+
+        if (packet->duration != 0)
+            GST_BUFFER_DURATION(buffer) = PTS_TO_GSTTIME(packet->duration);
+
+        g_mutex_lock(&demuxer->lock);
+        stream->segment.position = GST_BUFFER_TIMESTAMP(buffer);
+
+        if (stream->discont)
+        {
+            GstSegment newsegment;
+            gst_segment_init(&newsegment, GST_FORMAT_TIME);
+            newsegment.flags = stream->segment.flags;
+            newsegment.rate = stream->segment.rate;
+            newsegment.start = stream->segment.time;
+            newsegment.stop = stream->segment.stop;
+            newsegment.time = stream->segment.time;
+            newsegment.position = stream->segment.position;
+            newsegment_event = gst_event_new_segment(&newsegment);
+            
+            GST_BUFFER_FLAG_SET(buffer, GST_BUFFER_FLAG_DISCONT);
+            stream->discont = FALSE;
 
 #ifdef DEBUG_OUTPUT
-                g_print("MpegTS: [Video] NEWSEGMENT: last_stop = %.4f\n", (double)stream->segment.last_stop / GST_SECOND);
+            g_print("MpegTS: [Video] NEWSEGMENT: last_stop = %.4f\n", (double) stream->segment.last_stop / GST_SECOND);
 #endif
-            }
-            g_mutex_unlock(demuxer->lock);
         }
-        else
-            result = GST_FLOW_ERROR;
+        g_mutex_unlock(&demuxer->lock);
+    } else
+        result = GST_FLOW_ERROR;
 
-        if (newsegment_event)
-            result = gst_pad_push_event(stream->sourcepad, newsegment_event) ? GST_FLOW_OK : GST_FLOW_WRONG_STATE;
+    if (newsegment_event)
+        result = gst_pad_push_event(stream->sourcepad, newsegment_event) ? GST_FLOW_OK : GST_FLOW_FLUSHING;
 
-        if (result == GST_FLOW_OK)
-            result = gst_pad_push(stream->sourcepad, buffer);
-        else
-        {
-            if (GST_BUFFER_DATA(buffer))
-                av_free(GST_BUFFER_DATA(buffer));
-            gst_buffer_unref(buffer);
-        }
-    }
+    if (result == GST_FLOW_OK)
+        result = gst_pad_push(stream->sourcepad, buffer);
+    else
+        gst_buffer_unref(buffer);
 
     return result;
 }
@@ -737,82 +738,80 @@ static GstFlowReturn process_audio_packet(MpegTSDemuxer *demuxer, AVPacket *pack
         return result;
 
     GstBuffer *buffer = NULL;
-    result = gst_pad_alloc_buffer(stream->sourcepad, GST_BUFFER_OFFSET_NONE, 0, GST_PAD_CAPS(stream->sourcepad), &buffer);
+    GstEvent *newsegment_event = NULL;
+    void *buffer_data = av_mallocz(packet->size);
 
-    if (result == GST_FLOW_OK)
+    if (buffer_data != NULL)
     {
-        GstEvent *newsegment_event = NULL;
-        void *buffer_data = av_mallocz(packet->size);
+        memcpy(buffer_data, packet->data, packet->size);
+        buffer = gst_buffer_new_wrapped_full(0, buffer_data, packet->size, 0, packet->size, buffer_data, &av_free);
 
-        if (buffer_data != NULL)
+        if (packet->pts != AV_NOPTS_VALUE)
         {
-            GST_BUFFER_DATA(buffer) = buffer_data;
-            GST_BUFFER_SIZE(buffer) = packet->size;
-            GST_BUFFER_MALLOCDATA(buffer) = buffer_data;
-            GST_BUFFER_FREE_FUNC(buffer) = &av_free;
-            memcpy(GST_BUFFER_DATA(buffer), packet->data, packet->size);
-
-            if (packet->pts != AV_NOPTS_VALUE)
+            if (demuxer->base_pts == GST_CLOCK_TIME_NONE)
             {
-                if (demuxer->base_pts == GST_CLOCK_TIME_NONE)
-                {
-                    demuxer->base_pts = PTS_TO_GSTTIME(packet->pts) + stream->offset_time;
-                }
-
-                gint64 time = PTS_TO_GSTTIME(packet->pts) + stream->offset_time - demuxer->base_pts;
-                if (time < 0)
-                    time = 0;
-
-                if (stream->last_time > 0 && time < (gint64)(stream->last_time - PTS_TO_GSTTIME(G_MAXUINT32)))
-                {
-                    stream->offset_time += PTS_TO_GSTTIME(MAX_PTS + 1); // Wraparound occured
-                    time = PTS_TO_GSTTIME (packet->pts) + stream->offset_time;
-#ifdef VERBOSE_DEBUG_AUDIO
-                    g_print("[Audio wraparound] updating offset_time to %lld\n", stream->offset_time);
-#endif
-                }
-
-#ifdef VERBOSE_DEBUG_AUDIO
-                g_print("[Audio]: pts=%lld(%.4f) time=%lld (%.4f) offset_time=%lld last_time=%lld\n",
-                        PTS_TO_GSTTIME (packet->pts), (double)PTS_TO_GSTTIME (packet->pts) / GST_SECOND,
-                        time, (double)time/GST_SECOND, stream->offset_time, stream->last_time);
-#endif
-
-                stream->last_time = time;
-                GST_BUFFER_TIMESTAMP(buffer) = time;
+                demuxer->base_pts = PTS_TO_GSTTIME(packet->pts) + stream->offset_time;
             }
 
-            if (packet->duration != 0)
-                GST_BUFFER_DURATION(buffer) = PTS_TO_GSTTIME(packet->duration);
+            gint64 time = PTS_TO_GSTTIME(packet->pts) + stream->offset_time - demuxer->base_pts;
+            if (time < 0)
+                time = 0;
 
-            g_mutex_lock(demuxer->lock);
-            gst_segment_set_last_stop(&stream->segment, GST_FORMAT_TIME, GST_BUFFER_TIMESTAMP(buffer));
-
-            if (stream->discont)
+            if (stream->last_time > 0 && time < (gint64) (stream->last_time - PTS_TO_GSTTIME(G_MAXUINT32)))
             {
-                newsegment_event = gst_event_new_new_segment_full(demuxer->update, stream->segment.rate, stream->segment.applied_rate,
-                                                                  stream->segment.format, stream->segment.last_stop,
-                                                                  stream->segment.stop, stream->segment.time);
-                GST_BUFFER_FLAG_SET(buffer, GST_BUFFER_FLAG_DISCONT);
-                stream->discont = FALSE;
+                stream->offset_time += PTS_TO_GSTTIME(MAX_PTS + 1); // Wraparound occured
+                time = PTS_TO_GSTTIME(packet->pts) + stream->offset_time;
+#ifdef VERBOSE_DEBUG_AUDIO
+                g_print("[Audio wraparound] updating offset_time to %lld\n", stream->offset_time);
+#endif
+            }
+
+#ifdef VERBOSE_DEBUG_AUDIO
+            g_print("[Audio]: pts=%lld(%.4f) time=%lld (%.4f) offset_time=%lld last_time=%lld\n",
+                    PTS_TO_GSTTIME(packet->pts), (double) PTS_TO_GSTTIME(packet->pts) / GST_SECOND,
+                    time, (double) time / GST_SECOND, stream->offset_time, stream->last_time);
+#endif
+
+            stream->last_time = time;
+            GST_BUFFER_TIMESTAMP(buffer) = time;
+        }
+
+        if (packet->duration != 0)
+            GST_BUFFER_DURATION(buffer) = PTS_TO_GSTTIME(packet->duration);
+
+        g_mutex_lock(&demuxer->lock);
+        stream->segment.position = GST_BUFFER_TIMESTAMP(buffer);
+
+        if (stream->discont)
+        {
+            GstSegment newsegment;
+            gst_segment_init(&newsegment, GST_FORMAT_TIME);
+            newsegment.flags = stream->segment.flags;
+            newsegment.rate = stream->segment.rate;
+            newsegment.start = stream->segment.time;
+            newsegment.stop = stream->segment.stop;
+            newsegment.time = stream->segment.time;
+            newsegment.position = stream->segment.position;
+            newsegment_event = gst_event_new_segment(&newsegment);
+            
+            GST_BUFFER_FLAG_SET(buffer, GST_BUFFER_FLAG_DISCONT);
+            stream->discont = FALSE;
 
 #ifdef DEBUG_OUTPUT
-                g_print("MpegTS: [Audio] NEWSEGMENT: last_stop = %.4f\n", (double) stream->segment.last_stop / GST_SECOND);
+            g_print("MpegTS: [Audio] NEWSEGMENT: last_stop = %.4f\n", (double) stream->segment.last_stop / GST_SECOND);
 #endif
-            }
-            g_mutex_unlock(demuxer->lock);
         }
-        else
-            result = GST_FLOW_ERROR;
+        g_mutex_unlock(&demuxer->lock);
+    } else
+        result = GST_FLOW_ERROR;
 
-        if (newsegment_event)
-            result = gst_pad_push_event(stream->sourcepad, newsegment_event) ? GST_FLOW_OK : GST_FLOW_WRONG_STATE;
+    if (newsegment_event)
+        result = gst_pad_push_event(stream->sourcepad, newsegment_event) ? GST_FLOW_OK : GST_FLOW_FLUSHING;
 
-        if (result == GST_FLOW_OK)
-            result = gst_pad_push(stream->sourcepad, buffer);
-        else
-            gst_buffer_unref(buffer);
-    }
+    if (result == GST_FLOW_OK)
+        result = gst_pad_push(stream->sourcepad, buffer);
+    else
+        gst_buffer_unref(buffer);
 
 #ifdef VERBOSE_DEBUG_AUDIO
     if (result != GST_FLOW_OK)
@@ -852,7 +851,7 @@ static ParseAction mpegts_demuxer_read_frame(MpegTSDemuxer *demuxer)
 
             if (flow_result != GST_FLOW_OK)
             {
-                if (flow_result != GST_FLOW_WRONG_STATE)
+                if (flow_result != GST_FLOW_FLUSHING)
                     post_message(demuxer, "Send packet failed", GST_MESSAGE_ERROR, GST_STREAM_ERROR, GST_STREAM_ERROR_DEMUX);
 
                 result = PA_STOP;
@@ -953,14 +952,14 @@ static gpointer mpegts_demuxer_process_input(gpointer data)
 
                 action = get_init_action(demuxer, avformat_find_stream_info(demuxer->context, NULL));
 
-                g_mutex_lock(demuxer->lock);
+                g_mutex_lock(&demuxer->lock);
                 gint available = gst_adapter_available(demuxer->sink_adapter);
                 demuxer->adapter_limit_type = LIMITED;
                 gst_adapter_flush(demuxer->sink_adapter, available > demuxer->offset ? demuxer->offset : available);
                 demuxer->flush_adapter = TRUE;
                 demuxer->offset = 0;
-                g_cond_signal(demuxer->del_cond);
-                g_mutex_unlock(demuxer->lock);
+                g_cond_signal(&demuxer->del_cond);
+                g_mutex_unlock(&demuxer->lock);
 
                 mpegts_demuxer_check_streams(demuxer);
             }
@@ -1003,7 +1002,7 @@ static int mpegts_demuxer_read_packet(void *opaque, uint8_t *buffer, int size)
     MpegTSDemuxer *demuxer = MPEGTS_DEMUXER(opaque);
     int result = 0;
 
-    g_mutex_lock(demuxer->lock);
+    g_mutex_lock(&demuxer->lock);
     gint available = gst_adapter_available(demuxer->sink_adapter);
     while (available < demuxer->offset + size &&
            !demuxer->is_eos && !demuxer->is_flushing && demuxer->is_reading)
@@ -1012,10 +1011,10 @@ static int mpegts_demuxer_read_packet(void *opaque, uint8_t *buffer, int size)
             demuxer->adapter_limit_size - LIMIT_STEP < demuxer->offset + size)
         {
             demuxer->adapter_limit_size += LIMIT_STEP;
-            g_cond_signal(demuxer->del_cond);
+            g_cond_signal(&demuxer->del_cond);
         }
         else
-            g_cond_wait(demuxer->add_cond, demuxer->lock);
+            g_cond_wait(&demuxer->add_cond, &demuxer->lock);
 
         available = gst_adapter_available(demuxer->sink_adapter);
     }
@@ -1033,7 +1032,7 @@ static int mpegts_demuxer_read_packet(void *opaque, uint8_t *buffer, int size)
             else
                 demuxer->offset += size;
 
-            g_cond_signal(demuxer->del_cond);
+            g_cond_signal(&demuxer->del_cond);
             result = size;
 
 #ifdef FAKE_ERROR
@@ -1044,7 +1043,7 @@ static int mpegts_demuxer_read_packet(void *opaque, uint8_t *buffer, int size)
     else
         result = AVERROR_EXIT;
 
-    g_mutex_unlock(demuxer->lock);
+    g_mutex_unlock(&demuxer->lock);
 
 #ifdef DEBUG_OUTPUT
     if (result <= 0)
@@ -1076,7 +1075,7 @@ static int64_t mpegts_demuxer_seek(void *opaque, int64_t offset, int whence)
     MpegTSDemuxer *demuxer = MPEGTS_DEMUXER(opaque);
     int64_t result = -1;
 
-    g_mutex_lock(demuxer->lock);
+    g_mutex_lock(&demuxer->lock);
     gint available = gst_adapter_available(demuxer->sink_adapter);
 
     if (whence == SEEK_SET && offset >= 0 && offset < available)
@@ -1094,27 +1093,17 @@ static int64_t mpegts_demuxer_seek(void *opaque, int64_t offset, int whence)
 #endif
     }
 
-    g_mutex_unlock(demuxer->lock);
+    g_mutex_unlock(&demuxer->lock);
     return result;
 }
 
 /***********************************************************************************
  * Query
  ***********************************************************************************/
-static const GstQueryType* mpegts_demuxer_sink_query_type(GstPad * pad)
-{
-    static const GstQueryType query_types[] = {
-        GST_QUERY_DURATION,
-        GST_QUERY_NONE
-    };
-
-    return query_types;
-}
-
-static gboolean mpegts_demuxer_sink_query (GstPad *pad, GstQuery *query)
+static gboolean mpegts_demuxer_sink_query (GstPad *pad, GstObject *parent, GstQuery *query)
 {
     gboolean result = TRUE;
-    MpegTSDemuxer *demuxer = MPEGTS_DEMUXER(GST_PAD_PARENT(pad));
+    MpegTSDemuxer *demuxer = MPEGTS_DEMUXER(parent);
 
     switch (GST_QUERY_TYPE(query))
     {
@@ -1127,15 +1116,14 @@ static gboolean mpegts_demuxer_sink_query (GstPad *pad, GstQuery *query)
                 result = gst_pad_peer_query(pad, query);
             else if (format == GST_FORMAT_BYTES)
             {
-                g_mutex_lock(demuxer->lock);
+                g_mutex_lock(&demuxer->lock);
                 int bit_rate = (demuxer->context != NULL) ? demuxer->context->bit_rate : 0;
-                g_mutex_unlock(demuxer->lock);
+                g_mutex_unlock(&demuxer->lock);
 
                 if (bit_rate > 0)
                 {
-                    GstFormat peer_format = GST_FORMAT_TIME;
                     gint64    duration = GST_CLOCK_TIME_NONE;
-                    if (gst_pad_query_peer_duration(pad, &peer_format, &duration))
+                    if (gst_pad_peer_query_duration(pad, GST_FORMAT_TIME, &duration))
                     {
                         // Approximate duration in bytes for a certain time duration and bit rate.
                         if (duration != GST_CLOCK_TIME_NONE)
@@ -1159,9 +1147,9 @@ static gboolean mpegts_demuxer_sink_query (GstPad *pad, GstQuery *query)
     return result;
 }
 
-static gboolean mpegts_demuxer_src_query (GstPad *pad, GstQuery *query)
+static gboolean mpegts_demuxer_src_query (GstPad *pad, GstObject *parent, GstQuery *query)
 {
-    MpegTSDemuxer *demuxer = MPEGTS_DEMUXER(GST_PAD_PARENT(pad));
+    MpegTSDemuxer *demuxer = MPEGTS_DEMUXER(parent);
     return gst_pad_query(demuxer->sinkpad, query);
 }
 
@@ -1180,6 +1168,7 @@ static void mpegts_demuxer_init_state(MpegTSDemuxer *demuxer)
     demuxer->is_eos = FALSE;
     demuxer->is_flushing = FALSE;
     demuxer->is_reading = TRUE;
+    demuxer->is_closing = FALSE;
     demuxer->context = NULL;
     demuxer->update = FALSE;
 
@@ -1213,13 +1202,17 @@ static void mpegts_demuxer_flush(MpegTSDemuxer *demuxer)
 
 static void mpegts_demuxer_close(MpegTSDemuxer *demuxer)
 {
-    g_mutex_lock(demuxer->lock);
+    g_mutex_lock(&demuxer->lock);
     demuxer->is_reading = FALSE;
-    g_cond_signal(demuxer->add_cond);
-    g_mutex_unlock(demuxer->lock);
+    demuxer->is_closing = TRUE;
+    g_cond_signal(&demuxer->add_cond);
+    g_mutex_unlock(&demuxer->lock);
 
-    g_thread_join(demuxer->reader_thread);
-    demuxer->reader_thread = NULL;
+    if (demuxer->reader_thread)
+    {
+        g_thread_join(demuxer->reader_thread);
+        demuxer->reader_thread = NULL;
+    }
 
     if (demuxer->context)
     {
@@ -1257,7 +1250,7 @@ mpegts_demuxer_change_state(GstElement* element, GstStateChange transition)
     }
 
     // Change state.
-    GstStateChangeReturn ret = parent_class->change_state(element, transition);
+    GstStateChangeReturn ret = GST_ELEMENT_CLASS(parent_class)->change_state(element, transition);
     if (GST_STATE_CHANGE_FAILURE == ret)
         return ret;
 

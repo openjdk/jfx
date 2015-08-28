@@ -16,8 +16,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 
@@ -60,10 +60,9 @@ typedef enum {
 #include <gst/gstelementfactory.h>
 #include <gst/gstplugin.h>
 #include <gst/gstpluginfeature.h>
-#include <gst/gstindex.h>
-#include <gst/gstindexfactory.h>
 #include <gst/gstiterator.h>
 #include <gst/gstmessage.h>
+#include <gst/gstquery.h>
 #include <gst/gsttaglist.h>
 
 G_BEGIN_DECLS
@@ -85,8 +84,8 @@ G_BEGIN_DECLS
  *                               cannot produce data in %GST_STATE_PAUSED.
  *                               This typically happens with live sources.
  *
- * The possible return values from a state change function. Only
- * @GST_STATE_CHANGE_FAILURE is a real failure.
+ * The possible return values from a state change function such as
+ * gst_element_set_state(). Only @GST_STATE_CHANGE_FAILURE is a real failure.
  */
 typedef enum {
   GST_STATE_CHANGE_FAILURE             = 0,
@@ -128,10 +127,8 @@ typedef enum {
  * @elem: a #GstElement to return the target state for.
  *
  * This macro returns the target #GstState of the element.
- *
- * Since: 0.10.13
  */
-#define GST_STATE_TARGET(elem)          (GST_ELEMENT_CAST(elem)->abidata.ABI.target_state)
+#define GST_STATE_TARGET(elem)          (GST_ELEMENT_CAST(elem)->target_state)
 
 /**
  * GST_STATE_RETURN:
@@ -150,7 +147,7 @@ typedef enum {
  * Given a current state @cur and a target state @pending, calculate the next (intermediate)
  * #GstState.
  */
-#define GST_STATE_GET_NEXT(cur,pending)         ((cur) + __GST_SIGN ((gint)(pending) - (gint)(cur)))
+#define GST_STATE_GET_NEXT(cur,pending)         ((GstState)((cur) + __GST_SIGN ((gint)(pending) - (gint)(cur))))
 /**
  * GST_STATE_TRANSITION:
  * @cur: A current state
@@ -195,17 +192,17 @@ typedef enum {
  *     Streaming threads are started.
  *   </para></listitem>
  *   <listitem><para>
- *     Some elements might need to return ASYNC and complete the state change
- *     when they have enough information. It is a requirement for sinks to
- *     return ASYNC and complete the state change when they receive the first
- *     buffer or EOS event (preroll). Sinks also block the dataflow when in
- *     PAUSED.
+ *     Some elements might need to return %GST_STATE_CHANGE_ASYNC and complete
+ *     the state change when they have enough information. It is a requirement
+ *     for sinks to return %GST_STATE_CHANGE_ASYNC and complete the state change
+ *     when they receive the first buffer or %GST_EVENT_EOS (preroll).
+ *     Sinks also block the dataflow when in PAUSED.
  *   </para></listitem>
  *   <listitem><para>
  *     A pipeline resets the running_time to 0.
  *   </para></listitem>
  *   <listitem><para>
- *     Live sources return NO_PREROLL and don't generate data.
+ *     Live sources return %GST_STATE_CHANGE_NO_PREROLL and don't generate data.
  *   </para></listitem>
  * </itemizedlist>
  * @GST_STATE_CHANGE_PAUSED_TO_PLAYING: state change from PAUSED to PLAYING.
@@ -214,12 +211,12 @@ typedef enum {
  *     Most elements ignore this state change.
  *   </para></listitem>
  *   <listitem><para>
- *     The pipeline selects a clock and distributes this to all the children
- *     before setting them to PLAYING. This means that it is only alowed to
- *     synchronize on the clock in the PLAYING state.
+ *     The pipeline selects a #GstClock and distributes this to all the children
+ *     before setting them to PLAYING. This means that it is only allowed to
+ *     synchronize on the #GstClock in the PLAYING state.
  *   </para></listitem>
  *   <listitem><para>
- *     The pipeline uses the clock and the running_time to calculate the
+ *     The pipeline uses the #GstClock and the running_time to calculate the
  *     base_time. The base_time is distributed to all children when performing
  *     the state change.
  *   </para></listitem>
@@ -228,15 +225,15 @@ typedef enum {
  *     rendering the data.
  *   </para></listitem>
  *   <listitem><para>
- *     Sinks can post the EOS message in the PLAYING state. It is not allowed to
- *     post EOS when not in the PLAYING state.
+ *     Sinks can post %GST_MESSAGE_EOS in the PLAYING state. It is not allowed
+ *     to post %GST_MESSAGE_EOS when not in the PLAYING state.
  *   </para></listitem>
  *   <listitem><para>
  *     While streaming in PAUSED or PLAYING elements can create and remove
  *     sometimes pads.
  *   </para></listitem>
  *   <listitem><para>
- *     Live sources start generating data and return SUCCESS.
+ *     Live sources start generating data and return %GST_STATE_CHANGE_SUCCESS.
  *   </para></listitem>
  * </itemizedlist>
  * @GST_STATE_CHANGE_PLAYING_TO_PAUSED: state change from PLAYING to PAUSED.
@@ -245,24 +242,25 @@ typedef enum {
  *     Most elements ignore this state change.
  *   </para></listitem>
  *   <listitem><para>
- *     The pipeline calculates the running_time based on the last selected clock
- *     and the base_time. It stores this information to continue playback when
- *     going back to the PLAYING state.
+ *     The pipeline calculates the running_time based on the last selected
+ *     #GstClock and the base_time. It stores this information to continue
+ *     playback when going back to the PLAYING state.
  *   </para></listitem>
  *   <listitem><para>
- *     Sinks unblock any clock wait calls.
+ *     Sinks unblock any #GstClock wait calls.
  *   </para></listitem>
  *   <listitem><para>
- *     When a sink does not have a pending buffer to play, it returns ASYNC from
- *     this state change and completes the state change when it receives a new
- *     buffer or an EOS event.
+ *     When a sink does not have a pending buffer to play, it returns
+ *     %GST_STATE_CHANGE_ASYNC from this state change and completes the state
+ *     change when it receives a new buffer or an %GST_EVENT_EOS.
  *   </para></listitem>
  *   <listitem><para>
- *     Any queued EOS messages are removed since they will be reposted when going
- *     back to the PLAYING state. The EOS messages are queued in GstBins.
+ *     Any queued %GST_MESSAGE_EOS items are removed since they will be reposted
+ *     when going back to the PLAYING state. The EOS messages are queued in
+ *     #GstBin containers.
  *   </para></listitem>
  *   <listitem><para>
- *     Live sources stop generating data and return NO_PREROLL.
+ *     Live sources stop generating data and return %GST_STATE_CHANGE_NO_PREROLL.
  *   </para></listitem>
  * </itemizedlist>
  * @GST_STATE_CHANGE_PAUSED_TO_READY  : state change from PAUSED to READY.
@@ -274,7 +272,7 @@ typedef enum {
  *     Elements unblock any waits on devices
  *   </para></listitem>
  *   <listitem><para>
- *     Chain or get_range functions return WRONG_STATE.
+ *     Chain or get_range functions return %GST_FLOW_FLUSHING.
  *   </para></listitem>
  *   <listitem><para>
  *     The element pads are deactivated so that streaming becomes impossible and
@@ -313,23 +311,26 @@ typedef enum /*< flags=0 >*/
 
 /**
  * GstElementFlags:
- * @GST_ELEMENT_LOCKED_STATE: ignore state changes from parent
- * @GST_ELEMENT_IS_SINK: the element is a sink
- * @GST_ELEMENT_UNPARENTING: Child is being removed from the parent bin.
- *  gst_bin_remove() on a child already being removed immediately returns FALSE
- * @GST_ELEMENT_IS_SOURCE: the element is a source. Since 0.10.31
+ * @GST_ELEMENT_FLAG_LOCKED_STATE: ignore state changes from parent
+ * @GST_ELEMENT_FLAG_SINK: the element is a sink
+ * @GST_ELEMENT_FLAG_SOURCE: the element is a source.
+ * @GST_ELEMENT_FLAG_PROVIDE_CLOCK: the element can provide a clock
+ * @GST_ELEMENT_FLAG_REQUIRE_CLOCK: the element requires a clock
+ * @GST_ELEMENT_FLAG_INDEXABLE: the element can use an index
  * @GST_ELEMENT_FLAG_LAST: offset to define more flags
  *
  * The standard flags that an element may have.
  */
 typedef enum
 {
-  GST_ELEMENT_LOCKED_STATE      = (GST_OBJECT_FLAG_LAST << 0),
-  GST_ELEMENT_IS_SINK           = (GST_OBJECT_FLAG_LAST << 1),
-  GST_ELEMENT_UNPARENTING       = (GST_OBJECT_FLAG_LAST << 2),
-  GST_ELEMENT_IS_SOURCE         = (GST_OBJECT_FLAG_LAST << 3),
+  GST_ELEMENT_FLAG_LOCKED_STATE   = (GST_OBJECT_FLAG_LAST << 0),
+  GST_ELEMENT_FLAG_SINK           = (GST_OBJECT_FLAG_LAST << 1),
+  GST_ELEMENT_FLAG_SOURCE         = (GST_OBJECT_FLAG_LAST << 2),
+  GST_ELEMENT_FLAG_PROVIDE_CLOCK  = (GST_OBJECT_FLAG_LAST << 3),
+  GST_ELEMENT_FLAG_REQUIRE_CLOCK  = (GST_OBJECT_FLAG_LAST << 4),
+  GST_ELEMENT_FLAG_INDEXABLE      = (GST_OBJECT_FLAG_LAST << 5),
   /* padding */
-  GST_ELEMENT_FLAG_LAST         = (GST_OBJECT_FLAG_LAST << 16)
+  GST_ELEMENT_FLAG_LAST           = (GST_OBJECT_FLAG_LAST << 10)
 } GstElementFlags;
 
 /**
@@ -339,7 +340,7 @@ typedef enum
  * Check if the element is in the locked state and therefore will ignore state
  * changes from its parent object.
  */
-#define GST_ELEMENT_IS_LOCKED_STATE(elem)        (GST_OBJECT_FLAG_IS_SET(elem,GST_ELEMENT_LOCKED_STATE))
+#define GST_ELEMENT_IS_LOCKED_STATE(elem)        (GST_OBJECT_FLAG_IS_SET(elem,GST_ELEMENT_FLAG_LOCKED_STATE))
 
 /**
  * GST_ELEMENT_NAME:
@@ -388,10 +389,8 @@ typedef enum
  *
  * This macro returns the start_time of the @elem. The start_time is the
  * running_time of the pipeline when the element went to PAUSED.
- *
- * Since: 0.10.24
  */
-#define GST_ELEMENT_START_TIME(elem)            (GST_ELEMENT_CAST(elem)->abidata.ABI.start_time)
+#define GST_ELEMENT_START_TIME(elem)            (GST_ELEMENT_CAST(elem)->start_time)
 
 /**
  * GST_ELEMENT_ERROR:
@@ -461,8 +460,6 @@ G_STMT_START {                                                          \
  * the application of something noteworthy that is not an error.
  * The pipeline will post a info message and the
  * application will be informed.
- *
- * Since: 0.10.12
  */
 #define GST_ELEMENT_INFO(el, domain, code, text, debug)                 \
 G_STMT_START {                                                          \
@@ -486,24 +483,24 @@ G_STMT_START {                                                          \
  * This lock is used by the core.  It is taken while getting or setting
  * the state, during state changes, and while finalizing.
  */
-#define GST_STATE_GET_LOCK(elem)               (GST_ELEMENT_CAST(elem)->state_lock)
+#define GST_STATE_GET_LOCK(elem)               (&(GST_ELEMENT_CAST(elem)->state_lock))
 /**
  * GST_STATE_GET_COND:
  * @elem: a #GstElement
  *
  * Get the conditional used to signal the completion of a state change.
  */
-#define GST_STATE_GET_COND(elem)               (GST_ELEMENT_CAST(elem)->state_cond)
+#define GST_STATE_GET_COND(elem)               (&GST_ELEMENT_CAST(elem)->state_cond)
 
-#define GST_STATE_LOCK(elem)                   g_static_rec_mutex_lock(GST_STATE_GET_LOCK(elem))
-#define GST_STATE_TRYLOCK(elem)                g_static_rec_mutex_trylock(GST_STATE_GET_LOCK(elem))
-#define GST_STATE_UNLOCK(elem)                 g_static_rec_mutex_unlock(GST_STATE_GET_LOCK(elem))
-#define GST_STATE_UNLOCK_FULL(elem)            g_static_rec_mutex_unlock_full(GST_STATE_GET_LOCK(elem))
-#define GST_STATE_LOCK_FULL(elem,t)            g_static_rec_mutex_lock_full(GST_STATE_GET_LOCK(elem), t)
+#define GST_STATE_LOCK(elem)                   g_rec_mutex_lock(GST_STATE_GET_LOCK(elem))
+#define GST_STATE_TRYLOCK(elem)                g_rec_mutex_trylock(GST_STATE_GET_LOCK(elem))
+#define GST_STATE_UNLOCK(elem)                 g_rec_mutex_unlock(GST_STATE_GET_LOCK(elem))
+#define GST_STATE_UNLOCK_FULL(elem)            g_rec_mutex_unlock_full(GST_STATE_GET_LOCK(elem))
+#define GST_STATE_LOCK_FULL(elem,t)            g_rec_mutex_lock_full(GST_STATE_GET_LOCK(elem), t)
 #define GST_STATE_WAIT(elem)                   g_cond_wait (GST_STATE_GET_COND (elem), \
                                                         GST_OBJECT_GET_LOCK (elem))
-#define GST_STATE_TIMED_WAIT(elem, timeval)    g_cond_timed_wait (GST_STATE_GET_COND (elem), \
-                                                        GST_OBJECT_GET_LOCK (elem), timeval)
+#define GST_STATE_WAIT_UNTIL(elem, end_time)   g_cond_wait_until (GST_STATE_GET_COND (elem), \
+                                                        GST_OBJECT_GET_LOCK (elem), end_time)
 #define GST_STATE_SIGNAL(elem)                 g_cond_signal (GST_STATE_GET_COND (elem));
 #define GST_STATE_BROADCAST(elem)              g_cond_broadcast (GST_STATE_GET_COND (elem));
 
@@ -513,6 +510,7 @@ G_STMT_START {                                                          \
  * @state_cond: Used to signal completion of a state change
  * @state_cookie: Used to detect concurrent execution of
  * gst_element_set_state() and gst_element_get_state()
+ * @target_state: the target state of an element as set by the application
  * @current_state: the current state of an element
  * @next_state: the next state of an element, can be #GST_STATE_VOID_PENDING if
  * the element is in the correct state.
@@ -526,12 +524,13 @@ G_STMT_START {                                                          \
  * @base_time: the time of the clock right before the element is set to
  * PLAYING. Subtracting @base_time from the current clock time in the PLAYING
  * state will yield the running_time against the clock.
+ * @start_time: the running_time of the last PAUSED state
  * @numpads: number of pads of the element, includes both source and sink pads.
- * @pads: list of pads
+ * @pads: (element-type Gst.Pad): list of pads
  * @numsrcpads: number of source pads of the element.
- * @srcpads: list of source pads
+ * @srcpads: (element-type Gst.Pad): list of source pads
  * @numsinkpads: number of sink pads of the element.
- * @sinkpads: list of sink pads
+ * @sinkpads: (element-type Gst.Pad): list of sink pads
  * @pads_cookie: updated whenever the a pad is added or removed
  *
  * GStreamer element abstract base class.
@@ -541,11 +540,12 @@ struct _GstElement
   GstObject             object;
 
   /*< public >*/ /* with LOCK */
-  GStaticRecMutex      *state_lock;
+  GRecMutex             state_lock;
 
   /* element state */
-  GCond                *state_cond;
+  GCond                 state_cond;
   guint32               state_cookie;
+  GstState              target_state;
   GstState              current_state;
   GstState              next_state;
   GstState              pending_state;
@@ -556,6 +556,7 @@ struct _GstElement
   /* allocated clock */
   GstClock             *clock;
   GstClockTimeDiff      base_time; /* NULL/READY: 0 - PAUSED: current time - PLAYING: difference to clock */
+  GstClockTime          start_time;
 
   /* element pads, these lists can only be iterated while holding
    * the LOCK or checking the cookie after each LOCK. */
@@ -568,22 +569,13 @@ struct _GstElement
   guint32               pads_cookie;
 
   /*< private >*/
-  union {
-    struct {
-      /* state set by application */
-      GstState              target_state;
-      /* running time of the last PAUSED state */
-      GstClockTime          start_time;
-    } ABI;
-    /* adding + 0 to mark ABI change to be undone later */
-    gpointer _gst_reserved[GST_PADDING + 0];
-  } abidata;
+  gpointer _gst_reserved[GST_PADDING];
 };
 
 /**
  * GstElementClass:
  * @parent_class: the parent class structure
- * @details: #GstElementDetails for elements of this class
+ * @metadata: metadata for elements of this class
  * @elementfactory: the #GstElementFactory that creates these elements
  * @padtemplates: a #GList of #GstPadTemplate
  * @numpadtemplates: the number of padtemplates
@@ -596,12 +588,12 @@ struct _GstElement
  * @set_bus: set a #GstBus on the element
  * @provide_clock: gets the #GstClock provided by the element
  * @set_clock: set the #GstClock on the element
- * @get_index: set a #GstIndex on the element
- * @set_index: get the #GstIndex of an element
  * @send_event: send a #GstEvent to the element
- * @get_query_types: get the supported #GstQueryType of this element
  * @query: perform a #GstQuery on the element
- * @request_new_pad_full: called when a new pad is requested. Since: 0.10.32.
+ * @state_changed: called immediately after a new state was set.
+ * @post_message: called when a message is posted on the element. Chain up to
+ *                the parent class' handler to have it posted on the bus.
+ * @set_context: set a #GstContext on the element
  *
  * GStreamer element class. Override the vmethods to implement the element
  * functionality.
@@ -611,9 +603,8 @@ struct _GstElementClass
   GstObjectClass         parent_class;
 
   /*< public >*/
-  /* the element details */
-  /* FIXME-0.11: deprecate this in favour of meta_data */
-  GstElementDetails      details;
+  /* the element metadata */
+  gpointer		 metadata;
 
   /* factory that the element was created from */
   GstElementFactory     *elementfactory;
@@ -633,7 +624,8 @@ struct _GstElementClass
   /* virtual methods for subclasses */
 
   /* request/release pads */
-  GstPad*               (*request_new_pad)      (GstElement *element, GstPadTemplate *templ, const gchar* name);
+  GstPad*               (*request_new_pad)      (GstElement *element, GstPadTemplate *templ,
+                                                 const gchar* name, const GstCaps *caps);
   void                  (*release_pad)          (GstElement *element, GstPad *pad);
 
   /* state changes */
@@ -641,6 +633,8 @@ struct _GstElementClass
                                                  GstState * pending, GstClockTime timeout);
   GstStateChangeReturn (*set_state)             (GstElement *element, GstState state);
   GstStateChangeReturn (*change_state)          (GstElement *element, GstStateChange transition);
+  void                 (*state_changed)         (GstElement *element, GstState oldstate,
+                                                 GstState newstate, GstState pending);
 
   /* bus */
   void                  (*set_bus)              (GstElement * element, GstBus * bus);
@@ -649,28 +643,17 @@ struct _GstElementClass
   GstClock*             (*provide_clock)        (GstElement *element);
   gboolean              (*set_clock)            (GstElement *element, GstClock *clock);
 
-  /* index */
-  GstIndex*             (*get_index)            (GstElement *element);
-  void                  (*set_index)            (GstElement *element, GstIndex *index);
-
   /* query functions */
   gboolean              (*send_event)           (GstElement *element, GstEvent *event);
 
-  const GstQueryType*   (*get_query_types)      (GstElement *element);
   gboolean              (*query)                (GstElement *element, GstQuery *query);
 
-  /*< private >*/
-  /* FIXME-0.11: move up and replace details */
-  gpointer		meta_data;
+  gboolean              (*post_message)         (GstElement *element, GstMessage *message);
 
-  /*< public >*/
-  /* Virtual method for subclasses (additions) */
-  /* FIXME-0.11 Make this the default behaviour */
-  GstPad*		(*request_new_pad_full) (GstElement *element, GstPadTemplate *templ,
-						 const gchar* name, const GstCaps *caps);
+  void                  (*set_context)          (GstElement *element, GstContext *context);
 
   /*< private >*/
-  gpointer _gst_reserved[GST_PADDING-2];
+  gpointer _gst_reserved[GST_PADDING_LARGE-2];
 };
 
 /* element class pad templates */
@@ -679,16 +662,23 @@ GstPadTemplate*         gst_element_class_get_pad_template      (GstElementClass
 GList*                  gst_element_class_get_pad_template_list (GstElementClass *element_class);
 
 /* element class meta data */
-void                    gst_element_class_set_documentation_uri (GstElementClass * klass, const gchar *uri);
-void                    gst_element_class_set_icon_name         (GstElementClass * klass, const gchar *name);
-#ifndef GST_DISABLE_DEPRECATED
-void                    gst_element_class_set_details           (GstElementClass *klass, const GstElementDetails *details);
-#endif
-void                    gst_element_class_set_details_simple    (GstElementClass *klass,
+void                    gst_element_class_set_metadata          (GstElementClass *klass,
                                                                  const gchar     *longname,
                                                                  const gchar     *classification,
                                                                  const gchar     *description,
                                                                  const gchar     *author);
+void                    gst_element_class_set_static_metadata   (GstElementClass *klass,
+                                                                 const gchar     *longname,
+                                                                 const gchar     *classification,
+                                                                 const gchar     *description,
+                                                                 const gchar     *author);
+void                    gst_element_class_add_metadata          (GstElementClass * klass,
+                                                                 const gchar * key, const gchar * value);
+void                    gst_element_class_add_static_metadata   (GstElementClass * klass,
+                                                                 const gchar * key, const gchar * value);
+const gchar *           gst_element_class_get_metadata          (GstElementClass * klass,
+                                                                 const gchar * key);
+
 
 /* element instance */
 GType                   gst_element_get_type            (void);
@@ -701,10 +691,11 @@ GType                   gst_element_get_type            (void);
  *
  * Returns a copy of the name of @elem.
  * Caller should g_free() the return value after usage.
- * For a nameless element, this returns NULL, which you can safely g_free()
+ * For a nameless element, this returns %NULL, which you can safely g_free()
  * as well.
  *
- * Returns: (transfer full): the name of @elem. g_free() after usage. MT safe.
+ * Returns: (transfer full) (nullable): the name of @elem. g_free()
+ * after usage. MT safe.
  *
  */
 #define                 gst_element_get_name(elem)      gst_object_get_name(GST_OBJECT_CAST(elem))
@@ -738,8 +729,6 @@ GType                   gst_element_get_type            (void);
 #define                 gst_element_set_parent(elem,parent)     gst_object_set_parent(GST_OBJECT_CAST(elem),parent)
 
 /* clocking */
-gboolean                gst_element_requires_clock      (GstElement *element);
-gboolean                gst_element_provides_clock      (GstElement *element);
 GstClock*               gst_element_provide_clock       (GstElement *element);
 GstClock*               gst_element_get_clock           (GstElement *element);
 gboolean                gst_element_set_clock           (GstElement *element, GstClock *clock);
@@ -748,27 +737,21 @@ GstClockTime            gst_element_get_base_time       (GstElement *element);
 void                    gst_element_set_start_time      (GstElement *element, GstClockTime time);
 GstClockTime            gst_element_get_start_time      (GstElement *element);
 
-/* indexes */
-gboolean                gst_element_is_indexable        (GstElement *element);
-void                    gst_element_set_index           (GstElement *element, GstIndex *index);
-GstIndex*               gst_element_get_index           (GstElement *element);
-
 /* bus */
 void                    gst_element_set_bus             (GstElement * element, GstBus * bus);
 GstBus *                gst_element_get_bus             (GstElement * element);
+
+/* context */
+void                    gst_element_set_context         (GstElement * element, GstContext * context);
 
 /* pad management */
 gboolean                gst_element_add_pad             (GstElement *element, GstPad *pad);
 gboolean                gst_element_remove_pad          (GstElement *element, GstPad *pad);
 void                    gst_element_no_more_pads        (GstElement *element);
 
-#ifndef GST_DISABLE_DEPRECATED
-GstPad*                 gst_element_get_pad             (GstElement *element, const gchar *name);
-#endif /* GST_DISABLE_DEPRECATED */
 GstPad*                 gst_element_get_static_pad      (GstElement *element, const gchar *name);
 GstPad*                 gst_element_get_request_pad     (GstElement *element, const gchar *name);
-GstPad*                 gst_element_request_pad         (GstElement *element,
-							 GstPadTemplate *templ,
+GstPad*                 gst_element_request_pad         (GstElement *element, GstPadTemplate *templ,
 							 const gchar * name, const GstCaps *caps);
 void                    gst_element_release_request_pad (GstElement *element, GstPad *pad);
 
@@ -780,9 +763,8 @@ GstIterator *           gst_element_iterate_sink_pads   (GstElement * element);
 gboolean                gst_element_send_event          (GstElement *element, GstEvent *event);
 gboolean                gst_element_seek                (GstElement *element, gdouble rate,
                                                          GstFormat format, GstSeekFlags flags,
-                                                         GstSeekType cur_type, gint64 cur,
+                                                         GstSeekType start_type, gint64 start,
                                                          GstSeekType stop_type, gint64 stop);
-const GstQueryType*     gst_element_get_query_types     (GstElement *element);
 gboolean                gst_element_query               (GstElement *element, GstQuery *query);
 
 /* messages */
@@ -790,7 +772,7 @@ gboolean                gst_element_post_message        (GstElement * element, G
 
 /* error handling */
 /* gcc versions < 3.3 warn about NULL being passed as format to printf */
-#if (defined(GST_USING_PRINTF_EXTENSION) || !defined(__GNUC__) || (__GNUC__ < 3) || (__GNUC__ == 3 && __GNUC_MINOR__ < 3))
+#if (!defined(__GNUC__) || (__GNUC__ < 3) || (__GNUC__ == 3 && __GNUC_MINOR__ < 3))
 gchar *                 _gst_element_error_printf       (const gchar *format, ...);
 #else
 gchar *                 _gst_element_error_printf       (const gchar *format, ...) G_GNUC_PRINTF (1, 2);
@@ -817,7 +799,6 @@ GstStateChangeReturn    gst_element_change_state        (GstElement * element,
 GstStateChangeReturn    gst_element_continue_state      (GstElement * element,
                                                          GstStateChangeReturn ret);
 void                    gst_element_lost_state          (GstElement * element);
-void                    gst_element_lost_state_full     (GstElement * element, gboolean new_base_time);
 
 /* factory management */
 GstElementFactory*      gst_element_get_factory         (GstElement *element);

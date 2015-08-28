@@ -14,8 +14,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 #ifndef _GST_DISCOVERER_H_
@@ -32,7 +32,7 @@ G_BEGIN_DECLS
 #define GST_IS_DISCOVERER_STREAM_INFO(obj) \
   (G_TYPE_CHECK_INSTANCE_TYPE((obj),GST_TYPE_DISCOVERER_STREAM_INFO))
 typedef struct _GstDiscovererStreamInfo GstDiscovererStreamInfo;
-typedef GstMiniObjectClass GstDiscovererStreamInfoClass;
+typedef GObjectClass GstDiscovererStreamInfoClass;
 GType gst_discoverer_stream_info_get_type (void);
 
 /**
@@ -53,16 +53,16 @@ GType gst_discoverer_stream_info_get_type (void);
  * corresponding to the AVI container, which in turn will have a
  * #GstDiscovererAudioInfo sub-stream and a #GstDiscovererVideoInfo sub-stream
  * for the audio and video streams respectively.
- *
- * Since: 0.10.31
  */
-#define gst_discoverer_stream_info_ref(info) ((GstDiscovererStreamInfo*) gst_mini_object_ref((GstMiniObject*) info))
-#define gst_discoverer_stream_info_unref(info) (gst_mini_object_unref((GstMiniObject*) info))
+#define gst_discoverer_stream_info_ref(info) ((GstDiscovererStreamInfo*) g_object_ref((GObject*) info))
+#define gst_discoverer_stream_info_unref(info) (g_object_unref((GObject*) info))
 
 GstDiscovererStreamInfo* gst_discoverer_stream_info_get_previous(GstDiscovererStreamInfo* info);
 GstDiscovererStreamInfo* gst_discoverer_stream_info_get_next(GstDiscovererStreamInfo* info);
 GstCaps*                 gst_discoverer_stream_info_get_caps(GstDiscovererStreamInfo* info);
 const GstTagList*        gst_discoverer_stream_info_get_tags(GstDiscovererStreamInfo* info);
+const GstToc*            gst_discoverer_stream_info_get_toc(GstDiscovererStreamInfo* info);
+const gchar*             gst_discoverer_stream_info_get_stream_id(GstDiscovererStreamInfo* info);
 const GstStructure*      gst_discoverer_stream_info_get_misc(GstDiscovererStreamInfo* info);
 const gchar *            gst_discoverer_stream_info_get_stream_type_nick(GstDiscovererStreamInfo* info);
 
@@ -70,8 +70,6 @@ const gchar *            gst_discoverer_stream_info_get_stream_type_nick(GstDisc
  * GstDiscovererContainerInfo:
  *
  * #GstDiscovererStreamInfo specific to container streams.
- *
- * Since: 0.10.31
  */
 #define GST_TYPE_DISCOVERER_CONTAINER_INFO \
   (gst_discoverer_container_info_get_type ())
@@ -80,7 +78,7 @@ const gchar *            gst_discoverer_stream_info_get_stream_type_nick(GstDisc
 #define GST_IS_DISCOVERER_CONTAINER_INFO(obj) \
   (G_TYPE_CHECK_INSTANCE_TYPE((obj),GST_TYPE_DISCOVERER_CONTAINER_INFO))
 typedef struct _GstDiscovererContainerInfo GstDiscovererContainerInfo;
-typedef GstMiniObjectClass GstDiscovererContainerInfoClass;
+typedef GObjectClass GstDiscovererContainerInfoClass;
 
 GType gst_discoverer_container_info_get_type (void);
 
@@ -91,8 +89,6 @@ GList *gst_discoverer_container_info_get_streams(GstDiscovererContainerInfo *inf
  * GstDiscovererAudioInfo:
  *
  * #GstDiscovererStreamInfo specific to audio streams.
- *
- * Since: 0.10.31
  */
 #define GST_TYPE_DISCOVERER_AUDIO_INFO \
   (gst_discoverer_audio_info_get_type ())
@@ -101,7 +97,7 @@ GList *gst_discoverer_container_info_get_streams(GstDiscovererContainerInfo *inf
 #define GST_IS_DISCOVERER_AUDIO_INFO(obj) \
   (G_TYPE_CHECK_INSTANCE_TYPE((obj),GST_TYPE_DISCOVERER_AUDIO_INFO))
 typedef struct _GstDiscovererAudioInfo GstDiscovererAudioInfo;
-typedef GstMiniObjectClass GstDiscovererAudioInfoClass;
+typedef GObjectClass GstDiscovererAudioInfoClass;
 
 GType gst_discoverer_audio_info_get_type (void);
 
@@ -110,13 +106,12 @@ guint gst_discoverer_audio_info_get_sample_rate(const GstDiscovererAudioInfo* in
 guint gst_discoverer_audio_info_get_depth(const GstDiscovererAudioInfo* info);
 guint gst_discoverer_audio_info_get_bitrate(const GstDiscovererAudioInfo* info);
 guint gst_discoverer_audio_info_get_max_bitrate(const GstDiscovererAudioInfo* info);
+const gchar * gst_discoverer_audio_info_get_language(const GstDiscovererAudioInfo* info);
 
 /**
  * GstDiscovererVideoInfo:
  *
  * #GstDiscovererStreamInfo specific to video streams (this includes images).
- *
- * Since: 0.10.31
  */
 #define GST_TYPE_DISCOVERER_VIDEO_INFO \
   (gst_discoverer_video_info_get_type ())
@@ -125,7 +120,7 @@ guint gst_discoverer_audio_info_get_max_bitrate(const GstDiscovererAudioInfo* in
 #define GST_IS_DISCOVERER_VIDEO_INFO(obj) \
   (G_TYPE_CHECK_INSTANCE_TYPE((obj),GST_TYPE_DISCOVERER_VIDEO_INFO))
 typedef struct _GstDiscovererVideoInfo GstDiscovererVideoInfo;
-typedef GstMiniObjectClass GstDiscovererVideoInfoClass;
+typedef GObjectClass GstDiscovererVideoInfoClass;
 GType gst_discoverer_video_info_get_type (void);
 
 guint           gst_discoverer_video_info_get_width(const GstDiscovererVideoInfo* info);
@@ -141,6 +136,24 @@ guint           gst_discoverer_video_info_get_max_bitrate(const GstDiscovererVid
 gboolean        gst_discoverer_video_info_is_image(const GstDiscovererVideoInfo* info);
 
 /**
+ * GstDiscovererSubtitleInfo:
+ *
+ * #GstDiscovererStreamInfo specific to subtitle streams (this includes text and
+ * image based ones).
+ */
+#define GST_TYPE_DISCOVERER_SUBTITLE_INFO \
+  (gst_discoverer_subtitle_info_get_type ())
+#define GST_DISCOVERER_SUBTITLE_INFO(obj) \
+  (G_TYPE_CHECK_INSTANCE_CAST((obj),GST_TYPE_DISCOVERER_SUBTITLE_INFO, GstDiscovererSubtitleInfo))
+#define GST_IS_DISCOVERER_SUBTITLE_INFO(obj) \
+  (G_TYPE_CHECK_INSTANCE_TYPE((obj),GST_TYPE_DISCOVERER_SUBTITLE_INFO))
+typedef struct _GstDiscovererSubtitleInfo GstDiscovererSubtitleInfo;
+typedef GObjectClass GstDiscovererSubtitleInfoClass;
+GType gst_discoverer_subtitle_info_get_type (void);
+
+const gchar *   gst_discoverer_subtitle_info_get_language(const GstDiscovererSubtitleInfo* info);
+
+/**
  * GstDiscovererResult:
  * @GST_DISCOVERER_OK: The discovery was successful
  * @GST_DISCOVERER_URI_INVALID: the URI is invalid
@@ -150,8 +163,6 @@ gboolean        gst_discoverer_video_info_is_image(const GstDiscovererVideoInfo*
  * @GST_DISCOVERER_MISSING_PLUGINS: Some plugins are missing for full discovery
  *
  * Result values for the discovery process.
- *
- * Since: 0.10.31
  */
 typedef enum {
   GST_DISCOVERER_OK               = 0,
@@ -167,8 +178,6 @@ typedef enum {
  * GstDiscovererInfo:
  *
  * Structure containing the information of a URI analyzed by #GstDiscoverer.
- *
- * Since: 0.10.31
  */
 typedef struct _GstDiscovererInfo GstDiscovererInfo;
 
@@ -178,11 +187,11 @@ typedef struct _GstDiscovererInfo GstDiscovererInfo;
   (G_TYPE_CHECK_INSTANCE_CAST((obj),GST_TYPE_DISCOVERER_INFO, GstDiscovererInfo))
 #define GST_IS_DISCOVERER_INFO(obj) \
   (G_TYPE_CHECK_INSTANCE_TYPE((obj),GST_TYPE_DISCOVERER_INFO))
-typedef GstMiniObjectClass GstDiscovererInfoClass;
+typedef GObjectClass GstDiscovererInfoClass;
 GType gst_discoverer_info_get_type (void);
 
-#define gst_discoverer_info_unref(info) (gst_mini_object_unref((GstMiniObject*)info))
-#define gst_discoverer_info_ref(info) (gst_mini_object_ref((GstMiniObject*)info))
+#define gst_discoverer_info_unref(info) (g_object_unref((GObject*)info))
+#define gst_discoverer_info_ref(info) (g_object_ref((Gbject*)info))
 
 GstDiscovererInfo*        gst_discoverer_info_copy (GstDiscovererInfo * ptr);
 
@@ -194,11 +203,14 @@ GstClockTime              gst_discoverer_info_get_duration(const GstDiscovererIn
 gboolean                  gst_discoverer_info_get_seekable(const GstDiscovererInfo* info);
 const GstStructure*       gst_discoverer_info_get_misc(const GstDiscovererInfo* info);
 const GstTagList*         gst_discoverer_info_get_tags(const GstDiscovererInfo* info);
+const GstToc*             gst_discoverer_info_get_toc(const GstDiscovererInfo* info);
+const gchar**             gst_discoverer_info_get_missing_elements_installer_details(const GstDiscovererInfo* info);
 
 GList *                   gst_discoverer_info_get_streams (GstDiscovererInfo *info,
 							   GType streamtype);
 GList *                   gst_discoverer_info_get_audio_streams (GstDiscovererInfo *info);
 GList *                   gst_discoverer_info_get_video_streams (GstDiscovererInfo *info);
+GList *                   gst_discoverer_info_get_subtitle_streams (GstDiscovererInfo *info);
 GList *                   gst_discoverer_info_get_container_streams (GstDiscovererInfo *info);
 
 void                      gst_discoverer_stream_info_list_free (GList *infos);
@@ -222,12 +234,11 @@ typedef struct _GstDiscovererPrivate GstDiscovererPrivate;
  * GstDiscoverer:
  *
  * The #GstDiscoverer structure.
- *
- * Since: 0.10.31
  **/
 struct _GstDiscoverer {
   GObject parent;
 
+  /*< private >*/
   GstDiscovererPrivate *priv;
 
   gpointer _reserved[GST_PADDING];
@@ -236,12 +247,14 @@ struct _GstDiscoverer {
 struct _GstDiscovererClass {
   GObjectClass parentclass;
 
-  /*< signals >*/
+  /* signals */
   void        (*finished)        (GstDiscoverer *discoverer);
   void        (*starting)        (GstDiscoverer *discoverer);
   void        (*discovered)      (GstDiscoverer *discoverer,
                                   GstDiscovererInfo *info,
 				  const GError *err);
+  void        (*source_setup)    (GstDiscoverer *discoverer,
+                                  GstElement *source);
 
   gpointer _reserved[GST_PADDING];
 };
