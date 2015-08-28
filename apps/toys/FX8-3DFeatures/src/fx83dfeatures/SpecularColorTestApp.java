@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,8 @@
  */
 package fx83dfeatures;
 
+import fx83dfeatures.utils3d.CameraController;
+import fx83dfeatures.utils3d.Camera3D;
 import java.util.ArrayList;
 import java.util.List;
 import javafx.application.Application;

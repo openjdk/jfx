@@ -29,7 +29,7 @@ package industrial;
  Add emergency button
  Add help text ?
  */
-import com.sun.javafx.perf.PerformanceTracker;
+//import com.sun.javafx.perf.PerformanceTracker;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Application;
@@ -87,8 +87,9 @@ public class Industrial extends Application {
     Group chartFillGroup;
     Group chartFlowGroup;
     Group helpGroup;
-
-    PerformanceTracker tracker;
+    
+// FIXME: Needs public performance tracker API else remove this FPS feature
+//    PerformanceTracker tracker;
 
     static final int layoutSizeX = 1280;
     static final int layoutSizeY = 720;
@@ -215,10 +216,11 @@ public class Industrial extends Application {
         rateB.setTranslateY(430);
 
         //****************************
-        fps = new Text("??? fps");
-        fps.setFont(new Font(25));
-        fps.setLayoutX(10);
-        fps.setLayoutY(40);
+// FIXME: Needs public performance tracker API else remove this FPS feature
+//        fps = new Text("??? fps");
+//        fps.setFont(new Font(25));
+//        fps.setLayoutX(10);
+//        fps.setLayoutY(40);
 
         //****************************
         lowWater = new Slider(0, 90, 10);
@@ -389,7 +391,6 @@ public class Industrial extends Application {
         //****************************
         Group root = new Group(
                 backdrop,
-                fps,
                 pipeIn.getGroup(),
                 pumpGroup,
                 nameP, flowRateP, rateP,
@@ -415,16 +416,14 @@ public class Industrial extends Application {
         System.out.println("Screen size is " + primaryScreenBounds);
         Scene scene = new Scene(root, layoutSizeX, layoutSizeY);
 
-        tracker = PerformanceTracker.getSceneTracker(scene);
+// FIXME: Needs public performance tracker API else remove this FPS feature
+//        tracker = PerformanceTracker.getSceneTracker(scene);
 
-        controller = new Controller(
-                model,
-                tracker
-        );
+        controller = new Controller(model /*, tracker */);
 
-        model.getFPSProperty().addListener((ObservableValue<? extends Number> observable, Number oldValue, Number newValue) -> {
-            fps.setText("" + newValue.intValue() + " fps");
-        });
+//        model.getFPSProperty().addListener((ObservableValue<? extends Number> observable, Number oldValue, Number newValue) -> {
+//            fps.setText("" + newValue.intValue() + " fps");
+//        });
 
         rateP.valueProperty().bindBidirectional(model.getValveFlowRateProperty(Model.PUMP));
         rateA.valueProperty().bindBidirectional(model.getValveFlowRateProperty(Model.VALVE_A));

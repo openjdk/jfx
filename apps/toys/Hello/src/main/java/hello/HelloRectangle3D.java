@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,9 +26,7 @@
 package hello;
 
 import javafx.animation.Interpolator;
-import javafx.animation.KeyFrame;
 import javafx.animation.RotateTransition;
-import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.scene.Group;
 import javafx.scene.PerspectiveCamera;
@@ -42,8 +40,6 @@ import javafx.scene.shape.StrokeType;
 import javafx.scene.transform.Rotate;
 import javafx.stage.Stage;
 import javafx.util.Duration;
-
-import com.sun.javafx.perf.PerformanceTracker;
 
 /**
  */
@@ -84,12 +80,6 @@ public class HelloRectangle3D extends Application {
         tx.setInterpolator(Interpolator.LINEAR);
         tx.play();
 
-        PerformanceTracker tracker = PerformanceTracker.getSceneTracker(scene);
-        Timeline t = new Timeline(
-            new KeyFrame(Duration.seconds(1), event -> System.out.println("" + tracker.getAverageFPS() + " average fps, " + tracker.getInstantFPS() + " instant fps"))
-        );
-        t.setCycleCount(Timeline.INDEFINITE);
-        t.play();
     }
 
     private Rectangle rect(double x, double y, double width, double height, Color color) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,6 @@
 
 package hello;
 
-import javafx.animation.AnimationTimer;
 import javafx.animation.FillTransition;
 import javafx.animation.RotateTransition;
 import javafx.application.Application;
@@ -35,7 +34,6 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import javafx.util.Duration;
-import com.sun.javafx.perf.PerformanceTracker;
 
 /**
  * Spins the tiger!
@@ -70,18 +68,6 @@ public class HelloTiger extends Application {
         rot.setToAngle(360);
         rot.play();
 
-        final PerformanceTracker tracker = PerformanceTracker.getSceneTracker(scene);
-        AnimationTimer trackerTimer = new AnimationTimer() {
-            long ticks = 0;
-            @Override
-            public void handle(long now) {
-                ticks++;
-                if (ticks % 60 == 0) {
-                    System.out.println(tracker.getInstantFPS());
-                }
-            }
-        };
-        trackerTimer.start();
     }
 
     public static void main(String[] args) {

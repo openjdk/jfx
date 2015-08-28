@@ -40,6 +40,7 @@ import javafx.util.Duration;
 
 import com.sun.javafx.perf.PerformanceTracker;
 
+// FIXME: Needs public performance tracker API else move to tests/manual
 public class HelloFPS extends Application {
 
     private static final Color colors[] = {

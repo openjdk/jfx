@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015 Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,8 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-
-package hello;
+package robottest;
 
 import javafx.scene.Group;
 import javafx.scene.Scene;
@@ -40,7 +39,7 @@ import javafx.geometry.Rectangle2D;
  *  The application should be used by QA in order to test main
  *  FX functionality
  */
-public class HelloSanity extends Application {
+public class RobotTest extends Application {
 
     public static void main(String[] args) {
         launch(args);
@@ -57,38 +56,23 @@ public class HelloSanity extends Application {
         final VBox mainBox = new VBox(30);
         mainBox.setAlignment(Pos.CENTER);
         final Scene globalScene = new Scene(new Group(),bounds.getWidth(), bounds.getHeight());
-        final TestBuilder builder = TestBuilder.getInstance();
+        final RobotBuilder builder = RobotBuilder.getInstance();
 
-        Label welcome = new Label("Welcome to Hello Sanity");
+        Label welcome = new Label("Welcome to Robot Test");
 
-        Button bControls = new Button("Controls");
-        bControls.setOnAction(e -> builder.controlTest(globalScene, mainBox));
-
-        Button bTabs = new Button("Tabs and Menus");
-        bTabs.setOnAction(e -> builder.menusTest(globalScene, mainBox, primaryStage));
-
-        Button bWins = new Button("Windows");
-        bWins.setOnAction(e -> builder.windowsTest(globalScene, mainBox, primaryStage));
-
-        Button bAnim = new Button("Animation");
-        bAnim.setOnAction(e -> builder.animationTest(globalScene, mainBox));
-
-        Button bEffs = new Button("Effects");
-        bEffs.setOnAction(e -> builder.effectsTest(globalScene, mainBox));
-
-        Button bgestures = new Button("Gesture Actions");
-        bgestures.setOnAction(e -> builder.GestureTest(globalScene, mainBox));
+        Button bRobot = new Button("Robot");
+        bRobot.setOnAction(e -> builder.robotTest(globalScene, mainBox, primaryStage));
         
         Button bquit = new Button("Quit");
         bquit.setOnAction(e -> primaryStage.close());
         
-        mainBox.getChildren().addAll(welcome, bControls, bTabs, bWins,
-                                     bAnim, bEffs, bgestures, bquit);
+        mainBox.getChildren().addAll(welcome, bRobot, bquit);
         globalScene.setRoot(mainBox);
-        globalScene.getStylesheets().add("hello/HelloSanityStyles.css");
+        globalScene.getStylesheets().add("robottest/RobotTestStyles.css");
         primaryStage.setScene(globalScene);
         primaryStage.show();
-    }   
+    }
+
 }
 
 

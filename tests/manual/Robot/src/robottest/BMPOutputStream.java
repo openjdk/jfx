@@ -23,7 +23,7 @@
  * questions.
  */
 
-package hello;
+package robottest;
 
 import java.io.*;
 

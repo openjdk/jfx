@@ -24,7 +24,8 @@
  */
 package industrial;
 
-import com.sun.javafx.perf.PerformanceTracker;
+// FIXME: Needs public performance tracker API else remove this FPS feature
+//import com.sun.javafx.perf.PerformanceTracker;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.collections.ObservableList;
@@ -55,16 +56,15 @@ public class Controller implements EventHandler<ActionEvent> {
         10.0, // high
     };
 
-    PerformanceTracker tracker;
+// FIXME: Needs public performance tracker API else remove this FPS feature
+//    PerformanceTracker tracker;
     Model model;
 
     public Controller(
-            Model model,
-            PerformanceTracker tracker
-    ) {
+            Model model /* , PerformanceTracker tracker */ ) {
 
         this.model = model;
-        this.tracker = tracker;
+//        this.tracker = tracker;
 
         tankVolume = 25.0;
     }
@@ -140,8 +140,9 @@ public class Controller implements EventHandler<ActionEvent> {
                 seconds+=Industrial.historyInterval;
                 lastDataPoint = currtime;
 
-                int fpsValue = (int) Math.round(tracker.getAverageFPS());
-                model.getFPSProperty().set(fpsValue);
+// FIXME: Needs public performance tracker API else remove this FPS feature
+//                int fpsValue = (int) Math.round(tracker.getAverageFPS());
+//                model.getFPSProperty().set(fpsValue);
             }
         } else {
             lastDataPoint = currtime;

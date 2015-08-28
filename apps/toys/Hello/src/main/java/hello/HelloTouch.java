@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,15 +25,9 @@
 
 package hello;
 
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
-import javafx.beans.property.DoubleProperty;
-import javafx.event.Event;
 import javafx.event.EventHandler;
-import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.text.Text;
 import javafx.scene.text.Font;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.layout.VBox;
@@ -44,11 +38,7 @@ import javafx.scene.input.MouseEvent;
 import javafx.stage.Stage;
 import javafx.stage.Screen;
 import javafx.application.Application;
-import javafx.geometry.Pos;
 import javafx.geometry.Point2D;
-import javafx.geometry.Insets;
-
-import com.sun.glass.ui.Robot;
 
 public class HelloTouch extends Application {
 

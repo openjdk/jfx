@@ -38,18 +38,19 @@ import javafx.scene.chart.XYChart;
  */
 public class Model {
 
-    private final IntegerProperty fpsProp = new IntegerPropertyBase(0) {
-
-        @Override
-        public Object getBean() {
-            return Model.this;
-        }
-
-        @Override
-        public String getName() {
-            return "FPS";
-        }
-    };
+// FIXME: Needs public performance tracker API else remove this FPS feature
+//    private final IntegerProperty fpsProp = new IntegerPropertyBase(0) {
+//
+//        @Override
+//        public Object getBean() {
+//            return Model.this;
+//        }
+//
+//        @Override
+//        public String getName() {
+//            return "FPS";
+//        }
+//    };
 
     static final int PUMP = 0;
     static final int VALVE_A = 1;
@@ -234,9 +235,10 @@ public class Model {
         return valveFlowRates.get(which);
     }
 
-    public IntegerProperty getFPSProperty() {
-        return fpsProp;
-    }
+// FIXME: Needs public performance tracker API else remove this FPS feature
+//    public IntegerProperty getFPSProperty() {
+//        return fpsProp;
+//    }
 
     public XYChart.Series getFlowRateHistory(int which) {
         if (which > valveFlowRatesHistory.size()) {
