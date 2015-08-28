@@ -267,6 +267,11 @@ bookmark_app_info_new (const gchar *name)
   g_warn_if_fail (name != NULL);
   
   retval = g_slice_new (BookmarkAppInfo);
+#ifdef GSTREAMER_LITE
+  if (retval == NULL) {
+    return NULL;
+  }
+#endif // GSTREAMER_LITE
   
   retval->name = g_strdup (name);
   retval->exec = NULL;
@@ -332,6 +337,11 @@ bookmark_metadata_new (void)
   BookmarkMetadata *retval;
   
   retval = g_slice_new (BookmarkMetadata);
+#ifdef GSTREAMER_LITE
+  if (retval == NULL) {
+    return NULL;
+  }
+#endif // GSTREAMER_LITE
 
   retval->mime_type = NULL;
   
@@ -523,6 +533,12 @@ bookmark_item_new (const gchar *uri)
   g_warn_if_fail (uri != NULL);
   
   item = g_slice_new (BookmarkItem);
+#ifdef GSTREAMER_LITE
+  if (item == NULL) {
+    return NULL;
+  }
+#endif // GSTREAMER_LITE
+
   item->uri = g_strdup (uri);
   
   item->title = NULL;
@@ -796,7 +812,12 @@ parse_bookmark_element (GMarkupParseContext  *context,
   
   g_warn_if_fail (parse_data->current_item == NULL);
   
-  item = bookmark_item_new (uri);
+item = bookmark_item_new (uri);
+ #ifdef GSTREAMER_LITE
+  if (item == NULL) {
+    return;
+  }
+#endif // GSTREAMER_LITE
   
   if (added)
     item->added = timestamp_from_iso8601 (added);
@@ -882,6 +903,14 @@ parse_application_element (GMarkupParseContext  *context,
   if (!ai)
     {
       ai = bookmark_app_info_new (name);
+#ifdef GSTREAMER_LITE
+      if (ai == NULL) {
+          g_set_error (error, G_MARKUP_ERROR,
+      		   G_MARKUP_ERROR_INVALID_CONTENT,
+      		   _("AI is NULL"));
+          return;
+      }
+#endif GSTREAMER_LITE
       
       if (!item->metadata)
 	item->metadata = bookmark_metadata_new ();
@@ -3283,6 +3312,11 @@ g_bookmark_file_set_app_info (GBookmarkFile  *bookmark,
       else
         {
           ai = bookmark_app_info_new (name);
+#ifdef GSTREAMER_LITE
+          if (ai == NULL) {
+            return FALSE;
+          }
+#endif // GSTREAMER_LITE
           
           item->metadata->applications = g_list_prepend (item->metadata->applications, ai);
           g_hash_table_replace (item->metadata->apps_by_name, ai->name, ai);

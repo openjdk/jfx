@@ -281,6 +281,11 @@ array_info_new (const GVariantType *type)
   ArrayInfo *info;
 
   info = g_slice_new (ArrayInfo);
+#ifdef GSTREAMER_LITE
+  if (info == NULL) {
+    return NULL;
+  }
+#endif // GSTREAMER_LITE
   info->container.info.container_class = ARRAY_INFO_CLASS;
 
   info->element = g_variant_type_info_get (g_variant_type_element (type));
@@ -662,6 +667,11 @@ tuple_info_new (const GVariantType *type)
   TupleInfo *info;
 
   info = g_slice_new (TupleInfo);
+#ifdef GSTREAMER_LITE
+  if (info == NULL) {
+    return NULL;
+  }
+#endif // GSTREAMER_LITE
   info->container.info.container_class = TUPLE_INFO_CLASS;
 
   tuple_allocate_members (type, &info->members, &info->n_members);

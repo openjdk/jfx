@@ -184,6 +184,11 @@ GArray* g_array_sized_new (gboolean zero_terminated,
 			   guint    reserved_size)
 {
   GRealArray *array = g_slice_new (GRealArray);
+#ifdef GSTREAMER_LITE
+  if (array == NULL) {
+      return NULL;
+  }
+#endif // GSTREAMER_LITE
 
   array->data            = NULL;
   array->len             = 0;
@@ -798,6 +803,11 @@ GPtrArray*
 g_ptr_array_sized_new (guint reserved_size)
 {
   GRealPtrArray *array = g_slice_new (GRealPtrArray);
+#ifdef GSTREAMER_LITE
+  if (array == NULL) {
+      return NULL;
+  }
+#endif // GSTREAMER_LITE
 
   array->pdata = NULL;
   array->len = 0;

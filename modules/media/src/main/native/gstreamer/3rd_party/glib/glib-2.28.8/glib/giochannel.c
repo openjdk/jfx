@@ -2430,6 +2430,9 @@ reconvert:
                          */
 
                         g_assert (count == from_buf_len - from_buf_old_len);
+#ifdef GSTREAMER_LITE
+                        g_assert(from_buf_len < 6);
+#endif
 
                         channel->partial_write_buf[from_buf_len] = '\0';
 

@@ -408,6 +408,12 @@ add_list_to_struct (GstStructure * str,
   const GValue *chan_val;
 
   chan_val = gst_structure_get_value (str, "channels");
+#ifdef GSTREAMER_LITE
+  if (chan_val == NULL) {
+      g_warning ("Value type is NULL");
+      return caps;
+  }
+#endif // GSTREAMER_LITE
   if (G_VALUE_TYPE (chan_val) == G_TYPE_INT) {
     gst_audio_set_structure_channel_positions_list (str, pos, num_positions);
   } else if (G_VALUE_TYPE (chan_val) == GST_TYPE_LIST) {

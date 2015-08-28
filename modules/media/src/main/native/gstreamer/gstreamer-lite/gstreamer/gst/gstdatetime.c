@@ -523,6 +523,11 @@ gst_date_time_new_now_local_time (void)
   g_get_current_time (&tv);
 
   datetime = gst_date_time_new_from_unix_epoch_local_time (tv.tv_sec);
+#ifdef GSTREAMER_LITE
+  if (datetime == NULL) {
+    return NULL;
+  }
+#endif // GSTREAMER_LITE
   datetime->usec += tv.tv_usec;
   gst_date_time_set_local_timezone (datetime);
   return datetime;
