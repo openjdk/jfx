@@ -46,4 +46,10 @@ public class ObservableObjectValueStub<T> extends ObservableValueBase<T> impleme
     public T getValue() {
         return value;
     }
+
+    @Override
+    public void fireValueChangedEvent() {
+        super.fireValueChangedEvent();
+    }
+
 }
