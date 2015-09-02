@@ -220,4 +220,12 @@ public class ContentBindingListTest {
         // reset the exception handler
         Thread.currentThread().setUncaughtExceptionHandler(exceptionHandler);
     }
+
+    @Test
+    public void testChangeValue() {
+        Bindings.bindContent(op1, op2);
+        assertEquals(2, op1.get(0).intValue());
+        op2.set(0, 1);
+        assertEquals(1, op1.get(0).intValue());
+    }
 }

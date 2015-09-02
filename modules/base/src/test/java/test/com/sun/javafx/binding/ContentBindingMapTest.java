@@ -207,4 +207,12 @@ public class ContentBindingMapTest {
         assertTrue(binding1.equals(binding1));
         assertFalse(binding1.equals(binding2));
     }
+
+    @Test
+    public void testChangeValue() {
+        Bindings.bindContent(op1, op2);
+        assertEquals(2, op1.get(key2_1).intValue());
+        op2.put(key2_1, 1);
+        assertEquals(1, op1.get(key2_1).intValue());
+    }
 }

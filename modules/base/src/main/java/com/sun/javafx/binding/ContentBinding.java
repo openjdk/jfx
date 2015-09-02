@@ -221,7 +221,8 @@ public class ContentBinding {
             } else {
                 if (change.wasRemoved()) {
                     map.remove(change.getKey());
-                } else {
+                }
+                if (change.wasAdded()) {
                     map.put(change.getKey(), change.getValueAdded());
                 }
             }
