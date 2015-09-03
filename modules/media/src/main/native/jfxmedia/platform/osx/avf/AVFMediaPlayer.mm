@@ -206,6 +206,7 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     if (newOutput) {
         CVDisplayLinkStop(_displayLink);
         [_playerItem removeOutput:_playerOutput];
+        [_playerOutput setDelegate:nil queue:nil];
 
         self.playerOutput = newOutput;
         [_playerOutput setDelegate:self queue:playerQueue];
@@ -366,6 +367,11 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
 - (void) dispose {
     @synchronized(self) {
         if (!isDisposed) {
+            if (_playerOutput != nil) {
+                [_playerItem removeOutput:_playerOutput];
+                [_playerOutput setDelegate:nil queue:nil];
+            }
+
             [self setPlayerState:kPlayerState_HALTED];
 
             NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
