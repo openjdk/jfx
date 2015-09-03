@@ -3305,6 +3305,7 @@ compileTargets { t ->
             copy {
                 from "${sdkDir}"
                 into "${exportSDKDir}"
+                includeEmptyDirs = false
                 exclude '**/jfxrt.jar'
 
                 if (isWindows) {
@@ -3313,7 +3314,7 @@ compileTargets { t ->
 
                 eachFile {details ->
                     if (details.path.startsWith('rt/')) {
-                        details.path = 'jre/' + details.path.substring(3);
+                        details.path = "./" + details.path.substring(3);
                     }
                 }
             }
@@ -3323,10 +3324,10 @@ compileTargets { t ->
                 into "${exportTmp}"
             }
 
-            mkdir "${exportSDKDir}/jre/lib/ext"
+            mkdir "${exportSDKDir}/lib"
 
             ant.jar(
-                    destfile: "${exportSDKDir}/jre/lib/ext/jfxrt.jar",
+                    destfile: "${exportSDKDir}/lib/jfxrt.jar",
                     index: true,
                     compress: compressJar
                 ) {
