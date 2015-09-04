@@ -46,4 +46,9 @@ public class ObservableBooleanValueStub extends ObservableValueBase<Boolean> imp
     public Boolean getValue() {
         return value;
     }
+
+    @Override
+    public void fireValueChangedEvent() {
+        super.fireValueChangedEvent();
+    }
 }

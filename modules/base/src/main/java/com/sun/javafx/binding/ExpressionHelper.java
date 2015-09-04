@@ -28,7 +28,6 @@ package com.sun.javafx.binding;
 import javafx.beans.InvalidationListener;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-import sun.util.logging.PlatformLogger;
 
 import java.util.Arrays;
 

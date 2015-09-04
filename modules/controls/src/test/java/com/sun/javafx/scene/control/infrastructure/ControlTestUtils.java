@@ -40,7 +40,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import com.sun.javafx.binding.ExpressionHelperUtility;
+import test.com.sun.javafx.binding.ExpressionHelperUtility;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
