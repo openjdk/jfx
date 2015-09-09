@@ -262,7 +262,7 @@ public abstract class Parent extends Node {
                     // update the parent and scene for each new node
                     for (int i = from; i < to; ++i) {
                         Node node = children.get(i);
-                        if (node.isManaged()) {
+                        if (node.isManaged() || (node instanceof Parent && ((Parent) node).layoutFlag != LayoutFlags.CLEAN)) {
                             relayout = true;
                         }
                         node.setParent(Parent.this);

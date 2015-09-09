@@ -29,11 +29,6 @@ import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.sg.prism.NGGroup;
 import com.sun.javafx.tk.Toolkit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
-import javafx.geometry.Bounds;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import org.junit.After;
@@ -498,14 +493,7 @@ public class ParentTest {
 
     @Test
     public void requestLayoutAlwaysCalledUpToTheLayoutRoot() {
-        final Group root = new Group() {
-
-            @Override
-            public void requestLayout() {
-                fail();
-            }
-
-        };
+        final Group root = new Group();
         final LGroup lroot = new LGroup();
         lroot.setManaged(false);
         root.getChildren().add(lroot);
@@ -527,6 +515,47 @@ public class ParentTest {
         sub.requestLayout();
         lroot.assertAndClear(true);
         sub.assertAndClear(true);
+    }
+    
+    @Test
+    public void unmanagedParentTest() {
+        final LGroup innerGroup = new LGroup();
+        innerGroup.setManaged(false);
+
+        final LGroup outerGroup = new LGroup();
+        outerGroup.setManaged(false);
+
+        Scene s = new Scene(outerGroup);
+
+        innerGroup.assertAndClear(false);
+        outerGroup.assertAndClear(true);
+
+        outerGroup.getChildren().add(innerGroup);
+        innerGroup.requestLayout();
+
+        innerGroup.assertAndClear(true);
+        outerGroup.assertAndClear(true);
+
+        outerGroup.getChildren().remove(innerGroup);
+
+        innerGroup.assertAndClear(false);
+        outerGroup.assertAndClear(false);
+
+        final LGroup intermediate = new LGroup();
+        intermediate.setManaged(false);
+        intermediate.setAutoSizeChildren(false);
+        outerGroup.getChildren().add(intermediate);
+
+        innerGroup.assertAndClear(false);
+        intermediate.assertAndClear(true);
+        outerGroup.assertAndClear(true);
+
+        innerGroup.requestLayout();
+        intermediate.getChildren().add(innerGroup);
+
+        innerGroup.assertAndClear(true);
+        intermediate.assertAndClear(true);
+        outerGroup.assertAndClear(false);
 
     }
 
