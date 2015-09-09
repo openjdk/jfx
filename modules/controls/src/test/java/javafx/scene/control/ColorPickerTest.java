@@ -38,9 +38,8 @@ import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import com.sun.javafx.scene.control.infrastructure.MouseEventGenerator;
-import com.sun.javafx.scene.control.skin.ColorPalette;
-import com.sun.javafx.scene.control.skin.ColorPickerPaletteRetriever;
-import com.sun.javafx.scene.control.skin.ColorPickerSkin;
+import javafx.scene.control.skin.ColorPickerPaletteRetriever;
+import javafx.scene.control.skin.ColorPickerSkin;
 import com.sun.javafx.tk.Toolkit;
 import org.junit.Before;
 import org.junit.Test;
@@ -149,63 +148,5 @@ public class ColorPickerTest {
     
     @Test public void ensureOnActionPropertyReferencesBean() {
         assertEquals(colorPicker, colorPicker.onActionProperty().getBean());
-    }
-    
-    @Test public void ensureCanSelectColorFromPalette() {
-         final MouseEventGenerator generator = new MouseEventGenerator();
-         ColorPickerSkin skin = (ColorPickerSkin)colorPicker.getSkin();
-         assertTrue(skin != null);
-         ColorPalette colorPalette = ColorPickerPaletteRetriever.getColorPalette(colorPicker);
-         colorPicker.show();
-         tk.firePulse();
-         assertTrue(colorPicker.isShowing());
-         GridPane grid = colorPalette.getColorGrid();
-         double xval = grid.getBoundsInLocal().getMinX();
-         double yval = grid.getBoundsInLocal().getMinY();
-        
-        Scene paletteScene = ColorPickerPaletteRetriever.getPopup(colorPicker).getScene();
-        paletteScene.getWindow().requestFocus();
-        
-        paletteScene.impl_processMouseEvent(
-                generator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+85, yval+40));
-        
-        paletteScene.impl_processMouseEvent(
-                generator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, xval+85, yval+40));
-        tk.firePulse();
-        
-        assertEquals(colorPicker.getValue().toString(), "0x330033ff");
-    }
-    
-    @Test public void testEscapeClosesCustomColorDialog() {
-//        final MouseEventGenerator generator = new MouseEventGenerator();
-        ColorPickerSkin skin = (ColorPickerSkin)colorPicker.getSkin();
-        assertTrue(skin != null);
-        ColorPalette colorPalette = ColorPickerPaletteRetriever.getColorPalette(colorPicker);
-        colorPicker.show();
-        tk.firePulse();
-        assertTrue(colorPicker.isShowing());
-        Hyperlink link = ColorPickerPaletteRetriever.getCustomColorLink(colorPalette);
-         
-        Scene paletteScene = ColorPickerPaletteRetriever.getPopup(colorPicker).getScene();
-        paletteScene.getWindow().requestFocus();
-        
-        //Click on CustomColor hyperlink to show the custom color dialog.
-        Hyperlink hyperlink = ColorPickerPaletteRetriever.getCustomColorLink(colorPalette);
-        MouseEventFirer mouse = new MouseEventFirer(hyperlink);
-        mouse.fireMousePressAndRelease();
-        mouse.dispose();
-
-        Stage dialog = ColorPickerPaletteRetriever.getCustomColorDialog(colorPalette);
-        assertNotNull(dialog);
-        assertTrue(dialog.isShowing());
-        
-        dialog.requestFocus();
-        tk.firePulse();
-        
-        // fire KeyEvent (Escape) on custom color dialog to close it
-        KeyEventFirer keyboard = new KeyEventFirer(dialog);
-        keyboard.doKeyPress(KeyCode.ESCAPE);
-        tk.firePulse();   
-        assertTrue(!dialog.isShowing());
     }
 }

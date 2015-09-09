@@ -25,10 +25,12 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import com.sun.javafx.scene.control.Properties;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 
 import javafx.scene.Scene;
+import javafx.scene.control.skin.ComboBoxPopupControl;
 import javafx.scene.input.KeyEvent;
 
 import javafx.beans.value.ChangeListener;
@@ -36,8 +38,6 @@ import javafx.event.Event;
 import javafx.event.EventDispatcher;
 import javafx.event.EventHandler;
 import javafx.scene.input.MouseEvent;
-
-import com.sun.javafx.scene.control.skin.ComboBoxPopupControl;
 
 public class TwoLevelFocusListBehavior extends TwoLevelFocusBehavior {
 
@@ -190,7 +190,7 @@ public class TwoLevelFocusListBehavior extends TwoLevelFocusBehavior {
                 */
                 Parent p = tlNode.getParent();
                 if (p != null) {
-                    if (ComboBoxPopupControl.COMBO_BOX_STYLE_CLASS.equals(p.getStyleClass().toString())) {
+                    if (Properties.COMBO_BOX_STYLE_CLASS.equals(p.getStyleClass().toString())) {
                         b = false;
                     }
                 }

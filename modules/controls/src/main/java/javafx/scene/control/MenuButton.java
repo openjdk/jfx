@@ -37,7 +37,7 @@ import javafx.geometry.Side;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
-import com.sun.javafx.scene.control.skin.MenuButtonSkin;
+import javafx.scene.control.skin.MenuButtonSkin;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 

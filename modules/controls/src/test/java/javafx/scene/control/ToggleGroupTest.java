@@ -478,28 +478,28 @@ public class ToggleGroupTest {
         assertFalse(b2.isSelected());
         assertFalse(b3.isSelected());
 
-        EventUtil.fireEvent(new KeyEvent(null, null, KeyEvent.KEY_PRESSED, "", "", KeyCode.RIGHT, false, false, false, false),
+        EventUtil.fireEvent(new KeyEvent(null, b1, KeyEvent.KEY_PRESSED, "", "", KeyCode.RIGHT, false, false, false, false),
                 b1);
 
         assertFalse(b1.isSelected());
         assertTrue(b2.isSelected());
         assertFalse(b3.isSelected());
 
-        EventUtil.fireEvent(new KeyEvent(null, null, KeyEvent.KEY_PRESSED, "", "", KeyCode.DOWN, false, false, false, false),
+        EventUtil.fireEvent(new KeyEvent(null, b2, KeyEvent.KEY_PRESSED, "", "", KeyCode.DOWN, false, false, false, false),
                 b2);
 
         assertFalse(b1.isSelected());
         assertFalse(b2.isSelected());
         assertTrue(b3.isSelected());
 
-        EventUtil.fireEvent(new KeyEvent(null, null, KeyEvent.KEY_PRESSED, "", "", KeyCode.UP, false, false, false, false),
+        EventUtil.fireEvent(new KeyEvent(null, b3, KeyEvent.KEY_PRESSED, "", "", KeyCode.UP, false, false, false, false),
                 b3);
 
         assertFalse(b1.isSelected());
         assertTrue(b2.isSelected());
         assertFalse(b3.isSelected());
 
-        EventUtil.fireEvent(new KeyEvent(null, null, KeyEvent.KEY_PRESSED, "", "", KeyCode.LEFT, false, false, false, false),
+        EventUtil.fireEvent(new KeyEvent(null, b2, KeyEvent.KEY_PRESSED, "", "", KeyCode.LEFT, false, false, false, false),
                 b2);
 
         assertTrue(b1.isSelected());

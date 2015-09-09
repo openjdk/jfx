@@ -27,8 +27,8 @@ package com.sun.javafx.scene.control.behavior;
 
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.geom.transform.Affine3D;
-import com.sun.javafx.scene.control.skin.TextAreaSkin;
-import com.sun.javafx.scene.text.HitInfo;
+import com.sun.javafx.scene.control.Properties;
+import javafx.scene.control.skin.TextAreaSkin;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Bounds;
@@ -36,97 +36,102 @@ import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
 import javafx.scene.control.ContextMenu;
-import javafx.scene.control.IndexRange;
 import javafx.scene.control.TextArea;
+import com.sun.javafx.scene.control.skin.Utils;
 import javafx.scene.input.ContextMenuEvent;
+import com.sun.javafx.scene.control.inputmap.InputMap;
+import com.sun.javafx.scene.control.inputmap.KeyBinding;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.stage.Screen;
 import javafx.stage.Window;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.function.Predicate;
+
+import static javafx.scene.control.skin.TextAreaSkin.TextPosInfo;
 
 import static com.sun.javafx.PlatformUtil.isMac;
 import static com.sun.javafx.PlatformUtil.isWindows;
+import static javafx.scene.control.skin.TextInputControlSkin.TextUnit;
+import static javafx.scene.control.skin.TextInputControlSkin.Direction;
 import static javafx.scene.input.KeyCode.*;
-import static javafx.scene.input.KeyEvent.KEY_PRESSED;
 
 
 /**
  * Text area behavior.
  */
 public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
-    /**************************************************************************
-     *                          Setup KeyBindings                             *
-     *************************************************************************/
-    protected static final List<KeyBinding> TEXT_AREA_BINDINGS = new ArrayList<KeyBinding>();
-    static {
-        TEXT_AREA_BINDINGS.add(new KeyBinding(HOME, KEY_PRESSED, "LineStart")); // changed
-        TEXT_AREA_BINDINGS.add(new KeyBinding(END, KEY_PRESSED, "LineEnd")); // changed
-        TEXT_AREA_BINDINGS.add(new KeyBinding(UP, KEY_PRESSED, "PreviousLine")); // changed
-        TEXT_AREA_BINDINGS.add(new KeyBinding(KP_UP, KEY_PRESSED, "PreviousLine")); // changed
-        TEXT_AREA_BINDINGS.add(new KeyBinding(DOWN, KEY_PRESSED, "NextLine")); // changed
-        TEXT_AREA_BINDINGS.add(new KeyBinding(KP_DOWN, KEY_PRESSED, "NextLine")); // changed
-        TEXT_AREA_BINDINGS.add(new KeyBinding(PAGE_UP, KEY_PRESSED, "PreviousPage")); // new
-        TEXT_AREA_BINDINGS.add(new KeyBinding(PAGE_DOWN, KEY_PRESSED, "NextPage")); // new
-        TEXT_AREA_BINDINGS.add(new KeyBinding(ENTER, KEY_PRESSED, "InsertNewLine")); // changed
-        TEXT_AREA_BINDINGS.add(new KeyBinding(TAB, KEY_PRESSED, "TraverseOrInsertTab")); // changed
-
-        TEXT_AREA_BINDINGS.add(new KeyBinding(HOME, KEY_PRESSED, "SelectLineStart").shift()); // changed
-        TEXT_AREA_BINDINGS.add(new KeyBinding(END, KEY_PRESSED, "SelectLineEnd").shift()); // changed
-        TEXT_AREA_BINDINGS.add(new KeyBinding(UP, KEY_PRESSED, "SelectPreviousLine").shift()); // changed
-        TEXT_AREA_BINDINGS.add(new KeyBinding(KP_UP, KEY_PRESSED, "SelectPreviousLine").shift()); // changed
-        TEXT_AREA_BINDINGS.add(new KeyBinding(DOWN, KEY_PRESSED, "SelectNextLine").shift()); // changed
-        TEXT_AREA_BINDINGS.add(new KeyBinding(KP_DOWN, KEY_PRESSED, "SelectNextLine").shift()); // changed
-        TEXT_AREA_BINDINGS.add(new KeyBinding(PAGE_UP, KEY_PRESSED, "SelectPreviousPage").shift()); // new
-        TEXT_AREA_BINDINGS.add(new KeyBinding(PAGE_DOWN, KEY_PRESSED, "SelectNextPage").shift()); // new
-        // Platform specific settings
-        if (isMac()) {
-            TEXT_AREA_BINDINGS.add(new KeyBinding(LEFT, KEY_PRESSED, "LineStart").shortcut()); // changed
-            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_LEFT, KEY_PRESSED, "LineStart").shortcut()); // changed
-            TEXT_AREA_BINDINGS.add(new KeyBinding(RIGHT, KEY_PRESSED, "LineEnd").shortcut()); // changed
-            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_RIGHT, KEY_PRESSED, "LineEnd").shortcut()); // changed
-            TEXT_AREA_BINDINGS.add(new KeyBinding(UP, KEY_PRESSED, "Home").shortcut());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_UP, KEY_PRESSED, "Home").shortcut());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(DOWN, KEY_PRESSED, "End").shortcut());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_DOWN, KEY_PRESSED, "End").shortcut());
-
-            TEXT_AREA_BINDINGS.add(new KeyBinding(LEFT, KEY_PRESSED, "SelectLineStartExtend").shift().shortcut()); // changed
-            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_LEFT, KEY_PRESSED, "SelectLineStartExtend").shift().shortcut()); // changed
-            TEXT_AREA_BINDINGS.add(new KeyBinding(RIGHT, KEY_PRESSED, "SelectLineEndExtend").shift().shortcut()); // changed
-            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_RIGHT, KEY_PRESSED, "SelectLineEndExtend").shift().shortcut()); // changed
-            TEXT_AREA_BINDINGS.add(new KeyBinding(UP, KEY_PRESSED, "SelectHomeExtend").shortcut().shift());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_UP, KEY_PRESSED, "SelectHomeExtend").shortcut().shift());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(DOWN, KEY_PRESSED, "SelectEndExtend").shortcut().shift());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_DOWN, KEY_PRESSED, "SelectEndExtend").shortcut().shift());
-
-            TEXT_AREA_BINDINGS.add(new KeyBinding(UP, KEY_PRESSED, "ParagraphStart").alt());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_UP, KEY_PRESSED, "ParagraphStart").alt());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(DOWN, KEY_PRESSED, "ParagraphEnd").alt());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_DOWN, KEY_PRESSED, "ParagraphEnd").alt());
-
-            TEXT_AREA_BINDINGS.add(new KeyBinding(UP, KEY_PRESSED, "SelectParagraphStart").alt().shift());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_UP, KEY_PRESSED, "SelectParagraphStart").alt().shift());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(DOWN, KEY_PRESSED, "SelectParagraphEnd").alt().shift());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_DOWN, KEY_PRESSED, "SelectParagraphEnd").alt().shift());
-        } else {
-            TEXT_AREA_BINDINGS.add(new KeyBinding(UP, KEY_PRESSED, "ParagraphStart").ctrl());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_UP, KEY_PRESSED, "ParagraphStart").ctrl());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(DOWN, KEY_PRESSED, "ParagraphEnd").ctrl());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_DOWN, KEY_PRESSED, "ParagraphEnd").ctrl());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(UP, KEY_PRESSED, "SelectParagraphStart").ctrl().shift());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_UP, KEY_PRESSED, "SelectParagraphStart").ctrl().shift());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(DOWN, KEY_PRESSED, "SelectParagraphEnd").ctrl().shift());
-            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_DOWN, KEY_PRESSED, "SelectParagraphEnd").ctrl().shift());
-        }
-        // Add the other standard key bindings in
-        TEXT_AREA_BINDINGS.addAll(TextInputControlBindings.BINDINGS);
-        // However, we want to consume other key press / release events too, for
-        // things that would have been handled by the InputCharacter normally
-        TEXT_AREA_BINDINGS.add(new KeyBinding(null, KEY_PRESSED, "Consume"));
-    }
-
+//    /**************************************************************************
+//     *                          Setup KeyBindings                             *
+//     *************************************************************************/
+//    protected static final List<KeyBinding> TEXT_AREA_BINDINGS = new ArrayList<KeyBinding>();
+//    static {
+//        TEXT_AREA_BINDINGS.add(new KeyBinding(HOME, KEY_PRESSED, "LineStart")); // changed
+//        TEXT_AREA_BINDINGS.add(new KeyBinding(END, KEY_PRESSED, "LineEnd")); // changed
+//        TEXT_AREA_BINDINGS.add(new KeyBinding(UP, KEY_PRESSED, "PreviousLine")); // changed
+//        TEXT_AREA_BINDINGS.add(new KeyBinding(KP_UP, KEY_PRESSED, "PreviousLine")); // changed
+//        TEXT_AREA_BINDINGS.add(new KeyBinding(DOWN, KEY_PRESSED, "NextLine")); // changed
+//        TEXT_AREA_BINDINGS.add(new KeyBinding(KP_DOWN, KEY_PRESSED, "NextLine")); // changed
+//        TEXT_AREA_BINDINGS.add(new KeyBinding(PAGE_UP, KEY_PRESSED, "PreviousPage")); // new
+//        TEXT_AREA_BINDINGS.add(new KeyBinding(PAGE_DOWN, KEY_PRESSED, "NextPage")); // new
+//        TEXT_AREA_BINDINGS.add(new KeyBinding(ENTER, KEY_PRESSED, "InsertNewLine")); // changed
+//        TEXT_AREA_BINDINGS.add(new KeyBinding(TAB, KEY_PRESSED, "TraverseOrInsertTab")); // changed
+//
+//        TEXT_AREA_BINDINGS.add(new KeyBinding(HOME, KEY_PRESSED, "SelectLineStart").shift()); // changed
+//        TEXT_AREA_BINDINGS.add(new KeyBinding(END, KEY_PRESSED, "SelectLineEnd").shift()); // changed
+//        TEXT_AREA_BINDINGS.add(new KeyBinding(UP, KEY_PRESSED, "SelectPreviousLine").shift()); // changed
+//        TEXT_AREA_BINDINGS.add(new KeyBinding(KP_UP, KEY_PRESSED, "SelectPreviousLine").shift()); // changed
+//        TEXT_AREA_BINDINGS.add(new KeyBinding(DOWN, KEY_PRESSED, "SelectNextLine").shift()); // changed
+//        TEXT_AREA_BINDINGS.add(new KeyBinding(KP_DOWN, KEY_PRESSED, "SelectNextLine").shift()); // changed
+//        TEXT_AREA_BINDINGS.add(new KeyBinding(PAGE_UP, KEY_PRESSED, "SelectPreviousPage").shift()); // new
+//        TEXT_AREA_BINDINGS.add(new KeyBinding(PAGE_DOWN, KEY_PRESSED, "SelectNextPage").shift()); // new
+//        // Platform specific settings
+//        if (isMac()) {
+//            TEXT_AREA_BINDINGS.add(new KeyBinding(LEFT, KEY_PRESSED, "LineStart").shortcut()); // changed
+//            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_LEFT, KEY_PRESSED, "LineStart").shortcut()); // changed
+//            TEXT_AREA_BINDINGS.add(new KeyBinding(RIGHT, KEY_PRESSED, "LineEnd").shortcut()); // changed
+//            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_RIGHT, KEY_PRESSED, "LineEnd").shortcut()); // changed
+//            TEXT_AREA_BINDINGS.add(new KeyBinding(UP, KEY_PRESSED, "Home").shortcut());
+//            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_UP, KEY_PRESSED, "Home").shortcut());
+//            TEXT_AREA_BINDINGS.add(new KeyBinding(DOWN, KEY_PRESSED, "End").shortcut());
+//            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_DOWN, KEY_PRESSED, "End").shortcut());
+//
+//            TEXT_AREA_BINDINGS.add(new KeyBinding(LEFT, KEY_PRESSED, "SelectLineStartExtend").shift().shortcut()); // changed
+//            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_LEFT, KEY_PRESSED, "SelectLineStartExtend").shift().shortcut()); // changed
+//            TEXT_AREA_BINDINGS.add(new KeyBinding(RIGHT, KEY_PRESSED, "SelectLineEndExtend").shift().shortcut()); // changed
+//            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_RIGHT, KEY_PRESSED, "SelectLineEndExtend").shift().shortcut()); // changed
+//            TEXT_AREA_BINDINGS.add(new KeyBinding(UP, KEY_PRESSED, "SelectHomeExtend").shortcut().shift());
+//            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_UP, KEY_PRESSED, "SelectHomeExtend").shortcut().shift());
+//            TEXT_AREA_BINDINGS.add(new KeyBinding(DOWN, KEY_PRESSED, "SelectEndExtend").shortcut().shift());
+//            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_DOWN, KEY_PRESSED, "SelectEndExtend").shortcut().shift());
+//
+//            TEXT_AREA_BINDINGS.add(new KeyBinding(UP, KEY_PRESSED, "ParagraphStart").alt());
+//            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_UP, KEY_PRESSED, "ParagraphStart").alt());
+//            TEXT_AREA_BINDINGS.add(new KeyBinding(DOWN, KEY_PRESSED, "ParagraphEnd").alt());
+//            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_DOWN, KEY_PRESSED, "ParagraphEnd").alt());
+//
+//            TEXT_AREA_BINDINGS.add(new KeyBinding(UP, KEY_PRESSED, "SelectParagraphStart").alt().shift());
+//            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_UP, KEY_PRESSED, "SelectParagraphStart").alt().shift());
+//            TEXT_AREA_BINDINGS.add(new KeyBinding(DOWN, KEY_PRESSED, "SelectParagraphEnd").alt().shift());
+//            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_DOWN, KEY_PRESSED, "SelectParagraphEnd").alt().shift());
+//        } else {
+//            TEXT_AREA_BINDINGS.add(new KeyBinding(UP, KEY_PRESSED, "ParagraphStart").ctrl());
+//            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_UP, KEY_PRESSED, "ParagraphStart").ctrl());
+//            TEXT_AREA_BINDINGS.add(new KeyBinding(DOWN, KEY_PRESSED, "ParagraphEnd").ctrl());
+//            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_DOWN, KEY_PRESSED, "ParagraphEnd").ctrl());
+//            TEXT_AREA_BINDINGS.add(new KeyBinding(UP, KEY_PRESSED, "SelectParagraphStart").ctrl().shift());
+//            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_UP, KEY_PRESSED, "SelectParagraphStart").ctrl().shift());
+//            TEXT_AREA_BINDINGS.add(new KeyBinding(DOWN, KEY_PRESSED, "SelectParagraphEnd").ctrl().shift());
+//            TEXT_AREA_BINDINGS.add(new KeyBinding(KP_DOWN, KEY_PRESSED, "SelectParagraphEnd").ctrl().shift());
+//        }
+//        // Add the other standard key bindings in
+//        TEXT_AREA_BINDINGS.addAll(TextInputControlBindings.BINDINGS);
+//        // However, we want to consume other key press / release events too, for
+//        // things that would have been handled by the InputCharacter normally
+//        TEXT_AREA_BINDINGS.add(new KeyBinding(null, KEY_PRESSED, "Consume"));
+//    }
+//
     private TextAreaSkin skin;
     private ContextMenu contextMenu;
     private TwoLevelFocusBehavior tlFocus;
@@ -135,23 +140,89 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
      * Constructors                                                           *
      *************************************************************************/
 
-    public TextAreaBehavior(final TextArea textArea) {
-        super(textArea, TEXT_AREA_BINDINGS);
+    public TextAreaBehavior(final TextArea c) {
+        super(c);
 
         contextMenu = new ContextMenu();
-        if (IS_TOUCH_SUPPORTED) {
+        if (Properties.IS_TOUCH_SUPPORTED) {
             contextMenu.getStyleClass().add("text-input-context-menu");
         }
 
+        // some of the mappings are only valid when the control is editable, or
+        // only on certain platforms, so we create the following predicates that filters out the mapping when the
+        // control is not in the correct state / on the correct platform
+        final Predicate<KeyEvent> validWhenEditable = e -> !c.isEditable();
+        final Predicate<KeyEvent> validOnMac = e -> !PlatformUtil.isMac();
+        final Predicate<KeyEvent> validOnWindows = e -> !PlatformUtil.isWindows();
+        final Predicate<KeyEvent> validOnLinux = e -> !PlatformUtil.isLinux();
+
+        // Add these bindings as a child input map, so they take precedence
+        InputMap<TextArea> textAreaInputMap = new InputMap<>(c);
+        textAreaInputMap.getMappings().addAll(
+            keyMapping(HOME,      e -> lineStart(false)),
+            keyMapping(END,       e -> lineEnd(false)),
+            keyMapping(UP,        e -> skin.moveCaret(TextUnit.LINE, Direction.UP,   false)),
+            keyMapping(DOWN,      e -> skin.moveCaret(TextUnit.LINE, Direction.DOWN, false)),
+            keyMapping(PAGE_UP,   e -> skin.moveCaret(TextUnit.PAGE, Direction.UP,   false)),
+            keyMapping(PAGE_DOWN, e -> skin.moveCaret(TextUnit.PAGE, Direction.DOWN, false)),
+
+            keyMapping(new KeyBinding(HOME).shift(),      e -> lineStart(true)),
+            keyMapping(new KeyBinding(END).shift(),       e -> lineEnd(true)),
+            keyMapping(new KeyBinding(UP).shift(),        e -> skin.moveCaret(TextUnit.LINE, Direction.UP,   true)),
+            keyMapping(new KeyBinding(DOWN).shift(),      e -> skin.moveCaret(TextUnit.LINE, Direction.DOWN, true)),
+            keyMapping(new KeyBinding(PAGE_UP).shift(),   e -> skin.moveCaret(TextUnit.PAGE, Direction.UP,   true)),
+            keyMapping(new KeyBinding(PAGE_DOWN).shift(), e -> skin.moveCaret(TextUnit.PAGE, Direction.DOWN, true)),
+
+            // editing-only mappings
+            keyMapping(new KeyBinding(ENTER), e -> insertNewLine(), validWhenEditable),
+            keyMapping(new KeyBinding(TAB), e -> insertTab(), validWhenEditable)
+        );
+        addDefaultChildMap(getInputMap(), textAreaInputMap);
+
+        // mac os specific mappings
+        InputMap<TextArea> macOsInputMap = new InputMap<>(c);
+        macOsInputMap.setInterceptor(e -> !PlatformUtil.isMac());
+        macOsInputMap.getMappings().addAll(
+            // Mac OS specific mappings
+            keyMapping(new KeyBinding(LEFT).shortcut(),  e -> lineStart(false)),
+            keyMapping(new KeyBinding(RIGHT).shortcut(), e -> lineEnd(false)),
+            keyMapping(new KeyBinding(UP).shortcut(),    e -> c.home()),
+            keyMapping(new KeyBinding(DOWN).shortcut(),  e -> c.end()),
+
+            keyMapping(new KeyBinding(LEFT).shortcut().shift(),  e -> lineStart(true)),
+            keyMapping(new KeyBinding(RIGHT).shortcut().shift(), e -> lineEnd(true)),
+            keyMapping(new KeyBinding(UP).shortcut().shift(),    e -> selectHomeExtend()),
+            keyMapping(new KeyBinding(DOWN).shortcut().shift(),  e -> selectEndExtend()),
+
+            keyMapping(new KeyBinding(UP).alt(),           e -> skin.moveCaret(TextUnit.PARAGRAPH, Direction.UP,   false)),
+            keyMapping(new KeyBinding(DOWN).alt(),         e -> skin.moveCaret(TextUnit.PARAGRAPH, Direction.DOWN, false)),
+            keyMapping(new KeyBinding(UP).alt().shift(),   e -> skin.moveCaret(TextUnit.PARAGRAPH, Direction.UP,   true)),
+            keyMapping(new KeyBinding(DOWN).alt().shift(), e -> skin.moveCaret(TextUnit.PARAGRAPH, Direction.DOWN, true))
+        );
+        addDefaultChildMap(textAreaInputMap, macOsInputMap);
+
+        // windows / linux specific mappings
+        InputMap<TextArea> nonMacOsInputMap = new InputMap<>(c);
+        nonMacOsInputMap.setInterceptor(e -> PlatformUtil.isMac());
+        nonMacOsInputMap.getMappings().addAll(
+            keyMapping(new KeyBinding(UP).ctrl(),           e -> skin.moveCaret(TextUnit.PARAGRAPH, Direction.UP,   false)),
+            keyMapping(new KeyBinding(DOWN).ctrl(),         e -> skin.moveCaret(TextUnit.PARAGRAPH, Direction.DOWN, false)),
+            keyMapping(new KeyBinding(UP).ctrl().shift(),   e -> skin.moveCaret(TextUnit.PARAGRAPH, Direction.UP,   true)),
+            keyMapping(new KeyBinding(DOWN).ctrl().shift(), e -> skin.moveCaret(TextUnit.PARAGRAPH, Direction.DOWN, true))
+        );
+        addDefaultChildMap(textAreaInputMap, nonMacOsInputMap);
+
+        addKeyPadMappings(textAreaInputMap);
+
         // Register for change events
-        textArea.focusedProperty().addListener(new ChangeListener<Boolean>() {
+        c.focusedProperty().addListener(new ChangeListener<Boolean>() {
             @Override
             public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
                 // NOTE: The code in this method is *almost* and exact copy of what is in TextFieldBehavior.
                 // The only real difference is that TextFieldBehavior selects all the text when the control
                 // receives focus (when not gained by mouse click), whereas TextArea doesn't, and also the
                 // TextArea doesn't lose selection on focus lost, whereas the TextField does.
-                final TextArea textArea = getControl();
+                final TextArea textArea = getNode();
                 if (textArea.isFocused()) {
                     if (PlatformUtil.isIOS()) {
                         // Special handling of focus on iOS is required to allow to
@@ -186,8 +257,8 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         });
 
         // Only add this if we're on an embedded platform that supports 5-button navigation
-        if (com.sun.javafx.scene.control.skin.Utils.isTwoLevelFocus()) {
-            tlFocus = new TwoLevelFocusBehavior(textArea); // needs to be last.
+        if (Utils.isTwoLevelFocus()) {
+            tlFocus = new TwoLevelFocusBehavior(c); // needs to be last.
         }
     }
 
@@ -201,85 +272,32 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         this.skin = skin;
     }
 
-    /**************************************************************************
-     * Key handling implementation                                            *
-     *************************************************************************/
-
-    @Override public void callAction(String name) {
-        final TextArea textInputControl = getControl();
-
-        boolean done = false;
-
-        if (textInputControl.isEditable()) {
-//            fnCaretAnim(false);
-//            setCaretOpacity(1.0);
-            setEditing(true);
-            done = true;
-            if ("InsertNewLine".equals(name)) insertNewLine();
-            else if ("TraverseOrInsertTab".equals(name)) insertTab();
-            else {
-                done = false;
-            }
-            setEditing(false);
-        }
-
-        if (!done) {
-            done = true;
-            if ("LineStart".equals(name)) lineStart(false, false);
-            else if ("LineEnd".equals(name)) lineEnd(false, false);
-            else if ("SelectLineStart".equals(name)) lineStart(true, false);
-            else if ("SelectLineStartExtend".equals(name)) lineStart(true, true);
-            else if ("SelectLineEnd".equals(name)) lineEnd(true, false);
-            else if ("SelectLineEndExtend".equals(name)) lineEnd(true, true);
-            else if ("PreviousLine".equals(name)) skin.previousLine(false);
-            else if ("NextLine".equals(name)) skin.nextLine(false);
-            else if ("SelectPreviousLine".equals(name)) skin.previousLine(true);
-            else if ("SelectNextLine".equals(name)) skin.nextLine(true);
-
-            else if ("ParagraphStart".equals(name)) skin.paragraphStart(true, false);
-            else if ("ParagraphEnd".equals(name)) skin.paragraphEnd(true, isWindows(), false);
-            else if ("SelectParagraphStart".equals(name)) skin.paragraphStart(true, true);
-            else if ("SelectParagraphEnd".equals(name)) skin.paragraphEnd(true, isWindows(), true);
-
-            else if ("PreviousPage".equals(name)) skin.previousPage(false);
-            else if ("NextPage".equals(name)) skin.nextPage(false);
-            else if ("SelectPreviousPage".equals(name)) skin.previousPage(true);
-            else if ("SelectNextPage".equals(name)) skin.nextPage(true);
-            else if ("TraverseOrInsertTab".equals(name)) {
-                // RT-40312: Non-editabe mode means traverse instead of insert.
-                name = "TraverseNext";
-                done = false;
-            } else {
-                done = false;
-            }
-        }
-//            fnCaretAnim(true);
-
-        if (!done) {
-            super.callAction(name);
-        }
-    }
-
     private void insertNewLine() {
-        TextArea textArea = getControl();
-        textArea.replaceSelection("\n");
+        setEditing(true);
+        getNode().replaceSelection("\n");
+        setEditing(false);
     }
 
     private void insertTab() {
-        TextArea textArea = getControl();
-        textArea.replaceSelection("\t");
+        setEditing(true);
+        getNode().replaceSelection("\t");
+        setEditing(false);
     }
 
     @Override protected void deleteChar(boolean previous) {
-        skin.deleteChar(previous);
+        if (previous) {
+            getNode().deletePreviousChar();
+        } else {
+            getNode().deleteNextChar();
+        }
     }
 
     @Override protected void deleteFromLineStart() {
-        TextArea textArea = getControl();
+        TextArea textArea = getNode();
         int end = textArea.getCaretPosition();
 
         if (end > 0) {
-            lineStart(false, false);
+            lineStart(false);
             int start = textArea.getCaretPosition();
             if (end > start) {
                 replaceText(start, end, "");
@@ -287,22 +305,16 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         }
     }
 
-    private void lineStart(boolean select, boolean extendSelection) {
-        skin.lineStart(select, extendSelection);
+    private void lineStart(boolean select) {
+        skin.moveCaret(TextUnit.LINE, Direction.BEGINNING, select);
     }
 
-    private void lineEnd(boolean select, boolean extendSelection) {
-        skin.lineEnd(select, extendSelection);
-    }
-
-    protected void scrollCharacterToVisible(int index) {
-        // TODO this method should be removed when TextAreaSkin
-        // TODO is refactored to no longer need it.
-        skin.scrollCharacterToVisible(index);
+    private void lineEnd(boolean select) {
+        skin.moveCaret(TextUnit.LINE, Direction.END, select);
     }
 
     @Override protected void replaceText(int start, int end, String txt) {
-        getControl().replaceText(start, end, txt);
+        getNode().replaceText(start, end, txt);
     }
 
     /**
@@ -314,8 +326,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
     private boolean deferClick = false;
 
     @Override public void mousePressed(MouseEvent e) {
-        TextArea textArea = getControl();
-        super.mousePressed(e);
+        TextArea textArea = getNode();
         // We never respond to events if disabled
         if (!textArea.isDisabled()) {
             // If the text field doesn't have focus, then we'll attempt to set
@@ -334,8 +345,8 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
 
             // if the primary button was pressed
             if (e.getButton() == MouseButton.PRIMARY && !(e.isMiddleButtonDown() || e.isSecondaryButtonDown())) {
-                HitInfo hit = skin.getIndex(e.getX(), e.getY());
-                int i = com.sun.javafx.scene.control.skin.Utils.getHitInsertionIndex(hit, textArea.textProperty().getValueSafe());
+                TextPosInfo hit = skin.getIndex(e.getX(), e.getY());
+                int i = Utils.getHitInsertionIndex(hit, textArea.textProperty().getValueSafe());
 //                 int i = skin.getInsertionPoint(e.getX(), e.getY());
                 final int anchor = textArea.getAnchor();
                 final int caretPosition = textArea.getCaretPosition();
@@ -355,7 +366,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
                     // to indicate the text can be dragged, etc.
                 } else if (!(e.isControlDown() || e.isAltDown() || e.isShiftDown() || e.isMetaDown() || e.isShortcutDown())) {
                     switch (e.getClickCount()) {
-                        case 1: skin.positionCaret(hit, false, false); break;
+                        case 1: skin.positionCaret(hit, false); break;
                         case 2: mouseDoubleClick(hit); break;
                         case 3: mouseTripleClick(hit); break;
                         default: // no-op
@@ -372,7 +383,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
                     if (isMac()) {
                         textArea.extendSelection(i);
                     } else {
-                        skin.positionCaret(hit, true, false);
+                        skin.positionCaret(hit, true);
                     }
                 }
 //                 skin.setForwardBias(hit.isLeading());
@@ -386,29 +397,28 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
     }
 
     @Override public void mouseDragged(MouseEvent e) {
-        final TextArea textArea = getControl();
+        final TextArea textArea = getNode();
         // we never respond to events if disabled, but we do notify any onXXX
         // event listeners on the control
         if (!textArea.isDisabled() && !e.isSynthesized()) {
             if (e.getButton() == MouseButton.PRIMARY &&
                     !(e.isMiddleButtonDown() || e.isSecondaryButtonDown() ||
                             e.isControlDown() || e.isAltDown() || e.isShiftDown() || e.isMetaDown())) {
-                skin.positionCaret(skin.getIndex(e.getX(), e.getY()), true, false);
+                skin.positionCaret(skin.getIndex(e.getX(), e.getY()), true);
             }
         }
         deferClick = false;
     }
 
     @Override public void mouseReleased(final MouseEvent e) {
-        final TextArea textArea = getControl();
-        super.mouseReleased(e);
+        final TextArea textArea = getNode();
         // we never respond to events if disabled, but we do notify any onXXX
         // event listeners on the control
         if (!textArea.isDisabled()) {
             setCaretAnimating(false);
             if (deferClick) {
                 deferClick = false;
-                skin.positionCaret(skin.getIndex(e.getX(), e.getY()), shiftDown, false);
+                skin.positionCaret(skin.getIndex(e.getX(), e.getY()), shiftDown);
                 shiftDown = false;
             }
             setCaretAnimating(true);
@@ -416,7 +426,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
     }
 
     @Override public void contextMenuRequested(ContextMenuEvent e) {
-        final TextArea textArea = getControl();
+        final TextArea textArea = getNode();
 
         if (contextMenu.isShowing()) {
             contextMenu.hide();
@@ -425,22 +435,22 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
             double screenY = e.getScreenY();
             double sceneX = e.getSceneX();
 
-            if (IS_TOUCH_SUPPORTED) {
+            if (Properties.IS_TOUCH_SUPPORTED) {
                 Point2D menuPos;
                 if (textArea.getSelection().getLength() == 0) {
-                    skin.positionCaret(skin.getIndex(e.getX(), e.getY()), false, false);
+                    skin.positionCaret(skin.getIndex(e.getX(), e.getY()), false);
                     menuPos = skin.getMenuPosition();
                 } else {
                     menuPos = skin.getMenuPosition();
                     if (menuPos != null && (menuPos.getX() <= 0 || menuPos.getY() <= 0)) {
-                        skin.positionCaret(skin.getIndex(e.getX(), e.getY()), false, false);
+                        skin.positionCaret(skin.getIndex(e.getX(), e.getY()), false);
                         menuPos = skin.getMenuPosition();
                     }
                 }
 
                 if (menuPos != null) {
-                    Point2D p = getControl().localToScene(menuPos);
-                    Scene scene = getControl().getScene();
+                    Point2D p = getNode().localToScene(menuPos);
+                    Scene scene = getNode().getScene();
                     Window window = scene.getWindow();
                     Point2D location = new Point2D(window.getX() + scene.getX() + p.getX(),
                                                    window.getY() + scene.getY() + p.getY());
@@ -450,25 +460,25 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
                 }
             }
 
-            skin.populateContextMenu(contextMenu);
+            populateContextMenu(contextMenu);
             double menuWidth = contextMenu.prefWidth(-1);
-            double menuX = screenX - (IS_TOUCH_SUPPORTED ? (menuWidth / 2) : 0);
+            double menuX = screenX - (Properties.IS_TOUCH_SUPPORTED ? (menuWidth / 2) : 0);
             Screen currentScreen = com.sun.javafx.util.Utils.getScreenForPoint(screenX, 0);
             Rectangle2D bounds = currentScreen.getBounds();
 
             if (menuX < bounds.getMinX()) {
-                getControl().getProperties().put("CONTEXT_MENU_SCREEN_X", screenX);
-                getControl().getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
-                contextMenu.show(getControl(), bounds.getMinX(), screenY);
+                getNode().getProperties().put("CONTEXT_MENU_SCREEN_X", screenX);
+                getNode().getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
+                contextMenu.show(getNode(), bounds.getMinX(), screenY);
             } else if (screenX + menuWidth > bounds.getMaxX()) {
                 double leftOver = menuWidth - ( bounds.getMaxX() - screenX);
-                getControl().getProperties().put("CONTEXT_MENU_SCREEN_X", screenX);
-                getControl().getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
-                contextMenu.show(getControl(), screenX - leftOver, screenY);
+                getNode().getProperties().put("CONTEXT_MENU_SCREEN_X", screenX);
+                getNode().getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
+                contextMenu.show(getNode(), screenX - leftOver, screenY);
             } else {
-                getControl().getProperties().put("CONTEXT_MENU_SCREEN_X", 0);
-                getControl().getProperties().put("CONTEXT_MENU_SCENE_X", 0);
-                contextMenu.show(getControl(), menuX, screenY);
+                getNode().getProperties().put("CONTEXT_MENU_SCREEN_X", 0);
+                getNode().getProperties().put("CONTEXT_MENU_SCENE_X", 0);
+                contextMenu.show(getNode(), menuX, screenY);
             }
         }
 
@@ -479,8 +489,8 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         skin.setCaretAnimating(play);
     }
 
-    protected void mouseDoubleClick(HitInfo hit) {
-        final TextArea textArea = getControl();
+    protected void mouseDoubleClick(TextPosInfo hit) {
+        final TextArea textArea = getNode();
         textArea.previousWord();
         if (isWindows()) {
             textArea.selectNextWord();
@@ -489,23 +499,9 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         }
     }
 
-    protected void mouseTripleClick(HitInfo hit) {
+    protected void mouseTripleClick(TextPosInfo hit) {
         // select the line
-        skin.paragraphStart(false, false);
-        skin.paragraphEnd(false, isWindows(), true);
+        skin.moveCaret(TextUnit.PARAGRAPH, Direction.BEGINNING, false);
+        skin.moveCaret(TextUnit.PARAGRAPH, Direction.END, true);
     }
-
-    //    public function mouseWheelMove(e:MouseEvent):Void {
-//        def textBox = bind skin.control as TextBox;
-//        // we never respond to events if disabled, but we do notify any onXXX
-//        // event listeners on the control
-//        if (not textBox.disabled) {
-//            var rot = Math.abs(e.wheelRotation);
-//            while (rot > 0) {
-//                rot--;
-//                scrollText(e.wheelRotation > 0);
-//            }
-//        }
-//    }
-
 }

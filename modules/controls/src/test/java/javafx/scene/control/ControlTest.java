@@ -1013,7 +1013,8 @@ public class ControlTest {
         if (someClass.getEnclosingClass() != null) return;
 
         if (javafx.scene.control.Control.class.isAssignableFrom(someClass) &&
-                Modifier.isAbstract(someClass.getModifiers()) == false) {
+                Modifier.isAbstract(someClass.getModifiers()) == false &&
+                !Modifier.isPrivate(someClass.getModifiers()) == false) {
             String what = someClass.getName();
             try {
                 // should get NoSuchMethodException if ctor is not public

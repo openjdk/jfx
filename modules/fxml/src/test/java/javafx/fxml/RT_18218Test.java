@@ -25,7 +25,6 @@
 
 package javafx.fxml;
 
-import com.sun.javafx.fxml.LoadListener;
 import java.io.IOException;
 import java.util.Map;
 import org.junit.Test;
@@ -38,7 +37,7 @@ public class RT_18218Test {
     public void testStaticScriptLoad() throws IOException {
         FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_18218.fxml"));
         fxmlLoader.impl_setStaticLoad(true);
-        fxmlLoader.impl_setLoadListener(new LoadListener() {
+        fxmlLoader.setLoadListener(new LoadListener() {
             private String unknownStaticPropertyElementName = null;
 
             @Override

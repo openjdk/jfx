@@ -49,8 +49,8 @@ import javafx.scene.Node;
 import javafx.scene.input.KeyCombination;
 
 import com.sun.javafx.event.EventHandlerManager;
-import com.sun.javafx.scene.control.skin.ContextMenuContent;
-import com.sun.javafx.scene.control.skin.ContextMenuSkin;
+import com.sun.javafx.scene.control.ContextMenuContent;
+import javafx.scene.control.skin.ContextMenuSkin;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -612,7 +612,7 @@ public class MenuItem implements EventTarget, Styleable {
         for (int i = 0; i < childrenNodes.size(); i++) {
             if (! (childrenNodes.get(i) instanceof ContextMenuContent.MenuItemContainer)) continue;
 
-            ContextMenuContent.MenuItemContainer MenuRow = 
+            ContextMenuContent.MenuItemContainer MenuRow =
                     (ContextMenuContent.MenuItemContainer) childrenNodes.get(i);
 
             if (desiredMenuItem.equals(MenuRow.getItem())) {

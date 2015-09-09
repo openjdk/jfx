@@ -53,7 +53,7 @@ import javafx.util.Duration;
 
 import com.sun.javafx.charts.Legend;
 import com.sun.javafx.charts.Legend.LegendItem;
-import com.sun.javafx.css.converters.BooleanConverter;
+import javafx.css.converter.BooleanConverter;
 import javafx.beans.property.BooleanProperty;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;

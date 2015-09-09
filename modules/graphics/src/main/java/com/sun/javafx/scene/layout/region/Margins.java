@@ -27,10 +27,10 @@ package com.sun.javafx.scene.layout.region;
 
 import javafx.scene.text.Font;
 
-import com.sun.javafx.css.Size;
-import com.sun.javafx.css.SizeUnits;
-import com.sun.javafx.css.StyleConverterImpl;
+import javafx.css.Size;
+import javafx.css.SizeUnits;
 import javafx.css.ParsedValue;
+import javafx.css.StyleConverter;
 import sun.util.logging.PlatformLogger;
 import sun.util.logging.PlatformLogger.Level;
 
@@ -78,7 +78,7 @@ public class Margins {
     /**
      * Convert a sequence of sizes to an Margins
      */
-    public static final class Converter extends StyleConverterImpl<ParsedValue[], Margins> {
+    public static final class Converter extends StyleConverter<ParsedValue[], Margins> {
 
         public static Converter getInstance() {
             return Holder.CONVERTER_INSTANCE;
@@ -145,7 +145,7 @@ public class Margins {
     /**
      * Convert a sequence of sizes to an Insets
      */
-    public static final class SequenceConverter extends StyleConverterImpl<ParsedValue<ParsedValue[], Margins>[], Margins[]> {
+    public static final class SequenceConverter extends StyleConverter<ParsedValue<ParsedValue[], Margins>[], Margins[]> {
 
         public static SequenceConverter getInstance() {
             return Holder.SEQUENCE_CONVERTER_INSTANCE;

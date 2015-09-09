@@ -36,7 +36,7 @@ import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.control.TableView.TableViewFocusModel;
 
-import com.sun.javafx.scene.control.skin.TableCellSkin;
+import javafx.scene.control.skin.TableCellSkin;
 import javafx.collections.WeakListChangeListener;
 import java.lang.ref.WeakReference;
 import java.util.List;

@@ -45,9 +45,9 @@ import javafx.geometry.Pos;
 import javafx.scene.AccessibleRole;
 
 import com.sun.javafx.binding.ExpressionHelper;
-import com.sun.javafx.css.converters.EnumConverter;
-import com.sun.javafx.css.converters.SizeConverter;
-import com.sun.javafx.scene.control.skin.TextFieldSkin;
+import javafx.css.converter.EnumConverter;
+import javafx.css.converter.SizeConverter;
+import javafx.scene.control.skin.TextFieldSkin;
 
 import javafx.css.Styleable;
 

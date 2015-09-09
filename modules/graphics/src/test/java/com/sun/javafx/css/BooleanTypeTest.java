@@ -31,7 +31,7 @@ import javafx.scene.text.Font;
 
 import org.junit.Test;
 
-import com.sun.javafx.css.converters.BooleanConverter;
+import javafx.css.converter.BooleanConverter;
 
 
 public class BooleanTypeTest {

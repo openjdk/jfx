@@ -87,6 +87,24 @@ public class ParsedValue<V, T> {
     }
     
     /**
+     * If value is itself a ParsedValue or sequence of values, and should any of
+     * those values need to be looked up, then this flag is set. This
+     * does not mean that this particular value needs to be looked up, but
+     * that this value contains a value that needs to be looked up.
+     *
+     * @since 9
+     */
+    public boolean isContainsLookups() { return false; }
+
+     /**
+     * If value references another property, then the real value needs to
+     * be looked up.
+     *
+     * @since 9
+     */
+    public boolean isLookup() { return false; }
+
+    /**
      * Create an instance of ParsedValue where the value type V is converted to
      * the target type T using the given converter.
      * If {@code converter} is null, then it is assumed that the type of value 

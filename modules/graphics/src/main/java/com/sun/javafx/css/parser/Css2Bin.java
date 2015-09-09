@@ -25,7 +25,7 @@
 
 package com.sun.javafx.css.parser;
 
-import com.sun.javafx.css.Stylesheet;
+import javafx.css.Stylesheet;
 
 import java.io.File;
 import java.io.IOException;

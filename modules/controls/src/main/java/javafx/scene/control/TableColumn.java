@@ -25,11 +25,12 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.scene.control.skin.NestedTableColumnHeader;
-import com.sun.javafx.scene.control.skin.TableColumnHeader;
-import com.sun.javafx.scene.control.skin.TableHeaderRow;
-import com.sun.javafx.scene.control.skin.TableViewSkin;
-import com.sun.javafx.scene.control.skin.TableViewSkinBase;
+import com.sun.javafx.scene.control.Properties;
+import javafx.scene.control.skin.NestedTableColumnHeader;
+import javafx.scene.control.skin.TableColumnHeader;
+import javafx.scene.control.skin.TableHeaderRow;
+import javafx.scene.control.skin.TableViewSkin;
+import javafx.scene.control.skin.TableViewSkinBase;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -418,10 +419,10 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
                     TableView<S> table = getTableView();
                     if (table == null) return;
                     Map<Object,Object> properties = table.getProperties();
-                    if (properties.containsKey(TableViewSkinBase.RECREATE)) {
-                        properties.remove(TableViewSkinBase.RECREATE);
+                    if (properties.containsKey(Properties.RECREATE)) {
+                        properties.remove(Properties.RECREATE);
                     }
-                    properties.put(TableViewSkinBase.RECREATE, Boolean.TRUE);
+                    properties.put(Properties.RECREATE, Boolean.TRUE);
                 }
             };
 
@@ -636,8 +637,19 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
         if (! (getTableView().getSkin() instanceof TableViewSkin)) return null;
         TableViewSkin<?> skin = (TableViewSkin<?>) getTableView().getSkin();
 
-        TableHeaderRow tableHeader = skin.getTableHeaderRow();
-        NestedTableColumnHeader rootHeader = tableHeader.getRootHeader();
+        TableHeaderRow tableHeader = null;
+        for (Node n : skin.getChildren()) {
+            if (n instanceof TableHeaderRow) {
+                tableHeader = (TableHeaderRow)n;
+            }
+        }
+
+        NestedTableColumnHeader rootHeader = null;
+        for (Node n : tableHeader.getChildren()) {
+            if (n instanceof NestedTableColumnHeader) {
+                rootHeader = (NestedTableColumnHeader) n;
+            }
+        }
 
         // we now need to do a search for the header. We'll go depth-first.
         return scan(rootHeader);

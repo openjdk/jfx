@@ -26,7 +26,7 @@ package javafx.scene.control;
 
 import static junit.framework.Assert.*;
 
-import com.sun.javafx.scene.control.skin.SpinnerSkin;
+import javafx.scene.control.skin.SpinnerSkin;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import org.junit.Before;

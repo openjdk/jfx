@@ -25,7 +25,6 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TablePositionBase;
@@ -59,12 +58,12 @@ public class TreeTableCellBehavior<S,T> extends TableCellBehaviorBase<TreeItem<S
 
     /** @{@inheritDoc} */
     @Override protected TreeTableView<S> getCellContainer() {
-        return getControl().getTreeTableView();
+        return getNode().getTreeTableView();
     }
 
     /** @{@inheritDoc} */
     @Override protected TreeTableColumn<S,T> getTableColumn() {
-        return getControl().getTableColumn();
+        return getNode().getTableColumn();
     }
 
     /** @{@inheritDoc} */
@@ -89,7 +88,7 @@ public class TreeTableCellBehavior<S,T> extends TableCellBehaviorBase<TreeItem<S
 
     /** @{@inheritDoc} */
     @Override protected boolean isTableRowSelected() {
-        return getControl().getTreeTableRow().isSelected();
+        return getNode().getTreeTableRow().isSelected();
     }
 
     /** @{@inheritDoc} */
@@ -112,15 +111,15 @@ public class TreeTableCellBehavior<S,T> extends TableCellBehaviorBase<TreeItem<S
     }
 
     @Override protected boolean handleDisclosureNode(double x, double y) {
-        final TreeItem<S> treeItem = getControl().getTreeTableRow().getTreeItem();
+        final TreeItem<S> treeItem = getNode().getTreeTableRow().getTreeItem();
 
-        final TreeTableView<S> treeTableView = getControl().getTreeTableView();
+        final TreeTableView<S> treeTableView = getNode().getTreeTableView();
         final TreeTableColumn<S,T> column = getTableColumn();
         final TreeTableColumn<S,?> treeColumn = treeTableView.getTreeColumn() == null ?
                 treeTableView.getVisibleLeafColumn(0) : treeTableView.getTreeColumn();
 
         if (column == treeColumn) {
-            final Node disclosureNode = getControl().getTreeTableRow().getDisclosureNode();
+            final Node disclosureNode = getNode().getTreeTableRow().getDisclosureNode();
             if (disclosureNode != null) {
                 double startX = 0;
                 for (TreeTableColumn<S,?> tc : treeTableView.getVisibleLeafColumns()) {
@@ -142,16 +141,16 @@ public class TreeTableCellBehavior<S,T> extends TableCellBehaviorBase<TreeItem<S
     @Override
     protected void handleClicks(MouseButton button, int clickCount, boolean isAlreadySelected) {
         // handle editing, which only occurs with the primary mouse button
-        TreeItem<S> treeItem = getControl().getTreeTableRow().getTreeItem();
+        TreeItem<S> treeItem = getNode().getTreeTableRow().getTreeItem();
         if (button == MouseButton.PRIMARY) {
             if (clickCount == 1 && isAlreadySelected) {
-                edit(getControl());
+                edit(getNode());
             } else if (clickCount == 1) {
                 // cancel editing
                 edit(null);
             } else if (clickCount == 2 && treeItem.isLeaf()) {
                 // attempt to edit
-                edit(getControl());
+                edit(getNode());
             } else if (clickCount % 2 == 0) {
                 // try to expand/collapse branch tree item
                 treeItem.setExpanded(! treeItem.isExpanded());

@@ -25,101 +25,61 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import com.sun.javafx.scene.control.inputmap.InputMap;
 import javafx.event.Event;
-import javafx.geometry.NodeOrientation;
-import javafx.scene.Node;
-import javafx.scene.Parent;
 import javafx.scene.control.SelectionModel;
-import javafx.scene.control.SingleSelectionModel;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.MouseEvent;
-import java.util.ArrayList;
+import javafx.scene.input.*;
+import com.sun.javafx.scene.control.inputmap.KeyBinding;
+
 import java.util.List;
+
+import static javafx.scene.input.KeyCode.*;
+import static com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
+import static com.sun.javafx.scene.control.inputmap.InputMap.MouseMapping;
 
 public class TabPaneBehavior extends BehaviorBase<TabPane> {
 
-    /**************************************************************************
-     *                          Setup KeyBindings                             *
-     *************************************************************************/
-    private static final String HOME = "Home";
-    private static final String END = "End";
-    private static final String CTRL_PAGE_UP = "Ctrl_Page_Up";
-    private static final String CTRL_PAGE_DOWN = "Ctrl_Page_Down";
-    private static final String CTRL_TAB = "Ctrl_Tab";
-    private static final String CTRL_SHIFT_TAB = "Ctrl_Shift_Tab";
-
-    protected static final List<KeyBinding> TAB_PANE_BINDINGS = new ArrayList<>();
-    static {
-        TAB_PANE_BINDINGS.add(new KeyBinding(KeyCode.UP, "TraverseUp"));
-        TAB_PANE_BINDINGS.add(new KeyBinding(KeyCode.DOWN, "TraverseDown"));
-        TAB_PANE_BINDINGS.add(new KeyBinding(KeyCode.LEFT, "TraverseLeft"));
-        TAB_PANE_BINDINGS.add(new KeyBinding(KeyCode.RIGHT, "TraverseRight"));
-        TAB_PANE_BINDINGS.add(new KeyBinding(KeyCode.HOME, HOME));
-        TAB_PANE_BINDINGS.add(new KeyBinding(KeyCode.END, END));
-        TAB_PANE_BINDINGS.add(new KeyBinding(KeyCode.PAGE_UP, CTRL_PAGE_UP).ctrl());
-        TAB_PANE_BINDINGS.add(new KeyBinding(KeyCode.PAGE_DOWN, CTRL_PAGE_DOWN).ctrl());
-        TAB_PANE_BINDINGS.add(new KeyBinding(KeyCode.TAB, CTRL_TAB).ctrl());
-        TAB_PANE_BINDINGS.add(new KeyBinding(KeyCode.TAB, CTRL_SHIFT_TAB).shift().ctrl());
-    }
-
-    @Override protected void callAction(String name) {
-        boolean rtl = (getControl().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT);
-
-        if (("TraverseLeft".equals(name) && !rtl) ||
-            ("TraverseRight".equals(name) && rtl) ||
-            "TraverseUp".equals(name)) {
-            if (getControl().isFocused()) {
-                selectPreviousTab();
-            }
-        } else if (("TraverseRight".equals(name) && !rtl) || 
-                   ("TraverseLeft".equals(name) && rtl) ||
-                   "TraverseDown".equals(name)) {
-            if (getControl().isFocused()) {
-                selectNextTab();
-            }
-        } else if (CTRL_TAB.equals(name) || CTRL_PAGE_DOWN.equals(name)) {
-            selectNextTab();
-        } else if (CTRL_SHIFT_TAB.equals(name) || CTRL_PAGE_UP.equals(name)) {
-            selectPreviousTab();
-        } else if (HOME.equals(name)) {
-            if (getControl().isFocused()) {
-                moveSelection(0, 1);
-            }
-        } else if (END.equals(name)) {
-            if (getControl().isFocused()) {
-                moveSelection(getControl().getTabs().size() - 1, -1);
-            }
-        } else {
-            super.callAction(name);
-        }
-    }
-
-
-
-    /***************************************************************************
-     *                                                                         *
-     * Mouse event handling                                                    *
-     *                                                                         *
-     **************************************************************************/
-
-    @Override public void mousePressed(MouseEvent e) {
-        super.mousePressed(e);
-        TabPane tp = getControl();
-        tp.requestFocus();
-    }
-
-    /**************************************************************************
-     *                         State and Functions                            *
-     *************************************************************************/
+    private final InputMap<TabPane> tabPaneInputMap;
 
     public TabPaneBehavior(TabPane tabPane) {
-        super(tabPane, TAB_PANE_BINDINGS);
+        super(tabPane);
+
+        // create a map for TabPane-specific mappings (this reuses the default
+        // InputMap installed on the control, if it is non-null, allowing us to pick up any user-specified mappings)
+        tabPaneInputMap = createInputMap();
+
+        // TabPane-specific mappings for key and mouse input
+        addDefaultMapping(tabPaneInputMap,
+            new KeyMapping(UP, e -> selectPreviousTab()),
+            new KeyMapping(DOWN, e -> selectNextTab()),
+            new KeyMapping(LEFT, e -> rtl(tabPane, this::selectNextTab, this::selectPreviousTab)),
+            new KeyMapping(RIGHT, e -> rtl(tabPane, this::selectPreviousTab, this::selectNextTab)),
+            new KeyMapping(HOME, e -> {
+                if (getNode().isFocused()) {
+                    moveSelection(0, 1);
+                }
+            }),
+            new KeyMapping(END, e -> {
+                if (getNode().isFocused()) {
+                    moveSelection(getNode().getTabs().size() - 1, -1);
+                }
+            }),
+            new KeyMapping(new KeyBinding(PAGE_UP).ctrl(), e -> selectPreviousTab()),
+            new KeyMapping(new KeyBinding(PAGE_DOWN).ctrl(), e -> selectNextTab()),
+            new KeyMapping(new KeyBinding(TAB).ctrl(), e -> selectNextTab()),
+            new KeyMapping(new KeyBinding(TAB).ctrl().shift(), e -> selectPreviousTab()),
+            new MouseMapping(MouseEvent.MOUSE_PRESSED, e -> getNode().requestFocus())
+        );
+    }
+
+    @Override public InputMap<TabPane> getInputMap() {
+        return tabPaneInputMap;
     }
 
     public void selectTab(Tab tab) {
-        getControl().getSelectionModel().select(tab);
+        getNode().getSelectionModel().select(tab);
     }
 
     public boolean canCloseTab(Tab tab) {
@@ -129,7 +89,7 @@ public class TabPaneBehavior extends BehaviorBase<TabPane> {
     }
     
     public void closeTab(Tab tab) {
-        TabPane tabPane = getControl();
+        TabPane tabPane = getNode();
         // only switch to another tab if the selected tab is the one we're closing
         int index = tabPane.getTabs().indexOf(tab);
         if (index != -1) {
@@ -152,11 +112,11 @@ public class TabPaneBehavior extends BehaviorBase<TabPane> {
     }
 
     private void moveSelection(int delta) {
-        moveSelection(getControl().getSelectionModel().getSelectedIndex(), delta);
+        moveSelection(getNode().getSelectionModel().getSelectedIndex(), delta);
     }
 
     private void moveSelection(int startIndex, int delta) {
-        final TabPane tabPane = getControl();
+        final TabPane tabPane = getNode();
         int tabIndex = findValidTab(startIndex, delta);
         if (tabIndex > -1) {
             final SelectionModel<Tab> selectionModel = tabPane.getSelectionModel();
@@ -166,7 +126,7 @@ public class TabPaneBehavior extends BehaviorBase<TabPane> {
     }
 
     private int findValidTab(int startIndex, int delta) {
-        final TabPane tabPane = getControl();
+        final TabPane tabPane = getNode();
         final List<Tab> tabs = tabPane.getTabs();
         final int max = tabs.size();
 

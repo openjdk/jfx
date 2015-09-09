@@ -25,7 +25,7 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.css.converters.BooleanConverter;
+import javafx.css.converter.BooleanConverter;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -40,7 +40,7 @@ import javafx.collections.ObservableList;
 import javafx.css.CssMetaData;
 import javafx.css.StyleableBooleanProperty;
 
-import com.sun.javafx.scene.control.skin.MenuBarSkin;
+import javafx.scene.control.skin.MenuBarSkin;
 
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;

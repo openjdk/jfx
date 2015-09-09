@@ -1,11 +1,11 @@
 package com.sun.javafx.css;
 
 
-import com.sun.javafx.css.Declaration;
-import com.sun.javafx.css.Rule;
-import com.sun.javafx.css.Selector;
+import javafx.css.Declaration;
+import javafx.css.Rule;
+import javafx.css.Selector;
 import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.css.Stylesheet;
+import javafx.css.Stylesheet;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableSet;

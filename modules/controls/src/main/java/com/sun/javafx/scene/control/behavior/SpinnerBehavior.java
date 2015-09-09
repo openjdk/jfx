@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,13 +30,14 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerValueFactory;
+import com.sun.javafx.scene.control.inputmap.InputMap;
+import javafx.scene.input.KeyEvent;
 import javafx.util.Duration;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import static javafx.scene.input.KeyCode.*;
+import static com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
 
 public class SpinnerBehavior<T> extends BehaviorBase<Spinner<T>> {
 
@@ -46,6 +47,8 @@ public class SpinnerBehavior<T> extends BehaviorBase<Spinner<T>> {
     // step size)
     private static final double INITIAL_DURATION_MS = 750;
 
+    private final InputMap<Spinner<T>> spinnerInputMap;
+
     private final int STEP_AMOUNT = 1;
 
     private boolean isIncrementing = false;
@@ -53,7 +56,7 @@ public class SpinnerBehavior<T> extends BehaviorBase<Spinner<T>> {
     private Timeline timeline;
 
     final EventHandler<ActionEvent> spinningKeyFrameEventHandler = event -> {
-        final SpinnerValueFactory<T> valueFactory = getControl().getValueFactory();
+        final SpinnerValueFactory<T> valueFactory = getNode().getValueFactory();
         if (valueFactory == null) {
             return;
         }
@@ -74,52 +77,29 @@ public class SpinnerBehavior<T> extends BehaviorBase<Spinner<T>> {
      **************************************************************************/
 
     public SpinnerBehavior(Spinner<T> spinner) {
-        super(spinner, SPINNER_BINDINGS);
+        super(spinner);
+
+        // create a map for spinner-specific mappings (this reuses the default
+        // InputMap installed on the control, if it is non-null, allowing us to pick up any user-specified mappings)
+        spinnerInputMap = createInputMap();
+
+        // then spinner-specific mappings for key and mouse input
+        addDefaultMapping(spinnerInputMap,
+            new KeyMapping(UP, KeyEvent.KEY_PRESSED, e -> {
+                if (arrowsAreVertical()) increment(1); else FocusTraversalInputMap.traverseUp(e);
+            }),
+            new KeyMapping(RIGHT, KeyEvent.KEY_PRESSED, e -> {
+                if (! arrowsAreVertical()) increment(1); else FocusTraversalInputMap.traverseRight(e);
+            }),
+            new KeyMapping(LEFT, KeyEvent.KEY_PRESSED, e -> {
+                if (! arrowsAreVertical()) decrement(1); else FocusTraversalInputMap.traverseLeft(e);
+            }),
+            new KeyMapping(DOWN, KeyEvent.KEY_PRESSED, e -> {
+                if (arrowsAreVertical()) decrement(1); else FocusTraversalInputMap.traverseDown(e);
+            })
+        );
     }
 
-
-
-    /***************************************************************************
-     *                                                                         *
-     * Key event handling                                                      *
-     *                                                                         *
-     **************************************************************************/
-
-    /**
-     * Indicates that a keyboard key has been pressed which represents the
-     * event (this could be space bar for example). As long as keyDown is true,
-     * we are also armed, and will ignore mouse events related to arming.
-     * Note this is made package private solely for the sake of testing.
-     */
-    private boolean keyDown;
-
-    protected static final List<KeyBinding> SPINNER_BINDINGS = new ArrayList<KeyBinding>();
-    static {
-        SPINNER_BINDINGS.add(new KeyBinding(UP, "increment-up"));
-        SPINNER_BINDINGS.add(new KeyBinding(RIGHT, "increment-right"));
-        SPINNER_BINDINGS.add(new KeyBinding(LEFT, "decrement-left"));
-        SPINNER_BINDINGS.add(new KeyBinding(DOWN, "decrement-down"));
-    }
-
-    @Override protected void callAction(String name) {
-        boolean vertical = arrowsAreVertical();
-
-        switch (name) {
-            case "increment-up": {
-                if (vertical) increment(1); else traverseUp(); break;
-            }
-            case "increment-right": {
-                if (! vertical) increment(1); else traverseRight(); break;
-            }
-            case "decrement-down": {
-                if (vertical) decrement(1); else traverseDown(); break;
-            }
-            case "decrement-left": {
-                if (! vertical) decrement(1); else traverseLeft(); break;
-            }
-            default: super.callAction(name); break;
-        }
-    }
 
 
     /***************************************************************************
@@ -128,12 +108,16 @@ public class SpinnerBehavior<T> extends BehaviorBase<Spinner<T>> {
      *                                                                         *
      **************************************************************************/
 
+    @Override public InputMap<Spinner<T>> getInputMap() {
+        return spinnerInputMap;
+    }
+
     public void increment(int steps) {
-        getControl().increment(steps);
+        getNode().increment(steps);
     }
 
     public void decrement(int steps) {
-        getControl().decrement(steps);
+        getNode().decrement(steps);
     }
 
     public void startSpinning(boolean increment) {
@@ -166,7 +150,7 @@ public class SpinnerBehavior<T> extends BehaviorBase<Spinner<T>> {
      **************************************************************************/
 
     private boolean arrowsAreVertical() {
-        final List<String> styleClass = getControl().getStyleClass();
+        final List<String> styleClass = getNode().getStyleClass();
 
         return ! (styleClass.contains(Spinner.STYLE_CLASS_ARROWS_ON_LEFT_HORIZONTAL)  ||
                   styleClass.contains(Spinner.STYLE_CLASS_ARROWS_ON_RIGHT_HORIZONTAL) ||

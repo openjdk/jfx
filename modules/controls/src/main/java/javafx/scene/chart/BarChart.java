@@ -53,7 +53,7 @@ import javafx.css.StyleableDoubleProperty;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 
-import com.sun.javafx.css.converters.SizeConverter;
+import javafx.css.converter.SizeConverter;
 
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;

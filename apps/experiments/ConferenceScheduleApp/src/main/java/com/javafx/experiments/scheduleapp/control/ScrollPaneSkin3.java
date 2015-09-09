@@ -31,7 +31,7 @@
  */
 package com.javafx.experiments.scheduleapp.control;
 
-import com.sun.javafx.scene.control.skin.ScrollPaneSkin;
+import javafx.scene.control.skin.ScrollPaneSkin;
 import java.lang.reflect.Field;
 import javafx.event.EventHandler;
 import javafx.scene.control.ScrollPane;
@@ -98,15 +98,5 @@ public class ScrollPaneSkin3 extends ScrollPaneSkin {
             e.printStackTrace();
         }
         return 0;
-    }
-
-    protected void startContentsToViewport() {
-        if (IS_BEAGLE) return;
-        super.startContentsToViewport();
-    }
-
-    protected void startSBReleasedAnimation() {
-        if (IS_BEAGLE) return;
-        super.startSBReleasedAnimation();
     }
 }

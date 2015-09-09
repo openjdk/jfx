@@ -25,28 +25,28 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import com.sun.javafx.scene.control.inputmap.InputMap;
+import javafx.beans.Observable;
+import javafx.event.EventHandler;
 import javafx.event.EventTarget;
 import javafx.scene.Node;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ComboBoxBase;
 import javafx.scene.control.DatePicker;
+import javafx.scene.control.PopupControl;
 import javafx.scene.control.TextField;
-import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseButton;
-import javafx.scene.input.MouseEvent;
-import java.util.ArrayList;
-import java.util.List;
-import static javafx.scene.input.KeyCode.DOWN;
-import static javafx.scene.input.KeyCode.ENTER;
-import static javafx.scene.input.KeyCode.ESCAPE;
-import static javafx.scene.input.KeyCode.F4;
-import static javafx.scene.input.KeyCode.F10;
-import static javafx.scene.input.KeyCode.SPACE;
-import static javafx.scene.input.KeyCode.UP;
-import static javafx.scene.input.KeyEvent.KEY_PRESSED;
-import static javafx.scene.input.KeyEvent.KEY_RELEASED;
+import com.sun.javafx.scene.control.skin.Utils;
+import javafx.scene.input.*;
+import com.sun.javafx.scene.control.inputmap.KeyBinding;
+
+import static javafx.scene.input.KeyCode.*;
+import static javafx.scene.input.KeyEvent.*;
+import static com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
+import static com.sun.javafx.scene.control.inputmap.InputMap.MouseMapping;
 
 public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
+
+    private final InputMap<ComboBoxBase<T>> inputMap;
 
     /***************************************************************************
      *                                                                         *
@@ -57,26 +57,62 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
     private TwoLevelFocusComboBehavior tlFocus;
     
     /**
-     * Used to keep track of the most recent key event. This is used when
-     * the event needs to be forwarded to the parent for bubbling up.
-     */
-    private KeyEvent lastEvent;
-
-    /**
      * 
      */
-    public ComboBoxBaseBehavior(final ComboBoxBase<T> comboBox, final List<KeyBinding> bindings) {
-        super(comboBox, bindings);
+    public ComboBoxBaseBehavior(final ComboBoxBase<T> comboBox) {
+        super(comboBox);
+
+        // create a map for comboBox-specific mappings (this reuses the default
+        // InputMap installed on the control, if it is non-null, allowing us to pick up any user-specified mappings)
+        inputMap = createInputMap();
+
+        final EventHandler<KeyEvent> togglePopup = e -> {
+            // If popup is shown, KeyEvent causes popup to close
+            showPopupOnMouseRelease = true;
+
+            if (getNode().isShowing()) hide();
+            else show();
+        };
+
+        // comboBox-specific mappings for key and mouse input
+        addDefaultMapping(inputMap,
+            new KeyMapping(F4, KEY_RELEASED, togglePopup),
+            new KeyMapping(new KeyBinding(UP).alt(), togglePopup),
+            new KeyMapping(new KeyBinding(DOWN).alt(), togglePopup),
+
+            new KeyMapping(SPACE, KEY_PRESSED, this::keyPressed),
+            new KeyMapping(SPACE, KEY_RELEASED, this::keyReleased),
+
+            new KeyMapping(ENTER, KEY_PRESSED, this::keyPressed),
+            new KeyMapping(ENTER, KEY_RELEASED, this::keyReleased),
+
+            // The following keys are forwarded to the parent container
+            new KeyMapping(ESCAPE, KEY_PRESSED, this::cancelEdit),
+            new KeyMapping(F10,    KEY_PRESSED, this::forwardToParent),
+
+            new MouseMapping(MouseEvent.MOUSE_PRESSED, this::mousePressed),
+            new MouseMapping(MouseEvent.MOUSE_RELEASED, this::mouseReleased),
+            new MouseMapping(MouseEvent.MOUSE_ENTERED, this::mouseEntered),
+            new MouseMapping(MouseEvent.MOUSE_EXITED, this::mouseExited)
+        );
+
+        // ComboBoxBase also cares about focus
+        comboBox.focusedProperty().addListener(this::focusChanged);
 
         // Only add this if we're on an embedded platform that supports 5-button navigation
-        if (com.sun.javafx.scene.control.skin.Utils.isTwoLevelFocus()) {
+        if (Utils.isTwoLevelFocus()) {
             tlFocus = new TwoLevelFocusComboBehavior(comboBox); // needs to be last.
         }
     }
 
     @Override public void dispose() {
         if (tlFocus != null) tlFocus.dispose();
+        getNode().focusedProperty().removeListener(this::focusChanged);
         super.dispose();
+    }
+
+    @Override public InputMap<ComboBoxBase<T>> getInputMap() {
+        return inputMap;
     }
 
     /***************************************************************************
@@ -85,10 +121,10 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
      *                                                                         *
      **************************************************************************/
 
-    @Override protected void focusChanged() {
+    protected void focusChanged(Observable o) {
         // If we did have the key down, but are now not focused, then we must
         // disarm the box.
-        final ComboBoxBase<T> box = getControl();
+        final ComboBoxBase<T> box = getNode();
         if (keyDown && !box.isFocused()) {
             keyDown = false;
             box.disarm();
@@ -109,68 +145,25 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
      */
     private boolean keyDown;
 
-    private static final String PRESS_ACTION = "Press";
-    private static final String RELEASE_ACTION = "Release";
-
-    protected static final List<KeyBinding> COMBO_BOX_BASE_BINDINGS = new ArrayList<KeyBinding>();
-    static {
-        COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(F4, KEY_RELEASED, "togglePopup"));
-        COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(UP, "togglePopup").alt());
-        COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(DOWN, "togglePopup").alt());
-
-        COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(SPACE, KEY_PRESSED, PRESS_ACTION));
-        COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(SPACE, KEY_RELEASED, RELEASE_ACTION));
-
-        COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(ENTER, KEY_PRESSED, PRESS_ACTION));
-        COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(ENTER, KEY_RELEASED, RELEASE_ACTION));
-
-        // The following keys are forwarded to the parent container
-        COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(ESCAPE, "Cancel"));
-        COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(F10, "ToParent"));
-    }
-
-    @Override protected void callActionForEvent(KeyEvent e) {
-        // If popup is shown, KeyEvent causes popup to close
-        lastEvent = e;
-        showPopupOnMouseRelease = true;
-        super.callActionForEvent(e);
-    }
-
-    @Override protected void callAction(String name) {
-        if (PRESS_ACTION.equals(name)) {
-            keyPressed();
-        } else if (RELEASE_ACTION.equals(name)) {
-            keyReleased();
-        } else if ("showPopup".equals(name)) {
-            show();
-        } else if ("togglePopup".equals(name)) {
-            if (getControl().isShowing()) hide();
-            else show();
-        } else if ("Cancel".equals(name)) {
-            cancelEdit(lastEvent);
-        } else if ("ToParent".equals(name)) {
-            forwardToParent(lastEvent);
-        } else {
-            super.callAction(name);
-        }
-    }
-
     /**
      * This function is invoked when an appropriate keystroke occurs which
      * causes this button to be armed if it is not already armed by a mouse
      * press.
      */
-    private void keyPressed() {
-        if (com.sun.javafx.scene.control.skin.Utils.isTwoLevelFocus()) {
+    private void keyPressed(KeyEvent e) {
+        // If popup is shown, KeyEvent causes popup to close
+        showPopupOnMouseRelease = true;
+
+        if (Utils.isTwoLevelFocus()) {
             show();
             if (tlFocus != null) {
                 tlFocus.setExternalFocus(false);
             }
         }
         else {
-            if (! getControl().isPressed() && ! getControl().isArmed()) {
+            if (! getNode().isPressed() && ! getNode().isArmed()) {
                 keyDown = true;
-                getControl().arm();
+                getNode().arm();
             }
         }
     }
@@ -179,29 +172,32 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
      * Invoked when a valid keystroke release occurs which causes the button
      * to fire if it was armed by a keyPress.
      */
-    private void keyReleased() {
-        if (!com.sun.javafx.scene.control.skin.Utils.isTwoLevelFocus()) {
+    private void keyReleased(KeyEvent e) {
+        // If popup is shown, KeyEvent causes popup to close
+        showPopupOnMouseRelease = true;
+
+        if (!Utils.isTwoLevelFocus()) {
             if (keyDown) {
                 keyDown = false;
-                if (getControl().isArmed()) {
-                    getControl().disarm();
+                if (getNode().isArmed()) {
+                    getNode().disarm();
                 }
             }
         }
     }
     
-    protected void forwardToParent(KeyEvent event) {
-        if (getControl().getParent() != null) {
-            getControl().getParent().fireEvent(event);
+    private void forwardToParent(KeyEvent event) {
+        if (getNode().getParent() != null) {
+            getNode().getParent().fireEvent(event);
         }
     }
 
-    protected void cancelEdit(KeyEvent event) {
+    private void cancelEdit(KeyEvent event) {
         /**
          * This can be cleaned up if the editor property is moved up
          * to ComboBoxBase.
          */
-        ComboBoxBase comboBoxBase = getControl();
+        ComboBoxBase comboBoxBase = getNode();
         TextField textField = null;
         if (comboBoxBase instanceof DatePicker) {
             textField = ((DatePicker)comboBoxBase).getEditor();
@@ -215,21 +211,19 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
             forwardToParent(event);
         }
     }
-
+    
+    
     /**************************************************************************
      *                                                                        *
      * Mouse Events                                                           *
      *                                                                        *
      *************************************************************************/
 
-    @Override public void mousePressed(MouseEvent e) {
-        super.mousePressed(e);
+    public void mousePressed(MouseEvent e) {
         arm(e);
     }
 
-    @Override public void mouseReleased(MouseEvent e) {
-        super.mouseReleased(e);
-
+    public void mouseReleased(MouseEvent e) {
         disarm();
 
         // The showPopupOnMouseRelease boolean was added to resolve
@@ -245,10 +239,8 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
         }
     }
 
-    @Override public void mouseEntered(MouseEvent e) {
-        super.mouseEntered(e);
-
-        if (!getControl().isEditable()) {
+    public void mouseEntered(MouseEvent e) {
+        if (!getNode().isEditable()) {
             mouseInsideButton = true;
         } else {
             // This is strongly tied to ComboBoxBaseSkin
@@ -258,44 +250,43 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
         arm();
     }
 
-    @Override public void mouseExited(MouseEvent e) {
-        super.mouseExited(e);
+    public void mouseExited(MouseEvent e) {
         mouseInsideButton = false;
         disarm();
     }
     
-    private void getFocus() {
-        if (! getControl().isFocused() && getControl().isFocusTraversable()) {
-            getControl().requestFocus();
-        }
-    }
+//    private void getFocus() {
+//        if (! getNode().isFocused() && getNode().isFocusTraversable()) {
+//            getNode().requestFocus();
+//        }
+//    }
     
     private void arm(MouseEvent e) {
         boolean valid = (e.getButton() == MouseButton.PRIMARY &&
             ! (e.isMiddleButtonDown() || e.isSecondaryButtonDown() ||
              e.isShiftDown() || e.isControlDown() || e.isAltDown() || e.isMetaDown()));
         
-        if (! getControl().isArmed() && valid) {
-            getControl().arm();
+        if (! getNode().isArmed() && valid) {
+            getNode().arm();
         }
     }
     
     public void show() {
-        if (! getControl().isShowing()) {
-            getControl().requestFocus();
-            getControl().show();
+        if (! getNode().isShowing()) {
+            getNode().requestFocus();
+            getNode().show();
         }
     }
     
     public void hide() {
-        if (getControl().isShowing()) {
-            getControl().hide();
+        if (getNode().isShowing()) {
+            getNode().hide();
         }
     }
 
     private boolean showPopupOnMouseRelease = true;
     private boolean mouseInsideButton = false;
-    public void onAutoHide() {
+    public void onAutoHide(PopupControl popup) {
         // RT-18151: if the ComboBox button was clicked, and it was this that forced the
         // popup to disappear, we don't want the popup to immediately reappear.
         // If the mouse was not within the comboBox button at the time of the auto-hide occurring,
@@ -306,14 +297,14 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
     }
 
     public void arm() {
-        if (getControl().isPressed()) {
-            getControl().arm();
+        if (getNode().isPressed()) {
+            getNode().arm();
         }
     }
     
     public void disarm() {
-        if (! keyDown && getControl().isArmed()) {
-            getControl().disarm();
+        if (! keyDown && getNode().isArmed()) {
+            getNode().disarm();
         }
     }
 

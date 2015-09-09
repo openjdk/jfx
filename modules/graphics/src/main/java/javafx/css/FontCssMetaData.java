@@ -25,9 +25,9 @@
 
 package javafx.css;
 
-import com.sun.javafx.css.converters.FontConverter;
-import com.sun.javafx.css.converters.SizeConverter;
-import com.sun.javafx.css.converters.StringConverter;
+import javafx.css.converter.FontConverter;
+import javafx.css.converter.SizeConverter;
+import javafx.css.converter.StringConverter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;

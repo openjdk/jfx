@@ -44,7 +44,7 @@ import javafx.scene.AccessibleRole;
 import javafx.util.StringConverter;
 import javafx.css.PseudoClass;
 
-import com.sun.javafx.scene.control.skin.ChoiceBoxSkin;
+import javafx.scene.control.skin.ChoiceBoxSkin;
 
 import javafx.beans.DefaultProperty;
 

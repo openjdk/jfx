@@ -96,15 +96,15 @@ public class AppPlatform {
             AppNotificationHandler notificationHandler, Application.Parameters parameters)  
     throws IOException {
         if (IS_MAC) {
-            return requestStartMac(notificationHandler, parameters);
+            Platform.setImplicitExit(false);
+        }
+
+        if (EditorPlatform.isAssertionEnabled()) {
+            // Development mode : we do not delegate to the existing instance
+            notificationHandler.handleLaunch(parameters.getUnnamed());
+            return true;
         } else {
-            if (EditorPlatform.isAssertionEnabled()) {
-                // Development mode : we do not delegate to the existing instance
-                notificationHandler.handleLaunch(parameters.getUnnamed());
-                return true;
-            } else {
-                return requestStartGeneric(notificationHandler, parameters);
-            }
+            return requestStartGeneric(notificationHandler, parameters);
         }
     }
     
@@ -193,102 +193,4 @@ public class AppPlatform {
         }
         
     } 
-    
-    
-    
-    /*
-     * Private (requestStartMac)
-     */
-    
-    private static boolean requestStartMac(
-            AppNotificationHandler notificationHandler, Application.Parameters parameters) {
-        
-        Platform.setImplicitExit(false);
-        notificationHandler.handleLaunch(Collections.emptyList());
-        Deprecation.setPlatformEventHandler(new MacEventHandler(notificationHandler,
-                Deprecation.getPlatformEventHandler()));
-        
-        return true;
-    }
-    
-    private static class MacEventHandler extends com.sun.glass.ui.Application.EventHandler {
-        
-        private final AppNotificationHandler notificationHandler;
-        private final com.sun.glass.ui.Application.EventHandler oldEventHandler;
-        private int openFilesCount;
-        
-        public MacEventHandler(AppNotificationHandler notificationHandler,
-                com.sun.glass.ui.Application.EventHandler oldEventHandler) {
-            assert notificationHandler != null;
-            this.notificationHandler = notificationHandler;
-            this.oldEventHandler = oldEventHandler;
-        }
-        
-        /*
-         * com.sun.glass.ui.Application.AppNotificationHandler
-         */
-        @Override
-        public void handleDidFinishLaunchingAction(com.sun.glass.ui.Application app, long time) {
-            if (oldEventHandler != null) {
-                oldEventHandler.handleDidFinishLaunchingAction(app, time);
-            }
-        }
-
-        @Override
-        public void handleDidBecomeActiveAction(com.sun.glass.ui.Application app, long time) {
-            if (oldEventHandler != null) {
-                oldEventHandler.handleDidBecomeActiveAction(app, time);
-            }
-        }
-
-        @Override
-        public void handleOpenFilesAction(com.sun.glass.ui.Application app, long time, final String[] files) {
-            if (oldEventHandler != null) {
-                oldEventHandler.handleOpenFilesAction(app, time, files);
-            }
-            
-            /*
-             * When SB is started from NB or test environment on Mac OS, this 
-             * method is called a first time with dummy parameter like this:
-             * files[0] == "com.oracle.javafx.scenebuilder.app.SceneBuilderApp". //NOI18N
-             * We ignore this call here.
-             * 
-             * With Eclipse on Mac, files[0] == System.getProperty("java.class.path") (!) //NOI18N
-             */
-            final boolean openRejected;
-            if (startingFromTestBed) {
-                openRejected = true;
-            } else if (openFilesCount++ == 0) {
-                openRejected = (files.length == 1) 
-                        && ( files[0].equals(SceneBuilderApp.class.getName()) || //NOI18N
-                             files[0].equals(System.getProperty("java.class.path"))); //NOI18N
-            } else {
-                openRejected = false;
-            }
-            
-            if (openRejected == false) {
-                notificationHandler.handleOpenFilesAction(Arrays.asList(files));
-            }
-        }
-
-        @Override
-        public void handleQuitAction(com.sun.glass.ui.Application app, long time) {
-            if (oldEventHandler != null) {
-                oldEventHandler.handleQuitAction(app, time);
-            }
-            notificationHandler.handleQuitAction();
-        }  
-    } 
-    
-    
-    /*
-     * Some code to help starting Scene Builder application from SQE java code.
-     * This is relevant on Mac only.
-     */
-    
-    private static boolean startingFromTestBed;
-    
-    public static void setStartingFromTestBed(boolean macWorkaroundEnabled) {
-        AppPlatform.startingFromTestBed = macWorkaroundEnabled;
-    }
 }

@@ -25,84 +25,59 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import javafx.event.EventType;
-import javafx.geometry.NodeOrientation;
 import javafx.geometry.Orientation;
-import javafx.scene.control.Control;
 import javafx.scene.control.Skin;
 import javafx.scene.control.Slider;
-import javafx.scene.input.KeyCode;
+import com.sun.javafx.scene.control.inputmap.InputMap;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
-import java.util.ArrayList;
-import java.util.List;
 import com.sun.javafx.util.Utils;
-import static javafx.scene.input.KeyCode.DOWN;
-import static javafx.scene.input.KeyCode.END;
-import static javafx.scene.input.KeyCode.F4;
-import static javafx.scene.input.KeyCode.HOME;
-import static javafx.scene.input.KeyCode.KP_DOWN;
-import static javafx.scene.input.KeyCode.KP_LEFT;
-import static javafx.scene.input.KeyCode.KP_RIGHT;
-import static javafx.scene.input.KeyCode.KP_UP;
-import static javafx.scene.input.KeyCode.LEFT;
-import static javafx.scene.input.KeyCode.RIGHT;
-import static javafx.scene.input.KeyCode.UP;
-import static javafx.scene.input.KeyEvent.KEY_RELEASED;
+import static javafx.scene.input.KeyCode.*;
 
 public class SliderBehavior extends BehaviorBase<Slider> {
-    /**************************************************************************
-     *                          Setup KeyBindings                             *
-     *                                                                        *
-     * We manually specify the focus traversal keys because Slider has        *
-     * different usage for up/down arrow keys.                                *
-     *************************************************************************/
-    protected static final List<KeyBinding> SLIDER_BINDINGS = new ArrayList<KeyBinding>();
-    static {
-        SLIDER_BINDINGS.add(new KeyBinding(F4, "TraverseDebug").alt().ctrl().shift());
 
-        SLIDER_BINDINGS.add(new SliderKeyBinding(LEFT, "DecrementValue"));
-        SLIDER_BINDINGS.add(new SliderKeyBinding(KP_LEFT, "DecrementValue"));
-        SLIDER_BINDINGS.add(new SliderKeyBinding(UP, "IncrementValue").vertical());
-        SLIDER_BINDINGS.add(new SliderKeyBinding(KP_UP, "IncrementValue").vertical());
-        SLIDER_BINDINGS.add(new SliderKeyBinding(RIGHT, "IncrementValue"));
-        SLIDER_BINDINGS.add(new SliderKeyBinding(KP_RIGHT, "IncrementValue"));
-        SLIDER_BINDINGS.add(new SliderKeyBinding(DOWN, "DecrementValue").vertical());
-        SLIDER_BINDINGS.add(new SliderKeyBinding(KP_DOWN, "DecrementValue").vertical());
-
-        SLIDER_BINDINGS.add(new KeyBinding(HOME, KEY_RELEASED, "Home"));
-        SLIDER_BINDINGS.add(new KeyBinding(END, KEY_RELEASED, "End"));
-    }
-
-    protected /*final*/ String matchActionForEvent(KeyEvent e) {
-        String action = super.matchActionForEvent(e);
-        if (action != null) {
-            if (e.getCode() == LEFT || e.getCode() == KP_LEFT) {
-                if (getControl().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
-                    action = getControl().getOrientation() == Orientation.HORIZONTAL ? "IncrementValue" : "DecrementValue";
-                }
-            } else if (e.getCode() == RIGHT || e.getCode() == KP_RIGHT) {
-                if (getControl().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
-                    action = getControl().getOrientation() == Orientation.HORIZONTAL ? "DecrementValue" : "IncrementValue";
-                }
-            }
-        }
-        return action;
-    }
+    private final InputMap<Slider> sliderInputMap;
     
-    @Override
-    protected void callAction(String name) {
-        if ("Home".equals(name)) home();
-        else if ("End".equals(name)) end();
-        else if ("IncrementValue".equals(name)) incrementValue();
-        else if ("DecrementValue".equals(name)) decrementValue();
-        else super.callAction(name);
-    }
-
     private TwoLevelFocusBehavior tlFocus;
 
     public SliderBehavior(Slider slider) {
-        super(slider, SLIDER_BINDINGS);
+        super(slider);
+
+        // create a map for slider-specific mappings (this reuses the default
+        // InputMap installed on the control, if it is non-null, allowing us to pick up any user-specified mappings)
+        sliderInputMap = createInputMap();
+
+        // then slider-specific mappings for key input
+        addDefaultMapping(sliderInputMap,
+            new InputMap.KeyMapping(HOME, KeyEvent.KEY_RELEASED, e -> home()),
+            new InputMap.KeyMapping(END, KeyEvent.KEY_RELEASED, e -> end())
+        );
+
+        // we split the rest of the mappings into vertical and horizontal slider
+        // child input maps
+        // -- horizontal
+        InputMap<Slider> horizontalMappings = new InputMap<>(slider);
+        horizontalMappings.setInterceptor(e -> slider.getOrientation() != Orientation.HORIZONTAL);
+        horizontalMappings.getMappings().addAll(
+            // we use the rtl method to translate depending on the RTL state of the UI
+            new InputMap.KeyMapping(LEFT, e -> rtl(slider, this::incrementValue, this::decrementValue)),
+            new InputMap.KeyMapping(KP_LEFT, e -> rtl(slider, this::incrementValue, this::decrementValue)),
+            new InputMap.KeyMapping(RIGHT, e -> rtl(slider, this::decrementValue, this::incrementValue)),
+            new InputMap.KeyMapping(KP_RIGHT, e -> rtl(slider, this::decrementValue, this::incrementValue))
+        );
+        addDefaultChildMap(sliderInputMap, horizontalMappings);
+
+        // -- vertical
+        InputMap<Slider> verticalMappings = new InputMap<>(slider);
+        verticalMappings.setInterceptor(e -> slider.getOrientation() != Orientation.VERTICAL);
+        verticalMappings.getMappings().addAll(
+                new InputMap.KeyMapping(DOWN, e -> decrementValue()),
+                new InputMap.KeyMapping(KP_DOWN, e -> decrementValue()),
+                new InputMap.KeyMapping(UP, e -> incrementValue()),
+                new InputMap.KeyMapping(KP_UP, e -> incrementValue())
+        );
+        addDefaultChildMap(sliderInputMap, verticalMappings);
+
         // Only add this if we're on an embedded platform that supports 5-button navigation
         if (com.sun.javafx.scene.control.skin.Utils.isTwoLevelFocus()) {
             tlFocus = new TwoLevelFocusBehavior(slider); // needs to be last.
@@ -112,6 +87,10 @@ public class SliderBehavior extends BehaviorBase<Slider> {
     @Override public void dispose() {
         if (tlFocus != null) tlFocus.dispose();
         super.dispose();
+    }
+
+    @Override public InputMap<Slider> getInputMap() {
+        return sliderInputMap;
     }
 
     /**************************************************************************
@@ -129,7 +108,7 @@ public class SliderBehavior extends BehaviorBase<Slider> {
     public void trackPress(MouseEvent e, double position) {
         // determine the percentage of the way between min and max
         // represented by this mouse event
-        final Slider slider = getControl();
+        final Slider slider = getNode();
         // If not already focused, request focus
         if (!slider.isFocused()) slider.requestFocus();
         if (slider.getOrientation().equals(Orientation.HORIZONTAL)) {
@@ -145,7 +124,7 @@ public class SliderBehavior extends BehaviorBase<Slider> {
      */
     public void thumbPressed(MouseEvent e, double position) {
         // If not already focused, request focus
-        final Slider slider = getControl();
+        final Slider slider = getNode();
         if (!slider.isFocused())  slider.requestFocus();
         slider.setValueChanging(true);
     }
@@ -155,12 +134,12 @@ public class SliderBehavior extends BehaviorBase<Slider> {
      *        track and 1.0 being the end
      */
     public void thumbDragged(MouseEvent e, double position) {
-        final Slider slider = getControl();
+        final Slider slider = getNode();
         slider.setValue(Utils.clamp(slider.getMin(), (position * (slider.getMax() - slider.getMin())) + slider.getMin(), slider.getMax()));
     }
 
     private double snapValueToTicks(double val) {
-        final Slider slider = getControl();
+        final Slider slider = getNode();
         double v = val;
         double tickSpacing = 0;
         // compute the nearest tick to this value
@@ -181,7 +160,7 @@ public class SliderBehavior extends BehaviorBase<Slider> {
      * When thumb is released valueChanging should be set to false.
      */
     public void thumbReleased(MouseEvent e) {
-        final Slider slider = getControl();
+        final Slider slider = getNode();
         slider.setValueChanging(false);
         // RT-15207 When snapToTicks is true, slider value calculated in drag
         // is then snapped to the nearest tick on mouse release.
@@ -191,12 +170,12 @@ public class SliderBehavior extends BehaviorBase<Slider> {
     }
 
     void home() {
-        final Slider slider = getControl();
+        final Slider slider = getNode();
         slider.adjustValue(slider.getMin());
     }
 
     void decrementValue() {
-        final Slider slider = getControl();
+        final Slider slider = getNode();
         // RT-8634 If snapToTicks is true and block increment is less than
         // tick spacing, tick spacing is used as the decrement value.
         if (slider.isSnapToTicks()) {
@@ -208,12 +187,12 @@ public class SliderBehavior extends BehaviorBase<Slider> {
     }
 
     void end() {
-        final Slider slider = getControl();
+        final Slider slider = getNode();
         slider.adjustValue(slider.getMax());
     }
 
     void incrementValue() {
-        final Slider slider = getControl();
+        final Slider slider = getNode();
         // RT-8634 If snapToTicks is true and block increment is less than
         // tick spacing, tick spacing is used as the increment value.
         if (slider.isSnapToTicks()) {
@@ -225,7 +204,7 @@ public class SliderBehavior extends BehaviorBase<Slider> {
 
     // Used only if snapToTicks is true.
     double computeIncrement() {
-        final Slider slider = getControl();
+        final Slider slider = getNode();
         double tickSpacing = 0;
         if (slider.getMinorTickCount() != 0) {
             tickSpacing = slider.getMajorTickUnit() / (Math.max(slider.getMinorTickCount(),0)+1);
@@ -240,18 +219,18 @@ public class SliderBehavior extends BehaviorBase<Slider> {
         return slider.getBlockIncrement();
     }
 
-    public static class SliderKeyBinding extends OrientedKeyBinding {
-        public SliderKeyBinding(KeyCode code, String action) {
-            super(code, action);
-        }
-
-        public SliderKeyBinding(KeyCode code, EventType<KeyEvent> type, String action) {
-            super(code, type, action);
-        }
-
-        public @Override boolean getVertical(Control control) {
-            return ((Slider)control).getOrientation() == Orientation.VERTICAL;
-        }
-    }
+//    public static class SliderKeyBinding extends OrientedKeyBinding {
+//        public SliderKeyBinding(KeyCode code, String action) {
+//            super(code, action);
+//        }
+//
+//        public SliderKeyBinding(KeyCode code, EventType<KeyEvent> type, String action) {
+//            super(code, type, action);
+//        }
+//
+//        public @Override boolean getVertical(Control control) {
+//            return ((Slider)control).getOrientation() == Orientation.VERTICAL;
+//        }
+//    }
 
 }

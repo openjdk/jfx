@@ -24,11 +24,14 @@
  */
 package com.sun.javafx.css;
 
+import javafx.css.StyleClass;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+
 
 /**
  * States represents a set of State. A {@code Node} may be in more than
@@ -120,7 +123,7 @@ public final class StyleClassSet  extends BitSet<StyleClass> {
    
     /**
      */
-    static StyleClass getStyleClass(String styleClass) {
+    public static StyleClass getStyleClass(String styleClass) {
 
         if (styleClass == null || styleClass.trim().isEmpty()) {
             throw new IllegalArgumentException("styleClass cannot be null or empty String");

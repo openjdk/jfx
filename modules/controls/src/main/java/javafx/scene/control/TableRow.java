@@ -37,7 +37,7 @@ import java.lang.ref.WeakReference;
 import java.util.List;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
-import com.sun.javafx.scene.control.skin.TableRowSkin;
+import javafx.scene.control.skin.TableRowSkin;
 
 /**
  * <p>TableRow is an {@link javafx.scene.control.IndexedCell IndexedCell}, but

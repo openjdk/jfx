@@ -56,8 +56,8 @@ import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.CssMetaData;
 
-import com.sun.javafx.css.converters.BooleanConverter;
-import com.sun.javafx.css.converters.EnumConverter;
+import javafx.css.converter.BooleanConverter;
+import javafx.css.converter.EnumConverter;
 
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;

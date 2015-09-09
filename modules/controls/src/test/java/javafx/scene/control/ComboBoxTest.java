@@ -27,15 +27,12 @@ package javafx.scene.control;
 
 import com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
-import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.tk.Toolkit;
 import javafx.css.PseudoClass;
 
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.StageLoader;
-import com.sun.javafx.scene.control.skin.ComboBoxListViewSkin;
-import com.sun.javafx.scene.control.skin.ListViewSkin;
-import com.sun.javafx.scene.control.skin.VirtualFlow;
+import javafx.scene.control.skin.ComboBoxListViewSkin;
 
 import static com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 import static org.junit.Assert.*;
@@ -47,18 +44,14 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
-import javafx.event.Event;
 import javafx.event.EventHandler;
-import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.skin.VirtualFlow;
 import javafx.scene.input.KeyCode;
-import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
@@ -81,7 +74,7 @@ public class ComboBoxTest {
      ********************************************************************/    
     
     public ListView getListView() {
-        return ((ComboBoxListViewSkin)comboBox.getSkin()).getListView();
+        return (ListView) ((ComboBoxListViewSkin)comboBox.getSkin()).getPopupContent();
     }
     
     public Node getDisplayNode() {
@@ -1313,7 +1306,7 @@ public class ComboBoxTest {
         StageLoader sl = new StageLoader(cb);
         KeyEventFirer cbKeyboard = new KeyEventFirer(cb);
 
-        ListView listView = ((ComboBoxListViewSkin)cb.getSkin()).getListView();
+        ListView listView = (ListView) ((ComboBoxListViewSkin)cb.getSkin()).getPopupContent();
         assertNotNull(listView);
 
         KeyEventFirer lvKeyboard = new KeyEventFirer(listView);
@@ -1332,7 +1325,7 @@ public class ComboBoxTest {
         StageLoader sl = new StageLoader(cb);
         KeyEventFirer cbKeyboard = new KeyEventFirer(cb);
 
-        ListView listView = ((ComboBoxListViewSkin)cb.getSkin()).getListView();
+        ListView listView = (ListView) ((ComboBoxListViewSkin)cb.getSkin()).getPopupContent();
         assertNotNull(listView);
 
         KeyEventFirer lvKeyboard = new KeyEventFirer(listView);
@@ -1351,7 +1344,7 @@ public class ComboBoxTest {
         StageLoader sl = new StageLoader(cb);
         KeyEventFirer cbKeyboard = new KeyEventFirer(cb);
 
-        ListView listView = ((ComboBoxListViewSkin)cb.getSkin()).getListView();
+        ListView listView = (ListView) ((ComboBoxListViewSkin)cb.getSkin()).getPopupContent();
         assertNotNull(listView);
 
         KeyEventFirer lvKeyboard = new KeyEventFirer(listView);
@@ -1464,7 +1457,7 @@ public class ComboBoxTest {
         StageLoader sl = new StageLoader(cb);
         KeyEventFirer cbKeyboard = new KeyEventFirer(cb);
 
-        ListView listView = ((ComboBoxListViewSkin)cb.getSkin()).getListView();
+        ListView listView = (ListView) ((ComboBoxListViewSkin)cb.getSkin()).getPopupContent();
         assertNotNull(listView);
 
         KeyEventFirer lvKeyboard = new KeyEventFirer(listView);
@@ -1484,7 +1477,7 @@ public class ComboBoxTest {
         StageLoader sl = new StageLoader(cb);
         KeyEventFirer cbKeyboard = new KeyEventFirer(cb);
 
-        ListView listView = ((ComboBoxListViewSkin)cb.getSkin()).getListView();
+        ListView listView = (ListView) ((ComboBoxListViewSkin)cb.getSkin()).getPopupContent();
         assertNotNull(listView);
 
         KeyEventFirer lvKeyboard = new KeyEventFirer(listView);
@@ -1504,7 +1497,7 @@ public class ComboBoxTest {
         StageLoader sl = new StageLoader(cb);
         KeyEventFirer cbKeyboard = new KeyEventFirer(cb);
 
-        ListView listView = ((ComboBoxListViewSkin)cb.getSkin()).getListView();
+        ListView listView = (ListView) ((ComboBoxListViewSkin)cb.getSkin()).getPopupContent();
         assertNotNull(listView);
 
         KeyEventFirer lvKeyboard = new KeyEventFirer(listView);

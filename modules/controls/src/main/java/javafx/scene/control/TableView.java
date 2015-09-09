@@ -26,9 +26,18 @@
 package javafx.scene.control;
 
 import java.lang.ref.WeakReference;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.WeakHashMap;
 
 import com.sun.javafx.scene.control.Logging;
+import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.SelectedCellsMap;
 import com.sun.javafx.scene.control.behavior.TableCellBehavior;
 import com.sun.javafx.scene.control.behavior.TableCellBehaviorBase;
@@ -43,8 +52,6 @@ import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.MapChangeListener;
@@ -67,11 +74,10 @@ import javafx.util.Callback;
 import com.sun.javafx.collections.MappingChange;
 import com.sun.javafx.collections.NonIterableChange;
 import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
-import com.sun.javafx.css.converters.SizeConverter;
+import javafx.css.converter.SizeConverter;
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 import com.sun.javafx.scene.control.TableColumnComparatorBase.TableColumnComparator;
-import com.sun.javafx.scene.control.skin.TableViewSkin;
-import com.sun.javafx.scene.control.skin.TableViewSkinBase;
+import javafx.scene.control.skin.TableViewSkin;
 
 /**
  * The TableView control is designed to visualize an unlimited number of rows
@@ -1583,7 +1589,7 @@ public class TableView<S> extends Control {
      * @since JavaFX 8u60
      */
     public void refresh() {
-        getProperties().put(TableViewSkinBase.RECREATE, Boolean.TRUE);
+        getProperties().put(Properties.RECREATE, Boolean.TRUE);
     }
     
     

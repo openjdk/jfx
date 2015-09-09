@@ -37,36 +37,37 @@ import java.util.Set;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.WritableValue;
+import javafx.css.CascadingStyle;
 import javafx.css.CssMetaData;
+import javafx.css.CssParser;
 import javafx.css.FontCssMetaData;
 import javafx.css.ParsedValue;
 import javafx.css.PseudoClass;
+import javafx.css.Rule;
+import javafx.css.Selector;
+import javafx.css.Style;
 import javafx.css.StyleConverter;
 import javafx.css.StyleOrigin;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
+import javafx.css.Stylesheet;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
-import com.sun.javafx.util.Logging;
-import com.sun.javafx.util.Utils;
+
 import com.sun.javafx.css.CalculatedValue;
-import com.sun.javafx.css.CascadingStyle;
-import com.sun.javafx.css.CssError;
 import com.sun.javafx.css.ParsedValueImpl;
 import com.sun.javafx.css.PseudoClassState;
-import com.sun.javafx.css.Rule;
-import com.sun.javafx.css.Selector;
-import com.sun.javafx.css.Style;
 import com.sun.javafx.css.StyleCache;
 import com.sun.javafx.css.StyleCacheEntry;
-import com.sun.javafx.css.StyleConverterImpl;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.StyleMap;
-import com.sun.javafx.css.Stylesheet;
-import com.sun.javafx.css.converters.FontConverter;
-import sun.util.logging.PlatformLogger;
+import javafx.css.converter.FontConverter;
+import com.sun.javafx.util.Logging;
+import com.sun.javafx.util.Utils;
+
 import sun.util.logging.PlatformLogger.Level;
+import sun.util.logging.PlatformLogger;
 
 import static com.sun.javafx.css.CalculatedValue.*;
 
@@ -632,9 +633,6 @@ final class CssStyleHelper {
         final boolean isForceSlowpath = cacheContainer.forceSlowpath;
         cacheContainer.forceSlowpath = false;
 
-        // RT-20643
-        CssError.setCurrentScene(node.getScene());
-
         // For each property that is settable, we need to do a lookup and
         // transition to that value.
         for(int n=0; n<max; n++) {
@@ -788,9 +786,9 @@ final class CssStyleHelper {
                 final String msg = String.format("Failed to set css [%s] on [%s] due to '%s'\n",
                         cssMetaData.getProperty(), styleableProperty, e.getMessage());
 
-                List<CssError> errors = null;
+                List<CssParser.ParseError> errors = null;
                 if ((errors = StyleManager.getErrors()) != null) {
-                    final CssError error = new CssError.PropertySetError(cssMetaData, node, msg);
+                    final CssParser.ParseError error = new CssParser.ParseError.PropertySetError(cssMetaData, node, msg);
                     errors.add(error);
                 }
 
@@ -822,10 +820,6 @@ final class CssStyleHelper {
             }
 
         }
-
-        // RT-20643
-        CssError.setCurrentScene(null);
-
     }
 
     /**
@@ -964,18 +958,13 @@ final class CssStyleHelper {
 
                 try {
                     final StyleConverter keyType = cssMetaData.getConverter();
-                    if (keyType instanceof StyleConverterImpl) {
-                        Object ret = ((StyleConverterImpl)keyType).convert(subs);
-                        return new CalculatedValue(ret, origin, isRelative);
-                    } else {
-                        assert false; // TBD: should an explicit exception be thrown here?
-                        return SKIP;
-                    }
+                    Object ret = keyType.convert(subs);
+                    return new CalculatedValue(ret, origin, isRelative);
                 } catch (ClassCastException cce) {
                     final String msg = formatExceptionMessage(styleable, cssMetaData, null, cce);
-                    List<CssError> errors = null;
+                    List<CssParser.ParseError> errors = null;
                     if ((errors = StyleManager.getErrors()) != null) {
-                        final CssError error = new CssError.PropertySetError(cssMetaData, styleable, msg);
+                        final CssParser.ParseError error = new CssParser.ParseError.PropertySetError(cssMetaData, styleable, msg);
                         errors.add(error);
                     }
                     if (LOGGER.isLoggable(Level.WARNING)) {
@@ -1006,7 +995,7 @@ final class CssStyleHelper {
 
             // If there was a style found, then we want to check whether the
             // value was "inherit". If so, then we will simply inherit.
-            final ParsedValueImpl cssValue = style.getParsedValueImpl();
+            final ParsedValue cssValue = style.getParsedValue();
             if (cssValue != null && "inherit".equals(cssValue.getValue())) {
                 style = getInheritedStyle(styleable, property);
                 if (style == null) return SKIP;
@@ -1080,7 +1069,7 @@ final class CssStyleHelper {
 
                 if (cascadingStyle != null) {
 
-                    final ParsedValueImpl cssValue = cascadingStyle.getParsedValueImpl();
+                    final ParsedValue cssValue = cascadingStyle.getParsedValue();
 
                     if ("inherit".equals(cssValue.getValue())) {
                         return getInheritedStyle(parent, property);
@@ -1148,9 +1137,9 @@ final class CssStyleHelper {
     }
 
     // to resolve a lookup, we just need to find the parsed value.
-    private ParsedValueImpl resolveLookups(
+    private ParsedValue resolveLookups(
             final Styleable styleable,
-            final ParsedValueImpl parsedValue,
+            final ParsedValue parsedValue,
             final StyleMap styleMap, Set<PseudoClass> states,
             final ObjectProperty<StyleOrigin> whence,
             Set<ParsedValue> resolves) {
@@ -1172,7 +1161,7 @@ final class CssStyleHelper {
 
                 if (resolved != null) {
 
-                    if (resolves.contains(resolved.getParsedValueImpl())) {
+                    if (resolves.contains(resolved.getParsedValue())) {
 
                         if (LOGGER.isLoggable(Level.WARNING)) {
                             LOGGER.warning("Loop detected in " + resolved.getRule().toString() + " while resolving '" + sval + "'");
@@ -1198,7 +1187,7 @@ final class CssStyleHelper {
                     // the resolved value may itself need to be resolved.
                     // For example, if the value "color" resolves to "base",
                     // then "base" will need to be resolved as well.
-                    ParsedValueImpl pv = resolveLookups(styleable, resolved.getParsedValueImpl(), styleMap, states, whence, resolves);
+                    ParsedValue pv = resolveLookups(styleable, resolved.getParsedValue(), styleMap, states, whence, resolves);
 
                     if (resolves != null) {
                         resolves.remove(parsedValue);
@@ -1217,13 +1206,13 @@ final class CssStyleHelper {
 
         final Object val = parsedValue.getValue();
 
-        if (val instanceof ParsedValueImpl[][]) {
+        if (val instanceof ParsedValue[][]) {
 
-            // If ParsedValueImpl is a layered sequence of values, resolve the lookups for each.
-            final ParsedValueImpl[][] layers = (ParsedValueImpl[][])val;
-            ParsedValueImpl[][] resolved = new ParsedValueImpl[layers.length][0];
+            // If ParsedValue is a layered sequence of values, resolve the lookups for each.
+            final ParsedValue[][] layers = (ParsedValue[][])val;
+            ParsedValue[][] resolved = new ParsedValue[layers.length][0];
             for (int l=0; l<layers.length; l++) {
-                resolved[l] = new ParsedValueImpl[layers[l].length];
+                resolved[l] = new ParsedValue[layers[l].length];
                 for (int ll=0; ll<layers[l].length; ll++) {
                     if (layers[l][ll] == null) continue;
                     resolved[l][ll] =
@@ -1237,9 +1226,9 @@ final class CssStyleHelper {
 
         } else if (val instanceof ParsedValueImpl[]) {
 
-            // If ParsedValueImpl is a sequence of values, resolve the lookups for each.
-            final ParsedValueImpl[] layer = (ParsedValueImpl[])val;
-            ParsedValueImpl[] resolved = new ParsedValueImpl[layer.length];
+            // If ParsedValue is a sequence of values, resolve the lookups for each.
+            final ParsedValue[] layer = (ParsedValue[])val;
+            ParsedValue[] resolved = new ParsedValue[layer.length];
             for (int l=0; l<layer.length; l++) {
                 if (layer[l] == null) continue;
                 resolved[l] =
@@ -1256,7 +1245,7 @@ final class CssStyleHelper {
 
     }
 
-    private String getUnresolvedLookup(final ParsedValueImpl resolved) {
+    private String getUnresolvedLookup(final ParsedValue resolved) {
 
         Object value = resolved.getValue();
 
@@ -1264,8 +1253,8 @@ final class CssStyleHelper {
             return (String)value;
         }
 
-        if (value instanceof ParsedValueImpl[][]) {
-            final ParsedValueImpl[][] layers = (ParsedValueImpl[][])value;
+        if (value instanceof ParsedValue[][]) {
+            final ParsedValue[][] layers = (ParsedValue[][])value;
             for (int l=0; l<layers.length; l++) {
                 for (int ll=0; ll<layers[l].length; ll++) {
                     if (layers[l][ll] == null) continue;
@@ -1274,9 +1263,9 @@ final class CssStyleHelper {
                 }
             }
 
-        } else if (value instanceof ParsedValueImpl[]) {
-        // If ParsedValueImpl is a sequence of values, resolve the lookups for each.
-            final ParsedValueImpl[] layer = (ParsedValueImpl[])value;
+        } else if (value instanceof ParsedValue[]) {
+        // If ParsedValue is a sequence of values, resolve the lookups for each.
+            final ParsedValue[] layer = (ParsedValue[])value;
             for (int l=0; l<layer.length; l++) {
                 if (layer[l] == null) continue;
                 String unresolvedLookup = getUnresolvedLookup(layer[l]);
@@ -1287,7 +1276,7 @@ final class CssStyleHelper {
         return null;
     }
 
-    private String formatUnresolvedLookupMessage(Styleable styleable, CssMetaData cssMetaData, Style style, ParsedValueImpl resolved, ClassCastException cce) {
+    private String formatUnresolvedLookupMessage(Styleable styleable, CssMetaData cssMetaData, Style style, ParsedValue resolved, ClassCastException cce) {
 
         // Find value that could not be looked up. If the resolved value does not contain lookups, then the
         // ClassCastException is not because of trying to convert a String (which is the missing lookup)
@@ -1372,10 +1361,10 @@ final class CssStyleHelper {
             final Styleable originatingStyleable,
             final CalculatedValue fontFromCacheEntry) {
 
-        final ParsedValueImpl cssValue = style.getParsedValueImpl();
+        final ParsedValue cssValue = style.getParsedValue();
         if (cssValue != null && !("null".equals(cssValue.getValue()) || "none".equals(cssValue.getValue()))) {
 
-            ParsedValueImpl resolved = null;
+            ParsedValue resolved = null;
             try {
 
                 ObjectProperty<StyleOrigin> whence = new SimpleObjectProperty<>(style.getOrigin());
@@ -1453,14 +1442,14 @@ final class CssStyleHelper {
 
                 final StyleConverter cssMetaDataConverter = cssMetaData.getConverter();
                 // RT-37727 - handling of properties that are insets is wonky. If the property is -fx-inset, then
-                // there isn't an issue because the converter assigns the InsetsConverter to the ParsedValueImpl.
+                // there isn't an issue because the converter assigns the InsetsConverter to the ParsedValue.
                 // But -my-insets will parse as an array of numbers and the parser will assign the Size sequence
                 // converter to it. So, if the CssMetaData says it uses InsetsConverter, use the InsetsConverter
                 // and not the parser assigned converter.
                 if (cssMetaDataConverter == StyleConverter.getInsetsConverter()) {
                     if (resolved.getValue() instanceof ParsedValue) {
-                        // If you give the parser "-my-insets: 5;" you end up with a ParsedValueImpl<ParsedValue<?,Size>, Number>
-                        // and not a ParsedValueImpl<ParsedValue[], Number[]> so here we wrap the value into an array
+                        // If you give the parser "-my-insets: 5;" you end up with a ParsedValue<ParsedValue<?,Size>, Number>
+                        // and not a ParsedValue<ParsedValue[], Number[]> so here we wrap the value into an array
                         // to make the InsetsConverter happy.
                         resolved = new ParsedValueImpl(new ParsedValue[] {(ParsedValue)resolved.getValue()}, null, false);
                     }
@@ -1476,9 +1465,9 @@ final class CssStyleHelper {
 
             } catch (ClassCastException cce) {
                 final String msg = formatUnresolvedLookupMessage(styleable, cssMetaData, style.getStyle(),resolved, cce);
-                List<CssError> errors = null;
+                List<CssParser.ParseError> errors = null;
                 if ((errors = StyleManager.getErrors()) != null) {
-                    final CssError error = new CssError.PropertySetError(cssMetaData, styleable, msg);
+                    final CssParser.ParseError error = new CssParser.ParseError.PropertySetError(cssMetaData, styleable, msg);
                     errors.add(error);
                 }
                 if (LOGGER.isLoggable(Level.WARNING)) {
@@ -1490,9 +1479,9 @@ final class CssStyleHelper {
                 return SKIP;
             } catch (IllegalArgumentException iae) {
                 final String msg = formatExceptionMessage(styleable, cssMetaData, style.getStyle(), iae);
-                List<CssError> errors = null;
+                List<CssParser.ParseError> errors = null;
                 if ((errors = StyleManager.getErrors()) != null) {
-                    final CssError error = new CssError.PropertySetError(cssMetaData, styleable, msg);
+                    final CssParser.ParseError error = new CssParser.ParseError.PropertySetError(cssMetaData, styleable, msg);
                     errors.add(error);
                 }
                 if (LOGGER.isLoggable(Level.WARNING)) {
@@ -1504,9 +1493,9 @@ final class CssStyleHelper {
                 return SKIP;
             } catch (NullPointerException npe) {
                 final String msg = formatExceptionMessage(styleable, cssMetaData, style.getStyle(), npe);
-                List<CssError> errors = null;
+                List<CssParser.ParseError> errors = null;
                 if ((errors = StyleManager.getErrors()) != null) {
-                    final CssError error = new CssError.PropertySetError(cssMetaData, styleable, msg);
+                    final CssParser.ParseError error = new CssParser.ParseError.PropertySetError(cssMetaData, styleable, msg);
                     errors.add(error);
                 }
                 if (LOGGER.isLoggable(Level.WARNING)) {
@@ -1732,7 +1721,7 @@ final class CssStyleHelper {
 
                     if (cascadingStyle != null) {
 
-                        final ParsedValueImpl cssValue = cascadingStyle.getParsedValueImpl();
+                        final ParsedValue cssValue = cascadingStyle.getParsedValue();
 
                         if ("inherit".equals(cssValue.getValue()) == false) {
                             fontShorthand = cascadingStyle;
@@ -1990,7 +1979,7 @@ final class CssStyleHelper {
                         }
                     }
 
-                    final ParsedValueImpl cssValue = cascadingStyle.getParsedValueImpl();
+                    final ParsedValue cssValue = cascadingStyle.getParsedValue();
 
                     if ("inherit".equals(cssValue.getValue()) == false) {
                         return cascadingStyle;
@@ -2089,7 +2078,7 @@ final class CssStyleHelper {
                 CascadingStyle cascadingStyle = getStyle(node, styleableProperty.getProperty(), smap, _node.pseudoClassStates);
                 if (cascadingStyle != null) {
                     styleList.add(cascadingStyle);
-                    final ParsedValueImpl parsedValue = cascadingStyle.getParsedValueImpl();
+                    final ParsedValue parsedValue = cascadingStyle.getParsedValue();
                     getMatchingLookupStyles(node, parsedValue, styleList, matchState);
                 }
             }  else {
@@ -2102,7 +2091,7 @@ final class CssStyleHelper {
                     styleList.addAll(styles);
                     for (int n=0, nMax=styles.size(); n<nMax; n++) {
                         final CascadingStyle style = styles.get(n);
-                        final ParsedValueImpl parsedValue = style.getParsedValueImpl();
+                        final ParsedValue parsedValue = style.getParsedValue();
                         getMatchingLookupStyles(node, parsedValue, styleList, matchState);
                     }
                 }
@@ -2126,7 +2115,7 @@ final class CssStyleHelper {
     }
 
     // Pretty much a duplicate of resolveLookups, but without the state
-    private void getMatchingLookupStyles(final Styleable node, final ParsedValueImpl parsedValue, final List<CascadingStyle> styleList, boolean matchState) {
+    private void getMatchingLookupStyles(final Styleable node, final ParsedValue parsedValue, final List<CascadingStyle> styleList, boolean matchState) {
 
         if (parsedValue.isLookup()) {
 
@@ -2170,7 +2159,7 @@ final class CssStyleHelper {
 
                         for (int index=start; index<end; index++) {
                             final CascadingStyle style = styleList.get(index);
-                            getMatchingLookupStyles(parent, style.getParsedValueImpl(), styleList, matchState);
+                            getMatchingLookupStyles(parent, style.getParsedValue(), styleList, matchState);
                         }
                     }
 
@@ -2185,9 +2174,9 @@ final class CssStyleHelper {
         }
 
         final Object val = parsedValue.getValue();
-        if (val instanceof ParsedValueImpl[][]) {
-        // If ParsedValueImpl is a layered sequence of values, resolve the lookups for each.
-            final ParsedValueImpl[][] layers = (ParsedValueImpl[][])val;
+        if (val instanceof ParsedValue[][]) {
+        // If ParsedValue is a layered sequence of values, resolve the lookups for each.
+            final ParsedValue[][] layers = (ParsedValue[][])val;
             for (int l=0; l<layers.length; l++) {
                 for (int ll=0; ll<layers[l].length; ll++) {
                     if (layers[l][ll] == null) continue;
@@ -2195,9 +2184,9 @@ final class CssStyleHelper {
                 }
             }
 
-        } else if (val instanceof ParsedValueImpl[]) {
-        // If ParsedValueImpl is a sequence of values, resolve the lookups for each.
-            final ParsedValueImpl[] layer = (ParsedValueImpl[])val;
+        } else if (val instanceof ParsedValue[]) {
+        // If ParsedValue is a sequence of values, resolve the lookups for each.
+            final ParsedValue[] layer = (ParsedValue[])val;
             for (int l=0; l<layer.length; l++) {
                 if (layer[l] == null) continue;
                     getMatchingLookupStyles(node, layer[l], styleList, matchState);

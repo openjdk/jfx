@@ -32,6 +32,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javafx.css.CascadingStyle;
+import javafx.css.Declaration;
+import javafx.css.Match;
+import javafx.css.Rule;
+import javafx.css.Selector;
+import javafx.css.Style;
+
+
 /**
  * A map of property name to the cascading styles that match a node.
  */
@@ -41,7 +49,7 @@ public final class StyleMap {
         new StyleMap(-1, Collections.<Selector>emptyList());
 
     /** Only StyleManager creates StyleMap */
-    StyleMap(int id, List<Selector> selectors) {
+    public StyleMap(int id, List<Selector> selectors) {
         this.id = id;
         this.selectors = selectors;
     }
@@ -85,15 +93,10 @@ public final class StyleMap {
                 for (int d = 0, dmax = rule.getDeclarations().size(); d < dmax; d++) {
                     final Declaration decl = rule.getDeclarations().get(d);
 
-                    final CascadingStyle s = new CascadingStyle(
-                            new Style(match.selector, decl),
-                            match.pseudoClasses,
-                            match.specificity,
-                            // ordinal increments at declaration level since
-                            // there may be more than one declaration for the
-                            // same attribute within a selector or within a stylesheet
-                            ordinal++
-                    );
+                    // ordinal increments at declaration level since
+                    // there may be more than one declaration for the
+                    // same attribute within a selector or within a stylesheet
+                    final CascadingStyle s = new CascadingStyle(decl, match, ordinal++);
 
                     cascadingStyleList.add(s);
 

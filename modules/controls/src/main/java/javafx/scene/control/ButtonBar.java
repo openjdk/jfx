@@ -24,8 +24,7 @@
  */
 package javafx.scene.control;
 
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
+import com.sun.javafx.scene.control.Properties;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
@@ -38,11 +37,7 @@ import javafx.scene.Node;
 import javafx.scene.layout.HBox;
 
 import com.sun.javafx.util.Utils;
-import com.sun.javafx.scene.control.skin.ButtonBarSkin;
-import com.sun.javafx.scene.traversal.Algorithm;
-import com.sun.javafx.scene.traversal.Direction;
-import com.sun.javafx.scene.traversal.ParentTraversalEngine;
-import com.sun.javafx.scene.traversal.TraversalContext;
+import javafx.scene.control.skin.ButtonBarSkin;
 import javafx.beans.value.WritableValue;
 import javafx.css.StyleableProperty;
 
@@ -367,11 +362,11 @@ public class ButtonBar extends Control {
         final Map<Object,Object> properties = button.getProperties();
         final ObjectProperty<ButtonData> property =
                 (ObjectProperty<ButtonData>) properties.getOrDefault(
-                        ButtonBarSkin.BUTTON_DATA_PROPERTY,
+                        Properties.BUTTON_DATA_PROPERTY,
                         new SimpleObjectProperty<>(button, "buttonData", buttonData));
 
         property.set(buttonData);
-        properties.putIfAbsent(ButtonBarSkin.BUTTON_DATA_PROPERTY, property);
+        properties.putIfAbsent(Properties.BUTTON_DATA_PROPERTY, property);
     }
     
     /**
@@ -382,8 +377,8 @@ public class ButtonBar extends Control {
      */
     public static ButtonData getButtonData(Node button) {
         final Map<Object,Object> properties = button.getProperties();
-        if (properties.containsKey(ButtonBarSkin.BUTTON_DATA_PROPERTY)) {
-            ObjectProperty<ButtonData> property = (ObjectProperty<ButtonData>) properties.get(ButtonBarSkin.BUTTON_DATA_PROPERTY);
+        if (properties.containsKey(Properties.BUTTON_DATA_PROPERTY)) {
+            ObjectProperty<ButtonData> property = (ObjectProperty<ButtonData>) properties.get(Properties.BUTTON_DATA_PROPERTY);
             return property == null ? null : property.get();
         }
         return null;
@@ -408,9 +403,9 @@ public class ButtonBar extends Control {
         // we store the false, but remove the true (as the isButtonUniformSize 
         // method returns true by default)
         if (uniformSize) {
-            button.getProperties().remove(ButtonBarSkin.BUTTON_SIZE_INDEPENDENCE);
+            button.getProperties().remove(Properties.BUTTON_SIZE_INDEPENDENCE);
         } else {
-            button.getProperties().put(ButtonBarSkin.BUTTON_SIZE_INDEPENDENCE, uniformSize);
+            button.getProperties().put(Properties.BUTTON_SIZE_INDEPENDENCE, uniformSize);
         }
     }
     
@@ -420,7 +415,7 @@ public class ButtonBar extends Control {
      * {@link #setButtonUniformSize(Node, boolean)}) will return true here.
      */
     public static boolean isButtonUniformSize(Node button) {
-        return (boolean) button.getProperties().getOrDefault(ButtonBarSkin.BUTTON_SIZE_INDEPENDENCE, true);
+        return (boolean) button.getProperties().getOrDefault(Properties.BUTTON_SIZE_INDEPENDENCE, true);
     }
 
 

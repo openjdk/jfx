@@ -31,7 +31,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
 
-import com.sun.javafx.scene.control.skin.AccordionSkin;
+import javafx.scene.control.skin.AccordionSkin;
 
 import javafx.application.Platform;
 import javafx.beans.binding.DoubleBinding;

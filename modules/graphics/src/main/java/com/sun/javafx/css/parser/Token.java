@@ -26,24 +26,24 @@
 package com.sun.javafx.css.parser;
 
 
-final class Token {
+public final class Token {
 
-    final static int EOF = -1;
-    final static int INVALID = 0;
-    final static int SKIP = 1;
+    public final static int EOF = -1;
+    public final static int INVALID = 0;
+    public final static int SKIP = 1;
 
-    final static Token EOF_TOKEN = new Token(EOF, "EOF");
-    final static Token INVALID_TOKEN = new Token(INVALID, "INVALID");
-    final static Token SKIP_TOKEN = new Token(SKIP, "SKIP");
+    public final static Token EOF_TOKEN = new Token(EOF, "EOF");
+    public final static Token INVALID_TOKEN = new Token(INVALID, "INVALID");
+    public final static Token SKIP_TOKEN = new Token(SKIP, "SKIP");
 
-    Token(int type, String text, int line, int offset) {
+    public Token(int type, String text, int line, int offset) {
         this.type = type;
         this.text = text;
         this.line = line;
         this.offset = offset;        
     }
     
-    Token(int type, String text) {
+    public Token(int type, String text) {
         this(type, text, -1, -1);
     }
 
@@ -55,15 +55,15 @@ final class Token {
         this(0, "INVALID");
     }
 
-    String getText() {
+    public String getText() {
         return text;
     }
 
-    int getType() {
+    public int getType() {
         return type;
     }
 
-    int getLine() {
+    public int getLine() {
         return line;
     }
 
@@ -71,7 +71,7 @@ final class Token {
         this.line = line;
     }
 
-    int getOffset() {
+    public int getOffset() {
         return offset;
     }
 

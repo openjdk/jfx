@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,11 +26,10 @@
 package com.sun.javafx.scene.control.behavior;
 
 import javafx.scene.control.MenuButton;
-import java.util.ArrayList;
-import java.util.List;
+
+import static com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
 import static javafx.scene.input.KeyCode.ENTER;
 import static javafx.scene.input.KeyCode.SPACE;
-import static javafx.scene.input.KeyEvent.KEY_PRESSED;
 
 /**
  * Behavior for MenuButton.
@@ -49,22 +48,12 @@ public class MenuButtonBehavior extends MenuButtonBehaviorBase<MenuButton> {
      * @param menuButton the MenuButton
      */
     public MenuButtonBehavior(final MenuButton menuButton) {
-        super(menuButton, MENU_BUTTON_BINDINGS);
-    }
+        super(menuButton);
 
-    /***************************************************************************
-     *                                                                         *
-     * Key event handling                                                      *
-     *                                                                         *
-     **************************************************************************/
-
-    /**
-     * The key bindings for the MenuButton. Sets up the keys to open the menu.
-     */
-    protected static final List<KeyBinding> MENU_BUTTON_BINDINGS = new ArrayList<KeyBinding>();
-    static {
-        MENU_BUTTON_BINDINGS.addAll(BASE_MENU_BUTTON_BINDINGS);
-        MENU_BUTTON_BINDINGS.add(new KeyBinding(SPACE, KEY_PRESSED, OPEN_ACTION));
-        MENU_BUTTON_BINDINGS.add(new KeyBinding(ENTER, KEY_PRESSED, OPEN_ACTION));
+        /**
+         * The key bindings for the MenuButton. Sets up the keys to open the menu.
+         */
+        addDefaultMapping(new KeyMapping(SPACE, e -> openAction()));
+        addDefaultMapping(new KeyMapping(ENTER, e -> openAction()));
     }
 }

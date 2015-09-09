@@ -25,17 +25,17 @@
 
 package com.sun.javafx.scene.layout.region;
 
-import com.sun.javafx.css.Size;
-import com.sun.javafx.css.SizeUnits;
-import com.sun.javafx.css.StyleConverterImpl;
+import javafx.css.Size;
+import javafx.css.SizeUnits;
 import javafx.css.ParsedValue;
+import javafx.css.StyleConverter;
 import javafx.scene.layout.CornerRadii;
 import javafx.scene.text.Font;
 
 /**
  * Convert parsed value of &lt;size&gt;{1,4} [ '/' &lt;size&gt;{1,4}]? [',' &lt;size&gt;{1,4} [ '/' &lt;size&gt;{1,4}]?]? to CornerRadii
  */
-public final class CornerRadiiConverter extends StyleConverterImpl<ParsedValue<ParsedValue<?,Size>[][],CornerRadii>[], CornerRadii[]> {
+public final class CornerRadiiConverter extends StyleConverter<ParsedValue<ParsedValue<?,Size>[][],CornerRadii>[], CornerRadii[]> {
 
     private static final CornerRadiiConverter INSTANCE =
             new CornerRadiiConverter();

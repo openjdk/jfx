@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import com.sun.javafx.scene.control.Properties;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WeakChangeListener;
 import javafx.event.ActionEvent;
@@ -36,6 +37,8 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.TextField;
+import javafx.scene.control.skin.TextFieldSkin;
+import com.sun.javafx.scene.control.skin.Utils;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
@@ -43,8 +46,8 @@ import javafx.stage.Screen;
 import javafx.stage.Window;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.geom.transform.Affine3D;
-import com.sun.javafx.scene.control.skin.TextFieldSkin;
-import com.sun.javafx.scene.text.HitInfo;
+
+import static javafx.scene.control.skin.TextFieldSkin.TextPosInfo;
 import static com.sun.javafx.PlatformUtil.isMac;
 import static com.sun.javafx.PlatformUtil.isWindows;
 
@@ -59,10 +62,10 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
     private ChangeListener<Node> focusOwnerListener;
 
     public TextFieldBehavior(final TextField textField) {
-        super(textField, TEXT_INPUT_BINDINGS);
+        super(textField);
 
         contextMenu = new ContextMenu();
-        if (IS_TOUCH_SUPPORTED) {
+        if (Properties.IS_TOUCH_SUPPORTED) {
             contextMenu.getStyleClass().add("text-input-context-menu");
         }
 
@@ -103,7 +106,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
         }
 
         // Only add this if we're on an embedded platform that supports 5-button navigation
-        if (com.sun.javafx.scene.control.skin.Utils.isTwoLevelFocus()) {
+        if (Utils.isTwoLevelFocus()) {
             tlFocus = new TwoLevelFocusBehavior(textField); // needs to be last.
         }
     }
@@ -114,7 +117,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
     }
 
     private void handleFocusChange() {
-        TextField textField = getControl();
+        TextField textField = getNode();
         
         if (textField.isFocused()) {
             if (PlatformUtil.isIOS()) {
@@ -172,7 +175,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
     }
 
     @Override protected void fire(KeyEvent event) {
-        TextField textField = getControl();
+        TextField textField = getNode();
         EventHandler<ActionEvent> onAction = textField.getOnAction();
         ActionEvent actionEvent = new ActionEvent(textField, null);
 
@@ -186,7 +189,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
 
     @Override
     protected void cancelEdit(KeyEvent event) {
-        TextField textField = getControl();
+        TextField textField = getNode();
         if (textField.getTextFormatter() != null) {
             textField.cancelEdit();
         } else {
@@ -203,7 +206,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
     }
 
     @Override protected void deleteFromLineStart() {
-        TextField textField = getControl();
+        TextField textField = getNode();
         int end = textField.getCaretPosition();
 
         if (end > 0) {
@@ -235,8 +238,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
     private boolean deferClick = false;
 
     @Override public void mousePressed(MouseEvent e) {
-        TextField textField = getControl();
-        super.mousePressed(e);
+        TextField textField = getNode();
         // We never respond to events if disabled
         if (!textField.isDisabled()) {
             // If the text field doesn't have focus, then we'll attempt to set
@@ -255,13 +257,13 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
 
             // if the primary button was pressed
             if (e.isPrimaryButtonDown() && !(e.isMiddleButtonDown() || e.isSecondaryButtonDown())) {
-                HitInfo hit = skin.getIndex(e.getX(), e.getY());
+                TextPosInfo hit = skin.getIndex(e.getX(), e.getY());
                 String text = textField.textProperty().getValueSafe();
-                int i = com.sun.javafx.scene.control.skin.Utils.getHitInsertionIndex(hit, text);
+                int i = Utils.getHitInsertionIndex(hit, text);
                 final int anchor = textField.getAnchor();
                 final int caretPosition = textField.getCaretPosition();
                 if (e.getClickCount() < 2 &&
-                    (IS_TOUCH_SUPPORTED ||
+                    (Properties.IS_TOUCH_SUPPORTED ||
                      (anchor != caretPosition &&
                       ((i > anchor && i < caretPosition) || (i < anchor && i > caretPosition))))) {
                     // if there is a selection, then we will NOT handle the
@@ -307,7 +309,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
     }
 
     @Override public void mouseDragged(MouseEvent e) {
-        final TextField textField = getControl();
+        final TextField textField = getNode();
         // we never respond to events if disabled, but we do notify any onXXX
         // event listeners on the control
         if (!textField.isDisabled() && !deferClick) {
@@ -320,8 +322,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
     }
 
     @Override public void mouseReleased(MouseEvent e) {
-        final TextField textField = getControl();
-        super.mouseReleased(e);
+        final TextField textField = getNode();
         // we never respond to events if disabled, but we do notify any onXXX
         // event listeners on the control
         if (!textField.isDisabled()) {
@@ -336,7 +337,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
     }
 
     @Override public void contextMenuRequested(ContextMenuEvent e) {
-        final TextField textField = getControl();
+        final TextField textField = getNode();
 
         if (contextMenu.isShowing()) {
             contextMenu.hide();
@@ -345,7 +346,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
             double screenY = e.getScreenY();
             double sceneX = e.getSceneX();
 
-            if (IS_TOUCH_SUPPORTED) {
+            if (Properties.IS_TOUCH_SUPPORTED) {
                 Point2D menuPos;
                 if (textField.getSelection().getLength() == 0) {
                     skin.positionCaret(skin.getIndex(e.getX(), e.getY()), false);
@@ -359,8 +360,8 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
                 }
 
                 if (menuPos != null) {
-                    Point2D p = getControl().localToScene(menuPos);
-                    Scene scene = getControl().getScene();
+                    Point2D p = getNode().localToScene(menuPos);
+                    Scene scene = getNode().getScene();
                     Window window = scene.getWindow();
                     Point2D location = new Point2D(window.getX() + scene.getX() + p.getX(),
                                                    window.getY() + scene.getY() + p.getY());
@@ -370,61 +371,37 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
                 }
             }
 
-            skin.populateContextMenu(contextMenu);
+            populateContextMenu(contextMenu);
             double menuWidth = contextMenu.prefWidth(-1);
-            double menuX = screenX - (IS_TOUCH_SUPPORTED ? (menuWidth / 2) : 0);
+            double menuX = screenX - (Properties.IS_TOUCH_SUPPORTED ? (menuWidth / 2) : 0);
             Screen currentScreen = com.sun.javafx.util.Utils.getScreenForPoint(screenX, 0);
             Rectangle2D bounds = currentScreen.getBounds();
 
             if (menuX < bounds.getMinX()) {
-                getControl().getProperties().put("CONTEXT_MENU_SCREEN_X", screenX);
-                getControl().getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
-                contextMenu.show(getControl(), bounds.getMinX(), screenY);
+                getNode().getProperties().put("CONTEXT_MENU_SCREEN_X", screenX);
+                getNode().getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
+                contextMenu.show(getNode(), bounds.getMinX(), screenY);
             } else if (screenX + menuWidth > bounds.getMaxX()) {
                 double leftOver = menuWidth - ( bounds.getMaxX() - screenX);
-                getControl().getProperties().put("CONTEXT_MENU_SCREEN_X", screenX);
-                getControl().getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
-                contextMenu.show(getControl(), screenX - leftOver, screenY);
+                getNode().getProperties().put("CONTEXT_MENU_SCREEN_X", screenX);
+                getNode().getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
+                contextMenu.show(getNode(), screenX - leftOver, screenY);
             } else {
-                getControl().getProperties().put("CONTEXT_MENU_SCREEN_X", 0);
-                getControl().getProperties().put("CONTEXT_MENU_SCENE_X", 0);
-                contextMenu.show(getControl(), menuX, screenY);
+                getNode().getProperties().put("CONTEXT_MENU_SCREEN_X", 0);
+                getNode().getProperties().put("CONTEXT_MENU_SCENE_X", 0);
+                contextMenu.show(getNode(), menuX, screenY);
             }
         }
 
         e.consume();
     }
 
-//    var hadFocus = false;
-//    var focused = bind (skin.control as TextInputControl).focused on replace old {
-//        if (focused) {
-//            hadFocus = true;
-//            focusChanged(true);
-//        } else {
-//            if (hadFocus) {
-//                focusChanged(false);
-//            }
-//            hadFocus = false;
-//        }
-//    }
-//
-//    protected function focusChanged(f:Boolean):Void {
-//        def textInputControl = skin.control as TextInputControl;
-//        if (f and textInputControl.selectOnFocus and not focusGainedByMouseClick) {
-//            textInputControl.selectAll();
-//        } else if (not f) {
-//            textInputControl.commit();
-//            focusGainedByMouseClick = false;
-//            displaySoftwareKeyboard(false);
-//        }
-//    }
-//
-    protected void mouseSingleClick(HitInfo hit) {
+    protected void mouseSingleClick(TextPosInfo hit) {
         skin.positionCaret(hit, false);
     }
 
-    protected void mouseDoubleClick(HitInfo hit) {
-        final TextField textField = getControl();
+    protected void mouseDoubleClick(TextPosInfo hit) {
+        final TextField textField = getNode();
         textField.previousWord();
         if (isWindows()) {
             textField.selectNextWord();
@@ -433,8 +410,8 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
         }
     }
 
-    protected void mouseTripleClick(HitInfo hit) {
-        getControl().selectAll();
+    protected void mouseTripleClick(TextPosInfo hit) {
+        getNode().selectAll();
     }
     
     // Enumeration of all types of text input that can be simulated on 

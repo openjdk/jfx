@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,14 +26,9 @@
 package com.sun.javafx.scene.control.behavior;
 
 import javafx.scene.control.DatePicker;
+import javafx.scene.control.PopupControl;
+
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import com.sun.javafx.scene.control.skin.DatePickerSkin;
-import static javafx.scene.input.KeyCode.DOWN;
-import static javafx.scene.input.KeyCode.F4;
-import static javafx.scene.input.KeyCode.UP;
-import static javafx.scene.input.KeyEvent.KEY_RELEASED;
 
 
 public class DatePickerBehavior extends ComboBoxBaseBehavior<LocalDate> {
@@ -48,7 +43,7 @@ public class DatePickerBehavior extends ComboBoxBaseBehavior<LocalDate> {
      *
      */
     public DatePickerBehavior(final DatePicker datePicker) {
-        super(datePicker, DATE_PICKER_BINDINGS);
+        super(datePicker);
     }
 
     /***************************************************************************
@@ -57,20 +52,20 @@ public class DatePickerBehavior extends ComboBoxBaseBehavior<LocalDate> {
      *                                                                         *
      **************************************************************************/
 
-    protected static final List<KeyBinding> DATE_PICKER_BINDINGS = new ArrayList<KeyBinding>();
-    static {
-        DATE_PICKER_BINDINGS.addAll(COMBO_BOX_BASE_BINDINGS);
-    }
-
-    @Override public void onAutoHide() {
+    /** {@inheritDoc} */
+    @Override public void onAutoHide(PopupControl popup) {
         // when we click on some non-interactive part of the
         // calendar - we do not want to hide.
-        DatePicker datePicker = (DatePicker)getControl();
-        DatePickerSkin cpSkin = (DatePickerSkin)datePicker.getSkin();
-        cpSkin.syncWithAutoUpdate();
+        if (!popup.isShowing() && getNode().isShowing()) {
+            // Popup was dismissed. Maybe user clicked outside or typed ESCAPE.
+            // Make sure DatePicker button is in sync.
+            getNode().hide();
+        }
         // if the DatePicker is no longer showing, then invoke the super method
         // to keep its show/hide state in sync.
-        if (!datePicker.isShowing()) super.onAutoHide();
+        if (!getNode().isShowing()) {
+            super.onAutoHide(popup);
+        }
     }
 
 }

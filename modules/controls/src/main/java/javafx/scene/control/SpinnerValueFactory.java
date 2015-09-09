@@ -24,7 +24,6 @@
  */
 package javafx.scene.control;
 
-import com.sun.javafx.scene.control.skin.ListViewSkin;
 import javafx.beans.NamedArg;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
@@ -36,8 +35,6 @@ import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleLongProperty;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.WeakChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.WeakListChangeListener;
@@ -47,17 +44,13 @@ import javafx.util.converter.IntegerStringConverter;
 import java.lang.ref.WeakReference;
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
-import java.text.NumberFormat;
 import java.text.ParseException;
 import java.time.Duration;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.time.temporal.ChronoUnit;
-import java.time.temporal.Temporal;
-import java.time.temporal.TemporalField;
 import java.time.temporal.TemporalUnit;
 import java.util.List;
 

@@ -72,7 +72,7 @@ import javafx.scene.web.HTMLEditor;
 import javafx.scene.web.WebView;
 import javafx.util.Callback;
 
-import com.sun.javafx.scene.control.skin.ColorPickerSkin;
+import javafx.scene.control.skin.ColorPickerSkin;
 import com.sun.javafx.scene.control.skin.FXVK;
 import com.sun.javafx.scene.web.behavior.HTMLEditorBehavior;
 import com.sun.javafx.scene.traversal.TraversalEngine;

@@ -47,8 +47,8 @@ import javafx.css.StyleableObjectProperty;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 
-import com.sun.javafx.css.converters.EnumConverter;
-import com.sun.javafx.scene.control.skin.SplitPaneSkin;
+import javafx.css.converter.EnumConverter;
+import javafx.scene.control.skin.SplitPaneSkin;
 
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;

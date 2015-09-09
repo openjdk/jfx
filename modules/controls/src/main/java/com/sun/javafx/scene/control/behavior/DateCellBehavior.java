@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,15 +25,16 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import com.sun.javafx.scene.traversal.Direction;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
 import javafx.scene.control.DateCell;
-import java.util.ArrayList;
-import java.util.List;
-import com.sun.javafx.scene.control.skin.DatePickerContent;
-import com.sun.javafx.scene.traversal.Direction;
-import static java.time.temporal.ChronoUnit.DAYS;
-import static java.time.temporal.ChronoUnit.WEEKS;
+
+import com.sun.javafx.scene.control.DatePickerContent;
+import com.sun.javafx.scene.control.inputmap.InputMap;
+
+import java.time.temporal.ChronoUnit;
+
 import static javafx.scene.input.KeyCode.DOWN;
 import static javafx.scene.input.KeyCode.ENTER;
 import static javafx.scene.input.KeyCode.LEFT;
@@ -49,61 +50,43 @@ import static javafx.scene.input.KeyEvent.*;
  */
 public class DateCellBehavior extends BehaviorBase<DateCell> {
 
-    /**************************************************************************
-     *                          Setup KeyBindings                             *
-     *************************************************************************/
-    protected static final List<KeyBinding> DATE_CELL_BINDINGS = new ArrayList<KeyBinding>();
-    static {
-        DATE_CELL_BINDINGS.add(new KeyBinding(UP, "TraverseUp"));
-        DATE_CELL_BINDINGS.add(new KeyBinding(DOWN, "TraverseDown"));
-        DATE_CELL_BINDINGS.add(new KeyBinding(LEFT, "TraverseLeft"));
-        DATE_CELL_BINDINGS.add(new KeyBinding(RIGHT, "TraverseRight"));
-        DATE_CELL_BINDINGS.add(new KeyBinding(ENTER, KEY_RELEASED, "SelectDate"));
-        DATE_CELL_BINDINGS.add(new KeyBinding(SPACE, KEY_RELEASED, "SelectDate"));
-    }
-
+    private final InputMap<DateCell> inputMap;
 
     public DateCellBehavior(DateCell dateCell) {
-        super(dateCell, DATE_CELL_BINDINGS);
+        super(dateCell);
+
+        inputMap = createInputMap();
+        addDefaultMapping(inputMap,
+            new InputMap.KeyMapping(UP,    e -> traverse(dateCell, Direction.UP)),
+            new InputMap.KeyMapping(DOWN,  e -> traverse(dateCell, Direction.DOWN)),
+            new InputMap.KeyMapping(LEFT,  e -> traverse(dateCell, Direction.LEFT)),
+            new InputMap.KeyMapping(RIGHT, e -> traverse(dateCell, Direction.RIGHT)),
+            new InputMap.KeyMapping(ENTER, KEY_RELEASED, e -> selectDate()),
+            new InputMap.KeyMapping(SPACE, KEY_RELEASED, e -> selectDate())
+        );
     }
 
-    @Override public void callAction(String name) {
-        DateCell cell = getControl();
+    @Override public InputMap<DateCell> getInputMap() {
+        return inputMap;
+    }
+
+    private void selectDate() {
+        DateCell cell = getNode();
         DatePickerContent dpc = findDatePickerContent(cell);
-
-        if (dpc != null) {
-            switch (name) {
-              case "SelectDate":    dpc.selectDayCell(cell); break;
-              default: super.callAction(name);
-            }
-            return;
-        }
-        super.callAction(name);
+        dpc.selectDayCell(cell);
     }
 
-    @Override public void traverse(final Node node, final Direction dir) {
-        boolean rtl = (node.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT);
-
-        switch (dir) {
-          case UP:
-          case DOWN:
-          case LEFT:
-          case RIGHT:
-              if (node instanceof DateCell) {
-                  DatePickerContent dpc = findDatePickerContent(node);
-                  if (dpc != null) {
-                      DateCell cell = (DateCell)node;
-                      switch (dir) {
-                        case UP:    dpc.goToDayCell(cell, -1, WEEKS, true); break;
-                        case DOWN:  dpc.goToDayCell(cell, +1, WEEKS, true); break;
-                        case LEFT:  dpc.goToDayCell(cell, rtl ? +1 : -1, DAYS,  true); break;
-                        case RIGHT: dpc.goToDayCell(cell, rtl ? -1 : +1, DAYS,  true); break;
-                      }
-                      return;
-                  }
-              }
+    public void traverse(final DateCell cell, final Direction dir) {
+        boolean rtl = (cell.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT);
+        DatePickerContent dpc = findDatePickerContent(cell);
+        if (dpc != null) {
+            switch (dir) {
+                case UP:    dpc.goToDayCell(cell, -1, ChronoUnit.WEEKS, true); break;
+                case DOWN:  dpc.goToDayCell(cell, +1, ChronoUnit.WEEKS, true); break;
+                case LEFT:  dpc.goToDayCell(cell, rtl ? +1 : -1, ChronoUnit.DAYS,  true); break;
+                case RIGHT: dpc.goToDayCell(cell, rtl ? -1 : +1, ChronoUnit.DAYS,  true); break;
+            }
         }
-        super.traverse(node, dir);
     }
 
     protected DatePickerContent findDatePickerContent(Node node) {

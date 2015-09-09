@@ -29,205 +29,52 @@ import com.sun.javafx.scene.control.SizeLimitedList;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.WeakListChangeListener;
+import javafx.event.EventHandler;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.control.*;
+import com.sun.javafx.scene.control.inputmap.InputMap;
+import com.sun.javafx.scene.control.inputmap.KeyBinding;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.util.Callback;
 import java.util.ArrayList;
 import java.util.List;
 import com.sun.javafx.PlatformUtil;
-import static javafx.scene.input.KeyCode.A;
-import static javafx.scene.input.KeyCode.DOWN;
-import static javafx.scene.input.KeyCode.END;
-import static javafx.scene.input.KeyCode.ENTER;
-import static javafx.scene.input.KeyCode.ESCAPE;
-import static javafx.scene.input.KeyCode.F2;
-import static javafx.scene.input.KeyCode.HOME;
-import static javafx.scene.input.KeyCode.KP_DOWN;
-import static javafx.scene.input.KeyCode.KP_LEFT;
-import static javafx.scene.input.KeyCode.KP_RIGHT;
-import static javafx.scene.input.KeyCode.KP_UP;
-import static javafx.scene.input.KeyCode.LEFT;
-import static javafx.scene.input.KeyCode.PAGE_DOWN;
-import static javafx.scene.input.KeyCode.PAGE_UP;
-import static javafx.scene.input.KeyCode.RIGHT;
-import static javafx.scene.input.KeyCode.SPACE;
-import static javafx.scene.input.KeyCode.TAB;
-import static javafx.scene.input.KeyCode.UP;
+import static javafx.scene.input.KeyCode.*;
+import static com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
 
 public abstract class TableViewBehaviorBase<C extends Control, T, TC extends TableColumnBase<T,?>> extends BehaviorBase<C> {
 
     /**************************************************************************
      *                                                                        *
-     * Setup key bindings                                                     *
-     *                                                                        *  
-     *************************************************************************/
-    protected static final List<KeyBinding> TABLE_VIEW_BINDINGS = new ArrayList<KeyBinding>();
-
-    static {
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(TAB, "TraverseNext"));
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(TAB, "TraversePrevious").shift());
-
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(HOME, "SelectFirstRow"));
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(END, "SelectLastRow"));
-        
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "ScrollUp"));
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "ScrollDown"));
-
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(LEFT, "SelectLeftCell"));
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(KP_LEFT, "SelectLeftCell"));
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(RIGHT, "SelectRightCell"));
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(KP_RIGHT, "SelectRightCell"));
-
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(UP, "SelectPreviousRow"));
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(KP_UP, "SelectPreviousRow"));
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(DOWN, "SelectNextRow"));
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(KP_DOWN, "SelectNextRow"));
-
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(LEFT, "TraverseLeft"));
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(KP_LEFT, "TraverseLeft"));
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(RIGHT, "SelectNextRow"));
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(KP_RIGHT, "SelectNextRow"));
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(UP, "TraverseUp"));
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(KP_UP, "TraverseUp"));
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(DOWN, "TraverseDown"));
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(KP_DOWN, "TraverseDown"));
-
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(HOME, "SelectAllToFirstRow").shift());
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(END, "SelectAllToLastRow").shift());
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "SelectAllPageUp").shift());
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "SelectAllPageDown").shift());
-
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(UP, "AlsoSelectPrevious").shift());
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(KP_UP, "AlsoSelectPrevious").shift());
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(DOWN, "AlsoSelectNext").shift());
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(KP_DOWN, "AlsoSelectNext").shift());
-        
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(SPACE, "SelectAllToFocus").shift());
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(SPACE, "SelectAllToFocusAndSetAnchor").shortcut().shift());
-
-//        TABLE_VIEW_BINDINGS.add(new KeyBinding(UP, "AlsoSelectPreviousCell").shift());
-//        TABLE_VIEW_BINDINGS.add(new KeyBinding(KP_UP, "AlsoSelectPreviousCell").shift());
-//        TABLE_VIEW_BINDINGS.add(new KeyBinding(DOWN, "AlsoSelectNextCell").shift());
-//        TABLE_VIEW_BINDINGS.add(new KeyBinding(KP_DOWN, "AlsoSelectNextCell").shift());
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(LEFT, "AlsoSelectLeftCell").shift());
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(KP_LEFT, "AlsoSelectLeftCell").shift());
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(RIGHT, "AlsoSelectRightCell").shift());
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(KP_RIGHT, "AlsoSelectRightCell").shift());
-
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(UP, "FocusPreviousRow").shortcut());
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(DOWN, "FocusNextRow").shortcut());
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(RIGHT, "FocusRightCell").shortcut());
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(KP_RIGHT, "FocusRightCell").shortcut());
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(LEFT, "FocusLeftCell").shortcut());
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(KP_LEFT, "FocusLeftCell").shortcut());
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(A, "SelectAll").shortcut());
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(HOME, "FocusFirstRow").shortcut());
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(END, "FocusLastRow").shortcut());
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "FocusPageUp").shortcut());
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "FocusPageDown").shortcut());
-
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(UP, "DiscontinuousSelectPreviousRow").shortcut().shift());
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(DOWN, "DiscontinuousSelectNextRow").shortcut().shift());
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(LEFT, "DiscontinuousSelectPreviousColumn").shortcut().shift());
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(RIGHT, "DiscontinuousSelectNextColumn").shortcut().shift());
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "DiscontinuousSelectPageUp").shortcut().shift());
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "DiscontinuousSelectPageDown").shortcut().shift());
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(HOME, "DiscontinuousSelectAllToFirstRow").shortcut().shift());
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(END, "DiscontinuousSelectAllToLastRow").shortcut().shift());
-        
-        if (PlatformUtil.isMac()) {
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(SPACE, "toggleFocusOwnerSelection").ctrl().shortcut());
-        } else {
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(SPACE, "toggleFocusOwnerSelection").ctrl());
-        }
-
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(ENTER, "Activate"));
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(SPACE, "Activate"));
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(F2, "Activate"));
-//        TABLE_VIEW_BINDINGS.add(new KeyBinding(SPACE, "Activate").ctrl());
-        
-        TABLE_VIEW_BINDINGS.add(new KeyBinding(ESCAPE, "CancelEdit"));
-    }
-
-    @Override protected void callAction(String name) {
-        boolean rtl = (getControl().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT);
-
-        if ("SelectPreviousRow".equals(name)) selectPreviousRow();
-        else if ("SelectNextRow".equals(name)) selectNextRow();
-        else if ("SelectLeftCell".equals(name)) { if (rtl) selectRightCell(); else selectLeftCell(); }
-        else if ("SelectRightCell".equals(name)) { if (rtl) selectLeftCell(); else selectRightCell(); }
-        else if ("SelectFirstRow".equals(name)) selectFirstRow();
-        else if ("SelectLastRow".equals(name)) selectLastRow();
-        else if ("SelectAll".equals(name)) selectAll();
-        else if ("SelectAllPageUp".equals(name)) selectAllPageUp();
-        else if ("SelectAllPageDown".equals(name)) selectAllPageDown();
-        else if ("SelectAllToFirstRow".equals(name)) selectAllToFirstRow();
-        else if ("SelectAllToLastRow".equals(name)) selectAllToLastRow();
-        else if ("AlsoSelectNext".equals(name)) alsoSelectNext();
-        else if ("AlsoSelectPrevious".equals(name)) alsoSelectPrevious();
-        else if ("AlsoSelectLeftCell".equals(name)) { if (rtl) alsoSelectRightCell(); else alsoSelectLeftCell(); }
-        else if ("AlsoSelectRightCell".equals(name)) { if (rtl) alsoSelectLeftCell(); else alsoSelectRightCell(); }
-        else if ("ClearSelection".equals(name)) clearSelection();
-        else if ("ScrollUp".equals(name)) scrollUp();
-        else if ("ScrollDown".equals(name)) scrollDown();
-        else if ("FocusPreviousRow".equals(name)) focusPreviousRow();
-        else if ("FocusNextRow".equals(name)) focusNextRow();
-        else if ("FocusLeftCell".equals(name)) { if (rtl) focusRightCell(); else focusLeftCell(); }
-        else if ("FocusRightCell".equals(name)) { if (rtl) focusLeftCell(); else focusRightCell(); }
-        else if ("Activate".equals(name)) activate();
-        else if ("CancelEdit".equals(name)) cancelEdit();
-        else if ("FocusFirstRow".equals(name)) focusFirstRow();
-        else if ("FocusLastRow".equals(name)) focusLastRow();
-        else if ("toggleFocusOwnerSelection".equals(name)) toggleFocusOwnerSelection();
-
-        else if ("SelectAllToFocus".equals(name)) selectAllToFocus(false);
-        else if ("SelectAllToFocusAndSetAnchor".equals(name)) selectAllToFocus(true);
-
-        else if ("FocusPageUp".equals(name)) focusPageUp();
-        else if ("FocusPageDown".equals(name)) focusPageDown();
-        else if ("DiscontinuousSelectNextRow".equals(name)) discontinuousSelectNextRow();
-        else if ("DiscontinuousSelectPreviousRow".equals(name)) discontinuousSelectPreviousRow();
-        else if ("DiscontinuousSelectNextColumn".equals(name)) { if (rtl) discontinuousSelectPreviousColumn(); else discontinuousSelectNextColumn(); }
-        else if ("DiscontinuousSelectPreviousColumn".equals(name)) { if (rtl) discontinuousSelectNextColumn(); else discontinuousSelectPreviousColumn(); }
-        else if ("DiscontinuousSelectPageUp".equals(name)) discontinuousSelectPageUp();
-        else if ("DiscontinuousSelectPageDown".equals(name)) discontinuousSelectPageDown();
-        else if ("DiscontinuousSelectAllToLastRow".equals(name)) discontinuousSelectAllToLastRow();
-        else if ("DiscontinuousSelectAllToFirstRow".equals(name)) discontinuousSelectAllToFirstRow();
-        else super.callAction(name);
-    }
-
-    @Override protected void callActionForEvent(KeyEvent e) {
-        // RT-12751: we want to keep an eye on the user holding down the shift key, 
-        // so that we know when they enter/leave multiple selection mode. This
-        // changes what happens when certain key combinations are pressed.
-        isShiftDown = e.getEventType() == KeyEvent.KEY_PRESSED && e.isShiftDown();
-        isShortcutDown = e.getEventType() == KeyEvent.KEY_PRESSED && e.isShortcutDown();
-        
-        super.callActionForEvent(e);
-    }
-    
-    
-    
-    /**************************************************************************
-     *                                                                        *
      * Internal fields                                                        *
      *                                                                        *  
      *************************************************************************/
+
+    private final InputMap<C> tableViewInputMap;
     
     protected boolean isShortcutDown = false;
     protected boolean isShiftDown = false;
     private boolean selectionPathDeviated = false;
     protected boolean selectionChanging = false;
 
+    private final EventHandler<KeyEvent> keyEventListener = e -> {
+        if (!e.isConsumed()) {
+            // RT-12751: we want to keep an eye on the user holding down the shift key,
+            // so that we know when they enter/leave multiple selection mode. This
+            // changes what happens when certain key combinations are pressed.
+            isShiftDown = e.getEventType() == KeyEvent.KEY_PRESSED && e.isShiftDown();
+            isShortcutDown = e.getEventType() == KeyEvent.KEY_PRESSED && e.isShortcutDown();
+        }
+    };
+
     private final SizeLimitedList<TablePositionBase> selectionHistory = new SizeLimitedList<>(10);
 
     protected final ListChangeListener<TablePositionBase> selectedCellsListener = c -> {
         while (c.next()) {
             if (c.wasReplaced()) {
-                if (TreeTableCellBehavior.hasDefaultAnchor(getControl())) {
-                    TreeTableCellBehavior.removeAnchor(getControl());
+                if (TreeTableCellBehavior.hasDefaultAnchor(getNode())) {
+                    TreeTableCellBehavior.removeAnchor(getNode());
                 }
             }
 
@@ -282,11 +129,106 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
      *************************************************************************/
 
     public TableViewBehaviorBase(C control) {
-        this(control, null);
-    }
+        super(control);
 
-    public TableViewBehaviorBase(C control, List<KeyBinding> bindings) {
-        super(control, bindings == null ? TABLE_VIEW_BINDINGS : bindings);
+
+        // create a map for TableView(Base)-specific mappings
+        tableViewInputMap = createInputMap();
+
+        addDefaultMapping(tableViewInputMap,
+                new KeyMapping(TAB, FocusTraversalInputMap::traverseNext),
+                new KeyMapping(new KeyBinding(TAB).shift(), FocusTraversalInputMap::traversePrevious),
+
+                new KeyMapping(HOME, e -> selectFirstRow()),
+                new KeyMapping(END, e -> selectLastRow()),
+
+                new KeyMapping(PAGE_UP, e -> scrollUp()),
+                new KeyMapping(PAGE_DOWN, e -> scrollDown()),
+
+                new KeyMapping(LEFT, e -> selectLeftCell()),
+                new KeyMapping(KP_LEFT, e -> selectLeftCell()),
+                new KeyMapping(RIGHT, e -> selectRightCell()),
+                new KeyMapping(KP_RIGHT, e -> selectRightCell()),
+
+                new KeyMapping(UP, e -> selectPreviousRow()),
+                new KeyMapping(KP_UP, e -> selectPreviousRow()),
+                new KeyMapping(DOWN, e -> selectNextRow()),
+                new KeyMapping(KP_DOWN, e -> selectNextRow()),
+
+                new KeyMapping(LEFT, FocusTraversalInputMap::traverseLeft),
+                new KeyMapping(KP_LEFT, FocusTraversalInputMap::traverseLeft),
+                new KeyMapping(RIGHT, FocusTraversalInputMap::traverseRight),
+                new KeyMapping(KP_RIGHT, FocusTraversalInputMap::traverseRight),
+                new KeyMapping(UP, FocusTraversalInputMap::traverseUp),
+                new KeyMapping(KP_UP, FocusTraversalInputMap::traverseUp),
+                new KeyMapping(DOWN, FocusTraversalInputMap::traverseDown),
+                new KeyMapping(KP_DOWN, FocusTraversalInputMap::traverseDown),
+
+                new KeyMapping(new KeyBinding(HOME).shift(), e -> selectAllToFirstRow()),
+                new KeyMapping(new KeyBinding(END).shift(), e -> selectAllToLastRow()),
+                new KeyMapping(new KeyBinding(PAGE_UP).shift(), e -> selectAllPageUp()),
+                new KeyMapping(new KeyBinding(PAGE_DOWN).shift(), e -> selectAllPageDown()),
+
+                new KeyMapping(new KeyBinding(UP).shift(), e -> alsoSelectPrevious()),
+                new KeyMapping(new KeyBinding(KP_UP).shift(), e -> alsoSelectPrevious()),
+                new KeyMapping(new KeyBinding(DOWN).shift(), e -> alsoSelectNext()),
+                new KeyMapping(new KeyBinding(KP_DOWN).shift(), e -> alsoSelectNext()),
+
+                new KeyMapping(new KeyBinding(SPACE).shift(), e -> selectAllToFocus(false)),
+                new KeyMapping(new KeyBinding(SPACE).shortcut().shift(), e -> selectAllToFocus(true)),
+
+                new KeyMapping(new KeyBinding(LEFT).shift(), e -> alsoSelectLeftCell()),
+                new KeyMapping(new KeyBinding(KP_LEFT).shift(), e -> alsoSelectLeftCell()),
+                new KeyMapping(new KeyBinding(RIGHT).shift(), e -> alsoSelectRightCell()),
+                new KeyMapping(new KeyBinding(KP_RIGHT).shift(), e -> alsoSelectRightCell()),
+
+                new KeyMapping(new KeyBinding(UP).shortcut(), e -> focusPreviousRow()),
+                new KeyMapping(new KeyBinding(DOWN).shortcut(), e -> focusNextRow()),
+                new KeyMapping(new KeyBinding(RIGHT).shortcut(), e -> focusRightCell()),
+                new KeyMapping(new KeyBinding(KP_RIGHT).shortcut(), e -> focusRightCell()),
+                new KeyMapping(new KeyBinding(LEFT).shortcut(), e -> focusLeftCell()),
+                new KeyMapping(new KeyBinding(KP_LEFT).shortcut(), e -> focusLeftCell()),
+
+                new KeyMapping(new KeyBinding(A).shortcut(), e -> selectAll()),
+                new KeyMapping(new KeyBinding(HOME).shortcut(), e -> focusFirstRow()),
+                new KeyMapping(new KeyBinding(END).shortcut(), e -> focusLastRow()),
+                new KeyMapping(new KeyBinding(PAGE_UP).shortcut(), e -> focusPageUp()),
+                new KeyMapping(new KeyBinding(PAGE_DOWN).shortcut(), e -> focusPageDown()),
+
+                new KeyMapping(new KeyBinding(UP).shortcut().shift(), e -> discontinuousSelectPreviousRow()),
+                new KeyMapping(new KeyBinding(DOWN).shortcut().shift(), e -> discontinuousSelectNextRow()),
+                new KeyMapping(new KeyBinding(LEFT).shortcut().shift(), e -> discontinuousSelectPreviousColumn()),
+                new KeyMapping(new KeyBinding(RIGHT).shortcut().shift(), e -> discontinuousSelectNextColumn()),
+                new KeyMapping(new KeyBinding(PAGE_UP).shortcut().shift(), e -> discontinuousSelectPageUp()),
+                new KeyMapping(new KeyBinding(PAGE_DOWN).shortcut().shift(), e -> discontinuousSelectPageDown()),
+                new KeyMapping(new KeyBinding(HOME).shortcut().shift(), e -> discontinuousSelectAllToFirstRow()),
+                new KeyMapping(new KeyBinding(END).shortcut().shift(), e -> discontinuousSelectAllToLastRow()),
+
+                new KeyMapping(ENTER, e -> activate()),
+                new KeyMapping(SPACE, e -> activate()),
+                new KeyMapping(F2, e -> activate()),
+                new KeyMapping(ESCAPE, e -> cancelEdit()),
+
+                new InputMap.MouseMapping(MouseEvent.MOUSE_PRESSED, this::mousePressed)
+        );
+
+        // create OS-specific child mappings
+        // --- mac OS
+        InputMap<C> macInputMap = new InputMap<>(control);
+        macInputMap.setInterceptor(event -> !PlatformUtil.isMac());
+        addDefaultMapping(macInputMap, new KeyMapping(new KeyBinding(SPACE).shortcut().ctrl(), e -> toggleFocusOwnerSelection()));
+        addDefaultChildMap(tableViewInputMap, macInputMap);
+
+        // --- all other platforms
+        InputMap<C> otherOsInputMap = new InputMap<>(control);
+        otherOsInputMap.setInterceptor(event -> PlatformUtil.isMac());
+        addDefaultMapping(otherOsInputMap, new KeyMapping(new KeyBinding(SPACE).ctrl(), e -> toggleFocusOwnerSelection()));
+        addDefaultChildMap(tableViewInputMap, otherOsInputMap);
+
+        // set up other listeners
+        // We make this an event _filter_ so that we can determine the state
+        // of the shift key before the event handlers get a shot at the event.
+        control.addEventFilter(KeyEvent.ANY, keyEventListener);
     }
 
     
@@ -295,13 +237,18 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
      *                                                                        *
      * Abstract API                                                           *
      *                                                                        *  
-     *************************************************************************/    
-    
+     *************************************************************************/
+
+    /** {@inheritDoc} */
+    @Override public InputMap<C> getInputMap() {
+        return tableViewInputMap;
+    }
+
     /**
      * Call to record the current anchor position
      */
     protected void setAnchor(TablePositionBase tp) {
-        TableCellBehaviorBase.setAnchor(getControl(), tp, false);
+        TableCellBehaviorBase.setAnchor(getNode(), tp, false);
         setSelectionPathDeviated(false);
     }
     
@@ -309,14 +256,14 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
      * Will return the current anchor position.
      */
     protected TablePositionBase getAnchor() {
-        return TableCellBehaviorBase.getAnchor(getControl(), getFocusedCell());
+        return TableCellBehaviorBase.getAnchor(getNode(), getFocusedCell());
     }
     
     /**
      * Returns true if there is an anchor set, and false if not anchor is set.
      */
     protected boolean hasAnchor() {
-        return TableCellBehaviorBase.hasNonDefaultAnchor(getControl());
+        return TableCellBehaviorBase.hasNonDefaultAnchor(getNode());
     }
     
     /**
@@ -443,20 +390,18 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
     private Runnable onSelectLeftCell;
     public void setOnSelectLeftCell(Runnable r) { onSelectLeftCell = r; }
     
-    @Override public void mousePressed(MouseEvent e) {
-        super.mousePressed(e);
-        
+    public void mousePressed(MouseEvent e) {
 //        // FIXME can't assume (yet) cells.get(0) is necessarily the lead cell
 //        ObservableList<? extends TablePositionBase> cells = getSelectedCells();
 //        setAnchor(cells.isEmpty() ? null : cells.get(0));
         
-        if (!getControl().isFocused() && getControl().isFocusTraversable()) {
-            getControl().requestFocus();
+        if (!getNode().isFocused() && getNode().isFocusTraversable()) {
+            getNode().requestFocus();
         }
     }
 
     protected boolean isRTL() {
-        return (getControl().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT);
+        return (getNode().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT);
     }
     
     
@@ -1151,7 +1096,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
 
         TablePosition focusedCell = fm.getFocusedCell();
         
-        TableColumn endColumn = getControl().getVisibleLeafColumn(0);
+        TableColumn endColumn = getNode().getVisibleLeafColumn(0);
         sm.clearAndSelect(focusedCell.getRow(), endColumn);
     }
     
@@ -1167,7 +1112,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
 
         TablePosition focusedCell = fm.getFocusedCell();
         
-        TableColumn endColumn = getControl().getVisibleLeafColumn(getControl().getVisibleLeafColumns().size() - 1);
+        TableColumn endColumn = getNode().getVisibleLeafColumn(getNode().getVisibleLeafColumns().size() - 1);
         sm.clearAndSelect(focusedCell.getRow(), endColumn);
     }
      */

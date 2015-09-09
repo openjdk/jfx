@@ -35,6 +35,7 @@ import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Control;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.RadioButton;
+import javafx.scene.control.SkinBase;
 import javafx.scene.control.Slider;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane;
@@ -50,8 +51,6 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.LinkedHashMap;
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
-import com.sun.javafx.scene.control.skin.BehaviorSkinBase;
 import com.sun.javafx.webkit.Accessor;
 import com.sun.webkit.LoadListenerClient;
 import com.sun.webkit.graphics.Ref;
@@ -575,10 +574,9 @@ public final class RenderThemeImpl extends RenderTheme {
             setTranslateX(-width);
         }
 
-        private final class Skin extends BehaviorSkinBase {
+        private final class Skin extends SkinBase {
             Skin() {
-                super(FormMenuListButton.this,
-                      new BehaviorBase<>(FormMenuListButton.this, Collections.EMPTY_LIST));
+                super(FormMenuListButton.this);
                 
                 Region arrow = new Region();
                 arrow.getStyleClass().add("arrow");

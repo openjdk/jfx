@@ -25,11 +25,11 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.scene.control.Properties;
 import javafx.css.CssMetaData;
 import static com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
 
 import com.sun.javafx.pgstub.StubToolkit;
-import com.sun.javafx.scene.control.skin.ScrollBarSkin;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -71,11 +71,11 @@ public class ScrollBarTest {
     }
 
     @Test public void defaultWidth() {
-        assertEquals(scrollBar.getWidth(), ScrollBarSkin.DEFAULT_WIDTH, 0.0);
+        assertEquals(scrollBar.getWidth(), Properties.DEFAULT_WIDTH, 0.0);
     }
 
     @Test public void defaultHeight() {
-        assertEquals(scrollBar.getHeight(), ScrollBarSkin.DEFAULT_LENGTH, 0.0);
+        assertEquals(scrollBar.getHeight(), Properties.DEFAULT_LENGTH, 0.0);
     }
 
     @Test public void defaultMin() {

@@ -28,7 +28,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import com.sun.javafx.scene.control.skin.AccordionSkin;
+import javafx.scene.control.skin.AccordionSkin;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
 import hello.HelloAccordion;
 import javafx.beans.binding.DoubleBinding;

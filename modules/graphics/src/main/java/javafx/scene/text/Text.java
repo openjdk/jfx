@@ -25,9 +25,9 @@
 
 package javafx.scene.text;
 
-import com.sun.javafx.css.converters.BooleanConverter;
-import com.sun.javafx.css.converters.EnumConverter;
-import com.sun.javafx.css.converters.SizeConverter;
+import javafx.css.converter.BooleanConverter;
+import javafx.css.converter.EnumConverter;
+import javafx.css.converter.SizeConverter;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.RectBounds;

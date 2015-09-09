@@ -71,7 +71,7 @@ import com.javafx.experiments.scheduleapp.data.DataService;
 import com.javafx.experiments.scheduleapp.model.Event;
 import com.javafx.experiments.scheduleapp.model.Session;
 import com.javafx.experiments.scheduleapp.model.Track;
-import com.sun.javafx.scene.control.skin.ListViewSkin;
+import javafx.scene.control.skin.ListViewSkin;
 
 import static com.javafx.experiments.scheduleapp.ConferenceScheduleApp.*;
 import static com.javafx.experiments.scheduleapp.Theme.*;

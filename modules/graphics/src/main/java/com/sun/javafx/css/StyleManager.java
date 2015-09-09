@@ -25,14 +25,19 @@
 
 package com.sun.javafx.css;
 
-import com.sun.javafx.css.parser.CSSParser;
 import javafx.application.Application;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
+import javafx.css.CssParser;
+import javafx.css.FontFace;
 import javafx.css.PseudoClass;
+import javafx.css.Rule;
+import javafx.css.Selector;
 import javafx.css.StyleOrigin;
 import javafx.css.Styleable;
+import javafx.css.StyleConverter;
+import javafx.css.Stylesheet;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -156,8 +161,8 @@ final public class StyleManager {
      * Parent with author stylesheets. If a Scene or Parent is removed from the scene,
      * it's cache is annihilated.
      */
-    // package for testing
-    static final Map<Parent, CacheContainer> cacheContainerMap = new WeakHashMap<>();
+    // public for testing
+    public static final Map<Parent, CacheContainer> cacheContainerMap = new WeakHashMap<>();
 
     // package for testing
     CacheContainer getCacheContainer(Styleable styleable, SubScene subScene) {
@@ -231,17 +236,17 @@ final public class StyleManager {
      * The order of the entries in this list does not matter since a Scene or
      * SubScene will only have zero or one user-agent stylesheets.
      */
-    // package for testing
-    final List<StylesheetContainer> userAgentStylesheetContainers = new ArrayList<>();
+    // public for testing
+    public final List<StylesheetContainer> userAgentStylesheetContainers = new ArrayList<>();
     /**
      * A list of user-agent stylesheet urls from calling setDefaultUserAgentStylesheet and
      * addUserAgentStylesheet. The order of entries this list matters. The zeroth element is
      * _the_ platform default.
      */
-    // package for testing
-    final List<StylesheetContainer> platformUserAgentStylesheetContainers = new ArrayList<>();
-    // package for testing
-    boolean hasDefaultUserAgentStylesheet = false;
+    // public for testing
+    public final List<StylesheetContainer> platformUserAgentStylesheetContainers = new ArrayList<>();
+    // public for testing
+    public boolean hasDefaultUserAgentStylesheet = false;
 
     ////////////////////////////////////////////////////////////////////////////
     //
@@ -302,7 +307,8 @@ final public class StyleManager {
                 for (int r=0; r<rMax; r++) {
 
                     final Rule rule = rules.get(r);
-                    final List<Selector> selectors = rule.getUnobservedSelectorList();
+                    // final List<Selector> selectors = rule.getUnobservedSelectorList();
+                    final List<Selector> selectors = rule.getSelectors();
                     final int sMax = selectors == null || selectors.isEmpty() ? 0 : selectors.size();
                     for (int s=0; s < sMax; s++) {
 
@@ -419,8 +425,8 @@ final public class StyleManager {
      * This list is for author stylesheets and not for user-agent stylesheets. User-agent
      * stylesheets are either platformUserAgentStylesheetContainers or userAgentStylesheetContainers
      */
-    // package for unit testing
-    final Map<String,StylesheetContainer> stylesheetContainerMap = new HashMap<>();
+    // public for unit testing
+    public final Map<String,StylesheetContainer> stylesheetContainerMap = new HashMap<>();
 
 
     /**
@@ -1083,13 +1089,13 @@ final public class StyleManager {
                 // either we failed to load the .bss file, or parse
                 // was set to true.
                 if ((url != null) && parse) {
-                    stylesheet = new CSSParser().parse(url);
+                    stylesheet = new CssParser().parse(url);
                 }
 
                 if (stylesheet == null) {
                     if (errors != null) {
-                        CssError error =
-                            new CssError(
+                        CssParser.ParseError error =
+                            new CssParser.ParseError(
                                 "Resource \""+fname+"\" not found."
                             );
                         errors.add(error);
@@ -1104,13 +1110,15 @@ final public class StyleManager {
                 // load any fonts from @font-face
                 if (stylesheet != null) {
                     faceLoop: for(FontFace fontFace: stylesheet.getFontFaces()) {
-                        for(FontFace.FontFaceSrc src: fontFace.getSources()) {
-                            if (src.getType() == FontFace.FontFaceSrcType.URL) {
-                                Font loadedFont = Font.loadFont(src.getSrc(),10);
-                                if (loadedFont == null) {
-                                    getLogger().info("Could not load @font-face font [" + src.getSrc() + "]");
+                        if (fontFace instanceof FontFaceImpl) {
+                            for(FontFaceImpl.FontFaceSrc src: ((FontFaceImpl)fontFace).getSources()) {
+                                if (src.getType() == FontFaceImpl.FontFaceSrcType.URL) {
+                                    Font loadedFont = Font.loadFont(src.getSrc(),10);
+                                    if (loadedFont == null) {
+                                        getLogger().info("Could not load @font-face font [" + src.getSrc() + "]");
+                                    }
+                                    continue faceLoop;
                                 }
-                                continue faceLoop;
                             }
                         }
                     }
@@ -1120,8 +1128,8 @@ final public class StyleManager {
 
             } catch (FileNotFoundException fnfe) {
                 if (errors != null) {
-                    CssError error =
-                        new CssError(
+                    CssParser.ParseError error =
+                        new CssParser.ParseError(
                             "Stylesheet \""+fname+"\" not found."
                         );
                     errors.add(error);
@@ -1131,8 +1139,8 @@ final public class StyleManager {
                 }
             } catch (IOException ioe) {
                     if (errors != null) {
-                        CssError error =
-                            new CssError(
+                        CssParser.ParseError error =
+                            new CssParser.ParseError(
                                 "Could not load stylesheet: " + fname
                             );
                         errors.add(error);
@@ -1243,15 +1251,9 @@ final public class StyleManager {
         }
 
         synchronized (styleLock) {
-            // RT-20643
-            CssError.setCurrentScene(scene);
-
             if (_addUserAgentStylesheet(fname)) {
                 userAgentStylesheetsChanged();
             }
-
-            // RT-20643
-            CssError.setCurrentScene(null);
         }
     }
 
@@ -1302,18 +1304,12 @@ final public class StyleManager {
                 }
             }
 
-            // RT-20643
-            CssError.setCurrentScene(scene);
-
             platformUserAgentStylesheetContainers.add(new StylesheetContainer(fname, ua_stylesheet));
 
             if (ua_stylesheet != null) {
                 ua_stylesheet.setOrigin(StyleOrigin.USER_AGENT);
             }
             userAgentStylesheetsChanged();
-
-            // RT-20643
-            CssError.setCurrentScene(null);
         }
     }
 
@@ -1340,16 +1336,9 @@ final public class StyleManager {
         }
 
         synchronized (styleLock) {
-            // RT-20643
-
-            CssError.setCurrentScene(scene);
-
             if(_setDefaultUserAgentStylesheet(fname)) {
                 userAgentStylesheetsChanged();
             }
-
-            // RT-20643
-            CssError.setCurrentScene(null);
         }
     }
 
@@ -1487,7 +1476,7 @@ final public class StyleManager {
                 container.clearCache();
             }
 
-            StyleConverterImpl.clearCache();
+            StyleConverter.clearCache();
 
             for (Parent root : cacheContainerMap.keySet()) {
                 if (root == null) {
@@ -1573,15 +1562,7 @@ final public class StyleManager {
         }
 
         synchronized (styleLock) {
-            // RT-20643
-            CssError.setCurrentScene(parent.getScene());
-
-            final List<StylesheetContainer> list = processStylesheets(parentStylesheets, parent);
-
-            // RT-20643
-            CssError.setCurrentScene(null);
-
-            return list;
+            return processStylesheets(parentStylesheets, parent);
         }
     }
 
@@ -1601,15 +1582,7 @@ final public class StyleManager {
         }
 
         synchronized (styleLock) {
-            // RT-20643
-            CssError.setCurrentScene(scene);
-
-            final List<StylesheetContainer> list = processStylesheets(sceneStylesheets, scene.getRoot());
-
-            // RT-20643
-            CssError.setCurrentScene(null);
-
-            return list;
+            return processStylesheets(sceneStylesheets, scene.getRoot());
         }
     }
 
@@ -1852,7 +1825,7 @@ final public class StyleManager {
     //
     ////////////////////////////////////////////////////////////////////////////
 
-    private static ObservableList<CssError> errors = null;
+    private static ObservableList<CssParser.ParseError> errors = null;
     /**
      * Errors that may have occurred during css processing.
      * This list is null until errorsProperty() is called.
@@ -1864,7 +1837,7 @@ final public class StyleManager {
      *
      * @return
      */
-    public static ObservableList<CssError> errorsProperty() {
+    public static ObservableList<CssParser.ParseError> errorsProperty() {
         if (errors == null) {
             errors = FXCollections.observableArrayList();
         }
@@ -1879,7 +1852,7 @@ final public class StyleManager {
      * Not meant for general use - call errorsProperty() instead.
      * @return
      */
-    public static ObservableList<CssError> getErrors() {
+    public static ObservableList<CssParser.ParseError> getErrors() {
         return errors;
     }
 
@@ -2008,7 +1981,7 @@ final public class StyleManager {
             }
 
             final Stylesheet inlineStylesheet =
-                    new CSSParser().parse("*{"+inlineStyle+"}");
+                    new CssParser().parse("*{"+inlineStyle+"}");
 
             if (inlineStylesheet != null) {
 
@@ -2017,7 +1990,8 @@ final public class StyleManager {
                 List<Rule> rules = inlineStylesheet.getRules();
                 Rule rule = rules != null && !rules.isEmpty() ? rules.get(0) : null;
 
-                List<Selector> selectors = rule != null ? rule.getUnobservedSelectorList() : null;
+                //List<Selector> selectors = rule != null ? rule.getUnobservedSelectorList() : null;
+                List<Selector> selectors = rule != null ? rule.getSelectors() : null;
                 Selector selector = selectors != null && !selectors.isEmpty() ? selectors.get(0) : null;
 
                 // selector might be null if parser throws some exception

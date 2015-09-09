@@ -25,33 +25,21 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.PlatformUtil;
-import com.sun.javafx.util.Utils;
 import com.sun.javafx.scene.control.behavior.TreeTableViewAnchorRetriever;
 import com.sun.javafx.scene.control.infrastructure.*;
-import com.sun.javafx.scene.control.skin.TreeTableViewSkin;
 import com.sun.javafx.scene.control.test.Person;
 
 import static org.junit.Assert.*;
 
-import java.util.List;
-
 import com.sun.javafx.tk.Toolkit;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.cell.TreeItemPropertyValueFactory;
-import javafx.scene.input.KeyCode;
 
-import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.stage.Stage;
 import org.junit.After;
 
 import org.junit.Before;

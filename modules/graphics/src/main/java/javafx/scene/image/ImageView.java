@@ -27,7 +27,7 @@ package javafx.scene.image;
 
 import com.sun.javafx.beans.event.AbstractNotifyListener;
 import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.css.converters.URLConverter;
+import javafx.css.converter.URLConverter;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.jmx.MXNodeAlgorithm;

@@ -32,7 +32,7 @@
 package com.javafx.experiments.scheduleapp.control;
 
 import com.javafx.experiments.scheduleapp.Theme;
-import com.sun.javafx.scene.control.skin.ButtonSkin;
+import javafx.scene.control.skin.ButtonSkin;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;

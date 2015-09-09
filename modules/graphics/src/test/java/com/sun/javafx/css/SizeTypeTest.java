@@ -28,6 +28,8 @@ package com.sun.javafx.css;
 import static org.junit.Assert.assertEquals;
 
 import javafx.css.ParsedValue;
+import javafx.css.Size;
+import javafx.css.SizeUnits;
 import javafx.css.StyleConverter;
 import javafx.scene.text.Font;
 

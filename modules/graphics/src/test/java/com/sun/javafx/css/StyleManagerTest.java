@@ -25,9 +25,11 @@
 
 package com.sun.javafx.css;
 
-import com.sun.javafx.css.parser.CSSParser;
+import javafx.css.CascadingStyle;
+import javafx.css.CssParser;
 import javafx.css.StyleOrigin;
 import javafx.css.StyleableProperty;
+import javafx.css.Stylesheet;
 import javafx.scene.Group;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -187,7 +189,7 @@ public class StyleManagerTest {
         try {
             StyleManager sm = StyleManager.getInstance();
             URL ua0_url = StyleManagerTest.class.getResource("ua0.css");
-            Stylesheet stylesheet = CSSParser.getInstance().parse(ua0_url);
+            Stylesheet stylesheet = new CssParser().parse(ua0_url);
             sm.addUserAgentStylesheet(null,stylesheet);
 
             assertEquals(1, sm.platformUserAgentStylesheetContainers.size());
@@ -208,11 +210,11 @@ public class StyleManagerTest {
             StyleManager sm = StyleManager.getInstance();
 
             URL ua1_url = StyleManagerTest.class.getResource("ua1.css");
-            Stylesheet stylesheet = CSSParser.getInstance().parse(ua1_url);
+            Stylesheet stylesheet = new CssParser().parse(ua1_url);
             sm.addUserAgentStylesheet(null,stylesheet);
 
             URL ua0_url = StyleManagerTest.class.getResource("ua0.css");
-            stylesheet = CSSParser.getInstance().parse(ua0_url);
+            stylesheet = new CssParser().parse(ua0_url);
             sm.setDefaultUserAgentStylesheet(stylesheet);
 
             assertEquals(2, sm.platformUserAgentStylesheetContainers.size());
@@ -695,7 +697,7 @@ public class StyleManagerTest {
         List<CascadingStyle> styles = styleMap.get("-fx-fill");
         assertEquals(1, styles.size());
 
-        Object obj = styles.get(0).getParsedValueImpl().convert(null);
+        Object obj = styles.get(0).getParsedValue().convert(null);
         assertEquals(Color.RED, obj);
     }
 
@@ -721,7 +723,7 @@ public class StyleManagerTest {
         List<CascadingStyle> styles = styleMap.get("-fx-stroke");
         assertEquals(1, styles.size());
 
-        Object obj = styles.get(0).getParsedValueImpl().convert(null);
+        Object obj = styles.get(0).getParsedValue().convert(null);
         assertEquals(Color.YELLOW, obj);
     }
 
@@ -749,7 +751,7 @@ public class StyleManagerTest {
         List<CascadingStyle> styles = styleMap.get("-fx-stroke");
         assertEquals(2, styles.size());
 
-        Object obj = styles.get(0).getParsedValueImpl().convert(null);
+        Object obj = styles.get(0).getParsedValue().convert(null);
         assertEquals(Color.GREEN, obj);
 
         // ua0.css and ua2.css have fill, but we shouldn't get anything from ua0
@@ -757,7 +759,7 @@ public class StyleManagerTest {
         styles = styleMap.get("-fx-fill");
         assertEquals(1, styles.size());
 
-        obj = styles.get(0).getParsedValueImpl().convert(null);
+        obj = styles.get(0).getParsedValue().convert(null);
         assertEquals(Color.BLUE, obj);
     }
 
@@ -785,7 +787,7 @@ public class StyleManagerTest {
         List<CascadingStyle> styles = styleMap.get("-fx-stroke");
         assertEquals(1, styles.size());
 
-        Object obj = styles.get(0).getParsedValueImpl().convert(null);
+        Object obj = styles.get(0).getParsedValue().convert(null);
         assertEquals(Color.YELLOW, obj);
     }
 
@@ -816,7 +818,7 @@ public class StyleManagerTest {
         List<CascadingStyle> styles = styleMap.get("-fx-stroke");
         assertEquals(2, styles.size());
 
-        Object obj = styles.get(0).getParsedValueImpl().convert(null);
+        Object obj = styles.get(0).getParsedValue().convert(null);
         assertEquals(Color.GREEN, obj);
 
         // ua0.css and ua2.css have fill, but we shouldn't get anything from ua0
@@ -824,7 +826,7 @@ public class StyleManagerTest {
         styles = styleMap.get("-fx-fill");
         assertEquals(1, styles.size());
 
-        obj = styles.get(0).getParsedValueImpl().convert(null);
+        obj = styles.get(0).getParsedValue().convert(null);
         assertEquals(Color.BLUE, obj);
     }
 
@@ -852,7 +854,7 @@ public class StyleManagerTest {
         List<CascadingStyle> styles = styleMap.get("-fx-fill");
         assertEquals(1, styles.size());
 
-        Object obj = styles.get(0).getParsedValueImpl().convert(null);
+        Object obj = styles.get(0).getParsedValue().convert(null);
         assertEquals(Color.RED, obj);
 
         sm.setDefaultUserAgentStylesheet("/com/sun/javafx/css/ua1.css");
@@ -867,7 +869,7 @@ public class StyleManagerTest {
         styles = styleMap.get("-fx-stroke");
         assertEquals(1, styles.size());
 
-        obj = styles.get(0).getParsedValueImpl().convert(null);
+        obj = styles.get(0).getParsedValue().convert(null);
         assertEquals(Color.YELLOW, obj);
     }
 

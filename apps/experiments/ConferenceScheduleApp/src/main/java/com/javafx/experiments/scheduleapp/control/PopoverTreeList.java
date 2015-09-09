@@ -32,8 +32,8 @@
 package com.javafx.experiments.scheduleapp.control;
 
 import static com.javafx.experiments.scheduleapp.Theme.*;
-import com.sun.javafx.scene.control.skin.ListCellSkin;
-import com.sun.javafx.scene.control.skin.ListViewSkin;
+import javafx.scene.control.skin.ListCellSkin;
+import javafx.scene.control.skin.ListViewSkin;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
 import javafx.scene.control.ListCell;

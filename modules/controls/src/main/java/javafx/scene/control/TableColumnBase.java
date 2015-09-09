@@ -50,7 +50,6 @@ import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.scene.Node;
 
-import com.sun.javafx.scene.control.skin.Utils;
 import com.sun.javafx.event.EventHandlerManager;
 import java.util.HashMap;
 
@@ -61,6 +60,7 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableMap;
+import com.sun.javafx.scene.control.skin.Utils;
 
 /**
  * Table-like controls (such as {@link TableView} and {@link TreeTableView}) are

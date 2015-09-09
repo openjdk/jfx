@@ -26,7 +26,7 @@
 package com.sun.javafx.css.parser;
 
 
-class LexerState {
+public class LexerState {
 
     /**
      * Determine whether or not this state accepts the character. If the

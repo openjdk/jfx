@@ -49,8 +49,8 @@ import javafx.css.StyleableProperty;
 import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.collections.ListListenerHelper;
 import com.sun.javafx.collections.NonIterableChange;
-import com.sun.javafx.css.converters.SizeConverter;
-import com.sun.javafx.scene.control.skin.TextAreaSkin;
+import javafx.css.converter.SizeConverter;
+import javafx.scene.control.skin.TextAreaSkin;
 
 import javafx.css.Styleable;
 import javafx.scene.AccessibleRole;

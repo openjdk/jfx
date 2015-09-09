@@ -29,12 +29,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import javafx.application.Application;
-import javafx.event.Event;
-import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.skin.MenuBarSkinRetriever;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
@@ -42,15 +40,14 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.MouseEventGenerator;
-import com.sun.javafx.scene.control.skin.ContextMenuContent;
-import com.sun.javafx.scene.control.skin.MenuBarMenuButtonRetriever;
-import com.sun.javafx.scene.control.skin.MenuBarSkin;
+import com.sun.javafx.scene.control.ContextMenuContent;
+import com.sun.javafx.scene.control.MenuBarMenuButtonRetriever;
+import javafx.scene.control.skin.MenuBarSkin;
 import com.sun.javafx.tk.Toolkit;
 
 
@@ -130,7 +127,7 @@ public class MenuBarTest {
         double xval = (menuBar.localToScene(menuBar.getLayoutBounds())).getMinX();
         double yval = (menuBar.localToScene(menuBar.getLayoutBounds())).getMinY();
    
-        MenuButton mb = MenuBarMenuButtonRetriever.getNodeForMenu(skin, 0);
+        MenuButton mb = MenuBarSkinRetriever.getNodeForMenu(skin, 0);
         mb.getScene().getWindow().requestFocus();
         scene.impl_processMouseEvent(
             generator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+20, yval+20));
@@ -165,7 +162,7 @@ public class MenuBarTest {
         double xval = (menuBar.localToScene(menuBar.getLayoutBounds())).getMinX();
         double yval = (menuBar.localToScene(menuBar.getLayoutBounds())).getMinY();
    
-        MenuButton mb = MenuBarMenuButtonRetriever.getNodeForMenu(skin, 0);
+        MenuButton mb = MenuBarSkinRetriever.getNodeForMenu(skin, 0);
         mb.getScene().getWindow().requestFocus();
         scene.impl_processMouseEvent(
             generator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+20, yval+20));
@@ -175,7 +172,7 @@ public class MenuBarTest {
          /* ------------------------------------------------------------------ */
         
         // Show subMenu
-        ContextMenuContent menuContent = MenuBarMenuButtonRetriever.getMenuContent(mb); // ContextMenuContent
+        ContextMenuContent menuContent = MenuBarSkinRetriever.getMenuContent(mb); // ContextMenuContent
         Node displayNode = MenuBarMenuButtonRetriever.getDisplayNodeForMenuItem(menuContent, 0); // MenuItemContainer
         
         displayNode.getScene().getWindow().requestFocus();
@@ -231,7 +228,7 @@ public class MenuBarTest {
         
         MenuBarSkin skin = (MenuBarSkin)menuBar.getSkin();
         assertTrue(skin != null);
-        MenuButton mb = MenuBarMenuButtonRetriever.getNodeForMenu(skin, 0);
+        MenuButton mb = MenuBarSkinRetriever.getNodeForMenu(skin, 0);
         mb.getScene().getWindow().requestFocus();
         
         double xval = (menuBar.localToScene(menuBar.getLayoutBounds())).getMinX();
@@ -245,7 +242,7 @@ public class MenuBarTest {
          /* ------------------------------------------------------------------ */
         
         // Show Menu
-        ContextMenuContent menuContent = MenuBarMenuButtonRetriever.getMenuContent(mb); // ContextMenuContent
+        ContextMenuContent menuContent = MenuBarSkinRetriever.getMenuContent(mb); // ContextMenuContent
         Node displayNode = MenuBarMenuButtonRetriever.getDisplayNodeForMenuItem(menuContent, 0); // MenuItemContainer
         
         displayNode.getScene().getWindow().requestFocus();
@@ -265,7 +262,7 @@ public class MenuBarTest {
         tk.firePulse();
         
         // check if focusedMenuIndex is reset to -1 so navigation happens.
-        int focusedIndex = MenuBarMenuButtonRetriever.getFocusedIndex(skin);
+        int focusedIndex = MenuBarSkinRetriever.getFocusedIndex(skin);
         assertEquals(focusedIndex, -1);
     }
     
@@ -291,7 +288,7 @@ public class MenuBarTest {
         MenuBarSkin skin = (MenuBarSkin)menuBar.getSkin();
         assertTrue(skin != null);
         
-        MenuButton mb = MenuBarMenuButtonRetriever.getNodeForMenu(skin, 0);
+        MenuButton mb = MenuBarSkinRetriever.getNodeForMenu(skin, 0);
         mb.getScene().getWindow().requestFocus();
         assertTrue(mb.getScene().getWindow().isFocused());
         
@@ -335,7 +332,7 @@ public class MenuBarTest {
         double xval = (menuBar.localToScene(menuBar.getLayoutBounds())).getMinX();
         double yval = (menuBar.localToScene(menuBar.getLayoutBounds())).getMinY();
    
-        MenuButton mb = MenuBarMenuButtonRetriever.getNodeForMenu(skin, 0);
+        MenuButton mb = MenuBarSkinRetriever.getNodeForMenu(skin, 0);
         mb.getScene().getWindow().requestFocus();
         scene.impl_processMouseEvent(
             MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+20, yval+20));
@@ -378,7 +375,7 @@ public class MenuBarTest {
             assertEquals(firstClick.booleanValue(), true);
         });
         
-        MenuButton mb = MenuBarMenuButtonRetriever.getNodeForMenu(skin, 0);
+        MenuButton mb = MenuBarSkinRetriever.getNodeForMenu(skin, 0);
         mb.getScene().getWindow().requestFocus();
         mb.requestFocus();
         assertTrue(mb.isFocused());

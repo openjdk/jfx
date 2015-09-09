@@ -190,7 +190,7 @@ public class CatalogPage extends Page  implements Callback<ListView<CatalogPage.
         list = new ListView<Row>(){
             {
                 getStyleClass().setAll("twitter-list-view");
-                skinClassNameProperty().set("com.sun.javafx.scene.control.skin.ListViewSkin");
+                skinClassNameProperty().set("javafx.scene.control.skin.ListViewSkin");
                 setCellFactory(CatalogPage.this);
             }
         };

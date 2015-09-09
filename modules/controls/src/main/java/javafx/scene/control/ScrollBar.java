@@ -25,10 +25,11 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.util.Utils;
-import com.sun.javafx.css.converters.EnumConverter;
-import com.sun.javafx.css.converters.SizeConverter;
-import com.sun.javafx.scene.control.skin.ScrollBarSkin;
+import javafx.css.converter.EnumConverter;
+import javafx.css.converter.SizeConverter;
+import javafx.scene.control.skin.ScrollBarSkin;
 
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -86,8 +87,8 @@ public class ScrollBar extends Control {
      */
     public ScrollBar() {
         // TODO : we need to ensure we have a width and height
-        setWidth(ScrollBarSkin.DEFAULT_WIDTH);
-        setHeight(ScrollBarSkin.DEFAULT_LENGTH);
+        setWidth(Properties.DEFAULT_WIDTH);
+        setHeight(Properties.DEFAULT_LENGTH);
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
         setAccessibleRole(AccessibleRole.SCROLL_BAR);
         // focusTraversable is styleable through css. Calling setFocusTraversable

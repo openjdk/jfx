@@ -28,6 +28,7 @@ package javafx.scene.control;
 import com.sun.javafx.collections.MappingChange;
 import com.sun.javafx.collections.NonIterableChange;
 import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
+import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.SelectedCellsMap;
 
 import com.sun.javafx.scene.control.behavior.TableCellBehaviorBase;
@@ -36,21 +37,29 @@ import javafx.beans.property.DoubleProperty;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 
-import com.sun.javafx.css.converters.SizeConverter;
+import javafx.css.converter.SizeConverter;
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 import com.sun.javafx.scene.control.TableColumnComparatorBase;
-import com.sun.javafx.scene.control.skin.TableViewSkinBase;
 
 import javafx.css.Styleable;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableProperty;
 import javafx.event.WeakEventHandler;
 
-import com.sun.javafx.scene.control.skin.TreeTableViewSkin;
+import javafx.scene.control.skin.TreeTableViewSkin;
 
 import java.lang.ref.SoftReference;
 import java.lang.ref.WeakReference;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.WeakHashMap;
 
 import javafx.application.Platform;
 import javafx.beans.DefaultProperty;
@@ -1830,7 +1839,7 @@ public class TreeTableView<S> extends Control {
      * @since JavaFX 8u60
      */
     public void refresh() {
-        getProperties().put(TableViewSkinBase.RECREATE, Boolean.TRUE);
+        getProperties().put(Properties.RECREATE, Boolean.TRUE);
     }
     
     

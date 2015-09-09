@@ -25,8 +25,10 @@
 
 package com.sun.javafx.css;
 
-import com.sun.javafx.css.converters.SizeConverter;
+import javafx.css.converter.SizeConverter;
 import javafx.css.ParsedValue;
+import javafx.css.Size;
+import javafx.css.SizeUnits;
 import javafx.scene.text.Font;
 import static org.junit.Assert.assertEquals;
 import org.junit.Test;

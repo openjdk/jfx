@@ -37,7 +37,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
-import com.sun.javafx.scene.control.skin.ComboBoxListViewSkin;
+import com.sun.javafx.scene.control.FakeFocusTextField;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
@@ -55,8 +55,8 @@ import javafx.util.Callback;
 import javafx.util.StringConverter;
 import javafx.util.converter.LocalDateStringConverter;
 
-import com.sun.javafx.css.converters.BooleanConverter;
-import com.sun.javafx.scene.control.skin.DatePickerSkin;
+import javafx.css.converter.BooleanConverter;
+import javafx.scene.control.skin.DatePickerSkin;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
 
 
@@ -416,8 +416,8 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
     }
     public final ReadOnlyObjectProperty<TextField> editorProperty() {
         if (editor == null) {
-            editor = new ReadOnlyObjectWrapper<TextField>(this, "editor");
-            editor.set(new ComboBoxListViewSkin.FakeFocusTextField());
+            editor = new ReadOnlyObjectWrapper<>(this, "editor");
+            editor.set(new FakeFocusTextField());
         }
         return editor.getReadOnlyProperty();
     }

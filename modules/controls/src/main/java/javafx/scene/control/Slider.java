@@ -52,10 +52,10 @@ import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableIntegerProperty;
 import javafx.css.StyleableObjectProperty;
 
-import com.sun.javafx.css.converters.BooleanConverter;
-import com.sun.javafx.css.converters.EnumConverter;
-import com.sun.javafx.css.converters.SizeConverter;
-import com.sun.javafx.scene.control.skin.SliderSkin;
+import javafx.css.converter.BooleanConverter;
+import javafx.css.converter.EnumConverter;
+import javafx.css.converter.SizeConverter;
+import javafx.scene.control.skin.SliderSkin;
 
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;

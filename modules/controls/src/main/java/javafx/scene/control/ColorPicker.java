@@ -28,7 +28,7 @@ package javafx.scene.control;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.paint.Color;
-import com.sun.javafx.scene.control.skin.ColorPickerSkin;
+import javafx.scene.control.skin.ColorPickerSkin;
 
 /**
  * <p>ColorPicker control allows the user to select a color from either a standard 

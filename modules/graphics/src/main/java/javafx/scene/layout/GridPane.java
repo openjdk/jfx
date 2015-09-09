@@ -47,9 +47,9 @@ import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.CssMetaData;
-import com.sun.javafx.css.converters.BooleanConverter;
-import com.sun.javafx.css.converters.EnumConverter;
-import com.sun.javafx.css.converters.SizeConverter;
+import javafx.css.converter.BooleanConverter;
+import javafx.css.converter.EnumConverter;
+import javafx.css.converter.SizeConverter;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Iterator;
@@ -58,17 +58,12 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.function.Function;
-import javafx.beans.InvalidationListener;
+
 import javafx.beans.Observable;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
-import static javafx.scene.layout.Priority.ALWAYS;
-import static javafx.scene.layout.Priority.SOMETIMES;
-import static javafx.scene.layout.Region.USE_COMPUTED_SIZE;
-import static javafx.scene.layout.Region.boundedSize;
 import javafx.util.Callback;
 
 

@@ -71,7 +71,7 @@ import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
 
 import com.sun.javafx.collections.NonIterableChange;
-import com.sun.javafx.css.converters.BooleanConverter;
+import javafx.css.converter.BooleanConverter;
 
 
 

@@ -28,13 +28,13 @@ package com.sun.javafx.scene.layout.region;
 import javafx.scene.layout.BorderWidths;
 import javafx.scene.text.Font;
 import javafx.css.ParsedValue;
-import com.sun.javafx.css.Size;
-import com.sun.javafx.css.SizeUnits;
-import com.sun.javafx.css.StyleConverterImpl;
+import javafx.css.Size;
+import javafx.css.SizeUnits;
+import javafx.css.StyleConverter;
 
 /**
  */
-public final class BorderImageSliceConverter extends StyleConverterImpl<ParsedValue[], BorderImageSlices> {
+public final class BorderImageSliceConverter extends StyleConverter<ParsedValue[], BorderImageSlices> {
 
     private static final BorderImageSliceConverter BORDER_IMAGE_SLICE_CONVERTER =
             new BorderImageSliceConverter();

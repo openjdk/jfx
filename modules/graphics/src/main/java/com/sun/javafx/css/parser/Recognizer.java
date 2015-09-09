@@ -26,7 +26,7 @@
 package com.sun.javafx.css.parser;
 
 @FunctionalInterface
-interface Recognizer {
+public interface Recognizer {
 
     boolean recognize(int c);
 

@@ -27,7 +27,7 @@ package javafx.scene.control;
 
 import javafx.geometry.Pos;
 
-import com.sun.javafx.scene.control.skin.RadioButtonSkin;
+import javafx.scene.control.skin.RadioButtonSkin;
 
 import javafx.beans.value.WritableValue;
 import javafx.css.StyleableProperty;

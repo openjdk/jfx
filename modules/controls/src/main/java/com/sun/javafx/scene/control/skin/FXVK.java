@@ -25,6 +25,8 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import javafx.application.ConditionalFeature;
+import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleObjectProperty;
@@ -53,7 +55,7 @@ public class FXVK extends Control {
     public final ObjectProperty<EventHandler<KeyEvent>> onActionProperty() { return onAction; }
 
 
-    final static String[] VK_TYPE_NAMES = new String[] { "text", "numeric", "url", "email" };
+    public final static String[] VK_TYPE_NAMES = new String[] { "text", "numeric", "url", "email" };
     public final static String VK_TYPE_PROP_KEY = "vkType";
 
     String[] chars;
@@ -103,6 +105,30 @@ public class FXVK extends Control {
     public static void detach() {
         if (vk != null) {
             vk.setAttachedNode(null);
+        }
+    }
+
+    private final static boolean IS_FXVK_SUPPORTED = Platform.isSupported(ConditionalFeature.VIRTUAL_KEYBOARD);
+    private static boolean USE_FXVK = IS_FXVK_SUPPORTED;
+
+    public static boolean useFXVK() {
+        return USE_FXVK;
+    }
+
+    public static void toggleUseVK(TextInputControl textInput) {
+        Integer vkType = (Integer)textInput.getProperties().get(VK_TYPE_PROP_KEY);
+        if (vkType == null) {
+            vkType = -1;
+        }
+        vkType++;
+        if (vkType < 4) {
+            USE_FXVK = true;
+            textInput.getProperties().put(VK_TYPE_PROP_KEY, vkType);
+            attach(textInput);
+        } else {
+            detach();
+            textInput.getProperties().put(VK_TYPE_PROP_KEY, null);
+            USE_FXVK = false;
         }
     }
 

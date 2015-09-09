@@ -26,46 +26,43 @@
 package javafx.scene.control;
 
 import static com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
-import static javafx.application.Platform.runLater;
 import static javafx.scene.control.TableColumn.SortType.ASCENDING;
 import static javafx.scene.control.TableColumn.SortType.DESCENDING;
 import static org.junit.Assert.*;
 
 import java.util.*;
-import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 import com.sun.javafx.scene.control.SelectedCellsMap;
-import com.sun.javafx.scene.control.behavior.ListCellBehavior;
 import com.sun.javafx.scene.control.behavior.TableCellBehavior;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import com.sun.javafx.scene.control.infrastructure.StageLoader;
-import com.sun.javafx.scene.control.skin.*;
 import javafx.application.Platform;
-import javafx.beans.InvalidationListener;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.*;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
-import test.javafx.collections.MockSetObserver;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.SortedList;
-import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.cell.*;
+import javafx.scene.control.skin.TableCellSkin;
+import javafx.scene.control.skin.TableColumnHeader;
+import javafx.scene.control.skin.TableColumnHeaderRetriever;
+import javafx.scene.control.skin.TableHeaderRow;
+import javafx.scene.control.skin.TableHeaderRowRetriever;
+import javafx.scene.control.skin.VirtualFlow;
+import com.sun.javafx.scene.control.VirtualScrollBar;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -82,7 +79,7 @@ import com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import com.sun.javafx.scene.control.test.Person;
 import com.sun.javafx.scene.control.test.RT_22463_Person;
 
-import static com.sun.javafx.scene.control.skin.TableColumnHeaderRetriever.*;
+import static javafx.scene.control.skin.TableColumnHeaderRetriever.*;
 import static org.junit.Assert.assertEquals;
 
 public class TableViewTest {
@@ -2750,9 +2747,9 @@ public class TableViewTest {
 
         TableHeaderRow headerRow = VirtualFlowTestUtils.getTableHeaderRow(table);
 
-        TableColumnHeader nameHeader = headerRow.getColumnHeaderFor(name);
-        TableColumnHeader firstHeader = headerRow.getColumnHeaderFor(first);
-        TableColumnHeader lastHeader = headerRow.getColumnHeaderFor(last);
+        TableColumnHeader nameHeader = TableHeaderRowRetriever.getColumnHeaderFor(headerRow, name);
+        TableColumnHeader firstHeader = TableHeaderRowRetriever.getColumnHeaderFor(headerRow, first);
+        TableColumnHeader lastHeader = TableHeaderRowRetriever.getColumnHeaderFor(headerRow, last);
         assertNotNull(nameHeader);
         assertEquals(name, nameHeader.getTableColumn());
         assertNotNull(firstHeader);
@@ -3026,7 +3023,7 @@ public class TableViewTest {
         // start scrolling - we call VirtualFlow.adjustPixels, which is what
         // is called when the mouse wheel is scrolled
         VirtualFlow flow = VirtualFlowTestUtils.getVirtualFlow(tableView);
-        flow.adjustPixels(1000 * 24);
+        flow.scrollPixels(1000 * 24);
 
         assertEquals(cellCountAtStart, rt36556_instanceCount);
 

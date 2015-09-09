@@ -30,18 +30,11 @@ import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
-import javafx.event.EventType;
-import javafx.geometry.NodeOrientation;
 import javafx.geometry.Orientation;
-import javafx.scene.control.Control;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.Skin;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
+import com.sun.javafx.scene.control.inputmap.InputMap;
 import javafx.util.Duration;
-
-import java.util.ArrayList;
-import java.util.List;
 
 import static javafx.scene.input.KeyCode.*;
 import static javafx.scene.input.KeyEvent.KEY_RELEASED;
@@ -53,6 +46,8 @@ import static javafx.scene.input.KeyEvent.KEY_RELEASED;
 
 public class ScrollBarBehavior extends BehaviorBase<ScrollBar> {
 
+    private final InputMap<ScrollBar> inputMap;
+
     /***************************************************************************
      *                                                                         *
      * Constructors                                                            *
@@ -60,7 +55,38 @@ public class ScrollBarBehavior extends BehaviorBase<ScrollBar> {
      **************************************************************************/
 
     public ScrollBarBehavior(ScrollBar scrollBar) {
-        super(scrollBar, SCROLL_BAR_BINDINGS);
+        super(scrollBar);
+
+        // create a map for scrollbar-specific mappings (this reuses the default
+        // InputMap installed on the control, if it is non-null, allowing us to pick up any user-specified mappings)
+        inputMap = createInputMap();
+
+        // scrollbar-specific mappings for key and mouse input
+        addDefaultMapping(inputMap,
+            new InputMap.KeyMapping(HOME, KEY_RELEASED, e -> home()),
+            new InputMap.KeyMapping(END, KEY_RELEASED, e -> end())
+        );
+
+        // create two child input maps for horizontal and vertical scrollbars
+        InputMap<ScrollBar> horizontalInputMap = new InputMap<>(scrollBar);
+        horizontalInputMap.setInterceptor(e -> scrollBar.getOrientation() != Orientation.HORIZONTAL);
+        horizontalInputMap.getMappings().addAll(
+            new InputMap.KeyMapping(LEFT, e -> rtl(scrollBar, this::incrementValue, this::decrementValue)),
+            new InputMap.KeyMapping(KP_LEFT, e -> rtl(scrollBar, this::incrementValue, this::decrementValue)),
+            new InputMap.KeyMapping(RIGHT, e -> rtl(scrollBar, this::decrementValue, this::incrementValue)),
+            new InputMap.KeyMapping(KP_RIGHT, e -> rtl(scrollBar, this::decrementValue, this::incrementValue))
+        );
+        addDefaultChildMap(inputMap, horizontalInputMap);
+
+        InputMap<ScrollBar> verticalInputMap = new InputMap<>(scrollBar);
+        verticalInputMap.setInterceptor(e -> scrollBar.getOrientation() != Orientation.VERTICAL);
+        verticalInputMap.getMappings().addAll(
+                new InputMap.KeyMapping(UP, e -> decrementValue()),
+                new InputMap.KeyMapping(KP_UP, e -> decrementValue()),
+                new InputMap.KeyMapping(DOWN, e -> incrementValue()),
+                new InputMap.KeyMapping(KP_DOWN, e -> incrementValue())
+        );
+        addDefaultChildMap(inputMap, verticalInputMap);
     }
 
     /***************************************************************************
@@ -69,72 +95,26 @@ public class ScrollBarBehavior extends BehaviorBase<ScrollBar> {
      *                                                                         *
      **************************************************************************/
 
-    void home() {
-        getControl().setValue(getControl().getMin());
+
+    @Override public InputMap<ScrollBar> getInputMap() {
+        return inputMap;
+    }
+    private void home() {
+        getNode().setValue(getNode().getMin());
     }
 
-    void decrementValue() {
-        getControl().adjustValue(0);
+    private void decrementValue() {
+        getNode().adjustValue(0);
     }
 
-    void end() {
-        getControl().setValue(getControl().getMax());
+    private void end() {
+        getNode().setValue(getNode().getMax());
     }
 
-    void incrementValue() {
-        getControl().adjustValue(1);
+    private void incrementValue() {
+        getNode().adjustValue(1);
     }
 
-    /***************************************************************************
-     *                                                                         *
-     * Key event handling                                                      *
-     *                                                                         *
-     **************************************************************************/
-
-    /* We manually specify the focus traversal keys because Slider has
-     * different usage for up/down arrow keys.
-     */
-    protected static final List<KeyBinding> SCROLL_BAR_BINDINGS = new ArrayList<>();
-    static {
-        SCROLL_BAR_BINDINGS.add(new KeyBinding(F4, "TraverseDebug").alt().ctrl().shift());
-
-        SCROLL_BAR_BINDINGS.add(new ScrollBarKeyBinding(LEFT, "DecrementValue"));
-        SCROLL_BAR_BINDINGS.add(new ScrollBarKeyBinding(KP_LEFT, "DecrementValue"));
-        SCROLL_BAR_BINDINGS.add(new ScrollBarKeyBinding(UP, "DecrementValue").vertical());
-        SCROLL_BAR_BINDINGS.add(new ScrollBarKeyBinding(KP_UP, "DecrementValue").vertical());
-        SCROLL_BAR_BINDINGS.add(new ScrollBarKeyBinding(RIGHT, "IncrementValue"));
-        SCROLL_BAR_BINDINGS.add(new ScrollBarKeyBinding(KP_RIGHT, "IncrementValue"));
-        SCROLL_BAR_BINDINGS.add(new ScrollBarKeyBinding(DOWN, "IncrementValue").vertical());
-        SCROLL_BAR_BINDINGS.add(new ScrollBarKeyBinding(KP_DOWN, "IncrementValue").vertical());
-
-        SCROLL_BAR_BINDINGS.add(new KeyBinding(HOME, KEY_RELEASED, "Home"));
-        SCROLL_BAR_BINDINGS.add(new KeyBinding(END, KEY_RELEASED, "End"));
-    }
-
-    protected /*final*/ String matchActionForEvent(KeyEvent e) {
-        String action = super.matchActionForEvent(e);
-        if (action != null) {
-            if (e.getCode() == LEFT || e.getCode() == KP_LEFT) {
-                if (getControl().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
-                    action = getControl().getOrientation() == Orientation.HORIZONTAL ? "IncrementValue" : "DecrementValue";
-                }
-            } else if (e.getCode() == RIGHT || e.getCode() == KP_RIGHT) {
-                if (getControl().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
-                    action = getControl().getOrientation() == Orientation.HORIZONTAL ? "DecrementValue" : "IncrementValue";
-                }
-            }
-        }
-        return action;
-    }
-
-    @Override protected void callAction(String name) {
-        if ("Home".equals(name)) home();
-        else if ("End".equals(name)) end();
-        else if ("IncrementValue".equals(name)) incrementValue();
-        else if ("DecrementValue".equals(name)) decrementValue();
-        else super.callAction(name);
-        super.callAction(name);
-    }
 
     /***************************************************************************
      *                                                                         *
@@ -166,7 +146,7 @@ public class ScrollBarBehavior extends BehaviorBase<ScrollBar> {
 
         // determine the percentage of the way between min and max
         // represented by this mouse event
-        final ScrollBar bar = getControl();
+        final ScrollBar bar = getNode();
         if (!bar.isFocused() && bar.isFocusTraversable()) bar.requestFocus();
         final double pos = position;
         final boolean incrementing = (pos > ((bar.getValue() - bar.getMin())/(bar.getMax() - bar.getMin())));
@@ -204,7 +184,7 @@ public class ScrollBarBehavior extends BehaviorBase<ScrollBar> {
      * press occurs on the decrement button of the bar.
      */
     public void decButtonPressed() {
-        final ScrollBar bar = getControl();
+        final ScrollBar bar = getNode();
         if (!bar.isFocused() && bar.isFocusTraversable()) bar.requestFocus();
         stopTimeline();
         timeline = new Timeline();
@@ -238,7 +218,7 @@ public class ScrollBarBehavior extends BehaviorBase<ScrollBar> {
      * press occurs on the increment button of the bar.
      */
     public void incButtonPressed() {
-        final ScrollBar bar = getControl();
+        final ScrollBar bar = getNode();
         if (!bar.isFocused() && bar.isFocusTraversable()) bar.requestFocus();
         stopTimeline();
         timeline = new Timeline();
@@ -277,7 +257,7 @@ public class ScrollBarBehavior extends BehaviorBase<ScrollBar> {
      * @param position The mouse position on track with 0.0 being begining of track and 1.0 being the end
      */
     public void thumbDragged(double position) {
-        final ScrollBar scrollbar = getControl();
+        final ScrollBar scrollbar = getNode();
 
         // Stop the timeline for continuous increments as drags take precedence
         stopTimeline();
@@ -293,23 +273,6 @@ public class ScrollBarBehavior extends BehaviorBase<ScrollBar> {
         if (timeline != null) {
             timeline.stop();
             timeline = null;
-        }
-    }
-
-    /**
-     * Class to handle key bindings based upon the orientation of the control.
-     */
-    public static class ScrollBarKeyBinding extends OrientedKeyBinding {
-        public ScrollBarKeyBinding(KeyCode code, String action) {
-            super(code, action);
-        }
-
-        public ScrollBarKeyBinding(KeyCode code, EventType<KeyEvent> type, String action) {
-            super(code, type, action);
-        }
-
-        public @Override boolean getVertical(Control control) {
-            return ((ScrollBar)control).getOrientation() == Orientation.VERTICAL;
         }
     }
 }

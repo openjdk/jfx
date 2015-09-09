@@ -26,19 +26,42 @@
 package com.sun.javafx.scene.control.behavior;
 
 import javafx.scene.control.TitledPane;
+import com.sun.javafx.scene.control.inputmap.InputMap;
 import javafx.scene.input.MouseEvent;
-import java.util.ArrayList;
-import java.util.List;
-import static javafx.scene.input.KeyCode.ENTER;
+
 import static javafx.scene.input.KeyCode.SPACE;
 
 public class TitledPaneBehavior extends BehaviorBase<TitledPane> {
 
-    private TitledPane titledPane;
+    private final TitledPane titledPane;
+    private final InputMap<TitledPane> inputMap;
 
     public TitledPaneBehavior(TitledPane pane) {
-        super(pane, TITLEDPANE_BINDINGS);
+        super(pane);
         this.titledPane = pane;
+
+        // create a map for titledPane-specific mappings (this reuses the default
+        // InputMap installed on the control, if it is non-null, allowing us to pick up any user-specified mappings)
+        inputMap = createInputMap();
+
+        // add focus traversal mappings
+        addDefaultMapping(inputMap, FocusTraversalInputMap.getFocusTraversalMappings());
+
+        // ENTER should not be a key binding for TitledPane, as this is the
+        // key reserved for the default button. See RT-40166 for more detail.
+        addDefaultMapping(
+            new InputMap.KeyMapping(SPACE, e -> {
+                if (titledPane.isCollapsible() && titledPane.isFocused()) {
+                    titledPane.setExpanded(!titledPane.isExpanded());
+                    titledPane.requestFocus();
+                }
+            }),
+            new InputMap.MouseMapping(MouseEvent.MOUSE_PRESSED, this::mousePressed)
+        );
+    }
+
+    @Override public InputMap<TitledPane> getInputMap() {
+        return inputMap;
     }
 
     /***************************************************************************
@@ -47,28 +70,28 @@ public class TitledPaneBehavior extends BehaviorBase<TitledPane> {
      *                                                                         *
      **************************************************************************/
 
-    private static final String PRESS_ACTION = "Press";
-
-    protected static final List<KeyBinding> TITLEDPANE_BINDINGS = new ArrayList<KeyBinding>();
-    static {
-        // ENTER should not be a key binding for TitledPane, as this is the
-        // key reserved for the default button. See RT-40166 for more detail.
-        // TITLEDPANE_BINDINGS.add(new KeyBinding(ENTER, PRESS_ACTION));
-        TITLEDPANE_BINDINGS.add(new KeyBinding(SPACE, PRESS_ACTION));
-    }
-
-    @Override protected void callAction(String name) {
-        switch (name) {
-          case PRESS_ACTION:
-            if (titledPane.isCollapsible() && titledPane.isFocused()) {
-                titledPane.setExpanded(!titledPane.isExpanded());
-                titledPane.requestFocus();
-            }
-            break;
-          default:
-            super.callAction(name);
-        }
-    }
+//    private static final String PRESS_ACTION = "Press";
+//
+//    protected static final List<KeyBinding> TITLEDPANE_BINDINGS = new ArrayList<KeyBinding>();
+//    static {
+//        // ENTER should not be a key binding for TitledPane, as this is the
+//        // key reserved for the default button. See RT-40166 for more detail.
+//        // TITLEDPANE_BINDINGS.add(new KeyBinding(ENTER, PRESS_ACTION));
+//        TITLEDPANE_BINDINGS.add(new KeyBinding(SPACE, PRESS_ACTION));
+//    }
+//
+//    @Override protected void callAction(String name) {
+//        switch (name) {
+//          case PRESS_ACTION:
+//            if (titledPane.isCollapsible() && titledPane.isFocused()) {
+//                titledPane.setExpanded(!titledPane.isExpanded());
+//                titledPane.requestFocus();
+//            }
+//            break;
+//          default:
+//            super.callAction(name);
+//        }
+//    }
 
     /***************************************************************************
      *                                                                         *
@@ -76,10 +99,8 @@ public class TitledPaneBehavior extends BehaviorBase<TitledPane> {
      *                                                                         *
      **************************************************************************/
 
-    @Override public void mousePressed(MouseEvent e) {
-        super.mousePressed(e);
-        TitledPane tp = getControl();
-        tp.requestFocus();
+    public void mousePressed(MouseEvent e) {
+        getNode().requestFocus();
     }
 
     /**************************************************************************

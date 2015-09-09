@@ -30,7 +30,7 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 
 import com.sun.javafx.collections.TrackableObservableList;
-import com.sun.javafx.scene.control.skin.AccordionSkin;
+import javafx.scene.control.skin.AccordionSkin;
 
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.value.WritableValue;

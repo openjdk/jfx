@@ -25,7 +25,7 @@
 
 package com.sun.javafx.css;
 
-import com.sun.javafx.css.converters.SizeConverter;
+import javafx.css.converter.SizeConverter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -34,10 +34,9 @@ import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableProperty;
-import javafx.scene.Node;
 
 /** Test Node with styleable property but no getClassCssMetaData method */
-class TestNode extends TestNodeBase {
+public class TestNode extends TestNodeBase {
 
     private DoubleProperty xyzzy;
     private DoubleProperty xyzzyProperty() {
@@ -76,9 +75,9 @@ class TestNode extends TestNodeBase {
         super();
     }
     
-     static class StyleableProperties {
+    public static class StyleableProperties {
 
-         static final CssMetaData<TestNode, Number> XYZZY = 
+         public static final CssMetaData<TestNode, Number> XYZZY = 
              new CssMetaData<TestNode, Number>("-fx-xyzzy",
                  SizeConverter.getInstance(),
                  .5) {

@@ -59,13 +59,13 @@ import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform.Theme;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
-import com.sun.javafx.css.CompoundSelector;
-import com.sun.javafx.css.Rule;
-import com.sun.javafx.css.Selector;
-import com.sun.javafx.css.SimpleSelector;
-import com.sun.javafx.css.Style;
-import com.sun.javafx.css.Stylesheet;
-import com.sun.javafx.css.parser.CSSParser;
+import javafx.css.CompoundSelector;
+import javafx.css.Rule;
+import javafx.css.Selector;
+import javafx.css.SimpleSelector;
+import javafx.css.Style;
+import javafx.css.Stylesheet;
+import javafx.css.CssParser;
 
 /**
  *
@@ -237,7 +237,7 @@ public class CssInternal {
         Set<String> styleClasses = new HashSet<>();
         Stylesheet s;
         try {
-            s = new CSSParser().parse(url);
+            s = new CssParser().parse(url);
         } catch (IOException ex) {
             System.out.println("Warning: Invalid Stylesheet " + url); //NOI18N
             return styleClasses;

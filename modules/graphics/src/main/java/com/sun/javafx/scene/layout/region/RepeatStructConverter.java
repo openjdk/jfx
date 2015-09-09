@@ -25,15 +25,15 @@
 
 package com.sun.javafx.scene.layout.region;
 
-import com.sun.javafx.css.converters.EnumConverter;
+import javafx.css.converter.EnumConverter;
 import javafx.css.ParsedValue;
-import com.sun.javafx.css.StyleConverterImpl;
+import javafx.css.StyleConverter;
 import javafx.scene.layout.BackgroundRepeat;
 import javafx.scene.text.Font;
 
 /**
  */
-public final class RepeatStructConverter extends StyleConverterImpl<ParsedValue<String, BackgroundRepeat>[][], RepeatStruct[]> {
+public final class RepeatStructConverter extends StyleConverter<ParsedValue<String, BackgroundRepeat>[][], RepeatStruct[]> {
 
     private static final RepeatStructConverter REPEAT_STRUCT_CONVERTER =
             new RepeatStructConverter();

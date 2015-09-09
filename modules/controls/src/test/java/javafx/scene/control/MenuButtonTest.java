@@ -25,11 +25,9 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.scene.control.skin.MenuButtonSkin;
+import javafx.scene.control.skin.MenuButtonSkin;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.Side;
 import javafx.scene.Scene;
 import javafx.scene.layout.VBox;

@@ -30,8 +30,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
+import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.behavior.ListCellBehavior;
-import com.sun.javafx.scene.control.skin.TableViewSkinBase;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
@@ -43,8 +43,6 @@ import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.ReadOnlyIntegerWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.WeakChangeListener;
 import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
@@ -61,12 +59,12 @@ import javafx.util.Callback;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.CssMetaData;
 
-import com.sun.javafx.css.converters.EnumConverter;
+import javafx.css.converter.EnumConverter;
 
 import javafx.collections.WeakListChangeListener;
 
-import com.sun.javafx.css.converters.SizeConverter;
-import com.sun.javafx.scene.control.skin.ListViewSkin;
+import javafx.css.converter.SizeConverter;
+import javafx.scene.control.skin.ListViewSkin;
 
 import java.lang.ref.WeakReference;
 
@@ -964,7 +962,7 @@ public class ListView<T> extends Control {
      * @since JavaFX 8u60
      */
     public void refresh() {
-        getProperties().put(ListViewSkin.RECREATE, Boolean.TRUE);
+        getProperties().put(Properties.RECREATE, Boolean.TRUE);
     }
 
 

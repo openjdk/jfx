@@ -29,14 +29,14 @@ import javafx.geometry.Side;
 import javafx.scene.layout.BackgroundPosition;
 import javafx.scene.text.Font;
 import javafx.css.ParsedValue;
-import com.sun.javafx.css.Size;
-import com.sun.javafx.css.SizeUnits;
-import com.sun.javafx.css.StyleConverterImpl;
+import javafx.css.Size;
+import javafx.css.SizeUnits;
+import javafx.css.StyleConverter;
 
 /**
  * Given four Sizes from the Parser, this converter will produce a BackgroundPosition object.
  */
-public final class BackgroundPositionConverter extends StyleConverterImpl<ParsedValue[], BackgroundPosition> {
+public final class BackgroundPositionConverter extends StyleConverter<ParsedValue[], BackgroundPosition> {
     private static final BackgroundPositionConverter BACKGROUND_POSITION_CONVERTER =
             new BackgroundPositionConverter();
 

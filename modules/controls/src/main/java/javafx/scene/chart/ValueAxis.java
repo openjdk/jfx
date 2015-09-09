@@ -30,8 +30,8 @@ import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableIntegerProperty;
 
-import com.sun.javafx.css.converters.BooleanConverter;
-import com.sun.javafx.css.converters.SizeConverter;
+import javafx.css.converter.BooleanConverter;
+import javafx.css.converter.SizeConverter;
 
 import java.util.ArrayList;
 import java.util.Collections;

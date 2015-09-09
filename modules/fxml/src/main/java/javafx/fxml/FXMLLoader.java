@@ -77,7 +77,6 @@ import javax.xml.stream.util.StreamReaderDelegate;
 
 import com.sun.javafx.beans.IDProperty;
 import com.sun.javafx.fxml.BeanAdapter;
-import com.sun.javafx.fxml.LoadListener;
 import com.sun.javafx.fxml.ParseTraceElement;
 import com.sun.javafx.fxml.PropertyNotFoundException;
 import com.sun.javafx.fxml.expression.Expression;
@@ -85,7 +84,6 @@ import com.sun.javafx.fxml.expression.ExpressionValue;
 import com.sun.javafx.fxml.expression.KeyPath;
 import java.net.MalformedURLException;
 import java.security.AccessController;
-import java.security.AllPermission;
 import java.security.PrivilegedAction;
 import java.util.EnumMap;
 import java.util.Locale;
@@ -2376,11 +2374,8 @@ public class FXMLLoader {
 
     /**
      * Returns this loader's load listener.
-     *
-     * @treatAsPrivate
-     * @deprecated
      */
-    public LoadListener impl_getLoadListener() {
+    public LoadListener getLoadListener() {
         // SB-dependency: RT-21228 has been filed to track this
         return loadListener;
     }
@@ -2389,11 +2384,8 @@ public class FXMLLoader {
      * Sets this loader's load listener.
      *
      * @param loadListener
-     *
-     * @treatAsPrivate
-     * @deprecated
      */
-    public void impl_setLoadListener(LoadListener loadListener) {
+    public final void setLoadListener(LoadListener loadListener) {
         // SB-dependency: RT-21228 has been filed to track this
         this.loadListener = loadListener;
     }

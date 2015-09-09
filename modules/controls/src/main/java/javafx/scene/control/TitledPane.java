@@ -43,8 +43,8 @@ import javafx.css.PseudoClass;
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.CssMetaData;
 
-import com.sun.javafx.css.converters.BooleanConverter;
-import com.sun.javafx.scene.control.skin.TitledPaneSkin;
+import javafx.css.converter.BooleanConverter;
+import javafx.scene.control.skin.TitledPaneSkin;
 
 import javafx.beans.DefaultProperty;
 import javafx.css.Styleable;

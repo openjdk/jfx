@@ -35,9 +35,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.util.CssInternal;
-import com.sun.javafx.css.CssError;
-import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.css.parser.CSSParser;
+import javafx.css.CssParser;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -235,7 +233,7 @@ public class StyleEditor extends InlineListEditor {
         private String currentValue;
         private EditorItemDelegate editor;
         private boolean parsingError = false;
-        private ListChangeListener<CssError> errorListener;
+        private ListChangeListener<CssParser.ParseError> errorListener;
 
         public StyleItem(EditorItemDelegate editor, List<String> suggestedList) {
 //            System.out.println("New StyleItem.");
@@ -309,8 +307,8 @@ public class StyleEditor extends InlineListEditor {
             errorListener = change -> {
                 while (change.next()) {
                     if (change.wasAdded()) {
-                        for (CssError error : change.getAddedSubList()) {
-                            if (error instanceof CssError.InlineStyleParsingError) {
+                        for (CssParser.ParseError error : change.getAddedSubList()) {
+                            if ("InlineStyleParsingError".equals(error.getClass().getSimpleName())) {
                                 parsingError = true;
                                 break;
                             }
@@ -339,9 +337,9 @@ public class StyleEditor extends InlineListEditor {
 
             // Parse the style, and set the parsingError boolean if any error
             parsingError = false;
-            StyleManager.errorsProperty().addListener(errorListener);
-            new CSSParser().parseInlineStyle(new StyleableStub(value));
-            StyleManager.errorsProperty().removeListener(errorListener);
+            CssParser.errorsProperty().addListener(errorListener);
+            new CssParser().parseInlineStyle(new StyleableStub(value));
+            CssParser.errorsProperty().removeListener(errorListener);
 
             return value;
         }

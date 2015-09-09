@@ -28,17 +28,13 @@ package com.sun.javafx.css;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
-import java.net.MalformedURLException;
-import java.net.URL;
-
 import javafx.css.ParsedValue;
 import javafx.scene.text.Font;
 
-import org.junit.Before;
 import org.junit.Test;
 
-import com.sun.javafx.css.converters.StringConverter;
-import com.sun.javafx.css.converters.URLConverter;
+import javafx.css.converter.StringConverter;
+import javafx.css.converter.URLConverter;
 
 
 public class URLTypeTest {

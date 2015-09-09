@@ -36,11 +36,11 @@ import javafx.css.StyleOrigin;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableStringProperty;
 
-import com.sun.javafx.css.converters.BooleanConverter;
-import com.sun.javafx.css.converters.EnumConverter;
-import com.sun.javafx.css.converters.SizeConverter;
-import com.sun.javafx.css.converters.StringConverter;
-import com.sun.javafx.scene.control.skin.TooltipSkin;
+import javafx.css.converter.BooleanConverter;
+import javafx.css.converter.EnumConverter;
+import javafx.css.converter.SizeConverter;
+import javafx.css.converter.StringConverter;
+import javafx.scene.control.skin.TooltipSkin;
 
 import java.util.ArrayList;
 import java.util.Collections;

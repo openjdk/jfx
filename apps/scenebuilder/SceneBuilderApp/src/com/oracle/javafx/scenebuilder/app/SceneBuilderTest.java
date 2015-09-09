@@ -410,7 +410,6 @@ public class SceneBuilderTest {
      * @param args arguments to SceneBuilderApp.main()
      */
     public static void startApplication(String[] args) {
-        AppPlatform.setStartingFromTestBed(true);
         SceneBuilderApp.main(args);
     }
     
