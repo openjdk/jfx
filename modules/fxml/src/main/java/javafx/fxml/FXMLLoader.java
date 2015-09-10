@@ -2374,6 +2374,8 @@ public class FXMLLoader {
 
     /**
      * Returns this loader's load listener.
+     *
+     * @since 9
      */
     public LoadListener getLoadListener() {
         // SB-dependency: RT-21228 has been filed to track this
@@ -2383,7 +2385,7 @@ public class FXMLLoader {
     /**
      * Sets this loader's load listener.
      *
-     * @param loadListener
+     * @since 9
      */
     public final void setLoadListener(LoadListener loadListener) {
         // SB-dependency: RT-21228 has been filed to track this
