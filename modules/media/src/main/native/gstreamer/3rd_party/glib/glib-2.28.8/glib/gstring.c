@@ -418,11 +418,6 @@ GString*
 g_string_sized_new (gsize dfl_size)    
 {
   GString *string = g_slice_new (GString);
-#ifdef GSTREAMER_LITE
-  if (string == NULL) {
-    return NULL;
-  }
-#endif // GSTREAMER_LITE
 
   string->allocated_len = 0;
   string->len   = 0;
