@@ -65,15 +65,15 @@ public final class Match implements Comparable<Match> {
         specificity = (idCount << 8) | (styleClassCount << 4) | nPseudoClasses;
     }
         
-    Selector getSelector() {
+    public Selector getSelector() {
         return selector;
     }
 
-    PseudoClassState getPseudoClasses() {
+    public PseudoClassState getPseudoClasses() {
         return pseudoClasses;
     }
 
-    int getSpecificity() {
+    public int getSpecificity() {
         return specificity;
     }
 

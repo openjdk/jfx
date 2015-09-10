@@ -23,7 +23,16 @@
  * questions.
  */
 
-package javafx.css;
+package com.sun.javafx.css;
+
+import javafx.css.Declaration;
+import javafx.css.Match;
+import javafx.css.ParsedValue;
+import javafx.css.PseudoClass;
+import javafx.css.Rule;
+import javafx.css.Selector;
+import javafx.css.Style;
+import javafx.css.StyleOrigin;
 
 import java.util.Set;
 

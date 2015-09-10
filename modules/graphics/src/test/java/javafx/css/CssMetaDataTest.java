@@ -36,6 +36,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
+import com.sun.javafx.css.CascadingStyle;
 import com.sun.javafx.css.ParsedValueImpl;
 import com.sun.javafx.css.PseudoClassState;
 import com.sun.javafx.css.StyleManager;

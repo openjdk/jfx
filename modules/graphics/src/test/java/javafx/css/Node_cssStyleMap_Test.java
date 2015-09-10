@@ -25,6 +25,7 @@
 
 package javafx.css;
 
+import com.sun.javafx.css.CascadingStyle;
 import com.sun.javafx.css.ParsedValueImpl;
 import com.sun.javafx.css.StyleManager;
 import javafx.css.converter.FontConverter;

@@ -25,7 +25,6 @@
 
 package com.sun.javafx.css;
 
-import javafx.css.CascadingStyle;
 import javafx.css.CssParser;
 import javafx.css.StyleOrigin;
 import javafx.css.StyleableProperty;

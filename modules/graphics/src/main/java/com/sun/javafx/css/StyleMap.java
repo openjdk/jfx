@@ -32,12 +32,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javafx.css.CascadingStyle;
 import javafx.css.Declaration;
 import javafx.css.Match;
 import javafx.css.Rule;
 import javafx.css.Selector;
-import javafx.css.Style;
 
 
 /**

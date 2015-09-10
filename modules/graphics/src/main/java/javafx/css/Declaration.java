@@ -70,7 +70,7 @@ final public class Declaration {
         return rule;
     }
     
-    boolean isImportant() {
+    public final boolean isImportant() {
         return important;
     }
 

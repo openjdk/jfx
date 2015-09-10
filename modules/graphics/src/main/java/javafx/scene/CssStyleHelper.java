@@ -37,7 +37,7 @@ import java.util.Set;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.WritableValue;
-import javafx.css.CascadingStyle;
+import com.sun.javafx.css.CascadingStyle;
 import javafx.css.CssMetaData;
 import javafx.css.CssParser;
 import javafx.css.FontCssMetaData;
