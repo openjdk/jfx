@@ -2873,6 +2873,12 @@ gst_base_parse_chain (GstPad * pad, GstObject * parent, GstBuffer * buffer)
 
     if (GST_CLOCK_TIME_IS_VALID (dts) && (parse->priv->prev_dts != dts))
       parse->priv->prev_dts = parse->priv->next_dts = dts;
+#ifdef GSTREAMER_LITE
+          if (outbuf != NULL) {
+#endif // GSTREAMER_LITE
+#ifdef GSTREAMER_LITE
+          }
+#endif // GSTREAMER_LITE
 
     /* we can mess with, erm interpolate, timestamps,
      * and incoming stuff has PTS but no DTS seen so far,
