@@ -474,6 +474,11 @@ g_variant_alloc (const GVariantType *type,
   GVariant *value;
 
   value = g_slice_new (GVariant);
+#ifdef GSTREAMER_LITE
+  if (value == NULL) {
+    return NULL;
+  }
+#endif // GSTREAMER_LITE
   value->type_info = g_variant_type_info_get (type);
   value->state = (serialised ? STATE_SERIALISED : 0) |
                  (trusted ? STATE_TRUSTED : 0) |
@@ -510,6 +515,11 @@ g_variant_new_from_bytes (const GVariantType *type,
   gsize size;
 
   value = g_variant_alloc (type, TRUE, trusted);
+#ifdef GSTREAMER_LITE
+  if (value == NULL) {
+    return NULL;
+  }
+#endif // GSTREAMER_LITE
 
   value->contents.serialised.bytes = g_bytes_ref (bytes);
 
@@ -563,6 +573,11 @@ g_variant_new_from_children (const GVariantType  *type,
   GVariant *value;
 
   value = g_variant_alloc (type, FALSE, trusted);
+#ifdef GSTREAMER_LITE
+  if (value == NULL) {
+    return NULL;
+  }
+#endif // GSTREAMER_LITE
   value->contents.tree.children = children;
   value->contents.tree.n_children = n_children;
 
@@ -1007,6 +1022,11 @@ g_variant_get_child_value (GVariant *value,
 
     /* create a new serialised instance out of it */
     child = g_slice_new (GVariant);
+#ifdef GSTREAMER_LITE
+    if (child == NULL) {
+      return NULL;
+    }
+#endif // GSTREAMER_LITE
     child->type_info = s_child.type_info;
     child->state = (value->state & STATE_TRUSTED) |
                    STATE_SERIALISED;
