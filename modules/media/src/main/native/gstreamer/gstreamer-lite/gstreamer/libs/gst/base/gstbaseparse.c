@@ -1986,12 +1986,18 @@ gst_base_parse_handle_buffer (GstBaseParse * parse, GstBuffer * buffer,
       pts = gst_adapter_prev_pts (parse->priv->adapter, NULL);
       dts = gst_adapter_prev_dts (parse->priv->adapter, NULL);
       outbuf = gst_adapter_take_buffer (parse->priv->adapter, *skip);
+#ifdef GSTREAMER_LITE
+      if (outbuf != NULL) {
+#endif // GSTREAMER_LITE
       outbuf = gst_buffer_make_writable (outbuf);
       GST_BUFFER_PTS (outbuf) = pts;
       GST_BUFFER_DTS (outbuf) = dts;
       parse->priv->buffers_head =
           g_slist_prepend (parse->priv->buffers_head, outbuf);
       outbuf = NULL;
+#ifdef GSTREAMER_LITE
+      }
+#endif // GSTREAMER_LITE
     } else {
       gst_adapter_flush (parse->priv->adapter, *skip);
     }
@@ -2873,12 +2879,6 @@ gst_base_parse_chain (GstPad * pad, GstObject * parent, GstBuffer * buffer)
 
     if (GST_CLOCK_TIME_IS_VALID (dts) && (parse->priv->prev_dts != dts))
       parse->priv->prev_dts = parse->priv->next_dts = dts;
-#ifdef GSTREAMER_LITE
-          if (outbuf != NULL) {
-#endif // GSTREAMER_LITE
-#ifdef GSTREAMER_LITE
-          }
-#endif // GSTREAMER_LITE
 
     /* we can mess with, erm interpolate, timestamps,
      * and incoming stuff has PTS but no DTS seen so far,
