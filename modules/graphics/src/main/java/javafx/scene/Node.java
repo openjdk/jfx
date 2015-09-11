@@ -122,13 +122,13 @@ import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.collections.UnmodifiableListSet;
 import com.sun.javafx.css.PseudoClassState;
-import com.sun.javafx.css.Selector;
-import com.sun.javafx.css.Style;
-import com.sun.javafx.css.converters.BooleanConverter;
-import com.sun.javafx.css.converters.CursorConverter;
-import com.sun.javafx.css.converters.EffectConverter;
-import com.sun.javafx.css.converters.EnumConverter;
-import com.sun.javafx.css.converters.SizeConverter;
+import javafx.css.Selector;
+import javafx.css.Style;
+import javafx.css.converter.BooleanConverter;
+import javafx.css.converter.CursorConverter;
+import javafx.css.converter.EffectConverter;
+import javafx.css.converter.EnumConverter;
+import javafx.css.converter.SizeConverter;
 import com.sun.javafx.effect.EffectDirtyBits;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.BoxBounds;
@@ -1584,6 +1584,29 @@ public abstract class Node implements EventTarget, Styleable {
     public final BooleanProperty disableProperty() {
         return getMiscProperties().disableProperty();
     }
+
+
+//    /**
+//     * TODO document - null by default, could be non-null in subclasses (e.g. Control)
+//     */
+//    public final ObjectProperty<InputMap<?>> inputMapProperty() {
+//        if (inputMap == null) {
+//            inputMap = new SimpleObjectProperty<InputMap<?>>(this, "inputMap") {
+//                private InputMap<?> currentMap = get();
+//                @Override protected void invalidated() {
+//                    if (currentMap != null) {
+//                        currentMap.dispose();
+//                    }
+//                    currentMap = get();
+//                }
+//            };
+//        }
+//        return inputMap;
+//    }
+//    public final void setInputMap(InputMap<?> value) { inputMapProperty().set(value); }
+//    public final InputMap<?> getInputMap() { return inputMapProperty().getValue(); }
+//    private ObjectProperty<InputMap<?>> inputMap;
+
 
     /**************************************************************************
      *                                                                        *

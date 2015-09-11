@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,19 +22,17 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-
 package com.sun.javafx.scene.control.behavior;
 
+import javafx.beans.Observable;
 import javafx.scene.control.ButtonBase;
+import com.sun.javafx.scene.control.inputmap.InputMap;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
-import java.util.ArrayList;
-import java.util.List;
-import static javafx.scene.input.KeyCode.SPACE;
-import static javafx.scene.input.KeyCode.TAB;
-import static javafx.scene.input.KeyEvent.KEY_PRESSED;
-import static javafx.scene.input.KeyEvent.KEY_RELEASED;
 
+import static com.sun.javafx.scene.control.inputmap.InputMap.*;
+import static javafx.scene.input.KeyCode.SPACE;
 
 /**
  * All of the "button" types (CheckBox, RadioButton, ToggleButton, and Button)
@@ -45,42 +43,7 @@ import static javafx.scene.input.KeyEvent.KEY_RELEASED;
  *
  */
 public class ButtonBehavior<C extends ButtonBase> extends BehaviorBase<C> {
-
-    /***************************************************************************
-     *                                                                         *
-     * Constructors                                                            *
-     *                                                                         *
-     **************************************************************************/
-
-    public ButtonBehavior(final C button) {
-        super(button, BUTTON_BINDINGS);
-    }
-
-    public ButtonBehavior(final C button, final List<KeyBinding> bindings) {
-        super(button, bindings);
-    }
-
-    /***************************************************************************
-     *                                                                         *
-     * Focus change handling                                                   *
-     *                                                                         *
-     **************************************************************************/
-
-    @Override protected void focusChanged() {
-        // If we did have the key down, but are now not focused, then we must
-        // disarm the button.
-        final ButtonBase button = getControl();
-        if (keyDown && !button.isFocused()) {
-            keyDown = false;
-            button.disarm();
-        }
-    }
-
-    /***************************************************************************
-     *                                                                         *
-     * Key event handling                                                      *
-     *                                                                         *
-     **************************************************************************/
+    private final InputMap<C> buttonInputMap;
 
     /**
      * Indicates that a keyboard key has been pressed which represents the
@@ -90,40 +53,92 @@ public class ButtonBehavior<C extends ButtonBase> extends BehaviorBase<C> {
      */
     private boolean keyDown;
 
-    private static final String PRESS_ACTION = "Press";
-    private static final String RELEASE_ACTION = "Release";
 
-    protected static final List<KeyBinding> BUTTON_BINDINGS = new ArrayList<KeyBinding>();
-    static {
-            BUTTON_BINDINGS.add(new KeyBinding(TAB, "TraverseNext"));
-            BUTTON_BINDINGS.add(new KeyBinding(TAB, "TraversePrevious").shift());
 
-            BUTTON_BINDINGS.add(new KeyBinding(SPACE, KEY_PRESSED, PRESS_ACTION));
-            BUTTON_BINDINGS.add(new KeyBinding(SPACE, KEY_RELEASED, RELEASE_ACTION));
+    /***************************************************************************
+     *                                                                         *
+     * Constructors                                                            *
+     *                                                                         *
+     **************************************************************************/
+
+    public ButtonBehavior(C control) {
+        super(control);
+
+        // create a map for button-specific mappings (this reuses the default
+        // InputMap installed on the control, if it is non-null, allowing us to pick up any user-specified mappings)
+        buttonInputMap = createInputMap();
+
+        // add focus traversal mappings
+        addDefaultMapping(buttonInputMap, FocusTraversalInputMap.getFocusTraversalMappings());
+
+        // then button-specific mappings for key and mouse input
+        addDefaultMapping(buttonInputMap,
+            new KeyMapping(SPACE, KeyEvent.KEY_PRESSED, this::keyPressed),
+            new KeyMapping(SPACE, KeyEvent.KEY_RELEASED, this::keyReleased),
+            new MouseMapping(MouseEvent.MOUSE_PRESSED, this::mousePressed),
+            new MouseMapping(MouseEvent.MOUSE_RELEASED, this::mouseReleased),
+            new MouseMapping(MouseEvent.MOUSE_ENTERED, this::mouseEntered),
+            new MouseMapping(MouseEvent.MOUSE_EXITED, this::mouseExited)
+        );
+
+        // Button also cares about focus
+        control.focusedProperty().addListener(this::focusChanged);
     }
 
-    @Override protected void callAction(String name) {
-        if (!getControl().isDisabled()) {
-            if (PRESS_ACTION.equals(name)) {
-                keyPressed();
-            } else if (RELEASE_ACTION.equals(name)) {
-                keyReleased();
-            } else {
-                super.callAction(name);
-            }
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Implementation of BehaviorBase API                                      *
+     *                                                                         *
+     **************************************************************************/
+
+    @Override public InputMap<C> getInputMap() {
+        return buttonInputMap;
+    }
+
+    @Override public void dispose() {
+        super.dispose();
+
+        // TODO
+        getNode().focusedProperty().removeListener(this::focusChanged);
+    }
+
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Focus change handling                                                   *
+     *                                                                         *
+     **************************************************************************/
+
+    private void focusChanged(Observable o) {
+        // If we did have the key down, but are now not focused, then we must
+        // disarm the button.
+        final ButtonBase button = getNode();
+        if (keyDown && !button.isFocused()) {
+            keyDown = false;
+            button.disarm();
         }
     }
+
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Key event handling                                                      *
+     *                                                                         *
+     **************************************************************************/
 
     /**
      * This function is invoked when an appropriate keystroke occurs which
      * causes this button to be armed if it is not already armed by a mouse
      * press.
      */
-    private void keyPressed() {
-        final ButtonBase button = getControl();
-        if (! button.isPressed() && ! button.isArmed()) {
+    protected void keyPressed(KeyEvent e) {
+        if (! getNode().isPressed() && ! getNode().isArmed()) {
             keyDown = true;
-            button.arm();
+            getNode().arm();
         }
     }
 
@@ -131,16 +146,17 @@ public class ButtonBehavior<C extends ButtonBase> extends BehaviorBase<C> {
      * Invoked when a valid keystroke release occurs which causes the button
      * to fire if it was armed by a keyPress.
      */
-    private void keyReleased() {
-        final ButtonBase button = getControl();
+    protected void keyReleased(KeyEvent e) {
         if (keyDown) {
             keyDown = false;
-            if (button.isArmed()) {
-                button.disarm();
-                button.fire();
+            if (getNode().isArmed()) {
+                getNode().disarm();
+                getNode().fire();
             }
         }
     }
+
+
 
     /***************************************************************************
      *                                                                         *
@@ -152,12 +168,10 @@ public class ButtonBehavior<C extends ButtonBase> extends BehaviorBase<C> {
      * Invoked when a mouse press has occurred over the button. In addition to
      * potentially arming the Button, this will transfer focus to the button
      */
-    @Override public void mousePressed(MouseEvent e) {
-        final ButtonBase button = getControl();
-        super.mousePressed(e);
+    protected void mousePressed(MouseEvent e) {
         // if the button is not already focused, then request the focus
-        if (! button.isFocused() && button.isFocusTraversable()) {
-            button.requestFocus();
+        if (! getNode().isFocused() && getNode().isFocusTraversable()) {
+            getNode().requestFocus();
         }
 
         // arm the button if it is a valid mouse event
@@ -166,11 +180,11 @@ public class ButtonBehavior<C extends ButtonBase> extends BehaviorBase<C> {
         // has a release clickCount of 1. So here I'll check clickCount <= 1,
         // though it should really be == 1 I think.
         boolean valid = (e.getButton() == MouseButton.PRIMARY &&
-            ! (e.isMiddleButtonDown() || e.isSecondaryButtonDown() ||
-             e.isShiftDown() || e.isControlDown() || e.isAltDown() || e.isMetaDown()));
+                ! (e.isMiddleButtonDown() || e.isSecondaryButtonDown() ||
+                        e.isShiftDown() || e.isControlDown() || e.isAltDown() || e.isMetaDown()));
 
-        if (! button.isArmed() && valid) {
-            button.arm();
+        if (! getNode().isArmed() && valid) {
+            getNode().arm();
         }
     }
 
@@ -179,12 +193,11 @@ public class ButtonBehavior<C extends ButtonBase> extends BehaviorBase<C> {
      * was done in a manner that would fire the button's action. This happens
      * only if the button was armed by a corresponding mouse press.
      */
-    @Override public void mouseReleased(MouseEvent e) {
+    protected void mouseReleased(MouseEvent e) {
         // if armed by a mouse press instead of key press, then fire!
-        final ButtonBase button = getControl();
-        if (! keyDown && button.isArmed()) {
-            button.fire();
-            button.disarm();
+        if (! keyDown && getNode().isArmed()) {
+            getNode().fire();
+            getNode().disarm();
         }
     }
 
@@ -193,12 +206,10 @@ public class ButtonBehavior<C extends ButtonBase> extends BehaviorBase<C> {
      * by a mouse press and the mouse is still pressed, then this will cause
      * the button to be rearmed.
      */
-    @Override public void mouseEntered(MouseEvent e) {
+    protected void mouseEntered(MouseEvent e) {
         // rearm if necessary
-        final ButtonBase button = getControl();
-        super.mouseEntered(e);
-        if (! keyDown && button.isPressed()) {
-            button.arm();
+        if (! keyDown && getNode().isPressed()) {
+            getNode().arm();
         }
     }
 
@@ -207,12 +218,10 @@ public class ButtonBehavior<C extends ButtonBase> extends BehaviorBase<C> {
      * a mouse press, then this function will disarm the button upon the mouse
      * exiting it.
      */
-    @Override public void mouseExited(MouseEvent e) {
+    protected void mouseExited(MouseEvent e) {
         // Disarm if necessary
-        final ButtonBase button = getControl();
-        super.mouseExited(e);
-        if (! keyDown && button.isArmed()) {
-            button.disarm();
+        if (! keyDown && getNode().isArmed()) {
+            getNode().disarm();
         }
     }
 }

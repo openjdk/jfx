@@ -65,7 +65,6 @@ import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadat
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask.Accessory;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
-import com.sun.javafx.css.CssError;
 
 import java.net.URL;
 import java.util.List;
@@ -74,6 +73,7 @@ import java.util.Set;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WeakChangeListener;
 import javafx.collections.ObservableList;
+import javafx.css.CssParser;
 import javafx.event.EventHandler;
 import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
@@ -908,9 +908,9 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
         if (r.getIOException() != null) {
             result.append(r.getIOException());
         } else {
-            assert r.getCssErrors().isEmpty() == false;
+            assert r.getParseErrors().isEmpty() == false;
             int errorCount = 0;
-            for (CssError e : r.getCssErrors()) {
+            for (CssParser.ParseError e : r.getParseErrors()) {
                 result.append(e.getMessage());
                 errorCount++;
                 if (errorCount < 5) {

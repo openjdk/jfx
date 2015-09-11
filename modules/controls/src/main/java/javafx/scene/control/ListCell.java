@@ -42,7 +42,7 @@ import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 
-import com.sun.javafx.scene.control.skin.ListCellSkin;
+import javafx.scene.control.skin.ListCellSkin;
 
 /**
  * <p>The {@link Cell} type used within {@link ListView} instances. In addition 

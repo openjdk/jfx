@@ -40,7 +40,7 @@ import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.css.PseudoClass;
 
-import com.sun.javafx.scene.control.skin.ToggleButtonSkin;
+import javafx.scene.control.skin.ToggleButtonSkin;
 
 import javafx.css.StyleableProperty;
 

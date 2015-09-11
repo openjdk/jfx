@@ -36,7 +36,7 @@ import javafx.scene.Node;
 import javafx.scene.control.Control;
 import javafx.scene.control.ScrollBar;
 
-import com.sun.javafx.scene.control.skin.ScrollBarSkin;
+import javafx.scene.control.skin.ScrollBarSkin;
 import com.sun.webkit.graphics.Ref;
 import com.sun.webkit.graphics.ScrollBarTheme;
 import com.sun.webkit.graphics.WCGraphicsContext;
@@ -406,18 +406,31 @@ public final class ScrollBarThemeImpl extends ScrollBarTheme {
     }
 
     private static Node getThumb(ScrollBar scrollBar) {
-        return ((ScrollBarSkin)scrollBar.getSkin()).getThumb();
+//        return ((ScrollBarSkin)scrollBar.getSkin()).getThumb();
+        return findNode(scrollBar, "thumb");
     }
 
     private static Node getTrack(ScrollBar scrollBar) {
-        return ((ScrollBarSkin)scrollBar.getSkin()).getTrack();
+//        return ((ScrollBarSkin)scrollBar.getSkin()).getTrack();
+        return findNode(scrollBar, "track");
     }
 
     private static Node getIncButton(ScrollBar scrollBar) {
-        return ((ScrollBarSkin)scrollBar.getSkin()).getIncButton();
+//        return ((ScrollBarSkin)scrollBar.getSkin()).getIncrementButton();
+        return findNode(scrollBar, "increment-button");
     }
 
     private static Node getDecButton(ScrollBar scrollBar) {
-        return ((ScrollBarSkin)scrollBar.getSkin()).getDecButton();
+//        return ((ScrollBarSkin)scrollBar.getSkin()).getDecrementButton();
+        return findNode(scrollBar, "decrement-button");
+    }
+
+    private static Node findNode(ScrollBar scrollBar, String styleclass) {
+        for (Node n : scrollBar.getChildrenUnmodifiable()) {
+            if (n.getStyleClass().contains(styleclass)) {
+                return n;
+            }
+        }
+        return null;
     }
 }

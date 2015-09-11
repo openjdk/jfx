@@ -27,7 +27,7 @@ package hello.dialog.dialogs;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 
-import com.sun.javafx.scene.control.skin.AccordionSkin;
+import javafx.scene.control.skin.AccordionSkin;
 import javafx.scene.Node;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;

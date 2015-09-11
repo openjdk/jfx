@@ -27,7 +27,7 @@ package javafx.scene.control;
 
 import java.time.LocalDate;
 
-import com.sun.javafx.scene.control.skin.DateCellSkin;
+import javafx.scene.control.skin.DateCellSkin;
 
 /**
  * DateCell is used by {@link DatePicker} to render the individual

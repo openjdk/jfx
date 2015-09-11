@@ -31,12 +31,8 @@
  */
 package com.oracle.javafx.scenebuilder.kit.util;
 
-import com.sun.glass.ui.Application;
-import com.sun.glass.ui.Application.EventHandler;
-import com.sun.javafx.css.Style;
-import com.sun.javafx.geom.PickRay;
-import com.sun.javafx.scene.control.skin.MenuBarSkin;
-import com.sun.javafx.scene.input.PickResultChooser;
+import javafx.css.Style;
+import javafx.scene.control.skin.MenuBarSkin;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -49,7 +45,6 @@ import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 import javafx.fxml.FXMLLoader;
-import javafx.fxml.JavaFXBuilderFactory;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.Group;
@@ -100,7 +95,7 @@ public class Deprecation {
     }
 
 //    // RT-21096 : Promote impl_getStyleMap / impl_setStyleMap to public API
-    public static void setStyleMap(Node node, ObservableMap<StyleableProperty<?>, List<com.sun.javafx.css.Style>> map) {
+    public static void setStyleMap(Node node, ObservableMap<StyleableProperty<?>, List<javafx.css.Style>> map) {
         node.impl_setStyleMap(map);
     }
 
@@ -184,18 +179,35 @@ public class Deprecation {
         loader.impl_setStaticLoad(staticLoad);
     }
 
-    // RT-21228 : Promote setLoadListener to public API
-    public static void setLoadListener(FXMLLoader loader, com.sun.javafx.fxml.LoadListener loadListener) {
-        loader.impl_setLoadListener(loadListener);
-    }
-
     // RT-20184 : FX should provide a Parent.pick() routine
     public static Node pick(Node node, double sceneX, double sceneY) {
-        final Point2D p = node.sceneToLocal(sceneX, sceneY, true /* rootScene */);
-        final PickRay pickRay = new PickRay(p.getX(), p.getY(), 1.0, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY);
-        final PickResultChooser prc = new PickResultChooser();
-        node.impl_pickNode(pickRay, prc);
-        return prc.getIntersectedNode();
+        Point2D p = node.sceneToLocal(sceneX, sceneY, true /* rootScene */);
+
+        // check if the given node has the point inside it, or else we drop out
+        if (!node.contains(p)) return null;
+
+        // at this point we know that _at least_ the given node is a valid
+        // answer to the given point, so we will return that if we don't find
+        // a better child option
+        if (node instanceof Parent) {
+            // we iterate through all children (recursively). We don't stop
+            // iteration when we hit the first child that also contains the bounds,
+            // as we know that later nodes have a higher z-ordering, so they
+            // should be picked before the earlier nodes.
+            Node bestMatchingChild = null;
+            for (Node child : ((Parent)node).getChildrenUnmodifiable()) {
+                p = child.sceneToLocal(sceneX, sceneY, true /* rootScene */);
+                if (child.contains(p)) {
+                    bestMatchingChild = child;
+                }
+            }
+
+            if (bestMatchingChild != null) {
+                return pick(bestMatchingChild, sceneX, sceneY);
+            }
+        }
+
+        return node;
     }
 
     // RT-19857 : Keeping menu in the Mac menu bar when there is no more stage
@@ -207,14 +219,6 @@ public class Deprecation {
 //    public static ParseTraceElement[] getParseTrace(FXMLLoader loader) {
 //        return loader.getParseTrace();
 //    }
-
-    public static void setPlatformEventHandler(EventHandler eventHandler) {
-        Application.GetApplication().setEventHandler(eventHandler);
-    }
-
-    public static EventHandler getPlatformEventHandler() {
-        return Application.GetApplication().getEventHandler();
-    }
 
     public static int getGridPaneColumnCount(GridPane gridPane) {
         return gridPane.impl_getColumnCount();
@@ -245,10 +249,6 @@ public class Deprecation {
         }
     }
 
-    public static JavaFXBuilderFactory newJavaFXBuilderFactory(ClassLoader classLoader) {
-        return new JavaFXBuilderFactory(classLoader);
-    }
-    
     // Deprecated as of FX 8 u20, and replaced by new method getTreeItemLevel:
     // using it would break ability to compile over JDK 8 GA, not an option for now.
     public static int getNodeLevel(TreeItem<?> item) {

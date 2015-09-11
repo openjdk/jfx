@@ -32,7 +32,7 @@ import javafx.scene.text.Font;
 
 import org.junit.Test;
 
-import com.sun.javafx.css.converters.CursorConverter;
+import javafx.css.converter.CursorConverter;
 
 
 public class CursorTypeTest {

@@ -25,43 +25,38 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import com.sun.javafx.scene.control.inputmap.InputMap;
+import com.sun.javafx.scene.control.inputmap.KeyBinding;
 import javafx.scene.control.ToolBar;
-import javafx.scene.input.KeyCode;
-import java.util.ArrayList;
-import java.util.List;
+
+import static javafx.scene.input.KeyCode.*;
+import static com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
 
 /**
  * A Behavior implementation for ToolBars.
- *
  */
 public class ToolBarBehavior extends BehaviorBase<ToolBar> {
+    private final InputMap<ToolBar> toolBarInputMap;
 
     public ToolBarBehavior(ToolBar toolbar) {        
-        super(toolbar, TOOLBAR_BINDINGS);
+        super(toolbar);
+
+        // create a map for toolbar-specific mappings (this reuses the default
+        // InputMap installed on the control, if it is non-null, allowing us to pick up any user-specified mappings)
+        toolBarInputMap = createInputMap();
+
+        // toolbar-specific mappings for key and mouse input
+        addDefaultMapping(toolBarInputMap,
+            new KeyMapping(new KeyBinding(F5).ctrl(), e -> {
+                if (!toolbar.getItems().isEmpty()) {
+                    toolbar.getItems().get(0).requestFocus();
+                }
+            })
+        );
     }
-    
-    /***************************************************************************
-     *                                                                         *
-     * Key event handling                                                      *
-     *                                                                         *
-     **************************************************************************/
-    
-    private static final String CTRL_F5 = "Ctrl_F5";
-    
-    protected static final List<KeyBinding> TOOLBAR_BINDINGS = new ArrayList<KeyBinding>();
-    static {
-        TOOLBAR_BINDINGS.add(new KeyBinding(KeyCode.F5, CTRL_F5).ctrl());    
-    }
-    
-    @Override protected void callAction(String name) {
-        if (CTRL_F5.equals(name)) {
-            ToolBar toolbar = getControl();
-            if (!toolbar.getItems().isEmpty()) {
-                toolbar.getItems().get(0).requestFocus();
-            }
-        } else {
-            super.callAction(name);
-        }
+
+    @Override public InputMap<ToolBar> getInputMap() {
+        return toolBarInputMap;
     }
 }
 

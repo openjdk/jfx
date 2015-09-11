@@ -44,11 +44,13 @@ import javafx.geometry.Rectangle2D;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.control.SkinBase;
 import javafx.scene.control.TextInputControl;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.ComboBoxBase;
 import javafx.scene.Scene;
+import javafx.scene.control.skin.TextAreaSkin;
 import javafx.scene.input.InputEvent;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -67,7 +69,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.HashMap;
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import static javafx.scene.input.MouseEvent.MOUSE_PRESSED;
 import static javafx.scene.input.TouchEvent.TOUCH_PRESSED;
 import static javafx.scene.layout.Region.USE_PREF_SIZE;
@@ -75,7 +76,7 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 
 
-public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
+public class FXVKSkin extends SkinBase<FXVK> {
 
     private static final int GAP = 6;
 
@@ -353,10 +354,13 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
     }
 
     private String getNodeVKType(Node node) {
-        Object typeValue = node.getProperties().get(FXVK.VK_TYPE_PROP_KEY);
+        Integer vkType = (Integer)node.getProperties().get(FXVK.VK_TYPE_PROP_KEY);
         String typeStr = null;
-        if (typeValue instanceof String) {
-            typeStr = ((String)typeValue).toLowerCase(Locale.ROOT);
+        if (vkType != null) {
+            Object typeValue = FXVK.VK_TYPE_NAMES[vkType];
+            if (typeValue instanceof String) {
+                typeStr = ((String)typeValue).toLowerCase(Locale.ROOT);
+            }
         }
         return (typeStr != null ? typeStr : "text");
     }
@@ -473,7 +477,7 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
     }
 
     public FXVKSkin(final FXVK fxvk) {
-        super(fxvk, new BehaviorBase<>(fxvk, Collections.emptyList()));
+        super(fxvk);
         this.fxvk = fxvk;
         if (fxvk == FXVK.vk) {
             primaryVK = fxvk;

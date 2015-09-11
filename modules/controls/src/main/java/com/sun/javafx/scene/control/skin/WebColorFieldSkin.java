@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,14 +27,16 @@ package com.sun.javafx.scene.control.skin;
 
 import java.util.Locale;
 
+import com.sun.javafx.scene.control.WebColorField;
 import javafx.beans.InvalidationListener;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
+import javafx.scene.control.skin.ColorPickerSkin;
 import javafx.scene.paint.Color;
 
 /**
  */
-class WebColorFieldSkin extends InputFieldSkin {
+public class WebColorFieldSkin extends InputFieldSkin {
     private InvalidationListener integerFieldValueListener;
     private boolean noChangeInValue = false;
 
@@ -91,7 +93,7 @@ class WebColorFieldSkin extends InputFieldSkin {
     protected void updateText() {
         Color color = ((WebColorField) control).getValue();
         if (color == null) color = Color.BLACK;
-        getTextField().setText(ColorPickerSkin.formatHexString(color));
+        getTextField().setText(Utils.formatHexString(color));
     }
 
     protected void updateValue() {
@@ -107,7 +109,7 @@ class WebColorFieldSkin extends InputFieldSkin {
                     // calling setText results in updateValue - so we set this flag to true
                     // so that when this is true updateValue simply returns.
                     noChangeInValue = true; 
-                    getTextField().setText(ColorPickerSkin.formatHexString(newValue));
+                    getTextField().setText(Utils.formatHexString(newValue));
                     noChangeInValue = false;
                 }
             } catch (java.lang.IllegalArgumentException ex) {

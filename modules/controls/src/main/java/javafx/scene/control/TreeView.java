@@ -26,10 +26,10 @@
 package javafx.scene.control;
 
 import com.sun.javafx.collections.NonIterableChange;
-import com.sun.javafx.css.converters.SizeConverter;
+import javafx.css.converter.SizeConverter;
+import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.behavior.TreeCellBehavior;
-import com.sun.javafx.scene.control.skin.ListViewSkin;
-import com.sun.javafx.scene.control.skin.TreeViewSkin;
+import javafx.scene.control.skin.TreeViewSkin;
 
 import javafx.application.Platform;
 import javafx.beans.DefaultProperty;
@@ -1027,7 +1027,7 @@ public class TreeView<T> extends Control {
      * @since JavaFX 8u60
      */
     public void refresh() {
-        getProperties().put(TreeViewSkin.RECREATE, Boolean.TRUE);
+        getProperties().put(Properties.RECREATE, Boolean.TRUE);
     }
 
 

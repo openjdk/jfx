@@ -32,7 +32,7 @@ import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 
 import javafx.css.PseudoClass;
-import com.sun.javafx.scene.control.skin.ButtonSkin;
+import javafx.scene.control.skin.ButtonSkin;
 
 /**
  * <p>A simple button control.  The button control can contain

@@ -30,6 +30,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.scene.control.TextField;
 
 import com.sun.javafx.scene.control.behavior.TextFieldBehavior;
+import javafx.scene.control.skin.TextFieldSkin;
 
 public class TextFieldSkinAndroid extends TextFieldSkin {
 

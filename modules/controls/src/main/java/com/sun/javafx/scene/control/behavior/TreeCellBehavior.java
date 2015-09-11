@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,8 +33,6 @@ import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.input.MouseButton;
 
-import java.util.Collections;
-
 public class TreeCellBehavior<T> extends CellBehaviorBase<TreeCell<T>> {
 
     /***************************************************************************
@@ -44,7 +42,7 @@ public class TreeCellBehavior<T> extends CellBehaviorBase<TreeCell<T>> {
      **************************************************************************/
 
     public TreeCellBehavior(final TreeCell<T> control) {
-        super(control, Collections.emptyList());
+        super(control);
     }
 
 
@@ -67,7 +65,7 @@ public class TreeCellBehavior<T> extends CellBehaviorBase<TreeCell<T>> {
 
     @Override
     protected TreeView<T> getCellContainer() {
-        return getControl().getTreeView();
+        return getNode().getTreeView();
     }
 
     @Override
@@ -79,16 +77,16 @@ public class TreeCellBehavior<T> extends CellBehaviorBase<TreeCell<T>> {
     @Override
     protected void handleClicks(MouseButton button, int clickCount, boolean isAlreadySelected) {
         // handle editing, which only occurs with the primary mouse button
-        TreeItem<T> treeItem = getControl().getTreeItem();
+        TreeItem<T> treeItem = getNode().getTreeItem();
         if (button == MouseButton.PRIMARY) {
             if (clickCount == 1 && isAlreadySelected) {
-                edit(getControl());
+                edit(getNode());
             } else if (clickCount == 1) {
                 // cancel editing
                 edit(null);
             } else if (clickCount == 2 && treeItem.isLeaf()) {
                 // attempt to edit
-                edit(getControl());
+                edit(getNode());
             } else if (clickCount % 2 == 0) {
                 // try to expand/collapse branch tree item
                 treeItem.setExpanded(! treeItem.isExpanded());
@@ -97,7 +95,7 @@ public class TreeCellBehavior<T> extends CellBehaviorBase<TreeCell<T>> {
     }
 
     @Override protected boolean handleDisclosureNode(double x, double y) {
-        TreeCell<T> treeCell = getControl();
+        TreeCell<T> treeCell = getNode();
         Node disclosureNode = treeCell.getDisclosureNode();
         if (disclosureNode != null) {
             if (disclosureNode.getBoundsInParent().contains(x, y)) {

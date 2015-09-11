@@ -50,7 +50,7 @@ import com.sun.javafx.charts.ChartLayoutAnimator;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.CssMetaData;
 
-import com.sun.javafx.css.converters.SizeConverter;
+import javafx.css.converter.SizeConverter;
 
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;

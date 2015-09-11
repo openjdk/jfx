@@ -26,8 +26,8 @@
 package javafx.scene;
 
 import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.css.Stylesheet;
-import com.sun.javafx.css.parser.CSSParser;
+import javafx.css.Stylesheet;
+import javafx.css.CssParser;
 import com.sun.javafx.tk.Toolkit;
 import static javafx.geometry.NodeOrientation.*;
 import javafx.scene.paint.Color;
@@ -68,7 +68,7 @@ public class Node_effectiveOrientation_Css_Test {
     
     @Test
     public void test_SimpleSelector_dir_pseudoClass_with_scene_effective_orientation_ltr() {
-        Stylesheet stylesheet = CSSParser.getInstance().parse(
+        Stylesheet stylesheet = new CssParser().parse(
                 ".rect:dir(rtl) { -fx-fill: #ff0000; }" +
                 ".rect:dir(ltr) { -fx-fill: #00ff00; }" +
                 ".rect { -fx-fill: #0000ff; }" 
@@ -88,7 +88,7 @@ public class Node_effectiveOrientation_Css_Test {
     
     @Test
     public void test_SimpleSelector_dir_pseudoClass_with_scene_effective_orientation_rtl() {
-        Stylesheet stylesheet = CSSParser.getInstance().parse(
+        Stylesheet stylesheet = new CssParser().parse(
                 ".rect:dir(rtl) { -fx-fill: #ff0000; }" +
                 ".rect:dir(ltr) { -fx-fill: #00ff00; }" +
                 ".rect { -fx-fill: #0000ff; }" 
@@ -109,7 +109,7 @@ public class Node_effectiveOrientation_Css_Test {
 
     @Test
     public void test_CompounSelector_dir_pseudoClass_on_parent_with_scene_effective_orientation_ltr() {
-        Stylesheet stylesheet = CSSParser.getInstance().parse(
+        Stylesheet stylesheet = new CssParser().parse(
                 ".root:dir(rtl) .rect { -fx-fill: #ff0000; }" +
                 ".root:dir(ltr) .rect { -fx-fill: #00ff00; }" +
                 ".root .rect { -fx-fill: #0000ff; }" 
@@ -129,7 +129,7 @@ public class Node_effectiveOrientation_Css_Test {
     
     @Test
     public void test_CompoundSelector_dir_pseudoClass_on_parent_with_scene_effective_orientation_rtl() {
-        Stylesheet stylesheet = CSSParser.getInstance().parse(
+        Stylesheet stylesheet = new CssParser().parse(
                 ".root:dir(rtl) .rect { -fx-fill: #ff0000; }" +
                 ".root:dir(ltr) .rect { -fx-fill: #00ff00; }" +
                 ".root .rect { -fx-fill: #0000ff; }" 
@@ -150,7 +150,7 @@ public class Node_effectiveOrientation_Css_Test {
 
     @Test
     public void test_CompounSelector_dir_pseudoClass_on_child_with_scene_effective_orientation_ltr() {
-        Stylesheet stylesheet = CSSParser.getInstance().parse(
+        Stylesheet stylesheet = new CssParser().parse(
                 ".root .rect:dir(rtl) { -fx-fill: #ff0000; }" +
                 ".root .rect:dir(ltr) { -fx-fill: #00ff00; }" +
                 ".root .rect { -fx-fill: #0000ff; }" 
@@ -170,7 +170,7 @@ public class Node_effectiveOrientation_Css_Test {
     
     @Test
     public void test_CompoundSelector_dir_pseudoClass_on_child_with_scene_effective_orientation_rtl() {
-        Stylesheet stylesheet = CSSParser.getInstance().parse(
+        Stylesheet stylesheet = new CssParser().parse(
                 ".root .rect:dir(rtl) { -fx-fill: #ff0000; }" +
                 ".root .rect:dir(ltr) { -fx-fill: #00ff00; }" +
                 ".root .rect { -fx-fill: #0000ff; }" 
@@ -191,7 +191,7 @@ public class Node_effectiveOrientation_Css_Test {
     
     @Test
     public void test_dir_pseudoClass_functions_on_scene_effective_orientation_not_node() {
-        Stylesheet stylesheet = CSSParser.getInstance().parse(
+        Stylesheet stylesheet = new CssParser().parse(
                 ".rect:dir(rtl) { -fx-fill: #ff0000; }" +
                 ".rect:dir(ltr) { -fx-fill: #00ff00; }" +
                 ".rect { -fx-fill: #0000ff; }" 

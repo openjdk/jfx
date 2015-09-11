@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,8 +30,6 @@ import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MultipleSelectionModel;
 
-import java.util.Collections;
-
 public class ListCellBehavior<T> extends CellBehaviorBase<ListCell<T>> {
 
     /***************************************************************************
@@ -41,7 +39,7 @@ public class ListCellBehavior<T> extends CellBehaviorBase<ListCell<T>> {
      **************************************************************************/
 
     public ListCellBehavior(ListCell<T> control) {
-        super(control, Collections.emptyList());
+        super(control);
     }
 
 
@@ -61,7 +59,7 @@ public class ListCellBehavior<T> extends CellBehaviorBase<ListCell<T>> {
     }
 
     @Override protected ListView<T> getCellContainer() {
-        return getControl().getListView();
+        return getNode().getListView();
     }
 
     @Override protected void edit(ListCell<T> cell) {

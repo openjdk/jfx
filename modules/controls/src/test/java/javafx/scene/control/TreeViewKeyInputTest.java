@@ -26,7 +26,6 @@
 package javafx.scene.control;
 
 import com.sun.javafx.scene.control.behavior.TreeCellBehavior;
-import com.sun.javafx.scene.control.behavior.TreeCellBehavior;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;

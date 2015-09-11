@@ -25,7 +25,6 @@
 
 package hello;
 
-import com.sun.javafx.css.StyleManager;
 import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
@@ -34,10 +33,10 @@ import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
-public class HelloHighContrast extends Application {
+import com.sun.javafx.application.PlatformImpl;
+import com.sun.javafx.css.StyleManager;
 
-    private static final String MODENA_PATH = "com/sun/javafx/scene/control/skin/modena/";
-    private String lastStyleUsed = null;
+public class HelloHighContrast extends Application {
 
     public static void main(String[] args) {
         Application.launch(args);
@@ -46,18 +45,13 @@ public class HelloHighContrast extends Application {
     @Override public void start(Stage stage) {
         final ToggleGroup group = new ToggleGroup();
         group.selectedToggleProperty().addListener(ov -> {
-            // remove old style
-            if (lastStyleUsed != null) {
-                StyleManager.getInstance().removeUserAgentStylesheet(MODENA_PATH + lastStyleUsed);
-                lastStyleUsed = null;
-            }
-
-            // install new style
             String userData = (String) (group.getSelectedToggle() != null ? group.getSelectedToggle().getUserData() : null);
             if (userData != null) {
-                lastStyleUsed = userData;
-                StyleManager.getInstance().addUserAgentStylesheet(MODENA_PATH + userData);
+                System.setProperty("com.sun.javafx.highContrastTheme", userData);
+            } else {
+                System.clearProperty("com.sun.javafx.highContrastTheme");
             }
+            PlatformImpl.setAccessibilityTheme(null); // Reads the system property
         });
         
         ToggleButton disableHighContrast = new ToggleButton("Disable High Contrast");
@@ -68,17 +62,17 @@ public class HelloHighContrast extends Application {
 
         ToggleButton whiteOnBlackBtn = new ToggleButton("White on black");
         whiteOnBlackBtn.setMaxWidth(Double.MAX_VALUE);
-        whiteOnBlackBtn.setUserData("whiteOnBlack.css");
+        whiteOnBlackBtn.setUserData("WHITEONBLACK");
         whiteOnBlackBtn.setToggleGroup(group);
 
         ToggleButton blackOnWhiteBtn = new ToggleButton("Black on white");
         blackOnWhiteBtn.setMaxWidth(Double.MAX_VALUE);
-        blackOnWhiteBtn.setUserData("blackOnWhite.css");
+        blackOnWhiteBtn.setUserData("BLACKONWHITE");
         blackOnWhiteBtn.setToggleGroup(group);
 
         ToggleButton yellowOnBlackBtn = new ToggleButton("Yellow on black");
         yellowOnBlackBtn.setMaxWidth(Double.MAX_VALUE);
-        yellowOnBlackBtn.setUserData("yellowOnBlack.css");
+        yellowOnBlackBtn.setUserData("YELLOWONBLACK");
         yellowOnBlackBtn.setToggleGroup(group);
 
         VBox vbox = new VBox(10, disableHighContrast, whiteOnBlackBtn, blackOnWhiteBtn, yellowOnBlackBtn);

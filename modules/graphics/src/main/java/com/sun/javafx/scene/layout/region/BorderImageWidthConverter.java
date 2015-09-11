@@ -28,16 +28,16 @@ package com.sun.javafx.scene.layout.region;
 import javafx.scene.layout.BorderWidths;
 import javafx.scene.text.Font;
 import javafx.css.ParsedValue;
-import com.sun.javafx.css.Size;
-import com.sun.javafx.css.SizeUnits;
-import com.sun.javafx.css.StyleConverterImpl;
+import javafx.css.Size;
+import javafx.css.SizeUnits;
+import javafx.css.StyleConverter;
 
 /**
  * User: richardbair
  * Date: 8/10/12
  * Time: 8:07 PM
  */
-public class BorderImageWidthConverter extends StyleConverterImpl<ParsedValue[], BorderWidths> {
+public class BorderImageWidthConverter extends StyleConverter<ParsedValue[], BorderWidths> {
     private static final BorderImageWidthConverter CONVERTER_INSTANCE = new BorderImageWidthConverter();
 
     public static BorderImageWidthConverter getInstance() {

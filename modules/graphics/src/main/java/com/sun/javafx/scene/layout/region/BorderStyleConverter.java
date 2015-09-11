@@ -35,12 +35,12 @@ import javafx.scene.shape.StrokeType;
 import javafx.scene.text.Font;
 import javafx.css.ParsedValue;
 import com.sun.javafx.css.ParsedValueImpl;
-import com.sun.javafx.css.Size;
-import com.sun.javafx.css.StyleConverterImpl;
+import javafx.css.Size;
+import javafx.css.StyleConverter;
 
 /**
  */
-public class BorderStyleConverter  extends StyleConverterImpl<ParsedValue[], BorderStrokeStyle> {
+public class BorderStyleConverter  extends StyleConverter<ParsedValue[], BorderStrokeStyle> {
 //    private static final ParsedValue<ParsedValue<?,Size>[],Double[]> DASHED =
 //            new ParsedValue<ParsedValue<?,Size>[],Double[]>(
 //                    new ParsedValue[] {

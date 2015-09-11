@@ -28,14 +28,14 @@ package com.sun.javafx.scene.layout.region;
 import javafx.scene.layout.BorderStrokeStyle;
 import javafx.scene.text.Font;
 import javafx.css.ParsedValue;
-import com.sun.javafx.css.StyleConverterImpl;
+import javafx.css.StyleConverter;
 
 /**
  * User: richardbair
  * Date: 8/10/12
  * Time: 7:31 AM
  */
-public final class BorderStrokeStyleSequenceConverter extends StyleConverterImpl<ParsedValue<ParsedValue[],BorderStrokeStyle>[],BorderStrokeStyle[]> {
+public final class BorderStrokeStyleSequenceConverter extends StyleConverter<ParsedValue<ParsedValue[],BorderStrokeStyle>[],BorderStrokeStyle[]> {
     /**
      * Convert an array of border style values to an array of BorderStyle which
      * contains one BorderStyle element per border (top, right, bottom, left).

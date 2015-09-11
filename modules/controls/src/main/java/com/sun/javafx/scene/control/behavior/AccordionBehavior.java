@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,28 +30,60 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import javafx.geometry.NodeOrientation;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.FocusModel;
 import javafx.scene.control.TitledPane;
-import javafx.scene.input.KeyCode;
+import com.sun.javafx.scene.control.inputmap.InputMap;
+import com.sun.javafx.scene.control.inputmap.KeyBinding;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
-import java.util.ArrayList;
-import java.util.List;
 
+import static javafx.scene.input.KeyCode.*;
 
 public class AccordionBehavior extends BehaviorBase<Accordion> {
 
+    private final InputMap<Accordion> inputMap;
     private AccordionFocusModel focusModel;
     
     public AccordionBehavior(Accordion accordion) {
-        super(accordion, ACCORDION_BINDINGS);
+        super(accordion);
         focusModel = new AccordionFocusModel(accordion);
+
+        // create a map for accordion-specific mappings (this reuses the default
+        // InputMap installed on the control, if it is non-null, allowing us to pick up any user-specified mappings)
+        inputMap = createInputMap();
+
+        // accordion-specific mappings for key and mouse input
+        addDefaultMapping(inputMap,
+                new InputMap.KeyMapping(UP, e -> pageUp(false)),
+                new InputMap.KeyMapping(DOWN, e -> pageDown(false)),
+                new InputMap.KeyMapping(LEFT, e -> {
+                    if (isRTL(accordion)) pageDown(false);
+                    else pageUp(false);
+                }),
+                new InputMap.KeyMapping(RIGHT, e -> {
+                    if (isRTL(accordion)) pageUp(false);
+                    else pageDown(false);
+                }),
+                new InputMap.KeyMapping(HOME, this::home),
+                new InputMap.KeyMapping(END, this::end),
+                new InputMap.KeyMapping(PAGE_UP, e -> pageUp(true)),
+                new InputMap.KeyMapping(PAGE_DOWN, e -> pageDown(true)),
+                new InputMap.KeyMapping(new KeyBinding(PAGE_UP).ctrl(), this::moveBackward),
+                new InputMap.KeyMapping(new KeyBinding(PAGE_DOWN).ctrl(), this::moveForward),
+                new InputMap.KeyMapping(new KeyBinding(TAB).ctrl(), this::moveForward),
+                new InputMap.KeyMapping(new KeyBinding(TAB).ctrl().shift(), this::moveBackward),
+                new InputMap.MouseMapping(MouseEvent.MOUSE_PRESSED, this::mousePressed)
+        );
     }
 
     @Override public void dispose() {
         focusModel.dispose();
         super.dispose();
+    }
+
+    @Override public InputMap<Accordion> getInputMap() {
+        return inputMap;
     }
 
     /***************************************************************************
@@ -60,87 +92,133 @@ public class AccordionBehavior extends BehaviorBase<Accordion> {
      *                                                                         *
      **************************************************************************/
 
-    private static final String HOME = "Home";
-    private static final String END = "End";
-    private static final String PAGE_UP = "Page_Up";
-    private static final String PAGE_DOWN = "Page_Down";
-    private static final String CTRL_PAGE_UP = "Ctrl_Page_Up";
-    private static final String CTRL_PAGE_DOWN = "Ctrl_Page_Down";
-    private static final String CTRL_TAB = "Ctrl_Tab";
-    private static final String CTRL_SHIFT_TAB = "Ctrl_Shift_Tab";
+//    private static final String HOME = "Home";
+//    private static final String END = "End";
+//    private static final String PAGE_UP = "Page_Up";
+//    private static final String PAGE_DOWN = "Page_Down";
+//    private static final String CTRL_PAGE_UP = "Ctrl_Page_Up";
+//    private static final String CTRL_PAGE_DOWN = "Ctrl_Page_Down";
+//    private static final String CTRL_TAB = "Ctrl_Tab";
+//    private static final String CTRL_SHIFT_TAB = "Ctrl_Shift_Tab";
+//
+//    protected static final List<KeyBinding> ACCORDION_BINDINGS = new ArrayList<KeyBinding>();
+//    static {
+//        ACCORDION_BINDINGS.add(new KeyBinding(KeyCode.UP, "TraverseUp"));
+//        ACCORDION_BINDINGS.add(new KeyBinding(KeyCode.DOWN, "TraverseDown"));
+//        ACCORDION_BINDINGS.add(new KeyBinding(KeyCode.LEFT, "TraverseLeft"));
+//        ACCORDION_BINDINGS.add(new KeyBinding(KeyCode.RIGHT, "TraverseRight"));
+//        ACCORDION_BINDINGS.add(new KeyBinding(KeyCode.HOME, HOME));
+//        ACCORDION_BINDINGS.add(new KeyBinding(KeyCode.END, END));
+//        ACCORDION_BINDINGS.add(new KeyBinding(KeyCode.PAGE_UP, PAGE_UP));
+//        ACCORDION_BINDINGS.add(new KeyBinding(KeyCode.PAGE_DOWN, PAGE_DOWN));
+//        ACCORDION_BINDINGS.add(new KeyBinding(KeyCode.PAGE_UP, CTRL_PAGE_UP).ctrl());
+//        ACCORDION_BINDINGS.add(new KeyBinding(KeyCode.PAGE_DOWN, CTRL_PAGE_DOWN).ctrl());
+//        ACCORDION_BINDINGS.add(new KeyBinding(KeyCode.TAB, CTRL_TAB).ctrl());
+//        ACCORDION_BINDINGS.add(new KeyBinding(KeyCode.TAB, CTRL_SHIFT_TAB).shift().ctrl());
+//    }
 
-    protected static final List<KeyBinding> ACCORDION_BINDINGS = new ArrayList<KeyBinding>();
-    static {
-        ACCORDION_BINDINGS.add(new KeyBinding(KeyCode.UP, "TraverseUp"));
-        ACCORDION_BINDINGS.add(new KeyBinding(KeyCode.DOWN, "TraverseDown"));
-        ACCORDION_BINDINGS.add(new KeyBinding(KeyCode.LEFT, "TraverseLeft"));
-        ACCORDION_BINDINGS.add(new KeyBinding(KeyCode.RIGHT, "TraverseRight"));
-        ACCORDION_BINDINGS.add(new KeyBinding(KeyCode.HOME, HOME));
-        ACCORDION_BINDINGS.add(new KeyBinding(KeyCode.END, END));
-        ACCORDION_BINDINGS.add(new KeyBinding(KeyCode.PAGE_UP, PAGE_UP));
-        ACCORDION_BINDINGS.add(new KeyBinding(KeyCode.PAGE_DOWN, PAGE_DOWN));
-        ACCORDION_BINDINGS.add(new KeyBinding(KeyCode.PAGE_UP, CTRL_PAGE_UP).ctrl());
-        ACCORDION_BINDINGS.add(new KeyBinding(KeyCode.PAGE_DOWN, CTRL_PAGE_DOWN).ctrl());
-        ACCORDION_BINDINGS.add(new KeyBinding(KeyCode.TAB, CTRL_TAB).ctrl());
-        ACCORDION_BINDINGS.add(new KeyBinding(KeyCode.TAB, CTRL_SHIFT_TAB).shift().ctrl());
+//    @Override protected void callAction(String name) {
+//        Accordion accordion = getNode();
+//        boolean rtl = (accordion.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT);
+//
+//        if (("TraverseLeft".equals(name) && !rtl) ||
+//            ("TraverseRight".equals(name) && rtl) ||
+//            "TraverseUp".equals(name) ||
+//                PAGE_UP.equals(name)) {
+//
+//            if (focusModel.getFocusedIndex() != -1 && accordion.getPanes().get(focusModel.getFocusedIndex()).isFocused()) {
+//                focusModel.focusPrevious();
+//                int next = focusModel.getFocusedIndex();
+//                accordion.getPanes().get(next).requestFocus();
+//                if (PAGE_UP.equals(name)) {
+//                    accordion.getPanes().get(next).setExpanded(true);
+//                }
+//            }
+//        } else if (("TraverseRight".equals(name) && !rtl) ||
+//                   ("TraverseLeft".equals(name) && rtl) ||
+//                   "TraverseDown".equals(name) ||
+//                PAGE_DOWN.equals(name)) {
+//
+//            if (focusModel.getFocusedIndex() != -1 && accordion.getPanes().get(focusModel.getFocusedIndex()).isFocused()) {
+//                focusModel.focusNext();
+//                int next = focusModel.getFocusedIndex();
+//                accordion.getPanes().get(next).requestFocus();
+//                if (PAGE_DOWN.equals(name)) {
+//                    accordion.getPanes().get(next).setExpanded(true);
+//                }
+//            }
+//        } else if (CTRL_TAB.equals(name) || CTRL_PAGE_DOWN.equals(name)) {
+////            moveForward();
+//        } else if (CTRL_SHIFT_TAB.equals(name) || CTRL_PAGE_UP.equals(name)) {
+////            moveBackward();
+//        } else if (HOME.equals(name)) {
+////            home();
+//        } else if (END.equals(name)) {
+////            end();
+//        } else {
+//            super.callAction(name);
+//        }
+//    }
+
+    private void pageUp(boolean doExpand) {
+        Accordion accordion = getNode();
+        if (focusModel.getFocusedIndex() != -1 && accordion.getPanes().get(focusModel.getFocusedIndex()).isFocused()) {
+            focusModel.focusPrevious();
+            int next = focusModel.getFocusedIndex();
+            accordion.getPanes().get(next).requestFocus();
+            if (doExpand) {
+                accordion.getPanes().get(next).setExpanded(true);
+            }
+        }
     }
 
-    @Override protected void callAction(String name) {   
-        Accordion accordion = getControl();
-        boolean rtl = (accordion.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT);
-
-        if (("TraverseLeft".equals(name) && !rtl) ||
-            ("TraverseRight".equals(name) && rtl) ||
-            "TraverseUp".equals(name) || PAGE_UP.equals(name)) {
-
-            if (focusModel.getFocusedIndex() != -1 && accordion.getPanes().get(focusModel.getFocusedIndex()).isFocused()) {
-                focusModel.focusPrevious();
-                int next = focusModel.getFocusedIndex();
-                accordion.getPanes().get(next).requestFocus();
-                if (PAGE_UP.equals(name)) {
-                    accordion.getPanes().get(next).setExpanded(true);
-                }
-            }
-        } else if (("TraverseRight".equals(name) && !rtl) || 
-                   ("TraverseLeft".equals(name) && rtl) ||
-                   "TraverseDown".equals(name) || PAGE_DOWN.equals(name)) {
-
-            if (focusModel.getFocusedIndex() != -1 && accordion.getPanes().get(focusModel.getFocusedIndex()).isFocused()) {
-                focusModel.focusNext();
-                int next = focusModel.getFocusedIndex();
-                accordion.getPanes().get(next).requestFocus();
-                if (PAGE_DOWN.equals(name)) {
-                    accordion.getPanes().get(next).setExpanded(true);
-                }
-            }            
-        } else if (CTRL_TAB.equals(name) || CTRL_PAGE_DOWN.equals(name)) {
+    private void pageDown(boolean doExpand) {
+        Accordion accordion = getNode();
+        if (focusModel.getFocusedIndex() != -1 && accordion.getPanes().get(focusModel.getFocusedIndex()).isFocused()) {
             focusModel.focusNext();
-            if (focusModel.getFocusedIndex() != -1) {
-                int next = focusModel.getFocusedIndex();
-                accordion.getPanes().get(next).requestFocus();
+            int next = focusModel.getFocusedIndex();
+            accordion.getPanes().get(next).requestFocus();
+            if (doExpand) {
                 accordion.getPanes().get(next).setExpanded(true);
             }
-        } else if (CTRL_SHIFT_TAB.equals(name) || CTRL_PAGE_UP.equals(name)) {
-            focusModel.focusPrevious();
-            if (focusModel.getFocusedIndex() != -1) {
-                int next = focusModel.getFocusedIndex();            
-                accordion.getPanes().get(next).requestFocus();
-                accordion.getPanes().get(next).setExpanded(true);
-            }
-        } else if (HOME.equals(name)) {
-            if (focusModel.getFocusedIndex() != -1 && accordion.getPanes().get(focusModel.getFocusedIndex()).isFocused()) {
-                TitledPane tp = accordion.getPanes().get(0);
-                tp.requestFocus();
-                tp.setExpanded(!tp.isExpanded());
-            }
-        } else if (END.equals(name)) {
-            if (focusModel.getFocusedIndex() != -1 && accordion.getPanes().get(focusModel.getFocusedIndex()).isFocused()) {
-                TitledPane tp = accordion.getPanes().get(accordion.getPanes().size() - 1);
-                tp.requestFocus();
-                tp.setExpanded(!tp.isExpanded());
-            }
-        } else {
-            super.callAction(name);
+        }
+    }
+
+    private void moveBackward(KeyEvent e) {
+        Accordion accordion = getNode();
+        focusModel.focusPrevious();
+        if (focusModel.getFocusedIndex() != -1) {
+            int next = focusModel.getFocusedIndex();
+            accordion.getPanes().get(next).requestFocus();
+            accordion.getPanes().get(next).setExpanded(true);
+        }
+    }
+
+    private void moveForward(KeyEvent e) {
+        Accordion accordion = getNode();
+        focusModel.focusNext();
+        if (focusModel.getFocusedIndex() != -1) {
+            int next = focusModel.getFocusedIndex();
+            accordion.getPanes().get(next).requestFocus();
+            accordion.getPanes().get(next).setExpanded(true);
+        }
+    }
+
+    private void home(KeyEvent e) {
+        Accordion accordion = getNode();
+        if (focusModel.getFocusedIndex() != -1 && accordion.getPanes().get(focusModel.getFocusedIndex()).isFocused()) {
+            TitledPane tp = accordion.getPanes().get(0);
+            tp.requestFocus();
+            tp.setExpanded(!tp.isExpanded());
+        }
+    }
+
+    private void end(KeyEvent e) {
+        Accordion accordion = getNode();
+        if (focusModel.getFocusedIndex() != -1 && accordion.getPanes().get(focusModel.getFocusedIndex()).isFocused()) {
+            TitledPane tp = accordion.getPanes().get(accordion.getPanes().size() - 1);
+            tp.requestFocus();
+            tp.setExpanded(!tp.isExpanded());
         }
     }
 
@@ -152,7 +230,7 @@ public class AccordionBehavior extends BehaviorBase<Accordion> {
      * none present
      */
     public void mousePressed(MouseEvent e) {
-        Accordion accordion = getControl();
+        Accordion accordion = getNode();
         if (accordion.getPanes().size() > 0) {
             TitledPane lastTitledPane = accordion.getPanes().get(accordion.getPanes().size() - 1);
             lastTitledPane.requestFocus();

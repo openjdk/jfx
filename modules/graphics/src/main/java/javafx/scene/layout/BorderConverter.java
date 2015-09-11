@@ -25,7 +25,6 @@
 
 package javafx.scene.layout;
 
-import com.sun.javafx.css.StyleConverterImpl;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.scene.layout.region.BorderImageSlices;
 import com.sun.javafx.scene.layout.region.Margins;
@@ -34,6 +33,7 @@ import java.util.Map;
 import javafx.css.CssMetaData;
 import javafx.css.ParsedValue;
 import javafx.css.Styleable;
+import javafx.css.StyleConverter;
 import javafx.geometry.Insets;
 import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
@@ -41,7 +41,7 @@ import javafx.scene.paint.Paint;
 
 /**
  */
-class BorderConverter extends StyleConverterImpl<ParsedValue[], Border> {
+class BorderConverter extends StyleConverter<ParsedValue[], Border> {
 
     private static final BorderConverter BORDER_IMAGE_CONVERTER =
             new BorderConverter();

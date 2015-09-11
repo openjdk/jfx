@@ -185,7 +185,7 @@ public class SocialPage extends Page {
     private static class TwitterList extends ListView<Tweet> implements Callback<ListView<Tweet>, ListCell<Tweet>>{
         public TwitterList(){
             getStyleClass().setAll("twitter-list-view");
-            skinClassNameProperty().set("com.sun.javafx.scene.control.skin.ListViewSkin");
+            skinClassNameProperty().set("javafx.scene.control.skin.ListViewSkin");
             setCellFactory(this);
             setMinHeight(100);
         }

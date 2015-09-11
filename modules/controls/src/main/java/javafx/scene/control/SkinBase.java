@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +25,17 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.scene.control.LambdaMultiplePropertyChangeListenerHandler;
+import com.sun.javafx.scene.control.behavior.BehaviorBase;
+import javafx.application.ConditionalFeature;
+import javafx.application.Platform;
+import javafx.beans.value.ObservableValue;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Consumer;
+
 import javafx.collections.ObservableList;
 import javafx.css.Styleable;
 import javafx.event.EventHandler;
@@ -50,7 +57,7 @@ import javafx.scene.layout.Region;
  * @since JavaFX 8.0
  */
 public abstract class SkinBase<C extends Control> implements Skin<C> {
-    
+
     /***************************************************************************
      *                                                                         *
      * Private fields                                                          *
@@ -69,8 +76,15 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * A local field that directly refers to the children list inside the Control.
      */
     private ObservableList<Node> children;
-    
-    
+
+    /**
+     * This is part of the workaround introduced during delomboking. We probably will
+     * want to adjust the way listeners are added rather than continuing to use this
+     * map (although it doesn't really do much harm).
+     */
+    private LambdaMultiplePropertyChangeListenerHandler lambdaChangeListenerHandler;
+
+
     
     /***************************************************************************
      *                                                                         *
@@ -139,6 +153,11 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
     @Override public void dispose() { 
 //        control.removeEventHandler(ContextMenuEvent.CONTEXT_MENU_REQUESTED, contextMenuHandler);
 
+        // unhook listeners
+        if (lambdaChangeListenerHandler != null) {
+            lambdaChangeListenerHandler.dispose();
+        }
+
         this.control = null;
     }
     
@@ -181,7 +200,20 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
             control.removeEventHandler(MouseEvent.ANY, mouseEventConsumer);
         }
     }
-    
+
+
+    /**
+     * Subclasses can invoke this method to register that we want to listen to
+     * property change events for the given property.
+     */
+    protected final void registerChangeListener(ObservableValue<?> property, Consumer<ObservableValue<?>> consumer) {
+        if (lambdaChangeListenerHandler == null) {
+            lambdaChangeListenerHandler = new LambdaMultiplePropertyChangeListenerHandler();
+        }
+        lambdaChangeListenerHandler.registerChangeListener(property, consumer);
+    }
+
+
     
     
     /***************************************************************************
@@ -721,7 +753,6 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      **************************************************************************/
 
     private static class StyleableProperties {
-
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
 
         static {
@@ -730,9 +761,10 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
     }
 
     /** 
-     * @return The CssMetaData associated with this class, which may include the
+     * Returns the CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
-     */    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
+     */
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return SkinBase.StyleableProperties.STYLEABLES;
     }
 
@@ -746,7 +778,36 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
         return getClassCssMetaData();
     }
     
-    /** @see Node#pseudoClassStateChanged */
+    /**
+     * Used to specify that a pseudo-class of this Node has changed. If the
+     * pseudo-class is used in a CSS selector that matches this Node, CSS will
+     * be reapplied. Typically, this method is called from the {@code invalidated}
+     * method of a property that is used as a pseudo-class. For example:
+     * <code><pre>
+     *
+     *     private static final PseudoClass MY_PSEUDO_CLASS_STATE = PseudoClass.getPseudoClass("my-state");
+     *
+     *     BooleanProperty myPseudoClassState = new BooleanPropertyBase(false) {
+     *
+     *           {@literal @}Override public void invalidated() {
+     *                pseudoClassStateChanged(MY_PSEUDO_CLASS_STATE, get());
+     *           }
+     *
+     *           {@literal @}Override public Object getBean() {
+     *               return MyControl.this;
+     *           }
+     *
+     *           {@literal @}Override public String getName() {
+     *               return "myPseudoClassState";
+     *           }
+     *       };
+     * </pre><code>
+     *
+     * @see Node#pseudoClassStateChanged
+     * @param pseudoClass the pseudo-class that has changed state
+     * @param active whether or not the state is active
+     * @since JavaFX 8.0
+     */
     public final void pseudoClassStateChanged(PseudoClass pseudoClass, boolean active) {
         Control ctl = getSkinnable();
         if (ctl != null) {
@@ -761,12 +822,47 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      *                                                                         *
      **************************************************************************/
 
-    /** @see Node#queryAccessibleAttribute */
+    /**
+     * This method is called by the assistive technology to request
+     * the value for an attribute.
+     * <p>
+     * This method is commonly overridden by subclasses to implement
+     * attributes that are required for a specific role.<br>
+     * If a particular attribute is not handled, the super class implementation
+     * must be called.
+     * </p>
+     *
+     * @param attribute the requested attribute
+     * @param parameters optional list of parameters
+     * @return the value for the requested attribute
+     *
+     * @see AccessibleAttribute
+     * @see Node#queryAccessibleAttribute
+     *
+     * @since JavaFX 8u40
+     */
     protected Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         return null;
     }
 
-    /** @see Node#executeAccessibleAction */
+    /**
+     * This method is called by the assistive technology to request the action
+     * indicated by the argument should be executed.
+     * <p>
+     * This method is commonly overridden by subclasses to implement
+     * action that are required for a specific role.<br>
+     * If a particular action is not handled, the super class implementation
+     * must be called.
+     * </p>
+     *
+     * @param action the action to execute
+     * @param parameters optional list of parameters
+     *
+     * @see AccessibleAction
+     * @see Node#executeAccessibleAction
+     *
+     * @since JavaFX 8u40
+     */
     protected void executeAccessibleAction(AccessibleAction action, Object... parameters) {
     }
 

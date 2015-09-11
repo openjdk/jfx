@@ -39,13 +39,9 @@ import org.w3c.dom.html.HTMLElement;
 
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.css.StyleableProperty;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -72,7 +68,7 @@ import javafx.scene.web.HTMLEditor;
 import javafx.scene.web.WebView;
 import javafx.util.Callback;
 
-import com.sun.javafx.scene.control.skin.ColorPickerSkin;
+import javafx.scene.control.skin.ColorPickerSkin;
 import com.sun.javafx.scene.control.skin.FXVK;
 import com.sun.javafx.scene.web.behavior.HTMLEditorBehavior;
 import com.sun.webkit.WebPage;
@@ -87,7 +83,6 @@ import java.util.Map;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
-import com.sun.javafx.scene.control.skin.BehaviorSkinBase;
 import javafx.collections.ListChangeListener;
 
 import static javafx.geometry.NodeOrientation.*;
@@ -96,7 +91,7 @@ import javafx.print.PrinterJob;
 /**
  * HTML editor skin.
  */
-public class HTMLEditorSkin extends BehaviorSkinBase<HTMLEditor, HTMLEditorBehavior> {
+public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
     private GridPane gridPane;
 
     private ToolBar toolbar1;
@@ -251,7 +246,11 @@ public class HTMLEditorSkin extends BehaviorSkinBase<HTMLEditor, HTMLEditorBehav
         }
     };
     public HTMLEditorSkin(HTMLEditor htmlEditor) {
-        super(htmlEditor, new HTMLEditorBehavior(htmlEditor));
+        super(htmlEditor);
+
+        // install default input map for the HTMLEditor control
+        HTMLEditorBehavior behavior = new HTMLEditorBehavior(htmlEditor);
+//        htmlEditor.setInputMap(behavior.getInputMap());
 
         getChildren().clear();
 
@@ -718,10 +717,11 @@ public class HTMLEditorSkin extends BehaviorSkinBase<HTMLEditor, HTMLEditorBehav
         fgColorButton.setFocusTraversable(false);
         toolbar1.getItems().add(fgColorButton);
 
-        fgColorButton.applyCss();
-        ColorPickerSkin fgColorPickerSkin = (ColorPickerSkin) fgColorButton.getSkin();
-        String fgIcon = AccessController.doPrivileged((PrivilegedAction<String>) () -> HTMLEditorSkin.class.getResource(resources.getString("foregroundColorIcon")).toString());
-        ((StyleableProperty)fgColorPickerSkin.imageUrlProperty()).applyStyle(null,fgIcon);
+        // JDK-8115747: Icon URLs are now specified in CSS.
+        // fgColorButton.applyCss();
+        // ColorPickerSkin fgColorPickerSkin = (ColorPickerSkin) fgColorButton.getSkin();
+        // String fgIcon = AccessController.doPrivileged((PrivilegedAction<String>) () -> HTMLEditorSkin.class.getResource(resources.getString("foregroundColorIcon")).toString());
+        // ((StyleableProperty)fgColorPickerSkin.imageUrlProperty()).applyStyle(null,fgIcon);
 
         fgColorButton.setValue(DEFAULT_FG_COLOR);
         fgColorButton.setTooltip(new Tooltip(resources.getString("foregroundColor")));
@@ -738,10 +738,11 @@ public class HTMLEditorSkin extends BehaviorSkinBase<HTMLEditor, HTMLEditorBehav
         bgColorButton.setFocusTraversable(false);
         toolbar1.getItems().add(bgColorButton);
 
-        bgColorButton.applyCss();
-        ColorPickerSkin  bgColorPickerSkin = (ColorPickerSkin) bgColorButton.getSkin();
-        String bgIcon = AccessController.doPrivileged((PrivilegedAction<String>) () -> HTMLEditorSkin.class.getResource(resources.getString("backgroundColorIcon")).toString());
-        ((StyleableProperty)bgColorPickerSkin.imageUrlProperty()).applyStyle(null,bgIcon);
+        // JDK-8115747: Icon URLs are now specified in CSS.
+        // bgColorButton.applyCss();
+        // ColorPickerSkin  bgColorPickerSkin = (ColorPickerSkin) bgColorButton.getSkin();
+        // String bgIcon = AccessController.doPrivileged((PrivilegedAction<String>) () -> HTMLEditorSkin.class.getResource(resources.getString("backgroundColorIcon")).toString());
+        // ((StyleableProperty)bgColorPickerSkin.imageUrlProperty()).applyStyle(null,bgIcon);
 
         bgColorButton.setValue(DEFAULT_BG_COLOR);
         bgColorButton.setTooltip(new Tooltip(resources.getString("backgroundColor")));

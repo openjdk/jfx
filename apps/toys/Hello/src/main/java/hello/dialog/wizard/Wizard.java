@@ -29,7 +29,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Stack;
 
-import com.sun.javafx.scene.control.skin.AccordionSkin;
+import javafx.scene.control.skin.AccordionSkin;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;

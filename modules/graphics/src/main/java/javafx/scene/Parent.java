@@ -44,7 +44,7 @@ import com.sun.javafx.util.Utils;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.collections.VetoableListDecorator;
 import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
-import com.sun.javafx.css.Selector;
+import javafx.css.Selector;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.PickRay;
@@ -262,7 +262,7 @@ public abstract class Parent extends Node {
                     // update the parent and scene for each new node
                     for (int i = from; i < to; ++i) {
                         Node node = children.get(i);
-                        if (node.isManaged()) {
+                        if (node.isManaged() || (node instanceof Parent && ((Parent) node).layoutFlag != LayoutFlags.CLEAN)) {
                             relayout = true;
                         }
                         node.setParent(Parent.this);

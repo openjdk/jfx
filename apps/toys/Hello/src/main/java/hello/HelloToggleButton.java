@@ -33,6 +33,7 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 /**
@@ -45,7 +46,7 @@ public class HelloToggleButton extends Application {
     }
 
     @Override public void start(Stage stage) {
-        Scene scene = newScene();
+//        Scene scene = newScene();
         
         final ToggleGroup group = new ToggleGroup();
         group.selectedToggleProperty().addListener(ov -> System.out.println("UserData for selected Toggle: " +
@@ -61,27 +62,41 @@ public class HelloToggleButton extends Application {
         button2.setUserData("Button 2");
         button2.setLayoutY(40);
         button2.setToggleGroup(group);
-        
 
-        ObservableList<Node> content = ((Group)scene.getRoot()).getChildren();
-        content.add(button1);
-        content.add(button2);
+        ToggleButton button3 = new ToggleButton("No, *I* am your father");
+//        button1.setUserData("Button 1");
+        button3.setToggleGroup(group);
+//        button1.setSelected(true);
+
+        ToggleButton button4 = new ToggleButton("Nooooooooo!");
+//        button2.setUserData("Button 2");
+//        button2.setLayoutY(40);
+        button4.setToggleGroup(group);
+
+        VBox vbox = new VBox(10, button1, button2, button3, button4);
+
+        Scene scene = new Scene(vbox);
+//        ObservableList<Node> content = ((Group)scene.getRoot()).getChildren();
+//        content.add(button1);
+//        content.add(button2);
+//        content.add(button3);
+//        content.add(button4);
 
         stage.setScene(scene);
         stage.show();
     }
 
-    private static Stage newStage() {
-        Stage stage = new Stage();
-        stage.setTitle("Hello ToggleButton");
-        stage.setWidth(600);
-        stage.setHeight(450);
-        return stage;
-    }
+//    private static Stage newStage() {
+//        Stage stage = new Stage();
+//        stage.setTitle("Hello ToggleButton");
+//        stage.setWidth(600);
+//        stage.setHeight(450);
+//        return stage;
+//    }
     
-    private static Scene newScene() {
-        Scene scene = new Scene(new Group());
-        scene.setFill(GHOSTWHITE);
-        return scene;
-    }
+//    private static Scene newScene() {
+//        Scene scene = new Scene(new Group());
+//        scene.setFill(GHOSTWHITE);
+//        return scene;
+//    }
 }

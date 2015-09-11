@@ -29,15 +29,13 @@ import javafx.css.CssMetaData;
 import static com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
 
 import com.sun.javafx.pgstub.StubToolkit;
-import com.sun.javafx.scene.control.skin.ToolBarSkin;
+import javafx.scene.control.skin.ToolBarSkin;
 import com.sun.javafx.tk.Toolkit;
 import java.util.ArrayList;
 import java.util.List;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.css.StyleableProperty;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
 import javafx.scene.shape.Rectangle;

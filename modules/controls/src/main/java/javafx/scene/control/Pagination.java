@@ -42,8 +42,8 @@ import javafx.css.StyleableProperty;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.util.Callback;
-import com.sun.javafx.css.converters.SizeConverter;
-import com.sun.javafx.scene.control.skin.PaginationSkin;
+import javafx.css.converter.SizeConverter;
+import javafx.scene.control.skin.PaginationSkin;
 
 /**
  * <p>

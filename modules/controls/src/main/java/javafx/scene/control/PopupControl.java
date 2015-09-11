@@ -39,19 +39,19 @@ import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableSet;
+import javafx.css.CssParser;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.layout.Pane;
 import javafx.stage.PopupWindow;
 import com.sun.javafx.application.PlatformImpl;
-import com.sun.javafx.css.CssError;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 import com.sun.javafx.css.StyleManager;
 import javafx.css.Styleable;
 import javafx.css.StyleableStringProperty;
-import com.sun.javafx.css.converters.StringConverter;
+import javafx.css.converter.StringConverter;
 import com.sun.javafx.scene.control.Logging;
 import javafx.css.StyleableProperty;
 import javafx.stage.Window;
@@ -1182,9 +1182,9 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
                 } else {
                     final String msg = "The -fx-skin property has not been defined in CSS for " + this +
                             " and createDefaultSkin() returned null.";
-                    final List<CssError> errors = StyleManager.getErrors();
+                    final List<CssParser.ParseError> errors = StyleManager.getErrors();
                     if (errors != null) {
-                        CssError error = new CssError(msg);
+                        CssParser.ParseError error = new CssParser.ParseError(msg);
                         errors.add(error); // RT-19884
                     }
                     Logging.getControlsLogger().severe(msg);

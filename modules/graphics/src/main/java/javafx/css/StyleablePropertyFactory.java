@@ -25,7 +25,7 @@
 
 package javafx.css;
 
-import com.sun.javafx.css.converters.EnumConverter;
+import javafx.css.converter.EnumConverter;
 import javafx.beans.property.Property;
 import javafx.geometry.Insets;
 import javafx.scene.effect.Effect;

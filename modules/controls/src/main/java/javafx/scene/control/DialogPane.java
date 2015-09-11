@@ -65,7 +65,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 
 import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.css.converters.StringConverter;
+import javafx.css.converter.StringConverter;
 
 /**
  * DialogPane should be considered to be the root node displayed within a

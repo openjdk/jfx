@@ -31,7 +31,7 @@ import javafx.scene.control.FocusModel;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.SelectionMode;
-import javafx.scene.input.ContextMenuEvent;
+import com.sun.javafx.scene.control.inputmap.InputMap;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 
@@ -101,6 +101,8 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
      *                                                                         *
      **************************************************************************/
 
+    private final InputMap<T> cellInputMap;
+
     // To support touch devices, we have to slightly modify this behavior, such
     // that selection only happens on mouse release, if only minimal dragging
     // has occurred.
@@ -114,8 +116,24 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
      *                                                                         *
      **************************************************************************/
 
-    public CellBehaviorBase(T control, List<KeyBinding> bindings) {
-        super(control, bindings);
+    public CellBehaviorBase(T control) {
+        super(control);
+
+        // create a map for cell-specific mappings (this reuses the default
+        // InputMap installed on the control, if it is non-null, allowing us to pick up any user-specified mappings)
+        cellInputMap = createInputMap();
+
+        // TODO add focus traversal mappings (?)
+        // addDefaultMapping(cellInputMap, FocusTraversalInputMap.getFocusTraversalMappings());
+
+        InputMap.MouseMapping pressedMapping, releasedMapping;
+        addDefaultMapping(
+            pressedMapping = new InputMap.MouseMapping(MouseEvent.MOUSE_PRESSED, this::mousePressed),
+            releasedMapping = new InputMap.MouseMapping(MouseEvent.MOUSE_RELEASED, this::mouseReleased),
+            new InputMap.MouseMapping(MouseEvent.MOUSE_DRAGGED, this::mouseDragged)
+        );
+        pressedMapping.setAutoConsume(false);
+        releasedMapping.setAutoConsume(false);
     }
 
 
@@ -131,17 +149,23 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
     }
 
 
+
     /***************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
      **************************************************************************/
 
-    protected int getIndex() {
-        return getControl() instanceof IndexedCell ? ((IndexedCell<?>)getControl()).getIndex() : -1;
+    /** {@inheritDoc} */
+    @Override public InputMap<T> getInputMap() {
+        return cellInputMap;
     }
 
-    @Override public void mousePressed(MouseEvent e) {
+    protected int getIndex() {
+        return getNode() instanceof IndexedCell ? ((IndexedCell<?>)getNode()).getIndex() : -1;
+    }
+
+    public void mousePressed(MouseEvent e) {
         if (e.isSynthesized()) {
             latePress = true;
         } else {
@@ -153,7 +177,7 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
         }
     }
 
-    @Override public void mouseReleased(MouseEvent e) {
+    public void mouseReleased(MouseEvent e) {
         if (latePress) {
             latePress = false;
             doSelect(e.getX(), e.getY(), e.getButton(), e.getClickCount(),
@@ -161,7 +185,7 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
         }
     }
 
-    @Override public void mouseDragged(MouseEvent e) {
+    public void mouseDragged(MouseEvent e) {
         latePress = false;
     }
 
@@ -176,7 +200,7 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
     protected void doSelect(final double x, final double y, final MouseButton button,
                             final int clickCount, final boolean shiftDown, final boolean shortcutDown) {
         // we update the cell to point to the new tree node
-        final T cell = getControl();
+        final T cell = getNode();
 
         final Control cellContainer = getCellContainer();
 
@@ -263,12 +287,12 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
         // handle editing, which only occurs with the primary mouse button
         if (button == MouseButton.PRIMARY) {
             if (clickCount == 1 && isAlreadySelected) {
-                edit(getControl());
+                edit(getNode());
             } else if (clickCount == 1) {
                 // cancel editing
                 edit(null);
-            } else if (clickCount == 2 && getControl().isEditable()) {
-                edit(getControl());
+            } else if (clickCount == 2 && getNode().isEditable()) {
+                edit(getNode());
             }
         }
     }
@@ -311,6 +335,6 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
     }
 
     protected boolean isSelected() {
-        return getControl().isSelected();
+        return getNode().isSelected();
     }
 }

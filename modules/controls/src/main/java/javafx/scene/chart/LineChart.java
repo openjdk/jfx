@@ -63,7 +63,7 @@ import com.sun.javafx.charts.Legend.LegendItem;
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.CssMetaData;
 
-import com.sun.javafx.css.converters.BooleanConverter;
+import javafx.css.converter.BooleanConverter;
 
 import java.util.*;
 

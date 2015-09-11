@@ -25,7 +25,6 @@
 
 package javafx.scene.layout;
 
-import com.sun.javafx.util.Utils;
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
@@ -64,10 +63,10 @@ import java.util.function.Function;
 import com.sun.javafx.util.Logging;
 import com.sun.javafx.util.TempState;
 import com.sun.javafx.binding.ExpressionHelper;
-import com.sun.javafx.css.converters.BooleanConverter;
-import com.sun.javafx.css.converters.InsetsConverter;
-import com.sun.javafx.css.converters.ShapeConverter;
-import com.sun.javafx.css.converters.SizeConverter;
+import javafx.css.converter.BooleanConverter;
+import javafx.css.converter.InsetsConverter;
+import javafx.css.converter.ShapeConverter;
+import javafx.css.converter.SizeConverter;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.RectBounds;

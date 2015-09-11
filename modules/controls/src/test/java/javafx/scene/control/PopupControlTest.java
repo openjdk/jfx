@@ -25,7 +25,7 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.scene.control.skin.TooltipSkin;
+import javafx.scene.control.skin.TooltipSkin;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.SimpleStringProperty;

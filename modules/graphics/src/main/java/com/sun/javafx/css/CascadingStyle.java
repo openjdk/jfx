@@ -25,13 +25,21 @@
 
 package com.sun.javafx.css;
 
+import javafx.css.Declaration;
+import javafx.css.Match;
+import javafx.css.ParsedValue;
 import javafx.css.PseudoClass;
+import javafx.css.Rule;
+import javafx.css.Selector;
+import javafx.css.Style;
 import javafx.css.StyleOrigin;
 
 import java.util.Set;
 
-
-/** A marriage of pseudo-classes (potentially empty) to property and value */
+/** A marriage of pseudo-classes (potentially empty) to property and value
+ *
+ * @since 9
+ */
 public class CascadingStyle implements Comparable<CascadingStyle> {
 
     /** */
@@ -64,6 +72,13 @@ public class CascadingStyle implements Comparable<CascadingStyle> {
         this.skinProp = "-fx-skin".equals(style.getDeclaration().getProperty());
     }
         
+    public CascadingStyle(final Declaration decl, final Match match, final int ordinal) {
+        this(new Style(match.getSelector(), decl), 
+             match.getPseudoClasses(), 
+             match.getSpecificity(), 
+             ordinal);
+    }
+
     // Wrapper to make StyleHelper's life a little easier
     public String getProperty() {
         return style.getDeclaration().getProperty();
@@ -85,8 +100,8 @@ public class CascadingStyle implements Comparable<CascadingStyle> {
     }
     
     // Wrapper to make StyleHelper's life a little easier
-    public ParsedValueImpl getParsedValueImpl() {
-        return style.getDeclaration().getParsedValueImpl();
+    public ParsedValue getParsedValue() {
+        return style.getDeclaration().getParsedValue();
     }
     
     @Override public String toString() { return getProperty(); }
@@ -124,8 +139,7 @@ public class CascadingStyle implements Comparable<CascadingStyle> {
      * Hash on property and pseudoclasses since
      * obj1.hashCode() should equal obj2.hashCode() if obj1.equals(obj2)
      */
-    @Override
-    public int hashCode() {
+    @Override public int hashCode() {
         int hash = 7;
         final String property = getProperty();
         hash = 47 * hash + (property != null ? property.hashCode() : 0);
@@ -137,8 +151,7 @@ public class CascadingStyle implements Comparable<CascadingStyle> {
      * Implementation of Comparable such that more specific styles get
      * sorted before less specific ones.
      */
-    @Override
-    public int compareTo(CascadingStyle other) {
+    @Override public int compareTo(CascadingStyle other) {
 
         //
         // Important styles take the cake

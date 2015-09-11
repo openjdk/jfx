@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,8 +34,6 @@ import javafx.scene.control.TablePositionBase;
 import javafx.scene.control.TableSelectionModel;
 import javafx.scene.input.MouseButton;
 
-import java.util.Collections;
-
 public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, ?>, C extends IndexedCell<T>> extends CellBehaviorBase<C> {
     
     /***************************************************************************
@@ -52,7 +50,7 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
      **************************************************************************/    
 
     public TableCellBehaviorBase(C control) {
-        super(control, Collections.emptyList());
+        super(control);
     }
     
     
@@ -98,7 +96,7 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
                           final int clickCount, final boolean shiftDown, final boolean shortcutDown) {
         // Note that table.select will reset selection
         // for out of bounds indexes. So, need to check
-        final C tableCell = getControl();
+        final C tableCell = getNode();
 
         // If the mouse event is not contained within this tableCell, then
         // we don't want to react to it.
@@ -202,7 +200,7 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
 
     protected void simpleSelect(MouseButton button, int clickCount, boolean shortcutDown) {
         final TableSelectionModel<S> sm = getSelectionModel();
-        final int row = getControl().getIndex();
+        final int row = getNode().getIndex();
         final TableColumnBase<S,T> column = getTableColumn();
         boolean isAlreadySelected = sm.isSelected(row, column);
 
@@ -233,7 +231,7 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
         if (sm == null) return false;
 
         if (sm.isCellSelectionEnabled()) {
-            final C cell = getControl();
+            final C cell = getNode();
             return cell.isSelected();
         } else {
             return isTableRowSelected();

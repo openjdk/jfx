@@ -23,9 +23,8 @@
  * questions.
  */
 
-package com.sun.javafx.css.converters;
+package javafx.css.converter;
 
-import java.net.URL;
 import javafx.css.ParsedValue;
 import javafx.css.StyleConverter;
 import javafx.scene.text.Font;
@@ -55,7 +54,7 @@ public class URLConverterTest {
     public void testConvertWithNullBaseURL() {
         
         ParsedValue[] values = new ParsedValue[] {
-            new ParsedValueImpl<String,String>("com/sun/javafx/css/converters/some.txt", null),
+            new ParsedValueImpl<String,String>("javafx/css/converter/some.txt", null),
             new ParsedValueImpl<String,String>(null,null)
         };
         ParsedValueImpl<ParsedValue[], String> value = 
@@ -63,7 +62,7 @@ public class URLConverterTest {
                 
         Font font = null;
         ClassLoader cl = Thread.currentThread().getContextClassLoader();
-        String expResult = cl.getResource("com/sun/javafx/css/converters/some.txt").toExternalForm();
+        String expResult = cl.getResource("javafx/css/converter/some.txt").toExternalForm();
         String result = value.convert(font);
         assertEquals(expResult, result);
     }
@@ -72,14 +71,14 @@ public class URLConverterTest {
         ClassLoader cl = Thread.currentThread().getContextClassLoader();
         String base = cl.getResource("com/..").toExternalForm();
         ParsedValue[] values = new ParsedValue[] {
-            new ParsedValueImpl<String,String>("com/sun/javafx/css/converters/some.txt", null),
+            new ParsedValueImpl<String,String>("javafx/css/converter/some.txt", null),
             new ParsedValueImpl<String,String>(base,null)
         };
         ParsedValueImpl<ParsedValue[], String> value = 
             new ParsedValueImpl<ParsedValue[], String>(values, URLConverter.getInstance());
                 
         Font font = null;
-        String expResult = cl.getResource("com/sun/javafx/css/converters/some.txt").toExternalForm();
+        String expResult = cl.getResource("javafx/css/converter/some.txt").toExternalForm();
         String result = value.convert(font);
         assertEquals(expResult, result);
     }
@@ -88,7 +87,7 @@ public class URLConverterTest {
     public void testConvertWithAbsoluteURLAndNullBaseURL() {
         
         ClassLoader cl = Thread.currentThread().getContextClassLoader();
-        String expResult = cl.getResource("com/sun/javafx/css/converters/some.txt").toExternalForm();
+        String expResult = cl.getResource("javafx/css/converter/some.txt").toExternalForm();
         ParsedValue[] values = new ParsedValue[] {
             new ParsedValueImpl<String,String>(expResult, null),
             new ParsedValueImpl<String,String>(null,null)
@@ -106,7 +105,7 @@ public class URLConverterTest {
         
         ClassLoader cl = Thread.currentThread().getContextClassLoader();
         String baseURL = cl.getResource("com/..").toExternalForm();
-        String expResult = cl.getResource("com/sun/javafx/css/converters/some.txt").toExternalForm();
+        String expResult = cl.getResource("javafx/css/converter/some.txt").toExternalForm();
         ParsedValue[] values = new ParsedValue[] {
             new ParsedValueImpl<String,String>(expResult, null),
             new ParsedValueImpl<String,String>(baseURL,null)

@@ -41,9 +41,8 @@ import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadat
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import com.oracle.javafx.scenebuilder.kit.util.CssInternal;
 import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
-import com.sun.javafx.css.ParsedValueImpl;
-import com.sun.javafx.css.Rule;
-import com.sun.javafx.css.Style;
+import javafx.css.Rule;
+import javafx.css.Style;
 import javafx.css.StyleOrigin;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -289,9 +288,7 @@ public class CssContentMaker {
     protected static CssStyle retrieveStyle(List<Style> styles, Style style) {
         CssStyle st = new CssStyle(style);
         ParsedValue parsedValue = style.getDeclaration().getParsedValue();
-        assert parsedValue instanceof ParsedValueImpl;
-        ParsedValueImpl parsedValueImpl = (ParsedValueImpl) parsedValue;
-        if (parsedValueImpl.isContainsLookups() || parsedValueImpl.isLookup()) {
+        if (parsedValue.isContainsLookups() || parsedValue.isLookup()) {
             retrieveStylesFromParsedValue(styles, st, style.getDeclaration().getParsedValue());
         }
         return st;

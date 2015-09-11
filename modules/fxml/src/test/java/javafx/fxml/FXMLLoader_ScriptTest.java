@@ -24,7 +24,6 @@ package javafx.fxml;
  * questions.
  */
 
-import com.sun.javafx.fxml.LoadListener;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -40,7 +39,7 @@ public class FXMLLoader_ScriptTest {
         fxmlLoader.impl_setStaticLoad(true);
         AtomicBoolean scriptCalled = new AtomicBoolean();
         AtomicBoolean scriptEndCalled = new AtomicBoolean();
-        fxmlLoader.impl_setLoadListener(new LoadListener() {
+        fxmlLoader.setLoadListener(new LoadListener() {
 
             @Override
             public void readImportProcessingInstruction(String target) {

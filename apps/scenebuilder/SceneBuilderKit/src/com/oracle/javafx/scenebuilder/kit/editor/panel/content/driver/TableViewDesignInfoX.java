@@ -32,7 +32,7 @@
 package com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver;
 
 import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
-import com.sun.javafx.scene.control.skin.TableColumnHeader;
+import javafx.scene.control.skin.TableColumnHeader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;

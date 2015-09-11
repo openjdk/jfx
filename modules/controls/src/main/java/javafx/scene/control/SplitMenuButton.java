@@ -29,7 +29,7 @@ import javafx.event.ActionEvent;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
-import com.sun.javafx.scene.control.skin.SplitMenuButtonSkin;
+import javafx.scene.control.skin.SplitMenuButtonSkin;
 
 /**
  * The SplitMenuButton, like the {@link MenuButton} is closely associated with

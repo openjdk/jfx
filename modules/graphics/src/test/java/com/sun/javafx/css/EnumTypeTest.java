@@ -28,12 +28,13 @@ package com.sun.javafx.css;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 import javafx.css.ParsedValue;
+import javafx.css.SizeUnits;
 import javafx.css.StyleConverter;
 import javafx.scene.text.Font;
 
 import org.junit.Test;
 
-import com.sun.javafx.css.converters.EnumConverter;
+import javafx.css.converter.EnumConverter;
 
 
 public class EnumTypeTest {

@@ -32,9 +32,7 @@
 
 package com.oracle.javafx.scenebuilder.kit.editor.report;
 
-import com.sun.javafx.css.CssError;
-import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.css.parser.CSSParser;
+import javafx.css.CssParser;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -49,22 +47,22 @@ import java.util.Set;
 public class CSSParsingReport {
     private final Path stylesheetPath;
     private IOException ioException;
-    private final List<CssError> cssErrors = new ArrayList<>();
+    private final List<CssParser.ParseError> parseErrors = new ArrayList<>();
     
     public CSSParsingReport(Path stylesheetPath) {
         assert stylesheetPath != null;
         
         this.stylesheetPath = stylesheetPath;
-        final Set<CssError> previousErrors = new HashSet<>(StyleManager.errorsProperty());
+        final Set<CssParser.ParseError> previousErrors = new HashSet<>(CssParser.errorsProperty());
         try {
-            new CSSParser().parse(stylesheetPath.toUri().toURL());
+            new CssParser().parse(stylesheetPath.toUri().toURL());
             // Leave this.ioException to null
-            cssErrors.addAll(StyleManager.errorsProperty());
-            cssErrors.removeAll(previousErrors);
+            parseErrors.addAll(CssParser.errorsProperty());
+            parseErrors.removeAll(previousErrors);
         } catch(IOException x) {
             this.ioException = x;
         } finally {
-            StyleManager.errorsProperty().removeAll(cssErrors);
+            CssParser.errorsProperty().removeAll(parseErrors);
         }
     }
 
@@ -73,14 +71,14 @@ public class CSSParsingReport {
     }
     
     public boolean isEmpty() {
-        return (ioException == null) && cssErrors.isEmpty();
+        return (ioException == null) && parseErrors.isEmpty();
     }
     
     public IOException getIOException() {
         return ioException;
     }
     
-    public List<CssError> getCssErrors() {
-        return Collections.unmodifiableList(cssErrors);
+    public List<CssParser.ParseError> getParseErrors() {
+        return Collections.unmodifiableList(parseErrors);
     }
 }

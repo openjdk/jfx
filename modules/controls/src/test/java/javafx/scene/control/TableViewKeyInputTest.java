@@ -25,7 +25,6 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.scene.control.behavior.ListCellBehavior;
 import com.sun.javafx.scene.control.behavior.TableCellBehavior;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.collections.FXCollections;
@@ -2573,7 +2572,7 @@ public class TableViewKeyInputTest {
 
         keyboard.doKeyPress(KeyCode.SPACE);
         Toolkit.getToolkit().firePulse();
-        assertEquals(2, getAnchor().getRow());
+        assertEquals(debug(), 2, getAnchor().getRow());
         assertEquals(2, fm.getFocusedIndex());
         assertEquals(2, sm.getSelectedIndex());
         assertTrue(isSelected(1, 2));

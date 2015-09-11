@@ -35,8 +35,8 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.css.CssContentMaker.CssPr
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.util.CssInternal;
 import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
-import com.sun.javafx.css.Rule;
-import com.sun.javafx.css.Style;
+import javafx.css.Rule;
+import javafx.css.Style;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;

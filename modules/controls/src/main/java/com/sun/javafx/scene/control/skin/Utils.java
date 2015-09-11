@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,16 +30,13 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import java.text.Bidi;
-import java.text.BreakIterator;
-import java.util.function.Consumer;
-
-import static javafx.scene.control.OverrunStyle.*;
-import javafx.application.Platform;
+import com.sun.javafx.scene.control.behavior.TextBinding;
+import com.sun.javafx.scene.text.TextLayout;
+import com.sun.javafx.tk.Toolkit;
 import javafx.application.ConditionalFeature;
+import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
-import javafx.beans.property.Property;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.geometry.Bounds;
@@ -50,17 +47,27 @@ import javafx.scene.Scene;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.OverrunStyle;
+import com.sun.javafx.scene.control.ContextMenuContent;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.Mnemonic;
+import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextBoundsType;
 
-import com.sun.javafx.scene.control.behavior.TextBinding;
-import com.sun.javafx.scene.text.HitInfo;
-import com.sun.javafx.scene.text.TextLayout;
-import com.sun.javafx.tk.Toolkit;
-import javafx.util.Callback;
+import java.text.Bidi;
+import java.text.BreakIterator;
+import java.util.Locale;
+import java.util.function.Consumer;
+
+import static javafx.scene.control.OverrunStyle.CENTER_ELLIPSIS;
+import static javafx.scene.control.OverrunStyle.CENTER_WORD_ELLIPSIS;
+import static javafx.scene.control.OverrunStyle.CLIP;
+import static javafx.scene.control.OverrunStyle.ELLIPSIS;
+import static javafx.scene.control.OverrunStyle.LEADING_ELLIPSIS;
+import static javafx.scene.control.OverrunStyle.LEADING_WORD_ELLIPSIS;
+import static javafx.scene.control.OverrunStyle.WORD_ELLIPSIS;
+import static javafx.scene.control.skin.TextFieldSkin.TextPosInfo;
 
 /**
  * BE REALLY CAREFUL WITH RESTORING OR RESETTING STATE OF helper NODE AS LEFTOVER
@@ -88,7 +95,7 @@ public class Utils {
      * */
     static final TextLayout layout = Toolkit.getToolkit().getTextLayoutFactory().createLayout();
 
-    static double getAscent(Font font, TextBoundsType boundsType) {
+    public static double getAscent(Font font, TextBoundsType boundsType) {
         layout.setContent("", font.impl_getNativeFont());
         layout.setWrapWidth(0);
         layout.setLineSpacing(0);
@@ -100,7 +107,7 @@ public class Utils {
         return -layout.getBounds().getMinY();
     }
 
-    static double getLineHeight(Font font, TextBoundsType boundsType) {
+    public static double getLineHeight(Font font, TextBoundsType boundsType) {
         layout.setContent("", font.impl_getNativeFont());
         layout.setWrapWidth(0);
         layout.setLineSpacing(0);
@@ -114,18 +121,18 @@ public class Utils {
         return layout.getLines()[0].getBounds().getHeight();
     }
 
-    static double computeTextWidth(Font font, String text, double wrappingWidth) {
+    public static double computeTextWidth(Font font, String text, double wrappingWidth) {
         layout.setContent(text != null ? text : "", font.impl_getNativeFont());
         layout.setWrapWidth((float)wrappingWidth);
         return layout.getBounds().getWidth();
     }
 
-    static double computeTextHeight(Font font, String text, double wrappingWidth, TextBoundsType boundsType) {
+    public static double computeTextHeight(Font font, String text, double wrappingWidth, TextBoundsType boundsType) {
         return computeTextHeight(font, text, wrappingWidth, 0, boundsType);
     }
 
     @SuppressWarnings("deprecation")
-    static double computeTextHeight(Font font, String text, double wrappingWidth, double lineSpacing, TextBoundsType boundsType) {
+    public static double computeTextHeight(Font font, String text, double wrappingWidth, double lineSpacing, TextBoundsType boundsType) {
         layout.setContent(text != null ? text : "", font.impl_getNativeFont());
         layout.setWrapWidth((float)wrappingWidth);
         layout.setLineSpacing((float)lineSpacing);
@@ -137,7 +144,7 @@ public class Utils {
         return layout.getBounds().getHeight();
     }
 
-    static int computeTruncationIndex(Font font, String text, double width) {
+    public static int computeTruncationIndex(Font font, String text, double width) {
         helper.setText(text);
         helper.setFont(font);
         helper.setWrappingWidth(0);
@@ -155,7 +162,7 @@ public class Utils {
         return index;
     }
 
-    static String computeClippedText(Font font, String text, double width,
+    public static String computeClippedText(Font font, String text, double width,
                                      OverrunStyle type, String ellipsisString) {
         if (font == null) {
             throw new IllegalArgumentException("Must specify a font");
@@ -356,7 +363,7 @@ public class Utils {
         }
     }
 
-    static String computeClippedWrappedText(Font font, String text, double width,
+    public static String computeClippedWrappedText(Font font, String text, double width,
                                             double height, OverrunStyle truncationStyle,
                                             String ellipsisString, TextBoundsType boundsType) {
         if (font == null) {
@@ -634,11 +641,11 @@ public class Utils {
         return Math.min(Math.max(value, min), Math.max(min,max));
     }
 
-    static void addMnemonics(ContextMenu popup, Scene scene) {
+    public static void addMnemonics(ContextMenu popup, Scene scene) {
         addMnemonics(popup, scene, false);
     }
 
-    static void addMnemonics(ContextMenu popup, Scene scene, boolean initialState) {
+    public static void addMnemonics(ContextMenu popup, Scene scene, boolean initialState) {
 
         if (!com.sun.javafx.PlatformUtil.isMac()) {
 
@@ -667,7 +674,7 @@ public class Utils {
 
 
 
-    static void removeMnemonics(ContextMenu popup, Scene scene) {
+    public static void removeMnemonics(ContextMenu popup, Scene scene) {
 
         if (!com.sun.javafx.PlatformUtil.isMac()) {
 
@@ -700,7 +707,7 @@ public class Utils {
         }
     }
 
-    static double computeXOffset(double width, double contentWidth, HPos hpos) {
+    public static double computeXOffset(double width, double contentWidth, HPos hpos) {
         if (hpos == null) {
             return 0;
         }
@@ -717,7 +724,7 @@ public class Utils {
         }
     }
 
-    static double computeYOffset(double height, double contentHeight, VPos vpos) {
+    public static double computeYOffset(double height, double contentHeight, VPos vpos) {
         if (vpos == null) {
             return 0;
         }
@@ -751,7 +758,7 @@ public class Utils {
     // Workaround for RT-26961. HitInfo.getInsertionIndex() doesn't skip
     // complex character clusters / ligatures.
     private static BreakIterator charIterator = null;
-    public static int getHitInsertionIndex(HitInfo hit, String text) {
+    public static int getHitInsertionIndex(TextPosInfo hit, String text) {
         int charIndex = hit.getCharIndex();
         if (text != null && !hit.isLeading()) {
             if (charIterator == null) {
@@ -788,6 +795,17 @@ public class Utils {
                 }
             };
             p.addListener(listener);
+        }
+    }
+
+    public static String formatHexString(Color c) {
+        if (c != null) {
+            return String.format((Locale) null, "#%02x%02x%02x",
+                    Math.round(c.getRed() * 255),
+                    Math.round(c.getGreen() * 255),
+                    Math.round(c.getBlue() * 255));
+        } else {
+            return null;
         }
     }
 }

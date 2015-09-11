@@ -43,7 +43,7 @@ import javafx.stage.Window;
 
 import com.sun.javafx.util.Utils;
 import com.sun.javafx.collections.TrackableObservableList;
-import com.sun.javafx.scene.control.skin.ContextMenuSkin;
+import javafx.scene.control.skin.ContextMenuSkin;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 

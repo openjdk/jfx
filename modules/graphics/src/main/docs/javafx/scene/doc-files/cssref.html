@@ -696,7 +696,7 @@
     <p>When the JavaFX CSS parser encounters a syntax error, a warning message
         is emitted which conveys as much information as is available to help
         resolve the error. For example </p>
-    <p class="example"> WARNING: com.sun.javafx.css.parser.CSSParser declaration
+    <p class="example"> WARNING: javafx.css.CssParser declaration
         Expected '&lt;percent&gt;' while parsing '-fx-background-color' at ?[1,49]
     </p>
     <p>The cryptic '<span class="p example">?[1,49]</span>' pertains to the
@@ -709,8 +709,7 @@
             position may not be accurate in releases prior to JavaFX 2.2.</em><br>
     </p>
     <p>Applications needing to detect errors from the parser can add a listener
-        to the errors property of com.sun.javafx.css.StyleManager. This is not
-        public API and is subject to change. <br>
+        to the errors property of javafx.css.CssParser. <br>
     </p>
     <h3><a name="introlimitations" id="introlimitations">Limitations</a></h3>
     <ol>

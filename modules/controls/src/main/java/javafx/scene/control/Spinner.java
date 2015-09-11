@@ -24,8 +24,9 @@
  */
 package javafx.scene.control;
 
-import com.sun.javafx.scene.control.skin.ComboBoxListViewSkin;
-import com.sun.javafx.scene.control.skin.SpinnerSkin;
+import com.sun.javafx.scene.control.FakeFocusTextField;
+import javafx.scene.control.skin.ComboBoxListViewSkin;
+import javafx.scene.control.skin.SpinnerSkin;
 import javafx.beans.NamedArg;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
@@ -541,8 +542,8 @@ public class Spinner<T> extends Control {
      */
     public final ReadOnlyObjectProperty<TextField> editorProperty() {
         if (editor == null) {
-            editor = new ReadOnlyObjectWrapper<TextField>(this, "editor");
-            textField = new ComboBoxListViewSkin.FakeFocusTextField();
+            editor = new ReadOnlyObjectWrapper<>(this, "editor");
+            textField = new FakeFocusTextField();
             editor.set(textField);
         }
         return editor.getReadOnlyProperty();

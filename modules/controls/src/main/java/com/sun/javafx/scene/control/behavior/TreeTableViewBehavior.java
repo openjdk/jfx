@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,7 +30,6 @@ import static javafx.scene.input.KeyCode.*;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WeakChangeListener;
 import javafx.collections.ObservableList;
-import javafx.geometry.NodeOrientation;
 import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableFocusModel;
 import javafx.scene.control.TablePositionBase;
@@ -39,61 +38,11 @@ import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTablePosition;
 import javafx.scene.control.TreeTableView;
-import javafx.scene.input.KeyEvent;
+import com.sun.javafx.scene.control.inputmap.InputMap;
 import javafx.util.Callback;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public class TreeTableViewBehavior<T> extends TableViewBehaviorBase<TreeTableView<T>, TreeItem<T>, TreeTableColumn<T, ?>> {
-    
-    /**************************************************************************
-     *                                                                        *
-     * Setup key bindings                                                     *
-     *                                                                        *  
-     *************************************************************************/
 
-    protected static final List<KeyBinding> TREE_TABLE_VIEW_BINDINGS = new ArrayList<KeyBinding>();
-    
-    static {
-        // Add these bindings at the front of the list, so they take precedence
-        TREE_TABLE_VIEW_BINDINGS.add(new KeyBinding(LEFT, "CollapseRow"));
-        TREE_TABLE_VIEW_BINDINGS.add(new KeyBinding(KP_LEFT, "CollapseRow"));
-        TREE_TABLE_VIEW_BINDINGS.add(new KeyBinding(RIGHT, "ExpandRow"));
-        TREE_TABLE_VIEW_BINDINGS.add(new KeyBinding(KP_RIGHT, "ExpandRow"));
-
-        TREE_TABLE_VIEW_BINDINGS.add(new KeyBinding(MULTIPLY, "ExpandAll"));
-        TREE_TABLE_VIEW_BINDINGS.add(new KeyBinding(ADD, "ExpandRow"));
-        TREE_TABLE_VIEW_BINDINGS.add(new KeyBinding(SUBTRACT, "CollapseRow"));
-
-        TREE_TABLE_VIEW_BINDINGS.addAll(TABLE_VIEW_BINDINGS);
-    }
-
-    @Override protected /*final*/ String matchActionForEvent(KeyEvent e) {
-        String action = super.matchActionForEvent(e);
-        if (getControl().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
-            // Rather than switching the result of the action lookup in this way, the preferred
-            // way to do this according to the current architecture would be to hoist the
-            // getEffectiveNodeOrientation call up into the key bindings, the same way that ListView
-            // orientation (horizontal vs. vertical) is handled with the OrientedKeyBinding class.
-            if ("CollapseRow".equals(action) && (e.getCode() == LEFT || e.getCode() == KP_LEFT)) {
-                action = "ExpandRow";
-            } else if ("ExpandRow".equals(action) && (e.getCode() == RIGHT || e.getCode() == KP_RIGHT)) {
-                action = "CollapseRow";
-            }
-        }
-        return action;
-    }
-
-    @Override protected void callAction(String name) {
-        if ("ExpandRow".equals(name)) rightArrowPressed();
-        else if ("CollapseRow".equals(name)) leftArrowPressed();
-        else if ("ExpandAll".equals(name)) expandAll();
-        else super.callAction(name);
-    }
-    
-
-    
     /**************************************************************************
      *                                                                        *
      * Listeners                                                              *
@@ -111,7 +60,7 @@ public class TreeTableViewBehavior<T> extends TableViewBehaviorBase<TreeTableVie
             };
     
     private final WeakChangeListener<TreeTableView.TreeTableViewSelectionModel<T>> weakSelectionModelListener = 
-            new WeakChangeListener<TreeTableView.TreeTableViewSelectionModel<T>>(selectionModelListener);
+            new WeakChangeListener<>(selectionModelListener);
     
     
     
@@ -122,7 +71,23 @@ public class TreeTableViewBehavior<T> extends TableViewBehaviorBase<TreeTableVie
      *************************************************************************/
 
     public TreeTableViewBehavior(TreeTableView<T>  control) {
-        super(control, TREE_TABLE_VIEW_BINDINGS);
+        super(control);
+
+        // Add these bindings as a child input map, so they take precedence
+        InputMap<TreeTableView<T>> expandCollapseInputMap = new InputMap<>(control);
+        expandCollapseInputMap.getMappings().addAll(
+            // these should be read as 'if RTL, use the first method, otherwise use the second'
+            new InputMap.KeyMapping(LEFT, e -> rtl(control, this::expandRow, this::collapseRow)),
+            new InputMap.KeyMapping(KP_LEFT, e -> rtl(control, this::expandRow, this::collapseRow)),
+            new InputMap.KeyMapping(RIGHT, e -> rtl(control, this::collapseRow, this::expandRow)),
+            new InputMap.KeyMapping(KP_RIGHT, e -> rtl(control, this::collapseRow, this::expandRow)),
+
+            new InputMap.KeyMapping(MULTIPLY, e -> expandAll()),
+            new InputMap.KeyMapping(ADD, e -> expandRow()),
+            new InputMap.KeyMapping(SUBTRACT, e -> collapseRow())
+        );
+        addDefaultChildMap(getInputMap(), expandCollapseInputMap);
+
 
         // Fix for RT-16565
         control.selectionModelProperty().addListener(weakSelectionModelListener);
@@ -141,53 +106,53 @@ public class TreeTableViewBehavior<T> extends TableViewBehaviorBase<TreeTableVie
     
     /** {@inheritDoc}  */
     @Override protected int getItemCount() {
-        return getControl().getExpandedItemCount();
+        return getNode().getExpandedItemCount();
     }
 
     /** {@inheritDoc}  */
     @Override protected TableFocusModel getFocusModel() {
-        return getControl().getFocusModel();
+        return getNode().getFocusModel();
     }
 
     /** {@inheritDoc}  */
     @Override protected TableSelectionModel<TreeItem<T>> getSelectionModel() {
-        return getControl().getSelectionModel();
+        return getNode().getSelectionModel();
     }
 
     /** {@inheritDoc}  */
     @Override protected ObservableList<TreeTablePosition<T,?>> getSelectedCells() {
-        return getControl().getSelectionModel().getSelectedCells();
+        return getNode().getSelectionModel().getSelectedCells();
     }
 
     /** {@inheritDoc}  */
     @Override protected TablePositionBase getFocusedCell() {
-        return getControl().getFocusModel().getFocusedCell();
+        return getNode().getFocusModel().getFocusedCell();
     }
 
     /** {@inheritDoc}  */
     @Override protected int getVisibleLeafIndex(TableColumnBase tc) {
-        return getControl().getVisibleLeafIndex((TreeTableColumn)tc);
+        return getNode().getVisibleLeafIndex((TreeTableColumn)tc);
     }
 
     /** {@inheritDoc}  */
     @Override protected TreeTableColumn getVisibleLeafColumn(int index) {
-        return getControl().getVisibleLeafColumn(index);
+        return getNode().getVisibleLeafColumn(index);
     }
 
     /** {@inheritDoc}  */
     @Override protected void editCell(int row, TableColumnBase tc) {
-        getControl().edit(row, (TreeTableColumn)tc);
+        getNode().edit(row, (TreeTableColumn)tc);
     }
 
     /** {@inheritDoc}  */
     @Override protected ObservableList<TreeTableColumn<T,?>> getVisibleLeafColumns() {
-        return getControl().getVisibleLeafColumns();
+        return getNode().getVisibleLeafColumns();
     }
 
     /** {@inheritDoc}  */
     @Override protected TablePositionBase<TreeTableColumn<T, ?>> 
             getTablePosition(int row, TableColumnBase<TreeItem<T>, ?> tc) {
-        return new TreeTablePosition(getControl(), row, (TreeTableColumn)tc);
+        return new TreeTablePosition(getNode(), row, (TreeTableColumn)tc);
     }
 
 
@@ -201,7 +166,7 @@ public class TreeTableViewBehavior<T> extends TableViewBehaviorBase<TreeTableVie
     /** {@inheritDoc} */
     @Override protected void selectAllToFocus(boolean setAnchorToFocusIndex) {
         // Fix for RT-31241
-        if (getControl().getEditingCell() != null) return;
+        if (getNode().getEditingCell() != null) return;
 
         super.selectAllToFocus(setAnchorToFocusIndex);
     }
@@ -217,7 +182,7 @@ public class TreeTableViewBehavior<T> extends TableViewBehaviorBase<TreeTableVie
      * on whether we are in row or cell selection.
      */
     private void rightArrowPressed() {
-        if (getControl().getSelectionModel().isCellSelectionEnabled()) {
+        if (getNode().getSelectionModel().isCellSelectionEnabled()) {
             if (isRTL()) {
                 selectLeftCell();
             } else {
@@ -229,7 +194,7 @@ public class TreeTableViewBehavior<T> extends TableViewBehaviorBase<TreeTableVie
     }
     
     private void leftArrowPressed() {
-        if (getControl().getSelectionModel().isCellSelectionEnabled()) {
+        if (getNode().getSelectionModel().isCellSelectionEnabled()) {
             if (isRTL()) {
                 selectRightCell();
             } else {
@@ -241,16 +206,16 @@ public class TreeTableViewBehavior<T> extends TableViewBehaviorBase<TreeTableVie
     }
     
     private void expandRow() {
-        Callback<TreeItem<T>, Integer> getIndex = p -> getControl().getRow(p);
-        TreeViewBehavior.expandRow(getControl().getSelectionModel(), getIndex);
+        Callback<TreeItem<T>, Integer> getIndex = p -> getNode().getRow(p);
+        TreeViewBehavior.expandRow(getNode().getSelectionModel(), getIndex);
     }
     
     private void expandAll() {
-        TreeViewBehavior.expandAll(getControl().getRoot());
+        TreeViewBehavior.expandAll(getNode().getRoot());
     }
     
     private void collapseRow() {
-        TreeTableView<T> control = getControl();
+        TreeTableView<T> control = getNode();
         TreeViewBehavior.collapseRow(control.getSelectionModel(), control.getRoot(), control.isShowRoot());
     }
 }

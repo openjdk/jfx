@@ -25,7 +25,7 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.scene.control.skin.ProgressBarSkin;
+import javafx.scene.control.skin.ProgressBarSkin;
 
 import javafx.beans.value.WritableValue;
 import javafx.css.StyleableProperty;

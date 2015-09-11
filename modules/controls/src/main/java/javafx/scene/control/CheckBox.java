@@ -34,7 +34,7 @@ import javafx.geometry.Pos;
 import javafx.css.PseudoClass;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
-import com.sun.javafx.scene.control.skin.CheckBoxSkin;
+import javafx.scene.control.skin.CheckBoxSkin;
 
 /**
  * A tri-state selection Control typically skinned as a box with a checkmark or

@@ -26,11 +26,8 @@
 package javafx.scene.control;
 
 import com.sun.javafx.scene.control.skin.Utils;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import javafx.collections.ObservableMap;
 import javafx.event.Event;
 import javafx.scene.Node;
 import javafx.scene.Parent;

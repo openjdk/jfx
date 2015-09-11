@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,67 +27,62 @@ package com.sun.javafx.scene.control.behavior;
 
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.SelectionModel;
+import com.sun.javafx.scene.control.skin.Utils;
+import com.sun.javafx.scene.control.inputmap.InputMap;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
-import java.util.ArrayList;
-import java.util.List;
-import com.sun.javafx.scene.control.skin.Utils;
-import static javafx.scene.input.KeyCode.CANCEL;
-import static javafx.scene.input.KeyCode.DOWN;
-import static javafx.scene.input.KeyCode.ENTER;
-import static javafx.scene.input.KeyCode.ESCAPE;
-import static javafx.scene.input.KeyCode.SPACE;
-import static javafx.scene.input.KeyEvent.KEY_PRESSED;
-import static javafx.scene.input.KeyEvent.KEY_RELEASED;
+import static javafx.scene.input.KeyCode.*;
+
+import static com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
 
 /**
  * ChoiceBoxBehavior - default implementation
- *
- * @profile common
  */
 public class ChoiceBoxBehavior<T> extends BehaviorBase<ChoiceBox<T>> {
-    /**
-     * The key bindings for the ChoiceBox. It seems this should really be the
-     * same as with the ButtonBehavior super class, but it doesn't handle ENTER
-     * events on desktop, whereas this does. It may be a proper analysis of the
-     * interaction logic would allow us to share bindings, but for now, we simply
-     * build it up specially here.
-     */
-    protected static final List<KeyBinding> CHOICE_BUTTON_BINDINGS = new ArrayList<KeyBinding>();
-    static {
-        CHOICE_BUTTON_BINDINGS.add(new KeyBinding(SPACE, KEY_PRESSED, "Press"));
-        CHOICE_BUTTON_BINDINGS.add(new KeyBinding(SPACE, KEY_RELEASED, "Release"));
 
-        if (Utils.isTwoLevelFocus()) {
-            CHOICE_BUTTON_BINDINGS.add(new KeyBinding(ENTER, KEY_PRESSED, "Press"));
-            CHOICE_BUTTON_BINDINGS.add(new KeyBinding(ENTER, KEY_RELEASED, "Release"));
-        }
-
-        CHOICE_BUTTON_BINDINGS.add(new KeyBinding(ESCAPE, KEY_RELEASED, "Cancel"));
-        CHOICE_BUTTON_BINDINGS.add(new KeyBinding(DOWN, KEY_RELEASED, "Down"));
-        CHOICE_BUTTON_BINDINGS.add(new KeyBinding(CANCEL, KEY_RELEASED, "Cancel"));
-
-    }
+    private final InputMap<ChoiceBox<T>> choiceBoxInputMap;
 
     private TwoLevelFocusComboBehavior tlFocus;
 
     /**************************************************************************
      *                          Setup KeyBindings                             *
      *************************************************************************/
-    @Override protected void callAction(String name) {
-        if (name.equals("Cancel")) cancel();
-        else if (name.equals("Press")) keyPressed();
-        else if (name.equals("Release")) keyReleased();
-        else if (name.equals("Down")) showPopup();
-        else super.callAction(name);
-    }
 
     public ChoiceBoxBehavior(ChoiceBox<T> control) {
-        super(control, CHOICE_BUTTON_BINDINGS);
+        super(control);
+
+        // create a map for choiceBox-specific mappings (this reuses the default
+        // InputMap installed on the control, if it is non-null, allowing us to pick up any user-specified mappings)
+        choiceBoxInputMap = createInputMap();
+
+        // choiceBox-specific mappings for key and mouse input
+        addDefaultMapping(choiceBoxInputMap,
+            new KeyMapping(SPACE, KeyEvent.KEY_PRESSED, this::keyPressed),
+            new KeyMapping(SPACE, KeyEvent.KEY_RELEASED, this::keyReleased),
+
+            new KeyMapping(ESCAPE, KeyEvent.KEY_RELEASED, e -> cancel()),
+            new KeyMapping(DOWN, KeyEvent.KEY_RELEASED, e -> showPopup()),
+            new KeyMapping(CANCEL, KeyEvent.KEY_RELEASED, e -> cancel())
+        );
+
+        // add some special two-level focus mappings
+        InputMap<ChoiceBox<T>> twoLevelFocusInputMap = new InputMap<>(control);
+        twoLevelFocusInputMap.setInterceptor(e -> !Utils.isTwoLevelFocus());
+        twoLevelFocusInputMap.getMappings().addAll(
+            new KeyMapping(ENTER, KeyEvent.KEY_PRESSED, this::keyPressed),
+            new KeyMapping(ENTER, KeyEvent.KEY_RELEASED, this::keyReleased)
+        );
+        addDefaultChildMap(choiceBoxInputMap, twoLevelFocusInputMap);
+
         // Only add this if we're on an embedded platform that supports 5-button navigation
         if (Utils.isTwoLevelFocus()) {
             tlFocus = new TwoLevelFocusComboBehavior(control); // needs to be last.
         }
+    }
+
+    @Override public InputMap<ChoiceBox<T>> getInputMap() {
+        return choiceBoxInputMap;
     }
 
     @Override public void dispose() {
@@ -96,27 +91,26 @@ public class ChoiceBoxBehavior<T> extends BehaviorBase<ChoiceBox<T>> {
     }
 
     public void select(int index) {
-        SelectionModel<T> sm = getControl().getSelectionModel();
+        SelectionModel<T> sm = getNode().getSelectionModel();
         if (sm == null) return;
 
         sm.select(index);
     }
 
     public void close() {
-        getControl().hide();
+        getNode().hide();
     }
 
     public void showPopup() {
-        getControl().show();
+        getNode().show();
     }
 
     /**
      * Invoked when a mouse press has occurred over the box. In addition to
      * potentially arming the Button, this will transfer focus to the box
      */
-    @Override public void mousePressed(MouseEvent e) {
-        ChoiceBox<T> choiceButton = getControl();
-        super.mousePressed(e);
+    public void mousePressed(MouseEvent e) {
+        ChoiceBox<T> choiceButton = getNode();
         if (choiceButton.isFocusTraversable()) choiceButton.requestFocus();
     }
 
@@ -125,9 +119,8 @@ public class ChoiceBoxBehavior<T> extends BehaviorBase<ChoiceBox<T>> {
      * was done in a manner that would fire the box's action. This happens
      * only if the box was armed by a corresponding mouse press.
      */
-    @Override public void mouseReleased(MouseEvent e) {
-        ChoiceBox<T> choiceButton = getControl();
-        super.mouseReleased(e);
+    public void mouseReleased(MouseEvent e) {
+        ChoiceBox<T> choiceButton = getNode();
         if (choiceButton.isShowing() || !choiceButton.contains(e.getX(), e.getY())) {
             choiceButton.hide(); // hide if already showing 
         }
@@ -141,8 +134,8 @@ public class ChoiceBoxBehavior<T> extends BehaviorBase<ChoiceBox<T>> {
      * causes this box to be armed if it is not already armed by a mouse
      * press.
      */
-    private void keyPressed() {
-        ChoiceBox<T> choiceButton = getControl();
+    private void keyPressed(KeyEvent e) {
+        ChoiceBox<T> choiceButton = getNode();
         if (!choiceButton.isShowing()) {
             choiceButton.show();
         }
@@ -152,7 +145,7 @@ public class ChoiceBoxBehavior<T> extends BehaviorBase<ChoiceBox<T>> {
      * Invoked when a valid keystroke release occurs which causes the box
      * to fire if it was armed by a keyPress.
      */
-    private void keyReleased() {
+    private void keyReleased(KeyEvent e) {
     }
 
     // no-op
@@ -160,7 +153,7 @@ public class ChoiceBoxBehavior<T> extends BehaviorBase<ChoiceBox<T>> {
      * Invoked when "escape" key is released
      */
     public void cancel() {
-        ChoiceBox<T> choiceButton = getControl();
+        ChoiceBox<T> choiceButton = getNode();
         choiceButton.hide();
     }
 

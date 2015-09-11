@@ -25,6 +25,10 @@
 
 package com.sun.javafx.css;
 
+import javafx.css.CompoundSelector;
+import javafx.css.Selector;
+import javafx.css.SimpleSelector;
+import javafx.css.StyleClass;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -40,7 +44,7 @@ import java.util.Set;
 public final class SelectorPartitioning {
 
     /** package accessible */
-    SelectorPartitioning() {}
+    public SelectorPartitioning() {}
 
     /*
      * Wrapper so that we can have Map<ParitionKey, Partition> even though
@@ -193,7 +197,7 @@ public final class SelectorPartitioning {
     private int ordinal;
     
     /** clear current partitioning */
-    void reset() {
+    public void reset() {
         idMap.clear();
         typeMap.clear();
         styleClassMap.clear();
@@ -225,7 +229,7 @@ public final class SelectorPartitioning {
     private static final PartitionKey WILDCARD = new PartitionKey<String>("*");
     
     /* Place this selector into the partitioning map. Package accessible */
-    void partition(Selector selector) {
+    public void partition(Selector selector) {
         
         SimpleSelector simpleSelector = null;
         if (selector instanceof CompoundSelector) {
@@ -300,7 +304,7 @@ public final class SelectorPartitioning {
     }
     
     /** Get the list of selectors that match this selector. Package accessible */
-    List<Selector> match(String selectorId, String selectorType, Set<StyleClass> selectorStyleClass) {
+    public List<Selector> match(String selectorId, String selectorType, Set<StyleClass> selectorStyleClass) {
         
         final boolean hasId = 
             (selectorId != null && selectorId.isEmpty() == false);

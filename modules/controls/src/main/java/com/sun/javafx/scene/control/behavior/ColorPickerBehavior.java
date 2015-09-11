@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,14 +25,8 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import static javafx.scene.input.KeyCode.*;
-import static javafx.scene.input.KeyEvent.*;
-
-
-import java.util.ArrayList;
-import java.util.List;
 import javafx.scene.control.ColorPicker;
-import com.sun.javafx.scene.control.skin.ColorPickerSkin;
+import javafx.scene.control.PopupControl;
 
 import javafx.scene.paint.Color;
 
@@ -48,59 +42,28 @@ public class ColorPickerBehavior extends ComboBoxBaseBehavior<Color> {
      * 
      */
     public ColorPickerBehavior(final ColorPicker colorPicker) {
-        super(colorPicker, COLOR_PICKER_BINDINGS);
+        super(colorPicker);
     }
 
-    /***************************************************************************
-     *                                                                         *
-     * Key event handling                                                      *
-     *                                                                         *
-     **************************************************************************/
-    
-    /**
-     * Opens the Color Picker Palette.
-     */
-    protected static final String OPEN_ACTION = "Open";
-
-    /**
-     * Closes the Color Picker Palette.
-     */
-    protected static final String CLOSE_ACTION = "Close";
-    
-
-    protected static final List<KeyBinding> COLOR_PICKER_BINDINGS = new ArrayList<KeyBinding>();
-    static {
-//        COLOR_PICKER_BINDINGS.addAll(COMBO_BOX_BASE_BINDINGS);
-        COLOR_PICKER_BINDINGS.add(new KeyBinding(ESCAPE, KEY_PRESSED, CLOSE_ACTION));
-        COLOR_PICKER_BINDINGS.add(new KeyBinding(SPACE, KEY_PRESSED, OPEN_ACTION));
-        COLOR_PICKER_BINDINGS.add(new KeyBinding(ENTER, KEY_PRESSED, OPEN_ACTION));
-        
-    }
-
-    @Override protected void callAction(String name) {
-        if (OPEN_ACTION.equals(name)) {
-            show();
-        } else if(CLOSE_ACTION.equals(name)) {
-            hide();
-        }
-        else super.callAction(name);
-    }
-    
      /**************************************************************************
      *                                                                        *
      * Mouse Events                                                           *
      *                                                                        *
      *************************************************************************/
 
-    @Override public void onAutoHide() {
+    @Override public void onAutoHide(PopupControl popup) {
         // when we click on some non  interactive part of the 
         // Color Palette - we do not want to hide.
-        ColorPicker colorPicker = (ColorPicker)getControl();
-        ColorPickerSkin cpSkin = (ColorPickerSkin)colorPicker.getSkin();
-        cpSkin.syncWithAutoUpdate();
+        if (!popup.isShowing() && getNode().isShowing()) {
+            // Popup was dismissed. Maybe user clicked outside or typed ESCAPE.
+            // Make sure DatePicker button is in sync.
+            getNode().hide();
+        }
         // if the ColorPicker is no longer showing, then invoke the super method
         // to keep its show/hide state in sync.
-        if (!colorPicker.isShowing()) super.onAutoHide();
+        if (!getNode().isShowing()) {
+            super.onAutoHide(popup);
+        }
     }
 
 }

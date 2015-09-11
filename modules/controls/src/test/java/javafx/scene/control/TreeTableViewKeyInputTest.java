@@ -25,7 +25,6 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.scene.control.behavior.TableCellBehavior;
 import com.sun.javafx.scene.control.behavior.TreeTableCellBehavior;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.collections.FXCollections;

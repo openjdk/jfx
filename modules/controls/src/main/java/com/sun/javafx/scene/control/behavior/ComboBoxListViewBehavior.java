@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,12 +26,12 @@
 package com.sun.javafx.scene.control.behavior;
 
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.ComboBoxBase;
 import javafx.scene.control.SelectionModel;
-import java.util.ArrayList;
-import java.util.List;
+import com.sun.javafx.scene.control.inputmap.InputMap;
+
 import static javafx.scene.input.KeyCode.DOWN;
 import static javafx.scene.input.KeyCode.UP;
-import static javafx.scene.input.KeyEvent.KEY_PRESSED;
 
 public class ComboBoxListViewBehavior<T> extends ComboBoxBaseBehavior<T> {
 
@@ -45,7 +45,15 @@ public class ComboBoxListViewBehavior<T> extends ComboBoxBaseBehavior<T> {
      * 
      */
     public ComboBoxListViewBehavior(final ComboBox<T> comboBox) {
-        super(comboBox, COMBO_BOX_BINDINGS);
+        super(comboBox);
+
+        // Add these bindings as a child input map, so they take precedence
+        InputMap<ComboBoxBase<T>> comboBoxListViewInputMap = new InputMap<>(comboBox);
+        comboBoxListViewInputMap.getMappings().addAll(
+            new InputMap.KeyMapping(UP, e -> selectPrevious()),
+            new InputMap.KeyMapping(DOWN, e -> selectNext())
+        );
+        addDefaultChildMap(getInputMap(), comboBoxListViewInputMap);
     }
 
     /***************************************************************************
@@ -54,25 +62,8 @@ public class ComboBoxListViewBehavior<T> extends ComboBoxBaseBehavior<T> {
      *                                                                         *
      **************************************************************************/
 
-    protected static final List<KeyBinding> COMBO_BOX_BINDINGS = new ArrayList<KeyBinding>();
-    static {
-        COMBO_BOX_BINDINGS.add(new KeyBinding(UP, KEY_PRESSED, "selectPrevious"));
-        COMBO_BOX_BINDINGS.add(new KeyBinding(DOWN, "selectNext"));
-        COMBO_BOX_BINDINGS.addAll(COMBO_BOX_BASE_BINDINGS);
-    }
-
-    @Override protected void callAction(String name) {
-        if ("selectPrevious".equals(name)) {
-            selectPrevious();
-        } else if ("selectNext".equals(name)) {
-            selectNext();
-        } else {
-            super.callAction(name);
-        }
-    }
-    
     private ComboBox<T> getComboBox() {
-        return (ComboBox<T>) getControl();
+        return (ComboBox<T>) getNode();
     }
 
     private void selectPrevious() {

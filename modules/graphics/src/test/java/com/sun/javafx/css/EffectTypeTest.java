@@ -27,6 +27,8 @@ package com.sun.javafx.css;
 
 import static org.junit.Assert.assertEquals;
 import javafx.css.ParsedValue;
+import javafx.css.Size;
+import javafx.css.SizeUnits;
 import javafx.scene.effect.BlurType;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.effect.Effect;
@@ -36,8 +38,8 @@ import javafx.scene.text.Font;
 
 import org.junit.Test;
 
-import com.sun.javafx.css.converters.EffectConverter;
-import com.sun.javafx.css.parser.DeriveColorConverter;
+import javafx.css.converter.EffectConverter;
+import javafx.css.converter.DeriveColorConverter;
 
 
 public class EffectTypeTest {

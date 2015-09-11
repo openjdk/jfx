@@ -33,7 +33,7 @@ package com.oracle.javafx.scenebuilder.kit.fxom;
 
 import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
-import com.sun.javafx.fxml.LoadListener;
+import javafx.fxml.LoadListener;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -76,10 +76,9 @@ class FXOMLoader implements LoadListener {
         fxmlLoader.setLocation(document.getLocation());
         fxmlLoader.setResources(new ResourceKeyCollector(document.getResources()));
         fxmlLoader.setClassLoader(new TransientClassLoader(classLoader));
-        fxmlLoader.setBuilderFactory(new FXOMBuilderFactory(classLoader));
+        fxmlLoader.setLoadListener(this);
         Deprecation.setStaticLoad(fxmlLoader, true);
-        Deprecation.setLoadListener(fxmlLoader, this);
-        
+
         final Charset utf8 = Charset.forName("UTF-8");
         try (final InputStream is = new ByteArrayInputStream(fxmlText.getBytes(utf8))) {
             glueCursor = new GlueCursor(document.getGlue());

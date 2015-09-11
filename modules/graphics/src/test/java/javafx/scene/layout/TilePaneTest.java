@@ -27,7 +27,7 @@ package javafx.scene.layout;
 
 import javafx.css.ParsedValue;
 import javafx.css.CssMetaData;
-import com.sun.javafx.css.parser.CSSParser;
+import javafx.css.CssParser;
 import javafx.css.StyleableProperty;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -1026,7 +1026,7 @@ public class TilePaneTest {
         stage.setScene(scene);
         stage.show();
 
-        ParsedValue pv = CSSParser.getInstance().parseExpr("-fx-perf-tile-width","67.0");
+        ParsedValue pv = new CssParser().parseExpr("-fx-perf-tile-width","67.0");
         Object val = pv.convert(null);
         try {
             ((StyleableProperty)tilepane.prefTileWidthProperty()).applyStyle(null, val);
@@ -1042,7 +1042,7 @@ public class TilePaneTest {
         stage.setScene(scene);
         stage.show();
 
-        ParsedValue pv = CSSParser.getInstance().parseExpr("-fx-perf-rows","2");
+        ParsedValue pv = new CssParser().parseExpr("-fx-perf-rows","2");
         Object val = pv.convert(null);
         try {
             ((StyleableProperty)tilepane.prefRowsProperty()).applyStyle(null, val);
@@ -1059,7 +1059,7 @@ public class TilePaneTest {
         stage.setScene(scene);
         stage.show();
 
-        ParsedValue pv = CSSParser.getInstance().parseExpr("-fx-pref-columns","2");
+        ParsedValue pv = new CssParser().parseExpr("-fx-pref-columns","2");
         Object val = pv.convert(null);
         CssMetaData prop = ((StyleableProperty)tilepane.prefColumnsProperty()).getCssMetaData();
         try {

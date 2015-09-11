@@ -61,6 +61,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.Skin;
+import javafx.scene.control.skin.ListViewSkin;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
@@ -89,16 +90,9 @@ import com.sun.javafx.scene.control.skin.FXVK;
 
 import static com.javafx.experiments.scheduleapp.ConferenceScheduleApp.*;
 import static com.javafx.experiments.scheduleapp.Theme.*;
-import java.awt.image.BufferedImage;
-import java.io.IOException;
-import java.net.URL;
+
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import javafx.embed.swing.SwingFXUtils;
-import javafx.scene.image.WritableImage;
-import javax.imageio.ImageIO;
 
 /**
  * Page showing searchable list of all speakers at the conference
@@ -262,8 +256,8 @@ public class SpeakersPage extends Page implements ChangeListener<String> {
     private class SpeakerList extends ListView<Speaker> implements Callback<ListView<Speaker>, ListCell<Speaker>>{
         public SpeakerList(){
             getStyleClass().setAll("twitter-list-view");
-//            skinClassNameProperty().set("com.sun.javafx.scene.control.skin.ListViewSkin");
-            setSkin(new com.sun.javafx.scene.control.skin.ListViewSkin(this));
+//            skinClassNameProperty().set("javafx.scene.control.skin.ListViewSkin");
+            setSkin(new ListViewSkin(this));
             setCellFactory(this);
             // hack workaround for cell sizing
             Node node = lookup(".clipped-container");

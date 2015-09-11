@@ -35,7 +35,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
-import static com.sun.javafx.scene.control.skin.ContextMenuContentRetriever.*;
+import static com.sun.javafx.scene.control.ContextMenuContentRetriever.*;
 
 public class ContextMenuTest {
     private MenuItem menuItem0, menuItem1, menuItem2, menuItem3;

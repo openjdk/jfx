@@ -40,20 +40,19 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.value.WritableValue;
 import javafx.collections.ObservableList;
+import javafx.css.CssParser;
 import javafx.event.EventHandler;
-import javafx.geometry.Side;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.layout.Region;
 import com.sun.javafx.application.PlatformImpl;
-import com.sun.javafx.css.CssError;
 import javafx.css.CssMetaData;
 import com.sun.javafx.css.StyleManager;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableStringProperty;
-import com.sun.javafx.css.converters.StringConverter;
+import javafx.css.converter.StringConverter;
 import com.sun.javafx.scene.control.Logging;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
@@ -420,6 +419,11 @@ public abstract class Control extends Region implements Skinnable {
         // we add a listener for menu request events to show the context menu
         // that may be set on the Control
         this.addEventHandler(ContextMenuEvent.CONTEXT_MENU_REQUESTED, contextMenuHandler);
+
+        // TODO re-enable when InputMap moves back to Node / Control
+//        // Most controls need an input map, so we set this to be non-null in
+//        // Control to save people from running into NPEs.
+//        setInputMap(new InputMap(this));
     }
 
 
@@ -686,9 +690,9 @@ public abstract class Control extends Region implements Skinnable {
         if (skinClassName == null || skinClassName.isEmpty()) {
             final String msg =
                 "Empty -fx-skin property specified for control " + control;
-            final List<CssError> errors = StyleManager.getErrors();
+            final List<CssParser.ParseError> errors = StyleManager.getErrors();
             if (errors != null) {
-                CssError error = new CssError(msg);
+                CssParser.ParseError error = new CssParser.ParseError(msg);
                 errors.add(error); // RT-19884
             }
             Logging.getControlsLogger().severe(msg);
@@ -712,9 +716,9 @@ public abstract class Control extends Region implements Skinnable {
                     "No valid constructor defined in '" + skinClassName + "' for control " + control +
                         ".\r\nYou must provide a constructor that accepts a single "
                         + "Skinnable (e.g. Control or PopupControl) parameter in " + skinClassName + ".";
-                final List<CssError> errors = StyleManager.getErrors();
+                final List<CssParser.ParseError> errors = StyleManager.getErrors();
                 if (errors != null) {
-                    CssError error = new CssError(msg);
+                    CssParser.ParseError error = new CssParser.ParseError(msg);
                     errors.add(error); // RT-19884
                 }
                 Logging.getControlsLogger().severe(msg);
@@ -727,18 +731,18 @@ public abstract class Control extends Region implements Skinnable {
         } catch (InvocationTargetException e) {
             final String msg =
                 "Failed to load skin '" + skinClassName + "' for control " + control;
-            final List<CssError> errors = StyleManager.getErrors();
+            final List<CssParser.ParseError> errors = StyleManager.getErrors();
             if (errors != null) {
-                CssError error = new CssError(msg + " :" + e.getLocalizedMessage());
+                CssParser.ParseError error = new CssParser.ParseError(msg + " :" + e.getLocalizedMessage());
                 errors.add(error); // RT-19884
             }
             Logging.getControlsLogger().severe(msg, e.getCause());
         } catch (Exception e) {
             final String msg =
                 "Failed to load skin '" + skinClassName + "' for control " + control;
-            final List<CssError> errors = StyleManager.getErrors();
+            final List<CssParser.ParseError> errors = StyleManager.getErrors();
             if (errors != null) {
-                CssError error = new CssError(msg + " :" + e.getLocalizedMessage());
+                CssParser.ParseError error = new CssParser.ParseError(msg + " :" + e.getLocalizedMessage());
                 errors.add(error); // RT-19884
             }
             Logging.getControlsLogger().severe(msg, e);
@@ -863,9 +867,9 @@ public abstract class Control extends Region implements Skinnable {
             } else {
                 final String msg = "The -fx-skin property has not been defined in CSS for " + this +
                                    " and createDefaultSkin() returned null.";
-                final List<CssError> errors = StyleManager.getErrors();
+                final List<CssParser.ParseError> errors = StyleManager.getErrors();
                 if (errors != null) {
-                    CssError error = new CssError(msg);
+                    CssParser.ParseError error = new CssParser.ParseError(msg);
                     errors.add(error); // RT-19884
                 }
                 Logging.getControlsLogger().severe(msg);

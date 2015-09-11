@@ -25,7 +25,7 @@
 
 package com.sun.javafx.css;
 
-import com.sun.javafx.css.converters.StringConverter;
+import javafx.css.converter.StringConverter;
 import javafx.css.ParsedValue;
 import javafx.css.StyleConverter;
 import javafx.scene.text.Font;

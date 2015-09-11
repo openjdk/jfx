@@ -25,9 +25,9 @@
 
 package com.sun.javafx.css;
 
-import com.sun.javafx.css.converters.BooleanConverter;
-import com.sun.javafx.css.converters.SizeConverter;
-import com.sun.javafx.css.converters.StringConverter;
+import javafx.css.converter.BooleanConverter;
+import javafx.css.converter.SizeConverter;
+import javafx.css.converter.StringConverter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -50,7 +50,7 @@ import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 
 /** Test Node with styleable properties and an getClassCssMetaData method */
-class TestNodeBase extends Node {
+public class TestNodeBase extends Node {
 
     protected TestNodeBase() {
     }
@@ -170,7 +170,7 @@ class TestNodeBase extends Node {
     }
     
 
-    static class StyleableProperties {
+    public static class StyleableProperties {
         public final static CssMetaData<TestNodeBase,Boolean> TEST =
                 new CssMetaData<TestNodeBase,Boolean>("-fx-test", 
                 BooleanConverter.getInstance(), Boolean.TRUE) {

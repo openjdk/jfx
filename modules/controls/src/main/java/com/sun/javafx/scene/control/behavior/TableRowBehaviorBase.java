@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,7 +34,6 @@ import javafx.scene.control.TableSelectionModel;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 
-import java.util.Collections;
 import java.util.List;
 
 public abstract class TableRowBehaviorBase<T extends Cell> extends CellBehaviorBase<T> {
@@ -46,7 +45,7 @@ public abstract class TableRowBehaviorBase<T extends Cell> extends CellBehaviorB
      **************************************************************************/
 
     public TableRowBehaviorBase(T control) {
-        super(control, Collections.emptyList());
+        super(control);
     }
 
 
@@ -109,7 +108,7 @@ public abstract class TableRowBehaviorBase<T extends Cell> extends CellBehaviorB
                 } else if (shiftDown) {
                     // we add all rows between the current focus and
                     // this row (inclusive) to the current selection.
-                    TablePositionBase<?> anchor = TableCellBehavior.getAnchor(table, getFocusedCell());
+                    TablePositionBase<?> anchor = getAnchor(table, getFocusedCell());
                     final int anchorRow = anchor.getRow();
                     selectRows(anchorRow, index);
                 } else {

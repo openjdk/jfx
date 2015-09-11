@@ -26,14 +26,9 @@
 package javafx.scene.control;
 
 import com.sun.javafx.scene.control.behavior.ListCellBehavior;
-import com.sun.javafx.scene.control.behavior.TableCellBehavior;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
-import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import javafx.event.EventHandler;
 import javafx.scene.input.KeyCode;
 import java.util.List;
 import com.sun.javafx.PlatformUtil;
@@ -220,7 +215,7 @@ public class ListViewKeyInputTest {
         sm.clearAndSelect(0);
         assertTrue(fm.isFocused(0));
         keyboard.doRightArrowPress(KeyModifier.getShortcutKey());
-        assertTrue(fm.isFocused(0));
+        assertTrue(debug(), fm.isFocused(0));
         assertTrue(sm.isSelected(0));
     }
     

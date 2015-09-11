@@ -26,7 +26,10 @@
 package com.sun.javafx.css;
 
 import javafx.css.ParsedValue;
+import javafx.css.Size;
+import javafx.css.SizeUnits;
 import javafx.css.StyleConverter;
+import javafx.css.StyleConverter.StringStore;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 
@@ -46,7 +49,7 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
      * be looked up.
      */
     final private boolean lookup;
-    public final boolean isLookup() { return lookup; }
+    @Override public final boolean isLookup() { return lookup; }
 
     /**
      * If value is itself a ParsedValueImpl or sequence of values, and should any of
@@ -55,7 +58,7 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
      * that this value contains a value that needs to be looked up.
      */
     final private boolean containsLookups;
-    public final boolean isContainsLookups() { return containsLookups; }
+    @Override public final boolean isContainsLookups() { return containsLookups; }
 
     private static boolean getContainsLookupsFlag(Object obj) {
 
@@ -431,14 +434,11 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
 
         os.writeBoolean(lookup);
 
-        if (converter instanceof StyleConverterImpl) {
+        if (converter != null) {
             os.writeBoolean(true);
-            ((StyleConverterImpl)converter).writeBinary(os, stringStore);
+            converter.writeBinary(os, stringStore);
         } else {
             os.writeBoolean(false);
-            if (converter != null) {
-                System.err.println("cannot writeBinary " + converter.getClass().getName());
-            }
         }
 
         if (value instanceof ParsedValue) {
@@ -565,7 +565,7 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
         final boolean lookup = is.readBoolean();
         final boolean hasType = is.readBoolean();
 
-        final StyleConverter converter = (hasType) ? StyleConverterImpl.readBinary(is, strings) : null;
+        final StyleConverter converter = (hasType) ? StyleConverter.readBinary(is, strings) : null;
 
         final int valType = is.readByte();
 
@@ -685,7 +685,7 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
                 URL url = new URL(str);
                 return new ParsedValueImpl(url, converter, lookup);
             } catch (MalformedURLException malf) {
-                throw new InternalError("Excpeption in Value.readBinary: " + malf);
+                throw new InternalError("Exception in Value.readBinary: " + malf);
             }
 
         } else if (valType == NULL_VALUE) {

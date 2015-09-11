@@ -25,7 +25,6 @@
 
 package javafx.scene.layout;
 
-import com.sun.javafx.css.StyleConverterImpl;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.scene.layout.region.RepeatStruct;
 import java.util.Map;
@@ -33,6 +32,7 @@ import javafx.css.CssMetaData;
 import javafx.css.ParsedValue;
 import javafx.css.StyleConverter;
 import javafx.css.Styleable;
+import javafx.css.StyleConverter;
 import javafx.geometry.Insets;
 import javafx.scene.image.Image;
 import javafx.scene.paint.Paint;
@@ -40,7 +40,7 @@ import javafx.scene.paint.Paint;
 /**
  * Converts the CSS for -fx-background items into a Background.
  */
-class BackgroundConverter extends StyleConverterImpl<ParsedValue[], Background> {
+class BackgroundConverter extends StyleConverter<ParsedValue[], Background> {
 
     static final StyleConverter<ParsedValue[], Background> INSTANCE = new BackgroundConverter();
 

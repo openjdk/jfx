@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,12 +57,12 @@ public class TableCellBehavior<S,T> extends TableCellBehaviorBase<S, T, TableCol
 
     /** @{@inheritDoc} */
     @Override protected TableView<S> getCellContainer() {
-        return getControl().getTableView();
+        return getNode().getTableView();
     }
 
     /** @{@inheritDoc} */
     @Override protected TableColumn<S,T> getTableColumn() {
-        return getControl().getTableColumn();
+        return getNode().getTableColumn();
     }
 
     /** @{@inheritDoc} */
@@ -87,7 +87,7 @@ public class TableCellBehavior<S,T> extends TableCellBehaviorBase<S, T, TableCol
 
     /** @{@inheritDoc} */
     @Override protected boolean isTableRowSelected() {
-        return getControl().getTableRow().isSelected();
+        return getNode().getTableRow().isSelected();
     }
 
     /** @{@inheritDoc} */

@@ -27,12 +27,9 @@ package javafx.scene.control;
 
 import com.sun.javafx.scene.control.infrastructure.StageLoader;
 import com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
-import com.sun.javafx.scene.control.skin.TableColumnHeader;
-import com.sun.javafx.scene.control.skin.TableViewSkin;
-import com.sun.javafx.scene.control.skin.TreeTableViewSkin;
-import com.sun.javafx.scene.control.skin.VirtualFlow;
+import javafx.scene.control.skin.TableColumnHeader;
+import javafx.scene.control.skin.VirtualFlow;
 import com.sun.javafx.scene.control.test.Person;
-import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -52,12 +49,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import javafx.beans.property.BooleanProperty;
-import javafx.collections.FXCollections;
-import javafx.scene.Group;
-import javafx.scene.Scene;
-import javafx.scene.control.cell.PropertyValueFactory;
-import javafx.scene.layout.Region;
-import javafx.stage.Stage;
 
 import org.junit.Before;
 import org.junit.Ignore;

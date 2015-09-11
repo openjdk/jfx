@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,13 +26,17 @@ package com.sun.javafx.scene.control.infrastructure;
 
 import static org.junit.Assert.assertNotNull;
 
-import com.sun.javafx.scene.control.skin.*;
 import javafx.geometry.Orientation;
-import javafx.scene.Group;
 import javafx.scene.Node;
-import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.stage.Stage;
+import javafx.scene.control.skin.ComboBoxListViewSkin;
+import com.sun.javafx.scene.control.LabeledText;
+import javafx.scene.control.skin.NestedTableColumnHeader;
+import javafx.scene.control.skin.TableColumnHeader;
+import javafx.scene.control.skin.TableHeaderRow;
+import javafx.scene.control.skin.TableViewSkinBase;
+import javafx.scene.control.skin.VirtualFlow;
+import com.sun.javafx.scene.control.VirtualScrollBar;
 import javafx.util.Callback;
 import java.util.List;
 
@@ -312,7 +316,7 @@ public class VirtualFlowTestUtils {
     public static void assertTableHeaderColumnExists(final Control control, final TableColumnBase column, boolean expected) {
         TableHeaderRow headerRow = getTableHeaderRow(control);
 
-        NestedTableColumnHeader rootHeader = headerRow.getRootHeader();
+        NestedTableColumnHeader rootHeader = getNestedTableColumnHeader(headerRow);
         boolean match = false;
         for (TableColumnHeader header : rootHeader.getColumnHeaders()) {
             match = column.equals(header.getTableColumn());
@@ -340,7 +344,7 @@ public class VirtualFlowTestUtils {
         if (control instanceof ComboBox) {
             final ComboBox cb = (ComboBox) control;
             final ComboBoxListViewSkin skin = (ComboBoxListViewSkin) cb.getSkin();
-            control = skin.getListView();
+            control = (ListView) skin.getPopupContent();
         }
 
         flow = (VirtualFlow<?>)control.lookup("#virtual-flow");
@@ -367,7 +371,7 @@ public class VirtualFlowTestUtils {
             throw new IllegalStateException("getTableHeaderRow requires the control to be visible in a stage");
         }
 
-        TableViewSkinBase<?,?,?,?,?,?> skin = (TableViewSkinBase) control.getSkin();
+        TableViewSkinBase<?,?,?,?,?> skin = (TableViewSkinBase) control.getSkin();
         TableHeaderRow headerRow = null;
         for (Node n : skin.getChildren()) {
             if (n instanceof TableHeaderRow) {
@@ -395,7 +399,7 @@ public class VirtualFlowTestUtils {
 
     public static TableColumnHeader getTableColumnHeader(Control table, TableColumnBase<?,?> column) {
         TableHeaderRow headerRow = VirtualFlowTestUtils.getTableHeaderRow(table);
-        return findColumnHeader(headerRow.getRootHeader(), column);
+        return findColumnHeader(getNestedTableColumnHeader(headerRow), column);
     }
 
     private static TableColumnHeader findColumnHeader(NestedTableColumnHeader nestedHeader, TableColumnBase<?,?> column) {
@@ -412,5 +416,16 @@ public class VirtualFlowTestUtils {
             }
         }
         return null;
+    }
+
+    public static NestedTableColumnHeader getNestedTableColumnHeader(TableHeaderRow headerRow) {
+        NestedTableColumnHeader rootHeader = null;
+
+        for (Node n : headerRow.getChildren()) {
+            if (n instanceof NestedTableColumnHeader) {
+                rootHeader = (NestedTableColumnHeader) n;
+            }
+        }
+        return rootHeader;
     }
 }

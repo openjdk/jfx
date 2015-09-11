@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import com.sun.javafx.scene.control.DoubleField;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.scene.Node;
