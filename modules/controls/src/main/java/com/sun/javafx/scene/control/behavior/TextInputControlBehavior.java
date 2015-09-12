@@ -57,6 +57,7 @@ import java.util.function.Predicate;
 import static com.sun.javafx.PlatformUtil.isLinux;
 import static com.sun.javafx.PlatformUtil.isMac;
 import static com.sun.javafx.PlatformUtil.isWindows;
+import static com.sun.javafx.scene.control.inputmap.KeyBinding.OptionalBoolean;
 import static com.sun.javafx.scene.control.skin.resources.ControlResources.getString;
 import static javafx.scene.control.skin.TextInputControlSkin.TextUnit;
 import static javafx.scene.control.skin.TextInputControlSkin.Direction;
@@ -191,7 +192,12 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
                 // character input.
                 // Any other key press first goes to normal text input
                 // Note this is KEY_TYPED because otherwise the character is not available in the event.
-                keyMapping(new KeyBinding(null, KEY_TYPED), this::defaultKeyTyped),
+                keyMapping(new KeyBinding(null, KEY_TYPED)
+                                    .alt(OptionalBoolean.ANY)
+                                    .shift(OptionalBoolean.ANY)
+                                    .ctrl(OptionalBoolean.ANY)
+                                    .meta(OptionalBoolean.ANY),
+                           this::defaultKeyTyped),
 
                 // However, we want to consume other key press / release events too, for
                 // things that would have been handled by the InputCharacter normally
