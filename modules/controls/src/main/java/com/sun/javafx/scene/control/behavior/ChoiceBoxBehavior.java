@@ -34,7 +34,7 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import static javafx.scene.input.KeyCode.*;
 
-import static com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
+import static com.sun.javafx.scene.control.inputmap.InputMap.*;
 
 /**
  * ChoiceBoxBehavior - default implementation
@@ -63,7 +63,10 @@ public class ChoiceBoxBehavior<T> extends BehaviorBase<ChoiceBox<T>> {
 
             new KeyMapping(ESCAPE, KeyEvent.KEY_RELEASED, e -> cancel()),
             new KeyMapping(DOWN, KeyEvent.KEY_RELEASED, e -> showPopup()),
-            new KeyMapping(CANCEL, KeyEvent.KEY_RELEASED, e -> cancel())
+            new KeyMapping(CANCEL, KeyEvent.KEY_RELEASED, e -> cancel()),
+
+            new MouseMapping(MouseEvent.MOUSE_PRESSED, this::mousePressed),
+            new MouseMapping(MouseEvent.MOUSE_RELEASED, this::mouseReleased)
         );
 
         // add some special two-level focus mappings
