@@ -23,7 +23,7 @@
  * questions.
  */
 
-package com.sun.javafx.scene.web.skin;
+package javafx.scene.web;
 
 import java.util.ResourceBundle;
 
@@ -64,11 +64,8 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
-import javafx.scene.web.HTMLEditor;
-import javafx.scene.web.WebView;
 import javafx.util.Callback;
 
-import javafx.scene.control.skin.ColorPickerSkin;
 import com.sun.javafx.scene.control.skin.FXVK;
 import com.sun.javafx.scene.web.behavior.HTMLEditorBehavior;
 import com.sun.webkit.WebPage;
@@ -88,10 +85,22 @@ import javafx.collections.ListChangeListener;
 import static javafx.geometry.NodeOrientation.*;
 import javafx.print.PrinterJob;
 
+import static javafx.scene.web.HTMLEditorSkin.Command.*;
+
 /**
  * HTML editor skin.
+ *
+ * @see HTMLEditor
+ * @since 9
  */
 public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
+
+    /***************************************************************************
+     *                                                                         *
+     * Private fields                                                          *
+     *                                                                         *
+     **************************************************************************/
+
     private GridPane gridPane;
 
     private ToolBar toolbar1;
@@ -139,37 +148,27 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
     private WebView webView;
     private WebPage webPage;
 
-    private static final String CUT_COMMAND = "cut";
-    private static final String COPY_COMMAND = "copy";
-    private static final String PASTE_COMMAND = "paste";
+    private ParentTraversalEngine engine;
 
-    private static final String UNDO_COMMAND = "undo";
-    private static final String REDO_COMMAND = "redo";
+    private boolean resetToolbarState = false;
+    private String cachedHTMLText = "<html><head></head><body contenteditable=\"true\"></body></html>";
+    private ResourceBundle resources;
 
-    private static final String INSERT_HORIZONTAL_RULE_COMMAND = "inserthorizontalrule";
+    private boolean enableAtomicityCheck = false;
+    private int atomicityCount = 0;
+    private boolean isFirstRun = true;
 
-    private static final String ALIGN_LEFT_COMMAND = "justifyleft";
-    private static final String ALIGN_CENTER_COMMAND = "justifycenter";
-    private static final String ALIGN_RIGHT_COMMAND = "justifyright";
-    private static final String ALIGN_JUSTIFY_COMMAND = "justifyfull";
+    private static final int FONT_FAMILY_MENUBUTTON_WIDTH = 150;
+    private static final int FONT_FAMILY_MENU_WIDTH = 100;
+    private static final int FONT_SIZE_MENUBUTTON_WIDTH = 80;
 
-    private static final String BULLETS_COMMAND = "insertUnorderedList";
-    private static final String NUMBERS_COMMAND = "insertOrderedList";
 
-    private static final String INDENT_COMMAND = "indent";
-    private static final String OUTDENT_COMMAND = "outdent";
 
-    private static final String FORMAT_COMMAND = "formatblock";
-    private static final String FONT_FAMILY_COMMAND = "fontname";
-    private static final String FONT_SIZE_COMMAND = "fontsize";
-
-    private static final String BOLD_COMMAND = "bold";
-    private static final String ITALIC_COMMAND = "italic";
-    private static final String UNDERLINE_COMMAND = "underline";
-    private static final String STRIKETHROUGH_COMMAND = "strikethrough";
-
-    private static final String FOREGROUND_COLOR_COMMAND = "forecolor";
-    private static final String BACKGROUND_COLOR_COMMAND = "backcolor";
+    /***************************************************************************
+     *                                                                         *
+     * Static fields                                                           *
+     *                                                                         *
+     **************************************************************************/
 
     private static final Color DEFAULT_BG_COLOR = Color.WHITE;
     private static final Color DEFAULT_FG_COLOR = Color.BLACK;
@@ -190,18 +189,15 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
     private static final String SIZE_X_LARGE = "6";
     private static final String SIZE_XX_LARGE = "7";
 
-    private static final String INSERT_NEW_LINE_COMMAND = "insertnewline";
-    private static final String INSERT_TAB_COMMAND = "inserttab";
-
     // As per RT-16330: default format -> bold/size mappings are as follows:
     private static final String[][] DEFAULT_FORMAT_MAPPINGS = {
-        { FORMAT_PARAGRAPH,   "",             SIZE_SMALL     },
-        { FORMAT_HEADING_1,   BOLD_COMMAND,   SIZE_X_LARGE   },
-        { FORMAT_HEADING_2,   BOLD_COMMAND,   SIZE_LARGE     },
-        { FORMAT_HEADING_3,   BOLD_COMMAND,   SIZE_MEDIUM    },
-        { FORMAT_HEADING_4,   BOLD_COMMAND,   SIZE_SMALL     },
-        { FORMAT_HEADING_5,   BOLD_COMMAND,   SIZE_X_SMALL   },
-        { FORMAT_HEADING_6,   BOLD_COMMAND,   SIZE_XX_SMALL  },
+        { FORMAT_PARAGRAPH,   "",                  SIZE_SMALL     },
+        { FORMAT_HEADING_1,   BOLD.getCommand(),   SIZE_X_LARGE   },
+        { FORMAT_HEADING_2,   BOLD.getCommand(),   SIZE_LARGE     },
+        { FORMAT_HEADING_3,   BOLD.getCommand(),   SIZE_MEDIUM    },
+        { FORMAT_HEADING_4,   BOLD.getCommand(),   SIZE_SMALL     },
+        { FORMAT_HEADING_5,   BOLD.getCommand(),   SIZE_X_SMALL   },
+        { FORMAT_HEADING_6,   BOLD.getCommand(),   SIZE_XX_SMALL  },
     };
 
     // As per RT-16379: default OS -> font mappings:
@@ -218,6 +214,16 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
     };
     private static final String DEFAULT_OS_FONT = getOSMappings()[1];
 
+    private static PseudoClass CONTAINS_FOCUS_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("contains-focus");
+
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Static Methods                                                          *
+     *                                                                         *
+     **************************************************************************/
+
     private static String[] getOSMappings() {
         String os = System.getProperty("os.name");
         for  (int i = 0; i < DEFAULT_OS_MAPPINGS.length; i++) {
@@ -229,10 +235,14 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
         return DEFAULT_WINDOWS_7_MAPPINGS;
     }
 
-    private ParentTraversalEngine engine;
 
-    private boolean resetToolbarState = false;
-    private String cachedHTMLText = "<html><head></head><body contenteditable=\"true\"></body></html>";
+
+    /***************************************************************************
+     *                                                                         *
+     * Listeners                                                               *
+     *                                                                         *
+     **************************************************************************/
+
     private ListChangeListener<Node> itemsListener = c -> {
         while (c.next()) {
             if (c.getRemovedSize() > 0) {
@@ -245,11 +255,27 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
             }
         }
     };
-    public HTMLEditorSkin(HTMLEditor htmlEditor) {
-        super(htmlEditor);
+
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Constructors                                                            *
+     *                                                                         *
+     **************************************************************************/
+
+    /**
+     * Creates a new HTMLEditorSkin instance, installing the necessary child
+     * nodes into the Control {@link Control#getChildren() children} list, as
+     * well as the necessary input mappings for handling key, mouse, etc events.
+     *
+     * @param control The control that this skin should be installed onto.
+     */
+    public HTMLEditorSkin(HTMLEditor control) {
+        super(control);
 
         // install default input map for the HTMLEditor control
-        HTMLEditorBehavior behavior = new HTMLEditorBehavior(htmlEditor);
+        HTMLEditorBehavior behavior = new HTMLEditorBehavior(control);
 //        htmlEditor.setInputMap(behavior.getInputMap());
 
         getChildren().clear();
@@ -299,11 +325,11 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
                     ** if we are in either Bullet or Numbers mode then the
                     ** TAB key tells us to indent again.
                     */
-                    if (getCommandState(BULLETS_COMMAND) || getCommandState(NUMBERS_COMMAND)) {
-                        executeCommand(INDENT_COMMAND, null);
+                    if (getCommandState(BULLETS.getCommand()) || getCommandState(NUMBERS.getCommand())) {
+                        executeCommand(INDENT.getCommand(), null);
                     }
                     else {
-                        executeCommand(INSERT_TAB_COMMAND, null);
+                        executeCommand(INSERT_TAB.getCommand(), null);
                     }
                 }
                 else {
@@ -311,8 +337,8 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
                     ** if we are in either Bullet or Numbers mode then the
                     ** Shift-TAB key tells us to outdent.
                     */
-                    if (getCommandState(BULLETS_COMMAND) || getCommandState(NUMBERS_COMMAND)) {
-                        executeCommand(OUTDENT_COMMAND, null);
+                    if (getCommandState(BULLETS.getCommand()) || getCommandState(NUMBERS.getCommand())) {
+                        executeCommand(OUTDENT.getCommand(), null);
                     }
                 }
                 return;
@@ -330,18 +356,18 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
                         updateToolbarState(true);
                     } else if (event.isControlDown() || event.isMetaDown()) {
                         if (event.getCode() == KeyCode.B) {
-                            keyboardShortcuts(BOLD_COMMAND);
+                            performCommand(BOLD);
                         } else if (event.getCode() == KeyCode.I) {
-                            keyboardShortcuts(ITALIC_COMMAND);
+                            performCommand(ITALIC);
                         } else if (event.getCode() == KeyCode.U) {
-                            keyboardShortcuts(UNDERLINE_COMMAND);
+                            performCommand(UNDERLINE);
                         }
                         updateToolbarState(true);
                     } else {
                         resetToolbarState = event.getCode() == KeyCode.ENTER;
                         if (resetToolbarState) {
-                            if (getCommandState(BOLD_COMMAND) != boldButton.selectedProperty().getValue()) {
-                                executeCommand(BOLD_COMMAND, boldButton.selectedProperty().getValue().toString());
+                            if (getCommandState(BOLD.getCommand()) != boldButton.selectedProperty().getValue()) {
+                                executeCommand(BOLD.getCommand(), boldButton.selectedProperty().getValue().toString());
                             }
                         }
                         updateToolbarState(false);
@@ -372,11 +398,11 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
                         updateToolbarState(true);
                     } else if (event.isControlDown() || event.isMetaDown()) {
                         if (event.getCode() == KeyCode.B) {
-                            keyboardShortcuts(BOLD_COMMAND);
+                            performCommand(BOLD);
                         } else if (event.getCode() == KeyCode.I) {
-                            keyboardShortcuts(ITALIC_COMMAND);
+                            performCommand(ITALIC);
                         } else if (event.getCode() == KeyCode.U) {
-                            keyboardShortcuts(UNDERLINE_COMMAND);
+                            performCommand(UNDERLINE);
                         }
                         updateToolbarState(true);
                     } else {
@@ -471,14 +497,64 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
         webView.setFocusTraversable(true);
         gridPane.getChildren().addListener(itemsListener);
     }
-    
-    public final String getHTMLText() {
+
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Public API                                                              *
+     *                                                                         *
+     **************************************************************************/
+
+    /**
+     * Special-case handling for certain commands. Over time this may be extended
+     * to handle additional commands. The current list of supported commands is:
+     *
+     * <ul>
+     *     <li>BOLD</li>
+     *     <li>ITALIC</li>
+     *     <li>UNDERLINE</li>
+     * </ul>
+     */
+    public void performCommand(final Command command) {
+        switch (command) {
+            case BOLD: boldButton.fire(); break;
+            case ITALIC: italicButton.setSelected(!italicButton.isSelected()); break;
+            case UNDERLINE: underlineButton.setSelected(!underlineButton.isSelected()); break;
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void layoutChildren(final double x, final double y,
+                                  final double w, final double h) {
+
+        if (isFirstRun) {
+            populateToolbars();
+            isFirstRun = false;
+        }
+        super.layoutChildren(x,y,w,h);
+        double toolbarWidth = Math.max(toolbar1.prefWidth(-1), toolbar2.prefWidth(-1));
+        toolbar1.setMinWidth(toolbarWidth);
+        toolbar1.setPrefWidth(toolbarWidth);
+        toolbar2.setMinWidth(toolbarWidth);
+        toolbar2.setPrefWidth(toolbarWidth);
+    }
+
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Private Implementation                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+    final String getHTMLText() {
         // RT17203 setHTMLText is asynchronous.  We use the cached version of
-        // the html text until the page finishes loading.        
+        // the html text until the page finishes loading.
         return cachedHTMLText != null ? cachedHTMLText : webPage.getHtml(webPage.getMainFrame());
     }
 
-    public final void setHTMLText(String htmlText) {
+    final void setHTMLText(String htmlText) {
         cachedHTMLText = htmlText;
         webPage.load(webPage.getMainFrame(), htmlText, "text/html");
 
@@ -487,47 +563,45 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
         });
     }
 
-    private ResourceBundle resources;
-
     private void populateToolbars() {
         resources = ResourceBundle.getBundle(HTMLEditorSkin.class.getName());
 
         // Toolbar 1
-        cutButton = addButton(toolbar1, resources.getString("cutIcon"), resources.getString("cut"), CUT_COMMAND, "html-editor-cut");
-        copyButton = addButton(toolbar1, resources.getString("copyIcon"), resources.getString("copy"), COPY_COMMAND, "html-editor-copy");
-        pasteButton = addButton(toolbar1, resources.getString("pasteIcon"), resources.getString("paste"), PASTE_COMMAND, "html-editor-paste");
+        cutButton = addButton(toolbar1, resources.getString("cutIcon"), resources.getString("cut"), CUT.getCommand(), "html-editor-cut");
+        copyButton = addButton(toolbar1, resources.getString("copyIcon"), resources.getString("copy"), COPY.getCommand(), "html-editor-copy");
+        pasteButton = addButton(toolbar1, resources.getString("pasteIcon"), resources.getString("paste"), PASTE.getCommand(), "html-editor-paste");
 
         toolbar1.getItems().add(new Separator(Orientation.VERTICAL));
 
-//        undoButton = addButton(toolbar1, "undoIcon", resources.getString("undo"), UNDO_COMMAND);
-//        redoButton = addButton(toolbar1, "redoIcon", resources.getString("redo"), REDO_COMMAND);//
+//        undoButton = addButton(toolbar1, "undoIcon", resources.getString("undo"), UNDO.getCommand());
+//        redoButton = addButton(toolbar1, "redoIcon", resources.getString("redo"), REDO.getCommand());//
 //        toolbar1.getItems().add(new Separator());
 
          alignmentToggleGroup = new ToggleGroup();
          alignLeftButton = addToggleButton(toolbar1, alignmentToggleGroup,
-            resources.getString("alignLeftIcon"), resources.getString("alignLeft"), ALIGN_LEFT_COMMAND, "html-editor-align-left");
+            resources.getString("alignLeftIcon"), resources.getString("alignLeft"), ALIGN_LEFT.getCommand(), "html-editor-align-left");
          alignCenterButton = addToggleButton(toolbar1, alignmentToggleGroup,
-            resources.getString("alignCenterIcon"), resources.getString("alignCenter"), ALIGN_CENTER_COMMAND, "html-editor-align-center");
+            resources.getString("alignCenterIcon"), resources.getString("alignCenter"), ALIGN_CENTER.getCommand(), "html-editor-align-center");
          alignRightButton = addToggleButton(toolbar1, alignmentToggleGroup,
-            resources.getString("alignRightIcon"), resources.getString("alignRight"), ALIGN_RIGHT_COMMAND, "html-editor-align-right");
+            resources.getString("alignRightIcon"), resources.getString("alignRight"), ALIGN_RIGHT.getCommand(), "html-editor-align-right");
          alignJustifyButton = addToggleButton(toolbar1, alignmentToggleGroup,
-            resources.getString("alignJustifyIcon"), resources.getString("alignJustify"), ALIGN_JUSTIFY_COMMAND, "html-editor-align-justify");
+            resources.getString("alignJustifyIcon"), resources.getString("alignJustify"), ALIGN_JUSTIFY.getCommand(), "html-editor-align-justify");
 
         toolbar1.getItems().add(new Separator(Orientation.VERTICAL));
 
-        outdentButton = addButton(toolbar1, resources.getString("outdentIcon"), resources.getString("outdent"), OUTDENT_COMMAND, "html-editor-outdent");
+        outdentButton = addButton(toolbar1, resources.getString("outdentIcon"), resources.getString("outdent"), OUTDENT.getCommand(), "html-editor-outdent");
         if (outdentButton.getGraphic() != null) outdentButton.getGraphic().setNodeOrientation(NodeOrientation.INHERIT);
-        indentButton = addButton(toolbar1, resources.getString("indentIcon"), resources.getString("indent"), INDENT_COMMAND, "html-editor-indent");
+        indentButton = addButton(toolbar1, resources.getString("indentIcon"), resources.getString("indent"), INDENT.getCommand(), "html-editor-indent");
         if (indentButton.getGraphic() != null) indentButton.getGraphic().setNodeOrientation(NodeOrientation.INHERIT);
 
         toolbar1.getItems().add(new Separator(Orientation.VERTICAL));
 
          ToggleGroup listStyleToggleGroup = new ToggleGroup();
          bulletsButton = addToggleButton(toolbar1, listStyleToggleGroup,
-            resources.getString("bulletsIcon"), resources.getString("bullets"), BULLETS_COMMAND, "html-editor-bullets");
+            resources.getString("bulletsIcon"), resources.getString("bullets"), BULLETS.getCommand(), "html-editor-bullets");
          if (bulletsButton.getGraphic() != null) bulletsButton.getGraphic().setNodeOrientation(NodeOrientation.INHERIT);
          numbersButton = addToggleButton(toolbar1, listStyleToggleGroup,
-            resources.getString("numbersIcon"), resources.getString("numbers"), NUMBERS_COMMAND, "html-editor-numbers");
+            resources.getString("numbersIcon"), resources.getString("numbers"), NUMBERS.getCommand(), "html-editor-numbers");
 
         toolbar1.getItems().add(new Separator(Orientation.VERTICAL));
 
@@ -575,14 +649,14 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
                 formatComboBox.setValue(null);
             } else {
                 String formatValue = formatStyleMap.get(newValue);
-                executeCommand(FORMAT_COMMAND, formatValue);
+                executeCommand(FORMAT.getCommand(), formatValue);
                 updateToolbarState(false);
 
                 // RT-16330 match the new font format with the required weight and size
                 for (int i = 0; i < DEFAULT_FORMAT_MAPPINGS.length; i++) {
                     String[] mapping = DEFAULT_FORMAT_MAPPINGS[i];
                     if (mapping[0].equalsIgnoreCase(formatValue)) {
-                        executeCommand(FONT_SIZE_COMMAND, mapping[2]);
+                        executeCommand(FONT_SIZE.getCommand(), mapping[2]);
                         updateToolbarState(false);
                         break;
                     }
@@ -634,7 +708,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
         });
 
         fontFamilyComboBox.valueProperty().addListener((observable, oldValue, newValue) -> {
-            executeCommand(FONT_FAMILY_COMMAND, newValue);
+            executeCommand(FONT_FAMILY.getCommand(), newValue);
         });
 
         fontSizeComboBox = new ComboBox<String>();
@@ -676,39 +750,39 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
 
 
         fontSizeComboBox.valueProperty().addListener((observable, oldValue, newValue) -> {
-            Object fontSizeValue = getCommandValue(FONT_SIZE_COMMAND);
+            Object fontSizeValue = getCommandValue(FONT_SIZE.getCommand());
             if (!newValue.equals(fontSizeValue)) {
-                executeCommand(FONT_SIZE_COMMAND, fontSizeMap.get(newValue));
+                executeCommand(FONT_SIZE.getCommand(), fontSizeMap.get(newValue));
             }
         });
 
         toolbar2.getItems().add(new Separator(Orientation.VERTICAL));
 
         boldButton = addToggleButton(toolbar2, null,
-            resources.getString("boldIcon"), resources.getString("bold"), BOLD_COMMAND, "html-editor-bold");
+            resources.getString("boldIcon"), resources.getString("bold"), BOLD.getCommand(), "html-editor-bold");
         boldButton.setOnAction(event1 -> {
             // Only use the bold button for paragraphs.  We don't
             // want to turn bold off for headings.
 
             if ("<p>".equals(formatStyleMap.get(formatComboBox.getValue())))  {
-                executeCommand(BOLD_COMMAND, boldButton.selectedProperty().getValue().toString());
+                executeCommand(BOLD.getCommand(), boldButton.selectedProperty().getValue().toString());
             }
         });
         italicButton = addToggleButton(toolbar2, null,
-            resources.getString("italicIcon"), resources.getString("italic"), ITALIC_COMMAND, "html-editor-italic");
+            resources.getString("italicIcon"), resources.getString("italic"), ITALIC.getCommand(), "html-editor-italic");
         underlineButton = addToggleButton(toolbar2, null,
-            resources.getString("underlineIcon"), resources.getString("underline"), UNDERLINE_COMMAND, "html-editor-underline");
+            resources.getString("underlineIcon"), resources.getString("underline"), UNDERLINE.getCommand(), "html-editor-underline");
         strikethroughButton = addToggleButton(toolbar2, null,
-            resources.getString("strikethroughIcon"), resources.getString("strikethrough"), STRIKETHROUGH_COMMAND, "html-editor-strike");
+            resources.getString("strikethroughIcon"), resources.getString("strikethrough"), STRIKETHROUGH.getCommand(), "html-editor-strike");
 
         toolbar2.getItems().add(new Separator(Orientation.VERTICAL));
 
         insertHorizontalRuleButton = addButton(toolbar2, resources.getString("insertHorizontalRuleIcon"),
-            resources.getString("insertHorizontalRule"), INSERT_HORIZONTAL_RULE_COMMAND, "html-editor-hr");
+            resources.getString("insertHorizontalRule"), INSERT_HORIZONTAL_RULE.getCommand(), "html-editor-hr");
         // We override setOnAction to insert a new line.  This fixes RT-16453
         insertHorizontalRuleButton.setOnAction(event -> {
-            executeCommand(INSERT_NEW_LINE_COMMAND, null);
-            executeCommand(INSERT_HORIZONTAL_RULE_COMMAND, null);
+            executeCommand(INSERT_NEW_LINE.getCommand(), null);
+            executeCommand(INSERT_HORIZONTAL_RULE.getCommand(), null);
             updateToolbarState(false);
         });
 
@@ -728,7 +802,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
         fgColorButton.setOnAction(ev1 -> {
             Color newValue = fgColorButton.getValue();
             if (newValue != null) {
-                executeCommand(FOREGROUND_COLOR_COMMAND, colorValueToHex(newValue));
+                executeCommand(FOREGROUND_COLOR.getCommand(), colorValueToHex(newValue));
                 fgColorButton.hide();
             }
         });
@@ -750,7 +824,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
         bgColorButton.setOnAction(ev -> {
             Color newValue = bgColorButton.getValue();
             if (newValue != null) {
-                executeCommand(BACKGROUND_COLOR_COMMAND, colorValueToHex(newValue));
+                executeCommand(BACKGROUND_COLOR.getCommand(), colorValueToHex(newValue));
                 bgColorButton.hide();
             }
         });
@@ -772,7 +846,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
 
         Image icon = AccessController.doPrivileged((PrivilegedAction<Image>) () -> new Image(HTMLEditorSkin.class.getResource(iconName).toString()));
 //        button.setGraphic(new ImageView(icon));
-        ((StyleableProperty)button.graphicProperty()).applyStyle(null,new ImageView(icon));
+        ((StyleableProperty)button.graphicProperty()).applyStyle(null, new ImageView(icon));
         button.setTooltip(new Tooltip(tooltipText));
 
         button.setOnAction(event -> {
@@ -795,12 +869,12 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
         }
 
         Image icon = AccessController.doPrivileged((PrivilegedAction<Image>) () -> new Image(HTMLEditorSkin.class.getResource(iconName).toString()));
-        ((StyleableProperty)toggleButton.graphicProperty()).applyStyle(null,new ImageView(icon));
+        ((StyleableProperty)toggleButton.graphicProperty()).applyStyle(null, new ImageView(icon));
 //        toggleButton.setGraphic(new ImageView(icon));
 
         toggleButton.setTooltip(new Tooltip(tooltipText));
 
-        if (!BOLD_COMMAND.equals(command)) {
+        if (!BOLD.getCommand().equals(command)) {
             toggleButton.selectedProperty().addListener((observable, oldValue, newValue) -> {
                 if (getCommandState(command) != newValue.booleanValue()) {
                     executeCommand(command, null);
@@ -833,9 +907,6 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
 
     }
 
-    private boolean enableAtomicityCheck = false;
-    private int atomicityCount = 0;
-
     private void updateToolbarState(final boolean updateAlignment) {
         if (!webView.isFocused()) {
             return;
@@ -844,27 +915,27 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
         atomicityCount++;
 
         // These command aways return true.
-        copyButton.setDisable(!isCommandEnabled(CUT_COMMAND));
-        cutButton.setDisable(!isCommandEnabled(COPY_COMMAND));
-        pasteButton.setDisable(!isCommandEnabled(PASTE_COMMAND));
+        copyButton.setDisable(!isCommandEnabled(CUT.getCommand()));
+        cutButton.setDisable(!isCommandEnabled(COPY.getCommand()));
+        pasteButton.setDisable(!isCommandEnabled(PASTE.getCommand()));
 
-        // undoButton.setDisable(!isCommandEnabled(UNDO_COMMAND));
-        // redoButton.setDisable(!isCommandEnabled(REDO_COMMAND));
+        // undoButton.setDisable(!isCommandEnabled(UNDO.getCommand()));
+        // redoButton.setDisable(!isCommandEnabled(REDO.getCommand()));
 
-//        undoButton.setDisable(!isCommandEnabled(FORMAT_COMMAND));
-//        redoButton.setDisable(!isCommandEnabled(FORMAT_COMMAND));
+//        undoButton.setDisable(!isCommandEnabled(FORMAT.getCommand()));
+//        redoButton.setDisable(!isCommandEnabled(FORMAT.getCommand()));
 
-        insertHorizontalRuleButton.setDisable(!isCommandEnabled(INSERT_HORIZONTAL_RULE_COMMAND));
+        insertHorizontalRuleButton.setDisable(!isCommandEnabled(INSERT_HORIZONTAL_RULE.getCommand()));
 
         if (updateAlignment) {
-            alignLeftButton.setDisable(!isCommandEnabled(ALIGN_LEFT_COMMAND));
-            alignLeftButton.setSelected(getCommandState(ALIGN_LEFT_COMMAND));
-            alignCenterButton.setDisable(!isCommandEnabled(ALIGN_CENTER_COMMAND));
-            alignCenterButton.setSelected(getCommandState(ALIGN_CENTER_COMMAND));
-            alignRightButton.setDisable(!isCommandEnabled(ALIGN_RIGHT_COMMAND));
-            alignRightButton.setSelected(getCommandState(ALIGN_RIGHT_COMMAND));
-            alignJustifyButton.setDisable(!isCommandEnabled(ALIGN_JUSTIFY_COMMAND));
-            alignJustifyButton.setSelected(getCommandState(ALIGN_JUSTIFY_COMMAND));
+            alignLeftButton.setDisable(!isCommandEnabled(ALIGN_LEFT.getCommand()));
+            alignLeftButton.setSelected(getCommandState(ALIGN_LEFT.getCommand()));
+            alignCenterButton.setDisable(!isCommandEnabled(ALIGN_CENTER.getCommand()));
+            alignCenterButton.setSelected(getCommandState(ALIGN_CENTER.getCommand()));
+            alignRightButton.setDisable(!isCommandEnabled(ALIGN_RIGHT.getCommand()));
+            alignRightButton.setSelected(getCommandState(ALIGN_RIGHT.getCommand()));
+            alignJustifyButton.setDisable(!isCommandEnabled(ALIGN_JUSTIFY.getCommand()));
+            alignJustifyButton.setSelected(getCommandState(ALIGN_JUSTIFY.getCommand()));
         } else {
             if (alignmentToggleGroup.getSelectedToggle() != null) {
                 String command = alignmentToggleGroup.getSelectedToggle().getUserData().toString();
@@ -878,18 +949,18 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
             alignmentToggleGroup.selectToggle(alignLeftButton);
         }
 
-        bulletsButton.setDisable(!isCommandEnabled(BULLETS_COMMAND));
-        bulletsButton.setSelected(getCommandState(BULLETS_COMMAND));
-        numbersButton.setDisable(!isCommandEnabled(NUMBERS_COMMAND));
-        numbersButton.setSelected(getCommandState(NUMBERS_COMMAND));
+        bulletsButton.setDisable(!isCommandEnabled(BULLETS.getCommand()));
+        bulletsButton.setSelected(getCommandState(BULLETS.getCommand()));
+        numbersButton.setDisable(!isCommandEnabled(NUMBERS.getCommand()));
+        numbersButton.setSelected(getCommandState(NUMBERS.getCommand()));
 
-        indentButton.setDisable(!isCommandEnabled(INDENT_COMMAND));
-        outdentButton.setDisable(!isCommandEnabled(OUTDENT_COMMAND));
+        indentButton.setDisable(!isCommandEnabled(INDENT.getCommand()));
+        outdentButton.setDisable(!isCommandEnabled(OUTDENT.getCommand()));
 
-        formatComboBox.setDisable(!isCommandEnabled(FORMAT_COMMAND));
+        formatComboBox.setDisable(!isCommandEnabled(FORMAT.getCommand()));
 
 
-        String formatValue = getCommandValue(FORMAT_COMMAND);
+        String formatValue = getCommandValue(FORMAT.getCommand());
         if (formatValue != null) {
             String htmlTag = "<" + formatValue + ">";
             String comboFormatValue = styleFormatMap.get(htmlTag);
@@ -904,8 +975,8 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
             }
         }
 
-        fontFamilyComboBox.setDisable(!isCommandEnabled(FONT_FAMILY_COMMAND));
-        final String fontFamilyValue = getCommandValue(FONT_FAMILY_COMMAND);
+        fontFamilyComboBox.setDisable(!isCommandEnabled(FONT_FAMILY.getCommand()));
+        final String fontFamilyValue = getCommandValue(FONT_FAMILY.getCommand());
         if (fontFamilyValue != null) {
             String fontFamilyStr = fontFamilyValue;
 
@@ -945,8 +1016,8 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
             }
         }
 
-        fontSizeComboBox.setDisable(!isCommandEnabled(FONT_SIZE_COMMAND));
-        String fontSizeValue = getCommandValue(FONT_SIZE_COMMAND);
+        fontSizeComboBox.setDisable(!isCommandEnabled(FONT_SIZE.getCommand()));
+        String fontSizeValue = getCommandValue(FONT_SIZE.getCommand());
 
         // added test for fontSizeValue == null to combat RT-28847
         if (resetToolbarState && fontSizeValue == null) {
@@ -968,24 +1039,24 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
             }
         }
 
-        boldButton.setDisable(!isCommandEnabled(BOLD_COMMAND));
-        boldButton.setSelected(getCommandState(BOLD_COMMAND));
-        italicButton.setDisable(!isCommandEnabled(ITALIC_COMMAND));
-        italicButton.setSelected(getCommandState(ITALIC_COMMAND));
-        underlineButton.setDisable(!isCommandEnabled(UNDERLINE_COMMAND));
-        underlineButton.setSelected(getCommandState(UNDERLINE_COMMAND));
-        strikethroughButton.setDisable(!isCommandEnabled(STRIKETHROUGH_COMMAND));
-        strikethroughButton.setSelected(getCommandState(STRIKETHROUGH_COMMAND));
+        boldButton.setDisable(!isCommandEnabled(BOLD.getCommand()));
+        boldButton.setSelected(getCommandState(BOLD.getCommand()));
+        italicButton.setDisable(!isCommandEnabled(ITALIC.getCommand()));
+        italicButton.setSelected(getCommandState(ITALIC.getCommand()));
+        underlineButton.setDisable(!isCommandEnabled(UNDERLINE.getCommand()));
+        underlineButton.setSelected(getCommandState(UNDERLINE.getCommand()));
+        strikethroughButton.setDisable(!isCommandEnabled(STRIKETHROUGH.getCommand()));
+        strikethroughButton.setSelected(getCommandState(STRIKETHROUGH.getCommand()));
 
-        fgColorButton.setDisable(!isCommandEnabled(FOREGROUND_COLOR_COMMAND));
-        String foregroundColorValue = getCommandValue(FOREGROUND_COLOR_COMMAND);
+        fgColorButton.setDisable(!isCommandEnabled(FOREGROUND_COLOR.getCommand()));
+        String foregroundColorValue = getCommandValue(FOREGROUND_COLOR.getCommand());
         if (foregroundColorValue != null) {
             Color c = Color.web(rgbToHex((String)foregroundColorValue));
             fgColorButton.setValue(c);
         }
 
-        bgColorButton.setDisable(!isCommandEnabled(BACKGROUND_COLOR_COMMAND));
-        String backgroundColorValue = getCommandValue(BACKGROUND_COLOR_COMMAND);
+        bgColorButton.setDisable(!isCommandEnabled(BACKGROUND_COLOR.getCommand()));
+        String backgroundColorValue = getCommandValue(BACKGROUND_COLOR.getCommand());
         if (backgroundColorValue != null) {
             Color c = Color.web(rgbToHex((String)backgroundColorValue));
             bgColorButton.setValue(c);
@@ -1005,11 +1076,10 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
             ** the cut/copy/paste buttons that make sense
             */
             if (enable) {
-                copyButton.setDisable(!isCommandEnabled(COPY_COMMAND));
-                cutButton.setDisable(!isCommandEnabled(CUT_COMMAND));
-                pasteButton.setDisable(!isCommandEnabled(PASTE_COMMAND));
-            }
-            else {
+                copyButton.setDisable(!isCommandEnabled(COPY.getCommand()));
+                cutButton.setDisable(!isCommandEnabled(CUT.getCommand()));
+                pasteButton.setDisable(!isCommandEnabled(PASTE.getCommand()));
+            } else {
                 copyButton.setDisable(true);
                 cutButton.setDisable(true);
                 pasteButton.setDisable(true);
@@ -1092,7 +1162,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
     }
 
     private void applyTextFormatting() {
-        if (getCommandState(BULLETS_COMMAND) || getCommandState(NUMBERS_COMMAND)) {
+        if (getCommandState(BULLETS.getCommand()) || getCommandState(NUMBERS.getCommand())) {
             return;
         }
 
@@ -1100,46 +1170,70 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
             String format = formatStyleMap.get(formatComboBox.getValue());
             String font   = fontFamilyComboBox.getValue().toString();
 
-            executeCommand(FORMAT_COMMAND, format);
-            executeCommand(FONT_FAMILY_COMMAND, font);
-        }
-    }
-    
-    public void keyboardShortcuts(final String name) {
-        if ("bold".equals(name)) {
-            boldButton.fire();
-        } else if ("italic".equals(name)) {
-            italicButton.setSelected(!italicButton.isSelected());
-        } else if ("underline".equals(name)) {
-            underlineButton.setSelected(!underlineButton.isSelected());
+            executeCommand(FORMAT.getCommand(), format);
+            executeCommand(FONT_FAMILY.getCommand(), font);
         }
     }
 
-    private boolean isFirstRun = true;
-
-    @Override
-    protected void layoutChildren(final double x, final double y,
-            final double w, final double h) {
-        
-        if (isFirstRun) {
-            populateToolbars();
-            isFirstRun = false;
-        }
-        super.layoutChildren(x,y,w,h);
-        double toolbarWidth = Math.max(toolbar1.prefWidth(-1), toolbar2.prefWidth(-1));
-        toolbar1.setMinWidth(toolbarWidth);
-        toolbar1.setPrefWidth(toolbarWidth);
-        toolbar2.setMinWidth(toolbarWidth);
-        toolbar2.setPrefWidth(toolbarWidth);
-    }
-
-    private static final int FONT_FAMILY_MENUBUTTON_WIDTH = 150;
-    private static final int FONT_FAMILY_MENU_WIDTH = 100;
-    private static final int FONT_SIZE_MENUBUTTON_WIDTH = 80;
-
-    public void print(PrinterJob job) {
+    void print(PrinterJob job) {
         webView.getEngine().print(job);
     }
 
-    private static PseudoClass CONTAINS_FOCUS_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("contains-focus");
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Support Classes                                                         *
+     *                                                                         *
+     **************************************************************************/
+
+    /**
+     * Represents commands that can be passed into the HTMLEditor web engine.
+     */
+    public enum Command {
+        CUT("cut"),
+        COPY("copy"),
+        PASTE("paste"),
+
+        UNDO("undo"),
+        REDO("redo"),
+
+        INSERT_HORIZONTAL_RULE("inserthorizontalrule"),
+
+        ALIGN_LEFT("justifyleft"),
+        ALIGN_CENTER("justifycenter"),
+        ALIGN_RIGHT("justifyright"),
+        ALIGN_JUSTIFY("justifyfull"),
+
+        BULLETS("insertUnorderedList"),
+        NUMBERS("insertOrderedList"),
+
+        INDENT("indent"),
+        OUTDENT("outdent"),
+
+        FORMAT("formatblock"),
+        FONT_FAMILY("fontname"),
+        FONT_SIZE("fontsize"),
+
+        BOLD("bold"),
+        ITALIC("italic"),
+        UNDERLINE("underline"),
+        STRIKETHROUGH("strikethrough"),
+
+        FOREGROUND_COLOR("forecolor"),
+        BACKGROUND_COLOR("backcolor"),
+
+        INSERT_NEW_LINE("insertnewline"),
+        INSERT_TAB("inserttab");
+
+        private final String command;
+
+        Command(String command) {
+            this.command = command;
+        }
+
+        public String getCommand() {
+            return command;
+        }
+    }
 }

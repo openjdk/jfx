@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,7 +29,7 @@ import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.control.inputmap.InputMap;
 import com.sun.javafx.scene.control.inputmap.KeyBinding;
 import javafx.scene.web.HTMLEditor;
-import com.sun.javafx.scene.web.skin.HTMLEditorSkin;
+import javafx.scene.web.HTMLEditorSkin;
 import com.sun.javafx.scene.control.behavior.FocusTraversalInputMap;
 
 import static javafx.scene.input.KeyCode.*;
@@ -41,15 +41,14 @@ import static com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
 public class HTMLEditorBehavior extends BehaviorBase<HTMLEditor> {
     private final InputMap<HTMLEditor> inputMap;
 
-
     public HTMLEditorBehavior(HTMLEditor htmlEditor) {
         super(htmlEditor);
 
         this.inputMap = createInputMap();
         addDefaultMapping(inputMap,
-            new KeyMapping(new KeyBinding(B).shortcut(), e -> keyboardShortcuts("bold")),
-            new KeyMapping(new KeyBinding(I).shortcut(), e -> keyboardShortcuts("italic")),
-            new KeyMapping(new KeyBinding(U).shortcut(), e -> keyboardShortcuts("underline")),
+            new KeyMapping(new KeyBinding(B).shortcut(), e -> keyboardShortcuts(HTMLEditorSkin.Command.BOLD)),
+            new KeyMapping(new KeyBinding(I).shortcut(), e -> keyboardShortcuts(HTMLEditorSkin.Command.ITALIC)),
+            new KeyMapping(new KeyBinding(U).shortcut(), e -> keyboardShortcuts(HTMLEditorSkin.Command.UNDERLINE)),
 
             new KeyMapping(new KeyBinding(F12), e -> getNode().getImpl_traversalEngine().selectFirst().requestFocus()),
             new KeyMapping(new KeyBinding(TAB).ctrl(), FocusTraversalInputMap::traverseNext),
@@ -61,9 +60,9 @@ public class HTMLEditorBehavior extends BehaviorBase<HTMLEditor> {
         return inputMap;
     }
 
-    private void keyboardShortcuts(String name) {
+    private void keyboardShortcuts(HTMLEditorSkin.Command command) {
         HTMLEditor editor = getNode();
         HTMLEditorSkin editorSkin = (HTMLEditorSkin)editor.getSkin();
-        editorSkin.keyboardShortcuts(name);
+        editorSkin.performCommand(command);
     }
 }
