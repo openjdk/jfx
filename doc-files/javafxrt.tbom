@@ -20,7 +20,7 @@
 </file-set>
 
 <file-set name="Java Property Resource Bundles" languages="Std_Admin +Swedish">
-    <file source="rt/modules/web/src/main/resources/com/sun/javafx/scene/web/skin/HTMLEditorSkin%j.properties"
+    <file source="rt/modules/web/src/main/resources/javafx/scene/web/HTMLEditorSkin%j.properties"
           file-type="JavaProperties"/>
 </file-set>
 
