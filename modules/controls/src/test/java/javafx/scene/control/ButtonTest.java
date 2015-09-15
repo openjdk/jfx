@@ -42,7 +42,7 @@ import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 import java.util.List;
-import com.sun.javafx.pgstub.StubToolkit;
+import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.scene.control.infrastructure.ContextMenuEventFirer;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.MouseEventFirer;

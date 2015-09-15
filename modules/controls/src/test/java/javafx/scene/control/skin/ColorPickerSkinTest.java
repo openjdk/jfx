@@ -25,7 +25,7 @@
 
 package javafx.scene.control.skin;
 
-import com.sun.javafx.pgstub.StubToolkit;
+import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import com.sun.javafx.scene.control.infrastructure.MouseEventGenerator;

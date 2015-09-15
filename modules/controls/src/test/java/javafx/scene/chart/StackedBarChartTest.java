@@ -30,7 +30,7 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import javafx.collections.*;
 
-import com.sun.javafx.pgstub.StubToolkit;
+import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
 import java.util.Arrays;
 

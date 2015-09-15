@@ -34,6 +34,7 @@ import javafx.css.CssMetaData;
 import javafx.css.StyleableProperty;
 import javafx.css.CssParser;
 import javafx.scene.Node;
+import javafx.scene.ParentShim;
 import javafx.scene.Scene;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
@@ -121,7 +122,7 @@ public class XYChartTest extends ChartTestBase {
         axis.setPrefWidth(400);
         pulse();
         StackPane layout = new StackPane();
-        layout.getChildren().addAll(axis);
+        ParentShim.getChildren(layout).addAll(axis);
         pulse();
         setTestScene(new Scene(layout));
         setTestStage(new Stage());

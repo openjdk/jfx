@@ -28,7 +28,7 @@ package javafx.scene.control;
 import javafx.css.CssMetaData;
 import static com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
 
-import com.sun.javafx.pgstub.StubToolkit;
+import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;

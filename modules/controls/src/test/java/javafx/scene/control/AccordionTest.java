@@ -26,7 +26,6 @@
 package javafx.scene.control;
 
 import com.sun.javafx.application.PlatformImpl;
-import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.scene.control.infrastructure.ControlTestUtils;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.tk.Toolkit;
@@ -41,6 +40,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
+import test.com.sun.javafx.pgstub.StubToolkit;
 
 /**
  */

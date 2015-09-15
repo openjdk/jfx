@@ -28,7 +28,7 @@ package javafx.scene.control.skin;
 import static org.junit.Assert.assertEquals;
 
 import com.sun.javafx.menu.MenuBase;
-import com.sun.javafx.pgstub.StubToolkit;
+import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Insets;

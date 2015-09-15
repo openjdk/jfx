@@ -25,7 +25,7 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.pgstub.StubToolkit;
+import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
 import javafx.geometry.Bounds;
 import javafx.scene.Group;

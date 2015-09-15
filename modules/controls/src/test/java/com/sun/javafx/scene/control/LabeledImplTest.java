@@ -25,9 +25,9 @@
 
 package com.sun.javafx.scene.control;
 
-import com.sun.javafx.pgstub.StubImageLoaderFactory;
-import com.sun.javafx.pgstub.StubPlatformImageInfo;
-import com.sun.javafx.pgstub.StubToolkit;
+import test.com.sun.javafx.pgstub.StubImageLoaderFactory;
+import test.com.sun.javafx.pgstub.StubPlatformImageInfo;
+import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.scene.control.LabeledImpl;
 import com.sun.javafx.scene.control.skin.FXVK;
 import com.sun.javafx.tk.Toolkit;

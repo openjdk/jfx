@@ -29,7 +29,7 @@ import com.sun.javafx.scene.control.infrastructure.StageLoader;
 import javafx.css.CssMetaData;
 import static com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
 
-import com.sun.javafx.pgstub.StubToolkit;
+import test.com.sun.javafx.pgstub.StubToolkit;
 import javafx.scene.control.skin.SplitPaneSkin;
 import com.sun.javafx.tk.Toolkit;
 import javafx.application.Platform;

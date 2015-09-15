@@ -29,7 +29,7 @@ package javafx.scene.control;
 import javafx.css.ParsedValue;
 import javafx.css.CssMetaData;
 import javafx.css.CssParser;
-import com.sun.javafx.pgstub.StubToolkit;
+import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
 import javafx.css.StyleableProperty;
 import javafx.scene.Parent;

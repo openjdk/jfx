@@ -26,7 +26,7 @@
 package com.sun.javafx.scene.control.infrastructure;
 
 import com.sun.javafx.util.Utils;
-import com.sun.javafx.pgstub.StubToolkit;
+import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
 import javafx.scene.input.KeyCode;
 
