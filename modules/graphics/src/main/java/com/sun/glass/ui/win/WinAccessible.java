@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -945,10 +945,11 @@ final class WinAccessible extends Accessible {
                 } else {
                     node = (Node)getAttribute(PARENT);
                     if (node == null) {
-                        /* scene root node case */
+                        /* This is the root node of the scene or the scene itself */
                         Scene scene = (Scene)getAttribute(SCENE);
                         WinAccessible acc = (WinAccessible)getAccessible(scene);
-                        if (acc == null || acc.isDisposed()) return 0L;
+                        /* Return 0 if we are already at the scene or if scene is null */
+                        if (acc == null || acc == this || acc.isDisposed()) return 0L;
                         return acc.getNativeAccessible();
                     }
                 }
