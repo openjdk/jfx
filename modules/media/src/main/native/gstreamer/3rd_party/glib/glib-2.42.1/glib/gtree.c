@@ -134,6 +134,11 @@ g_tree_node_new (gpointer key,
                  gpointer value)
 {
   GTreeNode *node = g_slice_new (GTreeNode);
+#ifdef GSTREAMER_LITE
+  if (node == NULL) {
+    return NULL;
+  }
+#endif // GSTREAMER_LITE
 
   node->balance = 0;
   node->left = NULL;
@@ -215,6 +220,11 @@ g_tree_new_full (GCompareDataFunc key_compare_func,
   g_return_val_if_fail (key_compare_func != NULL, NULL);
   
   tree = g_slice_new (GTree);
+#ifdef GSTREAMER_LITE
+  if (tree == NULL) {
+    return NULL;
+  }
+#endif // GSTREAMER_LITE
   tree->root               = NULL;
   tree->key_compare        = key_compare_func;
   tree->key_destroy_func   = key_destroy_func;
@@ -486,6 +496,11 @@ g_tree_insert_internal (GTree    *tree,
           else
             {
               GTreeNode *child = g_tree_node_new (key, value);
+#ifdef GSTREAMER_LITE
+              if (child == NULL) {
+                return;
+              }
+#endif // GSTREAMER_LITE
 
               child->left = node->left;
               child->right = node;
@@ -508,6 +523,11 @@ g_tree_insert_internal (GTree    *tree,
           else
             {
               GTreeNode *child = g_tree_node_new (key, value);
+#ifdef GSTREAMER_LITE
+              if (child == NULL) {
+                return;
+              }
+#endif // GSTREAMER_LITE
 
               child->right = node->right;
               child->left = node;

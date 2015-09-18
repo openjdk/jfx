@@ -2488,6 +2488,11 @@ gst_structure_fixate_field_nearest_int (GstStructure * structure,
   g_return_val_if_fail (IS_MUTABLE (structure), FALSE);
 
   value = gst_structure_get_value (structure, field_name);
+#ifdef GSTREAMER_LITE
+  if (value == NULL) {
+    return FALSE;
+  }
+#endif // GSTREAMER_LITE  
 
   if (G_VALUE_TYPE (value) == G_TYPE_INT) {
     /* already fixed */
@@ -2552,6 +2557,11 @@ gst_structure_fixate_field_nearest_double (GstStructure * structure,
   g_return_val_if_fail (IS_MUTABLE (structure), FALSE);
 
   value = gst_structure_get_value (structure, field_name);
+#ifdef GSTREAMER_LITE
+  if (value == NULL) {
+    return FALSE;
+  }
+#endif // GSTREAMER_LITE
 
   if (G_VALUE_TYPE (value) == G_TYPE_DOUBLE) {
     /* already fixed */
@@ -2617,6 +2627,11 @@ gst_structure_fixate_field_boolean (GstStructure * structure,
   g_return_val_if_fail (IS_MUTABLE (structure), FALSE);
 
   value = gst_structure_get_value (structure, field_name);
+#ifdef GSTREAMER_LITE
+  if (value == NULL) {
+    return FALSE;
+  }
+#endif // GSTREAMER_LITE
 
   if (G_VALUE_TYPE (value) == G_TYPE_BOOLEAN) {
     /* already fixed */
@@ -2670,6 +2685,11 @@ gst_structure_fixate_field_string (GstStructure * structure,
   g_return_val_if_fail (IS_MUTABLE (structure), FALSE);
 
   value = gst_structure_get_value (structure, field_name);
+#ifdef GSTREAMER_LITE
+  if (value == NULL) {
+    return FALSE;
+  }
+#endif // GSTREAMER_LITE
 
   if (G_VALUE_TYPE (value) == G_TYPE_STRING) {
     /* already fixed */
@@ -2727,6 +2747,11 @@ gst_structure_fixate_field_nearest_fraction (GstStructure * structure,
   g_return_val_if_fail (target_denominator != 0, FALSE);
 
   value = gst_structure_get_value (structure, field_name);
+#ifdef GSTREAMER_LITE
+  if (value == NULL) {
+    return FALSE;
+  }
+#endif // GSTREAMER_LITE  
 
   if (G_VALUE_TYPE (value) == GST_TYPE_FRACTION) {
     /* already fixed */
