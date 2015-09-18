@@ -201,7 +201,8 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
 
                 // However, we want to consume other key press / release events too, for
                 // things that would have been handled by the InputCharacter normally
-                keyMapping(new KeyBinding(null, KEY_PRESSED), e -> e.consume()),
+                keyMapping(new KeyBinding(null, KEY_PRESSED).shift(OptionalBoolean.ANY),
+                           e -> e.consume()),
 
                 // VK
                 new KeyMapping(new KeyBinding(DIGIT9).ctrl().shift(), e -> {
