@@ -1562,7 +1562,7 @@ project(":graphics") {
 
     test {
         def cssDir = file("$buildDir/classes/main/javafx")
-        jvmArgs "-Djava.ext.dirs=", "-Djavafx.toolkit=com.sun.javafx.pgstub.StubToolkit",
+        jvmArgs "-Djava.ext.dirs=", "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit",
             "-DCSS_META_DATA_TEST_DIR=$cssDir"
         enableAssertions = true
         testLogging.exceptionFormat = "full"
@@ -1623,7 +1623,7 @@ project(":controls") {
 
     test {
         def cssDir = file("$buildDir/classes/main/javafx")
-        jvmArgs "-Djavafx.toolkit=com.sun.javafx.pgstub.StubToolkit",
+        jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit",
             "-DCSS_META_DATA_TEST_DIR=$cssDir"        
     }
 
@@ -1694,7 +1694,7 @@ project(":fxml") {
         // StubToolkit is not *really* needed here, but because some code inadvertently invokes performance
         // tracker and this attempts to fire up the toolkit and this looks for native libraries and fails,
         // we have to use the stub toolkit for now.
-        jvmArgs "-Djavafx.toolkit=com.sun.javafx.pgstub.StubToolkit"
+        jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit"
         classpath += files("$JDK_HOME/jre/lib/ext/nashorn.jar")
     }
 }

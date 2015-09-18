@@ -26,15 +26,10 @@
 package javafx.scene.web;
 
 
-import javafx.css.CssMetaData;
 import javafx.css.StyleableProperty;
-import com.sun.javafx.scene.web.skin.HTMLEditorSkin;
 
-import javafx.geometry.NodeOrientation;
 import javafx.scene.control.Control;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import javafx.print.PrinterJob;
 import javafx.scene.control.Skin;
 
@@ -52,8 +47,8 @@ public class HTMLEditor extends Control {
      */
     public HTMLEditor() {
         ((StyleableProperty)super.skinClassNameProperty()).applyStyle(
-            null, 
-            "com.sun.javafx.scene.web.skin.HTMLEditorSkin"
+            null,
+            "javafx.scene.web.HTMLEditorSkin"
         );
         getStyleClass().add("html-editor");
     }

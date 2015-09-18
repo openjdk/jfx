@@ -134,9 +134,9 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
                 copyFullBuffer = false;
                 if (isMSAA()) {
                     context.flushVertexBuffer();
-                    // Note must flip the z axis during blit
+                    // Note must flip the image vertically during blit
                     g.blit(stableBackbuffer, null,
-                            0, 0, sw, sh, 0, 0, dw, dh);
+                            0, 0, sw, sh, 0, dh, dw, 0);
                 } else {
                     drawTexture(g, stableBackbuffer,
                                 0, 0, dw, dh, 0, 0, sw, sh);

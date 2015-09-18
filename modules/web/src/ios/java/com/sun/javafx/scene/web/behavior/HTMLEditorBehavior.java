@@ -30,7 +30,7 @@ import java.util.ArrayList;
 import java.util.List;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.control.behavior.KeyBinding;
-import com.sun.javafx.scene.web.skin.HTMLEditorSkin;
+import javafx.scene.web.HTMLEditorSkin;
 import static javafx.scene.input.KeyCode.B;
 import static javafx.scene.input.KeyCode.I;
 import static javafx.scene.input.KeyCode.U;
@@ -42,32 +42,30 @@ import static javafx.scene.input.KeyCode.TAB;
  * HTML editor behavior.
  */
 public class HTMLEditorBehavior extends BehaviorBase<HTMLEditor> {
-    protected static final List<KeyBinding> HTML_EDITOR_BINDINGS = new ArrayList<KeyBinding>();
-
-    static {
-        HTML_EDITOR_BINDINGS.add(new KeyBinding(B, "bold").shortcut());
-        HTML_EDITOR_BINDINGS.add(new KeyBinding(I, "italic").shortcut());
-        HTML_EDITOR_BINDINGS.add(new KeyBinding(U, "underline").shortcut());
-        
-        HTML_EDITOR_BINDINGS.add(new KeyBinding(F12, "F12"));
-        HTML_EDITOR_BINDINGS.add(new KeyBinding(TAB, "TraverseNext").ctrl());
-        HTML_EDITOR_BINDINGS.add(new KeyBinding(TAB, "TraversePrevious").ctrl().shift());
-    }
+    private final InputMap<HTMLEditor> inputMap;
 
     public HTMLEditorBehavior(HTMLEditor htmlEditor) {
-        super(htmlEditor, HTML_EDITOR_BINDINGS);
+        super(htmlEditor);
+
+        this.inputMap = createInputMap();
+        addDefaultMapping(inputMap,
+                new KeyMapping(new KeyBinding(B).shortcut(), e -> keyboardShortcuts(HTMLEditorSkin.Command.BOLD)),
+                new KeyMapping(new KeyBinding(I).shortcut(), e -> keyboardShortcuts(HTMLEditorSkin.Command.ITALIC)),
+                new KeyMapping(new KeyBinding(U).shortcut(), e -> keyboardShortcuts(HTMLEditorSkin.Command.UNDERLINE)),
+
+                new KeyMapping(new KeyBinding(F12), e -> getNode().getImpl_traversalEngine().selectFirst().requestFocus()),
+                new KeyMapping(new KeyBinding(TAB).ctrl(), FocusTraversalInputMap::traverseNext),
+                new KeyMapping(new KeyBinding(TAB).ctrl().shift(), FocusTraversalInputMap::traversePrevious)
+        );
     }
 
-    @Override
-    protected void callAction(String name) {
-        if ("bold".equals(name) || "italic".equals(name) || "underline".equals(name)) {
-            HTMLEditor editor = getControl();
-            HTMLEditorSkin editorSkin = (HTMLEditorSkin)editor.getSkin();
-            editorSkin.keyboardShortcuts(name);
-        } else if ("F12".equals(name)) {
-            getControl().getImpl_traversalEngine().selectFirst().requestFocus();
-        } else {
-            super.callAction(name);
-        }
+    @Override public InputMap<HTMLEditor> getInputMap() {
+        return inputMap;
+    }
+
+    private void keyboardShortcuts(HTMLEditorSkin.Command command) {
+        HTMLEditor editor = getNode();
+        HTMLEditorSkin editorSkin = (HTMLEditorSkin)editor.getSkin();
+        editorSkin.performCommand(command);
     }
 }

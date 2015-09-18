@@ -128,6 +128,8 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         final Predicate<KeyEvent> validOnWindows = e -> !PlatformUtil.isWindows();
         final Predicate<KeyEvent> validOnLinux = e -> !PlatformUtil.isLinux();
 
+        KeyMapping consumeMostPressedEventsMapping;
+
         // create a child input map for mappings which are applicable on all
         // platforms, and regardless of editing state
         addDefaultMapping(inputMap,
@@ -183,7 +185,6 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
 
                 // The following keys are forwarded to the parent container
                 new KeyMapping(ESCAPE, this::cancelEdit),
-                new KeyMapping(F10, this::forwardToParent),
 
                 // Linux specific mappings
                 keyMapping(new KeyBinding(Z).ctrl(), e -> undo(), validOnLinux),
@@ -201,7 +202,9 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
 
                 // However, we want to consume other key press / release events too, for
                 // things that would have been handled by the InputCharacter normally
-                keyMapping(new KeyBinding(null, KEY_PRESSED), e -> e.consume()),
+                consumeMostPressedEventsMapping =
+                    keyMapping(new KeyBinding(null, KEY_PRESSED).shift(OptionalBoolean.ANY),
+                               e -> { if (!e.getCode().isFunctionKey()) e.consume(); }),
 
                 // VK
                 new KeyMapping(new KeyBinding(DIGIT9).ctrl().shift(), e -> {
@@ -218,6 +221,8 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
                     }
                 }
         );
+
+        consumeMostPressedEventsMapping.setAutoConsume(false);
 
         // mac os specific mappings
         InputMap<T> macOsInputMap = new InputMap<>(c);

@@ -58,7 +58,6 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Cell;
 import javafx.scene.control.IndexedCell;
-import javafx.scene.control.ListCell;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
