@@ -2547,7 +2547,7 @@ gst_pad_proxy_query_caps (GstPad * pad, GstQuery * query)
 
   /* FIXME: return something depending on the processing */
   return TRUE;
-  }
+}
 
 /**
  * gst_pad_query_position:
@@ -2778,7 +2778,7 @@ gst_pad_query_caps (GstPad * pad, GstCaps * filter)
     result = gst_caps_ref (filter);
   } else {
     result = gst_caps_new_any ();
-}
+  }
   gst_query_unref (query);
 
   return result;
@@ -2824,7 +2824,7 @@ gst_pad_peer_query_caps (GstPad * pad, GstCaps * filter)
     result = gst_caps_ref (filter);
   } else {
     result = gst_caps_new_any ();
-}
+  }
   gst_query_unref (query);
 
   return result;
@@ -2855,7 +2855,7 @@ gst_pad_query_accept_caps (GstPad * pad, GstCaps * caps)
   if (gst_pad_query (pad, query)) {
     gst_query_parse_accept_caps_result (query, &res);
     GST_DEBUG_OBJECT (pad, "query returned %d", res);
-}
+  }
   gst_query_unref (query);
 
   return res;
@@ -2884,7 +2884,7 @@ gst_pad_peer_query_accept_caps (GstPad * pad, GstCaps * caps)
   if (gst_pad_peer_query (pad, query)) {
     gst_query_parse_accept_caps_result (query, &res);
     GST_DEBUG_OBJECT (pad, "query returned %d", res);
-}
+  }
   gst_query_unref (query);
 
   return res;
@@ -3126,15 +3126,15 @@ gst_parse_bin_from_description_full (const gchar * bin_description,
                                      gboolean ghost_unlinked_pads, GstParseContext * context,
                                      GstParseFlags flags, GError ** err)
 {
-	gchar *msg;
-	
-	GST_WARNING ("Disabled API called");
-	
-	msg = gst_error_get_message (GST_CORE_ERROR, GST_CORE_ERROR_DISABLED);
-	g_set_error (err, GST_CORE_ERROR, GST_CORE_ERROR_DISABLED, "%s", msg);
-	g_free (msg);
-	
-	return NULL;
+  gchar *msg;
+
+  GST_WARNING ("Disabled API called");
+
+  msg = gst_error_get_message (GST_CORE_ERROR, GST_CORE_ERROR_DISABLED);
+  g_set_error (err, GST_CORE_ERROR, GST_CORE_ERROR_DISABLED, "%s", msg);
+  g_free (msg);
+
+  return NULL;
 }
 #endif // GSTREAMER_LITE
 

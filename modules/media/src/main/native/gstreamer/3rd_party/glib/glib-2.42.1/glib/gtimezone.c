@@ -761,7 +761,11 @@ find_relative_date (TimeZoneDate *buffer)
   else /* M.W.D */
     {
       guint days;
+#ifdef GSTREAMER_LITE
       guint days_in_month = g_date_get_days_in_month (buffer->mon, buffer->year);
+#else // GSTREAMER_LITE
+      guint days_in_month = g_date_days_in_month (buffer->mon, buffer->year);
+#endif // GSTREAMER_LITE
       GDateWeekday first_wday;
 
       g_date_set_dmy (&date, 1, buffer->mon, buffer->year);

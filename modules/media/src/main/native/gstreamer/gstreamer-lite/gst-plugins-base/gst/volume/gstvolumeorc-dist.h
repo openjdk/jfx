@@ -10,8 +10,6 @@
 extern "C" {
 #endif
 
-void gst_volume_orc_init (void);
-
 
 
 #ifndef _ORC_INTEGER_TYPEDEFS_
@@ -69,6 +67,19 @@ typedef union { orc_int64 i; double f; orc_int32 x2[2]; float x2f[2]; orc_int16 
 #define ORC_RESTRICT
 #endif
 #endif
+
+#ifndef ORC_INTERNAL
+#if defined(__SUNPRO_C) && (__SUNPRO_C >= 0x590)
+#define ORC_INTERNAL __attribute__((visibility("hidden")))
+#elif defined(__SUNPRO_C) && (__SUNPRO_C >= 0x550)
+#define ORC_INTERNAL __hidden
+#elif defined (__GNUC__)
+#define ORC_INTERNAL __attribute__((visibility("hidden")))
+#else
+#define ORC_INTERNAL
+#endif
+#endif
+
 void volume_orc_scalarmultiply_f64_ns (double * ORC_RESTRICT d1, double p1, int n);
 void volume_orc_scalarmultiply_f32_ns (float * ORC_RESTRICT d1, float p1, int n);
 void volume_orc_process_int32 (gint32 * ORC_RESTRICT d1, int p1, int n);

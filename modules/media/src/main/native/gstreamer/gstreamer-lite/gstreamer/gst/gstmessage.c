@@ -233,7 +233,7 @@ _gst_message_copy (GstMessage * message)
   }
 
   return GST_MESSAGE_CAST (copy);
-  }
+}
 
 static void
 gst_message_init (GstMessageImpl * message, GstMessageType type,
@@ -297,7 +297,7 @@ had_parent:
     g_slice_free1 (sizeof (GstMessageImpl), message);
     g_warning ("structure is already owned by another object");
     return NULL;
-}
+  }
 }
 
 /**
@@ -498,7 +498,7 @@ gst_message_new_tag (GstObject * src, GstTagList * tag_list)
  * The application must be prepared to receive BUFFERING messages in the
  * PREROLLING state and may only set the pipeline to PLAYING after receiving a
  * message with @percent set to 100, which can happen after the pipeline
- * completed prerolling. 
+ * completed prerolling.
  *
  * MT safe.
  *
@@ -838,7 +838,7 @@ gst_message_new_duration_changed (GstObject * src)
  * gst_message_new_async_start:
  * @src: (transfer none): The object originating the message.
  *
- * This message is posted by elements when they start an ASYNC state change. 
+ * This message is posted by elements when they start an ASYNC state change.
  *
  * Returns: (transfer full): The new async_start message.
  *
@@ -1322,7 +1322,7 @@ gst_message_parse_error (GstMessage * message, GError ** gerror, gchar ** debug)
   gst_structure_id_get (GST_MESSAGE_STRUCTURE (message),
       GST_QUARK (GERROR), G_TYPE_ERROR, gerror,
       GST_QUARK (DEBUG), G_TYPE_STRING, debug, NULL);
-  }
+}
 
 /**
  * gst_message_parse_warning:
@@ -1346,7 +1346,7 @@ gst_message_parse_warning (GstMessage * message, GError ** gerror,
   gst_structure_id_get (GST_MESSAGE_STRUCTURE (message),
       GST_QUARK (GERROR), G_TYPE_ERROR, gerror,
       GST_QUARK (DEBUG), G_TYPE_STRING, debug, NULL);
-  }
+}
 
 /**
  * gst_message_parse_info:
@@ -1369,7 +1369,7 @@ gst_message_parse_info (GstMessage * message, GError ** gerror, gchar ** debug)
   gst_structure_id_get (GST_MESSAGE_STRUCTURE (message),
       GST_QUARK (GERROR), G_TYPE_ERROR, gerror,
       GST_QUARK (DEBUG), G_TYPE_STRING, debug, NULL);
-  }
+}
 
 /**
  * gst_message_parse_segment_start:

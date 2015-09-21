@@ -181,7 +181,7 @@ _glib_get_dll_directory (void)
  * Deprecated:2.40: Just use memmove().
  */
 
-#ifndef G_DISABLE_DEPRECATED
+#ifndef GSTREAMER_LITE
 
 #ifdef G_OS_WIN32
 #undef g_atexit
@@ -237,7 +237,7 @@ g_atexit (GVoidFunc func)
     }
 }
 
-#endif  /* G_DISABLE_DEPRECATED */
+#endif // GSTREAMER_LITE
 
 /* Based on execvp() from GNU Libc.
  * Some of this code is cut-and-pasted into gspawn.c
@@ -2090,10 +2090,15 @@ g_format_size (guint64 size)
  * Flags to modify the format of the string returned by g_format_size_full().
  */
 
+#ifdef GSTREAMER_LITE
 #ifndef G_OS_WIN32 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-nonliteral"
 #endif // G_OS_WIN32
+#else // GSTREAMER_LITE
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"
+#endif // GSTREAMER_LITE
 
 /**
  * g_format_size_full:
@@ -2228,9 +2233,13 @@ g_format_size_full (guint64          size,
   return g_string_free (string, FALSE);
 }
 
+#ifdef GSTREAMER_LITE
 #ifndef G_OS_WIN32
 #pragma GCC diagnostic pop
 #endif // G_OS_WIN32
+#else // GSTREAMER_LITE
+#pragma GCC diagnostic pop
+#endif // GSTREAMER_LITE
 
 /**
  * g_format_size_for_display:

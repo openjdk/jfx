@@ -25,6 +25,7 @@
 #include <gst/gst.h>
 
 #include "audiopanorama.h"
+#ifndef GSTREAMER_LITE
 #include "audioinvert.h"
 #include "audiokaraoke.h"
 #include "audioamplify.h"
@@ -37,6 +38,7 @@
 #include "audiofirfilter.h"
 #include "audioecho.h"
 #include "gstscaletempo.h"
+#endif // GSTREAMER_LITE
 
 /* entry point to initialize the plug-in
  * initialize the plug-in itself

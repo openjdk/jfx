@@ -84,7 +84,7 @@ G_BEGIN_DECLS
  *                               cannot produce data in %GST_STATE_PAUSED.
  *                               This typically happens with live sources.
  *
- * The possible return values from a state change function such as
+ * The possible return values from a state change function such as 
  * gst_element_set_state(). Only @GST_STATE_CHANGE_FAILURE is a real failure.
  */
 typedef enum {

@@ -262,15 +262,15 @@ GType gst_audio_ring_buffer_get_type(void);
 /* callback stuff */
 void            gst_audio_ring_buffer_set_callback    (GstAudioRingBuffer *buf,
                                                        GstAudioRingBufferCallback cb,
-                                                 gpointer user_data);
+                                                       gpointer user_data);
 
 gboolean        gst_audio_ring_buffer_parse_caps      (GstAudioRingBufferSpec *spec, GstCaps *caps);
 void            gst_audio_ring_buffer_debug_spec_caps (GstAudioRingBufferSpec *spec);
 void            gst_audio_ring_buffer_debug_spec_buff (GstAudioRingBufferSpec *spec);
 
 gboolean        gst_audio_ring_buffer_convert         (GstAudioRingBuffer * buf, GstFormat src_fmt,
-                                                 gint64 src_val, GstFormat dest_fmt,
-						 gint64 * dest_val);
+                                                       gint64 src_val, GstFormat dest_fmt,
+                                                       gint64 * dest_val);
 
 /* device state */
 gboolean        gst_audio_ring_buffer_open_device     (GstAudioRingBuffer *buf);
@@ -312,14 +312,14 @@ void            gst_audio_ring_buffer_clear_all       (GstAudioRingBuffer *buf);
 /* commit samples */
 guint           gst_audio_ring_buffer_commit          (GstAudioRingBuffer * buf, guint64 *sample,
                                                        guint8 * data, gint in_samples,
-						 gint out_samples, gint * accum);
+                                                       gint out_samples, gint * accum);
 
 /* read samples */
 guint           gst_audio_ring_buffer_read            (GstAudioRingBuffer *buf, guint64 sample,
                                                        guint8 *data, guint len, GstClockTime *timestamp);
 
 /* Set timestamp on buffer */
-void            gst_audio_ring_buffer_set_timestamp   (GstAudioRingBuffer * buf, gint readseg, GstClockTime
+void            gst_audio_ring_buffer_set_timestamp   (GstAudioRingBuffer * buf, gint readseg, GstClockTime 
                                                        timestamp);
 
 /* mostly protected */
