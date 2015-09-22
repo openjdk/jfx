@@ -24,23 +24,24 @@
  */
 package com.sun.javafx.scene.control;
 
-import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
-import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.control.ContextMenu;
-import javafx.scene.control.CustomMenuItem;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.skin.ContextMenuSkin;
-import javafx.scene.input.KeyCode;
 
 import java.util.Optional;
+import javafx.scene.layout.Region;
 
 public class ContextMenuContentShim {
 
     private ContextMenuContentShim() {
         // no-op
+    }
+
+    public static Region get_selectedBackground(ContextMenuContent menu) {
+        return menu.selectedBackground;
     }
 
     public static Menu getOpenSubMenu(ContextMenu menu) {
@@ -137,70 +138,4 @@ public class ContextMenuContentShim {
         return null;
     }
 
-    public static void pressDownKey(ContextMenu menu) {
-//        getShowingMenuContent(menu).ifPresent(content -> new KeyEventFirer(content).doDownArrowPress());
-        Optional<ContextMenuContent> showingMenuContent = getShowingMenuContent(menu);
-        if (showingMenuContent.isPresent()) {
-            ContextMenuContent content = showingMenuContent.get();
-            new KeyEventFirer(content).doDownArrowPress();
-        }
-    }
-
-    public static void pressUpKey(ContextMenu menu) {
-//        getShowingMenuContent(menu).ifPresent(content -> new KeyEventFirer(content).doUpArrowPress());
-        Optional<ContextMenuContent> showingMenuContent = getShowingMenuContent(menu);
-        if (showingMenuContent.isPresent()) {
-            ContextMenuContent content = showingMenuContent.get();
-            new KeyEventFirer(content).doUpArrowPress();
-        }
-    }
-
-    public static void pressLeftKey(ContextMenu menu) {
-//        getShowingMenuContent(menu).ifPresent(content -> new KeyEventFirer(content).doLeftArrowPress());
-        Optional<ContextMenuContent> showingMenuContent = getShowingMenuContent(menu);
-        if (showingMenuContent.isPresent()) {
-            ContextMenuContent content = showingMenuContent.get();
-            new KeyEventFirer(content).doLeftArrowPress();
-        }
-    }
-
-    public static void pressRightKey(ContextMenu menu) {
-//        getShowingMenuContent(menu).ifPresent(content -> new KeyEventFirer(content).doRightArrowPress());
-        Optional<ContextMenuContent> showingMenuContent = getShowingMenuContent(menu);
-        if (showingMenuContent.isPresent()) {
-            ContextMenuContent content = showingMenuContent.get();
-            new KeyEventFirer(content).doRightArrowPress();
-        }
-    }
-
-    public static void pressEnterKey(ContextMenu menu) {
-//        getShowingMenuContent(menu).ifPresent(content -> new KeyEventFirer(content).doKeyPress(KeyCode.ENTER));
-        Optional<ContextMenuContent> showingMenuContent = getShowingMenuContent(menu);
-        if (showingMenuContent.isPresent()) {
-            ContextMenuContent content = showingMenuContent.get();
-            new KeyEventFirer(content).doKeyPress(KeyCode.ENTER);
-        }
-    }
-
-    public static void pressMouseButton(ContextMenu menu) {
-        Optional<ContextMenuContent> showingMenuContent = getShowingMenuContent(menu);
-        if (showingMenuContent.isPresent()) {
-            ContextMenuContent.MenuItemContainer itemContainer =
-                    (ContextMenuContent.MenuItemContainer) showingMenuContent.get().selectedBackground;
-
-            MenuItem item = itemContainer.getItem();
-            if (item instanceof CustomMenuItem) {
-                // If the item is a CustomMenuItem, we fire the event on the
-                // content of that CustomMenuItem.
-                // Also, note that we firea mouse _clicked_ event, as opposed to
-                // a press and release. I'm not sure why this is what the
-                // ContextMenuContent code expects, but I didn't want to mess with
-                // it at this point.
-                Node customContent = ((CustomMenuItem)item).getContent();
-                new MouseEventFirer(customContent).fireMouseClicked();
-            } else {
-                new MouseEventFirer(itemContainer).fireMousePressAndRelease();
-            }
-        }
-    }
 }
