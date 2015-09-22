@@ -112,7 +112,7 @@ public class MenuApp extends Application {
 
             final CheckMenuItem useSystemMenuBarCB = new CheckMenuItem("Use System Menu Bar (works only when MenuApp is run outside of Ensemble)");
             useSystemMenuBarCB.setSelected(true);
-            menuBar.useSystemMenuBarProperty().bind(useSystemMenuBarCB.selectedProperty());
+            menuBar.useSystemMenuBarProperty().bindBidirectional(useSystemMenuBarCB.selectedProperty());
             systemMenuBarMenu.getItems().add(useSystemMenuBarCB);
 
             menuBar.getMenus().add(systemMenuBarMenu);
