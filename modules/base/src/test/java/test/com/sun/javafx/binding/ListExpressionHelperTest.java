@@ -442,6 +442,22 @@ public class ListExpressionHelperTest {
     }
 
     @Test
+    public void testRemoveInvalidation8136465() {
+        helper = ListExpressionHelper.addListener(helper, observable, invalidationListener[0]);
+        helper = ListExpressionHelper.addListener(helper, observable, invalidationListener[1]);
+
+        ListExpressionHelper.fireValueChangedEvent(helper);
+        invalidationListener[0].check(observable, 1);
+        invalidationListener[1].check(observable, 1);
+
+        helper = ListExpressionHelper.removeListener(helper, invalidationListener[0]);
+
+        ListExpressionHelper.fireValueChangedEvent(helper);
+        invalidationListener[0].check(null, 0);
+        invalidationListener[1].check(observable, 1);
+    }
+
+    @Test
     public void testAddInvalidationWhileLocked() {
         final ChangeListener<Object> addingListener = new ChangeListener() {
             int index = 0;
@@ -588,6 +604,24 @@ public class ListExpressionHelperTest {
         changeListener[0].check(null, UNDEFINED, UNDEFINED, 0);
         changeListener[1].check(null, UNDEFINED, UNDEFINED, 0);
         changeListener[2].check(null, UNDEFINED, UNDEFINED, 0);
+    }
+
+    @Test
+    public void testRemoveChange8136465() {
+        helper = ListExpressionHelper.addListener(helper, observable, changeListener[0]);
+        helper = ListExpressionHelper.addListener(helper, observable, changeListener[1]);
+
+        observable.set(data2);
+        ListExpressionHelper.fireValueChangedEvent(helper);
+        changeListener[0].check(observable, data1, data2, 1);
+        changeListener[1].check(observable, data1, data2, 1);
+
+        helper = ListExpressionHelper.removeListener(helper, changeListener[0]);
+
+        observable.set(data1);
+        ListExpressionHelper.fireValueChangedEvent(helper);
+        changeListener[0].check(null, UNDEFINED, UNDEFINED, 0);
+        changeListener[1].check(observable, data2, data1, 1);
     }
 
     @Test
@@ -755,6 +789,27 @@ public class ListExpressionHelperTest {
         listChangeListener[0].check0();
         listChangeListener[1].check0();
         listChangeListener[2].check0();
+    }
+
+    @Test
+    public void testRemoveListChange8136465() {
+        helper = ListExpressionHelper.addListener(helper, observable, listChangeListener[0]);
+        helper = ListExpressionHelper.addListener(helper, observable, listChangeListener[1]);
+
+        observable.set(data2);
+        ListExpressionHelper.fireValueChangedEvent(helper);
+        listChangeListener[0].check1AddRemove(observable, FXCollections.emptyObservableList(), 0, 1);
+        listChangeListener[0].clear();
+        listChangeListener[1].check1AddRemove(observable, FXCollections.emptyObservableList(), 0, 1);
+        listChangeListener[1].clear();
+
+        helper = ListExpressionHelper.removeListener(helper, listChangeListener[0]);
+
+        observable.set(data1);
+        ListExpressionHelper.fireValueChangedEvent(helper);
+        listChangeListener[0].check0();
+        listChangeListener[1].check1AddRemove(observable, FXCollections.singletonObservableList(listItem), 0, 0);
+        listChangeListener[1].clear();
     }
 
     @Test

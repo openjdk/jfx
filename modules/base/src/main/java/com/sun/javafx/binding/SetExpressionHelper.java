@@ -394,6 +394,8 @@ public abstract class SetExpressionHelper<E> extends ExpressionHelperBase {
                             }
                             invalidationListeners = null;
                             invalidationSize = 0;
+                        } else if ((invalidationSize == 2) && (changeSize == 0) && (setChangeSize == 0)) {
+                            return new SingleInvalidation<>(observable, invalidationListeners[1-index]);
                         } else {
                             final int numMoved = invalidationSize - index - 1;
                             final InvalidationListener[] oldListeners = invalidationListeners;
@@ -406,7 +408,7 @@ public abstract class SetExpressionHelper<E> extends ExpressionHelperBase {
                             }
                             invalidationSize--;
                             if (!locked) {
-                                invalidationListeners[--invalidationSize] = null; // Let gc do its work
+                                invalidationListeners[invalidationSize] = null; // Let gc do its work
                             }
                         }
                         break;
@@ -454,6 +456,8 @@ public abstract class SetExpressionHelper<E> extends ExpressionHelperBase {
                             }
                             changeListeners = null;
                             changeSize = 0;
+                        } else if ((changeSize == 2) && (invalidationSize == 0) && (setChangeSize == 0)) {
+                            return new SingleChange<>(observable, changeListeners[1-index]);
                         } else {
                             final int numMoved = changeSize - index - 1;
                             final ChangeListener<? super ObservableSet<E>>[] oldListeners = changeListeners;
@@ -514,6 +518,8 @@ public abstract class SetExpressionHelper<E> extends ExpressionHelperBase {
                             }
                             setChangeListeners = null;
                             setChangeSize = 0;
+                        } else if ((setChangeSize == 2) && (invalidationSize == 0) && (changeSize == 0)) {
+                            return new SingleSetChange<>(observable, setChangeListeners[1-index]);
                         } else {
                             final int numMoved = setChangeSize - index - 1;
                             final SetChangeListener<? super E>[] oldListeners = setChangeListeners;
