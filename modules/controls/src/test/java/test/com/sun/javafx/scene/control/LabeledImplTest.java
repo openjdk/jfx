@@ -68,7 +68,7 @@ public class LabeledImplTest {
         final StubImageLoaderFactory imageLoaderFactory =
                 ((StubToolkit) Toolkit.getToolkit()).getImageLoaderFactory();
         imageLoaderFactory.reset();
-        imageLoaderFactory.registerImage(FXVK.class.getResource("caspian/center-btn.png").toExternalForm(),
+        imageLoaderFactory.registerImage(LabeledImplTest.class.getResource("/test/com/sun/javafx/scene/control/center-btn.png").toExternalForm(),
                 new StubPlatformImageInfo(32, 32));
     }
 
@@ -131,9 +131,7 @@ public class LabeledImplTest {
             } else if ("-fx-wrap-text".equals(prop)) {
                 value = Boolean.TRUE;
             } else if ("-fx-graphic".equals(prop)) {
-                // FXVK is used here as it is located within com.sun.javafx.scene.control.skin,
-                // which is useful when trying to load caspian / modena resources.
-                value = FXVK.class.getResource("caspian/center-btn.png").toExternalForm();
+                value = LabeledImplTest.class.getResource("/test/com/sun/javafx/scene/control/center-btn.png").toExternalForm();
             } else if ("-fx-underline".equals(prop)) {
                 value = Boolean.TRUE;
             } else if ("-fx-content-display".equals(prop)) {
