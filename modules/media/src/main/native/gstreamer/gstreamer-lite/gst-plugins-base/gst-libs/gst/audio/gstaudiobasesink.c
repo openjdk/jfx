@@ -322,7 +322,7 @@ gst_audio_base_sink_init (GstAudioBaseSink * audiobasesink)
     GST_OBJECT_FLAG_SET (basesink, GST_ELEMENT_FLAG_PROVIDE_CLOCK);
   else
     GST_OBJECT_FLAG_UNSET (basesink, GST_ELEMENT_FLAG_PROVIDE_CLOCK);
-      }
+}
 
 static void
 gst_audio_base_sink_dispose (GObject * object)

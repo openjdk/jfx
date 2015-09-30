@@ -201,7 +201,7 @@ gst_pad_template_class_init (GstPadTemplateClass * klass)
 static void
 gst_pad_template_init (GstPadTemplate * templ)
 {
-  }
+}
 
 static void
 gst_pad_template_dispose (GObject * object)

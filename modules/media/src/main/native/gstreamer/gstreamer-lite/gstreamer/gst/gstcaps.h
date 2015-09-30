@@ -189,7 +189,7 @@ GST_EXPORT GstCaps * _gst_caps_none;
  */
 #define GST_CAPS_FLAG_UNSET(caps,flag)         GST_MINI_OBJECT_FLAG_UNSET (caps, flag)
 
-  /* refcounting */
+/* refcounting */
 /**
  * gst_caps_ref:
  * @caps: the #GstCaps to reference

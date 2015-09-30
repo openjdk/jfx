@@ -40,9 +40,13 @@
 
 #include <string.h>
 #include <locale.h>
+#ifdef GSTREAMER_LITE
 #ifdef ENABLE_NLS
 #include <libintl.h>
 #endif
+#else // GSTREAMER_LITE
+#include <libintl.h>
+#endif // GSTREAMER_LITE
 #ifdef G_OS_WIN32
 
 /**

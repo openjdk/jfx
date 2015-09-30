@@ -77,7 +77,7 @@ _gst_buffer_list_copy (GstBufferList * list)
     GstBuffer *buf = g_array_index (list->array, GstBuffer *, i);
     buf = gst_buffer_ref (buf);
     g_array_append_val (copy->array, buf);
-}
+  }
   return copy;
 }
 
@@ -106,7 +106,7 @@ gst_buffer_list_init (GstBufferList * list, guint asize)
   list->array = g_array_sized_new (FALSE, FALSE, sizeof (GstBuffer *), asize);
 
   GST_LOG ("init %p", list);
-    }
+}
 
 /**
  * gst_buffer_list_new_sized:
@@ -166,7 +166,7 @@ gst_buffer_list_length (GstBufferList * list)
   g_return_val_if_fail (GST_IS_BUFFER_LIST (list), 0);
 
   return list->array->len;
-    }
+}
 
 /**
  * gst_buffer_list_foreach:
@@ -211,14 +211,14 @@ gst_buffer_list_foreach (GstBufferList * list, GstBufferListFunc func,
     }
 
     if (!ret)
-        break;
+      break;
 
     /* If the buffer was not removed by func go to the next buffer */
     if (buf_ret != NULL)
       i++;
-    }
-  return ret;
   }
+  return ret;
+}
 
 /**
  * gst_buffer_list_get:
@@ -297,6 +297,6 @@ gst_buffer_list_remove (GstBufferList * list, guint idx, guint length)
   for (i = idx; i < idx + length; ++i) {
     buf = g_array_index (list->array, GstBuffer *, i);
     gst_buffer_unref (buf);
-    }
-  g_array_remove_range (list->array, idx, length);
   }
+  g_array_remove_range (list->array, idx, length);
+}

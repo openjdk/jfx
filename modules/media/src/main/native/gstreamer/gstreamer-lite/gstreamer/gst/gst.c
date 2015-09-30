@@ -330,12 +330,14 @@ gst_init_check (int *argc, char **argv[], GError ** err)
 #endif
   gboolean res;
 
+#ifdef GSTREAMER_LITE
 #ifdef ENABLE_VISUAL_STUDIO_MEMORY_LEAKS_DETECTION
   #include <crtdbg.h>
 
   _CrtSetDbgFlag ( _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF );
   _CrtSetReportMode( _CRT_ERROR, _CRTDBG_MODE_DEBUG );
 #endif // ENABLE_VISUAL_STUDIO_MEMORY_LEAKS_DETECTION 
+#endif // GSTREAMER_LITE
 
   if (gst_initialized) {
     GST_DEBUG ("already initialized gst");

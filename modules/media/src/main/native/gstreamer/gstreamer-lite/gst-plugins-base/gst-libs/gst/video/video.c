@@ -99,7 +99,7 @@ gst_video_calculate_display_ratio (guint * dar_n, guint * dar_d,
 
   /* ERRORS */
 error_overflow:
-{
+  {
     GST_WARNING ("overflow in multiply");
     return FALSE;
   }

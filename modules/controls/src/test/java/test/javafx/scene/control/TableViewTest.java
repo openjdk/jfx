@@ -101,9 +101,9 @@ import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import test.com.sun.javafx.scene.control.test.Person;
 import test.com.sun.javafx.scene.control.test.RT_22463_Person;
 
-import static javafx.scene.control.skin.TableColumnHeaderShim.*;
 import javafx.scene.control.skin.TableHeaderRowShim;
 import static org.junit.Assert.assertEquals;
+import test.com.sun.javafx.scene.control.infrastructure.TableColumnHeaderUtil;
 
 public class TableViewTest {
     private TableView<String> table;
@@ -2082,12 +2082,12 @@ public class TableViewTest {
 
         StageLoader sl = new StageLoader(table);
 
-        assertEquals(0, getColumnIndex(col1));
-        assertEquals(1, getColumnIndex(col2));
+        assertEquals(0, TableColumnHeaderUtil.getColumnIndex(col1));
+        assertEquals(1, TableColumnHeaderUtil.getColumnIndex(col2));
 
-        moveColumn(col1, 1);
-        assertEquals(1, getColumnIndex(col1));
-        assertEquals(0, getColumnIndex(col2));
+        TableColumnHeaderUtil.moveColumn(col1, 1);
+        assertEquals(1, TableColumnHeaderUtil.getColumnIndex(col1));
+        assertEquals(0, TableColumnHeaderUtil.getColumnIndex(col2));
 
         sl.dispose();
     }
@@ -2100,12 +2100,12 @@ public class TableViewTest {
 
         StageLoader sl = new StageLoader(table);
 
-        assertEquals(0, getColumnIndex(col1));
-        assertEquals(1, getColumnIndex(col2));
+        assertEquals(0, TableColumnHeaderUtil.getColumnIndex(col1));
+        assertEquals(1, TableColumnHeaderUtil.getColumnIndex(col2));
 
-        moveColumn(col2, 0);
-        assertEquals(1, getColumnIndex(col1));
-        assertEquals(0, getColumnIndex(col2));
+        TableColumnHeaderUtil.moveColumn(col2, 0);
+        assertEquals(1, TableColumnHeaderUtil.getColumnIndex(col1));
+        assertEquals(0, TableColumnHeaderUtil.getColumnIndex(col2));
 
         sl.dispose();
     }
@@ -2119,14 +2119,14 @@ public class TableViewTest {
 
         StageLoader sl = new StageLoader(table);
 
-        assertEquals(0, getColumnIndex(col1));
-        assertEquals(1, getColumnIndex(col2));
-        assertEquals(2, getColumnIndex(col3));
+        assertEquals(0, TableColumnHeaderUtil.getColumnIndex(col1));
+        assertEquals(1, TableColumnHeaderUtil.getColumnIndex(col2));
+        assertEquals(2, TableColumnHeaderUtil.getColumnIndex(col3));
 
-        moveColumn(col1, 1);
-        assertEquals(1, getColumnIndex(col1));
-        assertEquals(0, getColumnIndex(col2));
-        assertEquals(2, getColumnIndex(col3));
+        TableColumnHeaderUtil.moveColumn(col1, 1);
+        assertEquals(1, TableColumnHeaderUtil.getColumnIndex(col1));
+        assertEquals(0, TableColumnHeaderUtil.getColumnIndex(col2));
+        assertEquals(2, TableColumnHeaderUtil.getColumnIndex(col3));
 
         sl.dispose();
     }
@@ -2140,14 +2140,14 @@ public class TableViewTest {
 
         StageLoader sl = new StageLoader(table);
 
-        assertEquals(0, getColumnIndex(col1));
-        assertEquals(1, getColumnIndex(col2));
-        assertEquals(2, getColumnIndex(col3));
+        assertEquals(0, TableColumnHeaderUtil.getColumnIndex(col1));
+        assertEquals(1, TableColumnHeaderUtil.getColumnIndex(col2));
+        assertEquals(2, TableColumnHeaderUtil.getColumnIndex(col3));
 
-        moveColumn(col2, 0);
-        assertEquals(1, getColumnIndex(col1));
-        assertEquals(0, getColumnIndex(col2));
-        assertEquals(2, getColumnIndex(col3));
+        TableColumnHeaderUtil.moveColumn(col2, 0);
+        assertEquals(1, TableColumnHeaderUtil.getColumnIndex(col1));
+        assertEquals(0, TableColumnHeaderUtil.getColumnIndex(col2));
+        assertEquals(2, TableColumnHeaderUtil.getColumnIndex(col3));
 
         sl.dispose();
     }
@@ -2161,14 +2161,14 @@ public class TableViewTest {
 
         StageLoader sl = new StageLoader(table);
 
-        assertEquals(0, getColumnIndex(col1));
-        assertEquals(1, getColumnIndex(col2));
-        assertEquals(2, getColumnIndex(col3));
+        assertEquals(0, TableColumnHeaderUtil.getColumnIndex(col1));
+        assertEquals(1, TableColumnHeaderUtil.getColumnIndex(col2));
+        assertEquals(2, TableColumnHeaderUtil.getColumnIndex(col3));
 
-        moveColumn(col2, 2);
-        assertEquals(0, getColumnIndex(col1));
-        assertEquals(2, getColumnIndex(col2));
-        assertEquals(1, getColumnIndex(col3));
+        TableColumnHeaderUtil.moveColumn(col2, 2);
+        assertEquals(0, TableColumnHeaderUtil.getColumnIndex(col1));
+        assertEquals(2, TableColumnHeaderUtil.getColumnIndex(col2));
+        assertEquals(1, TableColumnHeaderUtil.getColumnIndex(col3));
 
         sl.dispose();
     }
@@ -2182,14 +2182,14 @@ public class TableViewTest {
 
         StageLoader sl = new StageLoader(table);
 
-        assertEquals(0, getColumnIndex(col1));
-        assertEquals(1, getColumnIndex(col2));
-        assertEquals(2, getColumnIndex(col3));
+        assertEquals(0, TableColumnHeaderUtil.getColumnIndex(col1));
+        assertEquals(1, TableColumnHeaderUtil.getColumnIndex(col2));
+        assertEquals(2, TableColumnHeaderUtil.getColumnIndex(col3));
 
-        moveColumn(col3, 1);
-        assertEquals(0, getColumnIndex(col1));
-        assertEquals(2, getColumnIndex(col2));
-        assertEquals(1, getColumnIndex(col3));
+        TableColumnHeaderUtil.moveColumn(col3, 1);
+        assertEquals(0, TableColumnHeaderUtil.getColumnIndex(col1));
+        assertEquals(2, TableColumnHeaderUtil.getColumnIndex(col2));
+        assertEquals(1, TableColumnHeaderUtil.getColumnIndex(col3));
 
         sl.dispose();
     }
@@ -2203,14 +2203,14 @@ public class TableViewTest {
 
         StageLoader sl = new StageLoader(table);
 
-        assertEquals(0, getColumnIndex(col1));
-        assertEquals(1, getColumnIndex(col2));
-        assertEquals(2, getColumnIndex(col3));
+        assertEquals(0, TableColumnHeaderUtil.getColumnIndex(col1));
+        assertEquals(1, TableColumnHeaderUtil.getColumnIndex(col2));
+        assertEquals(2, TableColumnHeaderUtil.getColumnIndex(col3));
 
-        moveColumn(col1, 2);
-        assertEquals(2, getColumnIndex(col1));
-        assertEquals(0, getColumnIndex(col2));
-        assertEquals(1, getColumnIndex(col3));
+        TableColumnHeaderUtil.moveColumn(col1, 2);
+        assertEquals(2, TableColumnHeaderUtil.getColumnIndex(col1));
+        assertEquals(0, TableColumnHeaderUtil.getColumnIndex(col2));
+        assertEquals(1, TableColumnHeaderUtil.getColumnIndex(col3));
 
         sl.dispose();
     }
@@ -2224,14 +2224,14 @@ public class TableViewTest {
 
         StageLoader sl = new StageLoader(table);
 
-        assertEquals(0, getColumnIndex(col1));
-        assertEquals(1, getColumnIndex(col2));
-        assertEquals(2, getColumnIndex(col3));
+        assertEquals(0, TableColumnHeaderUtil.getColumnIndex(col1));
+        assertEquals(1, TableColumnHeaderUtil.getColumnIndex(col2));
+        assertEquals(2, TableColumnHeaderUtil.getColumnIndex(col3));
 
-        moveColumn(col3, 0);
-        assertEquals(1, getColumnIndex(col1));
-        assertEquals(2, getColumnIndex(col2));
-        assertEquals(0, getColumnIndex(col3));
+        TableColumnHeaderUtil.moveColumn(col3, 0);
+        assertEquals(1, TableColumnHeaderUtil.getColumnIndex(col1));
+        assertEquals(2, TableColumnHeaderUtil.getColumnIndex(col2));
+        assertEquals(0, TableColumnHeaderUtil.getColumnIndex(col3));
 
         sl.dispose();
     }
@@ -2247,14 +2247,14 @@ public class TableViewTest {
 
         col2.setVisible(false);
 
-        assertEquals(0, getColumnIndex(col1));
-        assertEquals(-1, getColumnIndex(col2));
-        assertEquals(1, getColumnIndex(col3));
+        assertEquals(0, TableColumnHeaderUtil.getColumnIndex(col1));
+        assertEquals(-1, TableColumnHeaderUtil.getColumnIndex(col2));
+        assertEquals(1, TableColumnHeaderUtil.getColumnIndex(col3));
 
-        moveColumn(col1, 1);
-        assertEquals(1, getColumnIndex(col1));
-        assertEquals(-1, getColumnIndex(col2));
-        assertEquals(0, getColumnIndex(col3));
+        TableColumnHeaderUtil.moveColumn(col1, 1);
+        assertEquals(1, TableColumnHeaderUtil.getColumnIndex(col1));
+        assertEquals(-1, TableColumnHeaderUtil.getColumnIndex(col2));
+        assertEquals(0, TableColumnHeaderUtil.getColumnIndex(col3));
 
         sl.dispose();
     }
@@ -2270,14 +2270,14 @@ public class TableViewTest {
 
         col2.setVisible(false);
 
-        assertEquals(0, getColumnIndex(col1));
-        assertEquals(-1, getColumnIndex(col2));
-        assertEquals(1, getColumnIndex(col3));
+        assertEquals(0, TableColumnHeaderUtil.getColumnIndex(col1));
+        assertEquals(-1, TableColumnHeaderUtil.getColumnIndex(col2));
+        assertEquals(1, TableColumnHeaderUtil.getColumnIndex(col3));
 
-        moveColumn(col1, 100);
-        assertEquals(1, getColumnIndex(col1));
-        assertEquals(-1, getColumnIndex(col2));
-        assertEquals(0, getColumnIndex(col3));
+        TableColumnHeaderUtil.moveColumn(col1, 100);
+        assertEquals(1, TableColumnHeaderUtil.getColumnIndex(col1));
+        assertEquals(-1, TableColumnHeaderUtil.getColumnIndex(col2));
+        assertEquals(0, TableColumnHeaderUtil.getColumnIndex(col3));
 
         sl.dispose();
     }
@@ -2293,14 +2293,14 @@ public class TableViewTest {
 
         col2.setVisible(false);
 
-        assertEquals(0, getColumnIndex(col1));
-        assertEquals(-1, getColumnIndex(col2));
-        assertEquals(1, getColumnIndex(col3));
+        assertEquals(0, TableColumnHeaderUtil.getColumnIndex(col1));
+        assertEquals(-1, TableColumnHeaderUtil.getColumnIndex(col2));
+        assertEquals(1, TableColumnHeaderUtil.getColumnIndex(col3));
 
-        moveColumn(col3, 0);
-        assertEquals(1, getColumnIndex(col1));
-        assertEquals(-1, getColumnIndex(col2));
-        assertEquals(0, getColumnIndex(col3));
+        TableColumnHeaderUtil.moveColumn(col3, 0);
+        assertEquals(1, TableColumnHeaderUtil.getColumnIndex(col1));
+        assertEquals(-1, TableColumnHeaderUtil.getColumnIndex(col2));
+        assertEquals(0, TableColumnHeaderUtil.getColumnIndex(col3));
 
         sl.dispose();
     }
@@ -2320,20 +2320,20 @@ public class TableViewTest {
         col2.setVisible(false);
         col4.setVisible(false);
 
-        assertEquals(0, getColumnIndex(col1));
-        assertEquals(-1, getColumnIndex(col2));
-        assertEquals(1, getColumnIndex(col3));
-        assertEquals(-1, getColumnIndex(col4));
-        assertEquals(2, getColumnIndex(col5));
-        assertEquals(3, getColumnIndex(col6));
+        assertEquals(0, TableColumnHeaderUtil.getColumnIndex(col1));
+        assertEquals(-1, TableColumnHeaderUtil.getColumnIndex(col2));
+        assertEquals(1, TableColumnHeaderUtil.getColumnIndex(col3));
+        assertEquals(-1, TableColumnHeaderUtil.getColumnIndex(col4));
+        assertEquals(2, TableColumnHeaderUtil.getColumnIndex(col5));
+        assertEquals(3, TableColumnHeaderUtil.getColumnIndex(col6));
 
-        moveColumn(col1, 1);    // 1 should represent the spot between col2 and col4
-        assertEquals(1, getColumnIndex(col1));
-        assertEquals(-1, getColumnIndex(col2));
-        assertEquals(0, getColumnIndex(col3));
-        assertEquals(-1, getColumnIndex(col4));
-        assertEquals(2, getColumnIndex(col5));
-        assertEquals(3, getColumnIndex(col6));
+        TableColumnHeaderUtil.moveColumn(col1, 1);    // 1 should represent the spot between col2 and col4
+        assertEquals(1, TableColumnHeaderUtil.getColumnIndex(col1));
+        assertEquals(-1, TableColumnHeaderUtil.getColumnIndex(col2));
+        assertEquals(0, TableColumnHeaderUtil.getColumnIndex(col3));
+        assertEquals(-1, TableColumnHeaderUtil.getColumnIndex(col4));
+        assertEquals(2, TableColumnHeaderUtil.getColumnIndex(col5));
+        assertEquals(3, TableColumnHeaderUtil.getColumnIndex(col6));
 
         sl.dispose();
     }
@@ -2353,20 +2353,20 @@ public class TableViewTest {
         col2.setVisible(false);
         col4.setVisible(false);
 
-        assertEquals(0, getColumnIndex(col1));
-        assertEquals(-1, getColumnIndex(col2));
-        assertEquals(1, getColumnIndex(col3));
-        assertEquals(-1, getColumnIndex(col4));
-        assertEquals(2, getColumnIndex(col5));
-        assertEquals(3, getColumnIndex(col6));
+        assertEquals(0, TableColumnHeaderUtil.getColumnIndex(col1));
+        assertEquals(-1, TableColumnHeaderUtil.getColumnIndex(col2));
+        assertEquals(1, TableColumnHeaderUtil.getColumnIndex(col3));
+        assertEquals(-1, TableColumnHeaderUtil.getColumnIndex(col4));
+        assertEquals(2, TableColumnHeaderUtil.getColumnIndex(col5));
+        assertEquals(3, TableColumnHeaderUtil.getColumnIndex(col6));
 
-        moveColumn(col1, 3);    // 3 should represent the end place
-        assertEquals(3, getColumnIndex(col1));
-        assertEquals(-1, getColumnIndex(col2));
-        assertEquals(0, getColumnIndex(col3));
-        assertEquals(-1, getColumnIndex(col4));
-        assertEquals(1, getColumnIndex(col5));
-        assertEquals(2, getColumnIndex(col6));
+        TableColumnHeaderUtil.moveColumn(col1, 3);    // 3 should represent the end place
+        assertEquals(3, TableColumnHeaderUtil.getColumnIndex(col1));
+        assertEquals(-1, TableColumnHeaderUtil.getColumnIndex(col2));
+        assertEquals(0, TableColumnHeaderUtil.getColumnIndex(col3));
+        assertEquals(-1, TableColumnHeaderUtil.getColumnIndex(col4));
+        assertEquals(1, TableColumnHeaderUtil.getColumnIndex(col5));
+        assertEquals(2, TableColumnHeaderUtil.getColumnIndex(col6));
 
         sl.dispose();
     }
@@ -2386,20 +2386,20 @@ public class TableViewTest {
         col2.setVisible(false);
         col4.setVisible(false);
 
-        assertEquals(0, getColumnIndex(col1));
-        assertEquals(-1, getColumnIndex(col2));
-        assertEquals(1, getColumnIndex(col3));
-        assertEquals(-1, getColumnIndex(col4));
-        assertEquals(2, getColumnIndex(col5));
-        assertEquals(3, getColumnIndex(col6));
+        assertEquals(0, TableColumnHeaderUtil.getColumnIndex(col1));
+        assertEquals(-1, TableColumnHeaderUtil.getColumnIndex(col2));
+        assertEquals(1, TableColumnHeaderUtil.getColumnIndex(col3));
+        assertEquals(-1, TableColumnHeaderUtil.getColumnIndex(col4));
+        assertEquals(2, TableColumnHeaderUtil.getColumnIndex(col5));
+        assertEquals(3, TableColumnHeaderUtil.getColumnIndex(col6));
 
-        moveColumn(col3, 0);
-        assertEquals(1, getColumnIndex(col1));
-        assertEquals(-1, getColumnIndex(col2));
-        assertEquals(0, getColumnIndex(col3));
-        assertEquals(-1, getColumnIndex(col4));
-        assertEquals(2, getColumnIndex(col5));
-        assertEquals(3, getColumnIndex(col6));
+        TableColumnHeaderUtil.moveColumn(col3, 0);
+        assertEquals(1, TableColumnHeaderUtil.getColumnIndex(col1));
+        assertEquals(-1, TableColumnHeaderUtil.getColumnIndex(col2));
+        assertEquals(0, TableColumnHeaderUtil.getColumnIndex(col3));
+        assertEquals(-1, TableColumnHeaderUtil.getColumnIndex(col4));
+        assertEquals(2, TableColumnHeaderUtil.getColumnIndex(col5));
+        assertEquals(3, TableColumnHeaderUtil.getColumnIndex(col6));
 
         sl.dispose();
     }
@@ -2419,20 +2419,20 @@ public class TableViewTest {
         col2.setVisible(false);
         col4.setVisible(false);
 
-        assertEquals(0, getColumnIndex(col1));
-        assertEquals(-1, getColumnIndex(col2));
-        assertEquals(1, getColumnIndex(col3));
-        assertEquals(-1, getColumnIndex(col4));
-        assertEquals(2, getColumnIndex(col5));
-        assertEquals(3, getColumnIndex(col6));
+        assertEquals(0, TableColumnHeaderUtil.getColumnIndex(col1));
+        assertEquals(-1, TableColumnHeaderUtil.getColumnIndex(col2));
+        assertEquals(1, TableColumnHeaderUtil.getColumnIndex(col3));
+        assertEquals(-1, TableColumnHeaderUtil.getColumnIndex(col4));
+        assertEquals(2, TableColumnHeaderUtil.getColumnIndex(col5));
+        assertEquals(3, TableColumnHeaderUtil.getColumnIndex(col6));
 
-        moveColumn(col3, 3);    // 3 should represent the end place
-        assertEquals(0, getColumnIndex(col1));
-        assertEquals(-1, getColumnIndex(col2));
-        assertEquals(3, getColumnIndex(col3));
-        assertEquals(-1, getColumnIndex(col4));
-        assertEquals(1, getColumnIndex(col5));
-        assertEquals(2, getColumnIndex(col6));
+        TableColumnHeaderUtil.moveColumn(col3, 3);    // 3 should represent the end place
+        assertEquals(0, TableColumnHeaderUtil.getColumnIndex(col1));
+        assertEquals(-1, TableColumnHeaderUtil.getColumnIndex(col2));
+        assertEquals(3, TableColumnHeaderUtil.getColumnIndex(col3));
+        assertEquals(-1, TableColumnHeaderUtil.getColumnIndex(col4));
+        assertEquals(1, TableColumnHeaderUtil.getColumnIndex(col5));
+        assertEquals(2, TableColumnHeaderUtil.getColumnIndex(col6));
 
         sl.dispose();
     }
@@ -2452,20 +2452,20 @@ public class TableViewTest {
         col2.setVisible(false);
         col4.setVisible(false);
 
-        assertEquals(0, getColumnIndex(col1));
-        assertEquals(-1, getColumnIndex(col2));
-        assertEquals(1, getColumnIndex(col3));
-        assertEquals(-1, getColumnIndex(col4));
-        assertEquals(2, getColumnIndex(col5));
-        assertEquals(3, getColumnIndex(col6));
+        assertEquals(0, TableColumnHeaderUtil.getColumnIndex(col1));
+        assertEquals(-1, TableColumnHeaderUtil.getColumnIndex(col2));
+        assertEquals(1, TableColumnHeaderUtil.getColumnIndex(col3));
+        assertEquals(-1, TableColumnHeaderUtil.getColumnIndex(col4));
+        assertEquals(2, TableColumnHeaderUtil.getColumnIndex(col5));
+        assertEquals(3, TableColumnHeaderUtil.getColumnIndex(col6));
 
-        moveColumn(col6, 0);
-        assertEquals(1, getColumnIndex(col1));
-        assertEquals(-1, getColumnIndex(col2));
-        assertEquals(2, getColumnIndex(col3));
-        assertEquals(-1, getColumnIndex(col4));
-        assertEquals(3, getColumnIndex(col5));
-        assertEquals(0, getColumnIndex(col6));
+        TableColumnHeaderUtil.moveColumn(col6, 0);
+        assertEquals(1, TableColumnHeaderUtil.getColumnIndex(col1));
+        assertEquals(-1, TableColumnHeaderUtil.getColumnIndex(col2));
+        assertEquals(2, TableColumnHeaderUtil.getColumnIndex(col3));
+        assertEquals(-1, TableColumnHeaderUtil.getColumnIndex(col4));
+        assertEquals(3, TableColumnHeaderUtil.getColumnIndex(col5));
+        assertEquals(0, TableColumnHeaderUtil.getColumnIndex(col6));
 
         sl.dispose();
     }
@@ -2485,20 +2485,20 @@ public class TableViewTest {
         col2.setVisible(false);
         col4.setVisible(false);
 
-        assertEquals(0, getColumnIndex(col1));
-        assertEquals(-1, getColumnIndex(col2));
-        assertEquals(1, getColumnIndex(col3));
-        assertEquals(-1, getColumnIndex(col4));
-        assertEquals(2, getColumnIndex(col5));
-        assertEquals(3, getColumnIndex(col6));
+        assertEquals(0, TableColumnHeaderUtil.getColumnIndex(col1));
+        assertEquals(-1, TableColumnHeaderUtil.getColumnIndex(col2));
+        assertEquals(1, TableColumnHeaderUtil.getColumnIndex(col3));
+        assertEquals(-1, TableColumnHeaderUtil.getColumnIndex(col4));
+        assertEquals(2, TableColumnHeaderUtil.getColumnIndex(col5));
+        assertEquals(3, TableColumnHeaderUtil.getColumnIndex(col6));
 
-        moveColumn(col6, 1);
-        assertEquals(0, getColumnIndex(col1));
-        assertEquals(-1, getColumnIndex(col2));
-        assertEquals(2, getColumnIndex(col3));
-        assertEquals(-1, getColumnIndex(col4));
-        assertEquals(3, getColumnIndex(col5));
-        assertEquals(1, getColumnIndex(col6));
+        TableColumnHeaderUtil.moveColumn(col6, 1);
+        assertEquals(0, TableColumnHeaderUtil.getColumnIndex(col1));
+        assertEquals(-1, TableColumnHeaderUtil.getColumnIndex(col2));
+        assertEquals(2, TableColumnHeaderUtil.getColumnIndex(col3));
+        assertEquals(-1, TableColumnHeaderUtil.getColumnIndex(col4));
+        assertEquals(3, TableColumnHeaderUtil.getColumnIndex(col5));
+        assertEquals(1, TableColumnHeaderUtil.getColumnIndex(col6));
 
         sl.dispose();
     }
@@ -3302,28 +3302,28 @@ public class TableViewTest {
         // RT-37057).
 
         // Drag column 1 to slot 1. As expected, the column position doesn't change.
-        TableColumnHeaderShim.moveColumn(column1, 0);
+        TableColumnHeaderUtil.moveColumn(column1, 0);
         assertEquals(column1, table.getVisibleLeafColumn(0));
         assertEquals(column2, table.getVisibleLeafColumn(1));
         assertEquals(0, TableColumnHeaderShim.getColumnIndex(header1));
         assertEquals(1, TableColumnHeaderShim.getColumnIndex(header2));
 
         // Drag column 1 to slot 2. As expected, the column 1 and 2 swap positions.
-        TableColumnHeaderShim.moveColumn(column1, 1);
+        TableColumnHeaderUtil.moveColumn(column1, 1);
         assertEquals(column2, table.getVisibleLeafColumn(0));
         assertEquals(column1, table.getVisibleLeafColumn(1));
         assertEquals(1, TableColumnHeaderShim.getColumnIndex(header1));
         assertEquals(0, TableColumnHeaderShim.getColumnIndex(header2));
 
         // Drag column 1 to slot 0. As expected, the column 1 and 2 swap positions.
-        TableColumnHeaderShim.moveColumn(column1, 0);
+        TableColumnHeaderUtil.moveColumn(column1, 0);
         assertEquals(column1, table.getVisibleLeafColumn(0));
         assertEquals(column2, table.getVisibleLeafColumn(1));
         assertEquals(0, TableColumnHeaderShim.getColumnIndex(header1));
         assertEquals(1, TableColumnHeaderShim.getColumnIndex(header2));
 
         // Drag column 1 to slot 1 again. What? Why did they swap positions this time?
-        TableColumnHeaderShim.moveColumn(column1, 0);
+        TableColumnHeaderUtil.moveColumn(column1, 0);
         assertEquals(column1, table.getVisibleLeafColumn(0));
         assertEquals(column2, table.getVisibleLeafColumn(1));
         assertEquals(0, TableColumnHeaderShim.getColumnIndex(header1));
@@ -3365,28 +3365,28 @@ public class TableViewTest {
         // in TableColumnHeader
 
         // Drag column 1 to slot 1. As expected, the column position doesn't change.
-        TableColumnHeaderShim.moveColumn(column1, 9, 61);
+        TableColumnHeaderUtil.moveColumn(column1, 9, 61);
         assertEquals(column1, table.getVisibleLeafColumn(0));
         assertEquals(column2, table.getVisibleLeafColumn(1));
         assertEquals(0, TableColumnHeaderShim.getColumnIndex(header1));
         assertEquals(1, TableColumnHeaderShim.getColumnIndex(header2));
 
         // Drag column 1 to slot 2. As expected, the column 1 and 2 swap positions.
-        TableColumnHeaderShim.moveColumn(column1, 12, 139);
+        TableColumnHeaderUtil.moveColumn(column1, 12, 139);
         assertEquals(column2, table.getVisibleLeafColumn(0));
         assertEquals(column1, table.getVisibleLeafColumn(1));
         assertEquals(1, TableColumnHeaderShim.getColumnIndex(header1));
         assertEquals(0, TableColumnHeaderShim.getColumnIndex(header2));
 
         // Drag column 1 to slot 0. As expected, the column 1 and 2 swap positions.
-        TableColumnHeaderShim.moveColumn(column1, 45, 21);
+        TableColumnHeaderUtil.moveColumn(column1, 45, 21);
         assertEquals(column1, table.getVisibleLeafColumn(0));
         assertEquals(column2, table.getVisibleLeafColumn(1));
         assertEquals(0, TableColumnHeaderShim.getColumnIndex(header1));
         assertEquals(1, TableColumnHeaderShim.getColumnIndex(header2));
 
         // Drag column 1 to slot 1 again. What? Why did they swap positions this time?
-        TableColumnHeaderShim.moveColumn(column1, 19, 63);
+        TableColumnHeaderUtil.moveColumn(column1, 19, 63);
         assertEquals(column1, table.getVisibleLeafColumn(0));
         assertEquals(column2, table.getVisibleLeafColumn(1));
         assertEquals(0, TableColumnHeaderShim.getColumnIndex(header1));
@@ -3428,21 +3428,21 @@ public class TableViewTest {
         // RT-37057).
 
         // Drag column 1 to slot 2. As expected, the column 1 and 2 swap positions
-        TableColumnHeaderShim.moveColumn(column1, 1);
+        TableColumnHeaderUtil.moveColumn(column1, 1);
         assertEquals(column2, table.getVisibleLeafColumn(0));
         assertEquals(column1, table.getVisibleLeafColumn(1));
         assertEquals(1, TableColumnHeaderShim.getColumnIndex(header1));
         assertEquals(0, TableColumnHeaderShim.getColumnIndex(header2));
 
         // Drag column 1 to slot 0. As expected, the column 1 and 2 swap positions.
-        TableColumnHeaderShim.moveColumn(column1, 0);
+        TableColumnHeaderUtil.moveColumn(column1, 0);
         assertEquals(column1, table.getVisibleLeafColumn(0));
         assertEquals(column2, table.getVisibleLeafColumn(1));
         assertEquals(0, TableColumnHeaderShim.getColumnIndex(header1));
         assertEquals(1, TableColumnHeaderShim.getColumnIndex(header2));
 
         // Drag column 4 to slot 1. What? It behaves like it was dragged to slot 0?!
-        TableColumnHeaderShim.moveColumn(column4, 1);
+        TableColumnHeaderUtil.moveColumn(column4, 1);
         assertEquals(column1, table.getVisibleLeafColumn(0));
         assertEquals(column4, table.getVisibleLeafColumn(1));
         assertEquals(column2, table.getVisibleLeafColumn(2));
@@ -3488,21 +3488,21 @@ public class TableViewTest {
         // in TableColumnHeader
 
         // Drag column 1 to slot 2. As expected, the column 1 and 2 swap positions
-        TableColumnHeaderShim.moveColumn(column1, 25, 136);
+        TableColumnHeaderUtil.moveColumn(column1, 25, 136);
         assertEquals(column2, table.getVisibleLeafColumn(0));
         assertEquals(column1, table.getVisibleLeafColumn(1));
         assertEquals(1, TableColumnHeaderShim.getColumnIndex(header1));
         assertEquals(0, TableColumnHeaderShim.getColumnIndex(header2));
 
         // Drag column 1 to slot 0. As expected, the column 1 and 2 swap positions.
-        TableColumnHeaderShim.moveColumn(column1, 51, 23);
+        TableColumnHeaderUtil.moveColumn(column1, 51, 23);
         assertEquals(column1, table.getVisibleLeafColumn(0));
         assertEquals(column2, table.getVisibleLeafColumn(1));
         assertEquals(0, TableColumnHeaderShim.getColumnIndex(header1));
         assertEquals(1, TableColumnHeaderShim.getColumnIndex(header2));
 
         // Drag column 4 to slot 1. What? It behaves like it was dragged to slot 0?!
-        TableColumnHeaderShim.moveColumn(column4, 56, 103);
+        TableColumnHeaderUtil.moveColumn(column4, 56, 103);
         assertEquals(column1, table.getVisibleLeafColumn(0));
         assertEquals(column4, table.getVisibleLeafColumn(1));
         assertEquals(column2, table.getVisibleLeafColumn(2));

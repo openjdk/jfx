@@ -4975,7 +4975,6 @@ gst_pad_push_event (GstPad * pad, GstEvent * event)
     gst_event_unref (event);
   }
   GST_OBJECT_UNLOCK (pad);
-   
 
   return res;
 

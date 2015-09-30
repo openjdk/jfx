@@ -878,10 +878,15 @@ g_ascii_dtostr (gchar       *buffer,
   return g_ascii_formatd (buffer, buf_len, "%.17g", d);
 }
 
+#ifdef GSTREAMER_LITE
 #ifndef G_OS_WIN32
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-nonliteral"
 #endif // G_OS_WIN32
+#else // GSTREAMER_LITE
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"
+#endif // GSTREAMER_LITE
 
 /**
  * g_ascii_formatd:
@@ -991,9 +996,13 @@ g_ascii_formatd (gchar       *buffer,
 #endif
 }
 
+#ifdef GSTREAMER_LITE
 #ifndef G_OS_WIN32
 #pragma GCC diagnostic pop
 #endif // G_OS_WIN32
+#else // GSTREAMER_LITE
+#pragma GCC diagnostic pop
+#endif // GSTREAMER_LITE
 
 #define ISSPACE(c)              ((c) == ' ' || (c) == '\f' || (c) == '\n' || \
                                  (c) == '\r' || (c) == '\t' || (c) == '\v')

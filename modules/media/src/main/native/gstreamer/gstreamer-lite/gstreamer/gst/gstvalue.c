@@ -967,7 +967,7 @@ gst_value_init_int_range (GValue * value)
 
   value->data[0].v_uint64 = 0;
   value->data[1].v_int = 1;
-  }
+}
 
 static void
 gst_value_copy_int_range (const GValue * src_value, GValue * dest_value)
@@ -1144,7 +1144,7 @@ gst_value_compare_int_range (const GValue * value1, const GValue * value2)
     if (INT_RANGE_MIN (value1) == INT_RANGE_MIN (value2))
       return GST_VALUE_EQUAL;
     return GST_VALUE_UNORDERED;
-}
+  }
 }
 
 static gchar *
@@ -1204,7 +1204,7 @@ gst_value_copy_int64_range (const GValue * src_value, GValue * dest_value)
 
   if (vals == NULL) {
     gst_value_init_int64_range (dest_value);
-}
+  }
 
   if (src_vals != NULL) {
     INT64_RANGE_MIN (dest_value) = INT64_RANGE_MIN (src_value);
@@ -1399,7 +1399,7 @@ gst_value_compare_int64_range (const GValue * value1, const GValue * value2)
     if (INT64_RANGE_MIN (value1) == INT64_RANGE_MIN (value2))
       return GST_VALUE_EQUAL;
     return GST_VALUE_UNORDERED;
-}
+  }
 }
 
 static gchar *
@@ -2224,7 +2224,7 @@ compare_buffer (GstBuffer * buf1, GstBuffer * buf2)
   if (!gst_buffer_map (buf2, &info2, GST_MAP_READ)) {
     gst_buffer_unmap (buf1, &info1);
     return GST_VALUE_UNORDERED;
-}
+  }
 
   mret = memcmp (info1.data, info2.data, info1.size);
   if (mret == 0)
@@ -4481,7 +4481,7 @@ gst_value_list_equals_range (const GValue * list, const GValue * value)
       gint v = g_value_get_int (VALUE_LIST_GET_VALUE (list, n));
       if (v < rmin || v > rmax || v % rstep) {
         return FALSE;
-}
+      }
     }
     return TRUE;
   } else if (CHECK_TYPES (INT64, G)) {
@@ -4597,7 +4597,7 @@ gst_value_compare (const GValue * value1, const GValue * value2)
         return ret;
       else if (ret != GST_VALUE_EQUAL)
         return GST_VALUE_UNORDERED;
-}
+    }
 
     return GST_VALUE_EQUAL;
   }
@@ -5728,7 +5728,7 @@ gst_value_deserialize_date_time (GValue * dest, const gchar * s)
   if (datetime != NULL) {
     g_value_take_boxed (dest, datetime);
   return TRUE;
-}
+  }
   GST_WARNING ("Failed to deserialize date time string '%s'", s);
   return FALSE;
 }

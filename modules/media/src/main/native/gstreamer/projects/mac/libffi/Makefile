@@ -17,6 +17,7 @@ CFLAGS = -c \
          -arch x86_64 \
          -Werror=implicit-function-declaration \
          -fPIC \
+         -DGSTREAMER_LITE \
 	 -mmacosx-version-min=10.7
 
 ifeq ($(BUILD_TYPE), Release)

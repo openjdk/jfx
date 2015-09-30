@@ -610,10 +610,15 @@ format_error_message (const gchar  *filename,
                       const gchar  *format_string,
                       int           saved_errno) G_GNUC_FORMAT(2);
 
+#ifdef GSTREAMER_LITE
 #ifndef G_OS_WIN32
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-nonliteral"
 #endif // G_OS_WIN32
+#else // GSTREAMER_LITE
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"
+#endif // GSTREAMER_LITE
 
 static char *
 format_error_message (const gchar  *filename,
@@ -630,9 +635,13 @@ format_error_message (const gchar  *filename,
   return msg;
 }
 
+#ifdef GSTREAMER_LITE
 #ifndef G_OS_WIN32
 #pragma GCC diagnostic pop
 #endif // G_OS_WIN32
+#else // GSTREAMER_LITE
+#pragma GCC diagnostic pop
+#endif // GSTREAMER_LITE
 
 /* format string must have two '%s':
  *

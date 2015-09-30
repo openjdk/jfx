@@ -50,6 +50,7 @@ import javafx.scene.control.Slider;
 import javafx.scene.control.ToolBar;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.media.MediaPlayer;
 import javafx.scene.media.MediaView;
@@ -149,7 +150,8 @@ public class PlayerPane extends Region {
                 transition.play();
             });
 
-            mp.currentTimeProperty().addListener((ObservableValue<? extends Duration> observable, Duration oldValue, Duration newValue) -> {
+            mp.currentTimeProperty().addListener((ObservableValue<? extends Duration> observable,
+                                                  Duration oldValue, Duration newValue) -> {
                 updateValues();
             });
             mp.setOnPlaying(() -> {
@@ -182,14 +184,19 @@ public class PlayerPane extends Region {
             timeSlider.setId("media-slider");
             timeSlider.setMinWidth(200);
             timeSlider.setMaxWidth(Double.MAX_VALUE);
-            timeSlider.valueProperty().addListener((Observable ov) -> {
+            timeSlider.valueProperty().addListener((ObservableValue<? extends Number> observable,
+                                                    Number old, Number now) -> {
                 if (timeSlider.isValueChanging()) {
                     // multiply duration by percentage calculated by slider position
                     if (duration != null) {
                         mp.seek(duration.multiply(timeSlider.getValue() / 100.0));
                     }
                     updateValues();
-                    
+                } else if (Math.abs(now.doubleValue() - old.doubleValue()) > 1.5) {
+                    // multiply duration by percentage calculated by slider position
+                    if (duration != null) {
+                        mp.seek(duration.multiply(timeSlider.getValue() / 100.0));
+                    }
                 }
             });
             mediaTopBar.getChildren().add(timeSlider);
@@ -216,11 +223,15 @@ public class PlayerPane extends Region {
             volumeSlider.setMaxWidth(Region.USE_PREF_SIZE);
             volumeSlider.valueProperty().addListener((Observable ov) -> {
             });
-            volumeSlider.valueProperty().addListener((ObservableValue<? extends Number> observable, Number oldValue, Number newValue) -> {
+            volumeSlider.valueProperty().addListener((ObservableValue<? extends Number> observable,
+                                                      Number old, Number now) -> {
                 if (volumeSlider.isValueChanging()) {
+                    mp.setVolume(volumeSlider.getValue() / 100.0);
+                } else {
                     mp.setVolume(volumeSlider.getValue() / 100.0);
                 }
             });
+            HBox.setHgrow(volumeSlider, Priority.ALWAYS);
             mediaTopBar.getChildren().add(volumeSlider);
                         
             final EventHandler<ActionEvent> backAction = (ActionEvent e) -> {

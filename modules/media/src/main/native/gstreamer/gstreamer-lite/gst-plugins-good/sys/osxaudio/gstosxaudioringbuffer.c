@@ -153,7 +153,7 @@ gst_osx_audio_ring_buffer_open_device (GstAudioRingBuffer * buf)
   osxbuf = GST_OSX_AUDIO_RING_BUFFER (buf);
 
   return gst_core_audio_open (osxbuf->core_audio);
-    }
+}
 
 static gboolean
 gst_osx_audio_ring_buffer_close_device (GstAudioRingBuffer * buf)
@@ -190,12 +190,12 @@ gst_osx_audio_ring_buffer_acquire (GstAudioRingBuffer * buf,
     is_passthrough = TRUE;
   } else {
     int width, depth;
-  /* Fill out the audio description we're going to be using */
-  format.mFormatID = kAudioFormatLinearPCM;
+    /* Fill out the audio description we're going to be using */
+    format.mFormatID = kAudioFormatLinearPCM;
     format.mSampleRate = (double) GST_AUDIO_INFO_RATE (&spec->info);
     format.mChannelsPerFrame = GST_AUDIO_INFO_CHANNELS (&spec->info);
     if (GST_AUDIO_INFO_IS_FLOAT (&spec->info)) {
-  format.mFormatFlags = kAudioFormatFlagsNativeFloatPacked;
+      format.mFormatFlags = kAudioFormatFlagsNativeFloatPacked;
       width = depth = GST_AUDIO_INFO_WIDTH (&spec->info);
     } else {
       format.mFormatFlags = kAudioFormatFlagIsSignedInteger;
@@ -205,20 +205,20 @@ gst_osx_audio_ring_buffer_acquire (GstAudioRingBuffer * buf,
         format.mFormatFlags |= kAudioFormatFlagIsPacked;
       } else {
         format.mFormatFlags |= kAudioFormatFlagIsAlignedHigh;
-    }
+      }
       if (GST_AUDIO_INFO_IS_BIG_ENDIAN (&spec->info)) {
         format.mFormatFlags |= kAudioFormatFlagIsBigEndian;
-  }
-  }
+      }
+    }
     format.mBytesPerFrame = GST_AUDIO_INFO_BPF (&spec->info);
     format.mBitsPerChannel = depth;
     format.mBytesPerPacket = GST_AUDIO_INFO_BPF (&spec->info);
     format.mFramesPerPacket = 1;
     format.mReserved = 0;
-  spec->segsize =
+    spec->segsize =
         (spec->latency_time * GST_AUDIO_INFO_RATE (&spec->info) /
         G_USEC_PER_SEC) * GST_AUDIO_INFO_BPF (&spec->info);
-  spec->segtotal = spec->buffer_time / spec->latency_time;
+    spec->segtotal = spec->buffer_time / spec->latency_time;
     is_passthrough = FALSE;
   }
 
@@ -228,7 +228,7 @@ gst_osx_audio_ring_buffer_acquire (GstAudioRingBuffer * buf,
   if (GST_IS_OSX_AUDIO_SINK (GST_OBJECT_PARENT (buf))) {
     gst_audio_ring_buffer_set_channel_positions (buf,
         GST_OSX_AUDIO_SINK (GST_OBJECT_PARENT (buf))->channel_positions);
-    }
+  }
 
   buf->size = spec->segtotal * spec->segsize;
   buf->memory = g_malloc0 (buf->size);
@@ -240,7 +240,7 @@ gst_osx_audio_ring_buffer_acquire (GstAudioRingBuffer * buf,
     g_free (buf->memory);
     buf->memory = NULL;
     buf->size = 0;
-    }
+  }
 
   osxbuf->segoffset = 0;
 
@@ -271,7 +271,7 @@ gst_osx_audio_ring_buffer_start (GstAudioRingBuffer * buf)
   osxbuf = GST_OSX_AUDIO_RING_BUFFER (buf);
 
   return gst_core_audio_start_processing (osxbuf->core_audio);
-  }
+}
 
 static gboolean
 gst_osx_audio_ring_buffer_pause (GstAudioRingBuffer * buf)
@@ -279,7 +279,7 @@ gst_osx_audio_ring_buffer_pause (GstAudioRingBuffer * buf)
   GstOsxAudioRingBuffer *osxbuf = GST_OSX_AUDIO_RING_BUFFER (buf);
 
   return gst_core_audio_pause_processing (osxbuf->core_audio);
-    }
+}
 
 
 static gboolean

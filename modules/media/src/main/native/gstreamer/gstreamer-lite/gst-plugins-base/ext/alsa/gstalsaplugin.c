@@ -24,7 +24,9 @@
 #endif
 
 #include "gstalsasink.h"
+#ifndef GSTREAMER_LITE
 #include "gstalsasrc.h"
+#endif // GSTREAMER_LITE
 
 #include <gst/gst-i18n-plugin.h>
 

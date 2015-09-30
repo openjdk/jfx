@@ -947,7 +947,7 @@ gst_tag_demux_seek_pull (GstTagDemux * tagdemux, GstEvent * event)
 
 static gboolean
 gst_tag_demux_seek_push (GstTagDemux * tagdemux, GstEvent * event)
-    {
+{
   gboolean res = FALSE;
       gdouble rate;
       GstFormat format;
@@ -1589,7 +1589,7 @@ gst_tag_demux_sink_activate (GstPad * sinkpad, GstObject * parent)
   if (!gst_pad_peer_query (sinkpad, query)) {
     gst_query_unref (query);
     goto activate_push;
-}
+  }
 
   pull_mode = gst_query_has_scheduling_mode_with_flags (query,
       GST_PAD_MODE_PULL, GST_SCHEDULING_FLAG_SEEKABLE);
@@ -1630,7 +1630,7 @@ gst_tag_demux_src_activate_mode (GstPad * pad, GstObject * parent,
     default:
       res = TRUE;
       break;
-}
+  }
   return res;
 }
 

@@ -403,6 +403,8 @@ public abstract class MapExpressionHelper<K, V> extends ExpressionHelperBase {
                             }
                             invalidationListeners = null;
                             invalidationSize = 0;
+                        } else if ((invalidationSize == 2) && (changeSize == 0) && (mapChangeSize == 0)) {
+                            return new SingleInvalidation<>(observable, invalidationListeners[1-index]);
                         } else {
                             final int numMoved = invalidationSize - index - 1;
                             final InvalidationListener[] oldListeners = invalidationListeners;
@@ -415,7 +417,7 @@ public abstract class MapExpressionHelper<K, V> extends ExpressionHelperBase {
                             }
                             invalidationSize--;
                             if (!locked) {
-                                invalidationListeners[--invalidationSize] = null; // Let gc do its work
+                                invalidationListeners[invalidationSize] = null; // Let gc do its work
                             }
                         }
                         break;
@@ -463,6 +465,8 @@ public abstract class MapExpressionHelper<K, V> extends ExpressionHelperBase {
                             }
                             changeListeners = null;
                             changeSize = 0;
+                        } else if ((changeSize == 2) && (invalidationSize == 0) && (mapChangeSize == 0)) {
+                            return new SingleChange<>(observable, changeListeners[1-index]);
                         } else {
                             final int numMoved = changeSize - index - 1;
                             final ChangeListener<? super ObservableMap<K, V>>[] oldListeners = changeListeners;
@@ -475,7 +479,7 @@ public abstract class MapExpressionHelper<K, V> extends ExpressionHelperBase {
                             }
                             changeSize--;
                             if (!locked) {
-                                changeListeners[--changeSize] = null; // Let gc do its work
+                                changeListeners[changeSize] = null; // Let gc do its work
                             }
                         }
                         break;
@@ -523,6 +527,8 @@ public abstract class MapExpressionHelper<K, V> extends ExpressionHelperBase {
                             }
                             mapChangeListeners = null;
                             mapChangeSize = 0;
+                        } else if ((mapChangeSize == 2) && (invalidationSize == 0) && (changeSize == 0)) {
+                            return new SingleMapChange<>(observable, mapChangeListeners[1-index]);
                         } else {
                             final int numMoved = mapChangeSize - index - 1;
                             final MapChangeListener<? super K, ? super V>[] oldListeners = mapChangeListeners;
@@ -535,7 +541,7 @@ public abstract class MapExpressionHelper<K, V> extends ExpressionHelperBase {
                             }
                             mapChangeSize--;
                             if (!locked) {
-                                mapChangeListeners[--mapChangeSize] = null; // Let gc do its work
+                                mapChangeListeners[mapChangeSize] = null; // Let gc do its work
                             }
                         }
                         break;

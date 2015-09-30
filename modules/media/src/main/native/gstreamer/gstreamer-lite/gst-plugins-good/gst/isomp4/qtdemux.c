@@ -5204,7 +5204,7 @@ qtdemux_sink_activate (GstPad * sinkpad, GstObject * parent)
   if (!gst_pad_peer_query (sinkpad, query)) {
     gst_query_unref (query);
     goto activate_push;
-}
+  }
 
   pull_mode = gst_query_has_scheduling_mode_with_flags (query,
       GST_PAD_MODE_PULL, GST_SCHEDULING_FLAG_SEEKABLE);
@@ -5217,7 +5217,7 @@ qtdemux_sink_activate (GstPad * sinkpad, GstObject * parent)
   return gst_pad_activate_mode (sinkpad, GST_PAD_MODE_PULL, TRUE);
 
 activate_push:
-{
+  {
     GST_DEBUG_OBJECT (sinkpad, "activating push");
     return gst_pad_activate_mode (sinkpad, GST_PAD_MODE_PUSH, TRUE);
   }
@@ -5242,7 +5242,7 @@ qtdemux_sink_activate_mode (GstPad * sinkpad, GstObject * parent,
             sinkpad, NULL);
       } else {
         res = gst_pad_stop_task (sinkpad);
-}
+      }
       break;
     default:
       res = FALSE;
@@ -9836,7 +9836,7 @@ unknown_tag:
   }
 #endif
     return;
-  }
+}
 
 static void
 qtdemux_tag_add_id32 (GstQTDemux * demux, const char *tag,
@@ -9865,7 +9865,7 @@ qtdemux_tag_add_id32 (GstQTDemux * demux, const char *tag,
     gst_tag_list_insert (demux->tag_list, taglist, GST_TAG_MERGE_KEEP);
   } else {
     GST_LOG_OBJECT (demux, "parsing failed");
-}
+  }
 
   if (taglist)
     gst_tag_list_unref (taglist);
