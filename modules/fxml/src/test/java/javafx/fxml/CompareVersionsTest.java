@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,6 +53,10 @@ public class CompareVersionsTest {
         assertTrue(FXMLLoader.compareJFXVersions("3.0.0.1", "3.0.0.0") > 0);
         assertTrue(FXMLLoader.compareJFXVersions("3.0.0.1", "3.0.0.0.0.1") > 0);
         assertTrue(FXMLLoader.compareJFXVersions("8.0.0-ea", "2.2.5") > 0);
+        assertTrue(FXMLLoader.compareJFXVersions("9-ea", "8.0.40") > 0);
+        assertTrue(FXMLLoader.compareJFXVersions("9", "8.0.40") > 0);
+        assertTrue(FXMLLoader.compareJFXVersions("9.1.2.3", "9.1") > 0);
+        assertTrue(FXMLLoader.compareJFXVersions("9.2", "9.1.2.3") > 0);
 
         assertTrue(FXMLLoader.compareJFXVersions("1", "1.0") == 0);
         assertTrue(FXMLLoader.compareJFXVersions("1.0", "1") == 0);
@@ -62,6 +66,11 @@ public class CompareVersionsTest {
         assertTrue(FXMLLoader.compareJFXVersions("1.2.3.0-fcs", "1.2.3") == 0);
         assertTrue(FXMLLoader.compareJFXVersions("1.2.3_ea", "1.2.3.0.0.0") == 0);
         assertTrue(FXMLLoader.compareJFXVersions("1.2.3.0.0.0.0", "1.2.3") == 0);
+        assertTrue(FXMLLoader.compareJFXVersions("9-ea", "9") == 0);
+        assertTrue(FXMLLoader.compareJFXVersions("9-ea", "9.0.0.0") == 0);
+        assertTrue(FXMLLoader.compareJFXVersions("9", "9.0.0.0") == 0);
+        assertTrue(FXMLLoader.compareJFXVersions("9.0.0.0", "9") == 0);
+        assertTrue(FXMLLoader.compareJFXVersions("9.0.1", "9.0.1.0") == 0);
 
         assertTrue(FXMLLoader.compareJFXVersions("ABC", "1.2.3") == 0);
         assertTrue(FXMLLoader.compareJFXVersions("a.b.c", "1.2.3") == 0);
@@ -81,5 +90,8 @@ public class CompareVersionsTest {
         assertTrue(FXMLLoader.compareJFXVersions("1.2.0", "1.2.0.0.0.1") < 0);
         assertTrue(FXMLLoader.compareJFXVersions("3.2.1", "3.2.2") < 0);
         assertTrue(FXMLLoader.compareJFXVersions("3.0.0.1", "3.0.0.1.0.0.1") < 0);
+        assertTrue(FXMLLoader.compareJFXVersions("8.0.40", "9") < 0);
+        assertTrue(FXMLLoader.compareJFXVersions("9.1", "9.1.2.3") < 0);
+        assertTrue(FXMLLoader.compareJFXVersions("9.1.2.3", "9.2") < 0);
     }
 }
