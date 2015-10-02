@@ -312,6 +312,9 @@ void URL::invalidate()
 {
     m_isValid = false;
     m_protocolIsInHTTPFamily = false;
+#if PLATFORM(JAVA)
+    m_protocolIsInJar = false;
+#endif
     m_schemeEnd = 0;
     m_userStart = 0;
     m_userEnd = 0;
@@ -425,6 +428,11 @@ void URL::init(const URL& base, const String& relative, const TextEncoding& enco
             if (str[0] == '#') {
                 appendASCII(base.m_string.left(base.m_queryEnd), str, len, parseBuffer);
                 parse(parseBuffer.data(), &relative);
+#if PLATFORM(JAVA)
+            } else if(base.isJarFile()) {
+                appendASCII(base.m_string.left(base.m_pathAfterLastSlash), str, len, parseBuffer);
+                parse(parseBuffer.data(), &relative);
+#endif
             } else {
                 m_string = relative;
                 invalidate();
@@ -1176,6 +1184,13 @@ void URL::parse(const char* url, const String* originalString)
         && isLetterMatchIgnoringCase(url[1], 'i')
         && isLetterMatchIgnoringCase(url[2], 'l')
         && isLetterMatchIgnoringCase(url[3], 'e');
+
+#if PLATFORM(JAVA)
+    m_protocolIsInJar = schemeEnd == 3
+        && isLetterMatchIgnoringCase(url[0], 'j')
+        && isLetterMatchIgnoringCase(url[1], 'a')
+        && isLetterMatchIgnoringCase(url[2], 'r');
+#endif
 
     m_protocolIsInHTTPFamily = isLetterMatchIgnoringCase(url[0], 'h')
         && isLetterMatchIgnoringCase(url[1], 't')
