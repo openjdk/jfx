@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -593,7 +593,7 @@ final class HLSConnectionHolder extends ConnectionHolder {
 
         private URI getPlaylistURI() throws URISyntaxException, MalformedURLException {
             String location = playlistsLocations.get(infoIndex);
-            if (location.startsWith("http://")) {
+            if (location.startsWith("http://") || location.startsWith("https://")) {
                 return new URI(location);
             } else {
                 return new URI(playlistURI.toURL().toString().substring(0, playlistURI.toURL().toString().lastIndexOf("/") + 1) + location);
@@ -899,7 +899,7 @@ final class HLSConnectionHolder extends ConnectionHolder {
         }
 
         private void setBaseURI(String playlistURI, String URI) {
-            if (!URI.startsWith("http://")) {
+            if (!URI.startsWith("http://") || !URI.startsWith("https://")) {
                 baseURI = playlistURI.substring(0, playlistURI.lastIndexOf("/") + 1);
             }
             needBaseURI = false;

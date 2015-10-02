@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -59,14 +59,30 @@ public abstract class Platform {
         }
         return false;
     }
+    
+    public boolean canPlayProtocol(String protocol) {
+        String[] protocols = getSupportedProtocols();
+        if (protocols != null) {
+            for (String p : protocols) {
+                if (p.equalsIgnoreCase(protocol)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 
     // NB: This method returns only content which can actually be PLAYED. It
     // does not account for metadata being able to be parsed without the media
     // being able to be played.
     public String[] getSupportedContentTypes() {
-        return null;
+        return new String[0];
     }
-
+    
+    public String[] getSupportedProtocols() {
+        return new String[0];
+    }
+    
     // XXX javadoc
     public MetadataParser createMetadataParser(Locator source) {
         return null;

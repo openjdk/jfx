@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,6 +31,7 @@ import com.sun.media.jfxmedia.locator.Locator;
 import com.sun.media.jfxmedia.logging.Logger;
 import com.sun.media.jfxmediaimpl.HostUtils;
 import com.sun.media.jfxmediaimpl.platform.Platform;
+import java.util.Arrays;
 
 /**
  * iOS Platform implementation.
@@ -52,6 +53,15 @@ public final class IOSPlatform extends Platform {
         "video/quicktime",
         "video/x-quicktime",
         "audio/x-aiff"
+    };
+    
+    /**
+     * All supported protocols.
+     */
+    private static final String[] PROTOCOLS = {
+        "http",
+        "https",
+        "ipod-library"
     };
 
     private static final class IOSPlatformInitializer {
@@ -88,9 +98,12 @@ public final class IOSPlatform extends Platform {
 
     @Override
     public String[] getSupportedContentTypes() {
-        String[] contentTypesCopy = new String[CONTENT_TYPES.length];
-        System.arraycopy(CONTENT_TYPES, 0, contentTypesCopy, 0, CONTENT_TYPES.length);
-        return contentTypesCopy;
+        return Arrays.copyOf(CONTENT_TYPES, CONTENT_TYPES.length);
+    }
+    
+    @Override
+    public String[] getSupportedProtocols() {
+        return Arrays.copyOf(PROTOCOLS, PROTOCOLS.length);
     }
 
     @Override

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -526,7 +526,12 @@ public final class MediaPlayer {
             } catch (com.sun.media.jfxmedia.MediaException e) {
                 handleError(MediaException.exceptionToMediaException(e));
             } catch (MediaException e) {
-                handleError(e);
+                // Check media object for error. If it is connection related, then Media object will have better error message
+                if (media.getError() != null) {
+                    handleError(media.getError());
+                } else {
+                    handleError(e);
+                }
             } catch (Exception e) {
                 handleError(new MediaException(MediaException.Type.UNKNOWN, e.getMessage()));
             }

@@ -87,7 +87,9 @@ public final class Media {
     private ReadOnlyObjectWrapper<MediaException> error;
 
     private void setError(MediaException value) {
-        errorPropertyImpl().set(value);
+        if (getError() == null) {
+            errorPropertyImpl().set(value);
+        }
     }
 
     /**
@@ -335,7 +337,7 @@ public final class Media {
     /**
      * Constructs a <code>Media</code> instance.  This is the only way to
      * specify the media source. The source must represent a valid <code>URI</code>
-     * and is immutable. Only HTTP, FILE, and JAR <code>URL</code>s are supported. If the
+     * and is immutable. Only HTTP, HTTPS, FILE, and JAR <code>URL</code>s are supported. If the
      * provided URL is invalid then an exception will be thrown.  If an
      * asynchronous error occurs, the {@link #errorProperty error} property will be set. Listen
      * to this property to be notified of any such errors.
@@ -352,7 +354,7 @@ public final class Media {
      * <ul>
      * <li>The supplied URI must conform to RFC-2396 as required by
      * <A href="https://docs.oracle.com/javase/8/docs/api/java/net/URI.html">java.net.URI</A>.</li>
-     * <li>Only HTTP, FILE, and JAR URIs are supported.</li>
+     * <li>Only HTTP, HTTPS, FILE, and JAR URIs are supported.</li>
      * </ul>
      *
      * <p>See <A href="https://docs.oracle.com/javase/8/docs/api/java/net/URI.html">java.net.URI</A>
@@ -451,7 +453,7 @@ public final class Media {
         }
         return null;
     }
-    
+
     // http://javafx-jira.kenai.com/browse/RT-24594
     // TODO: Remove this entire method (and associated stuff) when we switch to track parsing in MetadataParser
     void _updateMedia(com.sun.media.jfxmedia.Media _media) {
@@ -473,28 +475,28 @@ public final class Media {
                         }
                         trackMetadata.put("encoding", trackElement.getEncodingType().toString());
                         trackMetadata.put("enabled", Boolean.valueOf(trackElement.isEnabled()));
-                        
+
                         if (trackElement instanceof com.sun.media.jfxmedia.track.VideoTrack) {
                             com.sun.media.jfxmedia.track.VideoTrack vt =
                                     (com.sun.media.jfxmedia.track.VideoTrack) trackElement;
 
                             int videoWidth = vt.getFrameSize().getWidth();
                             int videoHeight = vt.getFrameSize().getHeight();
-                            
+
                             // FIXME: this isn't valid when there are multiple video tracks...
                             setWidth(videoWidth);
                             setHeight(videoHeight);
 
                             trackMetadata.put("video width", Integer.valueOf(videoWidth));
                             trackMetadata.put("video height", Integer.valueOf(videoHeight));
-                            
+
                             newTrack = new VideoTrack(trackElement.getTrackID(), trackMetadata);
                         } else if (trackElement instanceof com.sun.media.jfxmedia.track.AudioTrack) {
                             newTrack = new AudioTrack(trackElement.getTrackID(), trackMetadata);
                         } else if (trackElement instanceof com.sun.media.jfxmedia.track.SubtitleTrack) {
                             newTrack = new SubtitleTrack(trackID, trackMetadata);
                         }
-                        
+
                         if (null != newTrack) {
                             tracksBacking.add(newTrack);
                         }

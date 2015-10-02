@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -166,6 +166,25 @@ public final class PlatformManager {
         return outTypes;
     }
 
+    public List<String> getSupportedProtocols() {
+        ArrayList<String> outProtocols = new ArrayList<String>();
+
+        if (!platforms.isEmpty()) {
+            for (Platform platty : platforms) {
+                String[] npt = platty.getSupportedProtocols();
+                if (npt != null) {
+                    for (String p : npt) {
+                        if (!outProtocols.contains(p)) {
+                            outProtocols.add(p);
+                        }
+                    }
+                }
+            }
+        }
+
+        return outProtocols;
+    }
+
     public MetadataParser createMetadataParser(Locator source) {
         for (Platform platty : platforms) {
             MetadataParser parser = platty.createMetadataParser(source);
@@ -180,9 +199,10 @@ public final class PlatformManager {
     // FIXME: Make Media non-platform specific, it doesn't need to be
     public Media createMedia(Locator source) {
         String mimeType = source.getContentType();
+        String protocol = source.getProtocol();
         // go down the list until we get one that can be created
         for (Platform platty : platforms) {
-            if (platty.canPlayContentType(mimeType)) {
+            if (platty.canPlayContentType(mimeType) && platty.canPlayProtocol(protocol)) {
                 Media outMedia = platty.createMedia(source);
                 if (null != outMedia) {
                     return outMedia;
@@ -195,9 +215,10 @@ public final class PlatformManager {
 
     public MediaPlayer createMediaPlayer(Locator source) {
         String mimeType = source.getContentType();
+        String protocol = source.getProtocol();
         // go down the list until we get one that can be created
         for (Platform platty : platforms) {
-            if (platty.canPlayContentType(mimeType)) {
+            if (platty.canPlayContentType(mimeType) && platty.canPlayProtocol(protocol)) {
                 MediaPlayer outPlayer = platty.createMediaPlayer(source);
                 if (null != outPlayer) {
                     return outPlayer;

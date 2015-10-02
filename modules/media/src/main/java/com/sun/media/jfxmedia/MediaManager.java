@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,11 +57,25 @@ public class MediaManager {
      * @throws IllegalArgumentException if <code>contentType</code> is
      * <code>null</code>.
      */
-    public static boolean canPlayContentType (String contentType) {
+    public static boolean canPlayContentType(String contentType) {
         if (contentType == null) {
             throw new IllegalArgumentException("contentType == null!");
         }
-        return NativeMediaManager.getDefaultInstance().canPlayContentType (contentType);
+        return NativeMediaManager.getDefaultInstance().canPlayContentType(contentType);
+    }
+
+    /**
+     * Whether a media source having the indicated protocol may be
+     * played.
+     *
+     * @throws IllegalArgumentException if <code>contentType</code> is
+     * <code>null</code>.
+     */
+    public static boolean canPlayProtocol(String protocol) {
+        if (protocol == null) {
+            throw new IllegalArgumentException("protocol == null!");
+        }
+        return NativeMediaManager.getDefaultInstance().canPlayProtocol(protocol);
     }
 
 
