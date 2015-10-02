@@ -254,10 +254,10 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             keyMapping(new KeyBinding(DELETE).ctrl(), e -> deleteNextWord()),
             keyMapping(new KeyBinding(BACK_SPACE).ctrl(), e -> deletePreviousWord()),
             keyMapping(new KeyBinding(BACK_SLASH).ctrl(), e -> c.deselect()),
-            keyMapping(new KeyBinding(Y).ctrl(), e -> redo(), validOnWindows)
+            keyMapping(new KeyBinding(Y).ctrl(), e -> redo(), validOnWindows),
             keyMapping(new KeyBinding(Z).ctrl().shift(), e -> redo(), validOnLinux),
             keyMapping(new KeyBinding(LEFT).ctrl().shift(), e -> selectLeftWord()),
-            keyMapping(new KeyBinding(RIGHT).ctrl().shift(), e -> selectRightWord()),
+            keyMapping(new KeyBinding(RIGHT).ctrl().shift(), e -> selectRightWord())
         );
         addDefaultChildMap(inputMap, nonMacOsInputMap);
 
