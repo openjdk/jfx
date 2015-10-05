@@ -68,6 +68,7 @@ public final class InvokeLaterDispatcher extends Thread {
     private final InvokeLaterSubmitter invokeLaterSubmitter;
 
     public InvokeLaterDispatcher(InvokeLaterSubmitter invokeLaterSubmitter) {
+        super("InvokeLaterDispatcher");
         setDaemon(true);
 
         this.invokeLaterSubmitter = invokeLaterSubmitter;
