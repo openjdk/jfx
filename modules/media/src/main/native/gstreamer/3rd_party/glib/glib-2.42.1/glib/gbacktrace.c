@@ -251,12 +251,19 @@ g_on_error_stack_trace (const gchar *prg_name)
 
   waitpid (pid, &status, 0);
 #else
-#ifdef G_ENABLE_DEBUG // GSTREAMER_LITE exception
+#ifdef GSTREAMER_LITE
+  #ifdef G_ENABLE_DEBUG
+    if (IsDebuggerPresent ())
+      G_BREAKPOINT ();
+    else
+  #endif // G_ENABLE_DEBUG
+    abort ();
+#else // GSTREAMER_LITE
   if (IsDebuggerPresent ())
     G_BREAKPOINT ();
   else
-#endif // GSTREAMER_LITE exception
     abort ();
+#endif // GSTREAMER_LITE
 #endif
 }
 

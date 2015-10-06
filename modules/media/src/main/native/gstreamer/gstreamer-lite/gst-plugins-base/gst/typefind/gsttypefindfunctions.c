@@ -1912,7 +1912,7 @@ wavpack_type_find (GstTypeFind * tf, gpointer unused)
   if (data != NULL && memcmp (data, "wvpk", 4) == 0) {
     GST_DEBUG ("found second block sync");
     base_prob = GST_TYPE_FIND_LIKELY;
-}
+  }
 
   GST_DEBUG ("wvc=%d, wv=%d", count_wvc, count_wv);
 
@@ -2765,11 +2765,11 @@ h265_video_type_find (GstTypeFind * tf, gpointer unused)
 
       if (seen_sps && seen_pps && seen_irap && good >= 10 && bad < 4) {
         gst_type_find_suggest (tf, GST_TYPE_FIND_LIKELY, H265_VIDEO_CAPS);
-    return;
-  }
+        return;
+      }
 
       data_scan_ctx_advance (tf, &c, 5);
-}
+    }
     data_scan_ctx_advance (tf, &c, 1);
   }
 
@@ -3509,9 +3509,9 @@ mod_type_find (GstTypeFind * tf, gpointer unused)
         mod_type = "stm";
         probability = GST_TYPE_FIND_MAXIMUM;
         goto suggest_audio_mod_caps;
+      }
     }
   }
-}
   /* AMF */
   if ((data = gst_type_find_peek (tf, 0, 19)) != NULL) {
     if (memcmp (data, "ASYLUM Music Format", 19) == 0) {
@@ -4158,7 +4158,7 @@ ebml_parse_chunk (GstTypeFind * tf, DataScanCtx * ctx, guint32 chunk_id,
         else
           ++info->other;
         break;
-}
+      }
       case MATROSKA_STEREO_MODE:
         ++info->video_stereo;
         break;
@@ -4210,7 +4210,7 @@ matroska_type_find (GstTypeFind * tf, gpointer ununsed)
     GST_INFO ("=== done with chunk %08x", id);
     if (id == MATROSKA_SEGMENT)
       break;
-}
+  }
 
   GST_INFO ("audio=%u video=%u other=%u chunks=%u doctype=%d all_tracks=%d",
       info.audio, info.video, info.other, info.chunks, info.doctype,
@@ -4227,7 +4227,7 @@ matroska_type_find (GstTypeFind * tf, gpointer ununsed)
     type_name = "video/x-matroska-3d";
   } else {
     type_name = (is_audio) ? "audio/x-matroska" : "video/x-matroska";
-}
+  }
 
   if (info.doctype == EBML_DOCTYPE_UNKNOWN)
     prob = GST_TYPE_FIND_LIKELY;
@@ -4399,8 +4399,8 @@ ogganx_type_find (GstTypeFind * tf, gpointer private)
       if (memcmp (c.data, markers[i].marker, markers[i].marker_size) == 0) {
         ++hdr_count[markers[i].stream_type];
         break;
-  }
-}
+      }
+    }
 
     if (i == G_N_ELEMENTS (markers)) {
       GST_MEMDUMP ("unknown Ogg stream marker", c.data, size);

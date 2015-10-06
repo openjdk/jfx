@@ -400,11 +400,11 @@ gst_segment_to_stream_time (const GstSegment * segment, GstFormat format,
   /* format does not matter for -1 */
   if (G_UNLIKELY (position == -1))
     return -1;
-    
-    if (segment->format != format)
-    {
-        return -1;
-    }
+
+#ifdef GSTREAMER_LITE
+  if (segment->format != format)
+    return -1;
+#endif // GSTREAMER_LITE
 
   g_return_val_if_fail (segment != NULL, -1);
   g_return_val_if_fail (segment->format == format, -1);
@@ -484,11 +484,11 @@ gst_segment_to_running_time (const GstSegment * segment, GstFormat format,
     GST_DEBUG ("invalid position (-1)");
     return -1;
   }
-    
-    if (segment->format != format)
-    {
-        return -1;
-    }
+
+#ifdef GSTREAMER_LITE
+  if (segment->format != format)
+    return -1;
+#endif // GSTREAMER_LITE
 
   g_return_val_if_fail (segment != NULL, -1);
   g_return_val_if_fail (segment->format == format, -1);

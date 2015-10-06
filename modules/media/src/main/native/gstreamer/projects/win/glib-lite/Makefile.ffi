@@ -23,6 +23,7 @@ COMPILER_FLAGS = -nologo -W3 -WX- -EHsc -GS -fp:precise -Gm- \
 INCLUDES = -I$(SRCBASE_DIR)/include
 
 CFLAGS = -DFFI_BUILDING \
+         -DGSTREAMER_LITE \
 	 $(INCLUDES) \
 	 $(COMPILER_FLAGS)
 
@@ -46,7 +47,7 @@ ifeq ($(ARCH), x32)
     ML = ml.exe
 else
     INCLUDES += -I$(SRCBASE_DIR)/include/x64
-    CFLAGS += -DX86_WIN64 -DGSTREAMER_LITE
+    CFLAGS += -DX86_WIN64
     LIBFLAGS += -MACHINE:x64
 
     C_SOURCES += src/x86/ffi.c

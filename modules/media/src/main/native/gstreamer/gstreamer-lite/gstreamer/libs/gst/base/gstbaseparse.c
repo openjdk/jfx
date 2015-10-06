@@ -714,7 +714,7 @@ gst_base_parse_frame_free (GstBaseParseFrame * frame)
     g_slice_free (GstBaseParseFrame, frame);
   } else {
     memset (frame, 0, sizeof (*frame));
-}
+  }
 }
 
 G_DEFINE_BOXED_TYPE (GstBaseParseFrame, gst_base_parse_frame,
@@ -1239,7 +1239,7 @@ gst_base_parse_sink_event_default (GstBaseParse * parse, GstEvent * event)
           g_list_prepend (parse->priv->pending_events, event);
       // GST_VIDEO_DECODER_STREAM_UNLOCK (decoder);
       ret = TRUE;
-}
+    }
   }
 
   GST_DEBUG_OBJECT (parse, "event handled");
@@ -1505,7 +1505,7 @@ no_framecount:
   {
     GST_DEBUG_OBJECT (parse, "no framecount");
     return FALSE;
-}
+  }
 no_duration_bytes:
   {
     GST_DEBUG_OBJECT (parse, "no duration %" G_GUINT64_FORMAT ", bytes %"
@@ -2921,7 +2921,7 @@ gst_base_parse_chain (GstPad * pad, GstObject * parent, GstBuffer * buffer)
 done:
   GST_LOG_OBJECT (parse, "chain leaving");
   return ret;
-  }
+}
 
 /* pull @size bytes at current offset,
  * i.e. at least try to and possibly return a shorter buffer if near the end */
@@ -3164,7 +3164,7 @@ gst_base_parse_scan_frame (GstBaseParse * parse, GstBaseParseClass * klass)
 
 done:
   return ret;
-  }
+}
 
 /* Loop that is used in pull mode to retrieve data from upstream */
 static void
@@ -3407,7 +3407,7 @@ activate_failed:
   {
     GST_DEBUG_OBJECT (parse, "activate failed");
     return FALSE;
-}
+  }
 }
 
 /**

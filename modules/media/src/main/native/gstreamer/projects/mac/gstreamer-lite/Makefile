@@ -230,7 +230,6 @@ C_SOURCES = gstreamer/gst/gst.c \
             gst-plugins-base/gst/audioconvert/gstaudioconvertorc.c \
             gst-plugins-base/gst/audioconvert/gstaudioquantize.c \
             gst-plugins-base/gst/audioconvert/gstchannelmix.c \
-            gst-plugins-good/gst/audiofx/gstscaletempo.c \
             gst-plugins-bad/gst/aiff/aiff.c \
             gst-plugins-bad/gst/aiff/aiffparse.c \
             gst-plugins-base/gst/app/gstapp.c \

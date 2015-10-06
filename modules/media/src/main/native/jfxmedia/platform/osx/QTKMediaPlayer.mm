@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -322,7 +322,11 @@
              if (loadError) {
                  LOGGER_ERRORMSG(([[NSString stringWithFormat:@"Error loading QTMovie: %@\n", loadError] UTF8String]));
                  if (eventHandler) {
-                     eventHandler->SendPlayerMediaErrorEvent(ERROR_OSX_INIT);
+                     if (loadError.domain == NSOSStatusErrorDomain) {
+                         eventHandler->SendPlayerMediaErrorEvent(ERROR_LOCATOR_CONNECTION_LOST);
+                     } else {
+                         eventHandler->SendPlayerMediaErrorEvent(ERROR_OSX_INIT);
+                     }
                  }
              }
              

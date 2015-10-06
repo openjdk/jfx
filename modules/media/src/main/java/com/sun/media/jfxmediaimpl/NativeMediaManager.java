@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -67,6 +67,8 @@ public class NativeMediaManager {
     // should never change once we're initialized
     private final List<String> supportedContentTypes =
             new ArrayList();
+    private final List<String> supportedProtocols =
+            new ArrayList<>();
 
     /**
      * The NativeMediaManager singleton.
@@ -164,6 +166,28 @@ public class NativeMediaManager {
         }
     }
 
+    private synchronized void loadProtocols() {
+        if (!supportedProtocols.isEmpty()) {
+            // already populated, just return
+            return;
+        }
+
+        List<String> npt = PlatformManager.getManager().getSupportedProtocols();
+        if (null != npt && !npt.isEmpty()) {
+            supportedProtocols.addAll(npt);
+        }
+
+        if (Logger.canLog(Logger.DEBUG)) {
+            StringBuilder sb = new StringBuilder("JFXMedia supported protocols:\n");
+            for (String type : supportedProtocols) {
+                sb.append("    ");
+                sb.append(type);
+                sb.append("\n");
+            }
+            Logger.logMsg(Logger.DEBUG, sb.toString());
+        }
+    }
+
     /**
      * Whether a media source having the indicated content type may be played.
      *
@@ -195,17 +219,43 @@ public class NativeMediaManager {
         return false;
     }
 
-    /**
-     * Returns a copy of the array of supported content types.
-     *
-     * @return {@link String} array of supported content types.
-     */
     public String[] getSupportedContentTypes() {
         if (supportedContentTypes.isEmpty()) {
             loadContentTypes();
         }
 
         return supportedContentTypes.toArray(new String[1]);
+    }
+
+    /**
+     * Whether a media source having the indicated protocol may be played.
+     *
+     * @see MediaManager#canPlayProtocol(java.lang.String)
+     *
+     * @throws IllegalArgumentException if
+     * <code>protocol</code> is
+     * <code>null</code>.
+     */
+    public boolean canPlayProtocol(String protocol) {
+        if (protocol == null) {
+            throw new IllegalArgumentException("protocol == null!");
+        }
+
+        if (supportedProtocols.isEmpty()) {
+            loadProtocols();
+        }
+
+        /*
+         * Don't just use supportedProtocols.contains(protocol) as that
+         * is case sensitive, which we do not want
+         */
+        for (String type : supportedProtocols) {
+            if (protocol.equalsIgnoreCase(type)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public static MetadataParser getMetadataParser(Locator locator) {

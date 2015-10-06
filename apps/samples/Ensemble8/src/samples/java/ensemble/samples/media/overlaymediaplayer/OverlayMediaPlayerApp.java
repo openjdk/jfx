@@ -77,7 +77,8 @@ public class OverlayMediaPlayerApp extends Application {
         if (status == MediaPlayer.Status.UNKNOWN || status == MediaPlayer.Status.HALTED) {
             return;
         }
-        if (status == MediaPlayer.Status.PAUSED || status == MediaPlayer.Status.STOPPED || status == MediaPlayer.Status.READY) {
+        if (status == MediaPlayer.Status.PAUSED || status == MediaPlayer.Status.STOPPED ||
+            status == MediaPlayer.Status.READY) {
             mediaPlayer.play();
         }
     }

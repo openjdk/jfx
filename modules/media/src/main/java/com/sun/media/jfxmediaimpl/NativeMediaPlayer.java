@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -750,7 +750,7 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
             String contentType = media.getLocator().getContentType();
             String protocol = media.getLocator().getProtocol();
             if ((contentType != null && (contentType.equals(MediaUtils.CONTENT_TYPE_M3U) || contentType.equals(MediaUtils.CONTENT_TYPE_M3U8)))
-                    || (protocol != null && !protocol.equals("http"))) {
+                    || (protocol != null && !protocol.equals("http") && !protocol.equals("https"))) {
                 HandleBufferEvents(new BufferProgressEvent(getDuration(), 0, 1, 1));
             }
         }

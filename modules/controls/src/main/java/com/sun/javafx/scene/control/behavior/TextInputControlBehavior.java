@@ -149,12 +149,10 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
                 keyMapping(new KeyBinding(BACK_SPACE), e -> deletePreviousChar(), validWhenEditable),
                 keyMapping(new KeyBinding(BACK_SPACE).shift(), e -> deletePreviousChar(), validWhenEditable),
                 keyMapping(new KeyBinding(DELETE), e -> deleteNextChar(), validWhenEditable),
-                keyMapping(new KeyBinding(DELETE).shift(), e -> deleteNextChar(), validWhenEditable),
 
                 // cut (only applies when control is editable)
-                keyMapping(new KeyBinding(X).shortcut(), e -> c.cut(), validWhenEditable),
+                keyMapping(new KeyBinding(X).shortcut(), e -> cut(), validWhenEditable),
                 keyMapping(new KeyBinding(CUT), e -> cut(), validWhenEditable),
-                keyMapping(new KeyBinding(DELETE).shift(), e -> cut(), validWhenEditable),
 
                 // copy
                 keyMapping(new KeyBinding(C).shortcut(), e -> c.copy()),
@@ -162,7 +160,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
                 keyMapping(COPY, e -> c.copy()),
 
                 // paste (only applies when control is editable)
-                keyMapping(new KeyBinding(V).shortcut(), e -> c.paste(), validWhenEditable),
+                keyMapping(new KeyBinding(V).shortcut(), e -> paste(), validWhenEditable),
                 keyMapping(new KeyBinding(PASTE), e -> paste(), validWhenEditable),
                 keyMapping(new KeyBinding(INSERT).shift(), e -> paste(), validWhenEditable),
 
@@ -173,8 +171,6 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
                 keyMapping(new KeyBinding(DOWN).shift(), e -> selectEnd()),
                 keyMapping(new KeyBinding(HOME).shortcut().shift(), e -> selectHome()),
                 keyMapping(new KeyBinding(END).shortcut().shift(), e -> selectEnd()),
-                keyMapping(new KeyBinding(LEFT).shortcut().shift(), e -> selectHomeExtend()),
-                keyMapping(new KeyBinding(RIGHT).shortcut().shift(), e -> selectEndExtend()),
                 keyMapping(new KeyBinding(A).shortcut(), e -> c.selectAll()),
 
                 // Traversal Bindings
@@ -186,9 +182,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
                 // The following keys are forwarded to the parent container
                 new KeyMapping(ESCAPE, this::cancelEdit),
 
-                // Linux specific mappings
-                keyMapping(new KeyBinding(Z).ctrl(), e -> undo(), validOnLinux),
-                keyMapping(new KeyBinding(Z).ctrl().shift(), e -> redo(), validOnLinux),
+                keyMapping(new KeyBinding(Z).shortcut(), e -> undo()),
 
                 // character input.
                 // Any other key press first goes to normal text input
@@ -238,8 +232,9 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             keyMapping(new KeyBinding(DELETE).alt(), e -> deleteNextWord()),
             keyMapping(new KeyBinding(BACK_SPACE).alt(), e -> deletePreviousWord()),
             keyMapping(new KeyBinding(BACK_SPACE).shortcut(), e -> deleteFromLineStart()),
-            keyMapping(new KeyBinding(Z).shortcut(), e -> undo()),
             keyMapping(new KeyBinding(Z).shortcut().shift(), e -> redo()),
+            keyMapping(new KeyBinding(LEFT).shortcut().shift(), e -> selectHomeExtend()),
+            keyMapping(new KeyBinding(RIGHT).shortcut().shift(), e -> selectEndExtend()),
 
             // Mac OS specific selection mappings
             keyMapping(new KeyBinding(LEFT).shift().alt(), e -> selectLeftWord()),
@@ -259,8 +254,10 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             keyMapping(new KeyBinding(DELETE).ctrl(), e -> deleteNextWord()),
             keyMapping(new KeyBinding(BACK_SPACE).ctrl(), e -> deletePreviousWord()),
             keyMapping(new KeyBinding(BACK_SLASH).ctrl(), e -> c.deselect()),
-            keyMapping(new KeyBinding(Z).ctrl(), e -> undo()),
-            keyMapping(new KeyBinding(Y).ctrl(), e -> redo())
+            keyMapping(new KeyBinding(Y).ctrl(), e -> redo(), validOnWindows),
+            keyMapping(new KeyBinding(Z).ctrl().shift(), e -> redo(), validOnLinux),
+            keyMapping(new KeyBinding(LEFT).ctrl().shift(), e -> selectLeftWord()),
+            keyMapping(new KeyBinding(RIGHT).ctrl().shift(), e -> selectRightWord())
         );
         addDefaultChildMap(inputMap, nonMacOsInputMap);
 
@@ -702,7 +699,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     private final MenuItem copyMI   = new ContextMenuItem("Copy", e -> getNode().copy());
     private final MenuItem pasteMI  = new ContextMenuItem("Paste", e -> paste());
     private final MenuItem deleteMI = new ContextMenuItem("DeleteSelection", e -> deleteSelection());
-    private final MenuItem selectWordMI = new ContextMenuItem("SelectWord", e -> selectNextWord());
+    private final MenuItem selectWordMI = new ContextMenuItem("SelectWord", e -> selectWord());
     private final MenuItem selectAllMI = new ContextMenuItem("SelectAll", e -> getNode().selectAll());
     private final MenuItem separatorMI = new SeparatorMenuItem();
 

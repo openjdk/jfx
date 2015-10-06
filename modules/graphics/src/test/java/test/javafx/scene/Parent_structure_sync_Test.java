@@ -33,6 +33,7 @@ import javafx.scene.Group;
 import javafx.scene.Parent;
 import javafx.scene.ParentShim;
 import javafx.scene.Scene;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import org.junit.Before;
@@ -337,5 +338,29 @@ public class Parent_structure_sync_Test {
         assertFalse(ParentShim.test_getRemoved(parent2).isEmpty());
         sync();
         assertTrue(ParentShim.test_getRemoved(parent2).isEmpty());
+    }
+
+    @Test
+    public void validateParentsRemovedList2() {
+        BorderPane borderPane = new BorderPane(r1);
+        sync();
+        borderPane.setCenter(null);
+        assertNotNull(ParentShim.test_getRemoved(borderPane));
+        assertTrue(ParentShim.test_getRemoved(borderPane).isEmpty());
+        sync();
+        assertTrue(ParentShim.test_getRemoved(borderPane).isEmpty());        
+    }
+
+    @Test
+    public void validateParentsRemovedList3() {
+        BorderPane borderPane = new BorderPane(r1);
+        parent.getScene().setRoot(borderPane);
+        sync();
+        borderPane.getScene().setRoot(parent);
+        borderPane.setCenter(null);
+        assertNotNull(ParentShim.test_getRemoved(borderPane));
+        assertTrue(ParentShim.test_getRemoved(borderPane).isEmpty());
+        sync();
+        assertTrue(ParentShim.test_getRemoved(borderPane).isEmpty());
     }
 }

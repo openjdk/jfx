@@ -1275,8 +1275,6 @@ gst_base_transform_acceptcaps_default (GstBaseTransform * trans,
 #endif
   {
     GstCaps *allowed;
-      gchar *caps1 = NULL;
-      gchar *caps2 = NULL;
 
     GST_DEBUG_OBJECT (trans, "accept caps %" GST_PTR_FORMAT, caps);
 

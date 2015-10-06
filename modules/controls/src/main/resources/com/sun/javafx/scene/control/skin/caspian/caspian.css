@@ -3186,8 +3186,8 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-background-insets: 0 0 -1 0, 0, 1 0 1 1;
 }
 
-.combo-box-base:editable:contains-focus,
-.date-picker:contains-focus {
+.combo-box-base:editable:focused,
+.date-picker:focused {
     -fx-background-color: -fx-focus-color, -fx-outer-border, -fx-control-inner-background;
     -fx-background-radius: 5.4, 3, 2;
     -fx-background-insets: -1.4, 0, 1;

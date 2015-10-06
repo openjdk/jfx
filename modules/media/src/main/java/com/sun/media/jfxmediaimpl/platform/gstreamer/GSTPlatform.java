@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,6 +34,7 @@ import com.sun.media.jfxmedia.logging.Logger;
 import com.sun.media.jfxmediaimpl.HostUtils;
 import com.sun.media.jfxmediaimpl.MediaUtils;
 import com.sun.media.jfxmediaimpl.platform.Platform;
+import java.util.Arrays;
 
 /**
  * GStreamer platform implementation.
@@ -56,22 +57,17 @@ public final class GSTPlatform extends Platform {
         "application/vnd.apple.mpegurl",
         "audio/mpegurl"
     };
+    
+    /**
+     * All supported protocols.
+     */
+    private static final String[] PROTOCOLS = {
+        "file",
+        "http",
+        "https"
+    };
 
     private static GSTPlatform globalInstance = null;
-
-    // HACK: move this back to native when we fix the jdeveloper crash
-    private static final String[] contentTypes;
-
-    static {
-        // HACK: remove this when we go back to polling native
-        if (!HostUtils.isMacOSX()) {
-            contentTypes = new String[CONTENT_TYPES.length];
-            System.arraycopy(CONTENT_TYPES, 0, contentTypes,
-                    0, CONTENT_TYPES.length);
-        } else {
-            contentTypes = CONTENT_TYPES;
-        }
-    }
 
     @Override
     public boolean loadPlatform() {
@@ -104,9 +100,12 @@ public final class GSTPlatform extends Platform {
 
     @Override
     public String[] getSupportedContentTypes() {
-        String[] contentTypesCopy = new String[contentTypes.length];
-        System.arraycopy(contentTypes, 0, contentTypesCopy, 0, contentTypes.length);
-        return contentTypesCopy;
+        return Arrays.copyOf(CONTENT_TYPES, CONTENT_TYPES.length);
+    }
+    
+    @Override
+    public String[] getSupportedProtocols() {
+        return Arrays.copyOf(PROTOCOLS, PROTOCOLS.length);
     }
 
     @Override
@@ -135,7 +134,8 @@ public final class GSTPlatform extends Platform {
                 // Block until player transitions to READY or HALTED.
 
                 // Timeouts in milliseconds.
-                final long timeout = source.getURI().getScheme().equals("http") ?
+                String scheme = source.getURI().getScheme();
+                final long timeout = (scheme.equals("http") || scheme.equals("https")) ?
                         60000L : 5000L;
                 final long iterationTime = 50L;
                 long timeWaited = 0L;

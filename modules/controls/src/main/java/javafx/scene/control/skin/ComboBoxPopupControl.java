@@ -34,7 +34,6 @@ import com.sun.javafx.scene.traversal.ParentTraversalEngine;
 import com.sun.javafx.scene.traversal.TraversalContext;
 import javafx.beans.InvalidationListener;
 import javafx.beans.value.ObservableValue;
-import javafx.css.PseudoClass;
 import javafx.css.Styleable;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
@@ -137,6 +136,11 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
             if (getEditor() != null) {
                 // Fix for the regression noted in a comment in RT-29885.
                 ((FakeFocusTextField)textField).setFakeFocus(hasFocus);
+
+                // JDK-8120120 (aka RT-21454) and JDK-8136838
+                if (!hasFocus) {
+                    setTextFromTextFieldIntoComboBoxValue();
+                }
             }
         });
 
@@ -580,7 +584,5 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
      * Stylesheet Handling                                                     *
      *                                                                         *
      **************************************************************************/
-
-    private static PseudoClass CONTAINS_FOCUS_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("contains-focus");
 
 }

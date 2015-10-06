@@ -99,14 +99,19 @@ aggregate similar attributes.
     <td>Hypertext transfer protocol for representation of remote files</td>
     <td><a href="https://docs.oracle.com/javase/8/docs/api/java/net/URI.html">java.net.URI</a></td>
 </tr>
+    <td>HTTPS</td>
+    <td>Hypertext transfer protocol secure for representation of remote files</td>
+    <td><a href="https://docs.oracle.com/javase/8/docs/api/java/net/URI.html">java.net.URI</a></td>
+</tr>
+<tr>
 <tr>
     <td>JAR</td>
-    <td>Representation of media entries in files accessible via the FILE or HTTP protocols</td>
+    <td>Representation of media entries in files accessible via the FILE, HTTP or HTTPS protocols</td>
     <td><a href="https://docs.oracle.com/javase/8/docs/api/java/net/JarURLConnection.html">java.net.JarURLConnection</a></td>
 </tr>
 <tr>
     <td>HTTP Live Streaming (HLS)</td>
-    <td>Playlist-based media streaming via HTTP</td>
+    <td>Playlist-based media streaming via HTTP or HTTPS</td>
     <td><a href="http://tools.ietf.org/html/draft-pantos-http-live-streaming">Internet-Draft: HTTP Live Streaming</a></td>
 </tr>
 </table>
@@ -114,7 +119,7 @@ aggregate similar attributes.
 </p>
 <p>
 <h4>MPEG-4 Playback via HTTP</h4>
-It is recommended that MPEG-4 media to be played over HTTP be formatted such that the
+It is recommended that MPEG-4 media to be played over HTTP or HTTPS be formatted such that the
 headers required to decode the stream appear at the beginning of the file. Otherwise,
 playback might stall until the entire file is downloaded.
 </p>

@@ -54,7 +54,7 @@ import javafx.stage.Stage;
 public class StreamingMediaPlayerApp extends Application {
 
     private String streamingMediaPlayerCss = StreamingMediaPlayerApp.class.getResource("StreamingMediaPlayer.css").toExternalForm();
-    private static final String MEDIA_URL = "http://download.oracle.com/otndocs/products/javafx/JavaRap/prog_index.m3u8";
+    private static final String MEDIA_URL = "http://download.oracle.com/otndocs/javafx/JavaRap_ProRes_H264_768kbit_Widescreen.mp4";
     private MediaPlayer mediaPlayer;
 
     public Parent createContent() {
@@ -74,7 +74,8 @@ public class StreamingMediaPlayerApp extends Application {
         if (status == MediaPlayer.Status.UNKNOWN || status == MediaPlayer.Status.HALTED) {
             return;
         }
-        if (status == MediaPlayer.Status.PAUSED || status == MediaPlayer.Status.STOPPED || status == MediaPlayer.Status.READY) {
+        if (status == MediaPlayer.Status.PAUSED || status == MediaPlayer.Status.STOPPED ||
+            status == MediaPlayer.Status.READY) {
             mediaPlayer.play();
         }
     }

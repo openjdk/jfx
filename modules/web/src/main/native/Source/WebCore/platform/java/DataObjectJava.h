@@ -157,7 +157,7 @@ namespace WebCore {
         void asFilenames(Vector<String>& result) const {
             if(m_url.isEmpty() && !m_filenames.isEmpty())
                 result = m_filenames;
-            else
+            else if(!m_url.isEmpty())
                 result.append(m_url.string());
         }
 

@@ -42,7 +42,7 @@ import java.net.URL;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
-public class LabeledImplTestOther {
+public class LabeledImplOtherTest {
     
     
     @Test public void test_RT_21357() {
@@ -50,7 +50,7 @@ public class LabeledImplTestOther {
         final Labeled labeled = new Label("label");
         final LabeledImpl labeledImpl = new LabeledImpl(labeled);
         
-        URL url = Utils.class.getResource("caspian/center-btn.png");
+        URL url = LabeledImplOtherTest.class.getResource("/test/com/sun/javafx/scene/control/center-btn.png");
         Image img = new Image(url.toExternalForm());
         assertNotNull(img);
         
@@ -71,7 +71,7 @@ public class LabeledImplTestOther {
         mb.setTranslateX(100);mb.setTranslateY(100); 
         
         Scene scene = new Scene(mb, 300, 300); 
-        scene.getStylesheets().add(LabeledImplTestOther.class.getResource("LabeledImplTest.css").toExternalForm());
+        scene.getStylesheets().add(LabeledImplOtherTest.class.getResource("skin/LabeledImplTest.css").toExternalForm());
         Stage stage = new Stage();
         stage.setScene(scene); 
         stage.show(); 

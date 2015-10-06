@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,11 +34,12 @@ import com.sun.media.jfxmediaimpl.HostUtils;
 import com.sun.media.jfxmediaimpl.platform.Platform;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.Arrays;
 
 /**
  * Mac OS X Platform implementation. This class implements both the QTKit based
  * platform and the AVFoundation based platforms.
- * 
+ *
  * NOTE: The QTKit based platform is deprecated and will be removed in a future
  * release.
  */
@@ -55,6 +56,15 @@ public final class OSXPlatform extends Platform {
         "video/x-m4v",
         "application/vnd.apple.mpegurl",
         "audio/mpegurl"
+    };
+
+    /**
+     * All supported protocols.
+     */
+    private static final String[] PROTOCOLS = {
+        "file",
+        "http",
+        "https"
     };
 
     private static final class OSXPlatformInitializer {
@@ -121,9 +131,12 @@ public final class OSXPlatform extends Platform {
 
     @Override
     public String[] getSupportedContentTypes() {
-        String[] contentTypesCopy = new String[CONTENT_TYPES.length];
-        System.arraycopy(CONTENT_TYPES, 0, contentTypesCopy, 0, CONTENT_TYPES.length);
-        return contentTypesCopy;
+        return Arrays.copyOf(CONTENT_TYPES, CONTENT_TYPES.length);
+    }
+
+    @Override
+    public String[] getSupportedProtocols() {
+        return Arrays.copyOf(PROTOCOLS, PROTOCOLS.length);
     }
 
     @Override

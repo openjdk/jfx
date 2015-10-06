@@ -25,6 +25,8 @@
 
 package test.javafx.scene.control;
 
+import com.sun.javafx.scene.control.ContextMenuContent;
+import com.sun.javafx.scene.control.ContextMenuContentShim;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -42,8 +44,69 @@ import org.junit.Test;
 
 import static org.junit.Assert.*;
 import static com.sun.javafx.scene.control.ContextMenuContentShim.*;
+import java.util.Optional;
+import javafx.scene.Node;
+import javafx.scene.input.KeyCode;
+import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
+import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 
 public class ContextMenuTest {
+
+    public static void pressDownKey(ContextMenu menu) {
+        Optional<ContextMenuContent> showingMenuContent = ContextMenuContentShim.getShowingMenuContent(menu);
+        if (showingMenuContent.isPresent()) {
+            ContextMenuContent content = showingMenuContent.get();
+            new KeyEventFirer(content).doDownArrowPress();
+        }
+    }
+
+    public static void pressUpKey(ContextMenu menu) {
+        Optional<ContextMenuContent> showingMenuContent = ContextMenuContentShim.getShowingMenuContent(menu);
+        if (showingMenuContent.isPresent()) {
+            ContextMenuContent content = showingMenuContent.get();
+            new KeyEventFirer(content).doUpArrowPress();
+        }
+    }
+
+    public static void pressRightKey(ContextMenu menu) {
+        Optional<ContextMenuContent> showingMenuContent = ContextMenuContentShim.getShowingMenuContent(menu);
+        if (showingMenuContent.isPresent()) {
+            ContextMenuContent content = showingMenuContent.get();
+            new KeyEventFirer(content).doRightArrowPress();
+        }
+    }
+
+    public static void pressEnterKey(ContextMenu menu) {
+        Optional<ContextMenuContent> showingMenuContent = ContextMenuContentShim.getShowingMenuContent(menu);
+        if (showingMenuContent.isPresent()) {
+            ContextMenuContent content = showingMenuContent.get();
+            new KeyEventFirer(content).doKeyPress(KeyCode.ENTER);
+        }
+    }
+
+    public static void pressLeftKey(ContextMenu menu) {
+        Optional<ContextMenuContent> showingMenuContent = ContextMenuContentShim.getShowingMenuContent(menu);
+        if (showingMenuContent.isPresent()) {
+            ContextMenuContent content = showingMenuContent.get();
+            new KeyEventFirer(content).doLeftArrowPress();
+        }
+    }
+
+    public static void pressMouseButton(ContextMenu menu) {
+        Optional<ContextMenuContent> showingMenuContent = ContextMenuContentShim.getShowingMenuContent(menu);
+        if (showingMenuContent.isPresent()) {
+            ContextMenuContent.MenuItemContainer itemContainer =  (ContextMenuContent.MenuItemContainer)
+                    ContextMenuContentShim.get_selectedBackground(showingMenuContent.get());
+            MenuItem item = itemContainer.getItem();
+            if (item instanceof CustomMenuItem) {
+                Node customContent = ((CustomMenuItem) item).getContent();
+                new MouseEventFirer(customContent).fireMouseClicked();
+            } else {
+                new MouseEventFirer(itemContainer).fireMousePressAndRelease();
+            }
+        }
+    }
+
     private MenuItem menuItem0, menuItem1, menuItem2, menuItem3;
 
     private ContextMenu contextMenu;

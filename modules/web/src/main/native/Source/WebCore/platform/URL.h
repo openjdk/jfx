@@ -182,6 +182,7 @@ public:
 
 #if PLATFORM(JAVA)
     String deprecatedString() const;
+    bool isJarFile() const { return m_protocolIsInJar; }
 #endif
     const URL* innerURL() const { return 0; }
 
@@ -208,6 +209,9 @@ private:
     String m_string;
     bool m_isValid : 1;
     bool m_protocolIsInHTTPFamily : 1;
+#if PLATFORM(JAVA)
+    bool m_protocolIsInJar : 1;
+#endif
 
     int m_schemeEnd;
     int m_userStart;

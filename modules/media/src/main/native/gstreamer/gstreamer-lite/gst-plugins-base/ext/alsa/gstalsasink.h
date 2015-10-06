@@ -1,7 +1,7 @@
 /* GStreamer
  * Copyright (C)  2005 Wim Taymans <wim@fluendo.com>
  *
- * gstalsasink.h:
+ * gstalsasink.h: 
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public

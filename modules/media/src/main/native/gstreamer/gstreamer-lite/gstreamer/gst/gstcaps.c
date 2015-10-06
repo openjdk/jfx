@@ -142,8 +142,8 @@ _priv_gst_caps_initialize (void)
   _gst_caps_none = gst_caps_new_empty ();
 
   g_value_register_transform_func (_gst_caps_type,
-        G_TYPE_STRING, gst_caps_transform_to_string);
-  }
+      G_TYPE_STRING, gst_caps_transform_to_string);
+}
 
 static GstCaps *
 _gst_caps_copy (const GstCaps * caps)
@@ -167,7 +167,7 @@ _gst_caps_copy (const GstCaps * caps)
     features = gst_caps_get_features_unchecked (caps, i);
     gst_caps_append_structure_full (newcaps, gst_structure_copy (structure),
         gst_caps_features_copy_conditional (features));
-}
+  }
 
   return newcaps;
 }
@@ -724,10 +724,10 @@ GstCaps *
 gst_caps_merge_structure_full (GstCaps * caps, GstStructure * structure,
     GstCapsFeatures * features)
 {
-    GstStructure *structure1;
+  GstStructure *structure1;
   GstCapsFeatures *features1, *features_tmp;
-    int i;
-    gboolean unique = TRUE;
+  int i;
+  gboolean unique = TRUE;
 
   g_return_val_if_fail (GST_IS_CAPS (caps), NULL);
 
@@ -737,9 +737,9 @@ gst_caps_merge_structure_full (GstCaps * caps, GstStructure * structure,
   /* To make comparisons easier below */
   features_tmp = features ? features : GST_CAPS_FEATURES_MEMORY_SYSTEM_MEMORY;
 
-    /* check each structure */
+  /* check each structure */
   for (i = GST_CAPS_LEN (caps) - 1; i >= 0; i--) {
-      structure1 = gst_caps_get_structure_unchecked (caps, i);
+    structure1 = gst_caps_get_structure_unchecked (caps, i);
     features1 = gst_caps_get_features_unchecked (caps, i);
     if (!features1)
       features1 = GST_CAPS_FEATURES_MEMORY_SYSTEM_MEMORY;
@@ -754,20 +754,20 @@ gst_caps_merge_structure_full (GstCaps * caps, GstStructure * structure,
                 || gst_caps_features_is_any (features1))
             && gst_caps_features_is_equal (features_tmp, features1))
         && gst_structure_is_subset (structure, structure1)) {
-        unique = FALSE;
-        break;
-      }
+      unique = FALSE;
+      break;
     }
-    if (unique) {
+  }
+  if (unique) {
     caps = gst_caps_make_writable (caps);
     gst_caps_append_structure_unchecked (caps, structure, features);
-    } else {
-      gst_structure_free (structure);
+  } else {
+    gst_structure_free (structure);
     if (features)
       gst_caps_features_free (features);
-    }
-  return caps;
   }
+  return caps;
+}
 
 /**
  * gst_caps_get_size:
@@ -1157,7 +1157,7 @@ gst_caps_is_equal_fixed (const GstCaps * caps1, const GstCaps * caps2)
 
   return gst_structure_is_equal (struct1, struct2) &&
       gst_caps_features_is_equal (features1, features2);
-  }
+}
 
 /**
  * gst_caps_is_always_compatible:
@@ -1263,7 +1263,7 @@ gst_caps_is_subset_structure (const GstCaps * caps,
     if (gst_structure_is_subset (structure, s)) {
       /* If we found a superset return TRUE */
       return TRUE;
-}
+    }
   }
 
   return FALSE;
@@ -1296,7 +1296,7 @@ gst_caps_is_subset_structure_full (const GstCaps * caps,
   if (CAPS_IS_ANY (caps))
     return TRUE;
   if (CAPS_IS_EMPTY (caps))
-      return FALSE;
+    return FALSE;
 
   if (!features)
     features = GST_CAPS_FEATURES_MEMORY_SYSTEM_MEMORY;
@@ -1333,7 +1333,7 @@ gst_caps_is_equal (const GstCaps * caps1, const GstCaps * caps2)
   g_return_val_if_fail (GST_IS_CAPS (caps2), FALSE);
 
   if (G_UNLIKELY (caps1 == caps2))
-  return TRUE;
+    return TRUE;
 
   if (G_UNLIKELY (gst_caps_is_fixed (caps1) && gst_caps_is_fixed (caps2)))
     return gst_caps_is_equal_fixed (caps1, caps2);
@@ -1361,7 +1361,7 @@ gst_caps_is_strictly_equal (const GstCaps * caps1, const GstCaps * caps2)
   g_return_val_if_fail (GST_IS_CAPS (caps2), FALSE);
 
   if (G_UNLIKELY (caps1 == caps2))
-  return TRUE;
+    return TRUE;
 
   if (GST_CAPS_LEN (caps1) != GST_CAPS_LEN (caps2))
     return FALSE;
@@ -1379,7 +1379,7 @@ gst_caps_is_strictly_equal (const GstCaps * caps1, const GstCaps * caps2)
     if (gst_caps_features_is_any (f1) != gst_caps_features_is_any (f2) ||
         !gst_caps_features_is_equal (f1, f2) ||
         !gst_structure_is_equal (s1, s2))
-    return FALSE;
+      return FALSE;
   }
 
   return TRUE;
@@ -1623,8 +1623,8 @@ gst_caps_intersect_first (GstCaps * caps1, GstCaps * caps2)
             dest =
                 gst_caps_merge_structure_full (dest, istruct,
                 gst_caps_features_copy_conditional (features1));
-    }
-  }
+        }
+      }
     }
   }
 

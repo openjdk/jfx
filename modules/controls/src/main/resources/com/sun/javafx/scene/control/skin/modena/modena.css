@@ -1767,8 +1767,8 @@ is being used to size a border should also be in pixels.
     -fx-background-insets: 1 0 1 1;
     -fx-background-radius: 2 0 0 2;
 }
-.combo-box-base:editable:contains-focus,
-.date-picker:contains-focus {
+.combo-box-base:editable:focused,
+.date-picker:focused {
     -fx-background-color: -fx-focus-color;
     -fx-background-insets: -0.2;
     -fx-background-radius: 3;
@@ -1784,8 +1784,8 @@ is being used to size a border should also be in pixels.
     -fx-background-insets: 1 0 1 1, 1 0 1 1, 3 2 3 3;
     -fx-background-radius: 2 0 0 2, 1 0 0 1, 0;
 }
-.combo-box-base:editable:contains-focus > .arrow-button,
-.date-picker:contains-focus > .arrow-button {
+.combo-box-base:editable:focused > .arrow-button,
+.date-picker:focused > .arrow-button {
     -fx-background-color: -fx-inner-border, -fx-body-color, -fx-faint-focus-color, -fx-body-color;
     -fx-background-insets: 1, 2, 1, 2.6;
     -fx-background-radius: 0 2 2 0, 0 1 1 0, 0 1 1 0, 0 1 1 0;

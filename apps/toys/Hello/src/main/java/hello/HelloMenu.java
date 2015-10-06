@@ -179,7 +179,7 @@ public class HelloMenu extends Application {
 
             final CheckMenuItem useSystemMenuBarCB = new CheckMenuItem("Use _System Menu Bar");
             useSystemMenuBarCB.setSelected(true);
-            menuBar.useSystemMenuBarProperty().bind(useSystemMenuBarCB.selectedProperty());
+            menuBar.useSystemMenuBarProperty().bindBidirectional(useSystemMenuBarCB.selectedProperty());
             systemMenuBarMenu.getItems().add(useSystemMenuBarCB);
 
             menuBar.getMenus().add(systemMenuBarMenu);
