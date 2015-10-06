@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,64 +48,65 @@ public final class ButtonType {
      * {@link ButtonData} of {@link ButtonData#APPLY}.
      */
     public static final ButtonType APPLY = new ButtonType(
-            ControlResources.getString("Dialog.apply.button"), ButtonData.APPLY);
+            "Dialog.apply.button", null, ButtonData.APPLY);
     
     /**
      * A pre-defined {@link ButtonType} that displays "OK" and has a 
      * {@link ButtonData} of {@link ButtonData#OK_DONE}.
      */
     public static final ButtonType OK = new ButtonType(
-            ControlResources.getString("Dialog.ok.button"), ButtonData.OK_DONE);
+            "Dialog.ok.button", null, ButtonData.OK_DONE);
     
     /**
      * A pre-defined {@link ButtonType} that displays "Cancel" and has a 
      * {@link ButtonData} of {@link ButtonData#CANCEL_CLOSE}.
      */
     public static final ButtonType CANCEL = new ButtonType(
-            ControlResources.getString("Dialog.cancel.button"), ButtonData.CANCEL_CLOSE);
+            "Dialog.cancel.button", null, ButtonData.CANCEL_CLOSE);
     
     /**
      * A pre-defined {@link ButtonType} that displays "Close" and has a 
      * {@link ButtonData} of {@link ButtonData#CANCEL_CLOSE}.
      */
     public static final ButtonType CLOSE = new ButtonType(
-            ControlResources.getString("Dialog.close.button"), ButtonData.CANCEL_CLOSE);
+            "Dialog.close.button", null, ButtonData.CANCEL_CLOSE);
     
     /**
      * A pre-defined {@link ButtonType} that displays "Yes" and has a 
      * {@link ButtonData} of {@link ButtonData#YES}.
      */
     public static final ButtonType YES = new ButtonType(
-            ControlResources.getString("Dialog.yes.button"), ButtonData.YES);
+            "Dialog.yes.button", null, ButtonData.YES);
     
     /**
      * A pre-defined {@link ButtonType} that displays "No" and has a 
      * {@link ButtonData} of {@link ButtonData#NO}.
      */
     public static final ButtonType NO = new ButtonType(
-            ControlResources.getString("Dialog.no.button"), ButtonData.NO);
+            "Dialog.no.button", null, ButtonData.NO);
     
     /**
      * A pre-defined {@link ButtonType} that displays "Finish" and has a 
      * {@link ButtonData} of {@link ButtonData#FINISH}.
      */
     public static final ButtonType FINISH = new ButtonType(
-            ControlResources.getString("Dialog.finish.button"), ButtonData.FINISH);
+            "Dialog.finish.button", null, ButtonData.FINISH);
     
     /**
      * A pre-defined {@link ButtonType} that displays "Next" and has a 
      * {@link ButtonData} of {@link ButtonData#NEXT_FORWARD}.
      */
     public static final ButtonType NEXT = new ButtonType(
-            ControlResources.getString("Dialog.next.button"), ButtonData.NEXT_FORWARD);
+            "Dialog.next.button", null, ButtonData.NEXT_FORWARD);
     
     /**
      * A pre-defined {@link ButtonType} that displays "Previous" and has a 
      * {@link ButtonData} of {@link ButtonData#BACK_PREVIOUS}.
      */
     public static final ButtonType PREVIOUS = new ButtonType(
-            ControlResources.getString("Dialog.previous.button"), ButtonData.BACK_PREVIOUS);
+            "Dialog.previous.button", null, ButtonData.BACK_PREVIOUS);
     
+    private final String key;
     private final String text;
     private final ButtonData buttonData;
     
@@ -131,6 +132,14 @@ public final class ButtonType {
      */ 
     public ButtonType(@NamedArg("text") String text, 
                         @NamedArg("buttonData") ButtonData buttonData) {
+        this(null, text, buttonData);
+    }
+
+    /**
+     * Provide key or text. The other one should be null.
+     */
+    private ButtonType(String key, String text, ButtonData buttonData) {
+        this.key = key;
         this.text = text;
         this.buttonData = buttonData;
     }
@@ -143,7 +152,13 @@ public final class ButtonType {
     /**
      * Returns the text specified for this ButtonType in the constructor;
      */
-    public final String getText() { return text;    }
+    public final String getText() {
+        if (text == null && key != null) {
+            return ControlResources.getString(key);
+        } else {
+            return text;
+        }
+    }
 
     /** {@inheritDoc} */
     @Override public String toString() {
