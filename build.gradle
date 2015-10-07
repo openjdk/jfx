@@ -1580,16 +1580,23 @@ project(":graphics") {
         // Copy all of the download libraries to the libs directory for the sake of the IDEs
         File libsDir = rootProject.file("build/libs");
         
-        // In some IDEs (Eclipse for example), touching these libraries cauese a full build
-        // within the IDE.  When gradle is used outside of the IDE, for example to build the
-        // native code, a full rebuild is caused within the IDE.  The fix is to check for the 
-        // lib directory and not copy the files
-        //
-        // This means that in order to update the dependent libraries for the IDE's, a clean
-        // build is required
-        //
-        if (libsDir.exists()) return;
+        // In some IDEs (Eclipse for example), touching these libraries
+        // cauese a full build within the IDE. When gradle is used
+        // outside of the IDE, for example to build the native code,
+        // a full rebuild is caused within the IDE. The fix is to check
+        // for the presence of the target files in the lib directory
+        // and not copy the files if all are present.
+
         libsDir.mkdirs();
+
+        def allLibsPresent = true
+        def libNames = ["antlr-3.1.3.jar", "stringtemplate-3.2.jar", "antlr-runtime-3.1.3.jar", "swt-debug.jar"]
+        libNames.each { name ->
+            File f = new File(libsDir, name)
+            if (!f.exists()) allLibsPresent = false
+        }
+        if (allLibsPresent) return;
+
         for (File f : [configurations.compile.files, configurations.antlr3.files].flatten()) {
             copy {
                 into libsDir
@@ -2027,6 +2034,10 @@ project(":fxpackager") {
         File libsDir = rootProject.file("build/libs");
         File antLib = new File(libsDir, "ant-1.8.2.jar")
         libsDir.mkdirs();
+
+        // Skip copy if file is present.
+        if (antLib.exists()) return;
+
         for (File f : configurations.compile.files) {
             copy {
                 into libsDir
