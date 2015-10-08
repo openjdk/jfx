@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,6 +32,7 @@ import javafx.scene.control.DialogShim;
 import javafx.scene.control.HeavyweightDialogShim;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
+import java.util.Locale;
 import org.junit.After;
 import org.junit.Test;
 
@@ -57,8 +58,10 @@ public class AlertTest {
     private Object result = DUMMY_RESULT;
 
     @After public void cleanup() {
-        getStage(dialog).close();
-        dialog = null;
+        if (dialog != null) {
+            getStage(dialog).close();
+            dialog = null;
+        }
         result = DUMMY_RESULT;
         closeVetoed = false;
         closeWasForcedButStageWasShowing = false;
@@ -309,5 +312,16 @@ public class AlertTest {
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.APPLY, ButtonType.CANCEL);
         assertResultValue(ButtonType.CANCEL, dialog, true);
         assertCloseRequestAccepted(dialog, true);
+    }
+
+    @Test public void jdk8088397_buttontype_strings_change_with_locale() {
+        Locale defaultLocale = Locale.getDefault();
+        Locale.setDefault(new Locale("en"));
+        String englishStr = ButtonType.CANCEL.getText();
+        Locale.setDefault(new Locale("sv"));
+        String swedishStr = ButtonType.CANCEL.getText();
+        Locale.setDefault(defaultLocale);
+        assertEquals("Cancel", englishStr);
+        assertEquals("Avbryt", swedishStr);
     }
 }

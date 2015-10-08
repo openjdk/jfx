@@ -329,6 +329,9 @@ public class DatePickerContent extends VBox {
 
         monthLabel = new Label();
         monthLabel.getStyleClass().add("spinner-label");
+        monthLabel.fontProperty().addListener((o, ov, nv) -> { 
+            updateMonthLabelWidth(); 
+        });
 
         forwardMonthButton.setOnAction(t -> {
             forward(1, MONTHS, false);

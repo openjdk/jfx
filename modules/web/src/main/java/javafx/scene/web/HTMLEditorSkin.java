@@ -200,20 +200,6 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
         { FORMAT_HEADING_6,   BOLD.getCommand(),   SIZE_XX_SMALL  },
     };
 
-    // As per RT-16379: default OS -> font mappings:
-    private static final String[] DEFAULT_WINDOWS_7_MAPPINGS = {
-        "Windows 7",       "Segoe UI",        "12px",   "",     "120"
-    };
-    private static final String[][] DEFAULT_OS_MAPPINGS = {
-        // OS               Font name           size      weight  DPI
-        { "Windows XP",      "Tahoma",          "12px",   "",     "96"  },
-        { "Windows Vista",   "Segoe UI",        "12px",   "",     "96"  },
-        DEFAULT_WINDOWS_7_MAPPINGS,
-        { "Mac OS X",        "Lucida Grande",   "12px",   "",     "72"  },
-        { "Linux",           "Lucida Sans",   "12px",   "",     "96"  },
-    };
-    private static final String DEFAULT_OS_FONT = getOSMappings()[1];
-
     private static PseudoClass CONTAINS_FOCUS_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("contains-focus");
 
 
@@ -223,17 +209,6 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
      * Static Methods                                                          *
      *                                                                         *
      **************************************************************************/
-
-    private static String[] getOSMappings() {
-        String os = System.getProperty("os.name");
-        for  (int i = 0; i < DEFAULT_OS_MAPPINGS.length; i++) {
-            if (os.equals(DEFAULT_OS_MAPPINGS[i][0])) {
-                return DEFAULT_OS_MAPPINGS[i];
-            }
-        }
-
-        return DEFAULT_WINDOWS_7_MAPPINGS;
-    }
 
 
 
@@ -699,16 +674,15 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
 
         Platform.runLater(() -> {
             final ObservableList<String> fonts = FXCollections.observableArrayList(Font.getFamilies());
+            fonts.add(0, "");
             for (String fontFamily : fonts) {
-                if (DEFAULT_OS_FONT.equals(fontFamily)) {
-                    fontFamilyComboBox.setValue(fontFamily);
-                }
+                fontFamilyComboBox.setValue("");
                 fontFamilyComboBox.setItems(fonts);
             }
         });
 
         fontFamilyComboBox.valueProperty().addListener((observable, oldValue, newValue) -> {
-            executeCommand(FONT_FAMILY.getCommand(), newValue);
+            executeCommand(FONT_FAMILY.getCommand(), ("".equals(newValue)) ? "''" : newValue);
         });
 
         fontSizeComboBox = new ComboBox<String>();
@@ -1002,8 +976,8 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
                             break;
                         }
                         // Note: By default, 'Dialog' is the font returned from webview.
-                        // For presidio, we're just mapping to an OS-specific font.
-                        if (comboFontFamilyValue.equals(DEFAULT_OS_FONT) && fontFamilyStr.equals("Dialog")) {
+                        // For presidio, we're just mapping to the default font.
+                        if (comboFontFamilyValue.equals("") && fontFamilyStr.equals("Dialog")) {
                             selectedComboFont = comboFontFamilyValue;
                             break;
                         }
