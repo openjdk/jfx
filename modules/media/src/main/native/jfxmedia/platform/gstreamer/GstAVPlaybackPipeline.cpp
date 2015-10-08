@@ -344,11 +344,18 @@ GstFlowReturn CGstAVPlaybackPipeline::OnAppSinkPreroll(GstElement* pElem, CGstAV
             delete pVideoFrame;
             return GST_FLOW_OK;
         }
-        if (!pPipeline->m_pEventDispatcher->SendNewFrameEvent(pVideoFrame))
-        {
-            if (!pPipeline->m_pEventDispatcher->SendPlayerMediaErrorEvent(ERROR_JNI_SEND_NEW_FRAME_EVENT))
+        if (pVideoFrame->IsValid()) {
+            if (!pPipeline->m_pEventDispatcher->SendNewFrameEvent(pVideoFrame))
             {
-                LOGGER_LOGMSG(LOGGER_ERROR, "Cannot send media error event.\n");
+                if (!pPipeline->m_pEventDispatcher->SendPlayerMediaErrorEvent(ERROR_JNI_SEND_NEW_FRAME_EVENT))
+                {
+                    LOGGER_LOGMSG(LOGGER_ERROR, "Cannot send media error event.\n");
+                }
+            }
+        } else {
+            delete pVideoFrame;
+            if (pPipeline->m_pEventDispatcher != NULL) {
+                pPipeline->m_pEventDispatcher->Warning(WARNING_GSTREAMER_INVALID_FRAME, "Invalid frame");
             }
         }
     }

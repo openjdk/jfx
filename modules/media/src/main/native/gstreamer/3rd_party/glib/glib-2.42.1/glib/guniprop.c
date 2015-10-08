@@ -893,12 +893,21 @@ g_utf8_strup (const gchar *str,
    * We use a two pass approach to keep memory management simple
    */
   result_len = real_toupper (str, len, NULL, locale_type);
+#ifdef GSTREAMER_LITE
+  if (result_len == 0)
+    return NULL;
+#endif // GSTREAMER_LITE
   result = g_malloc (result_len + 1);
 #ifdef GSTREAMER_LITE
   if (result == NULL)
-      return NULL;
+    return NULL;
 #endif // GSTREAMER_LITE
+#ifdef GSTREAMER_LITE
+  if (real_toupper (str, len, result, locale_type) == 0)
+    return NULL;
+#else // GSTREAMER_LITE
   real_toupper (str, len, result, locale_type);
+#endif // GSTREAMER_LITE  
   result[result_len] = '\0';
 
   return result;

@@ -463,12 +463,13 @@ public class BeanAdapter extends AbstractMap<String, Object> {
                 coercedValue = new BigDecimal(value.toString());
             }
         } else if (type == Class.class) {
-            try {   
-                ReflectUtil.checkPackageAccess(value.toString());
+            try {
+                final String className = value.toString();
+                ReflectUtil.checkPackageAccess(className);
                 final ClassLoader cl = Thread.currentThread().getContextClassLoader();
                 coercedValue = Class.forName(
-                        value.toString(), 
-                        false, 
+                        className,
+                        false,
                         cl);
             } catch (ClassNotFoundException exception) {
                 throw new IllegalArgumentException(exception);
