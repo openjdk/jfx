@@ -764,6 +764,23 @@ static gboolean java_source_query (GstPad *pad, GstObject *parent, GstQuery *que
             break;
         }
 
+    case GST_QUERY_SEEKING:
+        {
+            GstFormat format = GST_FORMAT_UNDEFINED;
+            gst_query_parse_seeking(query, &format, NULL, NULL, NULL);
+            
+            // We can seek only in bytes format and when source is seekable.
+            if (format != GST_FORMAT_BYTES || !element->is_seekable)
+            {
+                result = FALSE;
+                break;
+            }
+
+            gst_query_set_seeking(query, GST_FORMAT_BYTES, TRUE, 0, element->size);
+
+            break;
+        }
+
     default:
         result = gst_pad_query_default(pad, parent, query);
         break;

@@ -93,6 +93,7 @@ struct _ProgressBuffer
     struct EosStatus  eos_status;
 
     gboolean      instant_seek;
+    gboolean      is_source_seeking;
 
 #if ENABLE_PULL_MODE
     gint64       range_start;
@@ -258,6 +259,7 @@ static void progress_buffer_init(ProgressBuffer *element)
     g_mutex_init(&element->lock);
     g_cond_init(&element->add_cond);
     element->bandwidth_timer = g_timer_new();
+    element->is_source_seeking = FALSE;
 
 #if ENABLE_PULL_MODE
     element->monitor_thread = NULL;
@@ -347,13 +349,13 @@ static void progress_buffer_finalize (GObject *object)
 }
 
 /***********************************************************************************/
-static inline void reset_eos(ProgressBuffer *element)
+static inline void reset_eos(ProgressBuffer *element, gboolean clear_pending_event)
 {
     element->eos_status.eos = FALSE;
     element->eos_status.signal_limit = EOS_SIGNAL_LIMIT;
-
-    // Do not clear pending events here, since we might get events before
-    // pad is activated.
+        
+    if (clear_pending_event)
+        progress_buffer_set_pending_event(element, NULL);
 }
 
 static inline gboolean pending_eos(ProgressBuffer *element)
@@ -383,7 +385,8 @@ static gboolean progress_buffer_activatepull_src(GstPad *pad, GstObject *parent,
     {
         g_mutex_lock(&element->lock);
         element->srcresult = GST_FLOW_OK;
-        reset_eos(element);
+        // Do not clear pending events, since we might get events before pad is activated.
+        reset_eos(element, FALSE);
         element->unexpected = FALSE;
         g_mutex_unlock(&element->lock);
 
@@ -422,7 +425,8 @@ static gboolean progress_buffer_activatepush_src(GstPad *pad, GstObject *parent,
     {
         g_mutex_lock(&element->lock);
         element->srcresult = GST_FLOW_OK;
-        reset_eos(element);
+        // Do not clear pending events, since we might get events before pad is activated.
+        reset_eos(element, FALSE);
         element->unexpected = FALSE;
         g_mutex_unlock(&element->lock);
 
@@ -716,7 +720,10 @@ static gboolean progress_buffer_perform_push_seek(ProgressBuffer *element, GstPa
         progress_buffer_set_pending_event(element, gst_event_new_segment(&segment));
     }
     else
-        reset_eos(element);
+    {
+        // Clear any pending events, since we doing seek.
+        reset_eos(element, TRUE);
+    }
 #else
     cache_set_read_position(element->cache, position - element->cache_read_offset);
     gst_segment_init(&segment, GST_FORMAT_BYTES);
@@ -729,13 +736,11 @@ static gboolean progress_buffer_perform_push_seek(ProgressBuffer *element, GstPa
 
     g_mutex_unlock(&element->lock);
 
-    if (flags & GST_SEEK_FLAG_FLUSH)
-        gst_pad_push_event(pad, gst_event_new_flush_stop(TRUE));
-
 #ifdef ENABLE_SOURCE_SEEKING
     if (!element->instant_seek)
     {
-        if (!gst_pad_push_event(element->sinkpad, gst_event_new_seek(rate, GST_FORMAT_BYTES, GST_SEEK_FLAG_NONE, GST_SEEK_TYPE_SET, position, GST_SEEK_TYPE_NONE, 0)))
+        element->is_source_seeking = TRUE;
+        if (!gst_pad_push_event(element->sinkpad, gst_event_new_seek(rate, GST_FORMAT_BYTES, flags, GST_SEEK_TYPE_SET, position, GST_SEEK_TYPE_NONE, 0)))
         {
             element->instant_seek = TRUE;
             cache_set_read_position(element->cache, position - element->cache_read_offset);
@@ -746,8 +751,12 @@ static gboolean progress_buffer_perform_push_seek(ProgressBuffer *element, GstPa
             segment.position = position;
             progress_buffer_set_pending_event(element, gst_event_new_segment(&segment));
         }
+        element->is_source_seeking = FALSE;
     }
 #endif
+
+    if (flags & GST_SEEK_FLAG_FLUSH)
+        gst_pad_push_event(pad, gst_event_new_flush_stop(TRUE));
 
     gst_pad_start_task(element->srcpad, progress_buffer_loop, element, NULL);
     GST_PAD_STREAM_UNLOCK(pad);
@@ -916,6 +925,17 @@ static gboolean progress_buffer_sink_event(GstPad *pad, GstObject *parent, GstEv
     ProgressBuffer *element = PROGRESS_BUFFER(parent);
     gboolean       result = TRUE;
 
+    // Ignore GST_EVENT_FLUSH_START and GST_EVENT_FLUSH_STOP if source seeking
+    if (element->is_source_seeking)
+    {
+        if (GST_EVENT_TYPE(event) == GST_EVENT_FLUSH_START || GST_EVENT_TYPE(event) == GST_EVENT_FLUSH_STOP)
+        {
+            // INLINE - gst_event_unref()
+            gst_event_unref(event);
+            return TRUE;
+        }
+    }
+
     if (GST_EVENT_IS_SERIALIZED (event) && GST_EVENT_TYPE(event) != GST_EVENT_FLUSH_STOP)
     {
         g_mutex_lock(&element->lock);
@@ -1029,7 +1049,7 @@ static GstFlowReturn progress_buffer_getrange(GstPad *pad, GstObject *parent, gu
         if (needs_seeking)
         {
             element->range_start = start_position;
-            reset_eos(element);
+            reset_eos(element, TRUE);
         }
 #endif
         if (element->sink_segment.position < (gint64)end_position)
