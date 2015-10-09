@@ -49,6 +49,25 @@ import com.sun.webkit.dom.*;
  */
 public class DOMTest extends TestBase {
 
+    @Test public void testGetSetId() {
+        final Document doc = getDocumentFor("src/test/resources/html/dom.html");
+        submit(() -> {
+            NodeList ee = doc.getElementsByTagName("p");
+
+            int numProcessed = 0;
+                for (int i = 0 ; i < ee.getLength() ; i++) {
+                    Node n = ee.item(i);
+                    String s = ((ElementImpl)n).getId();
+                    String newId = "new" + s;
+                    ((ElementImpl)n).setId(newId);
+                    assertEquals("New element id", newId, ((ElementImpl)n).getId());
+                    numProcessed++;
+                }
+
+            assertTrue("Number of processed Elements is equal to 0", numProcessed > 0);
+        });
+    }
+
     @Test public void testEmptyTextContent() {
         final Document doc = getDocumentFor("src/test/resources/html/dom.html");
         submit(() -> {

@@ -6,7 +6,7 @@ SUNWprivate_1.0 {
                WTFReportAssertionFailure;
                _ZN3WTF10fastMallocEj;
                _ZN3WTF10fastMallocEm;
-               _ZN3WTF8fastFreeEPv;	       
+               _ZN3WTF8fastFreeEPv;
                _ZN3WTF11currentTimeEv;
                JSCheckScriptSyntax;
                JSClassCreate;
@@ -613,6 +613,7 @@ SUNWprivate_1.0 {
                Java_com_sun_webkit_dom_ElementImpl_getElementsByTagNameImpl;
                Java_com_sun_webkit_dom_ElementImpl_getElementsByTagNameNSImpl;
                Java_com_sun_webkit_dom_ElementImpl_getFirstElementChildImpl;
+               Java_com_sun_webkit_dom_ElementImpl_getIdImpl;
                Java_com_sun_webkit_dom_ElementImpl_getLastElementChildImpl;
                Java_com_sun_webkit_dom_ElementImpl_getNextElementSiblingImpl;
                Java_com_sun_webkit_dom_ElementImpl_getOffsetHeightImpl;
@@ -690,6 +691,7 @@ SUNWprivate_1.0 {
                Java_com_sun_webkit_dom_ElementImpl_setAttributeNodeImpl;
                Java_com_sun_webkit_dom_ElementImpl_setAttributeNodeNSImpl;
                Java_com_sun_webkit_dom_ElementImpl_setClassNameImpl;
+               Java_com_sun_webkit_dom_ElementImpl_setIdImpl;
                Java_com_sun_webkit_dom_ElementImpl_setOnabortImpl;
                Java_com_sun_webkit_dom_ElementImpl_setOnbeforecopyImpl;
                Java_com_sun_webkit_dom_ElementImpl_setOnbeforecutImpl;

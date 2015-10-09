@@ -611,6 +611,7 @@
                _Java_com_sun_webkit_dom_ElementImpl_getElementsByTagNameImpl
                _Java_com_sun_webkit_dom_ElementImpl_getElementsByTagNameNSImpl
                _Java_com_sun_webkit_dom_ElementImpl_getFirstElementChildImpl
+               _Java_com_sun_webkit_dom_ElementImpl_getIdImpl
                _Java_com_sun_webkit_dom_ElementImpl_getLastElementChildImpl
                _Java_com_sun_webkit_dom_ElementImpl_getNextElementSiblingImpl
                _Java_com_sun_webkit_dom_ElementImpl_getOffsetHeightImpl
@@ -688,6 +689,7 @@
                _Java_com_sun_webkit_dom_ElementImpl_setAttributeNodeImpl
                _Java_com_sun_webkit_dom_ElementImpl_setAttributeNodeNSImpl
                _Java_com_sun_webkit_dom_ElementImpl_setClassNameImpl
+               _Java_com_sun_webkit_dom_ElementImpl_setIdImpl
                _Java_com_sun_webkit_dom_ElementImpl_setOnabortImpl
                _Java_com_sun_webkit_dom_ElementImpl_setOnbeforecopyImpl
                _Java_com_sun_webkit_dom_ElementImpl_setOnbeforecutImpl
