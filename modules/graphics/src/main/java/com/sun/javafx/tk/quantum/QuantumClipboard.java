@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,7 +41,6 @@ import java.net.SocketPermission;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.security.AccessControlContext;
-import java.security.AllPermission;
 import java.security.Permission;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -62,6 +61,7 @@ import com.sun.glass.ui.Clipboard;
 import com.sun.glass.ui.ClipboardAssistance;
 import com.sun.glass.ui.Pixels;
 import com.sun.javafx.tk.ImageLoader;
+import com.sun.javafx.tk.PermissionHelper;
 import com.sun.javafx.tk.TKClipboard;
 import com.sun.javafx.tk.Toolkit;
 import javafx.scene.image.PixelReader;
@@ -329,8 +329,6 @@ final class QuantumClipboard implements TKClipboard {
         return null;
     }
 
-    private static final Permission all = new AllPermission();
-
     private static Image convertObjectToImage(Object obj) {
         if (obj instanceof Image) {
             return (Image) obj;
@@ -394,7 +392,9 @@ final class QuantumClipboard implements TKClipboard {
                                 SocketPermission sp = new SocketPermission(hoststr, "connect");
                                 context.checkPermission(sp);
                             } else {
-                                context.checkPermission(all);
+                                final Permission clipboardPerm =
+                                        PermissionHelper.getAccessClipboardPermission();
+                                context.checkPermission(clipboardPerm);
                             }
                         }
                         return (new Image(url));

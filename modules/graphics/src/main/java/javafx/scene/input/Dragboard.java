@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2000, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +25,11 @@
 
 package javafx.scene.input;
 
-import java.security.AllPermission;
+import java.security.Permission;
 import java.util.Set;
 
 import com.sun.javafx.scene.input.DragboardHelper;
+import com.sun.javafx.tk.PermissionHelper;
 import com.sun.javafx.tk.TKClipboard;
 import com.sun.javafx.tk.TKScene;
 import javafx.scene.image.Image;
@@ -53,7 +54,9 @@ public final class Dragboard extends Clipboard {
         if (dataAccessRestricted) {
             final SecurityManager securityManager = System.getSecurityManager();
             if (securityManager != null) {
-                securityManager.checkPermission(new AllPermission());
+                final Permission clipboardPerm =
+                        PermissionHelper.getAccessClipboardPermission();
+                securityManager.checkPermission(clipboardPerm);
             }
         }
         return super.getContentImpl(dataFormat);

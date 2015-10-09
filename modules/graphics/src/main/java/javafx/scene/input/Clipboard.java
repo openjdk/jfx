@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2000, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@ package javafx.scene.input;
 import java.io.File;
 import java.security.AccessControlContext;
 import java.security.AccessController;
+import java.security.Permission;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -35,9 +36,9 @@ import java.util.Set;
 import javafx.scene.image.Image;
 import javafx.util.Pair;
 
+import com.sun.javafx.tk.PermissionHelper;
 import com.sun.javafx.tk.TKClipboard;
 import com.sun.javafx.tk.Toolkit;
-import java.security.AllPermission;
 
 /**
  * Represents an operating system clipboard, on which data may be placed during, for
@@ -170,7 +171,9 @@ public class Clipboard {
         try {
             final SecurityManager securityManager = System.getSecurityManager();
             if (securityManager != null) {
-                securityManager.checkPermission(new AllPermission());
+                final Permission clipboardPerm =
+                        PermissionHelper.getAccessClipboardPermission();
+                securityManager.checkPermission(clipboardPerm);
             }
             return getSystemClipboardImpl();
         } catch (final SecurityException e) {
