@@ -28,6 +28,7 @@ package sandbox.app;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import javafx.application.Platform;
 import javafx.embed.swing.JFXPanel;
@@ -46,6 +47,9 @@ import static sandbox.Constants.*;
  * will be shutdown by an explicit call to System.exit().
  */
 public class JFXPanelApp {
+
+    private final AtomicBoolean createSceneDone = new AtomicBoolean(false);
+    private final AtomicReference<Throwable> err = new AtomicReference<>(null);
 
     private void initApp(final boolean implicitExit) throws Exception {
         final JFrame frame = new JFrame("JFXPanel Test");
@@ -76,6 +80,23 @@ public class JFXPanelApp {
 
         // Hide the frame after the specified amount of time
         Timer timer = new Timer(SHOWTIME, e -> {
+            // Verify that the FX scene was created successfully
+            if (!createSceneDone.get()) {
+                System.exit(ERROR_TIMEOUT);
+            }
+            Throwable t = err.get();
+            if (t != null) {
+                if (t instanceof SecurityException) {
+                    System.exit(ERROR_SECURITY_EXCEPTION);
+                } else if (t instanceof ExceptionInInitializerError) {
+                    Throwable cause = t.getCause();
+                    if (cause instanceof SecurityException) {
+                        System.exit(ERROR_SECURITY_EXCEPTION);
+                    }
+                }
+                System.exit(ERROR_UNEXPECTED_EXCEPTION);
+            }
+
             if (implicitExit) {
                 frame.setVisible(false);
                 frame.dispose();
@@ -88,21 +109,17 @@ public class JFXPanelApp {
     }
 
     private void createScene(final JFXPanel jfxPanel) throws Exception {
-        final AtomicReference<Throwable> err = new AtomicReference<>(null);
         Platform.runLater(() -> {
             try {
                 final Scene scene = Util.createScene();
                 jfxPanel.setScene(scene);
             } catch (Error | Exception t) {
+                t.printStackTrace();
                 err.set(t);
+            } finally {
+                createSceneDone.set(true);
             }
         });
-        Throwable t = err.get();
-        if (t instanceof Error) {
-            throw (Error)t;
-        } else if (t instanceof Exception) {
-            throw (Exception)t;
-        }
     }
 
     public JFXPanelApp(boolean implicitExit) {

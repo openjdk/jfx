@@ -31,6 +31,7 @@ import junit.framework.AssertionFailedError;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
+import static org.junit.Assume.*;
 import static sandbox.Constants.*;
 
 /**
@@ -123,16 +124,15 @@ public class SandboxAppTest {
 
     @Test (timeout=10000)
     public void testJFXPanelApp() throws Exception {
+        // TODO: re-enable this when 8139317 is fixed
+        assumeTrue(!PlatformUtil.isMac());
         runSandboxedApp("JFXPanelApp");
     }
 
     @Test (timeout=10000)
     public void testJFXPanelImplicitExitApp() throws Exception {
-        // Test skipped on Mac OS X due to 8037776
-        if (PlatformUtil.isMac()) {
-            System.err.println("*** Skipping test on Mac OS X");
-            return;
-        }
+        // Test skipped on Mac OS X due to JDK bug 8037776
+        assumeTrue(!PlatformUtil.isMac());
         runSandboxedApp("JFXPanelImplicitExitApp", 0);
     }
 
