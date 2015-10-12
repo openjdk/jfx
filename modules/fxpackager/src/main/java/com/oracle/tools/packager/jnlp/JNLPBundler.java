@@ -74,7 +74,7 @@ import java.util.regex.Pattern;
 import static com.oracle.tools.packager.StandardBundlerParam.*;
 
 /**
- * 
+ *
  * Created by dferrin on 1/7/15.
  */
 public class JNLPBundler extends AbstractBundler {
@@ -89,7 +89,7 @@ public class JNLPBundler extends AbstractBundler {
     private static final String EMBEDDED_DT = "./"+webfilesDir+"/"+dtFX;
 
     private static final String PUBLIC_DT = "https://java.com/js/dtjava.js";
-    
+
     private static final String JFX_NS_URI = "http://javafx.com";
 
     public static final StandardBundlerParam<String> OUT_FILE = new StandardBundlerParam<>(
@@ -140,7 +140,7 @@ public class JNLPBundler extends AbstractBundler {
             (Class<Map<File, File>>) (Object) Map.class,
             p -> new LinkedHashMap<>(),
             null);
-    
+
     public static final StandardBundlerParam<String> CODEBASE = new StandardBundlerParam<>(
             I18N.getString("param.codebase.name"),
             I18N.getString("param.codebase.description"),
@@ -148,7 +148,7 @@ public class JNLPBundler extends AbstractBundler {
             String.class,
             p -> null,
             null);
-    
+
     public static final StandardBundlerParam<String> PLACEHOLDER = new StandardBundlerParam<>(
             I18N.getString("param.placeholder.name"),
             I18N.getString("param.placeholder.description"),
@@ -164,7 +164,7 @@ public class JNLPBundler extends AbstractBundler {
                 }
                 return s;
             });
-    
+
     public static final StandardBundlerParam<Boolean> OFFLINE_ALLOWED = new StandardBundlerParam<>(
             I18N.getString("param.offline-allowed.name"),
             I18N.getString("param.offline-allowed.description"),
@@ -172,7 +172,7 @@ public class JNLPBundler extends AbstractBundler {
             Boolean.class,
             p -> true,
             (s, p) -> Boolean.valueOf(s));
-    
+
     public static final StandardBundlerParam<Boolean> ALL_PERMISSIONS = new StandardBundlerParam<>(
             I18N.getString("param.all-permissions.name"),
             I18N.getString("param.all-permissions.description"),
@@ -180,7 +180,7 @@ public class JNLPBundler extends AbstractBundler {
             Boolean.class,
             p -> false,
             (s, p) -> Boolean.valueOf(s));
-    
+
     public static final StandardBundlerParam<Integer> WIDTH = new StandardBundlerParam<>(
             I18N.getString("param.width.name"),
             I18N.getString("param.width.description"),
@@ -188,7 +188,7 @@ public class JNLPBundler extends AbstractBundler {
             Integer.class,
             p -> 0,
             (s, p) -> Integer.parseInt(s));
-    
+
     public static final StandardBundlerParam<Integer> HEIGHT = new StandardBundlerParam<>(
             I18N.getString("param.height.name"),
             I18N.getString("param.height.description"),
@@ -196,7 +196,7 @@ public class JNLPBundler extends AbstractBundler {
             Integer.class,
             p -> 0,
             (s, p) -> Integer.parseInt(s));
-    
+
     public static final StandardBundlerParam<String> EMBEDDED_WIDTH = new StandardBundlerParam<>(
             I18N.getString("param.embedded-width.name"),
             I18N.getString("param.embedded-width.description"),
@@ -204,7 +204,7 @@ public class JNLPBundler extends AbstractBundler {
             String.class,
             p -> Integer.toString(WIDTH.fetchFrom(p)),
             (s, p) -> s);
-    
+
     public static final StandardBundlerParam<String> EMBEDDED_HEIGHT = new StandardBundlerParam<>(
             I18N.getString("param.embedded-height.name"),
             I18N.getString("param.embedded-height.description"),
@@ -212,7 +212,7 @@ public class JNLPBundler extends AbstractBundler {
             String.class,
             p -> Integer.toString(HEIGHT.fetchFrom(p)),
             (s, p) -> s);
-    
+
     public static final StandardBundlerParam<String> FALLBACK_APP = new StandardBundlerParam<>(
             I18N.getString("param.fallback-app.name"),
             I18N.getString("param.fallback-app.description"),
@@ -220,7 +220,7 @@ public class JNLPBundler extends AbstractBundler {
             String.class,
             p -> null,
             (s, p) -> s);
-    
+
     public static final StandardBundlerParam<String> UPDATE_MODE = new StandardBundlerParam<>(
             I18N.getString("param.update-mode.name"),
             I18N.getString("param.update-mode.description"),
@@ -228,7 +228,7 @@ public class JNLPBundler extends AbstractBundler {
             String.class,
             p -> "background",
             (s, p) -> s);
-    
+
     public static final StandardBundlerParam<String> FX_PLATFORM = new StandardBundlerParam<>(
             I18N.getString("param.fx-platform.name"),
             I18N.getString("param.fx-platform.description"),
@@ -236,7 +236,7 @@ public class JNLPBundler extends AbstractBundler {
             String.class,
             p -> "1.8+",
             (s, p) -> s);
-    
+
     public static final StandardBundlerParam<String> JRE_PLATFORM = new StandardBundlerParam<>(
             I18N.getString("param.jre-platform.name"),
             I18N.getString("param.jre-platform.description"),
@@ -244,7 +244,7 @@ public class JNLPBundler extends AbstractBundler {
             String.class,
             p -> "1.8+",
             (s, p) -> s);
-    
+
     @SuppressWarnings("unchecked")
     public static final StandardBundlerParam<List<Map<String, ? super Object>>> ICONS = new StandardBundlerParam<>(
             I18N.getString("param.icons.name"),
@@ -540,8 +540,8 @@ public class JNLPBundler extends AbstractBundler {
             //In case of FX app we will have one JNLP and one HTML
             //In case of Swing with FX we will have 2 JNLP files and one HTML
             String outfile = OUT_FILE.fetchFrom(params);
-            boolean isSwingApp = SWING_APP.fetchFrom(params); 
-            
+            boolean isSwingApp = SWING_APP.fetchFrom(params);
+
             String jnlp_filename_webstart = outfile + ".jnlp";
             String jnlp_filename_browser
                     = isSwingApp ?
@@ -552,7 +552,7 @@ public class JNLPBundler extends AbstractBundler {
             outputParentDir.mkdirs();
 
             boolean includeDT = INCLUDE_DT.fetchFrom(params);
-            
+
             if (includeDT && !extractWebFiles(outputParentDir)) {
                 throw new PackagerException("ERR_NoEmbeddedDT");
             }
@@ -588,7 +588,7 @@ public class JNLPBundler extends AbstractBundler {
             //we do not need html if this is component and not main app
             boolean isExtension = EXTENSION.fetchFrom(params);
             if (!isExtension) {
-                // even though the html is unused if templateOn, 
+                // even though the html is unused if templateOn,
                 // the templateStrings is updated as a side effect.
                 ByteArrayOutputStream html_bos =
                         new ByteArrayOutputStream();
@@ -629,7 +629,7 @@ public class JNLPBundler extends AbstractBundler {
             ex.printStackTrace();
             Log.debug(ex);
             return null;
-        }            
+        }
     }
 
     private static void copyFiles(RelativeFileSet resources, File outdir) throws IOException, PackagerException {
@@ -699,7 +699,7 @@ public class JNLPBundler extends AbstractBundler {
                 xout.writeAttribute("codebase", codebase);
             }
             xout.writeAttribute("href", jnlp_filename);
-            
+
             xout.writeStartElement("information");
 
             xout.writeStartElement("title");
@@ -709,7 +709,7 @@ public class JNLPBundler extends AbstractBundler {
                 xout.writeCData("Sample JavaFX Application");
             }
             xout.writeEndElement();
-            
+
             xout.writeStartElement("vendor");
             if (vendor != null) {
                 xout.writeCharacters(vendor);
@@ -717,7 +717,7 @@ public class JNLPBundler extends AbstractBundler {
                 xout.writeCharacters("Unknown vendor");
             }
             xout.writeEndElement();
-            
+
             xout.writeStartElement("description");
             if (description != null) {
                 xout.writeCharacters(description);
@@ -731,15 +731,15 @@ public class JNLPBundler extends AbstractBundler {
                 String width =  ICONS_WIDTH.fetchFrom(iconInfo);
                 String height = ICONS_HEIGHT.fetchFrom(iconInfo);
                 String depth =  ICONS_DEPTH.fetchFrom(iconInfo);
-                
+
                 xout.writeStartElement("icon");
-                
+
                 xout.writeAttribute("href", href);
                 if (kind != null)   xout.writeAttribute("kind",   kind);
                 if (width != null)  xout.writeAttribute("width",  width);
                 if (height != null) xout.writeAttribute("height", height);
                 if (depth != null)  xout.writeAttribute("depth",  depth);
-                
+
                 xout.writeEndElement();
             }
 
@@ -766,9 +766,9 @@ public class JNLPBundler extends AbstractBundler {
                 }
                 xout.writeEndElement();
             }
-            
+
             //TODO file associations
-            
+
             xout.writeEndElement(); // information
 
             boolean allPermissions = ALL_PERMISSIONS.fetchFrom(params);
@@ -817,16 +817,16 @@ public class JNLPBundler extends AbstractBundler {
                         ((currentOS == null && rfs.getOs() != null) ||
                                 currentOS != null && !currentOS.equals(rfs.getOs())) ||
                         ((currentArch == null && rfs.getArch() != null) ||
-                                currentArch != null && !currentArch.equals(rfs.getArch()))) 
+                                currentArch != null && !currentArch.equals(rfs.getArch())))
                 {
-    
+
                     //we do not print right a way as it may be empty block
                     // Not all resources make sense for JNLP (e.g. data or license)
                     if (needToCloseResourceTag) {
                         xout.writeEndElement();
                     }
                     needToCloseResourceTag = true;
-                    
+
                     currentOS = rfs.getOs();
                     currentArch = rfs.getArch();
                     xout.writeStartElement("resources");
@@ -834,7 +834,7 @@ public class JNLPBundler extends AbstractBundler {
                     if (currentArch != null) xout.writeAttribute("arch", currentArch);
                 }
                 for (String relativePath : rfs.getIncludedFiles()) {
-    
+
                     final File srcFile = new File(rfs.getBaseDirectory(), relativePath);
                     if (srcFile.exists() && srcFile.isFile()) {
                         RelativeFileSet.Type type = rfs.getType();
@@ -888,12 +888,12 @@ public class JNLPBundler extends AbstractBundler {
                 if (height == null) {
                     height = 0;
                 }
-    
+
                 String applicationClass = MAIN_CLASS.fetchFrom(params);
                 String preloader = PRELOADER_CLASS.fetchFrom(params);
                 Map<String, String> appParams = APP_PARAMS.fetchFrom(params);
                 List<String> arguments = ARGUMENTS.fetchFrom(params);
-    
+
                 String appName = APP_NAME.fetchFrom(params);
                 if (m == Mode.APPLET) {
                     xout.writeStartDocument("applet-desc");
@@ -906,7 +906,7 @@ public class JNLPBundler extends AbstractBundler {
                     xout.writeAttribute("name", "requiredFXVersion");
                     xout.writeAttribute("value", FX_PLATFORM.fetchFrom(params));
                     xout.writeEndElement(); // param
-    
+
                     for (Map.Entry<String, String> appParamEntry : appParams.entrySet()) {
                         xout.writeStartElement("param");
                         xout.writeAttribute("name", appParamEntry.getKey());
@@ -944,7 +944,7 @@ public class JNLPBundler extends AbstractBundler {
 
                         xout.writeEndElement(); // applet-desc
                     }
-    
+
                     xout.writeStartElement("jfx", "javafx-desc", JFX_NS_URI);
                     xout.writeAttribute("width", Integer.toString(width));
                     xout.writeAttribute("height", Integer.toString(height));
@@ -953,7 +953,7 @@ public class JNLPBundler extends AbstractBundler {
                     if (preloader != null) {
                         xout.writeAttribute("preloader-class", preloader);
                     }
-                    
+
                     if (appParams != null) {
                         for (Map.Entry<String, String> appParamEntry : appParams.entrySet()) {
                             xout.writeStartElement("param");
@@ -971,16 +971,16 @@ public class JNLPBundler extends AbstractBundler {
                             xout.writeEndElement(); // argument
                         }
                     }
-                    
+
                     xout.writeEndElement(); //javafx-desc
                 }
             }
-            
+
             xout.writeEndElement(); // jnlp
 
             // now pretty print
             String s = baos.toString();
-            out.println(xmlPrettyPrint(s));            
+            out.println(xmlPrettyPrint(s));
         } catch (XMLStreamException | TransformerException e) {
             e.printStackTrace();
         }
@@ -1005,7 +1005,7 @@ public class JNLPBundler extends AbstractBundler {
             l.add(name + " : '" + value.replaceAll("(['\"\\\\])", "\\\\$1") + "'");
         } else {
             l.add(name + " : " + value);
-            
+
         }
     }
 
@@ -1067,14 +1067,14 @@ public class JNLPBundler extends AbstractBundler {
             String dtURL = includeDT ? EMBEDDED_DT : PUBLIC_DT;
             if (templateStrings != null) {
                 templateStrings.put(TemplatePlaceholders.SCRIPT_URL, dtURL);
-                
+
                 ByteArrayOutputStream baos2 = new ByteArrayOutputStream();
                 XMLStreamWriter xo2 = xmlOutputFactory.createXMLStreamWriter(baos2, "utf-8");
                 xo2.writeStartElement("SCRIPT");
                 xo2.writeAttribute("src", dtURL);
                 xo2.writeEndElement();
                 xo2.close();
-                templateStrings.put(TemplatePlaceholders.SCRIPT_CODE, baos.toString());
+                templateStrings.put(TemplatePlaceholders.SCRIPT_CODE, baos2.toString());
             }
             xout.writeStartElement("SCRIPT");
             xout.writeAttribute("src", dtURL);
@@ -1205,7 +1205,7 @@ public class JNLPBundler extends AbstractBundler {
             writeEmbeddedDynamic(out_embed_dynamic, embedFuncName, xout);
 
             xout.writeEndElement(); //head
-            
+
             xout.writeStartElement("body");
             xout.writeStartElement("h2");
             xout.writeCharacters("Test page for ");
@@ -1213,30 +1213,30 @@ public class JNLPBundler extends AbstractBundler {
             xout.writeCharacters(APP_NAME.fetchFrom(params));
             xout.writeEndElement(); // b
             xout.writeEndElement(); // h2
-            
+
             xout.writeStartElement("b");
             xout.writeCharacters("Webstart:");
             xout.writeEndElement();
-            
+
             xout.writeStartElement("a");
             xout.writeAttribute("href", jnlpfile_webstart);
             xout.writeAttribute("onclick", "return launchApplication('" + jnlpfile_webstart + "');");
             xout.writeCharacters("click to launch this app as webstart");
             xout.writeEndElement(); // a
-            
+
             xout.writeEmptyElement("br");
             xout.writeEmptyElement("hr");
             xout.writeEmptyElement("br");
             xout.writeCharacters("\n");
             xout.writeComment(" Applet will be inserted here ");
-            
+
             xout.writeStartElement("div");
             xout.writeAttribute("id", placeholder);
             xout.writeEndElement(); //div
             xout.writeEndElement(); // body
             xout.writeEndElement(); // html
             xout.close();
-            
+
             theOut.print(xmlPrettyPrint(baos.toString()));
 
         } catch (XMLStreamException | TransformerException e) {
