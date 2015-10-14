@@ -67,6 +67,8 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
 
+import static javafx.scene.input.KeyCode.*;
+
 import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -121,6 +123,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
 
     private boolean pendingDismiss = false;
 
+    private boolean altKeyPressed = false;
 
 
     /***************************************************************************
@@ -361,11 +364,23 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         Utils.executeOnceWhenPropertyIsNonNull(control.sceneProperty(), (Scene scene) -> {
             scene.getAccelerators().put(acceleratorKeyCombo, firstMenuRunnable);
 
-            // put focus on the first menu when the alt key is pressed
+            // Clear menu selection when ALT is pressed by itself
             scene.addEventHandler(KeyEvent.KEY_PRESSED, e -> {
-                if (e.isAltDown() && !e.isConsumed()) {
+                altKeyPressed = false;
+                if (e.getCode() == ALT && !e.isConsumed()) {
+                    if (focusedMenuIndex == -1) {
+                        altKeyPressed = true;
+                    }
+                    unSelectMenus();
+                }
+            });
+            // Put focus on the first menu when ALT is released
+            // directly after being pressed by itself
+            scene.addEventHandler(KeyEvent.KEY_RELEASED, e -> {
+                if (altKeyPressed && e.getCode() == ALT && !e.isConsumed()) {
                     firstMenuRunnable.run();
                 }
+                altKeyPressed = false;
             });
         });
 
