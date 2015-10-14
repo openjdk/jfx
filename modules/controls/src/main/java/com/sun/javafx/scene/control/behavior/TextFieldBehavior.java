@@ -192,8 +192,9 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
         TextField textField = getNode();
         if (textField.getTextFormatter() != null) {
             textField.cancelEdit();
+            event.consume();
         } else {
-            forwardToParent(event);
+            super.cancelEdit(event);
         }
     }
 
