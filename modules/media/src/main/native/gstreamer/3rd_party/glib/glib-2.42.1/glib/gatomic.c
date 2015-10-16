@@ -740,6 +740,12 @@ gint
                     gint           val)
 {
   gint oldval;
+  
+#ifdef GSTREAMER_LITE
+  if (atomic == NULL) {
+    return;
+  }
+#endif // GSTREAMER_LITE
 
   pthread_mutex_lock (&g_atomic_lock);
   oldval = *atomic;
@@ -754,6 +760,12 @@ guint
                     guint           val)
 {
   guint oldval;
+
+#ifdef GSTREAMER_LITE
+  if (atomic == NULL) {
+    return;
+  }
+#endif // GSTREAMER_LITE
 
   pthread_mutex_lock (&g_atomic_lock);
   oldval = *atomic;

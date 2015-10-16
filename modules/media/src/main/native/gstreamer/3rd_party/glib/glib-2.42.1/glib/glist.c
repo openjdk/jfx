@@ -256,6 +256,11 @@ g_list_append (GList    *list,
   GList *last;
   
   new_list = _g_list_alloc ();
+#ifdef GSTREAMER_LITE
+  if (new_list == NULL) {
+    return NULL;
+  }
+#endif // GSTREAMER_LITE
   new_list->data = data;
   new_list->next = NULL;
   
@@ -306,6 +311,11 @@ g_list_prepend (GList    *list,
   GList *new_list;
   
   new_list = _g_list_alloc ();
+#ifdef GSTREAMER_LITE
+  if (new_list == NULL) {
+    return NULL;
+  }
+#endif // GSTREAMER_LITE
   new_list->data = data;
   new_list->next = list;
   
@@ -352,6 +362,11 @@ g_list_insert (GList    *list,
     return g_list_append (list, data);
 
   new_list = _g_list_alloc ();
+#ifdef GSTREAMER_LITE
+  if (new_list == NULL) {
+    return NULL;
+  }
+#endif // GSTREAMER_LITE
   new_list->data = data;
   new_list->prev = tmp_list->prev;
   tmp_list->prev->next = new_list;
@@ -389,6 +404,11 @@ g_list_insert_before (GList    *list,
       GList *node;
 
       node = _g_list_alloc ();
+#ifdef GSTREAMER_LITE
+      if (node == NULL) {
+        return NULL;
+      }
+#endif // GSTREAMER_LITE
       node->data = data;
       node->prev = sibling->prev;
       node->next = sibling;
@@ -413,6 +433,11 @@ g_list_insert_before (GList    *list,
         last = last->next;
 
       last->next = _g_list_alloc ();
+#ifdef GSTREAMER_LITE
+      if (last->next == NULL) {
+        return NULL;
+      }
+#endif // GSTREAMER_LITE
       last->next->data = data;
       last->next->prev = last;
       last->next->next = NULL;
