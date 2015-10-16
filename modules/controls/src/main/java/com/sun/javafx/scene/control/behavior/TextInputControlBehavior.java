@@ -128,6 +128,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         final Predicate<KeyEvent> validOnWindows = e -> !PlatformUtil.isWindows();
         final Predicate<KeyEvent> validOnLinux = e -> !PlatformUtil.isLinux();
 
+        KeyMapping cancelEditMapping;
         KeyMapping consumeMostPressedEventsMapping;
 
         // create a child input map for mappings which are applicable on all
@@ -180,7 +181,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
                 new KeyMapping(new KeyBinding(TAB).ctrl().shift(), FocusTraversalInputMap::traversePrevious),
 
                 // The following keys are forwarded to the parent container
-                new KeyMapping(ESCAPE, this::cancelEdit),
+                cancelEditMapping = new KeyMapping(ESCAPE, this::cancelEdit),
 
                 keyMapping(new KeyBinding(Z).shortcut(), e -> undo()),
 
@@ -216,6 +217,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
                 }
         );
 
+        cancelEditMapping.setAutoConsume(false);
         consumeMostPressedEventsMapping.setAutoConsume(false);
 
         // mac os specific mappings
@@ -610,7 +612,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     }
 
     protected void fire(KeyEvent event) { } // TODO move to TextFieldBehavior
-    protected void cancelEdit(KeyEvent event) { forwardToParent(event);}
+    protected void cancelEdit(KeyEvent event) { forwardToParent(event);} // not autoconsumed
 
     protected void forwardToParent(KeyEvent event) {
         if (getNode().getParent() != null) {

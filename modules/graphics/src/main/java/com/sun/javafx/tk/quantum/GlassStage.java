@@ -46,38 +46,41 @@ abstract class GlassStage implements TKStage {
 
     // Need to access via reflection since the SharedSecrets class moved to
     // a new package in JDK 9 and we still build and test with JDK 8u.
-    private static final Object javaSecurityAccess;
-    private static final Method m_doIntersectionPrivilege;
+    private static Object javaSecurityAccess = null;
+    private static Method m_doIntersectionPrivilege = null;
 
     static {
-        Class cls_SharedSecrets;
-        Class cls_JavaSecurityAccess;
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            Class cls_SharedSecrets;
+            Class cls_JavaSecurityAccess;
 
-        try {
             try {
-                // First look for these classes in their new location
-                cls_SharedSecrets = Class.forName("jdk.internal.misc.SharedSecrets");
-                cls_JavaSecurityAccess = Class.forName("jdk.internal.misc.JavaSecurityAccess");
-            } catch (ClassNotFoundException ex) {
-                // As a fallback, look for these classes in their old location
-                cls_SharedSecrets = Class.forName("sun.misc.SharedSecrets");
-                cls_JavaSecurityAccess = Class.forName("sun.misc.JavaSecurityAccess");
+                try {
+                    // First look for these classes in their new location
+                    cls_SharedSecrets = Class.forName("jdk.internal.misc.SharedSecrets");
+                    cls_JavaSecurityAccess = Class.forName("jdk.internal.misc.JavaSecurityAccess");
+                } catch (ClassNotFoundException ex) {
+                    // As a fallback, look for these classes in their old location
+                    cls_SharedSecrets = Class.forName("sun.misc.SharedSecrets");
+                    cls_JavaSecurityAccess = Class.forName("sun.misc.JavaSecurityAccess");
+                }
+
+                // JavaSecurityAccess jsa = SharedSecrets.getJavaSecurityAccess();
+                Method m_getJavaSecurityAccess = cls_SharedSecrets.getMethod("getJavaSecurityAccess",
+                        new Class[0]);
+                javaSecurityAccess = m_getJavaSecurityAccess.invoke(null);
+                m_doIntersectionPrivilege = cls_JavaSecurityAccess.getMethod("doIntersectionPrivilege",
+                        PrivilegedAction.class, AccessControlContext.class, AccessControlContext.class);
+
+            } catch (ClassNotFoundException
+                    | NoSuchMethodException
+                    | IllegalAccessException
+                    | InvocationTargetException ex)
+            {
+                throw new SecurityException(ex);
             }
-
-            // JavaSecurityAccess jsa = SharedSecrets.getJavaSecurityAccess();
-            Method m_getJavaSecurityAccess = cls_SharedSecrets.getMethod("getJavaSecurityAccess",
-                    new Class[0]);
-            javaSecurityAccess = m_getJavaSecurityAccess.invoke(null);
-            m_doIntersectionPrivilege = cls_JavaSecurityAccess.getMethod("doIntersectionPrivilege",
-                    PrivilegedAction.class, AccessControlContext.class, AccessControlContext.class);
-
-        } catch (ClassNotFoundException
-                | NoSuchMethodException
-                | IllegalAccessException
-                | InvocationTargetException ex)
-        {
-            throw new SecurityException(ex);
-        }
+            return null;
+        });
     }
 
     // A list of all GlassStage objects regardless of visibility.
