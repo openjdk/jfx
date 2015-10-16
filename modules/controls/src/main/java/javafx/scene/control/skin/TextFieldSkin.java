@@ -642,7 +642,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
         }
 
         if (SHOW_HANDLES) {
-            handleGroup.setLayoutX(x + textTranslateX.get());
+            handleGroup.setLayoutX(x + caretWidth / 2);
             handleGroup.setLayoutY(y);
 
             // Resize handles for caret and anchor.
@@ -878,7 +878,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
                                         caretWidth / 2));
         }
         if (SHOW_HANDLES) {
-            caretHandle.setLayoutX(caretX - caretHandle.getWidth() / 2 + 1);
+            caretHandle.setLayoutX(caretX - caretHandle.getWidth() / 2);
         }
     }
 
