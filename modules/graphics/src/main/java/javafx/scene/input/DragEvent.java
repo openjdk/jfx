@@ -362,6 +362,7 @@ public final class DragEvent extends InputEvent {
                 || eventType == DragEvent.DRAG_DONE) {
             state.accepted = transferMode != null;
             state.acceptedTrasferMode = transferMode;
+            state.acceptingObject = state.accepted ? source : null;
         }
 
         this.pickResult = pickResult != null ? pickResult : new PickResult(
