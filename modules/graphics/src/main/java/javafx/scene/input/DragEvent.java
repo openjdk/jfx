@@ -361,7 +361,7 @@ public final class DragEvent extends InputEvent {
         if (eventType == DragEvent.DRAG_DROPPED
                 || eventType == DragEvent.DRAG_DONE) {
             state.accepted = transferMode != null;
-            state.acceptedTrasferMode = transferMode;
+            state.acceptedTransferMode = transferMode;
             state.acceptingObject = state.accepted ? source : null;
         }
 
@@ -629,7 +629,7 @@ public final class DragEvent extends InputEvent {
      * @return transfer mode accepted by potential target.
      */
     public final TransferMode getAcceptedTransferMode() {
-        return state.acceptedTrasferMode;
+        return state.acceptedTransferMode;
     }
 
     /**
@@ -715,7 +715,7 @@ public final class DragEvent extends InputEvent {
         }
 
         state.accepted = tm != null;
-        state.acceptedTrasferMode = tm;
+        state.acceptedTransferMode = tm;
         state.acceptingObject = state.accepted ? source : null;
     }
 
@@ -770,7 +770,7 @@ public final class DragEvent extends InputEvent {
         /**
          * Transfer mode accepted by the potential gesture target.
          */
-        TransferMode acceptedTrasferMode = null;
+        TransferMode acceptedTransferMode = null;
 
         /**
          * Object that accepted this event.
