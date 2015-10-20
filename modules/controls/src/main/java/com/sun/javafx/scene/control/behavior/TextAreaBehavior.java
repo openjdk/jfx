@@ -430,7 +430,8 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
 
         if (contextMenu.isShowing()) {
             contextMenu.hide();
-        } else if (textArea.getContextMenu() == null) {
+        } else if (textArea.getContextMenu() == null &&
+                   textArea.getOnContextMenuRequested() == null) {
             double screenX = e.getScreenX();
             double screenY = e.getScreenY();
             double sceneX = e.getSceneX();

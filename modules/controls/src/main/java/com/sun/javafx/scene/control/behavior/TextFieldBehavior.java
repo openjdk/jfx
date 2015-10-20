@@ -342,7 +342,8 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
 
         if (contextMenu.isShowing()) {
             contextMenu.hide();
-        } else if (textField.getContextMenu() == null) {
+        } else if (textField.getContextMenu() == null && 
+                   textField.getOnContextMenuRequested() == null) {
             double screenX = e.getScreenX();
             double screenY = e.getScreenY();
             double sceneX = e.getSceneX();
