@@ -134,7 +134,8 @@ CPP_SOURCES = \
         Utils/LowLevelPerf.cpp \
         Utils/win32/WinCriticalSection.cpp  \
         Utils/win32/WinDllMain.cpp \
-        Utils/win32/WinThread.cpp
+        Utils/win32/WinThread.cpp \
+        Utils/win32/WinExceptionHandler.cpp
 
 C_SOURCES = Utils/ColorConverter.c
 
