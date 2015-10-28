@@ -883,11 +883,13 @@ public class PaginationSkin extends SkinBase<Pagination> {
 
         private void initializeNavigationHandlers() {
             leftArrowButton.setOnAction(arg0 -> {
+                getNode().requestFocus();
                 selectPrevious();
                 requestLayout();
             });
 
             rightArrowButton.setOnAction(arg0 -> {
+                getNode().requestFocus();
                 selectNext();
                 requestLayout();
             });
@@ -1286,15 +1288,14 @@ public class PaginationSkin extends SkinBase<Pagination> {
 
             getSkinnable().getStyleClass().addListener(updateSkinIndicatorType);
 
-            setOnAction(new EventHandler<ActionEvent>() {
-                @Override public void handle(ActionEvent arg0) {
+            setOnAction(arg0 -> {
+                    getNode().requestFocus();
                     int selected = getCurrentPageIndex();
                     // We do not need to update the selection if it has not changed.
                     if (selected != IndicatorButton.this.pageNumber) {
                         pagination.setCurrentPageIndex(IndicatorButton.this.pageNumber);
                         requestLayout();
                     }
-                }
             });
 
             tooltipVisibleProperty().addListener(updateTooltipVisibility);
