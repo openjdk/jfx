@@ -3790,6 +3790,9 @@ Only the properties with values that are different from the TextBox are specifie
 }
 
 .pagination > .pagination-control > .control-box > .bullet-button:selected {   
+    -fx-base: -fx-selection-bar-text;
+}
+.pagination:focused > .pagination-control > .control-box > .bullet-button:selected {   
     -fx-base: -fx-accent;
 }
 
@@ -3805,6 +3808,9 @@ Only the properties with values that are different from the TextBox are specifie
 }
 
 .pagination > .pagination-control > .control-box > .number-button:selected {   
+    -fx-base: -fx-selection-bar-text;
+}
+.pagination:focused > .pagination-control > .control-box > .number-button:selected {   
     -fx-base: -fx-accent;
 }
 .pagination > .pagination-control > .page-information {   
