@@ -133,7 +133,6 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
 //    }
 //
     private TextAreaSkin skin;
-    private ContextMenu contextMenu;
     private TwoLevelFocusBehavior tlFocus;
 
     /**************************************************************************
@@ -143,7 +142,6 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
     public TextAreaBehavior(final TextArea c) {
         super(c);
 
-        contextMenu = new ContextMenu();
         if (Properties.IS_TOUCH_SUPPORTED) {
             contextMenu.getStyleClass().add("text-input-context-menu");
         }
@@ -461,7 +459,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
                 }
             }
 
-            populateContextMenu(contextMenu);
+            populateContextMenu();
             double menuWidth = contextMenu.prefWidth(-1);
             double menuX = screenX - (Properties.IS_TOUCH_SUPPORTED ? (menuWidth / 2) : 0);
             Screen currentScreen = com.sun.javafx.util.Utils.getScreenForPoint(screenX, 0);
