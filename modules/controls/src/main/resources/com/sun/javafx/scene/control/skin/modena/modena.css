@@ -2190,6 +2190,9 @@ is being used to size a border should also be in pixels.
    -fx-background-insets: 0, 5,  6,  7;
 }
 .pagination > .pagination-control > .control-box > .bullet-button:selected {   
+    -fx-base: -fx-selection-bar-non-focused;
+}
+.pagination:focused > .pagination-control > .control-box > .bullet-button:selected {   
     -fx-base: -fx-accent;
 }
 .pagination.bullet > .pagination-control > .control-box {
@@ -2212,6 +2215,9 @@ is being used to size a border should also be in pixels.
     -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
 }
 .pagination > .pagination-control > .control-box > .number-button:selected {   
+    -fx-base: -fx-selection-bar-non-focused;
+}
+.pagination:focused > .pagination-control > .control-box > .number-button:selected {   
     -fx-base: -fx-accent;
 }
 .pagination > .pagination-control > .page-information {   

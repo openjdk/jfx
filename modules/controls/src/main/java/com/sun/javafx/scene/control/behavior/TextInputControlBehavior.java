@@ -88,6 +88,8 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
 
     final T textInputControl;
 
+    protected ContextMenu contextMenu;
+
     /**
      * Used to keep track of the most recent key event. This is used when
      * handling InputCharacter actions.
@@ -266,7 +268,9 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         addKeyPadMappings(inputMap);
 
         textInputControl.textProperty().addListener(textListener);
-    }
+
+        contextMenu = new ContextMenu();
+}
 
     @Override public InputMap<T> getInputMap() {
         return inputMap;
@@ -580,6 +584,16 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         } else {
             textInputControl.selectEndOfNextWord();
         }
+        if (SHOW_HANDLES && contextMenu.isShowing()) {
+            populateContextMenu();
+        }
+    }
+
+    protected void selectAll() {
+        getNode().selectAll();
+        if (SHOW_HANDLES && contextMenu.isShowing()) {
+            populateContextMenu();
+        }
     }
 
     protected void previousWord() {
@@ -645,11 +659,12 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         return editing;
     }
 
-    protected void populateContextMenu(ContextMenu contextMenu) {
+    protected void populateContextMenu() {
         TextInputControl textInputControl = getNode();
         boolean editable = textInputControl.isEditable();
         boolean hasText = (textInputControl.getLength() > 0);
         boolean hasSelection = (textInputControl.getSelection().getLength() > 0);
+        boolean allSelected = (textInputControl.getSelection().getLength() == textInputControl.getLength());
         boolean maskText = (textInputControl instanceof PasswordField); // (maskText("A") != "A");
         ObservableList<MenuItem> items = contextMenu.getItems();
 
@@ -664,8 +679,8 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             if (editable && Clipboard.getSystemClipboard().hasString()) {
                 items.add(pasteMI);
             }
-            if (hasText) {
-                if (!hasSelection) {
+            if (hasText && !allSelected) {
+                if (!hasSelection && !(textInputControl instanceof PasswordField)) {
                     items.add(selectWordMI);
                 }
                 items.add(selectAllMI);
@@ -702,7 +717,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     private final MenuItem pasteMI  = new ContextMenuItem("Paste", e -> paste());
     private final MenuItem deleteMI = new ContextMenuItem("DeleteSelection", e -> deleteSelection());
     private final MenuItem selectWordMI = new ContextMenuItem("SelectWord", e -> selectWord());
-    private final MenuItem selectAllMI = new ContextMenuItem("SelectAll", e -> getNode().selectAll());
+    private final MenuItem selectAllMI = new ContextMenuItem("SelectAll", e -> selectAll());
     private final MenuItem separatorMI = new SeparatorMenuItem();
 
 }
