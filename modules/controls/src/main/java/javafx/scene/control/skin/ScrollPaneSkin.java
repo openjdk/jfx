@@ -654,7 +654,9 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
         vsb.setOrientation(Orientation.VERTICAL);
 
         EventHandler<MouseEvent> barHandler = ev -> {
-            getSkinnable().requestFocus();
+            if (getSkinnable().isFocusTraversable()) {
+                getSkinnable().requestFocus();
+            }
         };
 
         hsb.addEventFilter(MouseEvent.MOUSE_PRESSED, barHandler);
