@@ -7,6 +7,7 @@
 #include "TestRunner.h"
 #include "EventSender.h"
 #include "WorkQueue.h"
+#include "WebCore/testing/js/WebCoreTestSupport.h"
 
 #include <wtf/RefPtr.h>
 #include <API/JavaScript.h>
@@ -40,20 +41,21 @@ JNIEXPORT void JNICALL Java_com_sun_javafx_webkit_drt_DumpRenderTree_didClearWin
     ASSERT(pContext);
     ASSERT(pWindowObject);
     ASSERT(eventSender);
-    
+
     JSGlobalContextRef context =
             static_cast<JSGlobalContextRef>(jlong_to_ptr(pContext));
     JSObjectRef windowObject =
             static_cast<JSObjectRef>(jlong_to_ptr(pWindowObject));
-    
+
     JSValueRef exception = 0;
-    
+
     gTestRunner->makeWindowObject(context, windowObject, &exception);
     ASSERT(!exception);
 
     JLObject jlEventSender(eventSender, true);
     makeEventSender(context, windowObject, jlEventSender, &exception);
     ASSERT(!exception);
+    WebCoreTestSupport::injectInternalsObject(context);
 }
 
 JNIEXPORT void JNICALL Java_com_sun_javafx_webkit_drt_DumpRenderTree_dispose
