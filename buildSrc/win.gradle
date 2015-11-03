@@ -152,35 +152,24 @@ ext.MSVCP = cygpath("${WINDOWS_VS_MSVCDIR}/redist/${IS_64 ? 'x64' : 'x86'}/Micro
 if (!file(RC).exists()) throw new GradleException("FAIL: cannot find RC: " + RC)
 if (!file(FXC).exists()) throw new GradleException("FAIL: cannot find FXC: " + FXC)
 
-// The product version passed to RC is defined as follows:
-//
-// MAJOR.MINOR.UPDATE_10.BUILD
-//
-// where:
-//
-// MAJOR = 8 (for JDK 8)
-// MINOR = 0
-// UPDATE_10 = JDK update * 10, so 8u65 --> 650
-// BUILD = build number with no leading zeros
-//
+// Product version variables passed to RC:
+def rcVer = "$RELEASE_VERSION"
 def rcVerMajor = Integer.parseInt(jfxReleaseMajorVersion)
 def rcVerMinor = Integer.parseInt(jfxReleaseMinorVersion)
-def rcVerMicro = Integer.parseInt(jfxReleaseMicroVersion) * 10
-def rcVerSubMicro = Integer.parseInt(PROMOTED_BUILD_NUMBER)
-
-def rcVer = "${rcVerMajor}.${rcVerMinor}.${rcVerMicro}.${rcVerSubMicro}"
-def rcVerComma = "${rcVerMajor},${rcVerMinor},${rcVerMicro},${rcVerSubMicro}"
-
-def rcVerProduct = "${rcVerMajor}"
+def rcVerSecurity = Integer.parseInt(jfxReleaseSecurityVersion)
+def rcVerPatch = Integer.parseInt(jfxReleasePatchVersion)
+def rcVerFile = "${rcVerMajor},${rcVerMinor},${rcVerSecurity},${rcVerPatch}"
+def rcVerBuild = "$RELEASE_VERSION_LONG"
+def rcVerCopyrYear = "${Calendar.getInstance().get(Calendar.YEAR)}"
 
 def rcFlags = [
     "/d", "\"JFX_COMPANY=${COMPANY_NAME}\"",
     "/d", "\"JFX_COMPONENT=${PRODUCT_NAME} ${PLATFORM_NAME} binary\"",
-    "/d", "\"JFX_NAME=${PRODUCT_NAME} ${PLATFORM_NAME} ${rcVerProduct}\"",
+    "/d", "\"JFX_NAME=${PRODUCT_NAME} ${PLATFORM_NAME} ${rcVerMajor}\"",
     "/d", "\"JFX_VER=${rcVer}\"",
-    "/d", "\"JFX_BUILD_ID=${RAW_VERSION}-${RELEASE_MILESTONE}-b${PROMOTED_BUILD_NUMBER}\"",
-    "/d", "\"JFX_COPYRIGHT=Copyright \u00A9 ${Calendar.getInstance().get(Calendar.YEAR)}\"",
-    "/d", "\"JFX_FVER=${rcVerComma}\"",
+    "/d", "\"JFX_BUILD_ID=${rcVerBuild}\"",
+    "/d", "\"JFX_COPYRIGHT=Copyright \u00A9 ${rcVerCopyrYear}\"",
+    "/d", "\"JFX_FVER=${rcVerFile}\"",
     "/d", "\"JFX_FTYPE=0x2L\"",
     "/nologo"
 ];

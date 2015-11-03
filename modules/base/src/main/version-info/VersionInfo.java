@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,13 +37,18 @@ package com.sun.javafx.runtime;
  * System Properties at the loading of the JavaFX Toolkit. The JavaFX properties
  * are javafx.version and javafx.runtime.version. Their formats follow the 
  * specification of java.version and java.runtime.version respectively.
- * See http://java.sun.com/j2se/versioning_naming.html for details.
+ * See http://openjdk.java.net/jeps/223 for details.
  * 
- * For example, a beta release build of JavaFX 2.0 build number 26 will contain 
+ * For example, an early access build of JavaFX 9 build 76 will contain 
  * the following properties:
  * 
- * javafx.version = 2.0.0-beta
- * javafx.runtime.version = 2.0.0-beta-b26
+ * javafx.version = 9-ea
+ * javafx.runtime.version = 9-ea+76
+ * 
+ * An fcs build of JavaFX 9 build 135 will contain the following properties:
+ * 
+ * javafx.version = 9
+ * javafx.runtime.version = 9+135
  * 
  * 2. It provides methods to access Hudson build information and timestamp.
  * These methods can be used to uniquely identify a particular build
@@ -68,12 +73,11 @@ package com.sun.javafx.runtime;
  * 3. To uniquely identify a build that isn't generated on Hudson, such as a
  * local build on a developer machine. It substitutes the build number tag of
  * the javafx.runtime.version string with the build timestamp.
- * For example, a beta build of JavaFx 2.0 on a developer machine will look
+ * For example, a build of JavaFX 9 on a developer machine will look
  * something like the following:
  *
- * javafx.version = 2.0.0-beta
- * javafx.runtime.version = 2.0.0-beta (2011/04/28 22:08:04)
- *
+ * javafx.version = 9-internal
+ * javafx.runtime.version = 9-internal+0-2015-08-10_22-08-04
  * 
  * <p>
  * The tags of the form @STRING@ are populated by ant when the project is built
@@ -103,24 +107,14 @@ public class VersionInfo {
     private static final String PROMOTED_BUILD_NUMBER = "@PROMOTED_BUILD_NUMBER@";
 
     /**
-     * Product Name. Currently unused.
-     */
-    private static final String PRODUCT_NAME = "@PRODUCT_NAME@";
-
-    /**
      * Raw Version number string. (without milestone tag)
      */
-    private static final String RAW_VERSION = "@RAW_VERSION@";
+    private static final String RELEASE_VERSION = "@RELEASE_VERSION@";
 
     /**
-     * Release Milestone.
+     * Release suffix.
      */
-    private static final String RELEASE_MILESTONE = "@RELEASE_MILESTONE@";
-
-    /**
-     * Release Name. Currently unused.
-     */
-    private static final String RELEASE_NAME = "@RELEASE_NAME@";
+    private static final String RELEASE_SUFFIX = "@RELEASE_SUFFIX@";
 
     /**
      * The composite version string. This is composed in the static
@@ -136,22 +130,19 @@ public class VersionInfo {
 
     // The static initializer composes the VERSION and RUNTIME_VERSION strings
     static {
-        String tmpVersion = RAW_VERSION;
+        String tmpVersion = RELEASE_VERSION;
 
         // Construct the VERSION string adding milestone information,
         // such as beta, if present.
-        // Note: RELEASE_MILESTONE is expected to be empty if it is set to "fcs"
-        if (getReleaseMilestone().length() > 0) {
-            tmpVersion += "-" + RELEASE_MILESTONE;
-        }
+        // Note: RELEASE_SUFFIX is expected to be empty for fcs versions
+        tmpVersion += RELEASE_SUFFIX;
         VERSION = tmpVersion;
 
         // Append the RUNTIME_VERSION string that follow the VERSION string
-        if (getHudsonJobName().length() > 0) {
-            tmpVersion += "-b" + PROMOTED_BUILD_NUMBER;
-        } else {
+        tmpVersion += "+" + PROMOTED_BUILD_NUMBER;
+        if (getHudsonJobName().length() == 0) {
             // Non hudson (developer) build
-            tmpVersion += " (" + BUILD_TIMESTAMP + ")";
+            tmpVersion += "-" + BUILD_TIMESTAMP;
         }
         RUNTIME_VERSION = tmpVersion;
     }
@@ -161,7 +152,7 @@ public class VersionInfo {
      * The format of the value strings of javafx.version and javafx.runtime.version
      * will follow the same pattern as java.version and java.runtime.version
      * respectively.
-     * See http://java.sun.com/j2se/versioning_naming.html for details.
+     * See http://openjdk.java.net/jeps/223 for details.
      */
     public static synchronized void setupSystemProperties() {
         if (System.getProperty("javafx.version") == null) {
@@ -199,15 +190,18 @@ public class VersionInfo {
     }
 
     /**
-     * Returns the release milestone string, an empty string is return if
-     * RELEASE_MILESTONE is set to "fcs".
+     * Returns the release milestone string by stripping off the leading '-'
+     * from the RELEASE_SUFFIX if present.
+     * Note: RELEASE_SUFFIX is expected to be empty for fcs versions
+     *
      * @return the release milestone string
      */
     public static String getReleaseMilestone() {
-        if (RELEASE_MILESTONE.equals("fcs")) {
-            return "";
+        String str = RELEASE_SUFFIX;
+        if (str.startsWith("-")) {
+            str = str.substring(1);
         }
-        return RELEASE_MILESTONE;
+        return str;
     }
 
     /**
