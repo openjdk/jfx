@@ -1299,7 +1299,6 @@ project(":graphics") {
 
     dependencies {
         compile project(":base"), BUILD_SRC
-        compile name: SWT_FILE_NAME
         stubCompile group: "junit", name: "junit", version: "4.8.2",
         project(":base").sourceSets.test.output, sourceSets.main.output
         antlr3 group: "org.antlr", name: "antlr", version: "3.1.3"
