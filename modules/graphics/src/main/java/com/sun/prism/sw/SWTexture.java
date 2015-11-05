@@ -213,7 +213,7 @@ abstract class SWTexture implements Texture {
             System.out.println("IMG.scanline: " + img.getScanlineStride());
         }
         this.update(img.getPixelBuffer(), img.getPixelFormat(), dstx, dsty,
-                    0, 0, srcw, srch, img.getScanlineStride(), skipFlush);
+                    img.getMinX(), img.getMinY(), srcw, srch, img.getScanlineStride(), skipFlush);
     }
 
     @Override
