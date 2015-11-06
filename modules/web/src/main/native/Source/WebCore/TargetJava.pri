@@ -474,7 +474,7 @@ SOURCES += \
     bridge/runtime_method.cpp \
     bridge/runtime_object.cpp \
     bridge/runtime_root.cpp \
-#    testing/js/WebCoreTestSupport.cpp \
+    testing/js/WebCoreTestSupport.cpp \
     Modules/navigatorcontentutils/NavigatorContentUtils.cpp \
     Modules/proximity/DeviceProximityController.cpp \
     Modules/proximity/DeviceProximityEvent.cpp \

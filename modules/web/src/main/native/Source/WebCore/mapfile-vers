@@ -102,6 +102,7 @@ SUNWprivate_1.0 {
                _ZN3JSC14setNeverInlineEPK15OpaqueJSContextPK13OpaqueJSValue;
                _ZN3JSC19numberOfDFGCompilesEPK15OpaqueJSContextPK13OpaqueJSValue;
                _ZN3JSC17JSArrayBufferView6s_infoE;
+               _ZN18WebCoreTestSupport21injectInternalsObjectEPK15OpaqueJSContext;
                Java_com_sun_webkit_dom_AttrImpl_getNameImpl;
                Java_com_sun_webkit_dom_AttrImpl_getOwnerElementImpl;
                Java_com_sun_webkit_dom_AttrImpl_getSpecifiedImpl;
