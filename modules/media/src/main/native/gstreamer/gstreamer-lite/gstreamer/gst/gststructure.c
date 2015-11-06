@@ -196,6 +196,7 @@ gst_structure_validate_name (const gchar * name)
     return FALSE;
   }
 
+#ifndef GSTREAMER_LITE
   if (strncmp (name, "video/x-raw-", 12) == 0) {
     g_warning ("0.10-style raw video caps are being created. Should be "
         "video/x-raw,format=(string).. now.");
@@ -203,6 +204,7 @@ gst_structure_validate_name (const gchar * name)
     g_warning ("0.10-style raw audio caps are being created. Should be "
         "audio/x-raw,format=(string).. now.");
   }
+#endif // GSTREAMER_LITE
 
   return TRUE;
 }
