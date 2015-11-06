@@ -373,32 +373,43 @@ public class InputMap<N extends Node> implements EventHandler<Event> {
         // specificity, we take the child mapping over the parent mapping.
         for (int i = 0; i < getChildInputMaps().size(); i++) {
             InputMap childInputMap = getChildInputMaps().get(i);
-
-            // test if the childInputMap should be considered
-            if (testInterceptors) {
-                boolean interceptorsApplies = testInterceptor(event, childInputMap.getInterceptor());
-                if (interceptorsApplies) {
-                    continue;
-                }
-            }
-
-            List<Pair<Integer, Mapping<?>>> childResults = childInputMap.lookupMappingAndSpecificity(event, minSpecificity);
-            if (!childResults.isEmpty()) {
-                int specificity = childResults.get(0).getKey();
-                List<Mapping<?>> childMappings = childResults.stream()
-                                    .map(pair -> pair.getValue())
-                                    .collect(Collectors.toList());
-                if (specificity == minSpecificity) {
-                    mappings.addAll(0, childMappings);
-                } else if (specificity > minSpecificity) {
-                    mappings.clear();
-                    minSpecificity = specificity;
-                    mappings.addAll(childMappings);
-                }
-            }
+            minSpecificity = scanRecursively(childInputMap, event, testInterceptors, minSpecificity, mappings);
         }
 
         return mappings;
+    }
+
+    private int scanRecursively(InputMap<?> inputMap, Event event, boolean testInterceptors, int minSpecificity, List<Mapping<?>> mappings) {
+        // test if the childInputMap should be considered
+        if (testInterceptors) {
+            boolean interceptorsApplies = testInterceptor(event, inputMap.getInterceptor());
+            if (interceptorsApplies) {
+                return minSpecificity;
+            }
+        }
+
+        // look at the given InputMap
+        List<Pair<Integer, Mapping<?>>> childResults = inputMap.lookupMappingAndSpecificity(event, minSpecificity);
+        if (!childResults.isEmpty()) {
+            int specificity = childResults.get(0).getKey();
+            List<Mapping<?>> childMappings = childResults.stream()
+                    .map(pair -> pair.getValue())
+                    .collect(Collectors.toList());
+            if (specificity == minSpecificity) {
+                mappings.addAll(0, childMappings);
+            } else if (specificity > minSpecificity) {
+                mappings.clear();
+                minSpecificity = specificity;
+                mappings.addAll(childMappings);
+            }
+        }
+
+        // now look at the children of this input map, if any exist
+        for (int i = 0; i < inputMap.getChildInputMaps().size(); i++) {
+            minSpecificity = scanRecursively(inputMap.getChildInputMaps().get(i), event, testInterceptors, minSpecificity, mappings);
+        }
+
+        return minSpecificity;
     }
 
     private InputMap<N> getRootInputMap() {
