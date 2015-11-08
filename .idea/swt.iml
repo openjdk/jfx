@@ -10,6 +10,6 @@
     <orderEntry type="module" module-name="base" exported="" />
     <orderEntry type="module" module-name="graphics" exported="" />
     <orderEntry type="inheritedJdk" />
+    <orderEntry type="library" name="swt" level="application" />
   </component>
 </module>
-

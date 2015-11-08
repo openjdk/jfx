@@ -16,6 +16,6 @@
     <orderEntry type="module" module-name="swing" exported="" />
     <orderEntry type="module" module-name="swt" exported="" />
     <orderEntry type="inheritedJdk" />
+    <orderEntry type="library" scope="TEST" name="junit4" level="application" />
   </component>
 </module>
-

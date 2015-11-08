@@ -15,6 +15,6 @@
     <orderEntry type="module" module-name="controls" exported="" />
     <orderEntry type="module" module-name="media" exported="" />
     <orderEntry type="inheritedJdk" />
+    <orderEntry type="library" scope="TEST" name="junit4" level="application" />
   </component>
 </module>
-

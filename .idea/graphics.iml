@@ -20,6 +20,6 @@
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="base" exported="" />
     <orderEntry type="inheritedJdk" />
+    <orderEntry type="library" scope="TEST" name="junit4" level="application" />
   </component>
 </module>
-
