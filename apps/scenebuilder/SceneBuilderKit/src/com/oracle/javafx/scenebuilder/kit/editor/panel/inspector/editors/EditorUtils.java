@@ -466,10 +466,12 @@ public class EditorUtils {
     public static Parent loadFxml(URL fxmlURL, Object controller) {
         final FXMLLoader loader = new FXMLLoader();
         loader.setController(controller);
-        // Do we really need this?
-//        loader.setClassLoader(controller.getClass().getClassLoader());
         loader.setLocation(fxmlURL);
         loader.setResources(I18N.getBundle());
+
+        // setting ClassLoader for OSGi environments
+        loader.setClassLoader(controller.getClass().getClassLoader());
+
         Parent root;
         try {
             root = (Parent) loader.load();
