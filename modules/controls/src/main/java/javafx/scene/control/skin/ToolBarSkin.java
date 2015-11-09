@@ -382,11 +382,13 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
 
         if (toolbar.getOrientation() == Orientation.HORIZONTAL) {
             for (Node node : toolbar.getItems()) {
+                if (!node.isManaged()) continue;
                 prefWidth += snapSize(node.prefWidth(-1)) + getSpacing();
             }
             prefWidth -= getSpacing();
         } else {
             for (Node node : toolbar.getItems()) {
+                if (!node.isManaged()) continue;
                 prefWidth = Math.max(prefWidth, snapSize(node.prefWidth(-1)));
             }
             if (toolbar.getItems().size() > 0) {
@@ -405,11 +407,13 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
         
         if(toolbar.getOrientation() == Orientation.VERTICAL) {
             for (Node node: toolbar.getItems()) {
+                if (!node.isManaged()) continue;
                 prefHeight += snapSize(node.prefHeight(-1)) + getSpacing();
             }
             prefHeight -= getSpacing();
         } else {
             for (Node node : toolbar.getItems()) {
+                if (!node.isManaged()) continue;
                 prefHeight = Math.max(prefHeight, snapSize(node.prefHeight(-1)));
             }
             if (toolbar.getItems().size() > 0) {
@@ -562,6 +566,8 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
         double x = 0;
         boolean hasOverflow = false;
         for (Node node : getSkinnable().getItems()) {
+            if (!node.isManaged()) continue;
+
             if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
                 x += snapSize(node.prefHeight(-1)) + getSpacing();
             } else {
@@ -589,11 +595,15 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
         for (Node node : getSkinnable().getItems()) {
             node.getStyleClass().remove("menu-item");
             node.getStyleClass().remove("custom-menu-item");
-            if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
-                x += snapSize(node.prefHeight(-1)) + getSpacing();
-            } else {
-                x += snapSize(node.prefWidth(-1)) + getSpacing();
+
+            if (node.isManaged()) {
+                if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
+                    x += snapSize(node.prefHeight(-1)) + getSpacing();
+                } else {
+                    x += snapSize(node.prefWidth(-1)) + getSpacing();
+                }
             }
+
             if (x <= length) {
                 box.getChildren().add(node);
             } else {
