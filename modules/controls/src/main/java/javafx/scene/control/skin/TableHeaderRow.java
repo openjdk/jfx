@@ -525,7 +525,19 @@ public class TableHeaderRow extends StackPane {
         // bind column text and isVisible so that the menu item is always correct
         item.setText(getText(col.getText(), col));
         col.textProperty().addListener(weakColumnTextListener);
-        item.selectedProperty().bindBidirectional(col.visibleProperty());
+
+        // ideally we would have API to observe the binding status of a property,
+        // but for now that doesn't exist, so we set this once and then forget
+        item.setDisable(col.visibleProperty().isBound());
+
+        // fake bidrectional binding (a real one was used here but resulted in JBS-8136468)
+        item.setSelected(col.isVisible());
+        final CheckMenuItem _item = item;
+        item.selectedProperty().addListener(o -> {
+            if (col.visibleProperty().isBound()) return;
+            col.setVisible(_item.isSelected());
+        });
+        col.visibleProperty().addListener(o -> _item.setSelected(col.isVisible()));
 
         columnPopupMenu.getItems().add(item);
     }
