@@ -341,6 +341,11 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
         }
     }
 
+    @Override
+    protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
+        return textField.minWidth(height);
+    }
+
     /** {@inheritDoc} */
     @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         return computePrefHeight(width, topInset, rightInset, bottomInset, leftInset);
