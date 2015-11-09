@@ -746,6 +746,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
                 textArea.selectPositionCaret(pos);
             } else {
                 textArea.positionCaret(pos);
+                setForwardBias(true);
             }
         }
     }
