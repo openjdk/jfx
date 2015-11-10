@@ -36,6 +36,7 @@ import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -64,6 +65,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
@@ -84,7 +86,6 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.transform.Scale;
-import javafx.scene.control.Control;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
@@ -92,51 +93,13 @@ import javax.imageio.ImageIO;
 
 public class Modena extends Application {
     public static final String TEST = "test";
+    public static final String SKINBASE = "com/sun/javafx/scene/control/skin/";
     static {
         System.getProperties().put("javafx.pseudoClassOverrideEnabled", "true");
     }
     private static final String testAppCssUrl = Modena.class.getResource("TestApp.css").toExternalForm();
-    private static String MODENA_STYLESHEET_URL;
-    private static String MODENA_EMBEDDED_STYLESHEET_URL;
-    private static String MODENA_STYLESHEET_BASE;
-    private static String CASPIAN_STYLESHEET_URL;
-    private static String CASPIAN_STYLESHEET_BASE;
-    static {
-        try {
-            final String controlPath = "javafx/scene/control/Control.class";
-            String path = Control.class.getResource("Control.class").toExternalForm();
-            String jfxrtRoot = path.substring(0, path.lastIndexOf(controlPath));
-            // these are not supported ways to find the platform themes and may 
-            // change release to release. Just used here for testing.
-            File caspianCssFile = new File("../../../modules/controls/src/main/resources/com/sun/javafx/scene/control/skin/caspian/caspian.css");
-            if (!caspianCssFile.exists()) {
-                caspianCssFile = new File("rt/modules/controls/src/main/resources/com/sun/javafx/scene/control/skin/caspian/caspian.css");
-            }
-            if (caspianCssFile.exists()) {
-                CASPIAN_STYLESHEET_URL = caspianCssFile.toURI().toURL().toExternalForm();
-            } else {
-                CASPIAN_STYLESHEET_URL = jfxrtRoot + "com/sun/javafx/scene/control/skin/caspian/caspian.css";
-            }
-            File modenaCssFile = new File("../../../modules/controls/src/main/resources/com/sun/javafx/scene/control/skin/modena/modena.css");
-            if (!modenaCssFile.exists()) {
-                modenaCssFile = new File("rt/modules/controls/src/main/resources/com/sun/javafx/scene/control/skin/modena/modena.css");
-                System.out.println("modenaCssFile = " + modenaCssFile);
-                System.out.println("modenaCssFile = " + modenaCssFile.getAbsolutePath());
-            }
-            if (modenaCssFile.exists()) {
-                MODENA_STYLESHEET_URL = modenaCssFile.toURI().toURL().toExternalForm();
-            } else {
-                MODENA_STYLESHEET_URL = jfxrtRoot + "com/sun/javafx/scene/control/skin/modena/modena.css";
-            }
-            MODENA_STYLESHEET_BASE = MODENA_STYLESHEET_URL.substring(0,MODENA_STYLESHEET_URL.lastIndexOf('/')+1);
-            CASPIAN_STYLESHEET_BASE = CASPIAN_STYLESHEET_URL.substring(0,CASPIAN_STYLESHEET_URL.lastIndexOf('/')+1);
-            MODENA_EMBEDDED_STYLESHEET_URL = MODENA_STYLESHEET_BASE + "modena-embedded-performance.css";
-            System.out.println("MODENA_EMBEDDED_STYLESHEET_URL = " + MODENA_EMBEDDED_STYLESHEET_URL);
-        } catch (MalformedURLException ex) {
-            Logger.getLogger(Modena.class.getName()).log(Level.SEVERE, null, ex);
-        }
-    }
     
+    public Scene scene;
     private BorderPane outerRoot;
     private BorderPane root;
     private SamplePageNavigation samplePageNavigation;
@@ -153,7 +116,6 @@ public class Modena extends Application {
     private String fontName = null;
     private int fontSize = 13;
     private String styleSheetContent = "";
-    private String styleSheetBase = "";
     private ToggleButton modenaButton,retinaButton,rtlButton,embeddedPerformanceButton;
     private TabPane contentTabs;
     private boolean test = false;
@@ -204,8 +166,6 @@ public class Modena extends Application {
             test = true;
         }
         mainStage = stage;
-        // set user agent stylesheet
-        updateUserAgentStyleSheet(true);
         // build Menu Bar
         outerRoot = new BorderPane();
         outerRoot.setTop(buildMenuBar());
@@ -213,8 +173,12 @@ public class Modena extends Application {
         // build UI
         rebuildUI(true,false,0, null);
         // show UI
-        Scene scene = new Scene(outerRoot, 1024, 768);
-        scene.getStylesheets().add(testAppCssUrl);
+        scene = new Scene(outerRoot, 1024, 768);
+        
+        // set user agent stylesheet
+        updateUserAgentStyleSheet(true);
+
+        // scene.getStylesheets().add(testAppCssUrl);
         stage.setScene(scene);
         stage.setTitle("Modena");
 //        stage.setIconified(test); // TODO: Blocked by http://javafx-jira.kenai.com/browse/JMY-203
@@ -246,10 +210,14 @@ public class Modena extends Application {
     }
     
     private void updateUserAgentStyleSheet(boolean modena) {
-        final SamplePage.Section scrolledSection = samplePageNavigation==null? null : samplePageNavigation.getCurrentSection();
-        styleSheetContent = modena ?
-                loadUrl(MODENA_STYLESHEET_URL) :
-                loadUrl(CASPIAN_STYLESHEET_URL);
+        final SamplePage.Section scrolledSection = (samplePageNavigation== null ?
+                                                        null : samplePageNavigation.getCurrentSection());
+        if (modena) {
+            scene.setUserAgentStylesheet(SKINBASE + "modena/modena.css");
+        } else {
+            scene.setUserAgentStylesheet(SKINBASE + "caspian/caspian.css");
+        }
+        
         if (!modena &&
             (baseColor == null || baseColor == Color.TRANSPARENT) &&
             (backgroundColor == null || backgroundColor == Color.TRANSPARENT) &&
@@ -265,10 +233,11 @@ public class Modena extends Application {
             Platform.runLater(() -> samplePageNavigation.setCurrentSection(scrolledSection));
             return;
         }
-        if (modena && embeddedPerformanceMode) styleSheetContent += loadUrl(MODENA_EMBEDDED_STYLESHEET_URL);
-        styleSheetBase = modena ? MODENA_STYLESHEET_BASE : CASPIAN_STYLESHEET_BASE;
+        if (modena && embeddedPerformanceMode) {
+            scene.setUserAgentStylesheet(SKINBASE + "modena/modena-embedded-performance.css");
+        }
         styleSheetContent += "\n.root {\n";
-        System.out.println("baseColor = "+baseColor);
+        System.out.println("baseColor = " + baseColor);
         System.out.println("accentColor = " + accentColor);
         System.out.println("backgroundColor = " + backgroundColor);
         if (baseColor != null && baseColor != Color.TRANSPARENT) {
@@ -372,13 +341,13 @@ public class Modena extends Application {
             rtlButton.setOnAction(event -> root.setNodeOrientation(rtlButton.isSelected() ?
                     NodeOrientation.RIGHT_TO_LEFT : NodeOrientation.LEFT_TO_RIGHT));
 
-            embeddedPerformanceButton = new ToggleButton("EP");
+        /*  embeddedPerformanceButton = new ToggleButton("EP");
             embeddedPerformanceButton.setSelected(embeddedPerformanceMode);
             embeddedPerformanceButton.setTooltip(new Tooltip("Apply Embedded Performance extra stylesheet"));
             embeddedPerformanceButton.setOnAction(event -> {
                 embeddedPerformanceMode = embeddedPerformanceButton.isSelected();
                 rebuild.handle(event);
-            });
+            }); */
 
             Button saveButton = new Button("Save...");
             saveButton.setOnAction(saveBtnHandler);
@@ -387,7 +356,7 @@ public class Modena extends Application {
             retinaButton.setOnAction(event -> restart());
 
             ToolBar toolBar = new ToolBar(new HBox(modenaButton, caspianButton), reloadButton, rtlButton,
-                    embeddedPerformanceButton, new Separator(), retinaButton,
+                    /* embeddedPerformanceButton, new Separator(), */ retinaButton,
                     new Label("Base:"),
                     createBaseColorPicker(),
                     new Label("Background:"),
@@ -468,6 +437,7 @@ public class Modena extends Application {
                 Color.BLACK
         );
         colorPicker.valueProperty().addListener((observable, oldValue, c) -> setBaseColor(c));
+        colorPicker.setDisable(true);
         return colorPicker;
     }
     
@@ -507,6 +477,7 @@ public class Modena extends Application {
             }
             updateUserAgentStyleSheet();
         });
+        colorPicker.setDisable(true);
         return colorPicker;
     }
     
@@ -532,6 +503,7 @@ public class Modena extends Application {
                 Color.BLACK
         );
         colorPicker.valueProperty().addListener((observable, oldValue, c) -> setAccentColor(c));
+        colorPicker.setDisable(true);
         return colorPicker;
     }
 
@@ -575,22 +547,7 @@ public class Modena extends Application {
         launch(args);
     }
     
-    /** Utility method to load a URL into a string */
-    private static String loadUrl(String url) {
-        StringBuilder sb = new StringBuilder();
-        try {
-            BufferedReader br = new BufferedReader(new InputStreamReader(new URL(url).openStream()));
-            String line;
-            while ((line = br.readLine()) != null) {
-                sb.append(line);
-                sb.append('\n');
-            }
-        } catch (IOException ex) {
-            Logger.getLogger(Modena.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        return sb.toString();
-    }
-    
+
     // =========================================================================
     // URL Handler to create magic "internal:stylesheet.css" url for our css string buffer
     {
@@ -598,12 +555,7 @@ public class Modena extends Application {
     }
 
     private String colorToRGBA(Color color) {
-        // Older version didn't care about opacity
-//        return String.format((Locale) null, "#%02x%02x%02x", 
-//                Math.round(color.getRed() * 255), 
-//                Math.round(color.getGreen() * 255), 
-//                Math.round(color.getBlue() * 255));
-        return String.format((Locale) null, "rgba(%d, %d, %d, %f)", 
+        return String.format((Locale) null, "rgba(%d, %d, %d, %f)",
             (int) Math.round(color.getRed() * 255), 
             (int) Math.round(color.getGreen() * 255), 
             (int) Math.round(color.getBlue() * 255),
@@ -631,7 +583,7 @@ public class Modena extends Application {
                 if (url.toString().toLowerCase().endsWith(".css")) {
                     return new StringURLConnection(url);
                 } else {
-                    return new URL(styleSheetBase+url.getFile()).openConnection();
+                    throw new FileNotFoundException("url: " + url);
                 }
             }
         };
