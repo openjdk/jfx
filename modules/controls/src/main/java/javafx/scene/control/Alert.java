@@ -237,7 +237,7 @@ public class Alert extends Dialog<ButtonType> {
      */
     public Alert(@NamedArg("alertType") AlertType alertType,
                  @NamedArg("contentText") String contentText,
-                 ButtonType... buttons) {
+                 @NamedArg("buttonTypes") ButtonType... buttons) {
         super();
 
         final DialogPane dialogPane = getDialogPane();
