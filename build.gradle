@@ -2636,7 +2636,8 @@ load(qt_config)""")
                     into "$gensrcDir/com/sun/webkit/dom"
                 }
             }
-            classpath = files(project(":graphics").sourceSets.main.output) // for JSObject
+            classpath = files(project.sourceSets.main.output.classesDir) +
+                        files(project(":graphics").sourceSets.main.output) // for JSObject
             source gensrcDir
             destinationDir = file("$buildDir/classes/main")
         }
