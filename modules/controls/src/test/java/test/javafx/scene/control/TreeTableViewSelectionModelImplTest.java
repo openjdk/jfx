@@ -26,7 +26,9 @@
 package test.javafx.scene.control;
 
 import com.sun.javafx.tk.Toolkit;
+import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.control.TreeTableView.TreeTableViewSelectionModel;
 import javafx.util.Callback;
@@ -765,5 +767,52 @@ public class TreeTableViewSelectionModelImplTest {
         item0.setExpanded(false);
         Toolkit.getToolkit().firePulse();
         assertEquals(1, model.getSelectedCells().size());
+    }
+
+    @Test public void test_jdk8131924_showRoot() {
+        test_jdk8131924(true);
+    }
+
+    @Test public void test_jdk8131924_hideRoot() {
+        test_jdk8131924(false);
+    }
+
+    private void test_jdk8131924(boolean showRoot) {
+        tableView.setRoot(new TreeItem("Root"));
+        tableView.getRoot().setExpanded(true);
+
+        tableView.setShowRoot(showRoot);
+
+        for (int i = 0; i < 4; i++) {
+            tableView.getRoot().getChildren().add(new TreeItem("" + i));
+        }
+
+        TreeTableColumn<String, String> col = new TreeTableColumn("Name");
+        col.setCellValueFactory(c -> new ReadOnlyStringWrapper(c.getValue().getValue()));
+
+        tableView.getColumns().addAll(col);
+        model.setSelectionMode(SelectionMode.MULTIPLE);
+        model.setCellSelectionEnabled(false);
+
+        int startIndex = showRoot ? 2 : 1;
+        model.select(startIndex);
+        assertEquals(startIndex, model.getSelectedIndex());
+        assertEquals(1, model.getSelectedIndices().size());
+        assertEquals("1", model.getSelectedItem().getValue());
+
+        // add a new item where the selection is, pushing the selection down one so that it remains on the same item
+        tableView.getRoot().getChildren().add(startIndex + (showRoot ? -1 : 0), new TreeItem<>("NEW"));
+        assertEquals("1", model.getSelectedItem().getValue());
+        assertEquals(startIndex + 1, model.getSelectedIndex());
+        assertEquals(1, model.getSelectedIndices().size());
+        assertEquals(1, model.getSelectedItems().size());
+
+        // now delete the item that was selected initially. Selection should move up one to startIndex, where
+        // the "NEW" element is
+        tableView.getRoot().getChildren().remove(startIndex + (showRoot ? 0 : 1));
+        assertEquals(1, model.getSelectedIndices().size());
+        assertEquals(startIndex, model.getSelectedIndex());
+        assertEquals("NEW", model.getSelectedItem().getValue());
+        assertEquals(1, model.getSelectedItems().size());
     }
 }
