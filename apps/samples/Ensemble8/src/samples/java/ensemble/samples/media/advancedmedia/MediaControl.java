@@ -164,7 +164,8 @@ public class MediaControl extends BorderPane {
                 mp.pause();
             }
         });
-        mp.currentTimeProperty().addListener((ObservableValue<? extends Duration> observable, Duration oldValue, Duration newValue) -> {
+        mp.currentTimeProperty().addListener((ObservableValue<? extends Duration> observable,
+                                              Duration oldValue, Duration newValue) -> {
             updateValues();
         });
         mp.setOnPlaying(() -> {
@@ -208,14 +209,19 @@ public class MediaControl extends BorderPane {
         timeSlider.setMaxWidth(Double.MAX_VALUE);
         
         HBox.setHgrow(timeSlider, Priority.ALWAYS);
-        timeSlider.valueProperty().addListener((Observable ov) -> {
+        timeSlider.valueProperty().addListener((ObservableValue<? extends Number> observable,
+                                                Number old, Number now) -> {
             if (timeSlider.isValueChanging()) {
                 // multiply duration by percentage calculated by slider position
                 if (duration != null) {
                     mp.seek(duration.multiply(timeSlider.getValue() / 100.0));
                 }
                 updateValues();
-                
+            } else if (Math.abs(now.doubleValue() - old.doubleValue()) > 1.5) {
+                // multiply duration by percentage calculated by slider position
+                if (duration != null) {
+                    mp.seek(duration.multiply(timeSlider.getValue() / 100.0));
+                }
             }
         });
         mediaBar.getChildren().add(timeSlider);
@@ -236,7 +242,8 @@ public class MediaControl extends BorderPane {
             public void handle(ActionEvent event) {
                 if (!fullScreen) {
                     newStage = new Stage();
-                    newStage.fullScreenProperty().addListener((ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) -> {
+                    newStage.fullScreenProperty().addListener((ObservableValue<? extends Boolean> ov,
+                                                               Boolean t, Boolean t1) -> {
                         onFullScreen();
                     });
                     final BorderPane borderPane = new BorderPane() {
@@ -249,8 +256,12 @@ public class MediaControl extends BorderPane {
                             super.layoutChildren();
                             if (mediaView != null) {
                                 if (getCenter() != null) { //if smaller pane has content
-                                    mediaView.setTranslateX((((Pane) getCenter()).getWidth() - mediaView.prefWidth(-1)) / 2);
-                                    mediaView.setTranslateY((((Pane) getCenter()).getHeight() - mediaView.prefHeight(-1)) / 2);
+                                    double xval = (((Pane) getCenter()).getWidth() -
+                                                   mediaView.prefWidth(-1)) / 2;
+                                    double yval = (((Pane) getCenter()).getHeight() -
+                                                   mediaView.prefHeight(-1)) / 2;
+                                    mediaView.setTranslateX(xval);
+                                    mediaView.setTranslateY(yval);
                                 }
                             }
                         }
@@ -293,10 +304,9 @@ public class MediaControl extends BorderPane {
         volumeSlider.setMaxWidth(Region.USE_PREF_SIZE);
         volumeSlider.valueProperty().addListener((Observable ov) -> {
         });
-        volumeSlider.valueProperty().addListener((ObservableValue<? extends Number> observable, Number oldValue, Number newValue) -> {
-            if (volumeSlider.isValueChanging()) {
-                mp.setVolume(volumeSlider.getValue() / 100.0);
-            }
+        volumeSlider.valueProperty().addListener((ObservableValue<? extends Number> observable,
+                                                  Number oldValue, Number newValue) -> {
+            mp.setVolume(volumeSlider.getValue() / 100.0);
         });
         mediaBar.getChildren().add(volumeSlider);
 
@@ -327,7 +337,8 @@ public class MediaControl extends BorderPane {
                 Duration currentTime = mp.getCurrentTime();
                 playTime.setText(formatTime(currentTime, duration));
                 timeSlider.setDisable(duration.isUnknown());
-                if (!timeSlider.isDisabled() && duration.greaterThan(Duration.ZERO) && !timeSlider.isValueChanging()) {
+                if (!timeSlider.isDisabled() && duration.greaterThan(Duration.ZERO) &&
+                        !timeSlider.isValueChanging()) {
                     timeSlider.setValue(currentTime.divide(duration).toMillis() * 100.0);
                 }
                 if (!volumeSlider.isValueChanging()) {

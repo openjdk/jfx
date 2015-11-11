@@ -225,11 +225,7 @@ public class PlayerPane extends Region {
             });
             volumeSlider.valueProperty().addListener((ObservableValue<? extends Number> observable,
                                                       Number old, Number now) -> {
-                if (volumeSlider.isValueChanging()) {
-                    mp.setVolume(volumeSlider.getValue() / 100.0);
-                } else {
-                    mp.setVolume(volumeSlider.getValue() / 100.0);
-                }
+                mp.setVolume(volumeSlider.getValue() / 100.0);
             });
             HBox.setHgrow(volumeSlider, Priority.ALWAYS);
             mediaTopBar.getChildren().add(volumeSlider);
