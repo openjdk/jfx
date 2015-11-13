@@ -27,6 +27,8 @@ package test.javafx.scene.control;
 
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.scene.control.behavior.TreeCellBehavior;
+import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.scene.control.*;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
@@ -61,18 +63,6 @@ import javafx.scene.Scene;
 import javafx.scene.control.cell.CheckBoxTreeCell;
 import javafx.scene.control.cell.TextFieldTreeCell;
 import com.sun.javafx.scene.control.VirtualScrollBar;
-import javafx.scene.control.Button;
-import javafx.scene.control.FocusModel;
-import javafx.scene.control.IndexedCell;
-import javafx.scene.control.MultipleSelectionModel;
-import javafx.scene.control.SelectionMode;
-import javafx.scene.control.SelectionModel;
-import javafx.scene.control.TextField;
-import javafx.scene.control.TreeCell;
-import javafx.scene.control.TreeCellShim;
-import javafx.scene.control.TreeItem;
-import javafx.scene.control.TreeView;
-import javafx.scene.control.TreeViewShim;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.VBox;
@@ -3385,5 +3375,47 @@ public class TreeViewTest {
         };
         sm.getSelectedIndices().addListener(l);
         sm.selectIndices(indices[0], indices);
+    }
+
+    @Test public void test_jdk8131924_showRoot() {
+        test_jdk8131924(true);
+    }
+
+    @Test public void test_jdk8131924_hideRoot() {
+        test_jdk8131924(false);
+    }
+
+    private void test_jdk8131924(boolean showRoot) {
+        final TreeView<String> treeView = new TreeView<>(new TreeItem("Root"));
+        MultipleSelectionModel<TreeItem<String>> model = treeView.getSelectionModel();
+        model.setSelectionMode(SelectionMode.MULTIPLE);
+
+        treeView.getRoot().setExpanded(true);
+        treeView.setShowRoot(showRoot);
+
+        for (int i = 0; i < 4; i++) {
+            treeView.getRoot().getChildren().add(new TreeItem("" + i));
+        }
+
+        int startIndex = showRoot ? 2 : 1;
+        model.select(startIndex);
+        assertEquals(startIndex, model.getSelectedIndex());
+        assertEquals(1, model.getSelectedIndices().size());
+        assertEquals("1", model.getSelectedItem().getValue());
+
+        // add a new item where the selection is, pushing the selection down one so that it remains on the same item
+        treeView.getRoot().getChildren().add(startIndex + (showRoot ? -1 : 0), new TreeItem<>("NEW"));
+        assertEquals("1", model.getSelectedItem().getValue());
+        assertEquals(startIndex + 1, model.getSelectedIndex());
+        assertEquals(1, model.getSelectedIndices().size());
+        assertEquals(1, model.getSelectedItems().size());
+
+        // now delete the item that was selected initially. Selection should move up one to startIndex, where
+        // the "NEW" element is
+        treeView.getRoot().getChildren().remove(startIndex + (showRoot ? 0 : 1));
+        assertEquals(1, model.getSelectedIndices().size());
+        assertEquals(startIndex, model.getSelectedIndex());
+        assertEquals("NEW", model.getSelectedItem().getValue());
+        assertEquals(1, model.getSelectedItems().size());
     }
 }

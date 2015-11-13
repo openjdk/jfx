@@ -779,8 +779,8 @@
     <h3><a name="typesize" id="typesize">&lt;size&gt;</a></h3>
     <p>A size is a <a href="#typenumber" class="typeref">&lt;number&gt;</a>
       with units of <a href="#typelength" class="typeref">&lt;length&gt;</a> or
-      <a href="#typepercentage" class="typeref">&lt;percentage&gt;</a>. If units
-      are not specified then specified the 'px' is assumed.</p>
+      <a href="#typepercentage" class="typeref">&lt;percentage&gt;</a>. If a unit
+      is not specified then 'px' is assumed.</p>
     <h4><a name="typelength" id="typelength">&lt;length&gt;</a></h4>
     <p class="grammar"><a href="#typenumber">&lt;number&gt;</a>[ px | mm | cm |
       in | pt | pc | em | ex ]?</p>
@@ -2894,7 +2894,7 @@
         </tr>
         <tr>
           <td class="propertyname">-fx-min-height, -fx-pref-height, -fx-max-height</td>
-          <td class="value"><a href="#typenumber" class="typelink">&lt;number&gt;</a></td>
+          <td class="value"><a href="#typesize" class="typelink">&lt;size&gt;</a></td>
           <td class="default">-1</td>
           <td>Percentage values are not useful since the actual value would be
               computed from the width and/or height of the Regions's parent before
@@ -2902,7 +2902,7 @@
         </tr>
         <tr>
           <td class="propertyname">-fx-min-width, -fx-pref-width, -fx-max-width</td>
-          <td class="value"><a href="#typenumber" class="typelink">&lt;number&gt;</a></td>
+          <td class="value"><a href="#typesize" class="typelink">&lt;size&gt;</a></td>
           <td class="default">-1</td>
           <td>Percentage values are not useful since the actual value would be
               computed from the width and/or height of the Region's parent before

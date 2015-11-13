@@ -2545,6 +2545,7 @@ public class TreeTableView<S> extends Control {
                         startAtomic();
 
                         final int clearIndex = param.getClearIndex();
+                        final int setIndex = param.getSetIndex();
                         TreeTablePosition<S,?> oldTP = null;
                         if (clearIndex > -1) {
                             for (int i = 0; i < selectedCellsMap.size(); i++) {
@@ -2552,7 +2553,8 @@ public class TreeTableView<S> extends Control {
                                 if (tp.getRow() == clearIndex) {
                                     oldTP = tp;
                                     selectedCellsMap.remove(tp);
-                                    break;
+                                } else if (tp.getRow() == setIndex && !param.isSelected()) {
+                                    selectedCellsMap.remove(tp);
                                 }
                             }
                         }

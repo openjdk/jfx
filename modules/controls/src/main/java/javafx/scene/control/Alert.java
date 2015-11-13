@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -237,7 +237,7 @@ public class Alert extends Dialog<ButtonType> {
      */
     public Alert(@NamedArg("alertType") AlertType alertType,
                  @NamedArg("contentText") String contentText,
-                 ButtonType... buttons) {
+                 @NamedArg("buttonTypes") ButtonType... buttons) {
         super();
 
         final DialogPane dialogPane = getDialogPane();

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2015, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -225,11 +225,7 @@ public class PlayerPane extends Region {
             });
             volumeSlider.valueProperty().addListener((ObservableValue<? extends Number> observable,
                                                       Number old, Number now) -> {
-                if (volumeSlider.isValueChanging()) {
-                    mp.setVolume(volumeSlider.getValue() / 100.0);
-                } else {
-                    mp.setVolume(volumeSlider.getValue() / 100.0);
-                }
+                mp.setVolume(volumeSlider.getValue() / 100.0);
             });
             HBox.setHgrow(volumeSlider, Priority.ALWAYS);
             mediaTopBar.getChildren().add(volumeSlider);

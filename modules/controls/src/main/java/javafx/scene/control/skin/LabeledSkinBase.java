@@ -117,7 +117,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
      */
     final InvalidationListener graphicPropertyChangedListener = valueModel -> {
         invalidText = true;
-        getSkinnable().requestLayout();
+        if (getSkinnable() != null) getSkinnable().requestLayout();
     };
 
     private Rectangle textClip;
