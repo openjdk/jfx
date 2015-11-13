@@ -1284,10 +1284,12 @@ pluginsresources.depends = $$PLUGINS_EMBED
 pluginsresources.clean = ${QMAKE_FILE_OUT} $${GENERATED_SOURCES_DIR}/PlugInsResources.h
 GENERATORS += pluginsresources
 
+#don't generate #line directives on windows due to Bison 3.0 generates path with single backslash instead of two backslash
+win32-* : XPATHBISON_NO_LINES = -l
 # GENERATOR 11: XPATH grammar
 xpathbison.output = ${QMAKE_FILE_BASE}.cpp
 xpathbison.input = XPATHBISON
-xpathbison.commands = bison -d -p xpathyy ${QMAKE_FILE_NAME} -o $${GENERATED_SOURCES_DIR}/${QMAKE_FILE_BASE}.tab.c && $(MOVE) $${GENERATED_SOURCES_DIR}$${QMAKE_DIR_SEP}${QMAKE_FILE_BASE}.tab.c $${GENERATED_SOURCES_DIR}$${QMAKE_DIR_SEP}${QMAKE_FILE_BASE}.cpp && $(MOVE) $${GENERATED_SOURCES_DIR}$${QMAKE_DIR_SEP}${QMAKE_FILE_BASE}.tab.h $${GENERATED_SOURCES_DIR}$${QMAKE_DIR_SEP}${QMAKE_FILE_BASE}.h
+xpathbison.commands = bison $${XPATHBISON_NO_LINES} -d -p xpathyy ${QMAKE_FILE_NAME} -o $${GENERATED_SOURCES_DIR}/${QMAKE_FILE_BASE}.tab.c && $(MOVE) $${GENERATED_SOURCES_DIR}$${QMAKE_DIR_SEP}${QMAKE_FILE_BASE}.tab.c $${GENERATED_SOURCES_DIR}$${QMAKE_DIR_SEP}${QMAKE_FILE_BASE}.cpp && $(MOVE) $${GENERATED_SOURCES_DIR}$${QMAKE_DIR_SEP}${QMAKE_FILE_BASE}.tab.h $${GENERATED_SOURCES_DIR}$${QMAKE_DIR_SEP}${QMAKE_FILE_BASE}.h
 xpathbison.depends = ${QMAKE_FILE_NAME}
 GENERATORS += xpathbison
 
