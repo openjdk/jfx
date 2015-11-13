@@ -153,6 +153,9 @@
     <ClCompile Include="..\..\jfxmedia\jni\NativeEqualizerBand.cpp">
       <Filter>jni</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\jfxmedia\Utils\win32\WinExceptionHandler.cpp">
+      <Filter>Utils\win32</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\jfxmedia\jni\JavaBandsHolder.h">
@@ -268,6 +271,9 @@
     </ClInclude>
     <ClInclude Include="..\..\jfxmedia\platform\gstreamer\GstVideoFrame.h">
       <Filter>platform\gstreamer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jfxmedia\Utils\win32\WinExceptionHandler.h">
+      <Filter>Utils\win32</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

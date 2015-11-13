@@ -52,6 +52,7 @@
     <ClCompile Include="..\..\jfxmedia\Utils\MediaWarningDispatcher.cpp" />
     <ClCompile Include="..\..\jfxmedia\Utils\win32\WinCriticalSection.cpp" />
     <ClCompile Include="..\..\jfxmedia\Utils\win32\WinDllMain.cpp" />
+    <ClCompile Include="..\..\jfxmedia\Utils\win32\WinExceptionHandler.cpp" />
     <ClCompile Include="..\..\jfxmedia\Utils\win32\WinThread.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -93,6 +94,7 @@
     <ClInclude Include="..\..\jfxmedia\Utils\MediaWarningDispatcher.h" />
     <ClInclude Include="..\..\jfxmedia\Utils\Singleton.h" />
     <ClInclude Include="..\..\jfxmedia\Utils\Thread.h" />
+    <ClInclude Include="..\..\jfxmedia\Utils\win32\WinExceptionHandler.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{41E7B612-A478-4FD5-9B2D-1B591FC6EE8A}</ProjectGuid>
