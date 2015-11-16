@@ -27,8 +27,6 @@ package javafx.scene.control;
 
 import com.sun.javafx.collections.MappingChange;
 import com.sun.javafx.collections.NonIterableChange;
-
-import static javafx.scene.control.SelectionMode.MULTIPLE;
 import static javafx.scene.control.SelectionMode.SINGLE;
 
 import java.util.AbstractList;
@@ -358,28 +356,26 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         select(row);
         stopAtomic();
 
-        if (getSelectionMode() == MULTIPLE) {
-            // fire off a single add/remove/replace notification (rather than
-            // individual remove and add notifications) - see RT-33324
-            ListChangeListener.Change<Integer> change;
+        // fire off a single add/remove/replace notification (rather than
+        // individual remove and add notifications) - see RT-33324
+        ListChangeListener.Change<Integer> change;
 
-            /*
-             * getFrom() documentation:
-             *   If wasAdded is true, the interval contains all the values that were added.
-             *   If wasPermutated is true, the interval marks the values that were permutated.
-             *   If wasRemoved is true and wasAdded is false, getFrom() and getTo() should
-             *   return the same number - the place where the removed elements were positioned in the list.
-             */
-            if (wasSelected) {
-                change = ControlUtils.buildClearAndSelectChange(selectedIndicesSeq, previousSelectedIndices, row);
-            } else {
-                int changeIndex = selectedIndicesSeq.indexOf(row);
-                change = new NonIterableChange.GenericAddRemoveChange<>(
-                        changeIndex, changeIndex+1, previousSelectedIndices, selectedIndicesSeq);
-            }
-
-            selectedIndicesSeq.callObservers(change);
+        /*
+         * getFrom() documentation:
+         *   If wasAdded is true, the interval contains all the values that were added.
+         *   If wasPermutated is true, the interval marks the values that were permutated.
+         *   If wasRemoved is true and wasAdded is false, getFrom() and getTo() should
+         *   return the same number - the place where the removed elements were positioned in the list.
+         */
+        if (wasSelected) {
+            change = ControlUtils.buildClearAndSelectChange(selectedIndicesSeq, previousSelectedIndices, row);
+        } else {
+            int changeIndex = selectedIndicesSeq.indexOf(row);
+            change = new NonIterableChange.GenericAddRemoveChange<>(
+                    changeIndex, changeIndex+1, previousSelectedIndices, selectedIndicesSeq);
         }
+
+        selectedIndicesSeq.callObservers(change);
     }
 
     @Override public void select(int row) {
