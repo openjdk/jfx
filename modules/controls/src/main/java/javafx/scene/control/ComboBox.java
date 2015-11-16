@@ -487,6 +487,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
                 throw new NullPointerException("ComboBox can not be null");
             }
             this.comboBox = cb;
+            this.comboBox.previousItemCount = getItemCount();
             
             selectedIndexProperty().addListener(valueModel -> {
                 // we used to lazily retrieve the selected item, but now we just
@@ -509,6 +510,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
                     ObservableList<T> oldItems = weakItemsRef.get();
                     weakItemsRef = new WeakReference<>(comboBox.getItems());
                     updateItemsObserver(oldItems, comboBox.getItems());
+                    comboBox.previousItemCount = getItemCount();
                 }
             };
             this.comboBox.itemsProperty().addListener(new WeakInvalidationListener(itemsObserver));
@@ -544,6 +546,17 @@ public class ComboBox<T> extends ComboBoxBase<T> {
 
                 if (shift != 0) {
                     clearAndSelect(getSelectedIndex() + shift);
+                } else if (comboBox.wasSetAllCalled && getSelectedIndex() >= 0 && getSelectedItem() != null) {
+                    // try to find the previously selected item
+                    T selectedItem = getSelectedItem();
+                    for (int i = 0; i < comboBox.getItems().size(); i++) {
+                        if (selectedItem.equals(comboBox.getItems().get(i))) {
+                            comboBox.setValue(null);
+                            setSelectedItem(null);
+                            setSelectedIndex(i);
+                            break;
+                        }
+                    }
                 }
                 
                 comboBox.previousItemCount = getItemCount();
