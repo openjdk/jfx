@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Stack;
 
-import javafx.scene.control.skin.AccordionSkin;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
@@ -400,7 +399,7 @@ public class Wizard {
         
         public WizardPane() {
             // TODO extract to CSS
-            setGraphic(new ImageView(new Image(AccordionSkin.class.getResource("modena/dialog-confirm.png").toExternalForm())));
+            setGraphic(new ImageView(new Image(getClass().getResource("/hello/dialog/dialog-confirm.png").toExternalForm())));
         }
 
         // TODO we want to change this to an event-based API eventually

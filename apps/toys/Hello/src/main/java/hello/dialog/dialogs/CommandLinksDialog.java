@@ -28,9 +28,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import javafx.scene.control.skin.AccordionSkin;
-import com.sun.javafx.scene.control.skin.resources.ControlResources;
-import hello.HelloAccordion;
 import javafx.beans.binding.DoubleBinding;
 import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
@@ -95,10 +92,8 @@ public class CommandLinksDialog extends Dialog<ButtonType> {
         
         dialogPane.getStylesheets().add(getClass().getResource("commandlink.css").toExternalForm());
 
-        setTitle(ControlResources.getString("Dialog.info.title"));
-
         // FIXME extract to CSS
-        dialogPane.setGraphic(new ImageView(new Image(AccordionSkin.class.getResource("modena/dialog-information.png").toExternalForm())));
+        dialogPane.setGraphic(new ImageView(new Image(getClass().getResource("/hello/dialog/dialog-information.png").toExternalForm())));
         dialogPane.getButtonTypes().addAll(links);
         
         dialogPane.contentProperty().addListener(o -> updateGrid());
@@ -200,7 +195,8 @@ public class CommandLinksDialog extends Dialog<ButtonType> {
 //                new ImageView(commandLinkImage);
 //        Pane graphicContainer = new Pane(view);
 //        graphicContainer.getStyleClass().add("graphic-container");
-        ImageView arrow = new ImageView(HelloAccordion.class.getResource("about_16.png").toExternalForm());
+        
+        ImageView arrow = new ImageView(getClass().getResource("/hello/about_16.png").toExternalForm());
         GridPane.setValignment(arrow, VPos.TOP);
         GridPane.setMargin(arrow, new Insets(0,10,0,0));
 
