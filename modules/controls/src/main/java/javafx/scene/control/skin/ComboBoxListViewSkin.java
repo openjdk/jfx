@@ -387,14 +387,15 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         T newValue = comboBox.getValue();
         
         SelectionModel<T> listViewSM = listView.getSelectionModel();
+
+        // RT-22386: We need to test to see if the value is in the comboBox
+        // items list. If it isn't, then we should clear the listview
+        // selection
+        final int indexOfNewValue = getIndexOfComboBoxValueInItemsList();
         
-        if (newValue == null) {
+        if (newValue == null && indexOfNewValue == -1) {
             listViewSM.clearSelection();
         } else {
-            // RT-22386: We need to test to see if the value is in the comboBox
-            // items list. If it isn't, then we should clear the listview 
-            // selection
-            int indexOfNewValue = getIndexOfComboBoxValueInItemsList();
             if (indexOfNewValue == -1) {
                 listSelectionLock = true;
                 listViewSM.clearSelection();
@@ -403,7 +404,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 int index = comboBox.getSelectionModel().getSelectedIndex();
                 if (index >= 0 && index < comboBoxItems.size()) {
                     T itemsObj = comboBoxItems.get(index);
-                    if (itemsObj != null && itemsObj.equals(newValue)) {
+                    if ((itemsObj != null && itemsObj.equals(newValue)) || (itemsObj == null && newValue == null)) {
                         listViewSM.select(index);
                     } else {
                         listViewSM.select(newValue);
