@@ -762,8 +762,8 @@ if (Integer.parseInt(NUM_COMPILE_THREADS.toString()) < 1) {
     NUM_COMPILE_THREADS = 1
 }
 
-// Check that Gradle 1.8 is in use.
-if (gradle.gradleVersion != "1.8") {
+// Check that Gradle 2.9 is in use, error if < 1.8.
+if (gradle.gradleVersion != "2.9") {
     def ver = gradle.gradleVersion.split("[\\.]");
     def gradleMajor = Integer.parseInt(ver[0]);
     def gradleMinor = Integer.parseInt(ver[1]);
@@ -775,7 +775,7 @@ if (gradle.gradleVersion != "1.8") {
 
         // Blacklisted versions of gradle
         if (gradleMinor == 11) {
-            err = "JavaFX fails to build with Gradle ${gradle.gradleVersion}; supported version is 1.8"
+            err = "JavaFX fails to build with Gradle ${gradle.gradleVersion}; supported version is 2.9"
         }
     }
 
@@ -785,7 +785,7 @@ if (gradle.gradleVersion != "1.8") {
 
     logger.warn("*****************************************************************");
     logger.warn("Unsupported gradle version $gradle.gradleVersion in use.");
-    logger.warn("Only version 1.8 is supported. Use this version at your own risk");
+    logger.warn("Only version 2.9 is supported. Use this version at your own risk");
     if ( err != "") logger.warn(err);
     logger.warn("*****************************************************************");
 }
@@ -799,6 +799,7 @@ if (gradle.gradleVersion != "1.8") {
  *                                                                            *
  *****************************************************************************/
 
+logger.quiet("gradle.gradleVersion: $gradle.gradleVersion")
 logger.quiet("OS_NAME: $OS_NAME")
 logger.quiet("OS_ARCH: $OS_ARCH")
 logger.quiet("JAVA_HOME: $JAVA_HOME")
