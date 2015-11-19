@@ -1999,11 +1999,6 @@ project(":fxpackager") {
                     from file("$buildDir/native/javapackager/javapackager.exe")
                     into file("$buildDir/javapackager")
                 }
-                copy {
-                    from file("$buildDir/native/javapackager/javapackager.exe")
-                    into file("$buildDir/javapackager")
-                    rename ('javapackager', 'javafxpackager')
-                }
             }
         }
     } else {
@@ -2013,12 +2008,6 @@ project(":fxpackager") {
                 copy {
                     from "src/main/native/javapackager/shell"
                     into "$buildDir/javapackager"
-                    fileMode = 0755
-                }
-                copy {
-                    from "src/main/native/javapackager/shell"
-                    into "$buildDir/javapackager"
-                    rename ('javapackager', 'javafxpackager')
                     fileMode = 0755
                 }
             }
