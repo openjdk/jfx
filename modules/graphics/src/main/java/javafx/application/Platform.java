@@ -25,6 +25,7 @@
 
 package javafx.application;
 
+import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import com.sun.javafx.application.PlatformImpl;
@@ -87,6 +88,22 @@ public final class Platform {
 //    public static void runAndWait(Runnable runnable) {
 //        PlatformImpl.runAndWait(runnable);
 //    }
+
+    /**
+     * Requests the Java Runtime to perform a pulse. This will run a pulse
+     * even if there are no animation timers, scene graph modifications,
+     * or window events that would otherwise cause the pulse to run.
+     * If no pulse is in progress, then one will be scheduled to
+     * run the next time the pulse timer fires.
+     * If there is already a pulse running, then
+     * at least one more pulse after the current pulse will be scheduled.
+     * This method may be called on any thread.
+     *
+     * @since 9
+     */
+    public static void requestNextPulse() {
+        Toolkit.getToolkit().requestNextPulse();
+    }
 
     /**
      * Returns true if the calling thread is the JavaFX Application Thread.

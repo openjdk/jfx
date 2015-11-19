@@ -25,6 +25,7 @@
 
 package test.javafx.scene;
 
+import com.sun.javafx.runtime.SystemProperties;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.concurrent.Task;
@@ -51,7 +52,10 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import javafx.scene.Camera;
 import javafx.scene.Cursor;
 import javafx.scene.CursorShim;
@@ -855,5 +859,115 @@ public class SceneTest {
          * they should be the same thing.
          */
         assertEquals("MyValue", properties2.get("MyKey"));
+    }
+
+    /***************************************************************************
+     *                                                                         *
+     *                   Scene Pulse Listener Tests                            *
+     *                                                                         *
+     **************************************************************************/
+
+    @Test(expected = NullPointerException.class)
+    public void testAddNullPreLayoutPulseListener() {
+        Scene scene = new Scene(new Group(), 300, 300);
+        scene.addPreLayoutPulseListener(null);
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void testAddNullPostLayoutPulseListener() {
+        Scene scene = new Scene(new Group(), 300, 300);
+        scene.addPostLayoutPulseListener(null);
+    }
+
+    @Test public void testRemoveNullPreLayoutPulseListener_nullListenersList() {
+        Scene scene = new Scene(new Group(), 300, 300);
+        scene.removePreLayoutPulseListener(null);
+        // no failure expected
+    }
+
+    @Test public void testRemoveNullPostLayoutPulseListener_nullListenersList() {
+        Scene scene = new Scene(new Group(), 300, 300);
+        scene.removePostLayoutPulseListener(null);
+        // no failure expected
+    }
+
+    @Test public void testRemoveNullPreLayoutPulseListener_nonNullListenersList() {
+        Scene scene = new Scene(new Group(), 300, 300);
+        scene.addPreLayoutPulseListener(() -> { });
+        scene.removePreLayoutPulseListener(null);
+        // no failure expected
+    }
+
+    @Test public void testRemoveNullPostLayoutPulseListener_nonNullListenersList() {
+        Scene scene = new Scene(new Group(), 300, 300);
+        scene.addPostLayoutPulseListener(() -> { });
+        scene.removePostLayoutPulseListener(null);
+        // no failure expected
+    }
+
+    @Test public void testPreLayoutPulseListenerIsFired() {
+        Scene scene = new Scene(new Group(), 300, 300);
+        final AtomicInteger counter = new AtomicInteger(0);
+
+        assertEquals(0, counter.get());
+        scene.addPreLayoutPulseListener(() -> counter.incrementAndGet());
+        assertEquals(0, counter.get());
+
+        SceneShim.scenePulseListener_pulse(scene);
+        assertEquals(1, counter.get());
+
+        SceneShim.scenePulseListener_pulse(scene);
+        assertEquals(2, counter.get());
+    }
+
+    @Test public void testPostLayoutPulseListenerIsFired() {
+        Scene scene = new Scene(new Group(), 300, 300);
+        final AtomicInteger counter = new AtomicInteger(0);
+
+        assertEquals(0, counter.get());
+        scene.addPostLayoutPulseListener(() -> counter.incrementAndGet());
+        assertEquals(0, counter.get());
+
+        SceneShim.scenePulseListener_pulse(scene);
+        assertEquals(1, counter.get());
+
+        SceneShim.scenePulseListener_pulse(scene);
+        assertEquals(2, counter.get());
+    }
+
+    @Test public void testPreLayoutPulseListenerIsFired_untilRemoved() {
+        Scene scene = new Scene(new Group(), 300, 300);
+        final AtomicInteger counter = new AtomicInteger(0);
+
+        Runnable r = () -> counter.incrementAndGet();
+
+        assertEquals(0, counter.get());
+        scene.addPreLayoutPulseListener(r);
+        assertEquals(0, counter.get());
+
+        SceneShim.scenePulseListener_pulse(scene);
+        assertEquals(1, counter.get());
+
+        scene.removePreLayoutPulseListener(r);
+        SceneShim.scenePulseListener_pulse(scene);
+        assertEquals(1, counter.get());
+    }
+
+    @Test public void testPostLayoutPulseListenerIsFired_untilRemoved() {
+        Scene scene = new Scene(new Group(), 300, 300);
+        final AtomicInteger counter = new AtomicInteger(0);
+
+        Runnable r = () -> counter.incrementAndGet();
+
+        assertEquals(0, counter.get());
+        scene.addPostLayoutPulseListener(r);
+        assertEquals(0, counter.get());
+
+        SceneShim.scenePulseListener_pulse(scene);
+        assertEquals(1, counter.get());
+
+        scene.removePostLayoutPulseListener(r);
+        SceneShim.scenePulseListener_pulse(scene);
+        assertEquals(1, counter.get());
     }
 }
