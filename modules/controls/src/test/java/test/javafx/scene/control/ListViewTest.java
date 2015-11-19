@@ -40,6 +40,7 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.collections.transformation.SortedList;
 import javafx.scene.control.Button;
 import javafx.scene.control.FocusModel;
 import javafx.scene.control.IndexedCell;
@@ -1793,5 +1794,28 @@ public class ListViewTest {
         };
         sm.getSelectedIndices().addListener(l);
         sm.selectIndices(indices[0], indices);
+    }
+
+    @Test public void test_jdk8141124() {
+        ListView<String> listView = new ListView<>();
+        ObservableList<String> items = FXCollections.observableArrayList();
+        SortedList<String> sortedItems = new SortedList<>(items);
+        sortedItems.setComparator(String::compareTo);
+        listView.setItems(sortedItems);
+
+        MultipleSelectionModel<String> sm = listView.getSelectionModel();
+
+        items.add("2");
+        listView.getSelectionModel().selectFirst();
+        assertEquals("2", sm.getSelectedItem());
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals(0, (int) sm.getSelectedIndices().get(0));
+        assertEquals("2", sm.getSelectedItems().get(0));
+
+        items.addAll("1", "3");
+        assertEquals("2", sm.getSelectedItem());
+        assertEquals(1, sm.getSelectedIndex());
+        assertEquals(1, (int) sm.getSelectedIndices().get(0));
+        assertEquals("2", sm.getSelectedItems().get(0));
     }
 }

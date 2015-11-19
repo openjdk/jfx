@@ -75,6 +75,7 @@ import javafx.css.StyleableProperty;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
+import javafx.util.Pair;
 
 /**
  * A ListView displays a horizontal or vertical list of items from which the
@@ -1290,7 +1291,7 @@ public class ListView<T> extends Control {
 //            }
             c.reset();
 
-            int shift = 0;
+            List<Pair<Integer, Integer>> shifts = new ArrayList<>();
             while (c.next()) {
                 if (c.wasReplaced()) {
                     if (c.getList().isEmpty()) {
@@ -1315,7 +1316,8 @@ public class ListView<T> extends Control {
                         }
                     }
                 } else if (c.wasAdded() || c.wasRemoved()) {
-                    shift += c.wasAdded() ? c.getAddedSize() : -c.getRemovedSize();
+                    int shift = c.wasAdded() ? c.getAddedSize() : -c.getRemovedSize();
+                    shifts.add(new Pair<>(c.getFrom(), shift));
                 } else if (c.wasPermutated()) {
 
                     // General approach:
@@ -1371,8 +1373,8 @@ public class ListView<T> extends Control {
                 }
             }
 
-            if (shift != 0) {
-                shiftSelection(c.getFrom(), shift, null);
+            if (!shifts.isEmpty()) {
+                shiftSelection(shifts, null);
             }
             
             previousModelSize = getItemCount();
