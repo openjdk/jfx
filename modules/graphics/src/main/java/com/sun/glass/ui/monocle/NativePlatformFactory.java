@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -99,9 +99,13 @@ public abstract class NativePlatformFactory {
                                              factoryName, factoryClassName);
                 }
                 try {
-                    NativePlatformFactory npf = (NativePlatformFactory)
-                            Class.forName(factoryClassName)
-                            .newInstance();
+                    final ClassLoader loader = NativePlatformFactory.class.getClassLoader();
+                    final Class<?> clazz = Class.forName(factoryClassName, false, loader);
+                    if (!NativePlatformFactory.class.isAssignableFrom(clazz)) {
+                        throw new IllegalArgumentException("Unrecognized Monocle platform: "
+                                + factoryClassName);
+                    }
+                    NativePlatformFactory npf = (NativePlatformFactory) clazz.newInstance();
                     if (npf.matches() &&
                         npf.getMajorVersion() == majorVersion &&
                         npf.getMinorVersion() == minorVersion) {
