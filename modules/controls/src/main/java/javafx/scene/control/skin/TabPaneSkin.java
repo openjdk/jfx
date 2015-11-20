@@ -448,7 +448,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         }
         if (n instanceof Label) {
             Label l = (Label)n;
-            Label label = new Label(l.getText(), l.getGraphic());
+            Label label = new Label(l.getText(), clone(l.getGraphic()));
             return label;
         }
         return null;

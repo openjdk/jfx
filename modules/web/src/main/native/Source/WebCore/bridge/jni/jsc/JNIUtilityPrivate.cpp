@@ -248,27 +248,27 @@ jvalue convertValueToJValue(ExecState* exec, RootObject* rootObject, JSValue val
                 }
             }
 
-            // Create an appropriate Java object if target type is java.lang.Object.
-            if (!result.l && !strcmp(javaClassName, "java.lang.Object")) {
-                if (value.isString()) {
+            // Create an appropriate Java object if target type is java.lang.Object or other wrapper Objects {Integer, Double, Boolean}.
+            if (!result.l) {
+                if (value.isString() && !strcmp(javaClassName, "java.lang.Object")) {
                     String stringValue = asString(value)->value(exec);
                     JNIEnv* env = getJNIEnv();
                     jobject javaString = env->functions->NewString(env, (const jchar*)stringValue.deprecatedCharacters(), stringValue.length());
                     result.l = javaString;
                 } else if (value.isNumber()) {
                     JNIEnv* env = getJNIEnv();
-                    if (value.isInt32()) {
+                    if (value.isInt32() && (!strcmp(javaClassName, "java.lang.Number") || !strcmp(javaClassName, "java.lang.Integer") || !strcmp(javaClassName, "java.lang.Object"))) {
                         static JGClass clazz(env->FindClass("java/lang/Integer"));
                         jmethodID meth = env->GetStaticMethodID(clazz, "valueOf", "(I)Ljava/lang/Integer;");
                         result.l = env->CallStaticObjectMethod(clazz, meth, (jint) value.asInt32());
-                    } else {
+                    } else if (!strcmp(javaClassName, "java.lang.Number") || !strcmp(javaClassName, "java.lang.Double") || !strcmp(javaClassName, "java.lang.Object")) {
                         jdouble doubleValue = (jdouble) value.asNumber();
                         static JGClass clazz = env->FindClass("java/lang/Double");
                         jmethodID meth = env->GetStaticMethodID(clazz, "valueOf", "(D)Ljava/lang/Double;");
                         jobject javaDouble = env->CallStaticObjectMethod(clazz, meth, doubleValue);
                         result.l = javaDouble;
                     }
-                } else if (value.isBoolean()) {
+                } else if (value.isBoolean() && (!strcmp(javaClassName, "java.lang.Boolean") || !strcmp(javaClassName, "java.lang.Object"))) {
                     bool boolValue = value.asBoolean();
                     JNIEnv* env = getJNIEnv();
                     static JGClass clazz(env->FindClass("java/lang/Boolean"));

@@ -27,7 +27,6 @@ package hello.dialog.dialogs;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 
-import javafx.scene.control.skin.AccordionSkin;
 import javafx.scene.Node;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
@@ -45,7 +44,7 @@ public class ExceptionDialog extends Dialog<ButtonType> {
         final DialogPane dialogPane = getDialogPane();
         
         setTitle("Exception Details");
-        dialogPane.setGraphic(new ImageView(new Image(AccordionSkin.class.getResource("modena/dialog-error.png").toExternalForm())));
+        dialogPane.setGraphic(new ImageView(new Image(getClass().getResource("/hello/dialog/dialog-error.png").toExternalForm())));
         dialogPane.getButtonTypes().addAll(ButtonType.OK);
         dialogPane.setContentText(exception == null? "":  exception.getMessage());
         dialogPane.setExpandableContent(buildExceptionDetails(exception));

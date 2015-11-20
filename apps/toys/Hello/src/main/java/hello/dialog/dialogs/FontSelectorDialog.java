@@ -31,8 +31,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
 
-import javafx.scene.control.skin.AccordionSkin;
-
 import javafx.application.Platform;
 import javafx.beans.binding.DoubleBinding;
 import javafx.beans.value.ChangeListener;
@@ -79,7 +77,7 @@ public class FontSelectorDialog extends Dialog<Font> {
         dialogPane.setHeaderText("Select font");
 
         // FIXME extract to CSS
-        dialogPane.setGraphic(new ImageView(new Image(AccordionSkin.class.getResource("modena/dialog-confirm.png").toExternalForm())));
+        dialogPane.setGraphic(new ImageView(new Image(getClass().getResource("/hello/dialog/dialog-confirm.png").toExternalForm())));
         dialogPane.getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
         dialogPane.setContent(fontPanel);
     }

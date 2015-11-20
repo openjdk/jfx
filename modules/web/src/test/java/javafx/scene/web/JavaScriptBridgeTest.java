@@ -315,6 +315,67 @@ public class JavaScriptBridgeTest extends TestBase {
         });
     }
 
+    // JDK-8141386
+    public static class WrapperObjects {
+        public Number n0; // using setter
+        public Number n1; // direct access
+        public Double d0; // using setter
+        public Double d1; // direct access
+        public Integer i0; // using setter
+        public Integer i1; // direct access
+        public Boolean b0; // using setter
+        public Boolean b1; // direct access
+
+        public void setNumberVal(Number n) {
+            n0 = n;
+        }
+
+        public void setDoubleVal(Double d) {
+            d0 = d;
+        }
+
+        public void setIntegerVal(Integer i) {
+            i0 = i;
+        }
+
+        public void setBooleanVal(Boolean b) {
+            b0 = b;
+        }
+    }
+
+    public @Test void testMethodCallWithWrapperObjects() {
+        final WebEngine web = getEngine();
+
+        submit(() -> {
+            WrapperObjects obj = new WrapperObjects();
+            bind("obj", obj);
+            // Test java.lang.Number
+            web.executeScript("obj.setNumberVal(1.23)");
+            assertEquals(1.23, obj.n0.doubleValue(), 0.1);
+            web.executeScript("obj.n1 = 1.23");
+            assertEquals(1.23, obj.n1.doubleValue(), 0.1);
+            // Test java.lang.Double
+            web.executeScript("obj.setDoubleVal(1.23)");
+            assertEquals(1.23, obj.d0, 0.1);
+            web.executeScript("obj.d1 = 1.23");
+            assertEquals(1.23, obj.d1, 0.1);
+            // Test java.lang.Integer
+            web.executeScript("obj.setIntegerVal(123)");
+            assertEquals(123, obj.i0.intValue());
+            web.executeScript("obj.i1 = 123");
+            assertEquals(123, obj.i1.intValue());
+            // Test java.lang.Boolean
+            web.executeScript("obj.setBooleanVal(true)");
+            assertEquals(true, obj.b0.booleanValue());
+            web.executeScript("obj.setBooleanVal(false)");
+            assertEquals(false, obj.b0.booleanValue());
+            web.executeScript("obj.b1 = true");
+            assertEquals(true, obj.b1.booleanValue());
+            web.executeScript("obj.b1 = false");
+            assertEquals(false, obj.b1.booleanValue());
+        });
+    }
+
     public @Test void testBridgeExplicitOverloading() throws InterruptedException {
         final WebEngine web = getEngine();
         

@@ -25,6 +25,7 @@
 
 package javafx.application;
 
+import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import com.sun.javafx.application.PlatformImpl;
@@ -87,6 +88,22 @@ public final class Platform {
 //    public static void runAndWait(Runnable runnable) {
 //        PlatformImpl.runAndWait(runnable);
 //    }
+
+    /**
+     * Requests the Java Runtime to perform a pulse. This will run a pulse
+     * even if there are no animation timers, scene graph modifications,
+     * or window events that would otherwise cause the pulse to run.
+     * If no pulse is in progress, then one will be scheduled to
+     * run the next time the pulse timer fires.
+     * If there is already a pulse running, then
+     * at least one more pulse after the current pulse will be scheduled.
+     * This method may be called on any thread.
+     *
+     * @since 9
+     */
+    public static void requestNextPulse() {
+        Toolkit.getToolkit().requestNextPulse();
+    }
 
     /**
      * Returns true if the calling thread is the JavaFX Application Thread.
@@ -166,6 +183,92 @@ public final class Platform {
      */
     public static boolean isSupported(ConditionalFeature feature) {
         return PlatformImpl.isSupported(feature);
+    }
+
+    /**
+     * Enter a nested event loop and block until the corresponding
+     * exitNestedEventLoop call is made.
+     * The key passed into this method is used to
+     * uniquely identify the matched enter/exit pair. This method creates a
+     * new nested event loop and blocks until the corresponding
+     * exitNestedEventLoop method is called with the same key.
+     * The return value of this method will be the {@code rval}
+     * object supplied to the exitNestedEventLoop method call that unblocks it.
+     *
+     * <p>
+     * This method must either be called from an input event handler or
+     * from the run method of a Runnable passed to
+     * {@link javafx.application.Platform#runLater Platform.runLater}.
+     * It must not be called during animation or layout processing.
+     * </p>
+     *
+     * @param key the Object that identifies the nested event loop, which
+     * must not be null
+     *
+     * @throws IllegalArgumentException if the specified key is associated
+     * with a nested event loop that has not yet returned
+     *
+     * @throws NullPointerException if the key is null
+     *
+     * @throws IllegalStateException if this method is called during
+     * animation or layout processing.
+     *
+     * @throws IllegalStateException if this method is called on a thread
+     * other than the JavaFX Application Thread.
+     *
+     * @return the value passed into the corresponding call to exitEventLoop
+     *
+     * @since 9
+     */
+    public static Object enterNestedEventLoop(Object key) {
+        return Toolkit.getToolkit().enterNestedEventLoop(key);
+    }
+
+    /**
+     * Exit a nested event loop and unblock the caller of the
+     * corresponding enterNestedEventLoop.
+     * The key passed into this method is used to
+     * uniquely identify the matched enter/exit pair. This method causes the
+     * nested event loop that was previously created with the key to exit and
+     * return control to the caller. If the specified nested event loop is not
+     * the inner-most loop then it will not return until all other inner loops
+     * also exit.
+     *
+     * @param key the Object that identifies the nested event loop, which
+     * must not be null
+     *
+     * @param rval an Object that is returned to the caller of the
+     * corresponding enterNestedEventLoop. This may be null.
+     *
+     * @throws IllegalArgumentException if the specified key is not associated
+     * with an active nested event loop
+     *
+     * @throws NullPointerException if the key is null
+     *
+     * @throws IllegalStateException if this method is called on a thread
+     * other than the FX Application thread
+     *
+     * @since 9
+     */
+    public static void exitNestedEventLoop(Object key, Object rval) {
+        Toolkit.getToolkit().exitNestedEventLoop(key, rval);
+    }
+
+    /**
+     * Checks whether a nested event loop is running, returning true to indicate
+     * that one is, and false if there are no nested event loops currently
+     * running.
+     * This method must be called on the JavaFX Application thread.
+     *
+     * @return true if there is a nested event loop running, and false otherwise.
+     *
+     * @throws IllegalStateException if this method is called on a thread
+     * other than the JavaFX Application Thread.
+     *
+     * @since 9
+     */
+    public static boolean isNestedLoopRunning() {
+        return Toolkit.getToolkit().isNestedLoopRunning();
     }
 
     private static ReadOnlyBooleanWrapper accessibilityActiveProperty;

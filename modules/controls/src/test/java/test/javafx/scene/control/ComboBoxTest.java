@@ -1824,7 +1824,7 @@ public class ComboBoxTest {
 
         comboBox.getSelectionModel().clearAndSelect(0);
         assertEquals(null, comboBox.getSelectionModel().getSelectedItem());
-        assertEquals(-1, comboBox.getSelectionModel().getSelectedIndex());
+        assertEquals(0, comboBox.getSelectionModel().getSelectedIndex());
 
         sl.dispose();
     }

@@ -89,6 +89,7 @@ import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import com.sun.javafx.logging.PulseLogger;
 
@@ -588,6 +589,126 @@ public class Scene implements EventTarget {
             return scenePulseListener;
         }
         return null;
+    }
+
+    private List<Runnable> preLayoutPulseListeners;
+    private List<Runnable> postLayoutPulseListeners;
+
+    /**
+     * Adds a new scene pre layout pulse listener to this scene. Every time a pulse occurs,
+     * this listener will be called on the JavaFX Application Thread directly
+     * <strong>before</strong> the CSS and layout passes, and also before
+     * any rendering is done for
+     * this frame. This scene pulse listener is suitable for knowing when a
+     * scenegraph pulse is happening and also for modifying the scenegraph
+     * (as it is called before CSS and layout, so any changes made will be properly
+     * styled and positioned).
+     *
+     * This method must be called on the JavaFX Application thread.
+     *
+     * @param r The Runnable to be called when the pulse occurs.
+     *
+     * @throws IllegalStateException if this method is called on a thread
+     * other than the JavaFX Application Thread.
+     *
+     * @throws NullPointerException if the provided Runnable is null.
+     *
+     * @since 9
+     */
+    public final void addPreLayoutPulseListener(Runnable r) {
+        Toolkit.getToolkit().checkFxUserThread();
+
+        if (r == null) {
+            throw new NullPointerException("Scene pulse listener should not be null");
+        }
+        if (preLayoutPulseListeners == null) {
+            preLayoutPulseListeners = new CopyOnWriteArrayList<>();
+        }
+        preLayoutPulseListeners.add(r);
+    }
+
+    /**
+     * Removes a previously registered scene pre layout pulse listener from listening to
+     * pulses in this scene. This method does nothing if the specified Runnable is
+     * not already in the list.
+     *
+     * This method must be called on the JavaFX Application thread.
+     *
+     * @param r The Runnable that should no longer be called when the pulse
+     * occurs for this scene.
+     *
+     * @throws IllegalStateException if this method is called on a thread
+     * other than the JavaFX Application Thread.
+     *
+     * @since 9
+     */
+    public final void removePreLayoutPulseListener(Runnable r) {
+        Toolkit.getToolkit().checkFxUserThread();
+
+        if (preLayoutPulseListeners == null) {
+            return;
+        }
+        preLayoutPulseListeners.remove(r);
+    }
+
+    /**
+     * Adds a new scene post layout pulse listener to this scene. Every time a pulse occurs,
+     * this listener will be called on the JavaFX Application Thread directly
+     * <strong>after</strong> the CSS and layout passes, but before any rendering is done for
+     * this frame. This scene pulse listener is suitable for knowing when a
+     * scenegraph pulse is happening, but it is not suited to use cases related
+     * to modifying the scenegraph (as it is called after CSS and layout, so
+     * any changes will possibly be incorrect until the next pulse is run).
+     * An alternative (and better) solution for situations where a scenegraph
+     * modification is required to happen is to use either the
+     * {@link #addPreLayoutPulseListener(Runnable)} API or the the
+     * {@link javafx.animation.AnimationTimer} API.
+     *
+     * This method must be called on the JavaFX Application thread.
+     *
+     * @param r The Runnable to be called when the pulse occurs.
+     *
+     * @throws IllegalStateException if this method is called on a thread
+     * other than the JavaFX Application Thread.
+     *
+     * @throws NullPointerException if the provided Runnable is null.
+     *
+     * @since 9
+     */
+    public final void addPostLayoutPulseListener(Runnable r) {
+        Toolkit.getToolkit().checkFxUserThread();
+
+        if (r == null) {
+            throw new NullPointerException("Scene pulse listener should not be null");
+        }
+        if (postLayoutPulseListeners == null) {
+            postLayoutPulseListeners = new CopyOnWriteArrayList<>();
+        }
+        postLayoutPulseListeners.add(r);
+    }
+
+    /**
+     * Removes a previously registered scene post layout pulse listener from listening to
+     * pulses in this scene. This method does nothing if the specified Runnable is
+     * not already in the list.
+     *
+     * This method must be called on the JavaFX Application thread.
+     *
+     * @param r The Runnable that should no longer be called when the pulse
+     * occurs for this scene.
+     *
+     * @throws IllegalStateException if this method is called on a thread
+     * other than the JavaFX Application Thread.
+     *
+     * @since 9
+     */
+    public final void removePostLayoutPulseListener(Runnable r) {
+        Toolkit.getToolkit().checkFxUserThread();
+
+        if (postLayoutPulseListeners == null) {
+            return;
+        }
+        postLayoutPulseListeners.remove(r);
     }
 
     /**
@@ -2386,6 +2507,14 @@ public class Scene implements EventTarget {
 
             disposeAccessibles();
 
+            // run any scene pre pulse listeners immediately _before_ css / layout,
+            // and before scene synchronization
+            if (preLayoutPulseListeners != null) {
+                for (Runnable r : preLayoutPulseListeners) {
+                    r.run();
+                }
+            }
+
             if (PULSE_LOGGING_ENABLED) {
                 PulseLogger.newPhase("CSS Pass");
             }
@@ -2395,6 +2524,14 @@ public class Scene implements EventTarget {
                 PulseLogger.newPhase("Layout Pass");
             }
             Scene.this.doLayoutPass();
+
+            // run any scene post pulse listeners immediately _after_ css / layout,
+            // and before scene synchronization
+            if (postLayoutPulseListeners != null) {
+                for (Runnable r : postLayoutPulseListeners) {
+                    r.run();
+                }
+            }
 
             boolean dirty = dirtyNodes == null || dirtyNodesSize != 0 || !isDirtyEmpty();
             if (dirty) {

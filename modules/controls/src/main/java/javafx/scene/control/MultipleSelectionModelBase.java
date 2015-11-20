@@ -29,11 +29,7 @@ import com.sun.javafx.collections.MappingChange;
 import com.sun.javafx.collections.NonIterableChange;
 import static javafx.scene.control.SelectionMode.SINGLE;
 
-import java.util.AbstractList;
-import java.util.ArrayList;
-import java.util.BitSet;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -41,6 +37,7 @@ import javafx.collections.ListChangeListener.Change;
 import javafx.util.Callback;
 
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
+import javafx.util.Pair;
 
 
 /**
@@ -232,64 +229,42 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
     
     // package only
     void shiftSelection(int position, int shift, final Callback<ShiftParams, Void> callback) {
-        // with no check here, we get RT-15024
-        if (position < 0) return;
-        if (shift == 0) return;
-        
+        shiftSelection(Arrays.asList(new Pair<>(position, shift)), callback);
+    }
+
+    void shiftSelection(List<Pair<Integer, Integer>> shifts, final Callback<ShiftParams, Void> callback) {
         int selectedIndicesCardinality = selectedIndices.cardinality(); // number of true bits
         if (selectedIndicesCardinality == 0) return;
-        
-        int selectedIndicesSize = selectedIndices.size();   // number of bits reserved 
-        
+
+        int selectedIndicesSize = selectedIndices.size();   // number of bits reserved
+
         int[] perm = new int[selectedIndicesSize];
-        int idx = 0;
+        Arrays.fill(perm, -1);
+
+        // sort the list so that we iterate from highest position to lowest position
+        Collections.sort(shifts, (s1, s2) -> Integer.compare(s2.getKey(), s1.getKey()));
+        final int lowestShiftPosition = shifts.get(shifts.size() - 1).getKey();
+
         boolean hasPermutated = false;
-        
-        if (shift > 0) {
-            for (int i = selectedIndicesSize - 1; i >= position && i >= 0; i--) {
-                boolean selected = selectedIndices.get(i);
-                
-                if (callback == null) {
-                    selectedIndices.clear(i);
-                    selectedIndices.set(i + shift, selected);
-                } else {
-                    callback.call(new ShiftParams(i, i + shift, selected));
-                }
-
-                if (selected) {
-                    perm[idx++] = i + 1;
-                    hasPermutated = true;
-                }
-            }
-            selectedIndices.clear(position);
-        } else if (shift < 0) {
-            for (int i = position; i < selectedIndicesSize; i++) {
-                if ((i + shift) < 0) continue;
-                if ((i + 1 + shift) < position) continue;
-                boolean selected = selectedIndices.get(i + 1);
-                
-                if (callback == null) {
-                    selectedIndices.clear(i + 1);
-                    selectedIndices.set(i + 1 + shift, selected);
-                } else {
-                    callback.call(new ShiftParams(i + 1, i + 1 + shift, selected));
-                }
-
-                if (selected) {
-                    perm[idx++] = i;
-                    hasPermutated = true;
-                }
-            }
+        for (Pair<Integer, Integer> shift : shifts) {
+            hasPermutated = doShift(shift, callback, perm) || hasPermutated;
         }
-        
+
         // This ensure that the selection remains accurate when a shift occurs.
         final int selectedIndex = getSelectedIndex();
-        if (selectedIndex >= position && selectedIndex > -1) {
+        if (selectedIndex >= lowestShiftPosition && selectedIndex > -1) {
+            // sum up the total shift, where the position is less than or equal
+            // to the previously selected index
+            int totalShift = shifts.stream()
+                    .filter(shift -> shift.getKey() <= selectedIndex)
+                    .mapToInt(shift -> shift.getValue())
+                    .sum();
+
             // Fix for RT-38787: we used to not enter this block if
             // selectedIndex + shift resulted in a value less than zero, whereas
             // now we just set the newSelectionLead to zero in that instance.
             // There exists unit tests that cover this.
-            final int newSelectionLead = Math.max(0, selectedIndex + shift);
+            final int newSelectionLead = Math.max(0, selectedIndex + totalShift);
 
             setSelectedIndex(newSelectionLead);
 
@@ -309,12 +284,65 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
         if (hasPermutated) {
             selectedIndicesSeq.callObservers(
-                new NonIterableChange.SimplePermutationChange<Integer>(
+                new NonIterableChange.SimplePermutationChange<>(
                         0, 
                         selectedIndicesCardinality, 
                         perm, 
                         selectedIndicesSeq));
         }
+    }
+
+    private boolean doShift(Pair<Integer, Integer> shiftPair, final Callback<ShiftParams, Void> callback, int[] perm) {
+        final int position = shiftPair.getKey();
+        final int shift = shiftPair.getValue();
+
+        // with no check here, we get RT-15024
+        if (position < 0) return false;
+        if (shift == 0) return false;
+
+        int idx = (int) Arrays.stream(perm).filter(value -> value > -1).count();
+        boolean hasPermutated = false;
+
+        int selectedIndicesSize = selectedIndices.size() - idx;   // number of bits reserved
+
+        if (shift > 0) {
+            for (int i = selectedIndicesSize - 1; i >= position && i >= 0; i--) {
+                boolean selected = selectedIndices.get(i);
+
+                if (callback == null) {
+                    selectedIndices.clear(i);
+                    selectedIndices.set(i + shift, selected);
+                } else {
+                    callback.call(new ShiftParams(i, i + shift, selected));
+                }
+
+                if (selected) {
+                    perm[idx++] = i + 1;
+                    hasPermutated = true;
+                }
+            }
+            selectedIndices.clear(position);
+        } else if (shift < 0) {
+            for (int i = position; i < selectedIndicesSize; i++) {
+                if ((i + shift) < 0) continue;
+                if ((i + 1 + shift) < position) continue;
+                boolean selected = selectedIndices.get(i + 1);
+
+                if (callback == null) {
+                    selectedIndices.clear(i + 1);
+                    selectedIndices.set(i + 1 + shift, selected);
+                } else {
+                    callback.call(new ShiftParams(i + 1, i + 1 + shift, selected));
+                }
+
+                if (selected) {
+                    perm[idx++] = i;
+                    hasPermutated = true;
+                }
+            }
+        }
+
+        return hasPermutated;
     }
 
     @Override public void clearAndSelect(int row) {
