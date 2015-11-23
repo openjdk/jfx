@@ -39,5 +39,12 @@ public class NumberAxisShim {
     public static Object getRange(NumberAxis na) {
         return na.getRange();
     }
-    
+
+    public static void setRange(NumberAxis na, Object range, boolean animate) {
+        na.setRange(range, animate);
+    }
+
+    public static Object autoRange(NumberAxis na, double minValue, double maxValue, double length, double labelSize) {
+        return na.autoRange(minValue, maxValue, length, labelSize);
+    }
 }
