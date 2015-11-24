@@ -133,10 +133,25 @@ public class PlatformImpl {
     /**
      * This method is invoked typically on the main thread. At this point,
      * the JavaFX Application Thread has not been started. Any attempt
-     * to call startup twice results in an exception.
+     * to call startup more than once results in all subsequent calls turning into
+     * nothing more than a runLater call with the provided Runnable being called.
      * @param r
      */
     public static void startup(final Runnable r) {
+        startup(r, false);
+    }
+
+    /**
+     * This method is invoked typically on the main thread. At this point,
+     * the JavaFX Application Thread has not been started. If preventDuplicateCalls
+     * is true, calling this method multiple times will result in an
+     * IllegalStateException. If it is false, calling this method multiple times
+     * will result in all subsequent calls turning into
+     * nothing more than a runLater call with the provided Runnable being called.
+     * @param r
+     * @param preventDuplicateCalls
+     */
+    public static void startup(final Runnable r, boolean preventDuplicateCalls) {
 
         // NOTE: if we ever support re-launching an application and/or
         // launching a second application in the same VM/classloader
@@ -146,10 +161,15 @@ public class PlatformImpl {
         }
 
         if (initialized.getAndSet(true)) {
+            if (preventDuplicateCalls) {
+                throw new IllegalStateException("Toolkit already initialized");
+            }
+
             // If we've already initialized, just put the runnable on the queue.
             runLater(r);
             return;
         }
+
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             contextual2DNavigation = Boolean.getBoolean(
                     "com.sun.javafx.isContextual2DNavigation");

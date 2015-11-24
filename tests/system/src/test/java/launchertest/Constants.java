@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -61,4 +61,9 @@ public class Constants {
 
     static final int ERROR_CONSTRUCTOR_WRONG_CCL = 24;
     static final int ERROR_START_WRONG_CCL = 25;
+
+    static final int ERROR_STARTUP_SUCCEEDED = 26;
+    static final int ERROR_STARTUP_FAILED = 27;
+
+    static final int ERROR_ASSERTION_FAILURE = 28;
 }

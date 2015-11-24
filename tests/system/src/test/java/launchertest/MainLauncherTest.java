@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -82,6 +82,11 @@ public class MainLauncherTest {
         new TestData("TestApp"),
         new TestData("TestAppNoMain"),
         new TestData("TestNotApplication"),
+        new TestData("TestStartupApp1", ERROR_NONE),
+        new TestData("TestStartupApp2", ERROR_NONE),
+        new TestData("TestStartupAppNoMain", ERROR_NONE),
+        new TestData("TestStartupJFXPanel", ERROR_NONE),
+        new TestData("TestStartupNotApplication", ERROR_NONE),
         new TestData("TestAppThreadCheck", ERROR_NONE),
         new TestData("TestAppNoMainThreadCheck", ERROR_NONE),
         new TestData("TestNotApplicationThreadCheck", ERROR_NONE),
@@ -224,13 +229,23 @@ public class MainLauncherTest {
             case ERROR_START_WRONG_CCL:
                 throw new AssertionFailedError(testAppName
                         + ": start has wrong CCL");
+            case ERROR_LAUNCH_SUCCEEDED:
+                throw new AssertionFailedError(testAppName
+                + ": Application.launch unexpectedly succeeded");
+            case ERROR_STARTUP_SUCCEEDED:
+                throw new AssertionFailedError(testAppName
+                + ": Plataform.startup unexpectedly succeeded");
+            case ERROR_STARTUP_FAILED:
+                throw new AssertionFailedError(testAppName
+                + ": Plataform.startup failed");
+
+            case ERROR_ASSERTION_FAILURE:
+                throw new AssertionFailedError(testAppName
+                + ": Assertion failure in test application");
 
             case ERROR_UNEXPECTED_EXCEPTION:
                 throw new AssertionFailedError(testAppName
                 + ": unexpected exception");
-            case ERROR_LAUNCH_SUCCEEDED:
-                throw new AssertionFailedError(testAppName
-                + ": Application.launch unexpectedly succeeded");
 
             default:
                 throw new AssertionFailedError(testAppName
