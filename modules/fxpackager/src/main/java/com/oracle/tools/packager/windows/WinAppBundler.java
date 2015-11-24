@@ -365,7 +365,7 @@ public class WinAppBundler extends AbstractImageBundler {
         if (LAUNCHER_CFG_FORMAT.fetchFrom(p).equals(CFG_FORMAT_PROPERTIES)) {
             writeCfgFile(p, rootDirectory);
         } else {
-            writeCfgFile(p, new File(rootDirectory, getLauncherCfgName(p)), "$APPDIR\\runtime");
+            writeCfgFile(p, new File(rootDirectory, getLauncherCfgName(p)), getRuntimeLocation(p));
         }
 
         // Copy executable root folder
@@ -418,17 +418,21 @@ public class WinAppBundler extends AbstractImageBundler {
         }
     }
 
+    private String getRuntimeLocation(Map<String, ? super Object> params) {
+        if (WIN_RUNTIME.fetchFrom(params) == null) {
+            return "";
+        } else {
+            return "$APPDIR\\runtime";
+        }
+    }
+
     private void writeCfgFile(Map<String, ? super Object> params, File rootDir) throws FileNotFoundException {
         File cfgFile = new File(rootDir, getLauncherCfgName(params));
 
         cfgFile.delete();
 
         PrintStream out = new PrintStream(cfgFile);
-        if (WIN_RUNTIME.fetchFrom(params) == null) {
-            out.println("app.runtime=");
-        } else {
-            out.println("app.runtime=$APPDIR\\runtime");
-        }
+        out.println("app.runtime=" + getRuntimeLocation(params));
         out.println("app.mainjar=" + MAIN_JAR.fetchFrom(params).getIncludedFiles().iterator().next());
         out.println("app.version=" + VERSION.fetchFrom(params));
         //for future AU support (to be able to find app in the registry)

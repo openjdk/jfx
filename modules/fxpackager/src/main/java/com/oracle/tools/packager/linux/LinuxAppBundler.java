@@ -248,7 +248,7 @@ public class LinuxAppBundler extends AbstractImageBundler {
         if (LAUNCHER_CFG_FORMAT.fetchFrom(p).equals(CFG_FORMAT_PROPERTIES)) {
             writeCfgFile(p, rootDir);
         } else {
-            writeCfgFile(p, new File(rootDir, getLauncherCfgName(p)), "$APPDIR/runtime");
+            writeCfgFile(p, new File(rootDir, getLauncherCfgName(p)), getRuntimeLocation(p));
         }
     }
 
@@ -269,16 +269,20 @@ public class LinuxAppBundler extends AbstractImageBundler {
         }
     }
 
+    private String getRuntimeLocation(Map<String, ? super Object> params) {
+        if (LINUX_RUNTIME.fetchFrom(params) == null) {
+            return "";
+        } else {
+            return "$APPDIR/runtime";
+        }
+    }
+
     private void writeCfgFile(Map<String, ? super Object> params, File rootDir) throws FileNotFoundException {
         File cfgFile = new File(rootDir, getLauncherCfgName(params));
 
         cfgFile.delete();
         PrintStream out = new PrintStream(cfgFile);
-        if (LINUX_RUNTIME.fetchFrom(params) == null) {
-            out.println("app.runtime=");                    
-        } else {
-            out.println("app.runtime=$APPDIR/runtime");
-        }
+        out.println("app.runtime=" + getRuntimeLocation(params));
         out.println("app.mainjar=" + MAIN_JAR.fetchFrom(params).getIncludedFiles().iterator().next());
         out.println("app.version=" + VERSION.fetchFrom(params));
 
