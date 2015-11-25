@@ -64,8 +64,7 @@ public class CellSkinBase<C extends Cell> extends LabeledSkinBase<C> {
     /**
      * Creates a new CellSkinBase instance, installing the necessary child
      * nodes into the Control {@link Control#getChildren() children} list, as
-     * well as the necessary {@link Node#getInputMap() input mappings} for
-     * handling key, mouse, etc events.
+     * well as the necessary input mappings for handling key, mouse, etc events.
      *
      * @param control The control that this skin should be installed onto.
      */
