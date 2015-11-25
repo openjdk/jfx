@@ -285,10 +285,10 @@ public class TableCell<S,T> extends IndexedCell<T> {
      * between the TableCell being instantiated and being set into an owner
      * TableRow.
      */
-    private ReadOnlyObjectWrapper<TableRow> tableRow = new ReadOnlyObjectWrapper<TableRow>(this, "tableRow");
-    private void setTableRow(TableRow value) { tableRow.set(value); }
-    public final TableRow getTableRow() { return tableRow.get(); }
-    public final ReadOnlyObjectProperty<TableRow> tableRowProperty() { return tableRow;  }
+    private ReadOnlyObjectWrapper<TableRow<S>> tableRow = new ReadOnlyObjectWrapper<>(this, "tableRow");
+    private void setTableRow(TableRow<S> value) { tableRow.set(value); }
+    public final TableRow<S> getTableRow() { return tableRow.get(); }
+    public final ReadOnlyObjectProperty<TableRow<S>> tableRowProperty() { return tableRow;  }
 
 
 
