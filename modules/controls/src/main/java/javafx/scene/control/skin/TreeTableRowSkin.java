@@ -110,7 +110,9 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         registerChangeListener(control.indexProperty(), e -> updateCells = true);
         registerChangeListener(control.treeItemProperty(), e -> {
             updateTreeItem();
-            isDirty = true;
+            // There used to be an isDirty = true statement here, but this was
+            // determined to be unnecessary and led to performance issues such as
+            // those detailed in JDK-8143266
         });
         registerChangeListener(control.getTreeTableView().treeColumnProperty(), e -> {
             // Fix for RT-27782: Need to set isDirty to true, rather than the
