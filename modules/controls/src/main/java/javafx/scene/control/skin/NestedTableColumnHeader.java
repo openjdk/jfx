@@ -542,7 +542,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
             rect.setWidth(DRAG_RECT_WIDTH);
             rect.setHeight(getHeight() - label.getHeight());
             rect.setFill(Color.TRANSPARENT);
-            rect.visibleProperty().bind(c.visibleProperty());
+            rect.visibleProperty().bind(c.visibleProperty().and(c.resizableProperty()));
             rect.setOnMousePressed(rectMousePressed);
             rect.setOnMouseDragged(rectMouseDragged);
             rect.setOnMouseReleased(rectMouseReleased);
