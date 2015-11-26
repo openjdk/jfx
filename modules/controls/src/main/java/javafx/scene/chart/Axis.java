@@ -645,7 +645,6 @@ public abstract class Axis<T> extends Region {
         // auto range if it is not valid
         final Side side = getEffectiveSide();
         final double length = (side.isVertical()) ? height : width;
-        int tickIndex = 0;
         boolean rangeInvalid = !isRangeValid();
         boolean lengthDiffers = oldLength != length;
         if (lengthDiffers || rangeInvalid) {
@@ -720,9 +719,10 @@ public abstract class Axis<T> extends Region {
                     int stop = 0;
                     for (; stop < tickMarks.size(); ++stop) {
                         TickMark<T> m = tickMarks.get(stop);
+                        double tickPosition = updateAndGetDisplayPosition(m);
                         if (m.isTextVisible()) {
                             double tickHeight = measureTickMarkSize(m.getValue(), getRange()).getHeight();
-                            lastStart = updateAndGetDisplayPosition(m) - tickHeight / 2;
+                            lastStart = tickPosition - tickHeight / 2;
                             break;
                         } else {
                             labelsToSkip.set(stop);
@@ -731,12 +731,13 @@ public abstract class Axis<T> extends Region {
 
                     for (int i = tickMarks.size() - 1; i > stop; i--) {
                         TickMark<T> m = tickMarks.get(i);
+                        double tickPosition = updateAndGetDisplayPosition(m);
                         if (!m.isTextVisible()) {
                             labelsToSkip.set(i);
                             continue;
                         }
                         double tickHeight = measureTickMarkSize(m.getValue(), getRange()).getHeight();
-                        double tickStart = updateAndGetDisplayPosition(m) - tickHeight / 2;
+                        double tickStart = tickPosition - tickHeight / 2;
                         if (tickStart <= prevEnd || tickStart + tickHeight > lastStart) {
                             labelsToSkip.set(i);
                         } else {
@@ -749,9 +750,10 @@ public abstract class Axis<T> extends Region {
                     stop = tickMarks.size() - 1;
                     for (; stop >= 0; --stop) {
                         TickMark<T> m = tickMarks.get(stop);
+                        double tickPosition = updateAndGetDisplayPosition(m);
                         if (m.isTextVisible()) {
                             double tickWidth = measureTickMarkSize(m.getValue(), getRange()).getWidth();
-                            lastStart = updateAndGetDisplayPosition(m) - tickWidth / 2;
+                            lastStart = tickPosition - tickWidth / 2;
                             break;
                         } else {
                             labelsToSkip.set(stop);
@@ -760,12 +762,13 @@ public abstract class Axis<T> extends Region {
 
                     for (int i = 0; i < stop; ++i) {
                         TickMark<T> m = tickMarks.get(i);
+                        double tickPosition = updateAndGetDisplayPosition(m);
                         if (!m.isTextVisible()) {
                             labelsToSkip.set(i);
                             continue;
                         }
                         double tickWidth = measureTickMarkSize(m.getValue(), getRange()).getWidth();
-                        double tickStart = updateAndGetDisplayPosition(m) - tickWidth / 2;
+                        double tickStart = tickPosition - tickWidth / 2;
                         if (tickStart <= prevEnd || tickStart + tickWidth > lastStart) {
                             labelsToSkip.set(i);
                         } else {
@@ -791,51 +794,18 @@ public abstract class Axis<T> extends Region {
                 //noinspection SuspiciousNameCombination
                 axisLabel.resize(height, Math.ceil(axisLabel.prefHeight(width)));
             }
-            tickIndex = 0;
             for (int i = 0; i < tickMarks.size(); i++) {
                 TickMark<T> tick = tickMarks.get(i);
                 positionTextNode(tick.textNode, width - getTickLabelGap() - tickMarkLength,
                         tick.getPosition(), effectiveLabelRotation, side);
-
-                // check if position is inside bounds
-                if (tick.getPosition() >= 0 && tick.getPosition() <= Math.ceil(length)) {
-                    if (isTickLabelsVisible()) {
-                        tick.textNode.setVisible(!labelsToSkip.get(i));
-                        tickIndex++;
-                    }
-                    // add tick mark line
-                    tickMarkPath.getElements().addAll(
-                            new MoveTo(width - tickMarkLength, tick.getPosition()),
-                            new LineTo(width, tick.getPosition())
-                    );
-                } else {
-                    tick.textNode.setVisible(false);
-                }
+                updateTickMark(tick, i, length,
+                        width - tickMarkLength, tick.getPosition(),
+                        width, tick.getPosition());
             }
         } else if (Side.RIGHT.equals(side)) {
             // offset path to make strokes snap to pixel
             tickMarkPath.setLayoutX(0.5);
             tickMarkPath.setLayoutY(0.5);
-            tickIndex = 0;
-            for (int i = 0; i < tickMarks.size(); i++) {
-                TickMark<T> tick = tickMarks.get(i);
-                positionTextNode(tick.textNode, getTickLabelGap() + tickMarkLength,
-                        tick.getPosition(), effectiveLabelRotation, side);
-                // check if position is inside bounds
-                if (tick.getPosition() >= 0 && tick.getPosition() <= Math.ceil(length)) {
-                    if (isTickLabelsVisible()) {
-                        tick.textNode.setVisible(!labelsToSkip.get(i));
-                        tickIndex++;
-                    }
-                    // add tick mark line
-                    tickMarkPath.getElements().addAll(
-                            new MoveTo(0, tick.getPosition()),
-                            new LineTo(tickMarkLength, tick.getPosition())
-                    );
-                } else {
-                    tick.textNode.setVisible(false);
-                }
-            }
             if (getLabel() != null) {
                 final double axisLabelWidth = Math.ceil(axisLabel.prefHeight(width));
                 axisLabel.getTransforms().setAll(new Translate(0, height), new Rotate(-90, 0, 0));
@@ -843,6 +813,14 @@ public abstract class Axis<T> extends Region {
                 axisLabel.setLayoutY(0);
                 //noinspection SuspiciousNameCombination
                 axisLabel.resize(height, axisLabelWidth);
+            }
+            for (int i = 0; i < tickMarks.size(); i++) {
+                TickMark<T> tick = tickMarks.get(i);
+                positionTextNode(tick.textNode, getTickLabelGap() + tickMarkLength,
+                        tick.getPosition(), effectiveLabelRotation, side);
+                updateTickMark(tick, i, length,
+                        0, tick.getPosition(),
+                        tickMarkLength, tick.getPosition());
             }
         } else if (Side.TOP.equals(side)) {
             // offset path to make strokes snap to pixel
@@ -854,59 +832,33 @@ public abstract class Axis<T> extends Region {
                 axisLabel.setLayoutY(0);
                 axisLabel.resize(width, Math.ceil(axisLabel.prefHeight(width)));
             }
-            tickIndex = 0;
             for (int i = 0; i < tickMarks.size(); i++) {
                 TickMark<T> tick = tickMarks.get(i);
                 positionTextNode(tick.textNode, tick.getPosition(), height - tickMarkLength - getTickLabelGap(),
                         effectiveLabelRotation, side);
-                // check if position is inside bounds
-                if (tick.getPosition() >= 0 && tick.getPosition() <= Math.ceil(length)) {
-                    if (isTickLabelsVisible()) {
-                        tick.textNode.setVisible(!labelsToSkip.get(i));
-                        tickIndex++;
-                    }
-                    // add tick mark line
-                    tickMarkPath.getElements().addAll(
-                            new MoveTo(tick.getPosition(), height),
-                            new LineTo(tick.getPosition(), height - tickMarkLength)
-                    );
-                } else {
-                    tick.textNode.setVisible(false);
-                }
+                updateTickMark(tick, i, length,
+                        tick.getPosition(), height,
+                        tick.getPosition(), height - tickMarkLength);
             }
         } else {
             // BOTTOM
             // offset path to make strokes snap to pixel
             tickMarkPath.setLayoutX(0.5);
             tickMarkPath.setLayoutY(0.5);
-            tickIndex = 0;
-            for (int i = 0; i < tickMarks.size(); i++) {
-                TickMark<T> tick = tickMarks.get(i);
-                final double xPos = Math.round(getDisplayPosition(tick.getValue()));
-//                System.out.println("tick pos at : "+tickIndex+" = "+xPos);
-                positionTextNode(tick.textNode, xPos, tickMarkLength + getTickLabelGap(),
-                        effectiveLabelRotation, side);
-                // check if position is inside bounds
-                if (xPos >= 0 && xPos <= Math.ceil(length)) {
-                    if (isTickLabelsVisible()) {
-                        tick.textNode.setVisible(!labelsToSkip.get(i));
-                        tickIndex++;
-                    }
-                    // add tick mark line
-                    tickMarkPath.getElements().addAll(
-                            new MoveTo(xPos, 0),
-                            new LineTo(xPos, tickMarkLength)
-                    );
-                } else {
-                    tick.textNode.setVisible(false);
-                }
-            }
             if (getLabel() != null) {
                 axisLabel.getTransforms().clear();
                 final double labelHeight = Math.ceil(axisLabel.prefHeight(width));
                 axisLabel.setLayoutX(0);
-                axisLabel.setLayoutY(height-labelHeight);
+                axisLabel.setLayoutY(height - labelHeight);
                 axisLabel.resize(width, labelHeight);
+            }
+            for (int i = 0; i < tickMarks.size(); i++) {
+                TickMark<T> tick = tickMarks.get(i);
+                positionTextNode(tick.textNode, tick.getPosition(), tickMarkLength + getTickLabelGap(),
+                        effectiveLabelRotation, side);
+                updateTickMark(tick, i, length,
+                        tick.getPosition(), 0,
+                        tick.getPosition(), tickMarkLength);
             }
         }
     }
@@ -947,6 +899,26 @@ public abstract class Axis<T> extends Region {
         }
     }
 
+    /**
+     * Updates visibility of the text node and adds the tick mark to the path
+     */
+    private void updateTickMark(TickMark<T> tick, int index, double length,
+            double startX, double startY, double endX, double endY)
+    {
+        // check if position is inside bounds
+        if (tick.getPosition() >= 0 && tick.getPosition() <= Math.ceil(length)) {
+            if (isTickLabelsVisible()) {
+                tick.textNode.setVisible(!labelsToSkip.get(index));
+            }
+            // add tick mark line
+            tickMarkPath.getElements().addAll(
+                    new MoveTo(startX, startY),
+                    new LineTo(endX, endY)
+            );
+        } else {
+            tick.textNode.setVisible(false);
+        }
+    }
     /**
      * Get the string label name for a tick mark with the given value
      *
