@@ -410,7 +410,7 @@ if (IS_MAC) {
 // The following properties should be left alone by developers and set only from Hudson.
 defineProperty("HUDSON_JOB_NAME", "not_hudson")
 defineProperty("HUDSON_BUILD_NUMBER","0000")
-defineProperty("PROMOTED_BUILD_NUMBER", "00")
+defineProperty("PROMOTED_BUILD_NUMBER", "0")
 
 // The following properties define the product name for Oracle JDK and OpenJDK
 // for VersionInfo and the DLL manifest.
@@ -425,12 +425,37 @@ if (BUILD_CLOSED) {
 }
 
 // The following properties are set based on properties defined in
-// build.properties. The release number or milestone number should be updated
+// build.properties. The release version and suffix should be updated
 // in that file.
-def jfxReleaseVersion = "${jfxReleaseMajorVersion}.${jfxReleaseMinorVersion}.${jfxReleaseMicroVersion}"
-defineProperty("RAW_VERSION", jfxReleaseVersion)
-defineProperty("RELEASE_NAME", jfxReleaseName)
-defineProperty("RELEASE_MILESTONE", jfxReleaseMilestone)
+def relVer = 0
+if (jfxReleasePatchVersion == "0") {
+    if (jfxReleaseSecurityVersion == "0") {
+        if (jfxReleaseMinorVersion == "0") {
+            relVer = "${jfxReleaseMajorVersion}"
+        } else {
+            relVer = "${jfxReleaseMajorVersion}.${jfxReleaseMinorVersion}"
+        }
+    } else {
+        relVer = "${jfxReleaseMajorVersion}.${jfxReleaseMinorVersion}.${jfxReleaseSecurityVersion}"
+    }
+} else {
+    relVer = "${jfxReleaseMajorVersion}.${jfxReleaseMinorVersion}.${jfxReleaseSecurityVersion}.${jfxReleasePatchVersion}"
+}
+defineProperty("RELEASE_VERSION", relVer)
+def buildDate = new java.util.Date()
+def buildTimestamp = new java.text.SimpleDateFormat("yyyy-MM-dd-HHmmss").format(buildDate)
+defineProperty("BUILD_TIMESTAMP", buildTimestamp)
+def relSuffix = ""
+def relOpt = ""
+if (HUDSON_JOB_NAME == "not_hudson") {
+    relSuffix = "-internal"
+    relOpt = "-${buildTimestamp}"
+} else {
+    relSuffix = jfxReleaseSuffix
+}
+defineProperty("RELEASE_SUFFIX", relSuffix)
+defineProperty("RELEASE_VERSION_SHORT", "${RELEASE_VERSION}${RELEASE_SUFFIX}")
+defineProperty("RELEASE_VERSION_LONG", "${RELEASE_VERSION_SHORT}+${PROMOTED_BUILD_NUMBER}${relOpt}")
 
 // Check whether the COMPILE_TARGETS property has been specified (if so, it was done by
 // the user and not by this script). If it has not been defined then default
@@ -818,9 +843,10 @@ logger.quiet("HUDSON_JOB_NAME: $HUDSON_JOB_NAME")
 logger.quiet("HUDSON_BUILD_NUMBER: $HUDSON_BUILD_NUMBER")
 logger.quiet("PROMOTED_BUILD_NUMBER: $PROMOTED_BUILD_NUMBER")
 logger.quiet("PRODUCT_NAME: $PRODUCT_NAME")
-logger.quiet("RAW_VERSION: $RAW_VERSION")
-logger.quiet("RELEASE_NAME: $RELEASE_NAME")
-logger.quiet("RELEASE_MILESTONE: $RELEASE_MILESTONE")
+logger.quiet("RELEASE_VERSION: $RELEASE_VERSION")
+logger.quiet("RELEASE_SUFFIX: $RELEASE_SUFFIX")
+logger.quiet("RELEASE_VERSION_SHORT: $RELEASE_VERSION_SHORT")
+logger.quiet("RELEASE_VERSION_LONG: $RELEASE_VERSION_LONG")
 
 if (UPDATE_STUB_CACHE) {
     logger.quiet("UPDATE_STUB_CACHE: $UPDATE_STUB_CACHE")
@@ -1210,7 +1236,7 @@ allprojects {
         enabled = IS_BUILD_JAVADOC
         exclude("com/**/*", "Compile*", "javafx/builder/**/*", "javafx/scene/accessibility/**/*");
         executable = JAVADOC;
-        options.windowTitle("JavaFX Project ${project.name} ${RELEASE_NAME}")
+        options.windowTitle("JavaFX Project ${project.name} ${RELEASE_VERSION}")
         if (BUILD_CLOSED) {
             options.linksOffline(JDK_DOCS, JDK_DOCS_CLOSED);
         } else {
@@ -1242,14 +1268,13 @@ project(":base") {
     // We need to take the VersionInfo.java file and replace the various
     // properties within it
     def replacements = [
-        "BUILD_TIMESTAMP": new java.util.Date(),
+        "BUILD_TIMESTAMP": BUILD_TIMESTAMP,
         "HUDSON_JOB_NAME": HUDSON_JOB_NAME,
         "HUDSON_BUILD_NUMBER": HUDSON_BUILD_NUMBER,
         "PROMOTED_BUILD_NUMBER": PROMOTED_BUILD_NUMBER,
         "PRODUCT_NAME": PRODUCT_NAME,
-        "RAW_VERSION": RAW_VERSION,
-        "RELEASE_NAME": RELEASE_NAME,
-        "RELEASE_MILESTONE": RELEASE_MILESTONE];
+        "RELEASE_VERSION": RELEASE_VERSION,
+        "RELEASE_SUFFIX": RELEASE_SUFFIX];
     task processVersionInfo(type: Copy, description: "Replace params in VersionInfo and copy file to destination") {
         doFirst { mkdir "$buildDir/generated-src/version-info" }
         from "src/main/version-info"
@@ -1963,8 +1988,9 @@ project(":fxpackager") {
                     mkdir "$buildDir/native/javapackager"
                     from file("src/main/native/javapackager/win/javapackager.manifest")
                     into file("$buildDir/native/javapackager")
+                    // FIXME: the following is wrong and needs to be fixed
                     filter { line->
-                        line = line.replace("FXVERSION", "${RAW_VERSION}.${HUDSON_BUILD_NUMBER}");
+                        line = line.replace("FXVERSION", "${RELEASE_VERSION}.${HUDSON_BUILD_NUMBER}");
                     }
                 }
             }
@@ -3113,9 +3139,11 @@ compileTargets { t ->
             // Create the javafx.properties file
             final File javafxProperties = file("build/${sdkDirName}/rt/lib/javafx.properties")
             javafxProperties.delete()
-            javafxProperties << "javafx.runtime.version=$RAW_VERSION";
+            javafxProperties << "javafx.version=$RELEASE_VERSION_SHORT";
             javafxProperties << "\n"
-            javafxProperties << "javafx.runtime.build=b$PROMOTED_BUILD_NUMBER";
+            javafxProperties << "javafx.runtime.version=$RELEASE_VERSION_LONG";
+            javafxProperties << "\n"
+            javafxProperties << "javafx.runtime.build=$PROMOTED_BUILD_NUMBER";
             javafxProperties << "\n"
             // Include any properties that have been defined (most likely in
             // one of the various platform gradle files)
