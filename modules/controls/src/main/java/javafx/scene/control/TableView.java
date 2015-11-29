@@ -3055,7 +3055,8 @@ public class TableView<S> extends Control {
                             TablePosition<S, ?> added = c.getAddedSubList().get(j);
                             S addedItem = added.getItem();
 
-                            if (removedItem.equals(addedItem)) {
+                            if ((removedItem != null && removedItem.equals(addedItem)) ||
+                                    (removedItem == null && addedItem == null)) {
                                 matchFound = true;
                                 break;
                             }
