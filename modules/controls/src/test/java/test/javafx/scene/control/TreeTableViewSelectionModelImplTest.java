@@ -815,30 +815,4 @@ public class TreeTableViewSelectionModelImplTest {
         assertEquals("NEW", model.getSelectedItem().getValue());
         assertEquals(1, model.getSelectedItems().size());
     }
-
-    @Test public void test_jdk_8143594_nullValue() {
-        model.setSelectionMode(SelectionMode.MULTIPLE);
-        model.setCellSelectionEnabled(false);
-
-        tableView.setShowRoot(false);
-        tableView.getRoot().getChildren().get(3).setValue(null);
-
-        model.select(0);
-        model.clearAndSelect(3);
-        model.clearAndSelect(0);
-        model.clearAndSelect(3);
-    }
-
-    @Test public void test_jdk_8143594_nullTreeItem() {
-        model.setSelectionMode(SelectionMode.MULTIPLE);
-        model.setCellSelectionEnabled(false);
-
-        tableView.setShowRoot(false);
-        tableView.getRoot().getChildren().set(3, null);
-
-        model.select(0);
-        model.clearAndSelect(3);
-        model.clearAndSelect(0);
-        model.clearAndSelect(3);
-    }
 }

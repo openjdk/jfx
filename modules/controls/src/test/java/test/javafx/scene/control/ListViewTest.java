@@ -1818,16 +1818,4 @@ public class ListViewTest {
         assertEquals(1, (int) sm.getSelectedIndices().get(0));
         assertEquals("2", sm.getSelectedItems().get(0));
     }
-
-    @Test public void test_jdk_8143594() {
-        MultipleSelectionModel model = listView.getSelectionModel();
-        model.setSelectionMode(SelectionMode.MULTIPLE);
-
-        listView.getItems().addAll("Apple", "Orange", null);
-
-        model.select(0);
-        model.clearAndSelect(2);
-        model.clearAndSelect(0);
-        model.clearAndSelect(2);
-    }
 }

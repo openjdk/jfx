@@ -732,16 +732,4 @@ public class TableViewSelectionModelImplTest {
             }
         }
     }
-
-    @Test public void test_jdk_8143594() {
-        model.setSelectionMode(SelectionMode.MULTIPLE);
-        model.setCellSelectionEnabled(false);
-
-        tableView.getItems().set(3, null);
-
-        model.select(0);
-        model.clearAndSelect(3);
-        model.clearAndSelect(0);
-        model.clearAndSelect(3);
-    }
 }
