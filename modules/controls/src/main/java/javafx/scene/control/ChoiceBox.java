@@ -181,6 +181,9 @@ public class ChoiceBox<T> extends Control {
             oldSM = sm;
             if (sm != null) {
                 sm.selectedItemProperty().addListener(selectedItemListener);
+                if (sm.getSelectedItem() != null && ! valueProperty().isBound()) {
+                    ChoiceBox.this.setValue(sm.getSelectedItem());
+                }
             }
         }                
     };
