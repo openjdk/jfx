@@ -23,7 +23,7 @@
  * questions.
  */
 
-package hello;
+package hellotest;
 
 import javafx.application.Application;
 import javafx.geometry.Insets;
@@ -34,7 +34,6 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 import com.sun.javafx.application.PlatformImpl;
-import com.sun.javafx.css.StyleManager;
 
 public class HelloHighContrast extends Application {
 
