@@ -303,9 +303,10 @@ class CellUtils {
         ComboBox<T> comboBox = new ComboBox<T>(items);
         comboBox.converterProperty().bind(converter);
         comboBox.setMaxWidth(Double.MAX_VALUE);
-        comboBox.getSelectionModel().selectedItemProperty().addListener((ov, oldValue, newValue) -> {
-            if (cell.isEditing()) {
-                cell.commitEdit(newValue);
+        comboBox.showingProperty().addListener(o -> {
+            // when the comboBox is hidden, commit the current selection into the cell
+            if (!comboBox.isShowing()) {
+                cell.commitEdit(comboBox.getSelectionModel().getSelectedItem());
             }
         });
         return comboBox;
