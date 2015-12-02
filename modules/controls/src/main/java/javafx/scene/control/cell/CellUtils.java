@@ -154,9 +154,9 @@ class CellUtils {
         ChoiceBox<T> choiceBox = new ChoiceBox<T>(items);
         choiceBox.setMaxWidth(Double.MAX_VALUE);
         choiceBox.converterProperty().bind(converter);
-        choiceBox.getSelectionModel().selectedItemProperty().addListener((ov, oldValue, newValue) -> {
-            if (cell.isEditing()) {
-                cell.commitEdit(newValue);
+        choiceBox.showingProperty().addListener(o -> {
+            if (!choiceBox.isShowing()) {
+                cell.commitEdit(choiceBox.getSelectionModel().getSelectedItem());
             }
         });
         return choiceBox;
