@@ -896,7 +896,7 @@ public class JNLPBundler extends AbstractBundler {
 
                 String appName = APP_NAME.fetchFrom(params);
                 if (m == Mode.APPLET) {
-                    xout.writeStartDocument("applet-desc");
+                    xout.writeStartElement("applet-desc");
                     xout.writeAttribute("width", Integer.toString(width));
                     xout.writeAttribute("height", Integer.toString(height));
                     xout.writeAttribute("main-class", applicationClass);

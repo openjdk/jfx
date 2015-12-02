@@ -41,6 +41,64 @@ public final class Platform {
     }
 
     /**
+     * This method starts the JavaFX runtime. The specified Runnable will then be
+     * called on the JavaFX Application Thread. In general it is not necessary to
+     * explicitly call this method, since it is invoked as a consequence of
+     * how most JavaFX applications are built. However there are valid use cases
+     * for calling this method directly. Because this method starts the JavaFX
+     * runtime, there is not yet any JavaFX Application Thread, so it is normal
+     * that this method is called directly on the main thread of the application.
+     *
+     * <p>
+     * This method may or may not return to the caller before the run method
+     * of the specified Runnable has been called. In any case, once this method
+     * returns, you may call {@link #runLater} with additional Runnables.
+     * Those Runnables will be called, also on the JavaFX Application Thread,
+     * after the Runnable passed into this method has been called.
+     * </p>
+     *
+     * <p>As noted, it is normally the case that the JavaFX Application Thread
+     * is started automatically. It is important that this method only be called
+     * when the JavaFX runtime has not yet been initialized. Situations where
+     * the JavaFX runtime is started automatically include:
+     * </p>
+     *
+     * <ul>
+     *   <li>For standard JavaFX applications that extend {@link Application}, and
+     *   use either the Java launcher or one of the launch methods in the
+     *   Application class to launch the application, the FX runtime is
+     *   initialized automatically by the launcher before the Application
+     *   class is loaded.</li>
+     *   <li>For Swing applications that use JFXPanel to display FX content, the
+     *   FX runtime is initialized when the first JFXPanel instance is
+     *   constructed.</li>
+     *   <li>For SWT application that use FXCanvas to display FX content, the FX
+     *   runtime is initialized when the first FXCanvas instance is
+     *   constructed.</li>
+     * </ul>
+     *
+     * <p>When an application does not follow any of these common approaches,
+     * then it becomes the responsibility of the developer to manually start the
+     * JavaFX runtime by calling this startup method.
+     * </p>
+     *
+     * <p>Calling this method when the JavaFX runtime is already running will result in an
+     * {@link IllegalStateException} being thrown - it is only valid to request
+     * that the JavaFX runtime be started once.
+     * </p>
+     *
+     * @throws IllegalStateException if the JavaFX runtime is already running
+     *
+     * @param runnable the Runnable whose run method will be executed on the
+     * JavaFX Application Thread once it has been started.
+     *
+     * @since 9
+     */
+    public static void startup(Runnable runnable) {
+        PlatformImpl.startup(runnable, true);
+    }
+
+    /**
      * Run the specified Runnable on the JavaFX Application Thread at some
      * unspecified
      * time in the future. This method, which may be called from any thread,
@@ -73,6 +131,9 @@ public final class Platform {
      * runtime is initialized when the first JFXPanel instance is constructed.
      * For SWT application that use FXCanvas to display FX content, the FX
      * runtime is initialized when the first FXCanvas instance is constructed.
+     * For applications that do not follow any of these approaches, then it is
+     * necessary to manually start the JavaFX runtime by calling
+     * {@link #startup(Runnable)} once.
      * </p>
      *
      * @param runnable the Runnable whose run method will be executed on the

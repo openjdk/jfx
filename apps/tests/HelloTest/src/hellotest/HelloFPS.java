@@ -23,7 +23,7 @@
  * questions.
  */
 
-package hello;
+package hellotest;
 
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;

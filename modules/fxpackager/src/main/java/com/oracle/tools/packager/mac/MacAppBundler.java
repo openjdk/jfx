@@ -497,7 +497,7 @@ public class MacAppBundler extends AbstractImageBundler {
                 if (LAUNCHER_CFG_FORMAT.fetchFrom(p).equals(CFG_FORMAT_PROPERTIES)) {
                     writeCfgFile(p, rootDirectory);
                 } else {
-                    writeCfgFile(p, new File(rootDirectory, getLauncherCfgName(p)), "$APPDIR/PlugIns/Java.runtime");
+                    writeCfgFile(p, new File(rootDirectory, getLauncherCfgName(p)), getRuntimeLocation(p));
                 }
             }
 
@@ -659,6 +659,14 @@ public class MacAppBundler extends AbstractImageBundler {
                 nm = nm.substring(0, 16);
             }
             return nm;
+        }
+    }
+
+    private String getRuntimeLocation(Map<String, ? super Object> params) {
+        if (MAC_RUNTIME.fetchFrom(params) == null) {
+            return "";
+        } else {
+            return "$APPDIR/PlugIns/Java.runtime";
         }
     }
 
@@ -1124,11 +1132,7 @@ public class MacAppBundler extends AbstractImageBundler {
         pkgInfoFile.delete();
 
         PrintStream out = new PrintStream(pkgInfoFile);
-        if (MAC_RUNTIME.fetchFrom(params) == null) {
-            out.println("app.runtime=");
-        } else {
-            out.println("app.runtime=$APPDIR/PlugIns/Java.runtime");
-        }
+        out.println("app.runtime=" + getRuntimeLocation(params));
         out.println("app.mainjar=" + MAIN_JAR.fetchFrom(params).getIncludedFiles().iterator().next());
         out.println("app.version=" + VERSION.fetchFrom(params));
         //for future AU support (to be able to find app in the registry)

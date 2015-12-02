@@ -204,7 +204,7 @@ public class TableHeaderRow extends StackPane {
         dragHeader.getChildren().add(dragHeaderLabel);
 
         // the header lives inside a NestedTableColumnHeader
-        NestedTableColumnHeader rootHeader = new NestedTableColumnHeader(tableSkin, null);
+        NestedTableColumnHeader rootHeader = createRootHeader();
         setRootHeader(rootHeader);
         rootHeader.setFocusTraversable(false);
         rootHeader.setTableHeaderRow(this);
@@ -388,6 +388,16 @@ public class TableHeaderRow extends StackPane {
         }
 
         clip.setWidth(tableWidth);
+    }
+
+    /**
+     * Creates a new NestedTableColumnHeader instance. By default this method should not be overridden, but in some
+     * circumstances it makes sense (e.g. testing, or when extreme customization is desired).
+     *
+     * @return A new NestedTableColumnHeader instance.
+     */
+    protected NestedTableColumnHeader createRootHeader() {
+        return new NestedTableColumnHeader(tableSkin, null);
     }
 
 

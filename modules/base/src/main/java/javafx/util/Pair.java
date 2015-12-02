@@ -89,12 +89,10 @@ public class Pair<K,V> implements Serializable{
      */
     @Override
     public int hashCode() {
-        // name's hashCode is multiplied by an arbitrary prime number (13)
-        // in order to make sure there is a difference in the hashCode between
-        // these two parameters:
-        //  name: a  value: aa
-        //  name: aa value: a
-        return key.hashCode() * 13 + (value == null ? 0 : value.hashCode());
+        int hash = 7;
+        hash = 31 * hash + (key != null ? key.hashCode() : 0);
+        hash = 31 * hash + (value != null ? value.hashCode() : 0);
+        return hash;
     }
 
      /**

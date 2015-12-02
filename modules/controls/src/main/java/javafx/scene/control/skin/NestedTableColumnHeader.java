@@ -333,6 +333,20 @@ public class NestedTableColumnHeader extends TableColumnHeader {
         return height + label.prefHeight(-1) + snappedTopInset() + snappedBottomInset();
     }
 
+    /**
+     * Creates a new TableColumnHeader instance for the given TableColumnBase instance. By default this method should
+     * not be overridden, but in some circumstances it makes sense (e.g. testing, or when extreme customization is desired).
+     * If the given TableColumnBase instance has child columns, then it is suggested to return a
+     * {@link NestedTableColumnHeader} instance instead.
+     *
+     * @return A new TableColumnHeader instance.
+     */
+    protected TableColumnHeader createTableColumnHeader(TableColumnBase col) {
+        return col.getColumns().isEmpty() ?
+                new TableColumnHeader(getTableViewSkin(), col) :
+                new NestedTableColumnHeader(getTableViewSkin(), col);
+    }
+
 
 
     /***************************************************************************
@@ -453,12 +467,6 @@ public class NestedTableColumnHeader extends TableColumnHeader {
         return label.prefHeight(-1);
     }
 
-    TableColumnHeader createTableColumnHeader(TableColumnBase col) {
-        return col.getColumns().isEmpty() ?
-                new TableColumnHeader(getTableViewSkin(), col) :
-                new NestedTableColumnHeader(getTableViewSkin(), col);
-    }
-
     void setHeadersNeedUpdate() {
         updateColumns = true;
 
@@ -534,7 +542,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
             rect.setWidth(DRAG_RECT_WIDTH);
             rect.setHeight(getHeight() - label.getHeight());
             rect.setFill(Color.TRANSPARENT);
-            rect.visibleProperty().bind(c.visibleProperty());
+            rect.visibleProperty().bind(c.visibleProperty().and(c.resizableProperty()));
             rect.setOnMousePressed(rectMousePressed);
             rect.setOnMouseDragged(rectMouseDragged);
             rect.setOnMouseReleased(rectMouseReleased);

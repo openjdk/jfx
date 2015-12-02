@@ -627,30 +627,22 @@ public class Stage extends Window {
      * by the underlying platform and therefore must not be bindable.
      * </p>
      *
-     * Notes regarding desktop profile implementation.
-     * <p>
-     * For desktop profile the runtime will attempt to enter full-screen
-     * exclusive mode (FSEM) if such is supported by the platform and it is
-     * allowed for this application. If either is not the case a
-     * simulated full-screen window will be used instead; the window will be
-     * maximized, made undecorated if possible, and moved to the front.
-     * </p>
-     * For desktop profile the user can unconditionally exit full-screen mode
+     * The user can unconditionally exit full-screen mode
      * at any time by pressing {@code ESC}.
      * <p>
      * There are differences in behavior between applications if a security 
      * manager is present. Applications with permissions are allowed to enter 
-     * full-screen exclusive mode unrestricted. Applications without the proper 
+     * full-screen mode unrestricted. Applications without the proper 
      * permissions will have the following restrictions:
      * </p>
      * <ul>
-     *  <li>Applications can only enter FSEM in response
+     *  <li>Applications can only enter full-screen mode in response
      *   to user input. More specifically, entering is allowed from mouse
      *   ({@code Node.mousePressed/mouseReleased/mouseClicked}) or keyboard
      *   ({@code Node.keyPressed/keyReleased/keyTyped}) event handlers. It is
-     *   not allowed to enter FSEM in response to {@code ESC}
-     *   key. Attempting to enter FSEM from any other context will result in
-     *   emulated full-screen mode.
+     *   not allowed to enter full-screen mode in response to {@code ESC}
+     *   key. Attempting to enter full-screen mode from any other context will
+     *   be ignored.
      *   <p>
      *   If {@code Stage} was constructed as full-screen but not visible
      *   it will enter full-screen mode upon becoming visible, with the same
@@ -658,7 +650,7 @@ public class Stage extends Window {
      *   {@code fullScreen} to {@code true}.
      *   </p>
      *  </li>
-     *  <li> If the application was allowed to enter FSEM
+     *  <li> If the application was allowed to enter full-screen mode
      *   it will have limited keyboard input. It will only receive KEY_PRESSED
      *   and KEY_RELEASED events from the following keys:
      *   {@code UP, DOWN, LEFT, RIGHT, SPACE, TAB, PAGE_UP, PAGE_DOWN, HOME, END, ENTER}

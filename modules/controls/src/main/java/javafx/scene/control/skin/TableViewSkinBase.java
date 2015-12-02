@@ -537,7 +537,17 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
 
         checkContentWidthState();
     }
-    
+
+    /**
+     * Creates a new TableHeaderRow instance. By default this method should not be overridden, but in some
+     * circumstances it makes sense (e.g. testing, or when extreme customization is desired).
+     *
+     * @return A new TableHeaderRow instance.
+     */
+    protected TableHeaderRow createTableHeaderRow() {
+        return new TableHeaderRow(this);
+    }
+
     
     
     /***************************************************************************
@@ -548,10 +558,6 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
 
     final TableHeaderRow getTableHeaderRow() {
         return tableHeaderRow;
-    }
-
-    private TableHeaderRow createTableHeaderRow() {
-        return new TableHeaderRow(this);
     }
 
     @Override void updateRowCount() {
