@@ -78,85 +78,6 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
     public abstract boolean buildNativeGeometry(float[] vertexBuffer,
             int vertexBufferLength, short[] indexBufferShort, int indexBufferLength);
 
-    private boolean updateSkipMeshNormalGeometry(int[] posFromAndLengthIndices, int[] uvFromAndLengthIndices) {
-
-        // Find out the list of modified tex coords.
-        int startTexCoord = uvFromAndLengthIndices[0] / TEXCOORD_SIZE;
-        int numTexCoords = (uvFromAndLengthIndices[1] / TEXCOORD_SIZE);
-        if ((uvFromAndLengthIndices[1] % TEXCOORD_SIZE) > 0) {
-            numTexCoords++;
-        }
-
-        if (numTexCoords > 0) {
-            for (int i = 0; i < numTexCoords; i++) {
-                int texCoordOffset = (startTexCoord + i) * TEXCOORD_SIZE;
-                MeshGeomComp2VB mt2vb = (MeshGeomComp2VB) texCoord2vbMap.get(texCoordOffset);
-                assert mt2vb != null;
-                // mt2vb shouldn't be null. We can't have a texCoord referred by 
-                // the faces array that isn't in the vertexBuffer.
-                if (mt2vb != null) {
-                    int[] locs = mt2vb.getLocs();
-                    int validLocs = mt2vb.getValidLocs();
-                    if (locs != null) {
-                        for (int j = 0; j < validLocs; j++) {
-                            int vbIndex = (locs[j] * VERTEX_SIZE_VB) + POINT_SIZE_VB;
-                            vertexBuffer[vbIndex] = uv[texCoordOffset];
-                            vertexBuffer[vbIndex + 1] = uv[texCoordOffset + 1];
-                        }
-                    } else {
-                        int loc = mt2vb.getLoc();
-                        int vbIndex = (loc * VERTEX_SIZE_VB) + POINT_SIZE_VB;
-                        vertexBuffer[vbIndex] = uv[texCoordOffset];
-                        vertexBuffer[vbIndex + 1] = uv[texCoordOffset + 1];
-                    }                    
-                }
-            }
-        }
-
-        // Find out the list of modified points
-        int startPoint = posFromAndLengthIndices[0] / POINT_SIZE;
-        int numPoints = (posFromAndLengthIndices[1] / POINT_SIZE);
-        if ((posFromAndLengthIndices[1] % POINT_SIZE) > 0) {
-            numPoints++;
-        }
-
-        if (numPoints > 0) {
-            for (int i = 0; i < numPoints; i++) {
-                int pointOffset = (startPoint + i) * POINT_SIZE;
-                MeshGeomComp2VB mp2vb = (MeshGeomComp2VB) point2vbMap.get(pointOffset);
-                assert mp2vb != null;
-                // mp2vb shouldn't be null. We can't have a point referred by
-                // the faces array that isn't in the vertexBuffer.
-                if (mp2vb != null) {
-                    int[] locs = mp2vb.getLocs();
-                    int validLocs = mp2vb.getValidLocs();
-                    if (locs != null) {
-                        for (int j = 0; j < validLocs; j++) {
-                            int vbIndex = locs[j] * VERTEX_SIZE_VB;
-                            vertexBuffer[vbIndex] = pos[pointOffset];
-                            vertexBuffer[vbIndex + 1] = pos[pointOffset + 1];
-                            vertexBuffer[vbIndex + 2] = pos[pointOffset + 2];
-                        }
-                    } else {
-                        int loc = mp2vb.getLoc();
-                        int vbIndex = loc * VERTEX_SIZE_VB;
-                            vertexBuffer[vbIndex] = pos[pointOffset];
-                            vertexBuffer[vbIndex + 1] = pos[pointOffset + 1];
-                            vertexBuffer[vbIndex + 2] = pos[pointOffset + 2];
-                    }                    
-                }
-            }
-        }
-
-        if (indexBuffer != null) {
-            return buildNativeGeometry(vertexBuffer,
-                    numberOfVertices * VERTEX_SIZE_VB, indexBuffer, nFaces * 3);
-        } else {
-            return buildNativeGeometry(vertexBuffer,
-                    numberOfVertices * VERTEX_SIZE_VB, indexBufferShort, nFaces * 3);
-        }        
-    }
-
     private boolean[] dirtyVertices;
     private float[] cachedNormals;
     private float[] cachedTangents;
@@ -170,107 +91,6 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
     private HashMap<Integer, MeshGeomComp2VB> point2vbMap;
     private HashMap<Integer, MeshGeomComp2VB> normal2vbMap;
     private HashMap<Integer, MeshGeomComp2VB> texCoord2vbMap;
-    
-    private boolean buildSkipMeshNormalGeometry() { 
-            
-        HashMap<Long, Integer> face2vbMap = new HashMap();
-
-        if (point2vbMap == null) {
-            point2vbMap = new HashMap();
-        } else {
-            point2vbMap.clear();
-        }
-        if (texCoord2vbMap == null) {
-            texCoord2vbMap = new HashMap();
-        } else {
-            texCoord2vbMap.clear();
-        }
-        
-        Integer mf2vb;
-        BaseMesh.MeshGeomComp2VB mp2vb;
-        BaseMesh.MeshGeomComp2VB mt2vb;
-        vertexBuffer = new float[nVerts * VERTEX_SIZE_VB];
-        indexBuffer = new int[nFaces * 3];
-        int ibCount = 0;
-        int vbCount = 0;
-
-        for (int faceCount = 0; faceCount < nFaces; faceCount++) {
-            int faceIndex = faceCount * 6;
-            for (int i = 0; i < 3; i++) {
-                int vertexIndex = i * 2;
-                int pointIndex = faceIndex + vertexIndex;
-                int texCoordIndex = pointIndex + 1;
-                long key = (long) ((long) (faces[pointIndex]) << 32 | faces[texCoordIndex]);
-                mf2vb = (Integer) face2vbMap.get(key);
-                if (mf2vb == null) {
-                    mf2vb = vbCount / VERTEX_SIZE_VB;
-
-                    face2vbMap.put(key, mf2vb);
-                    if (vertexBuffer.length <= vbCount) {
-                        float[] temp = new float[vbCount + 10 * VERTEX_SIZE_VB]; // Let's increment by 10
-                        System.arraycopy(vertexBuffer, 0, temp, 0, vertexBuffer.length);
-                        vertexBuffer = temp;
-                    }
-                    int pointOffset = faces[pointIndex] * POINT_SIZE;
-                    int texCoordOffset = faces[texCoordIndex] * TEXCOORD_SIZE;
-                    vertexBuffer[vbCount] = pos[pointOffset];
-                    vertexBuffer[vbCount + 1] = pos[pointOffset + 1];
-                    vertexBuffer[vbCount + 2] = pos[pointOffset + 2];
-                    vertexBuffer[vbCount + 3] = uv[texCoordOffset];
-                    vertexBuffer[vbCount + 4] = uv[texCoordOffset + 1];
-                    vertexBuffer[vbCount + 5] = 0;
-                    vertexBuffer[vbCount + 6] = 0;
-                    vertexBuffer[vbCount + 7] = 0;
-                    vertexBuffer[vbCount + 8] = 0;                   
-                    vbCount += VERTEX_SIZE_VB;
- 
-                    mp2vb = point2vbMap.get(pointOffset);
-                    if (mp2vb == null) {
-                        // create 
-                        mp2vb = new MeshGeomComp2VB(pointOffset, mf2vb);
-                        point2vbMap.put(pointOffset, mp2vb);
-                    } else {
-                        // addLoc
-                        mp2vb.addLoc(mf2vb);
-                    }
-                    
-                    mt2vb = texCoord2vbMap.get(texCoordOffset);
-                    if (mt2vb == null) {
-                        // create 
-                        mt2vb = new MeshGeomComp2VB(texCoordOffset, mf2vb);
-                        texCoord2vbMap.put(texCoordOffset, mt2vb);
-                    } else {
-                        // addLoc
-                        mt2vb.addLoc(mf2vb);
-                    }
-                }
-                
-                // Construct IndexBuffer
-                indexBuffer[ibCount++] = mf2vb;
-            }
-        }
-
-        numberOfVertices = vbCount / VERTEX_SIZE_VB;
-        
-        if (numberOfVertices > 0x10000) { // > 64K
-            return buildNativeGeometry(vertexBuffer,
-                    numberOfVertices * VERTEX_SIZE_VB, indexBuffer, nFaces * 3);
-        } else {
-             
-            if (indexBufferShort == null || indexBufferShort.length < nFaces * 3) {
-                indexBufferShort = new short[nFaces * 3];
-            }
-            int ii = 0;
-            for (int i = 0; i < nFaces; i++) {
-                indexBufferShort[ii] = (short) indexBuffer[ii++]; 
-                indexBufferShort[ii] = (short) indexBuffer[ii++]; 
-                indexBufferShort[ii] = (short) indexBuffer[ii++]; 
-            }
-            indexBuffer = null; // free 
-            return buildNativeGeometry(vertexBuffer,
-                    numberOfVertices * VERTEX_SIZE_VB, indexBufferShort, nFaces * 3);
-        }                
-    }
 
     private void convertNormalsToQuats(MeshTempState instance, int numberOfVertices,
             float[] normals, float[] tangents, float[] bitangents,
@@ -691,10 +511,7 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
                     texCoords, texCoordsFromAndLengthIndices,
                     faces, facesFromAndLengthIndices);
         } else {
-            return buildPTGeometry(points, pointsFromAndLengthIndices,
-                    texCoords, texCoordsFromAndLengthIndices,
-                    faces, facesFromAndLengthIndices,
-                    faceSmoothingGroups, faceSmoothingGroupsFromAndLengthIndices);
+            return buildPTGeometry(points, texCoords, faces, faceSmoothingGroups);
         }
     }
 
@@ -729,10 +546,7 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
     }
 
     // Build PointTexCoordGeometry
-    private boolean buildPTGeometry(float[] pos, int[] posFromAndLengthIndices,
-            float[] uv, int[] uvFromAndLengthIndices,
-            int[] faces, int[] facesFromAndLengthIndices,
-            int[] smoothing, int[] smoothingFromAndLengthIndices) {
+    private boolean buildPTGeometry(float[] pos, float[] uv, int[] faces, int[] smoothing) {
         nVerts = pos.length / 3;
         nTVerts = uv.length / 2;
         nFaces = faces.length / (VertexFormat.POINT_TEXCOORD.getVertexIndexSize() * 3);
@@ -741,28 +555,6 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
         this.uv = uv;
         this.faces = faces;
         this.smoothing = smoothing.length == nFaces ? smoothing : null;
-
-        if (PrismSettings.skipMeshNormalComputation) {
-            boolean updatePoints = posFromAndLengthIndices[1] > 0;
-            boolean updateTexCoords = uvFromAndLengthIndices[1] > 0;
-            boolean updateFaces = facesFromAndLengthIndices[1] > 0;
-            boolean updateSmoothing = smoothingFromAndLengthIndices[1] > 0;
-
-            // First time creation
-            boolean buildGeom = !(updatePoints || updateTexCoords || updateFaces || updateSmoothing);
-
-            // We will need to rebuild if there is a change to faces or smoothing
-            if (updateFaces || updateSmoothing) {
-                buildGeom = true;
-            }
-
-            if ((!buildGeom) && (vertexBuffer != null)
-                    && ((indexBuffer != null) || (indexBufferShort != null))) {
-                return updateSkipMeshNormalGeometry(posFromAndLengthIndices, uvFromAndLengthIndices);
-            }
-
-            return buildSkipMeshNormalGeometry();
-        }
 
         MeshTempState instance = MeshTempState.getInstance();
         // big pool for all possible vertices
