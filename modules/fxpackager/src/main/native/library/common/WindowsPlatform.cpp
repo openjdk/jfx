@@ -170,14 +170,42 @@ TString WindowsPlatform::GetAppDataDirectory() {
     return result;
 }
 
-#define JAVA_RUNTIME_SUBKEY _T("SOFTWARE\\JavaSoft\\Java Runtime Environment")
 #define BUFFER_SIZE 256
 
 // try to find current Java Home from registry
+//
 // HKLM\Software\JavaSoft\Java Runtime Environment\CurrentVersion
 // HKLM\Software\JavaSoft\Java Runtime Environment\[CurrentVersion]\JavaHome
-// return TRUE if found, and path is set in lpszJavaHome
-// return FALSE otherwise
+//
+// note that this has been changed in JDK9 to
+//
+// HKLM\Software\JavaSoft\JRE\CurrentVersion
+// HKLM\Software\JavaSoft\JRE\[CurrentVersion]\JavaHome
+//
+// return non-empty string as path if found
+// return empty string otherwise
+
+TString GetSystemJREForSubkey(TString javaRuntimeSubkey) {
+    Registry registry(HKEY_LOCAL_MACHINE);
+    TString result;
+
+    if (registry.Open(javaRuntimeSubkey)) {
+        TString version = registry.ReadString(_T("CurrentVersion"));
+
+        if (!version.empty()) {
+            if (registry.Open(javaRuntimeSubkey + TString(_T("\\")) + TString(version))) {
+                TString javaHome = registry.ReadString(_T("JavaHome"));
+
+                if (FilePath::DirectoryExists(javaHome)) {
+                    result = javaHome;
+                }
+            }
+        }
+    }
+
+    return result;
+}
+
 TString WindowsPlatform::GetSystemJRE() {
     if (GetAppCDSState() != cdsDisabled) {
         //TODO throw exception
@@ -185,20 +213,14 @@ TString WindowsPlatform::GetSystemJRE() {
     }
 
     TString result;
-    Registry registry(HKEY_LOCAL_MACHINE);
+    result = GetSystemJREForSubkey(_T("SOFTWARE\\JavaSoft\\JRE"));
+    if (!result.empty()) {
+        return result;
+    }
 
-    if (registry.Open(JAVA_RUNTIME_SUBKEY) == true) {
-        TString version = registry.ReadString(_T("CurrentVersion"));
-
-        if (version.empty() == false) {
-            if (registry.Open(JAVA_RUNTIME_SUBKEY + TString(_T("\\")) + TString(version)) == true) {
-                TString javaHome = registry.ReadString(_T("JavaHome"));
-
-                if (FilePath::DirectoryExists(javaHome) == true) {
-                    result = javaHome;
-                }
-            }
-        }
+    result = GetSystemJREForSubkey(_T("SOFTWARE\\JavaSoft\\Java Runtime Environment"));
+    if (!result.empty()) {
+        return result;
     }
 
     return result;
