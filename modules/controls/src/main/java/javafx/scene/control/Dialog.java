@@ -395,7 +395,7 @@ public class Dialog<R> implements EventTarget {
                 }
             }
 
-            impl_setResultAndClose(cancelButton, false);
+            setResultAndClose(cancelButton, false);
         }
 
         // start normal closing process
@@ -988,7 +988,7 @@ public class Dialog<R> implements EventTarget {
     // both when a button is clicked and when the user forces a window closed
     // with keyboard OS-specific shortchuts or OS-native titlebar buttons).
     @SuppressWarnings("unchecked")
-    void impl_setResultAndClose(ButtonType cmd, boolean close) {
+    void setResultAndClose(ButtonType cmd, boolean close) {
         Callback<ButtonType, R> resultConverter = getResultConverter();
         
         R priorResultValue = getResult();
