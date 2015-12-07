@@ -123,6 +123,16 @@ public class ContextMenu extends PopupControl {
 
     /***************************************************************************
      *                                                                         *
+     * Fields                                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+    private boolean showRelativeToWindow = false;
+
+
+
+    /***************************************************************************
+     *                                                                         *
      * Constructors                                                            *
      *                                                                         *
      **************************************************************************/
@@ -143,6 +153,8 @@ public class ContextMenu extends PopupControl {
         this();
         this.items.addAll(items);
     }
+
+
 
     /***************************************************************************
      *                                                                         *
@@ -193,37 +205,21 @@ public class ContextMenu extends PopupControl {
             }
         }
     };
+
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Public API                                                              *
+     *                                                                         *
+     **************************************************************************/
+
     /**
      * The menu items on the context menu. If this ObservableList is modified at
      * runtime, the ContextMenu will update as expected.
      * @see MenuItem
      */
     public final ObservableList<MenuItem> getItems() { return items; }
-
-     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    private final BooleanProperty impl_showRelativeToWindow = new SimpleBooleanProperty(false);
-     /**
-      * @treatAsPrivate implementation detail
-      */
-    public final boolean isImpl_showRelativeToWindow() { return impl_showRelativeToWindow.get(); }
-     /**
-      * @treatAsPrivate implementation detail
-      */
-    public final void setImpl_showRelativeToWindow(boolean value) { impl_showRelativeToWindow.set(value); }
-     /**
-      * @treatAsPrivate implementation detail
-      */
-    public final BooleanProperty impl_showRelativeToWindowProperty() { return impl_showRelativeToWindow; }
-    
-    /***************************************************************************
-     *                                                                         *
-     * Methods                                                                 *
-     *                                                                         *
-     **************************************************************************/
 
     /**
      * Shows the {@code ContextMenu} relative to the given anchor node, on the side
@@ -276,19 +272,6 @@ public class ContextMenu extends PopupControl {
         doShow(anchor, screenX, screenY);
     }
 
-    private void doShow(Node anchor, double screenX, double screenY) {
-        Event.fireEvent(this, new Event(Menu.ON_SHOWING));
-        if(isImpl_showRelativeToWindow()) {
-            final Scene scene = (anchor == null) ? null : anchor.getScene();
-            final Window win = (scene == null) ? null : scene.getWindow();
-            if (win == null) return;
-            super.show(win, screenX, screenY);
-        } else {
-            super.show(anchor, screenX, screenY);
-        }
-        Event.fireEvent(this, new Event(Menu.ON_SHOWN));
-    }
-
     /**
      * Hides this {@code ContextMenu} and any visible submenus, assuming that when this function
      * is called that the {@code ContextMenu} was showing.
@@ -306,6 +289,32 @@ public class ContextMenu extends PopupControl {
     @Override protected Skin<?> createDefaultSkin() {
         return new ContextMenuSkin(this);
     }
+
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Private Implementation                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+    final boolean isShowRelativeToWindow() { return showRelativeToWindow; }
+    final void setShowRelativeToWindow(boolean value) { showRelativeToWindow = value; }
+
+    private void doShow(Node anchor, double screenX, double screenY) {
+        Event.fireEvent(this, new Event(Menu.ON_SHOWING));
+        if(isShowRelativeToWindow()) {
+            final Scene scene = (anchor == null) ? null : anchor.getScene();
+            final Window win = (scene == null) ? null : scene.getWindow();
+            if (win == null) return;
+            super.show(win, screenX, screenY);
+        } else {
+            super.show(anchor, screenX, screenY);
+        }
+        Event.fireEvent(this, new Event(Menu.ON_SHOWN));
+    }
+
+
 
     /***************************************************************************
      *                                                                         *

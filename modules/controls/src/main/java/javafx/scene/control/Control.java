@@ -382,7 +382,7 @@ public abstract class Control extends Region implements Skinnable {
 
             if (ctx != null) {
                 // set this flag so contextmenu show will be relative to parent window not anchor
-                ctx.setImpl_showRelativeToWindow(true); //RT-15160
+                ctx.setShowRelativeToWindow(true); //RT-15160
 
                 // if a context menu is set, we need to install any accelerators
                 // belonging to its menu items ASAP into the scene that this
