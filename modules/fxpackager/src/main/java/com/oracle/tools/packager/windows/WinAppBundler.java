@@ -34,11 +34,7 @@ import com.oracle.tools.packager.IOUtils;
 import com.oracle.tools.packager.RelativeFileSet;
 import com.oracle.tools.packager.UnsupportedPlatformException;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.PrintStream;
+import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
@@ -77,6 +73,9 @@ public class WinAppBundler extends AbstractImageBundler {
     private final static String REDIST_MSVCP = "msvcpVS_VER.dll";
 
     private static final String TOOL_ICON_SWAP="IconSwap.exe";
+    private static final String TOOL_VERSION_INFO_SWAP="VersionInfoSwap.exe";
+
+    private static final String EXECUTABLE_PROPERTIES_TEMPLATE = "WinLauncher.properties";
 
     public static final BundlerParamInfo<URL> RAW_EXECUTABLE_URL = new WindowsBundlerParam<>(
             I18N.getString("param.raw-executable-url.name"),
@@ -154,7 +153,9 @@ public class WinAppBundler extends AbstractImageBundler {
         
         imageBundleValidation(p);
 
-        if (WinResources.class.getResource(TOOL_ICON_SWAP) == null) {
+        if (WinResources.class.getResource(TOOL_ICON_SWAP) == null ||
+            WinResources.class.getResource(TOOL_VERSION_INFO_SWAP) == null)
+        {
             throw new ConfigException(
                     I18N.getString("error.no-windows-resources"),
                     I18N.getString("error.no-windows-resources.advice"));
@@ -206,11 +207,57 @@ public class WinAppBundler extends AbstractImageBundler {
         return new File(getConfigRoot(params), APP_NAME.fetchFrom(params) + ".ico");
     }
 
+    private File getConfig_ExecutableProperties(Map<String, ? super Object> params) {
+        return new File(getConfigRoot(params), APP_NAME.fetchFrom(params) + ".properties");
+    }
+
     private final static String TEMPLATE_APP_ICON ="javalogo_white_48.ico";
 
     //remove
     protected void cleanupConfigFiles(Map<String, ? super Object> params) {
         getConfig_AppIcon(params).delete();
+        getConfig_ExecutableProperties(params).delete();
+    }
+
+    private void validateValueAndPut(Map<String, String> data, String key,
+                                     BundlerParamInfo<String> param, Map<String, ? super Object> params)
+    {
+        String value = param.fetchFrom(params);
+        if (value.contains("\r") || value.contains("\n")) {
+            Log.info("Configuration Parameter " + param.getID() + " contains multiple lines of text, ignore it");
+            data.put(key, "");
+            return;
+        }
+        data.put(key, value);
+    }
+
+    protected void prepareExecutableProperties(Map<String, ? super Object> params)
+        throws IOException
+    {
+        Map<String, String> data = new HashMap<>();
+
+        // mapping Java parameters in strings for version resource
+        data.put("COMMENTS", "");
+        validateValueAndPut(data, "COMPANY_NAME", VENDOR, params);
+        validateValueAndPut(data, "FILE_DESCRIPTION", DESCRIPTION, params);
+        validateValueAndPut(data, "FILE_VERSION", VERSION, params);
+        data.put("INTERNAL_NAME", getLauncherName(params));
+        validateValueAndPut(data, "LEGAL_COPYRIGHT", COPYRIGHT, params);
+        data.put("LEGAL_TRADEMARK", "");
+        data.put("ORIGINAL_FILENAME", getLauncherName(params));
+        data.put("PRIVATE_BUILD", "");
+        validateValueAndPut(data, "PRODUCT_NAME", APP_NAME, params);
+        validateValueAndPut(data, "PRODUCT_VERSION", VERSION, params);
+        data.put("SPECIAL_BUILD", "");
+
+        Writer w = new BufferedWriter(new FileWriter(getConfig_ExecutableProperties(params)));
+        String content = preprocessTextResource(
+                WinAppBundler.WIN_BUNDLER_PREFIX + getConfig_ExecutableProperties(params).getName(),
+                I18N.getString("resource.executable-properties-template"), EXECUTABLE_PROPERTIES_TEMPLATE, data,
+                VERBOSE.fetchFrom(params),
+                DROP_IN_RESOURCES_ROOT.fetchFrom(params));
+        w.write(content);
+        w.close();
     }
 
     private void prepareConfigFiles(Map<String, ? super Object> params) throws IOException {
@@ -232,6 +279,8 @@ public class WinAppBundler extends AbstractImageBundler {
                     VERBOSE.fetchFrom(params),
                     DROP_IN_RESOURCES_ROOT.fetchFrom(params));
         }
+
+        prepareExecutableProperties(params);
     }
 
     public boolean bundle(Map<String, ? super Object> p, File outputDirectory) {
@@ -343,7 +392,7 @@ public class WinAppBundler extends AbstractImageBundler {
         final URL REDIST_MSVCR_URL = WinResources.class.getResource(
                                               REDIST_MSVCR.replaceAll("VS_VER", VS_VER));
         final URL REDIST_MSVCP_URL = WinResources.class.getResource(
-                                              REDIST_MSVCP.replaceAll("VS_VER", VS_VER));
+                REDIST_MSVCP.replaceAll("VS_VER", VS_VER));
 
         if (REDIST_MSVCR_URL != null && REDIST_MSVCP_URL != null) {
             IOUtils.copyFromURL(
@@ -377,7 +426,7 @@ public class WinAppBundler extends AbstractImageBundler {
 
         //Update branding of exe file
         if (REBRAND_EXECUTABLE.fetchFrom(p) && getConfig_AppIcon(p).exists()) {
-            //extract helper tool
+            //extract IconSwap helper tool
             File iconSwapTool = File.createTempFile("iconswap", ".exe");
             IOUtils.copyFromURL(
                     WinResources.class.getResource(TOOL_ICON_SWAP),
@@ -399,6 +448,27 @@ public class WinAppBundler extends AbstractImageBundler {
 
         IOUtils.copyFile(getConfig_AppIcon(p),
                 new File(rootDirectory, APP_NAME.fetchFrom(p) + ".ico"));
+
+        if (REBRAND_EXECUTABLE.fetchFrom(p) && getConfig_ExecutableProperties(p).exists()) {
+            // extract VersionInfoHelper tool
+            File versionInfoTool = File.createTempFile("versioninfoswap", ".exe");
+            IOUtils.copyFromURL(
+                    WinResources.class.getResource(TOOL_VERSION_INFO_SWAP),
+                    versionInfoTool,
+                    true);
+            versionInfoTool.setExecutable(true, false);
+            versionInfoTool.deleteOnExit();
+
+            // run it on launcher file
+            executableFile.setWritable(true);
+            ProcessBuilder pb = new ProcessBuilder(
+                    versionInfoTool.getAbsolutePath(),
+                    getConfig_ExecutableProperties(p).getAbsolutePath(),
+                    executableFile.getAbsolutePath());
+            IOUtils.exec(pb, VERBOSE.fetchFrom(p));
+            executableFile.setReadOnly();
+            versionInfoTool.delete();
+        }
     }
 
     private void copyApplication(Map<String, ? super Object> params, File appDirectory) throws IOException {

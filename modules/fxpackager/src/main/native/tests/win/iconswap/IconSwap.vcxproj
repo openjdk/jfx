@@ -19,7 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\tools\win\IconSwap.cpp" />
+    <ClCompile Include="..\..\..\tools\win\iconswap\IconSwap.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{8535CC69-A1BD-4CE0-B916-A63FFC31F65E}</ProjectGuid>

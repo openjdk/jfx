@@ -274,6 +274,16 @@ WIN.iconLauncher.ccFlags = ["/nologo", "/W3", "/EHsc", "/D_WINDOWS", "/DUNICODE"
 WIN.iconLauncher.linker = linker
 WIN.iconLauncher.linkFlags = ["/link", "/nologo", "/SUBSYSTEM:CONSOLE"];
 
+WIN.versionInfoLauncher = [:]
+WIN.versionInfoLauncher.compiler = compiler
+WIN.versionInfoLauncher.ccFlags = ["/nologo", "/W3",
+          "/EHsc", "/c", "/D_WINDOWS", "/DUNICODE", "/D_UNICODE", "/DWIN32",
+          "/D_LITTLE_ENDIAN", "/DWIN32_LEAN_AND_MEAN",
+          ccDebugFlags].flatten();
+WIN.versionInfoLauncher.linker = linker
+WIN.versionInfoLauncher.linkFlags = ["/nologo", "/WX", "/SUBSYSTEM:CONSOLE"];
+if (IS_DEBUG_NATIVE) WIN.versionInfoLauncher.linkFlags.add("/debug");
+
 WIN.fxpackager = [:]
 WIN.fxpackager.nativeSource = [
     file("modules/fxpackager/src/main/native/javapackager/win")]
