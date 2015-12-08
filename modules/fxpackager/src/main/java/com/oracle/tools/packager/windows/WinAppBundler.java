@@ -379,10 +379,10 @@ public class WinAppBundler extends AbstractImageBundler {
         if (REBRAND_EXECUTABLE.fetchFrom(p) && getConfig_AppIcon(p).exists()) {
             //extract helper tool
             File iconSwapTool = File.createTempFile("iconswap", ".exe");
-            iconSwapTool.delete();
             IOUtils.copyFromURL(
                     WinResources.class.getResource(TOOL_ICON_SWAP),
-                    iconSwapTool);
+                    iconSwapTool,
+                    true);
             iconSwapTool.setExecutable(true, false);
             iconSwapTool.deleteOnExit();
 
