@@ -24,6 +24,7 @@
  */
 
 #include <jni.h>
+#include <dlfcn.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <stdio.h>
@@ -49,7 +50,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_MacGLContext_nInitialize
     char *tmpVersionStr;
     int versionNumbers[2];
     const char *glExtensions;
-
+    
     jlong pixelFormat = 0;
     jlong win = 0;
     jlong context = 0;
@@ -155,105 +156,105 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_MacGLContext_nInitialize
 
     /* set function pointers */
     ctxInfo->glActiveTexture = (PFNGLACTIVETEXTUREPROC)
-            getProcAddress("glActiveTexture");
+            dlsym(RTLD_DEFAULT, "glActiveTexture");
     ctxInfo->glAttachShader = (PFNGLATTACHSHADERPROC)
-            getProcAddress("glAttachShader");
+            dlsym(RTLD_DEFAULT, "glAttachShader");
     ctxInfo->glBindAttribLocation = (PFNGLBINDATTRIBLOCATIONPROC)
-            getProcAddress("glBindAttribLocation");
+            dlsym(RTLD_DEFAULT, "glBindAttribLocation");
     ctxInfo->glBindFramebuffer = (PFNGLBINDFRAMEBUFFERPROC)
-            getProcAddress("glBindFramebuffer");
+            dlsym(RTLD_DEFAULT, "glBindFramebuffer");
     ctxInfo->glBindRenderbuffer = (PFNGLBINDRENDERBUFFERPROC)
-            getProcAddress("glBindRenderbuffer");
+            dlsym(RTLD_DEFAULT, "glBindRenderbuffer");
     ctxInfo->glCheckFramebufferStatus = (PFNGLCHECKFRAMEBUFFERSTATUSPROC)
-            getProcAddress("glCheckFramebufferStatus");
+            dlsym(RTLD_DEFAULT, "glCheckFramebufferStatus");
     ctxInfo->glCreateProgram = (PFNGLCREATEPROGRAMPROC)
-            getProcAddress("glCreateProgram");
+            dlsym(RTLD_DEFAULT, "glCreateProgram");
     ctxInfo->glCreateShader = (PFNGLCREATESHADERPROC)
-            getProcAddress("glCreateShader");
+            dlsym(RTLD_DEFAULT, "glCreateShader");
     ctxInfo->glCompileShader = (PFNGLCOMPILESHADERPROC)
-            getProcAddress("glCompileShader");
+            dlsym(RTLD_DEFAULT, "glCompileShader");
     ctxInfo->glDeleteBuffers = (PFNGLDELETEBUFFERSPROC)
-            getProcAddress("glDeleteBuffers");
+            dlsym(RTLD_DEFAULT, "glDeleteBuffers");
     ctxInfo->glDeleteFramebuffers = (PFNGLDELETEFRAMEBUFFERSPROC)
-            getProcAddress("glDeleteFramebuffers");
+            dlsym(RTLD_DEFAULT, "glDeleteFramebuffers");
     ctxInfo->glDeleteProgram = (PFNGLDELETEPROGRAMPROC)
-            getProcAddress("glDeleteProgram");
+            dlsym(RTLD_DEFAULT, "glDeleteProgram");
     ctxInfo->glDeleteRenderbuffers = (PFNGLDELETERENDERBUFFERSPROC)
-            getProcAddress("glDeleteRenderbuffers");
+            dlsym(RTLD_DEFAULT, "glDeleteRenderbuffers");
     ctxInfo->glDeleteShader = (PFNGLDELETESHADERPROC)
-            getProcAddress("glDeleteShader");
+            dlsym(RTLD_DEFAULT, "glDeleteShader");
     ctxInfo->glDetachShader = (PFNGLDETACHSHADERPROC)
-            getProcAddress("glDetachShader");
+            dlsym(RTLD_DEFAULT, "glDetachShader");
     ctxInfo->glDisableVertexAttribArray = (PFNGLDISABLEVERTEXATTRIBARRAYPROC)
-            getProcAddress("glDisableVertexAttribArray");
+            dlsym(RTLD_DEFAULT, "glDisableVertexAttribArray");
     ctxInfo->glEnableVertexAttribArray = (PFNGLENABLEVERTEXATTRIBARRAYPROC)
-            getProcAddress("glEnableVertexAttribArray");
+            dlsym(RTLD_DEFAULT, "glEnableVertexAttribArray");
     ctxInfo->glFramebufferRenderbuffer = (PFNGLFRAMEBUFFERRENDERBUFFERPROC)
-            getProcAddress("glFramebufferRenderbuffer");
+            dlsym(RTLD_DEFAULT, "glFramebufferRenderbuffer");
     ctxInfo->glFramebufferTexture2D = (PFNGLFRAMEBUFFERTEXTURE2DPROC)
-            getProcAddress("glFramebufferTexture2D");
+            dlsym(RTLD_DEFAULT, "glFramebufferTexture2D");
     ctxInfo->glGenFramebuffers = (PFNGLGENFRAMEBUFFERSPROC)
-            getProcAddress("glGenFramebuffers");
+            dlsym(RTLD_DEFAULT, "glGenFramebuffers");
     ctxInfo->glGenRenderbuffers = (PFNGLGENRENDERBUFFERSPROC)
-            getProcAddress("glGenRenderbuffers");
+            dlsym(RTLD_DEFAULT, "glGenRenderbuffers");
     ctxInfo->glGetProgramiv = (PFNGLGETPROGRAMIVPROC)
-            getProcAddress("glGetProgramiv");
+            dlsym(RTLD_DEFAULT, "glGetProgramiv");
     ctxInfo->glGetShaderiv = (PFNGLGETSHADERIVPROC)
-            getProcAddress("glGetShaderiv");
+            dlsym(RTLD_DEFAULT, "glGetShaderiv");
     ctxInfo->glGetUniformLocation = (PFNGLGETUNIFORMLOCATIONPROC)
-            getProcAddress("glGetUniformLocation");
+            dlsym(RTLD_DEFAULT, "glGetUniformLocation");
     ctxInfo->glLinkProgram = (PFNGLLINKPROGRAMPROC)
-            getProcAddress("glLinkProgram");
+            dlsym(RTLD_DEFAULT, "glLinkProgram");
     ctxInfo->glRenderbufferStorage = (PFNGLRENDERBUFFERSTORAGEPROC)
-            getProcAddress("glRenderbufferStorage");
+            dlsym(RTLD_DEFAULT, "glRenderbufferStorage");
     ctxInfo->glShaderSource = (PFNGLSHADERSOURCEPROC)
-            getProcAddress("glShaderSource");
+            dlsym(RTLD_DEFAULT, "glShaderSource");
     ctxInfo->glUniform1f = (PFNGLUNIFORM1FPROC)
-            getProcAddress("glUniform1f");
+            dlsym(RTLD_DEFAULT, "glUniform1f");
     ctxInfo->glUniform2f = (PFNGLUNIFORM2FPROC)
-            getProcAddress("glUniform2f");
+            dlsym(RTLD_DEFAULT, "glUniform2f");
     ctxInfo->glUniform3f = (PFNGLUNIFORM3FPROC)
-            getProcAddress("glUniform3f");
+            dlsym(RTLD_DEFAULT, "glUniform3f");
     ctxInfo->glUniform4f = (PFNGLUNIFORM4FPROC)
-            getProcAddress("glUniform4f");
+            dlsym(RTLD_DEFAULT, "glUniform4f");
     ctxInfo->glUniform4fv = (PFNGLUNIFORM4FVPROC)
-            getProcAddress("glUniform4fv");
+            dlsym(RTLD_DEFAULT, "glUniform4fv");
     ctxInfo->glUniform1i = (PFNGLUNIFORM1IPROC)
-            getProcAddress("glUniform1i");
+            dlsym(RTLD_DEFAULT, "glUniform1i");
     ctxInfo->glUniform2i = (PFNGLUNIFORM2IPROC)
-            getProcAddress("glUniform2i");
+            dlsym(RTLD_DEFAULT, "glUniform2i");
     ctxInfo->glUniform3i = (PFNGLUNIFORM3IPROC)
-            getProcAddress("glUniform3i");
+            dlsym(RTLD_DEFAULT, "glUniform3i");
     ctxInfo->glUniform4i = (PFNGLUNIFORM4IPROC)
-            getProcAddress("glUniform4i");
+            dlsym(RTLD_DEFAULT, "glUniform4i");
     ctxInfo->glUniform4iv = (PFNGLUNIFORM4IVPROC)
-            getProcAddress("glUniform4iv");
+            dlsym(RTLD_DEFAULT, "glUniform4iv");
     ctxInfo->glUniformMatrix4fv = (PFNGLUNIFORMMATRIX4FVPROC)
-            getProcAddress("glUniformMatrix4fv");
+            dlsym(RTLD_DEFAULT, "glUniformMatrix4fv");
     ctxInfo->glUseProgram = (PFNGLUSEPROGRAMPROC)
-            getProcAddress("glUseProgram");
+            dlsym(RTLD_DEFAULT, "glUseProgram");
     ctxInfo->glValidateProgram = (PFNGLVALIDATEPROGRAMPROC)
-            getProcAddress("glValidateProgram");
+            dlsym(RTLD_DEFAULT, "glValidateProgram");
     ctxInfo->glVertexAttribPointer = (PFNGLVERTEXATTRIBPOINTERPROC)
-            getProcAddress("glVertexAttribPointer");
+            dlsym(RTLD_DEFAULT, "glVertexAttribPointer");
     ctxInfo->glGenBuffers = (PFNGLGENBUFFERSPROC)
-            getProcAddress("glGenBuffers");
+            dlsym(RTLD_DEFAULT, "glGenBuffers");
     ctxInfo->glBindBuffer = (PFNGLBINDBUFFERPROC)
-            getProcAddress("glBindBuffer");
+            dlsym(RTLD_DEFAULT, "glBindBuffer");
     ctxInfo->glBufferData = (PFNGLBUFFERDATAPROC)
-            getProcAddress("glBufferData");
+            dlsym(RTLD_DEFAULT, "glBufferData");
     ctxInfo->glBufferSubData = (PFNGLBUFFERSUBDATAPROC)
-            getProcAddress("glBufferSubData");
+            dlsym(RTLD_DEFAULT, "glBufferSubData");
     ctxInfo->glGetShaderInfoLog = (PFNGLGETSHADERINFOLOGPROC)
-            getProcAddress("glGetShaderInfoLog");
+            dlsym(RTLD_DEFAULT, "glGetShaderInfoLog");
     ctxInfo->glGetProgramInfoLog = (PFNGLGETPROGRAMINFOLOGPROC)
-            getProcAddress("glGetProgramInfoLog");
+            dlsym(RTLD_DEFAULT, "glGetProgramInfoLog");
     ctxInfo->glTexImage2DMultisample = (PFNGLTEXIMAGE2DMULTISAMPLEPROC)
-            getProcAddress("glTexImage2DMultisample");
+            dlsym(RTLD_DEFAULT, "glTexImage2DMultisample");
     ctxInfo->glRenderbufferStorageMultisample = (PFNGLRENDERBUFFERSTORAGEMULTISAMPLEPROC)
-            getProcAddress("glRenderbufferStorageMultisample");
+            dlsym(RTLD_DEFAULT, "glRenderbufferStorageMultisample");
     ctxInfo->glBlitFramebuffer = (PFNGLBLITFRAMEBUFFERPROC)
-            getProcAddress("glBlitFramebuffer");
+            dlsym(RTLD_DEFAULT, "glBlitFramebuffer");
 
     // initialize platform states and properties to match
     // cached states and properties

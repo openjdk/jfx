@@ -46,7 +46,6 @@ jboolean  clearCurrentContext(void *nsContext);
 jboolean  deleteContext(void* nsContext);
 jboolean  flushBuffer(void* nsContext);
 void* createDummyWindow();
-void* getProcAddress(const char *procName);
 
 void setSwapInterval(void* nsContext, int interval);
 
