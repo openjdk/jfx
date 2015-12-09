@@ -140,9 +140,7 @@ public class SpeakersPage extends Page implements ChangeListener<String> {
         // hardware layer support. This code will just move the keyboard out of the way.
         searchBox.focusedProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable observable) {
-                Iterator<Window> itr = Window.impl_getWindows();
-                while (itr.hasNext()) {
-                    Window win = itr.next();
+                for (Window win : Window.getWindows()) {
                     Object obj = win.getScene().getRoot().lookup(".fxvk");
                     if (obj instanceof FXVK) {
                         FXVK keyboard = (FXVK) obj;

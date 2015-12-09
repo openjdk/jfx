@@ -43,6 +43,7 @@ import static org.junit.Assert.*;
 
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 
 public class SGMXBean_sceneGraph_Test {
@@ -74,12 +75,10 @@ public class SGMXBean_sceneGraph_Test {
         stage2.setScene(scene2);
         stage2.show();
 
-        final Iterator<Window> it = Window.impl_getWindows();
+        final List<Window> windows = Window.getWindows();
         nodesCount = 0;
-        while (it.hasNext()) {
-            final Window w = it.next();
+        for (Window w : windows) {
             nodesCount += countNodes(w.getScene().getRoot());
-
         }
     }
 

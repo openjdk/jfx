@@ -38,9 +38,7 @@ public final class WindowManager {
     public static void closeApplicationWindows(
             final ClassLoader appClassLoader) {
         final List<Window> selectedWindows = new ArrayList<Window>();
-        final Iterator<Window> allWindows = Window.impl_getWindows();
-        while (allWindows.hasNext()) {
-            final Window window = allWindows.next();
+        for (Window window : Window.getWindows()) {
             if (matches(window, appClassLoader)) {
                 selectedWindows.add(window);
             }
