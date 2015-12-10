@@ -111,26 +111,28 @@ public final class WindowTest {
     }
 
     @Test public void testGetWindowsIsObservable() {
-        AtomicInteger windowCount = new AtomicInteger(0);
         ObservableList<Window> windows = Window.getWindows();
+
+        final int initialWindowCount = windows.size();
+        AtomicInteger windowCount = new AtomicInteger(initialWindowCount);
 
         InvalidationListener listener = o -> windowCount.set(windows.size());
         windows.addListener(listener);
 
-        assertEquals(0, windowCount.get());
+        assertEquals(initialWindowCount + 0, windowCount.get());
 
         testWindow.show();
-        assertEquals(1, windowCount.get());
+        assertEquals(initialWindowCount + 1, windowCount.get());
 
         Stage anotherTestWindow = new Stage();
         anotherTestWindow.show();
-        assertEquals(2, windowCount.get());
+        assertEquals(initialWindowCount + 2, windowCount.get());
 
         testWindow.hide();
-        assertEquals(1, windowCount.get());
+        assertEquals(initialWindowCount + 1, windowCount.get());
 
         anotherTestWindow.hide();
-        assertEquals(0, windowCount.get());
+        assertEquals(initialWindowCount + 0, windowCount.get());
 
         windows.removeListener(listener);
     }
@@ -157,13 +159,17 @@ public final class WindowTest {
     // There is no UOE here because the window being removed is not in the list of windows,
     // so no modification of the windows list occurs.
     @Test public void testGetWindowsIsUnmodifiable_removeNonShowingWindow_nonEmptyList() {
+        ObservableList<Window> windows = Window.getWindows();
+
+        final int initialWindowCount = windows.size();
+
         testWindow.show();
-        assertEquals(1, Window.getWindows().size());
+        assertEquals(initialWindowCount + 1, windows.size());
 
         Stage anotherTestWindow = new Stage();
-        assertEquals(1, Window.getWindows().size());
+        assertEquals(initialWindowCount + 1, windows.size());
 
-        Window.getWindows().remove(anotherTestWindow);
-        assertEquals(1, Window.getWindows().size());
+        windows.remove(anotherTestWindow);
+        assertEquals(initialWindowCount + 1, windows.size());
     }
 }
