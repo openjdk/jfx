@@ -26,9 +26,7 @@
 package javafx.embed.swing;
 
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.geometry.Point2D;
@@ -39,7 +37,6 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
-import javafx.stage.Screen;
 import javafx.stage.Window;
 import javax.swing.JComponent;
 import java.awt.AWTEvent;
@@ -58,7 +55,6 @@ import java.awt.event.InputEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowFocusListener;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.IntBuffer;
 import java.security.AccessController;
@@ -76,11 +72,9 @@ import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.sg.prism.NGExternalNode;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.stage.FocusUngrabEvent;
-import com.sun.javafx.stage.ScreenHelper;
 import com.sun.javafx.stage.WindowHelper;
 import com.sun.javafx.PlatformUtil;
 import sun.awt.UngrabEvent;
-import sun.awt.LightweightFrame;
 import sun.swing.JLightweightFrame;
 import sun.swing.LightweightContent;
 
@@ -972,7 +966,7 @@ public class SwingNode extends Node {
                 return;
             }
             int swingModifiers = SwingEvents.fxKeyModsToKeyMods(event);
-            int swingKeyCode = event.getCode().impl_getCode();
+            int swingKeyCode = event.getCode().getCode();
             char swingChar = event.getCharacter().charAt(0);
 
             // A workaround. Some swing L&F's process mnemonics on KEY_PRESSED,

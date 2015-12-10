@@ -218,7 +218,7 @@ public class ConferenceScheduleApp extends Application {
                     // TODO not sure how to implement
                     sceneListener.keyEvent(
                             (EventType<KeyEvent>)event.getEventType(),
-                            event.getCode().impl_getCode(),
+                            event.getCode().getCode(),
                             event.getCharacter().toCharArray(),
                             event.isShiftDown(), false, false, false);
                 }

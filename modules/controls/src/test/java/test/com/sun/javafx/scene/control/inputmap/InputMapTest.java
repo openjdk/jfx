@@ -134,8 +134,8 @@ public class InputMapTest {
 //        return new KeyEvent(null,
 //                target,                            // EventTarget
 //                evtType,                           // eventType
-//                evtType == KeyEvent.KEY_TYPED ? keyCode.impl_getChar() : null,  // Character (unused unless evtType == KEY_TYPED)
-//                keyCode.impl_getChar(),            // text
+//                evtType == KeyEvent.KEY_TYPED ? keyCode.getChar() : null,  // Character (unused unless evtType == KEY_TYPED)
+//                keyCode.getChar(),            // text
 //                keyCode,                           // KeyCode
 //                false,                             // shiftDown
 //                false,                             // ctrlDown

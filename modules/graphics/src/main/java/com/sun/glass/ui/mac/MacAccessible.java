@@ -1455,7 +1455,7 @@ final class MacAccessible extends Accessible {
                     KeyCode code = ((KeyCodeCombination)kc).getCode();
                     if (!isCmdCharBased(code)) {
                         @SuppressWarnings("deprecation")
-                        int keyCode = code.impl_getCode();
+                        int keyCode = code.getCode();
                         result = MacApplication._getMacKey(keyCode);
                     }
                 }

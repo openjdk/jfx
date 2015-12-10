@@ -341,7 +341,7 @@ public class VirtualKeyboardSkin extends SkinBase<VirtualKeyboard, BehaviorBase<
 
         protected KeyEvent event(EventType<KeyEvent> type) {
             if (type == KeyEvent.KEY_PRESSED || type == KeyEvent.KEY_RELEASED) {
-                return KeyEvent.impl_keyEvent(getSkinnable(), chars, chars, code.impl_getCode(),
+                return KeyEvent.impl_keyEvent(getSkinnable(), chars, chars, code.getCode(),
                                               shiftDown, false, false, false, type);
             } else {
                 return super.event(type);

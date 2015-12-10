@@ -44,7 +44,7 @@ public final class KeyCodeMap {
         charMap = new HashMap<Integer, KeyCode>(KeyCode.values().length);
 
         for (KeyCode c : KeyCode.values()) {
-            charMap.put(c.impl_getCode(), c);
+            charMap.put(c.getCode(), c);
         }
     }
 
