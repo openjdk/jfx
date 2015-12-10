@@ -28,6 +28,7 @@ package test.robot.helloworld;
 import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Robot;
 import com.sun.javafx.PlatformUtil;
+import java.awt.AWTPermission;
 import java.security.AllPermission;
 import java.security.Permission;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -38,6 +39,7 @@ import javafx.scene.paint.Color;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+import javafx.util.FXPermission;
 import org.junit.After;
 import org.junit.Test;
 
@@ -73,8 +75,10 @@ public class CustomSecurityManagerTest extends VisualTestBase {
                 return;
             }
 
-            // Grant access unless AllPermission is required
-            if (!(perm instanceof AllPermission)) {
+            // Grant access unless one of the following is required
+            if (!(perm instanceof AllPermission)
+                    && !(perm instanceof FXPermission)
+                    && !(perm instanceof AWTPermission)) {
                 return;
             }
 

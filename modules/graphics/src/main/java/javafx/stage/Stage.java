@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,7 +50,7 @@ import com.sun.javafx.stage.StagePeerListener;
 import com.sun.javafx.tk.TKPulseListener;
 import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.Toolkit;
-import java.security.AllPermission;
+import static com.sun.javafx.FXPermissions.CREATE_TRANSPARENT_WINDOW_PERMISSION;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.ObjectProperty;
@@ -270,7 +270,7 @@ public class Stage extends Window {
      * Sets a flag indicating that this stage is used for a security dialog and
      * must always be on top. If set, this will cause the window to be always
      * on top, regardless of the setting of the alwaysOnTop property, and
-     * whether or not all permissions are granted when the dialog is shown.
+     * whether or not permissions are granted when the dialog is shown.
      * NOTE: this flag must be set prior to showing the stage the first time.
      *
      * @param securityDialog flag indicating that this Stage is being used to
@@ -630,10 +630,10 @@ public class Stage extends Window {
      * The user can unconditionally exit full-screen mode
      * at any time by pressing {@code ESC}.
      * <p>
-     * There are differences in behavior between applications if a security
-     * manager is present. Applications with permissions are allowed to enter
-     * full-screen mode unrestricted. Applications without the proper
-     * permissions will have the following restrictions:
+     * If a security manager is present, the application must have the
+     * {@link javafx.util.FXPermission} "unrestrictedFullScreen" in order
+     * to enter full-screen mode with no restrictions. Applications without
+     * permission will have the following restrictions:
      * </p>
      * <ul>
      *  <li>Applications can only enter full-screen mode in response
@@ -838,11 +838,11 @@ public class Stage extends Window {
      * platform).
      * </p>
      * <p>
-     * There are differences in behavior between applications if a security
-     * manager is present. Applications with permissions are allowed to set
-     * "always on top" flag on a Stage. In applications without the proper
-     * permissions, an attempt to set the flag will be ignored and the property
-     * value will be restored to "false".
+     * If a security manager is present, the application must have the
+     * {@link javafx.util.FXPermission} "setWindowAlwaysOnTop" in order for
+     * this property to have any effect. If the application does not have
+     * permission, attempting to set this property will be ignored
+     * and the property value will be restored to {@code false}.
      * </p>
      * <p>
      * The property is read only because it can be changed externally
@@ -1147,7 +1147,7 @@ public class Stage extends Window {
                         System.getSecurityManager();
                 if (securityManager != null) {
                     try {
-                        securityManager.checkPermission(new AllPermission());
+                        securityManager.checkPermission(CREATE_TRANSPARENT_WINDOW_PERMISSION);
                     } catch (final SecurityException e) {
                         stageStyle = StageStyle.UNDECORATED;
                     }
@@ -1250,9 +1250,13 @@ public class Stage extends Window {
      * A value of null indicates that the default platform specific key combination
      * should be used.
      * <p>
-     * An internal copy of this value is made when entering FullScreen mode and will be
-     * used to trigger the exit from the mode. If an application does not have
-     * the proper permissions, this setting will be ignored.
+     * An internal copy of this value is made when entering full-screen mode and will be
+     * used to trigger the exit from the mode.
+     * If a security manager is present, the application must have the
+     * {@link javafx.util.FXPermission} "unrestrictedFullScreen" to modify the
+     * exit key combination. If the application does not have permission, the
+     * value of this property will be ignored, in which case the
+     * default key combination will be used.
      * </p>
      * @param keyCombination the key combination to exit on
      * @since JavaFX 8.0
@@ -1289,8 +1293,11 @@ public class Stage extends Window {
      * message being displayed.
      * If set to the empty string, then no message will be displayed.
      * <p>
-     * If an application does not have the proper permissions, this setting
-     * will be ignored.
+     * If a security manager is present, the application must have the
+     * {@link javafx.util.FXPermission} "unrestrictedFullScreen" to modify the
+     * exit hint. If the application does not have permission, the
+     * value of this property will be ignored, in which case the
+     * default message will be displayed.
      * </p>
      * @param value the string to be displayed.
      * @since JavaFX 8.0

@@ -25,7 +25,6 @@
 
 package javafx.stage;
 
-import java.security.AllPermission;
 import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.util.HashMap;
@@ -66,6 +65,8 @@ import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
+
+import static com.sun.javafx.FXPermissions.ACCESS_WINDOW_LIST_PERMISSION;
 
 
 /**
@@ -155,7 +156,7 @@ public class Window implements EventTarget {
     public static ObservableList<Window> getWindows() {
         final SecurityManager securityManager = System.getSecurityManager();
         if (securityManager != null) {
-            securityManager.checkPermission(new AllPermission());
+            securityManager.checkPermission(ACCESS_WINDOW_LIST_PERMISSION);
         }
 
         return unmodifiableWindows;

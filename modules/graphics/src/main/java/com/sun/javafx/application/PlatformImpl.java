@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@ package com.sun.javafx.application;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.runtime.SystemProperties;
+import static com.sun.javafx.FXPermissions.CREATE_TRANSPARENT_WINDOW_PERMISSION;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -51,7 +52,6 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.scene.Scene;
 
 import java.security.AccessController;
-import java.security.AllPermission;
 import java.security.PrivilegedAction;
 
 public class PlatformImpl {
@@ -508,7 +508,7 @@ public class PlatformImpl {
                     System.getSecurityManager();
             if (securityManager != null) {
                 try {
-                    securityManager.checkPermission(new AllPermission());
+                    securityManager.checkPermission(CREATE_TRANSPARENT_WINDOW_PERMISSION);
                 } catch (final SecurityException e) {
                     return false;
                 }

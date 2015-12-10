@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,6 +43,10 @@ public enum StageStyle {
 
     /**
      * Defines a {@code Stage} style with a transparent background and no decorations.
+     * This is a conditional feature; to check if it is supported use
+     * {@link javafx.application.Platform#isSupported(javafx.application.ConditionalFeature)}.
+     * If the feature is not supported by the platform, this style downgrades
+     * to {@code StageStyle.UNDECORATED}
      */
     TRANSPARENT,
 

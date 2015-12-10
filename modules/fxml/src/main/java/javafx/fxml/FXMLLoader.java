@@ -39,7 +39,6 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.net.URL;
 import java.nio.charset.Charset;
-import java.security.AllPermission;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -82,6 +81,7 @@ import com.sun.javafx.fxml.PropertyNotFoundException;
 import com.sun.javafx.fxml.expression.Expression;
 import com.sun.javafx.fxml.expression.ExpressionValue;
 import com.sun.javafx.fxml.expression.KeyPath;
+import static com.sun.javafx.FXPermissions.MODIFY_FXML_CLASS_LOADER_PERMISSION;
 import java.net.MalformedURLException;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -3080,7 +3080,7 @@ public class FXMLLoader {
         }
         final SecurityManager sm = System.getSecurityManager();
         if (sm != null) {
-            sm.checkPermission(new AllPermission());
+            sm.checkPermission(MODIFY_FXML_CLASS_LOADER_PERMISSION);
         }
 
         FXMLLoader.defaultClassLoader = defaultClassLoader;
@@ -3286,10 +3286,10 @@ public class FXMLLoader {
         return retVal;
     }
 
-    private static void checkAllPermissions() {
+    private static void checkClassLoaderPermission() {
         final SecurityManager securityManager = System.getSecurityManager();
         if (securityManager != null) {
-            securityManager.checkPermission(new AllPermission());
+            securityManager.checkPermission(MODIFY_FXML_CLASS_LOADER_PERMISSION);
         }
     }
 
@@ -3342,8 +3342,8 @@ public class FXMLLoader {
                 controllerFields = new HashMap<>();
 
                 if (callerClassLoader == null) {
-                    // allow null class loader only with full permission check
-                    checkAllPermissions();
+                    // allow null class loader only with permission check
+                    checkClassLoaderPermission();
                 }
 
                 addAccessibleMembers(controller.getClass(),
@@ -3363,8 +3363,8 @@ public class FXMLLoader {
                 }
 
                 if (callerClassLoader == null) {
-                    // allow null class loader only with full permission check
-                    checkAllPermissions();
+                    // allow null class loader only with permission check
+                    checkClassLoaderPermission();
                 }
 
                 addAccessibleMembers(controller.getClass(),

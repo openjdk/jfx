@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,15 +24,9 @@
  */
 package com.sun.glass.ui;
 
-import java.nio.IntBuffer;
-
-import java.security.AccessController;
-import java.security.AllPermission;
-import java.security.Permission;
+import static com.sun.javafx.FXPermissions.CREATE_ROBOT_PERMISSION;
 
 public abstract class Robot {
-
-    private final static Permission allPermission = new AllPermission();
 
     final static public int MOUSE_LEFT_BTN   = 1;
     final static public int MOUSE_RIGHT_BTN  = 2;
@@ -40,15 +34,10 @@ public abstract class Robot {
 
     protected abstract void _create();
     protected Robot() {
-        // Fix for RT-22633
-        // Ideally, we should restrict user access to Glass packages at all,
-        // but that's not the case right now. To prevent applications from
-        // using Robot, we check for AllPermission here as we don't have
-        // (and will unlikely have in the future) specific permission for
-        // this functionality
+        // Ensure proper permission
         final SecurityManager sm = System.getSecurityManager();
         if (sm != null) {
-            sm.checkPermission(allPermission);
+            sm.checkPermission(CREATE_ROBOT_PERMISSION);
         }
         Application.checkEventThread();
         _create();

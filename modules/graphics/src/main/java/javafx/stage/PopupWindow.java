@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -62,7 +62,7 @@ import com.sun.javafx.stage.PopupWindowPeerListener;
 import com.sun.javafx.stage.WindowCloseRequestHandler;
 import com.sun.javafx.stage.WindowEventDispatcher;
 import com.sun.javafx.tk.Toolkit;
-import java.security.AllPermission;
+import static com.sun.javafx.FXPermissions.CREATE_TRANSPARENT_WINDOW_PERMISSION;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
@@ -488,7 +488,7 @@ public abstract class PopupWindow extends Window {
                 final SecurityManager securityManager =
                         System.getSecurityManager();
                 if (securityManager != null) {
-                    securityManager.checkPermission(new AllPermission());
+                    securityManager.checkPermission(CREATE_TRANSPARENT_WINDOW_PERMISSION);
                 }
                 popupStyle = StageStyle.TRANSPARENT;
             } catch (final SecurityException e) {

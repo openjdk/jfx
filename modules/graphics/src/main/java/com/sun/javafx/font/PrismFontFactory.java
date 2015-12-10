@@ -26,7 +26,6 @@
 package com.sun.javafx.font;
 
 import java.security.AccessController;
-import java.security.AllPermission;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.io.File;
@@ -45,6 +44,7 @@ import com.sun.glass.ui.Screen;
 import com.sun.glass.utils.NativeLibLoader;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.text.GlyphLayout;
+import static com.sun.javafx.FXPermissions.LOAD_FONT_PERMISSION;
 
 public abstract class PrismFontFactory implements FontFactory {
 
@@ -1793,7 +1793,7 @@ public abstract class PrismFontFactory implements FontFactory {
         try {
             SecurityManager sm = System.getSecurityManager();
             if (sm != null) {
-                sm.checkPermission(new AllPermission());
+                sm.checkPermission(LOAD_FONT_PERMISSION);
             }
             return true;
         } catch (SecurityException ex) {

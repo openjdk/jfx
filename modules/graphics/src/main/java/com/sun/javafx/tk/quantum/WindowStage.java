@@ -27,7 +27,6 @@ package com.sun.javafx.tk.quantum;
 
 import java.nio.ByteBuffer;
 import java.security.AccessController;
-import java.security.AllPermission;
 import java.security.Permission;
 import java.security.PrivilegedAction;
 import java.security.AccessControlContext;
@@ -54,6 +53,7 @@ import com.sun.prism.Image;
 import com.sun.prism.PixelFormat;
 import java.util.Locale;
 import java.util.ResourceBundle;
+import static com.sun.javafx.FXPermissions.*;
 
 class WindowStage extends GlassStage {
 
@@ -621,7 +621,7 @@ class WindowStage extends GlassStage {
         if (securityDialog) return;
 
         if (alwaysOnTop) {
-            if (hasPermission(alwaysOnTopPermission)) {
+            if (hasPermission(SET_WINDOW_ALWAYS_ON_TOP_PERMISSION)) {
                 platformWindow.setLevel(Level.FLOATING);
             }
         } else {
@@ -639,7 +639,7 @@ class WindowStage extends GlassStage {
     // security manager, or a permission check doesn't result in a security
     // exeception.
     boolean isTrustedFullScreen() {
-        return hasPermission(fullScreenPermission);
+        return hasPermission(UNRESTRICTED_FULL_SCREEN_PERMISSION);
     }
 
     // Safely exit full screen
@@ -662,12 +662,6 @@ class WindowStage extends GlassStage {
             return false;
         }
     }
-
-    // We may need finer-grained permissions in the future, but for
-    // now AllPermission is good enough to do the job we need, such
-    // as fullscreen support for signed/unsigned application.
-    private static final Permission fullScreenPermission = new AllPermission();
-    private static final Permission alwaysOnTopPermission = new AllPermission();
 
     private boolean fullScreenFromUserEvent = false;
 
