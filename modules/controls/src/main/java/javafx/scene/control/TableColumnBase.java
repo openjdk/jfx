@@ -504,32 +504,26 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
     
     
     // --- Reorderable
-    private BooleanProperty reorderable;
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * A boolean property to toggle on and off the 'reorderability' of this column
+     * (with drag and drop - reordering by modifying the appropriate <code>columns</code>
+     * list is always allowed). When this property is true, this column can be reordered by
+     * users simply by dragging and dropping the columns into their desired positions.
+     * When this property is false, this ability to drag and drop columns is not available.
+     *
+     * @since 9
      */
-    @Deprecated
-    public final BooleanProperty impl_reorderableProperty() {
+    private BooleanProperty reorderable;
+    public final BooleanProperty reorderableProperty() {
         if (reorderable == null) {
             reorderable = new SimpleBooleanProperty(this, "reorderable", true);
         }
         return reorderable;
     }
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public final void impl_setReorderable(boolean value) {
-        impl_reorderableProperty().set(value);
+    public final void setReorderable(boolean value) {
+        reorderableProperty().set(value);
     }
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public final boolean impl_isReorderable() {
+    public final boolean isReorderable() {
         return reorderable == null ? true : reorderable.get();
     }
 

@@ -864,7 +864,7 @@ public class TableColumnHeader extends Region {
 
     // package for testing
     void columnReorderingStarted(double dragOffset) {
-        if (! getTableColumn().impl_isReorderable()) return;
+        if (! getTableColumn().isReorderable()) return;
         
         // Used to ensure the column ghost is positioned relative to where the
         // user clicked on the column header
@@ -877,7 +877,7 @@ public class TableColumnHeader extends Region {
 
     // package for testing
     void columnReordering(double sceneX, double sceneY) {
-        if (! getTableColumn().impl_isReorderable()) return;
+        if (! getTableColumn().isReorderable()) return;
 
         // this is for handling the column drag to reorder columns.
         // It shows a line to indicate where the 'drop' will be.
@@ -958,7 +958,7 @@ public class TableColumnHeader extends Region {
 
     // package for testing
     void columnReorderingComplete() {
-        if (! getTableColumn().impl_isReorderable()) return;
+        if (! getTableColumn().isReorderable()) return;
         
         // Move col from where it is now to the new position.
         moveColumn(getTableColumn(), newColumnPos);

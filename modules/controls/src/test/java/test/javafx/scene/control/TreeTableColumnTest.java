@@ -702,32 +702,32 @@ public class TreeTableColumnTest {
      ********************************************************************/
 
     @Test public void reorderableIsTrueByDefault() {
-        assertTrue(column.impl_isReorderable());
-        assertTrue(column.impl_reorderableProperty().get());
+        assertTrue(column.isReorderable());
+        assertTrue(column.reorderableProperty().get());
     }
 
     @Test public void reorderableCanBeSpecified() {
-        column.impl_setReorderable(false);
-        assertFalse(column.impl_isReorderable());
-        assertFalse(column.impl_reorderableProperty().get());
+        column.setReorderable(false);
+        assertFalse(column.isReorderable());
+        assertFalse(column.reorderableProperty().get());
     }
 
     @Test public void reorderablePropertyBeanIsCorrect() {
-        assertSame(column, column.impl_reorderableProperty().getBean());
+        assertSame(column, column.reorderableProperty().getBean());
     }
 
     @Test public void reorderablePropertyNameIsCorrect() {
-        assertEquals("reorderable", column.impl_reorderableProperty().getName());
+        assertEquals("reorderable", column.reorderableProperty().getName());
     }
 
     @Test public void reorderableCanBeBound() {
         BooleanProperty other = new SimpleBooleanProperty(false);
-        column.impl_reorderableProperty().bind(other);
-        assertFalse(column.impl_isReorderable());
-        assertFalse(column.impl_reorderableProperty().get());
+        column.reorderableProperty().bind(other);
+        assertFalse(column.isReorderable());
+        assertFalse(column.reorderableProperty().get());
         other.set(true);
-        assertTrue(column.impl_isReorderable());
-        assertTrue(column.impl_reorderableProperty().get());
+        assertTrue(column.isReorderable());
+        assertTrue(column.reorderableProperty().get());
     }
 
     /*********************************************************************
