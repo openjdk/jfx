@@ -835,7 +835,7 @@ public class CssPanelController extends AbstractFxmlPanelController {
 
     private void disableColumnReordering() {
         for (TableColumn<CssProperty, ?> column : table.getColumns()) {
-            Deprecation.setTableColumnReordable(column, false);
+            column.setReorderable(false);
         }
     }
 

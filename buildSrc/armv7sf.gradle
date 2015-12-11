@@ -284,18 +284,18 @@ def pangoCFlags_pkgconfig = "-pthread -I${sdk}/usr/include/pango-1.0 -I${sdk}/us
 
 def pangoLFlags_pkgconfig = "-L${sdk}/usr/lib/arm-linux-gnueabi -lpangoft2-1.0 -lpango-1.0 -lfreetype -lfontconfig -lgobject-2.0 -lglib-2.0"
 
-pangoCCFlags.addAll(gtkCFlags_pkgconfig.split(" "))
-pangoLinkFlags.addAll(gtkLFlags_pkgconfig.split(" "))
+pangoCCFlags.addAll(pangoCFlags_pkgconfig.split(" "))
+pangoLinkFlags.addAll(pangoLFlags_pkgconfig.split(" "))
 
 def freetypeCCFlags = [ext.IS_COMPILE_PANGO ? "-D_ENABLE_PANGO" :
                        ext.IS_COMPILE_HARFBUZZ ? "-D_ENABLE_HARFBUZZ" : ""]
 def freetypeLinkFlags = []
 
 def freetypeCFlags_pkgconfig = "-I${sdk}/usr/include/freetype2 -I${sdk}/usr/include"
-def freeytpeLFlags_pkgconfig = "-L${sdk}/usr/lib/arm-linux-gnueabi -lfreetype"
+def freetypeLFlags_pkgconfig = "-L${sdk}/usr/lib/arm-linux-gnueabi -lfreetype"
 
-freetypeCCFlags.addAll(gtkCFlags_pkgconfig.split(" "))
-freetypeLinkFlags.addAll(gtkLFlags_pkgconfig.split(" "))
+freetypeCCFlags.addAll(freetypeCFlags_pkgconfig.split(" "))
+freetypeLinkFlags.addAll(freetypeLFlags_pkgconfig.split(" "))
 
 ARMV7SF.javafxPlatformProperties = "javafx.platform=${ARMV7SF.javafxPlatformDefault}"
 

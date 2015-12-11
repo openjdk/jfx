@@ -1895,7 +1895,7 @@ project(":fxpackager") {
             matches = "IconSwap\\.cpp"
             params.addAll(WIN.iconLauncher.ccFlags)
             output(file("$buildDir/native/IconSwap"))
-            source file("src/main/native/tools/win")
+            source file("src/main/native/tools/win/iconswap")
             compiler = WIN.launcher.compiler
             exe = true
             linkerOptions.addAll(WIN.iconLauncher.linkFlags)
@@ -1906,7 +1906,28 @@ project(":fxpackager") {
                 }
             }
         }
-        task compileLauncher(dependsOn: [buildWinLauncher, linkWinLibrary, buildWinLauncherSvc, buildIconSwap])
+        task compileVersionInfoSwap(type: CCTask, group: "Build") {
+            description = "Compiles native sources for the VersionInfoSwap tool";
+            matches = ".*\\.cpp"
+            source(file("src/main/native/tools/win/versioninfoswap"));
+            params.addAll(WIN.versionInfoLauncher.ccFlags)
+            output(file("$buildDir/native/VersionInfoSwap/obj"));
+            compiler = WIN.versionInfoLauncher.compiler
+        }
+        task linkVersionInfoSwap(type: LinkTask, group: "Build", dependsOn: compileVersionInfoSwap) {
+            description = "Links native sources for the VersionInfoSwap tool";
+            objectDir = file("$buildDir/native/VersionInfoSwap/obj")
+            linkParams.addAll(WIN.versionInfoLauncher.linkFlags);
+            lib = file("$buildDir/native/VersionInfoSwap/VersionInfoSwap.exe")
+            linker = WIN.versionInfoLauncher.linker
+            doLast {
+                copy {
+                    from "$buildDir/native/VersionInfoSwap/VersionInfoSwap.exe"
+                    into "$buildDir/classes/main/com/oracle/tools/packager/windows"
+                }
+            }
+        }
+        task compileLauncher(dependsOn: [buildWinLauncher, linkWinLibrary, buildWinLauncherSvc, buildIconSwap, linkVersionInfoSwap])
         jar.dependsOn compileLauncher;
     } else if (IS_MAC && COMPILE_FXPACKAGER) {
         task buildMacLauncher(type: CCTask, group: "Build") {

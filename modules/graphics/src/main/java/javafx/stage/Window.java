@@ -28,9 +28,12 @@ package javafx.stage;
 import java.security.AllPermission;
 import java.security.AccessControlContext;
 import java.security.AccessController;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 
+import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.ObjectProperty;
@@ -43,6 +46,7 @@ import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
 import javafx.event.Event;
 import javafx.event.EventDispatchChain;
@@ -77,9 +81,10 @@ import com.sun.javafx.tk.Toolkit;
 public class Window implements EventTarget {
 
     /**
-     * A list of all the currently existing windows. This is only used by SQE for testing.
+     * A list of all the currently _showing_ windows. This is publicly accessible via the unmodifiableWindows wrapper.
      */
-    private static WeakReferenceQueue<Window>windowQueue = new WeakReferenceQueue<Window>();
+    private static ObservableList<Window> windows = FXCollections.observableArrayList();
+    private static ObservableList<Window> unmodifiableWindows = FXCollections.unmodifiableObservableList(windows);
 
     static {
         WindowHelper.setWindowAccessor(
@@ -134,20 +139,20 @@ public class Window implements EventTarget {
     }
 
     /**
-     * Return all Windows
+     * Returns a list containing a reference to the currently showing JavaFX windows. The list is unmodifiable -
+     * attempting to modify this list will result in an {@link UnsupportedOperationException} being thrown at runtime.
      *
-     * @return Iterator of all Windows
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @return A list containing all windows that are currently showing.
+     * @since 9
      */
-    @Deprecated
-    public static Iterator<Window> impl_getWindows() {
+    @ReturnsUnmodifiableCollection
+    public static ObservableList<Window> getWindows() {
         final SecurityManager securityManager = System.getSecurityManager();
         if (securityManager != null) {
             securityManager.checkPermission(new AllPermission());
         }
 
-        return (Iterator<Window>) windowQueue.iterator();
+        return unmodifiableWindows;
     }
 
     final AccessControlContext acc = AccessController.getContext();
@@ -824,9 +829,9 @@ public class Window implements EventTarget {
             impl_visibleChanging(newVisible);
             if (newVisible) {
                 hasBeenVisible = true;
-                windowQueue.add(Window.this);
+                windows.add(Window.this);
             } else {
-                windowQueue.remove(Window.this);
+                windows.remove(Window.this);
             }
             Toolkit tk = Toolkit.getToolkit();
             if (impl_peer != null) {

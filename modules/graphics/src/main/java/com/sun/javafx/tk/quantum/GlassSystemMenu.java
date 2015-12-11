@@ -39,22 +39,17 @@ import com.sun.glass.ui.MenuBar;
 import com.sun.glass.ui.MenuItem;
 import com.sun.glass.ui.Pixels;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyCharacterCombination;
 import javafx.scene.input.KeyCodeCombination;
-import javafx.scene.Node;
 
 class GlassSystemMenu implements TKSystemMenu {
         
@@ -320,11 +315,11 @@ class GlassSystemMenu implements TKSystemMenu {
             assert PlatformUtil.isMac() || PlatformUtil.isLinux();
             int modifier = glassModifiers(kcc);
             if (PlatformUtil.isMac()) {
-                int finalCode = code.isLetterKey() ? code.impl_getChar().toUpperCase().charAt(0)
-                        : code.impl_getCode();
+                int finalCode = code.isLetterKey() ? code.getChar().toUpperCase().charAt(0)
+                        : code.getCode();
                 glassSubMenuItem.setShortcut(finalCode, modifier);
             } else if (PlatformUtil.isLinux()) {
-                String lower = code.impl_getChar().toLowerCase();
+                String lower = code.getChar().toLowerCase();
                 if ((modifier & KeyEvent.MODIFIER_CONTROL) != 0) {
                     glassSubMenuItem.setShortcut(lower.charAt(0), modifier);
                 } else {
@@ -368,10 +363,10 @@ class GlassSystemMenu implements TKSystemMenu {
 
         if (kcc instanceof KeyCodeCombination) {
             KeyCode kcode = ((KeyCodeCombination)kcc).getCode();
-            int     code  = kcode.impl_getCode();
+            int     code  = kcode.getCode();
 
-            if (((code >= KeyCode.F1.impl_getCode())  && (code <= KeyCode.F12.impl_getCode())) ||
-                ((code >= KeyCode.F13.impl_getCode()) && (code <= KeyCode.F24.impl_getCode()))) {
+            if (((code >= KeyCode.F1.getCode())  && (code <= KeyCode.F12.getCode())) ||
+                ((code >= KeyCode.F13.getCode()) && (code <= KeyCode.F24.getCode()))) {
                 ret += KeyEvent.MODIFIER_FUNCTION;
             }
         }

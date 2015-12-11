@@ -620,7 +620,7 @@ public class StubToolkit extends Toolkit {
         if (charToKeyCodeMap != null) {
             final KeyCode keyCode = charToKeyCodeMap.get(character);
             if (keyCode != null) {
-                return keyCode.impl_getCode();
+                return keyCode.getCode();
             }
         }
 

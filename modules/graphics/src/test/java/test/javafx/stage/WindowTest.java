@@ -28,9 +28,13 @@ package test.javafx.stage;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertTrue;
 import static junit.framework.Assert.assertNotNull;
+
+import javafx.beans.InvalidationListener;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 
+import javafx.collections.ObservableList;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -41,6 +45,8 @@ import com.sun.javafx.tk.Toolkit;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 public final class WindowTest {
     private StubToolkit toolkit;
     private Stage testWindow;
@@ -49,6 +55,12 @@ public final class WindowTest {
     public void setUp() {
         toolkit = (StubToolkit) Toolkit.getToolkit();
         testWindow = new Stage();
+    }
+
+    @After
+    public void afterTest() {
+        testWindow.hide();
+        testWindow = null;
     }
 
     @Test
@@ -96,5 +108,68 @@ public final class WindowTest {
         final TKStage unkPeer = window.impl_getPeer();
         assertTrue(unkPeer instanceof StubStage);
         return (StubStage) unkPeer;
+    }
+
+    @Test public void testGetWindowsIsObservable() {
+        ObservableList<Window> windows = Window.getWindows();
+
+        final int initialWindowCount = windows.size();
+        AtomicInteger windowCount = new AtomicInteger(initialWindowCount);
+
+        InvalidationListener listener = o -> windowCount.set(windows.size());
+        windows.addListener(listener);
+
+        assertEquals(initialWindowCount + 0, windowCount.get());
+
+        testWindow.show();
+        assertEquals(initialWindowCount + 1, windowCount.get());
+
+        Stage anotherTestWindow = new Stage();
+        anotherTestWindow.show();
+        assertEquals(initialWindowCount + 2, windowCount.get());
+
+        testWindow.hide();
+        assertEquals(initialWindowCount + 1, windowCount.get());
+
+        anotherTestWindow.hide();
+        assertEquals(initialWindowCount + 0, windowCount.get());
+
+        windows.removeListener(listener);
+    }
+
+    @Test(expected = UnsupportedOperationException.class)
+    public void testGetWindowsIsUnmodifiable_add() {
+        Stage anotherTestWindow = new Stage();
+        Window.getWindows().add(anotherTestWindow);
+    }
+
+    @Test(expected = UnsupportedOperationException.class)
+    public void testGetWindowsIsUnmodifiable_removeShowingWindow() {
+        testWindow.show();
+        Window.getWindows().remove(testWindow);
+    }
+
+    // There is no UOE here because the window being removed is not in the list of windows,
+    // so no modification of the windows list occurs.
+    @Test public void testGetWindowsIsUnmodifiable_removeNonShowingWindow_emptyList() {
+        Stage anotherTestWindow = new Stage();
+        Window.getWindows().remove(anotherTestWindow);
+    }
+
+    // There is no UOE here because the window being removed is not in the list of windows,
+    // so no modification of the windows list occurs.
+    @Test public void testGetWindowsIsUnmodifiable_removeNonShowingWindow_nonEmptyList() {
+        ObservableList<Window> windows = Window.getWindows();
+
+        final int initialWindowCount = windows.size();
+
+        testWindow.show();
+        assertEquals(initialWindowCount + 1, windows.size());
+
+        Stage anotherTestWindow = new Stage();
+        assertEquals(initialWindowCount + 1, windows.size());
+
+        windows.remove(anotherTestWindow);
+        assertEquals(initialWindowCount + 1, windows.size());
     }
 }

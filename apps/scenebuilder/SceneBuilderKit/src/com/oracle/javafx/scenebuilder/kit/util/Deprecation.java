@@ -232,12 +232,6 @@ public class Deprecation {
         return gridPane.impl_getCellBounds(c, r);
     }
 
-    // RT-33675 : Promote TableColumn.impl_setReorderable() to public API
-    @SuppressWarnings("rawtypes")
-    public static void setTableColumnReordable(TableColumn tableColumn, boolean reordable) {
-        tableColumn.impl_setReorderable(reordable);
-    }
-
     // Returns the corresponding text css (.css) from a binary css (.bss)
     public static URL getThemeTextStylesheet(String binaryCssUrlStr) {
         String textCssUrlStr = binaryCssUrlStr.replaceAll(".bss", ".css"); //NOI18N

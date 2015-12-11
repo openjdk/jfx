@@ -774,7 +774,7 @@ public class DialogPane extends Pane {
         button.addEventHandler(ActionEvent.ACTION, ae -> {
             if (ae.isConsumed()) return;
             if (dialog != null) {
-                dialog.impl_setResultAndClose(buttonType, true);
+                dialog.setResultAndClose(buttonType, true);
             }
         });
         

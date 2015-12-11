@@ -38,7 +38,7 @@ public class KeyCodeTest {
     @Test
     public void shouldGetCharacter() {
         for (KeyCode code : KeyCode.values()) {
-            String chr = code.impl_getChar();
+            String chr = code.getChar();
             assertNotNull(chr);
             assertFalse(chr.isEmpty());
         }
@@ -47,7 +47,7 @@ public class KeyCodeTest {
     @Test
     public void shouldFindCorrectCode() {
         for (KeyCode code : KeyCode.values()) {
-            assertSame(code, KeyCodeMap.valueOf(code.impl_getCode()));
+            assertSame(code, KeyCodeMap.valueOf(code.getCode()));
         }
     }
 }

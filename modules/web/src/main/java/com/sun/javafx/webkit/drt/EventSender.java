@@ -30,10 +30,8 @@ import com.sun.javafx.webkit.KeyCodeMap;
 import com.sun.webkit.event.WCKeyEvent;
 import com.sun.webkit.event.WCMouseEvent;
 import com.sun.webkit.event.WCMouseWheelEvent;
-import java.util.ArrayList;
+
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import javafx.scene.input.KeyCode;
 
@@ -64,7 +62,7 @@ final class EventSender {
         MAP.put("printScreen", KeyCode.PRINTSCREEN);
         MAP.put("menu", KeyCode.CONTEXT_MENU);
         for (KeyCode code : KeyCode.values()) {
-            MAP.put(code.impl_getCode(), code);
+            MAP.put(code.getCode(), code);
             MAP.put(code.getName().toLowerCase(), code);
             MAP.put(code.getName(), code);
         }

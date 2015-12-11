@@ -42,6 +42,7 @@ import java.io.StringReader;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.List;
 
 public class SGMXBean_windows_Test {
 
@@ -66,12 +67,8 @@ public class SGMXBean_windows_Test {
         stage2.setScene(scene2);
         stage2.show();
 
-        final Iterator<Window> it = Window.impl_getWindows();
-        windowsCount = 0;
-        while (it.hasNext()) {
-            windowsCount++;
-            it.next();
-        }
+        final List<Window> windows = Window.getWindows();
+        windowsCount = windows.size();
     }
 
     private static JSONDocument getJSONDocument(String source) {

@@ -1290,21 +1290,21 @@ public enum KeyCode {
     }
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * Returns the character element of this key code, which is simply a mapping of the underlying platform code
+     * returned by {@link #getCode()}.
+     *
+     * @since 9
      */
-    @Deprecated
-    public String impl_getChar() {
+    public final String getChar() {
         return ch;
     }
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * Returns the underlying platform code used to represent the {@link #getChar() character} in the key code.
+     *
+     * @since 9
      */
-    // SB-dependency: RT-22749 has been filed to track this
-    @Deprecated
-    public int impl_getCode() {
+    public final int getCode() {
         return code;
     }
 

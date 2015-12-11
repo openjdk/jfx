@@ -125,7 +125,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacCursor__1initIDs
                    ];
     [cursorCache retain];
     
-    assert([cursorCache count] == com_sun_glass_ui_Cursor_CURSOR_MAX);
+    assert([cursorCache count] == (com_sun_glass_ui_Cursor_CURSOR_MAX + 1));
 }
 
 /*

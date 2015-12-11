@@ -362,12 +362,10 @@ public class SGMXBeanImpl implements SGMXBean, MXNodeAlgorithm {
 
     private void importWindows() {
         int windowCount = 0;
-        final Iterator<Window> it = Window.impl_getWindows();
+        final List<Window> windows = Window.getWindows();
 
         jwindows = JSONDocument.createArray();
-        while (it.hasNext()) {
-            final Window window = it.next();
-
+        for (Window window : windows) {
             windowMap.put(windowCount, window);
 
             final JSONDocument jwindow = JSONDocument.createObject();

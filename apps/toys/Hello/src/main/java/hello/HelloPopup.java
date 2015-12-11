@@ -128,11 +128,10 @@ public class HelloPopup extends Application {
             }
 
             nextPopup.show(popupParent, popupX, popupY);
-            
-            Iterator<Window> windows = Window.impl_getWindows();
-            while (windows.hasNext()) {
-                System.out.println("W: " + windows.next().getClass().getName());
-            }
+
+            Window.getWindows().stream().forEach(window -> {
+                System.out.println("W: " + window.getClass().getName());
+            });
         }
     }
 

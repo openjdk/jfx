@@ -50,14 +50,18 @@ public class IOUtils {
     }
 
     public static void copyFromURL(URL location, File file) throws IOException {
+        copyFromURL(location, file, false);
+    }
+
+    public static void copyFromURL(URL location, File file, boolean append) throws IOException {
         if (location == null) {
             throw new IOException("Missing input resource!");
         }
-        if (file.exists()) {
+        if (file.exists() && !append) {
            file.delete();
         }
         InputStream in = location.openStream();
-        FileOutputStream out = new FileOutputStream(file);
+        FileOutputStream out = new FileOutputStream(file, append);
         byte[] buffer = new byte[1024];
         int len;
         while ((len = in.read(buffer)) != -1) {

@@ -5816,7 +5816,6 @@ public class Metadata {
         hiddenProperties.add(new PropertyName("impl_selectionEnd"));
         hiddenProperties.add(new PropertyName("impl_selectionShape"));
         hiddenProperties.add(new PropertyName("impl_selectionStart"));
-        hiddenProperties.add(new PropertyName("impl_showRelativeToWindow"));
         hiddenProperties.add(new PropertyName("impl_traversalEngine"));
         hiddenProperties.add(new PropertyName("inputMethodRequests"));
         hiddenProperties.add(new PropertyName("localToParentTransform"));

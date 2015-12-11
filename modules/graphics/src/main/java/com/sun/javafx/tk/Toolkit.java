@@ -855,14 +855,12 @@ public abstract class Toolkit {
      */
     public void pauseScenes() {
         pauseScenesLatch = new CountDownLatch(1);
-        Iterator<Window> i = Window.impl_getWindows();
-        while (i.hasNext()) {
-            final Window w = i.next();
-            final Scene scene = w.getScene();
+        Window.getWindows().stream().forEach(window -> {
+            final Scene scene = window.getScene();
             if (scene != null) {
                 this.removeSceneTkPulseListener(scene.impl_getScenePulseListener());
             }
-        }
+        });
         this.getMasterTimer().pause();
         SceneHelper.setPaused(true);
     }
@@ -874,14 +872,12 @@ public abstract class Toolkit {
     public void resumeScenes() {
         SceneHelper.setPaused(false);
         this.getMasterTimer().resume();
-        Iterator<Window> i = Window.impl_getWindows();
-        while (i.hasNext()) {
-            final Window w = i.next();
-            final Scene scene = w.getScene();
+        Window.getWindows().stream().forEach(window -> {
+            final Scene scene = window.getScene();
             if (scene != null) {
                 this.addSceneTkPulseListener(scene.impl_getScenePulseListener());
             }
-        }
+        });
         pauseScenesLatch.countDown();
         pauseScenesLatch = null;
     }
