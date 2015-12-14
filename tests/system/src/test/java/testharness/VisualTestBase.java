@@ -148,6 +148,11 @@ public abstract class VisualTestBase {
     protected Color getColor(Scene scene, int x, int y) {
         x += scene.getX() + scene.getWindow().getX();
         y += scene.getY() + scene.getWindow().getY();
+        return getColor(x, y);
+    }
+
+    // This must be called on the FX app thread
+    protected Color getColor(int x, int y) {
         int pixColor = robot.getPixelColor(x, y);
         int a = (pixColor >> 24) & 0xff;
         int r = (pixColor >> 16) & 0xff;
