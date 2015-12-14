@@ -793,15 +793,8 @@ if (gradle.gradleVersion != "2.9") {
     def gradleMajor = Integer.parseInt(ver[0]);
     def gradleMinor = Integer.parseInt(ver[1]);
     def err = "";
-    if (gradleMajor == 1) {
-        if (gradleMinor < 8) {
-            err = "Gradle version too old: ${gradle.gradleVersion}; must be at least 1.8"
-        }
-
-        // Blacklisted versions of gradle
-        if (gradleMinor == 11) {
-            err = "JavaFX fails to build with Gradle ${gradle.gradleVersion}; supported version is 2.9"
-        }
+    if (gradleMajor == 1 || gradleMajor == 2 && gradleMinor < 9) {
+        err = "Gradle version too old: ${gradle.gradleVersion}; must be at least 2.9"
     }
 
     if (IS_GRADLE_VERSION_CHECK && err != "") {
