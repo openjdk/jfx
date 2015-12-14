@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -94,6 +94,11 @@ final class EventSender {
     private boolean mousePressed;
 
     /**
+     * The type of mouse button.
+     */
+    private int mouseButton = WCMouseEvent.NOBUTTON;
+
+    /**
      * The time offset for events.
      */
     private long timeOffset;
@@ -145,6 +150,7 @@ final class EventSender {
      * methods of the DRT event sender object.
      */
     private void mouseUpDown(int button, int modifiers) {
+        mouseButton = button;
         mousePressed = isSet(modifiers, PRESSED);
         dispatchMouseEvent(mousePressed
                 ? WCMouseEvent.MOUSE_PRESSED
@@ -160,7 +166,8 @@ final class EventSender {
         mousePositionY = y;
         dispatchMouseEvent(mousePressed
                 ? WCMouseEvent.MOUSE_DRAGGED
-                : WCMouseEvent.MOUSE_MOVED, 0, 0, 0);
+                : WCMouseEvent.MOUSE_MOVED, 
+                (mousePressed ? mouseButton : WCMouseEvent.NOBUTTON), 0, 0);
     }
 
     /**
