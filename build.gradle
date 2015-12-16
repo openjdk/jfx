@@ -210,6 +210,29 @@ void setupTools(String name, Closure loader, Closure processor) {
     }
 }
 
+String[] parseJavaVersion(String jRuntimeVersion) {
+    def jVersion = jRuntimeVersion.split("[-\\+]")[0]
+    def tmpBuildNumber = "0"
+    if (jVersion.startsWith("1.")) {
+        // This is a pre-JEP-223 version string
+        def dashbIdx = jRuntimeVersion.lastIndexOf("-b")
+        if (dashbIdx != -1) {
+            tmpBuildNumber = jRuntimeVersion.substring(dashbIdx + 2)
+        }
+    } else {
+        // This is a post-JEP-223 version string
+        def plusIdx = jRuntimeVersion.indexOf("+")
+        if (plusIdx != -1) {
+            tmpBuildNumber = jRuntimeVersion.substring(plusIdx + 1)
+        }
+    }
+    def jBuildNumber = tmpBuildNumber.split("[-\\+]")[0]
+    def versionInfo = new String[2];
+    versionInfo[0] = jVersion
+    versionInfo[1] = jBuildNumber
+    return versionInfo
+}
+
 /**
  * Fails the build with the specified error message
  *
@@ -278,8 +301,9 @@ defineProperty("JAVADOC", cygpath("$JDK_HOME/bin/javadoc${IS_WINDOWS ? '.exe' : 
 defineProperty("JDK_DOCS", "https://docs.oracle.com/javase/8/docs/api/")
 
 defineProperty("javaRuntimeVersion", System.getProperty("java.runtime.version"))
-defineProperty("javaVersion", javaRuntimeVersion.split("-")[0])
-defineProperty("javaBuildNumber", javaRuntimeVersion.substring(javaRuntimeVersion.lastIndexOf("-b") + 2))
+def javaVersionInfo = parseJavaVersion(javaRuntimeVersion)
+defineProperty("javaVersion", javaVersionInfo[0])
+defineProperty("javaBuildNumber", javaVersionInfo[1])
 
 loadProperties("$projectDir/build.properties")
 
@@ -753,19 +777,19 @@ if (!file(JAVADOC).exists()) throw new Exception("Missing or incorrect path to '
 // Java HotSpot(TM) 64-Bit Server VM (build 24.45-b08, mixed mode)
 //
 // We need to parse the second line
-def inStream = new java.io.BufferedReader(new java.io.InputStreamReader(new java.lang.ProcessBuilder(JAVA, "-version").start().getErrorStream()));
+def inStream = new java.io.BufferedReader(new java.io.InputStreamReader(new java.lang.ProcessBuilder(JAVA, "-fullversion").start().getErrorStream()));
 try {
-    if (inStream.readLine() != null) {
-        String v = inStream.readLine();
-        if (v != null) {
-            int ib = v.indexOf(" (build ");
-            if (ib != -1) {
-                String ver = v.substring(ib + 8, v.size() - 1);
+    String v = inStream.readLine().trim();
+    if (v != null) {
+        int ib = v.indexOf("full version \"");
+        if (ib != -1) {
+            String str = v.substring(ib);
+            String ver = str.substring(str.indexOf("\"") + 1, str.size() - 1);
 
-                defineProperty("jdkRuntimeVersion", ver)
-                defineProperty("jdkVersion", jdkRuntimeVersion.split("-")[0])
-                defineProperty("jdkBuildNumber", jdkRuntimeVersion.substring(jdkRuntimeVersion.lastIndexOf("-b") + 2))
-            }
+            defineProperty("jdkRuntimeVersion", ver)
+            def jdkVersionInfo = parseJavaVersion(ver)
+            defineProperty("jdkVersion", jdkVersionInfo[0])
+            defineProperty("jdkBuildNumber", jdkVersionInfo[1])
         }
     }
 } finally {
@@ -828,7 +852,8 @@ logger.quiet("java build number: ${javaBuildNumber}")
 logger.quiet("jdk.runtime.version: ${jdkRuntimeVersion}")
 logger.quiet("jdk version: ${jdkVersion}")
 logger.quiet("jdk build number: ${jdkBuildNumber}")
-logger.quiet("minimum java build number: ${jfxBuildJdkBuildnumMin}")
+logger.quiet("minimum jdk version: ${jfxBuildJdkVersion}")
+logger.quiet("minimum jdk build number: ${jfxBuildJdkBuildnumMin}")
 logger.quiet("CONF: $CONF")
 logger.quiet("NUM_COMPILE_THREADS: $NUM_COMPILE_THREADS")
 logger.quiet("COMPILE_TARGETS: $COMPILE_TARGETS")
@@ -1050,7 +1075,7 @@ List parseJdkVersion(String version) {
     def arr = version.split("[_\\.]");
     def intArr = [];
     arr.each { s -> intArr += Integer.parseInt(s); }
-    if (intArr.size() < 4) intArr += 0;
+    while (intArr.size() < 4) intArr += 0;
     return intArr;
 }
 
@@ -1078,7 +1103,7 @@ task verifyJava() {
         } else if (status == 0) {
             def buildNum = Integer.parseInt(jdkBuildNumber)
             def minBuildNum = Integer.parseInt(jfxBuildJdkBuildnumMin)
-            if (buildNum < minBuildNum) {
+            if (buildNum != 0 && buildNum < minBuildNum) {
                 fail("JDK build number ($buildNum) < minimum build number ($minBuildNum)")
             }
         }
