@@ -17,10 +17,6 @@ OSX_PLATFORM_BASE = $(SRCBASE_DIR)/platform/osx
 TARGET_NAME = lib$(BASE_NAME).dylib
 TARGET = $(BUILD_DIR)/$(TARGET_NAME)
 
-# separate library for QTKit based platform
-QTK_NAME = lib$(BASE_NAME)_qtkit.dylib
-QTK_LIB = $(BUILD_DIR)/$(QTK_NAME)
-
 AVF_NAME = lib$(BASE_NAME)_avf.dylib
 AVF_LIB = $(BUILD_DIR)/$(AVF_NAME)
 
@@ -142,7 +138,7 @@ JFXMEDIA_OBJECTS = \
 
 .PHONY: default, checklibs
 
-default: $(TARGET) $(QTK_LIB) $(AVF_LIB)
+default: $(TARGET) $(AVF_LIB)
 	@echo "Ensuring $(TARGET_NAME) does not link against QuickTime..."
 	! nm -m "$(TARGET)" | grep -E "(QTKit|QuickTime)"
 	@echo "Ensuring $(AVF_NAME) does not link against QuickTime..."
@@ -249,25 +245,3 @@ $(AVF_OBJBASE)/%.o: %.mm
 $(AVF_LIB): $(TARGET) $(AVF_OBJECTS)
 	@mkdir -p $(dir $@)
 	$(LINKER)  $(AVF_LDFLAGS) -dynamiclib $(AVF_OBJECTS) -l$(BASE_NAME) -o $@
-
-
-# ------------------------------------------------------------------
-# QTKit platform lib rules
-
-QTK_OBJBASE = $(OBJBASE_DIR)/qtk
-QTK_LDFLAGS = $(LDFLAGS) \
-          -Wl,-install_name,@rpath/$(QTK_NAME) \
-          -framework QTKit
-
-QTK_SOURCES = platform/osx/QTKMediaPlayer.mm
-QTK_OBJECTS = $(patsubst %.mm,$(QTK_OBJBASE)/%.o,$(QTK_SOURCES))
-
--include $(QTK_OBJECTS:.o=.d)
-
-$(QTK_OBJBASE)/%.o: %.mm
-	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) $(INCLUDES) -MD -MF $(QTK_OBJBASE)/$*.d -x objective-c++ -c $< -o $@
-
-$(QTK_LIB): $(TARGET) $(QTK_OBJECTS)
-	@mkdir -p $(dir $@)
-	$(LINKER)  $(QTK_LDFLAGS) -dynamiclib $(QTK_OBJECTS) -l$(BASE_NAME) -o $@

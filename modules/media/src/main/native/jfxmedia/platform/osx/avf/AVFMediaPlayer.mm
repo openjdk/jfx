@@ -297,7 +297,7 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
                        ofObject:(id)object
                          change:(NSDictionary *)change
                         context:(void *)context {
-	if (context == AVFMediaPlayerItemStatusContext) {
+    if (context == AVFMediaPlayerItemStatusContext) {
         AVPlayerStatus status = (AVPlayerStatus)[[change objectForKey:NSKeyValueChangeNewKey] longValue];
         if (status == AVPlayerStatusReadyToPlay) {
             if (!_movieReady) {
@@ -312,19 +312,19 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
         eventHandler->SendDurationUpdateEvent(duration);
     } else if (context == AVFMediaPlayerItemTracksContext) {
         [self extractTrackInfo];
-	} else {
-		[super observeValueForKeyPath:keyPath ofObject:object change:change context:context];
-	}
+    } else {
+        [super observeValueForKeyPath:keyPath ofObject:object change:change context:context];
+    }
 }
 
 - (double) currentTime
 {
-	return CMTimeGetSeconds([self.player currentTime]);
+    return CMTimeGetSeconds([self.player currentTime]);
 }
 
 - (void) setCurrentTime:(double)time
 {
-	[self.player seekToTime:CMTimeMakeWithSeconds(time, 1)];
+    [self.player seekToTime:CMTimeMakeWithSeconds(time, 1)];
 }
 
 - (BOOL) mute {
@@ -661,25 +661,25 @@ static void SpectrumCallbackProc(void *context, double duration) {
 
 static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink, const CVTimeStamp *inNow, const CVTimeStamp *inOutputTime, CVOptionFlags flagsIn, CVOptionFlags *flagsOut, void *displayLinkContext)
 {
-	AVFMediaPlayer *self = (__bridge AVFMediaPlayer *)displayLinkContext;
-	AVPlayerItemVideoOutput *playerItemVideoOutput = self.playerOutput;
+    AVFMediaPlayer *self = (__bridge AVFMediaPlayer *)displayLinkContext;
+    AVPlayerItemVideoOutput *playerItemVideoOutput = self.playerOutput;
 
-	// The displayLink calls back at every vsync (screen refresh)
-	// Compute itemTime for the next vsync
-	CMTime outputItemTime = [playerItemVideoOutput itemTimeForCVTimeStamp:*inOutputTime];
+    // The displayLink calls back at every vsync (screen refresh)
+    // Compute itemTime for the next vsync
+    CMTime outputItemTime = [playerItemVideoOutput itemTimeForCVTimeStamp:*inOutputTime];
     if ([playerItemVideoOutput hasNewPixelBufferForItemTime:outputItemTime]) {
         CVPixelBufferRef pixBuff = [playerItemVideoOutput copyPixelBufferForItemTime:outputItemTime itemTimeForDisplay:NULL];
-		// Copy the pixel buffer to be displayed next and add it to AVSampleBufferDisplayLayer for display
+        // Copy the pixel buffer to be displayed next and add it to AVSampleBufferDisplayLayer for display
         double frameTime = CMTimeGetSeconds(outputItemTime);
-		[self sendPixelBuffer:pixBuff frameTime:frameTime hostTime:inOutputTime->hostTime];
+        [self sendPixelBuffer:pixBuff frameTime:frameTime hostTime:inOutputTime->hostTime];
         self.hlsBugResetCount = 0;
 
-		CVBufferRelease(pixBuff);
-	} else {
-		CMTime delta = CMClockMakeHostTimeFromSystemUnits(inNow->hostTime - self.lastHostTime);
+        CVBufferRelease(pixBuff);
+    } else {
+        CMTime delta = CMClockMakeHostTimeFromSystemUnits(inNow->hostTime - self.lastHostTime);
         NSTimeInterval elapsedTime = CMTimeGetSeconds(delta);
 
-		if (elapsedTime > FREEWHEELING_PERIOD_IN_SECONDS) {
+        if (elapsedTime > FREEWHEELING_PERIOD_IN_SECONDS) {
             if (self.player.rate != 0.0) {
                 if (self.hlsBugResetCount > 9) {
                     /*
@@ -702,12 +702,12 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink, const CVTimeSt
                     return kCVReturnSuccess;
                 }
             }
-			// No new images for a while.  Shut down the display link to conserve
+            // No new images for a while.  Shut down the display link to conserve
             // power, but request a wakeup call if new images are coming.
-			CVDisplayLinkStop(displayLink);
-			[playerItemVideoOutput requestNotificationOfMediaDataChangeWithAdvanceInterval:ADVANCE_INTERVAL_IN_SECONDS];
-		}
-	}
+            CVDisplayLinkStop(displayLink);
+            [playerItemVideoOutput requestNotificationOfMediaDataChangeWithAdvanceInterval:ADVANCE_INTERVAL_IN_SECONDS];
+        }
+    }
 
-	return kCVReturnSuccess;
+    return kCVReturnSuccess;
 }

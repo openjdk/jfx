@@ -66,17 +66,11 @@ static Class gMediaPlayerClass = nil;
 + (BOOL) initPlayerPlatform
 {
     BOOL enableAVF = YES;
-    BOOL enableQTK = YES;
 
     // Check environment to see if platforms are enabled
     char *value = getenv("JFXMEDIA_AVF");
     if (value ? strncasecmp(value, "yes", 3) != 0 : NO) {
         enableAVF = NO;
-    }
-
-    value = getenv("JFXMEDIA_QTKIT");
-    if (value ? strncasecmp(value, "yes", 3) != 0 : NO) {
-        enableQTK = NO;
     }
 
     // Determine if we can use OSX native player libs, without linking directly
@@ -85,19 +79,6 @@ static Class gMediaPlayerClass = nil;
     if (enableAVF) {
         klass = objc_getClass("AVFMediaPlayer");
         if (klass) {
-            if ([klass conformsToProtocol:@protocol(OSXPlayerProtocol)]) {
-                if ([klass respondsToSelector:@selector(playerAvailable)] ? [klass playerAvailable] : YES) {
-                    gMediaPlayerClass = klass;
-                    return YES;
-                }
-            }
-        }
-    }
-
-    if (enableQTK) {
-        klass = objc_getClass("QTKMediaPlayer");
-        if (klass) {
-            // And make sure it conforms to the OSXPlayerProtocol
             if ([klass conformsToProtocol:@protocol(OSXPlayerProtocol)]) {
                 if ([klass respondsToSelector:@selector(playerAvailable)] ? [klass playerAvailable] : YES) {
                     gMediaPlayerClass = klass;

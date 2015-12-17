@@ -87,7 +87,6 @@
 		65989AB01991570800319296 /* MTObjectProxy.m in Sources */ = {isa = PBXBuildFile; fileRef = 659896EA1991570800319296 /* MTObjectProxy.m */; };
 		65989AB11991570800319296 /* posix_critical_section.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 659896EC1991570800319296 /* posix_critical_section.cpp */; };
 		65989ABC1991574B00319296 /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 65989ABB1991574B00319296 /* CoreVideo.framework */; };
-		65989ACE199160EC00319296 /* QTKMediaPlayer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 659896D41991570800319296 /* QTKMediaPlayer.mm */; };
 		65989AED199160EC00319296 /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 65989ABB1991574B00319296 /* CoreVideo.framework */; };
 		65989AEE199160EC00319296 /* QTKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 65989AB91991574400319296 /* QTKit.framework */; };
 		65989AEF199160EC00319296 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 65989AB71991573600319296 /* AVFoundation.framework */; };
@@ -644,8 +643,6 @@
 		659896D01991570800319296 /* OSXMediaPlayer.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = OSXMediaPlayer.mm; sourceTree = "<group>"; };
 		659896D11991570800319296 /* OSXPlatform.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = OSXPlatform.mm; sourceTree = "<group>"; };
 		659896D21991570800319296 /* OSXPlayerProtocol.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OSXPlayerProtocol.h; sourceTree = "<group>"; };
-		659896D31991570800319296 /* QTKMediaPlayer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = QTKMediaPlayer.h; sourceTree = "<group>"; };
-		659896D41991570800319296 /* QTKMediaPlayer.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = QTKMediaPlayer.mm; sourceTree = "<group>"; };
 		659896DD1991570800319296 /* AutoLock.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AutoLock.h; sourceTree = "<group>"; };
 		659896DE1991570800319296 /* ColorConverter.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ColorConverter.c; sourceTree = "<group>"; };
 		659896DF1991570800319296 /* ColorConverter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ColorConverter.h; sourceTree = "<group>"; };
@@ -1812,8 +1809,6 @@
 				659896D01991570800319296 /* OSXMediaPlayer.mm */,
 				659896D11991570800319296 /* OSXPlatform.mm */,
 				659896D21991570800319296 /* OSXPlayerProtocol.h */,
-				659896D31991570800319296 /* QTKMediaPlayer.h */,
-				659896D41991570800319296 /* QTKMediaPlayer.mm */,
 			);
 			path = osx;
 			sourceTree = "<group>";
@@ -3396,7 +3391,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				65989ACE199160EC00319296 /* QTKMediaPlayer.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
