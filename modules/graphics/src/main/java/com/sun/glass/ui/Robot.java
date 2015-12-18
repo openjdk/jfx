@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,8 +46,9 @@ public abstract class Robot {
         // using Robot, we check for AllPermission here as we don't have
         // (and will unlikely have in the future) specific permission for
         // this functionality
-        if (System.getSecurityManager() != null) {
-            AccessController.checkPermission(allPermission);
+        final SecurityManager sm = System.getSecurityManager();
+        if (sm != null) {
+            sm.checkPermission(allPermission);
         }
         Application.checkEventThread();
         _create();

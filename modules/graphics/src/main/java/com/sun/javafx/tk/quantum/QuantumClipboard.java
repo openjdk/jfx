@@ -383,18 +383,18 @@ final class QuantumClipboard implements TKClipboard {
                             }
                             if (protocol.equalsIgnoreCase("file")) {
                                 FilePermission fp = new FilePermission(u.getFile(), "read");
-                                context.checkPermission(fp);
+                                sm.checkPermission(fp, context);
                             } else if (protocol.equalsIgnoreCase("ftp") ||
                                        protocol.equalsIgnoreCase("http") ||
                                        protocol.equalsIgnoreCase("https")) {
                                 int port = u.getPort();
                                 String hoststr = (port == -1 ? u.getHost() : u.getHost() + ":" + port);
                                 SocketPermission sp = new SocketPermission(hoststr, "connect");
-                                context.checkPermission(sp);
+                                sm.checkPermission(sp, context);
                             } else {
                                 final Permission clipboardPerm =
                                         PermissionHelper.getAccessClipboardPermission();
-                                context.checkPermission(clipboardPerm);
+                                sm.checkPermission(clipboardPerm, context);
                             }
                         }
                         return (new Image(url));

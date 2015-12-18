@@ -26,7 +26,6 @@
 package com.sun.javafx.tk.quantum;
 
 import java.nio.ByteBuffer;
-import java.security.AccessControlException;
 import java.security.AccessController;
 import java.security.AllPermission;
 import java.security.Permission;
@@ -587,11 +586,12 @@ class WindowStage extends GlassStage {
 
     private boolean hasPermission(Permission perm) {
         try {
-            if (System.getSecurityManager() != null) {
-                getAccessControlContext().checkPermission(perm);
+            final SecurityManager sm = System.getSecurityManager();
+            if (sm != null) {
+                sm.checkPermission(perm, getAccessControlContext());
             }
             return true;
-        } catch (AccessControlException ae) {
+        } catch (SecurityException se) {
             return false;
         }
     }

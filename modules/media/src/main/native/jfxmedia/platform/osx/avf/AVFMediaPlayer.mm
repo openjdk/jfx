@@ -401,6 +401,11 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
 - (void) dispose {
     @synchronized(self) {
         if (!isDisposed) {
+            if (_player != nil) {
+                // this should stop and dealloc the audio processor
+                _player.currentItem.audioMix = nil;
+            }
+
             if (_playerOutput != nil) {
                 [_playerItem removeOutput:_playerOutput];
                 [_playerOutput setDelegate:nil queue:nil];
