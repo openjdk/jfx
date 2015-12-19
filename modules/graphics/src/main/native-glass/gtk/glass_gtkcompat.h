@@ -103,7 +103,7 @@
         gdk_display_get_default(), event->requestor)
 
 #define GLASS_GDK_DRAG_CONTEXT_GET_DEST_WINDOW(context) \
-    ((context != NULL) ? context->dest_window : NULL)
+    ((context != NULL) ? gdk_drag_context_get_dest_window(context) : NULL)
 
 #endif /* GTK_CHECK_VERSION(3, 0, 0) */
 

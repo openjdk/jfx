@@ -200,11 +200,11 @@ void glass_gdk_display_get_pointer(GdkDisplay* display, gint* x, gint *y) {
 
 GdkScreen * 
 glass_gdk_window_get_screen(GdkWindow * gdkWindow) {
-    return gdk_drawable_get_screen(GDK_DRAWABLE(gdkWindow));
+    return gdk_window_get_screen(gdkWindow);
 }
 
 GdkDisplay * glass_gdk_window_get_display(GdkWindow * gdkWindow) {
-    return gdk_drawable_get_display(GDK_DRAWABLE(gdkWindow));
+    return gdk_window_get_display(gdkWindow);
 }
 
 gboolean
@@ -331,7 +331,8 @@ int glass_gtk_fixup_typed_key(int key, int keyval) {
 }
 
 void glass_gdk_window_get_size(GdkWindow *window, gint *w, gint *h) {
-    gdk_drawable_get_size(GDK_DRAWABLE(window), w, h);
+    *w = gdk_window_get_width(window);
+    *h = gdk_window_get_height(window);
 }
 
 void glass_gdk_display_get_pointer(GdkDisplay* display, gint* x, gint *y) {
@@ -354,7 +355,6 @@ glass_gtk_selection_data_get_data_with_length(
 
 static void
 configure_opaque_window(GtkWidget *window) {
-    (void)window;
 
     gtk_widget_set_visual(window,
                           gdk_screen_get_system_visual(

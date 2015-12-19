@@ -1705,8 +1705,10 @@ bool WindowContextChild::set_view(jobject view) {
     if (view) {
         gint width, height;
         jview = mainEnv->NewGlobalRef(view);
-        width = gtk_widget->allocation.width;
-        height = gtk_widget->allocation.height;
+        GtkAllocation ws;
+        gtk_widget_get_allocation(gtk_widget, &ws);
+        width = ws.width;
+        height = ws.height;
         mainEnv->CallVoidMethod(view, jViewNotifyResize, width, height);
         CHECK_JNI_EXCEPTION_RET(mainEnv, FALSE)
     } else {
@@ -1735,8 +1737,10 @@ void WindowContextChild::set_bounds(int x, int y, bool xSet, bool ySet, int w, i
 
     if (w > 0 || h > 0) {
         gint newWidth, newHeight;
-        newWidth = gtk_widget->allocation.width;
-        newHeight = gtk_widget->allocation.height;
+        GtkAllocation ws;
+        gtk_widget_get_allocation(gtk_widget, &ws);
+        newWidth = ws.width;
+        newHeight = ws.height;
 
         if (w > 0) {
             newWidth = w;

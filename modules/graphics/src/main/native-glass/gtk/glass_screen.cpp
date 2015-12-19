@@ -119,7 +119,7 @@ static jobject createJavaScreen(JNIEnv* env, GdkScreen* screen, gint monitor_idx
     jobject jScreen = env->NewObject(jScreenCls, jScreenInit,
                                      (jlong)monitor_idx,
 
-                                     visual ? visual->depth : 0,
+                                     (visual ? gdk_visual_get_depth(visual) : 0),
 
                                      monitor_geometry.x,
                                      monitor_geometry.y,

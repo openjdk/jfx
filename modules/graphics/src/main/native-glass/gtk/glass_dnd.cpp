@@ -1247,7 +1247,7 @@ void DragView::View::screen_changed() {
 }
 
 void DragView::View::expose() {
-    cairo_t *context = gdk_cairo_create(widget->window);
+    cairo_t *context = gdk_cairo_create(gtk_widget_get_window(widget));
 
     cairo_surface_t* cairo_surface;
 
