@@ -30,6 +30,7 @@ import com.sun.javafx.geom.PathIterator;
 import com.sun.javafx.sg.prism.NGPath;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.BooleanProperty;
 import javafx.scene.Group;
 import test.javafx.scene.NodeTest;
 import javafx.scene.Scene;
@@ -39,6 +40,7 @@ import java.util.ArrayList;
 import java.util.List;
 import javafx.scene.shape.FillRule;
 import javafx.scene.shape.LineTo;
+import javafx.scene.shape.VLineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
 import javafx.scene.shape.PathElement;
@@ -145,5 +147,12 @@ public class PathTest {
         String s = new Path().toString();
         assertNotNull(s);
         assertFalse(s.isEmpty());
+    }
+
+    @Test public void testPathElementIsAbsoluteAfterAbsoluteProperty() {
+        PathElement element = new VLineTo();
+        assertTrue(element.isAbsolute());
+        assertTrue(element.absoluteProperty().getValue());
+        assertTrue(element.isAbsolute());
     }
 }
