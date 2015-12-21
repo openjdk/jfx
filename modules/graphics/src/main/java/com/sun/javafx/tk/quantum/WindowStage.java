@@ -330,10 +330,16 @@ class WindowStage extends GlassStage {
     }
 
     @Override public void setMinimumSize(int minWidth, int minHeight) {
+        float pScale = platformWindow.getPlatformScale();
+        minWidth  = (int) Math.ceil(minWidth  * pScale);
+        minHeight = (int) Math.ceil(minHeight * pScale);
         platformWindow.setMinimumSize(minWidth, minHeight);
     }
 
     @Override public void setMaximumSize(int maxWidth, int maxHeight) {
+        float pScale = platformWindow.getPlatformScale();
+        maxWidth  = (int) Math.ceil(maxWidth  * pScale);
+        maxHeight = (int) Math.ceil(maxHeight * pScale);
         platformWindow.setMaximumSize(maxWidth, maxHeight);
     }
 
