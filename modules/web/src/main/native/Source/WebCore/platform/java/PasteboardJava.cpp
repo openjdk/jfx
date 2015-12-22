@@ -206,7 +206,8 @@ PassOwnPtr<Pasteboard> Pasteboard::createForCopyAndPaste()
 {
     // Use single shared data instance for all copy'n'paste pasteboards.
     static RefPtr<DataObjectJava> data = DataObjectJava::create();
-
+    // TODO: setURL, setFiles, setData, setHtml (needs URL)
+    data->setPlainText(jGetPlainText());
     return adoptPtr(new Pasteboard(data, true));
 }
 
