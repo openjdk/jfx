@@ -282,7 +282,7 @@ void ResourceLoader::willSendRequest(ResourceRequest& request, const ResourceRes
 
     m_request = request;
 
-    if (!redirectResponse.isNull() && !m_documentLoader->isCommitted())
+    if (!redirectResponse.isNull() && (m_documentLoader && !m_documentLoader->isCommitted()))
         frameLoader()->client().dispatchDidReceiveServerRedirectForProvisionalLoad();
 }
 

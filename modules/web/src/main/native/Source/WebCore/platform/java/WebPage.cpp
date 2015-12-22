@@ -1076,6 +1076,14 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkLoad
     env->ReleaseStringUTFChars(text, stringChars);
 }
 
+JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkIsLoading
+    (JNIEnv* env, jobject self, jlong pFrame)
+{
+    Frame* frame = static_cast<Frame*>(jlong_to_ptr(pFrame));
+
+    return bool_to_jbool(frame && frame->loader().isLoading());
+}
+
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkStop
     (JNIEnv* env, jobject self, jlong pFrame)
 {

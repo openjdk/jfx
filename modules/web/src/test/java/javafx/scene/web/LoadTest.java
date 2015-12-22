@@ -25,6 +25,8 @@
 
 package javafx.scene.web;
 
+import static javafx.concurrent.Worker.State.READY;
+import static javafx.concurrent.Worker.State.RUNNING;
 import static javafx.concurrent.Worker.State.FAILED;
 import static javafx.concurrent.Worker.State.SUCCEEDED;
 import static org.junit.Assert.assertEquals;
@@ -33,6 +35,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import java.io.File;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
 import javafx.concurrent.Worker.State;
 import javafx.event.EventHandler;
 import org.junit.Test;
@@ -184,5 +187,77 @@ public class LoadTest extends TestBase {
         assertEquals("Unexpected load state", SUCCEEDED, getLoadState());
         assertEquals("Unexpected location", "", webEngine.getLocation());
         assertNotNull("Document is null", webEngine.getDocument());
+    }
+
+    /**
+     * @test
+     * @bug 8140501
+     * summary loadContent on location changed
+     */
+    @Test public void loadContentOnLocationChange() throws Exception {
+        final CountDownLatch latch = new CountDownLatch(2);
+
+        submit(() -> {
+            WebEngine webEngine = new WebEngine();
+            webEngine.locationProperty().addListener((observable, oldValue, newValue) -> {
+                // NOTE: blank url == about:blank
+                // loading a empty or null url to WebKit
+                // will be treated as blank url
+                // ref : https://html.spec.whatwg.org
+                if (newValue.equalsIgnoreCase("about:blank")) {
+                    webEngine.loadContent("");
+                    assertTrue("loadContent in READY State", webEngine.getLoadWorker().getState() == READY);
+                }
+            });
+
+            webEngine.getLoadWorker().stateProperty().addListener(((observable, oldValue, newValue) -> {
+                if (newValue == SUCCEEDED) {
+                    latch.countDown();
+                }
+            }));
+
+            webEngine.load("");
+            assertTrue("load task completed successfully", webEngine.getLoadWorker().getState() == SUCCEEDED);
+        });
+        try {
+            latch.await();
+        } catch (InterruptedException ex) {
+            throw new AssertionError(ex);
+        }
+    }
+
+    /**
+     * @test
+     * @bug 8140501
+     * summary load url on location changed
+     */
+    @Test public void loadUrlOnLocationChange() throws Exception {
+        // Cancelling loadContent is synchronous,
+        // there wont be 2 SUCCEEDED event
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        submit(() -> {
+            WebEngine webEngine = new WebEngine();
+            webEngine.locationProperty().addListener((observable, oldValue, newValue) -> {
+                if (newValue.equalsIgnoreCase("")) {
+                    webEngine.load("");
+                    assertTrue("Load in READY State", webEngine.getLoadWorker().getState() == READY);
+                }
+            });
+
+            webEngine.getLoadWorker().stateProperty().addListener(((observable, oldValue, newValue) -> {
+                if (newValue == SUCCEEDED) {
+                    latch.countDown();
+                }
+            }));
+
+            webEngine.loadContent("");
+            assertTrue("loadContent task running", webEngine.getLoadWorker().getState() == RUNNING);
+        });
+        try {
+            latch.await();
+        } catch (InterruptedException ex) {
+            throw new AssertionError(ex);
+        }
     }
 }
