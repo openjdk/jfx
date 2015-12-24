@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,6 +33,10 @@
 #include <platform/gstreamer/GstMediaManager.h>
 #include <Utils/JfxCriticalSection.h>
 #include <jfxmedia_errors.h>
+
+#if TARGET_OS_WIN32
+#include <Utils/win32/WinExceptionHandler.h>
+#endif
 
 CMediaManager::MMSingleton CMediaManager::s_Singleton;
 
@@ -74,6 +78,10 @@ uint32_t CMediaManager::CreateInstance(CMediaManager** ppMediaManager)
 #if !defined(TARGET_OS_WIN32) && !defined(TARGET_OS_MAC) && !defined(TARGET_OS_LINUX)
     return ERROR_OS_UNSUPPORTED;
 #else
+#if TARGET_OS_WIN32
+    SetExceptionHandler();
+#endif
+
     CGstMediaManager* pGstManager = new(nothrow) CGstMediaManager();
     if (NULL == pGstManager)
         return ERROR_MEMORY_ALLOCATION;
