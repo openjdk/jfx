@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,7 +27,6 @@ package com.sun.prism;
 
 import com.sun.prism.Texture.WrapMode;
 import com.sun.prism.impl.TextureResourcePool;
-import com.sun.prism.impl.VertexBuffer;
 import com.sun.prism.shape.ShapeRep;
 
 public interface ResourceFactory extends GraphicsResource {
@@ -238,7 +237,6 @@ public interface ResourceFactory extends GraphicsResource {
     public boolean isCompatibleTexture(Texture tex);
 
     public Presentable createPresentable(PresentableState pState);
-    public VertexBuffer createVertexBuffer(int maxQuads);
 
     public ShapeRep createPathRep();
     public ShapeRep createRoundRectRep();

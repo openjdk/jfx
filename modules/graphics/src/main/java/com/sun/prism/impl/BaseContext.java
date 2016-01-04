@@ -76,10 +76,10 @@ public abstract class BaseContext {
     private final Map<FontStrike, GlyphCache>
         lcdGlyphCaches = new HashMap<FontStrike, GlyphCache>();
 
-    protected BaseContext(Screen screen, ResourceFactory factory, VertexBuffer vb) {
+    protected BaseContext(Screen screen, ResourceFactory factory, int vbQuads) {
         this.screen = screen;
         this.factory = factory;
-        this.vertexBuffer = vb;
+        this.vertexBuffer = new VertexBuffer(this, vbQuads);
     }
 
     protected void setDeviceParametersFor2D() {}
@@ -98,18 +98,28 @@ public abstract class BaseContext {
     }
 
     public void flushVertexBuffer() {
+        vertexBuffer.flush();
+    }
+
+    protected final void flushMask() {
         if (curMaskRow > 0 || curMaskCol > 0) {
             maskTex.lock();
             // assert !maskTex.isSurfaceLost();
             // since it was bound and unflushed...
             maskTex.update(maskBuffer, maskTex.getPixelFormat(),
-                           0, 0, 0, 0, highMaskCol, nextMaskRow,
-                           maskTex.getPhysicalWidth(), true);
+                                       0, 0, 0, 0, highMaskCol, nextMaskRow,
+                                       maskTex.getPhysicalWidth(), true);
             maskTex.unlock();
             curMaskRow = curMaskCol = nextMaskRow = highMaskCol = 0;
         }
-        vertexBuffer.flush();
     }
+
+    public void drawQuads(float coordArray[], byte colorArray[], int numVertices) {
+        flushMask();
+        renderQuads(coordArray, colorArray, numVertices);
+    }
+
+    protected abstract void renderQuads(float coordArray[], byte colorArray[], int numVertices);
 
     /**
      *

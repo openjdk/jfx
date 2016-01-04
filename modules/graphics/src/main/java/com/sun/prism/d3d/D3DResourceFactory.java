@@ -54,7 +54,6 @@ import com.sun.prism.Texture.Usage;
 import com.sun.prism.Texture.WrapMode;
 import com.sun.prism.d3d.D3DResource.D3DRecord;
 import com.sun.prism.impl.PrismSettings;
-import com.sun.prism.impl.VertexBuffer;
 import com.sun.prism.impl.ps.BaseShaderFactory;
 import com.sun.prism.impl.TextureResourcePool;
 import com.sun.prism.ps.Shader;
@@ -343,11 +342,6 @@ class D3DResourceFactory extends BaseShaderFactory {
         }
         return null;
 
-    }
-
-
-    public VertexBuffer createVertexBuffer(int maxQuads) {
-        return new VertexBuffer(maxQuads);
     }
 
     private static ByteBuffer getBuffer(InputStream is) {

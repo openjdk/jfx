@@ -31,7 +31,6 @@
 #include "com_sun_prism_d3d_D3DGraphics.h"
 #include "com_sun_prism_d3d_D3DSwapChain.h"
 #include "com_sun_prism_d3d_D3DContext.h"
-#include "com_sun_prism_d3d_D3DVertexBuffer.h"
 
 /*
  * Class:     com_sun_prism_d3d_D3DSwapChain
@@ -103,13 +102,13 @@ struct PrismSourceVertex {
 };
 
 /*
- * Class:     com_sun_prism_d3d_D3DVertexBuffer
- * Method:    nFlush
+ * Class:     com_sun_prism_d3d_D3DContext
+ * Method:    nDrawIndexedQuads
  */
-JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DVertexBuffer_nDrawIndexedQuads
+JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DContext_nDrawIndexedQuads
   (JNIEnv *env, jclass, jlong ctx, jfloatArray fbuf, jbyteArray bbuf, jint remainingVerts)
 {
-    TraceLn(NWT_TRACE_INFO, "D3DVertexBuffer_nDrawIndexedQuads");
+    TraceLn(NWT_TRACE_INFO, "D3DContext_nDrawIndexedQuads");
 
     D3DContext *pCtx = (D3DContext *)jlong_to_ptr(ctx);
     
@@ -124,30 +123,6 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DVertexBuffer_nDrawIndexedQuads
     if (pSrcColors) env->ReleasePrimitiveArrayCritical(bbuf, pSrcColors, JNI_ABORT);
     if (pSrcFloats) env->ReleasePrimitiveArrayCritical(fbuf, pSrcFloats, JNI_ABORT);
 
-    return hr;
-}
-
-/*
- * Class:     com_sun_prism_d3d_D3DVertexBuffer
- * Method:    nDrawTriangleList
-*/
-JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DVertexBuffer_nDrawTriangleList
-  (JNIEnv *env, jclass, jlong ctx, jfloatArray fbuf, jbyteArray bbuf, jint numTriangles)
-{
-    TraceLn(NWT_TRACE_INFO, "D3DVertexBuffer_nDrawTriangleList");
-
-    D3DContext *pCtx = (D3DContext *)jlong_to_ptr(ctx);
-
-    RETURN_STATUS_IF_NULL(pCtx, E_FAIL);
-
-    PrismSourceVertex *pSrcFloats = (PrismSourceVertex *)env->GetPrimitiveArrayCritical(fbuf, 0);
-    BYTE *pSrcColors = (BYTE *)env->GetPrimitiveArrayCritical(bbuf, 0);
-
-    HRESULT hr = (pSrcFloats && pSrcColors && numTriangles > 0) ?
-        pCtx->drawTriangleList(pSrcFloats, pSrcColors, numTriangles) : E_FAIL;
-
-    if (pSrcColors) env->ReleasePrimitiveArrayCritical(bbuf, pSrcColors, JNI_ABORT);
-    if (pSrcFloats) env->ReleasePrimitiveArrayCritical(fbuf, pSrcFloats, JNI_ABORT);
     return hr;
 }
 
@@ -255,66 +230,6 @@ HRESULT D3DContext::drawIndexedQuads(PrismSourceVertex const *pSrcFloats, BYTE c
             numQuads -= quadsInBatch;
         }
     } while (numQuads > 0 && SUCCEEDED(res));
-
-    pVertexBufferRes->SetLastIndex(firstIndex);
-
-    return res;
-}
-
-/*
- * Note: this method assumes that pSrcFloats and pSrcColors are not null and
- * numTriangles is a positive number
- */
-HRESULT D3DContext::drawTriangleList(struct PrismSourceVertex const *pSrcFloats, BYTE const *pSrcColors, int numTriangles) {
-
-     RETURN_STATUS_IF_NULL(pd3dDevice, E_FAIL);
-     
-    // pVertexBufferRes and pVertexBuffer is never null
-    // it is checked in D3DContext::InitDevice
-    IDirect3DVertexBuffer9 *pVertexBuffer = pVertexBufferRes->GetVertexBuffer();
-
-    HRESULT res = BeginScene();
-    RETURN_STATUS_IF_FAILED(res);
-
-    UINT firstIndex = pVertexBufferRes->GetFirstIndex();
-
-    const int maxTrisInbuffer = MAX_VERTICES / 3;
-
-    do {
-        int trisInBatch = min(maxTrisInbuffer, numTriangles);
-        int vertsInBatch = trisInBatch * 3;
-
-        if ((firstIndex + vertsInBatch) > MAX_VERTICES) {
-            firstIndex = 0;
-        }
-
-        DWORD dwLockFlags = firstIndex ? D3DLOCK_NOOVERWRITE : D3DLOCK_DISCARD;
-
-        UINT lockIndex = firstIndex   * sizeof(PRISM_VERTEX_2D);
-        UINT lockSize  = vertsInBatch * sizeof(PRISM_VERTEX_2D);
-
-        PRISM_VERTEX_2D *pVert = 0;
-        res = pVertexBuffer->Lock(lockIndex, lockSize, (void **)&pVert, dwLockFlags);
-        if (SUCCEEDED(res)) {
-            fillVB(pVert, pSrcFloats, pSrcColors, vertsInBatch);
-            pSrcFloats += vertsInBatch;
-            pSrcColors += vertsInBatch*4;
-
-            res = pVertexBuffer->Unlock();
-
-#if defined PERF_COUNTERS
-            D3DContext::FrameStats &stats = getStats();
-            stats.numBufferLocks++;
-            stats.numDrawCalls++;
-            stats.numTrianglesDrawn += trisInBatch;
-#endif
-
-            res = pd3dDevice->DrawPrimitive(D3DPT_TRIANGLELIST, firstIndex, trisInBatch);
-
-            firstIndex += vertsInBatch;
-            numTriangles -= trisInBatch;
-        }
-    } while (numTriangles > 0 && SUCCEEDED(res));
 
     pVertexBufferRes->SetLastIndex(firstIndex);
 

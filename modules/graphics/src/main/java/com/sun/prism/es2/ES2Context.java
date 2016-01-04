@@ -71,12 +71,8 @@ class ES2Context extends BaseShaderContext {
 
     public static final int NUM_QUADS = PrismSettings.superShader ? 4096 : 256;
 
-    private static ES2VertexBuffer createVertexBuffer() {
-        return new ES2VertexBuffer(NUM_QUADS);
-    }
-
     ES2Context(Screen screen, ShaderFactory factory) {
-        super(screen, factory, createVertexBuffer());
+        super(screen, factory, NUM_QUADS);
         GLFactory glF = ES2Pipeline.glFactory;
 
         // NOTE: There is issue with the returned value of getNativeScreen.
@@ -90,14 +86,38 @@ class ES2Context extends BaseShaderContext {
         glContext = glF.createGLContext(dummyGLDrawable, pixelFormat,
                 glF.getShareContext(), PrismSettings.isVsyncEnabled);
         makeCurrent(dummyGLDrawable);
-        ES2VertexBuffer vb = (ES2VertexBuffer) getVertexBuffer();
-        vb.enableVertexAttributes(glContext);
 
-        quadIndices = vb.genQuadsIndexBuffer(NUM_QUADS);
+        glContext.enableVertexAttributes();
+        quadIndices = genQuadsIndexBuffer(NUM_QUADS);
         setIndexBuffer(quadIndices);
         state = new State();
     }
-    
+
+    static short [] getQuadIndices16bit(int numQuads) {
+        short data[] = new short[numQuads * 6];
+
+        for (int i = 0; i != numQuads; ++i) {
+            int vtx = i * 4;
+            int idx = i * 6;
+            data[idx+0] = (short) (vtx+0);
+            data[idx+1] = (short) (vtx+1);
+            data[idx+2] = (short) (vtx+2);
+
+            data[idx+3] = (short) (vtx+2);
+            data[idx+4] = (short) (vtx+1);
+            data[idx+5] = (short) (vtx+3);
+        }
+
+        return data;
+    }
+
+    int genQuadsIndexBuffer(int numQuads) {
+        if (numQuads * 6 > 0x10000)
+            throw new IllegalArgumentException("vertex indices overflow");
+
+        return glContext.createIndexBuffer16(getQuadIndices16bit(numQuads));
+    }
+
     final void clearContext() {
         if (currentDrawable != null) {
             currentDrawable.swapBuffers(glContext);
@@ -345,20 +365,15 @@ class ES2Context extends BaseShaderContext {
         shaderProgram = 0;
         glContext.setDeviceParametersFor2D();
 
-        ES2VertexBuffer vb = (ES2VertexBuffer) getVertexBuffer();
-
         // Bind vertex attributes and index buffer
-        vb.enableVertexAttributes(glContext);
+        glContext.enableVertexAttributes();
         setIndexBuffer(quadIndices);
     }
 
     @Override
     public void setDeviceParametersFor3D() {
-
-        ES2VertexBuffer vb = (ES2VertexBuffer) getVertexBuffer();
-
         // unbind vertex attributes and index buffer
-        vb.disableVertexAttributes(glContext);
+        glContext.disableVertexAttributes();
         glContext.setDeviceParametersFor3D();
     }
 
@@ -484,6 +499,11 @@ class ES2Context extends BaseShaderContext {
         ES2PhongShader.setShaderParamaters(shader, meshView, this);
 
         glContext.renderMeshView(nativeHandle);
+    }
+
+    @Override
+    protected void renderQuads(float coordArray[], byte colorArray[], int numVertices) {
+        glContext.drawIndexedQuads(coordArray, colorArray, numVertices);
     }
 
     void printRawMatrix(String mesg) {
