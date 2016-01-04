@@ -1648,35 +1648,6 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nDrawIndexedQuads
 
 /*
  * Class:     com_sun_prism_es2_GLContext
- * Method:    nDrawTriangleList
- * Signature: (JI[F[B)V
- */
-JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nDrawTriangleList
-  (JNIEnv *env, jclass class, jlong nativeCtxInfo, jint numTriangles,
-   jfloatArray dataf, jbyteArray datab)
-{
-    float *pFloat;
-    char *pByte;
-
-    ContextInfo *ctxInfo = (ContextInfo *) jlong_to_ptr(nativeCtxInfo);
-    if ((ctxInfo == NULL) || (ctxInfo->glVertexAttribPointer == NULL)) {
-        return;
-    }
-
-    pFloat = (float *)(*env)->GetPrimitiveArrayCritical(env, dataf, NULL);
-    pByte = (char *)(*env)->GetPrimitiveArrayCritical(env, datab, NULL);
-
-    if (pFloat && pByte) {
-        setVertexAttributePointers(ctxInfo, pFloat, pByte);
-        glDrawArrays(GL_TRIANGLES, 0, numTriangles * 3);
-    }
-
-    if (pByte)  (*env)->ReleasePrimitiveArrayCritical(env, datab, pByte, JNI_ABORT);
-    if (pFloat) (*env)->ReleasePrimitiveArrayCritical(env, dataf, pFloat, JNI_ABORT);
-}
-
-/*
- * Class:     com_sun_prism_es2_GLContext
  * Method:    nCreateIndexBuffer16
  * Signature: (J[SI)I
  */

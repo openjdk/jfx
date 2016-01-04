@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,7 +38,6 @@ import com.sun.prism.ResourceFactory;
 import com.sun.prism.Texture;
 import com.sun.prism.impl.BaseContext;
 import com.sun.prism.impl.BaseGraphics;
-import com.sun.prism.impl.VertexBuffer;
 import com.sun.prism.paint.Color;
 import com.sun.prism.paint.Gradient;
 import com.sun.prism.paint.ImagePattern;
@@ -160,8 +159,8 @@ public abstract class BaseShaderContext extends BaseContext {
 
     private State state;
 
-    protected BaseShaderContext(Screen screen, ShaderFactory factory, VertexBuffer vb) {
-        super(screen, factory, vb);
+    protected BaseShaderContext(Screen screen, ShaderFactory factory, int vbQuads) {
+        super(screen, factory, vbQuads);
         this.factory = factory;
         init();
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,7 +37,6 @@ import com.sun.prism.RTTexture;
 import com.sun.prism.Texture;
 import com.sun.prism.Texture.Usage;
 import com.sun.prism.Texture.WrapMode;
-import com.sun.prism.impl.VertexBuffer;
 import com.sun.prism.impl.TextureResourcePool;
 import com.sun.prism.impl.ps.BaseShaderFactory;
 import com.sun.prism.ps.Shader;
@@ -102,11 +101,6 @@ class DummyResourceFactory extends BaseShaderFactory {
     public Presentable createPresentable(PresentableState pState) {
         DummyRTTexture rtt = new DummyRTTexture(context, WrapMode.CLAMP_NOT_NEEDED, pState.getWidth(), pState.getHeight());
         return new DummySwapChain(context, pState, rtt);
-    }
-
-
-    public VertexBuffer createVertexBuffer(int maxQuads) {
-        return new VertexBuffer(maxQuads);
     }
 
     public Shader createShader(InputStream pixelShaderCode,

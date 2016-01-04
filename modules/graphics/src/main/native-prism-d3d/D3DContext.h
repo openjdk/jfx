@@ -91,9 +91,6 @@ public:
                                 IDirect3DSurface9* pDstSurface,
                                 int dstX0, int dstY0, int dstX1, int dstY1);
 
-    HRESULT drawTriangleList(struct PrismSourceVertex const *pSrcFloats, BYTE const *pSrcColors, int numTriangles);
-
-
     /**
      * Releases the old device (if there was one) and all associated
      * resources, re-creates, initializes and tests the new device.

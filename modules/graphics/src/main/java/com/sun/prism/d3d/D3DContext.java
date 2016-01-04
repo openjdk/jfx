@@ -40,7 +40,6 @@ import com.sun.prism.RTTexture;
 import com.sun.prism.RenderTarget;
 import com.sun.prism.Texture;
 import com.sun.prism.impl.PrismSettings;
-import com.sun.prism.impl.VertexBuffer;
 import com.sun.prism.impl.ps.BaseShaderContext;
 import com.sun.prism.ps.Shader;
 
@@ -95,12 +94,8 @@ class D3DContext extends BaseShaderContext {
 
     public static final int NUM_QUADS = PrismSettings.superShader ? 4096 : 256;
 
-    static VertexBuffer createVertexBuffer(long contextHandle) {
-        return new D3DVertexBuffer(contextHandle, NUM_QUADS);
-    }
-
     D3DContext(long pContext, Screen screen, D3DResourceFactory factory) {
-        super(screen, factory, createVertexBuffer(pContext));
+        super(screen, factory, NUM_QUADS);
         this.pContext = pContext;
         this.factory = factory;
     }
@@ -420,6 +415,8 @@ class D3DContext extends BaseShaderContext {
     private static native void nSetPointLight(long pContext, long nativeMeshView,
             int index, float x, float y, float z, float r, float g, float b, float w);
     private static native void nRenderMeshView(long pContext, long nativeMeshView);
+    private static native int nDrawIndexedQuads(long pContext,
+            float coords[], byte colors[], int numVertices);
 
 
     /*
@@ -543,6 +540,12 @@ class D3DContext extends BaseShaderContext {
 
     void setPointLight(long nativeMeshView, int index, float x, float y, float z, float r, float g, float b, float w) {
         nSetPointLight(pContext, nativeMeshView, index, x, y, z, r, g, b, w);
+    }
+
+    @Override
+    protected void renderQuads(float coordArray[], byte colorArray[], int numVertices) {
+        int res = nDrawIndexedQuads(pContext, coordArray, colorArray, numVertices);
+        D3DContext.validate(res);
     }
 
     void renderMeshView(long nativeMeshView, Graphics g) {

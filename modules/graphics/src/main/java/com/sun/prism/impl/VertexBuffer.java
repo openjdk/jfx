@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,7 +29,7 @@ import com.sun.javafx.geom.transform.AffineBase;
 import com.sun.prism.paint.Color;
 import java.util.Arrays;
 
-public class VertexBuffer {
+public final class VertexBuffer {
 
     protected static final int VERTS_PER_QUAD  = 4;
 
@@ -50,22 +50,15 @@ public class VertexBuffer {
     protected byte  colorArray[];
     protected float coordArray[];
 
-    public VertexBuffer(int maxQuads) {
+    private final BaseContext ownerCtx;
+
+    public VertexBuffer(BaseContext owner, int maxQuads) {
+        this.ownerCtx = owner;
         capacity = maxQuads * VERTS_PER_QUAD;
         index = 0;
 
         colorArray = new byte [capacity * BYTES_PER_VERT];
         coordArray = new float[capacity * FLOATS_PER_VERT];
-    }
-
-    protected void drawQuads(int numVertices) {
-        throw new Error ("flush not implemented for lightweight");
-    }
-
-    // it had better be the case if this method be moved to Graphics
-    // so that we can delete D3DVertexBuffer and ES2(N)VertexBuffer
-    protected void drawTriangles(int numTriangles, float fData[], byte cData[]) {
-        throw new Error ("flush not implemented for lightweight");
     }
 
     public final void setPerVertexColor(Color c, float extraAlpha) {
@@ -96,13 +89,13 @@ public class VertexBuffer {
 
     /**
      * Flushes (renders) all pending vertices (triangles) in the buffer to the
-     * destination render target.  This operation only applies to heavyweight
+     * owner BaseContext.  This operation only applies to heavyweight
      * buffers; calling flush() on a lightweight buffer will result in an
      * exception.
      */
     public final void flush() {
         if (index > 0) {
-            drawQuads(index);
+            ownerCtx.drawQuads(coordArray, colorArray, index);
             index = 0;
         }
     }
@@ -201,15 +194,9 @@ public class VertexBuffer {
         index++;
     }
 
-    // render a trianglelist
-    public final void addVerts(VertexBuffer vb, int numVerts) {
-        flush();
-        drawTriangles(numVerts/3, vb.coordArray, vb.colorArray);
-    }
-
     private void ensureCapacityForQuad() {
         if (index + VERTS_PER_QUAD > capacity) {
-            drawQuads(index);
+            ownerCtx.drawQuads(coordArray, colorArray, index);
             index = 0;
         }
     }
@@ -291,8 +278,7 @@ public class VertexBuffer {
 //        ensureCapacityForQuad();
         int idx = index;
         if (idx + VERTS_PER_QUAD > capacity) {
-//            grow();
-            drawQuads(idx);
+            ownerCtx.drawQuads(coordArray, colorArray, idx);
             idx = index = 0;
         }
 
@@ -337,7 +323,7 @@ public class VertexBuffer {
 //        ensureCapacityForQuad();
         int idx = index;
         if (idx + VERTS_PER_QUAD > capacity) {
-            drawQuads(idx);
+            ownerCtx.drawQuads(coordArray, colorArray, idx);
             idx = index = 0;
         }
 
@@ -377,7 +363,7 @@ public class VertexBuffer {
     {
         int idx = index;
         if (idx + VERTS_PER_QUAD > capacity) {
-            drawQuads(idx);
+            ownerCtx.drawQuads(coordArray, colorArray, idx);
             idx = index = 0;
         }
 
@@ -448,7 +434,7 @@ public class VertexBuffer {
     {
         int idx = index;
         if (idx + VERTS_PER_QUAD > capacity) {
-            drawQuads(idx);
+            ownerCtx.drawQuads(coordArray, colorArray, idx);
             idx = index = 0;
         }
 
@@ -496,7 +482,7 @@ public class VertexBuffer {
     {
         int idx = index;
         if (idx + VERTS_PER_QUAD > capacity) {
-            drawQuads(idx);
+            ownerCtx.drawQuads(coordArray, colorArray, idx);
             idx = index = 0;
         }
 
