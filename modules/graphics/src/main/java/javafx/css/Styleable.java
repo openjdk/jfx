@@ -29,6 +29,7 @@ import java.util.List;
 
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableSet;
+import javafx.scene.Node;
 
 /** 
  * Styleable comprises the minimal interface required for an object to be styled by CSS.
@@ -93,4 +94,17 @@ public interface Styleable {
      */
     ObservableSet<PseudoClass> getPseudoClassStates();
 
+    /**
+     * Returns the Node that represents this Styleable object. This method should be overridden
+     * in cases where the Styleable is not itself a Node, so that it may optionally
+     * return the relevant root node representation of itself. By default this method returns
+     * null, which can mean that either the Styleable itself is a Node, or if that is not
+     * the case, that the Styleable does not have a node representation available at the
+     * time of request.
+     *
+     * @since 9
+     */
+    default Node getStyleableNode() {
+        return null;
+    }
 }

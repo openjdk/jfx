@@ -1551,7 +1551,7 @@ public class ContextMenuContent extends Region {
                     // Accessibility might need to see the menu node before the window
                     // is visible (i.e. before the skin is applied).
                     if (submenu.getSkin() == null) {
-                        submenu.impl_styleableGetNode().impl_processCSS(true);
+                        submenu.getStyleableNode().impl_processCSS(true);
                     }
                     ContextMenuContent cmContent = (ContextMenuContent)submenu.getSkin().getNode();
                     return cmContent.itemsContainer;

@@ -753,14 +753,14 @@ public class CssUtils {
         Styleable styleable = (target instanceof Styleable) ? (Styleable) target : null;
         Node node = null;
         if (styleable != null) {
-            node = Deprecation.getNode(styleable);
+            node = styleable.getStyleableNode();
             if (node == null) {
                 if (target instanceof MenuItem) {
                     final MenuItem mi = (MenuItem) target;
                     PopupControl pc = mi.getParentPopup();
 
                     if (pc != null) { // can be null for Menu.
-                        node = Deprecation.getNode(pc);
+                        node = pc.getStyleableNode();
                     }
                 } else {
                     if (target instanceof Tab) {
