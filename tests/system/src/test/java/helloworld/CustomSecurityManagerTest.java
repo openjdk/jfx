@@ -173,6 +173,12 @@ public class CustomSecurityManagerTest extends VisualTestBase {
         sleep(1000);
 
         runAndWait(() -> {
+            boolean propertyState = testStage1.fullScreenProperty().get();
+            if (expectedFullScreen) {
+                assertTrue(propertyState);
+            } else {
+                assertFalse(propertyState);
+            }
             for (int row = 0; row < 2; row++) {
                 int y = row == 0 ? 1 : screenHeight.get() - 2;
                 for (int col = 0; col < 2; col++) {

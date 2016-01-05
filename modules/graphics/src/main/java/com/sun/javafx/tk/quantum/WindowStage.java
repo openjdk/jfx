@@ -632,6 +632,7 @@ class WindowStage extends GlassStage {
                 final boolean isTrusted = isTrustedFullScreen();
                 if (!isTrusted && !fullScreenFromUserEvent) {
                     exitFullScreen();
+                    fullscreenChanged(false);
                 } else {
                     v.enterFullscreen(false, false, false);
                     if (warning != null && warning.inWarningTransition()) {
