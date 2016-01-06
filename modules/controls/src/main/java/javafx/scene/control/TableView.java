@@ -2358,18 +2358,13 @@ public class TableView<S> extends Control {
             // replace the anchor
             TableCellBehavior.setAnchor(tableView, newTablePosition, false);
 
-            // if I'm in cell selection mode but the column is null, I don't want
-            // to select the whole row instead...
-            if (isCellSelectionEnabled && column == null) {
-                return;
-            }
-
-            final boolean wasSelected = isSelected(row, column);
-
             // firstly we make a copy of the selection, so that we can send out
             // the correct details in the selection change event.
             List<TablePosition<S,?>> previousSelection = new ArrayList<>(selectedCellsMap.getSelectedCells());
 
+            // secondly we check if we can short-circuit out of here because the new selection
+            // equals the current selection
+            final boolean wasSelected = isSelected(row, column);
             if (wasSelected && previousSelection.size() == 1) {
                 // before we return, we double-check that the selected item
                 // is equal to the item in the given index
@@ -2422,9 +2417,10 @@ public class TableView<S> extends Control {
             if (wasSelected) {
                 change = ControlUtils.buildClearAndSelectChange(selectedCellsSeq, previousSelection, row);
             } else {
-                final int changeIndex = selectedCellsSeq.indexOf(newTablePosition);
+                final int changeIndex = isCellSelectionEnabled ? 0 : selectedCellsSeq.indexOf(newTablePosition);
+                final int changeSize = isCellSelectionEnabled ? getSelectedCells().size() : 1;
                 change = new NonIterableChange.GenericAddRemoveChange<>(
-                        changeIndex, changeIndex + 1, previousSelection, selectedCellsSeq);
+                        changeIndex, changeIndex + changeSize, previousSelection, selectedCellsSeq);
             }
             handleSelectedCellsListChangeEvent(change);
         }
@@ -2708,20 +2704,27 @@ public class TableView<S> extends Control {
         private void clearSelection(TablePosition<S,?> tp) {
             final boolean csMode = isCellSelectionEnabled();
             final int row = tp.getRow();
+            final boolean columnIsNull = tp.getTableColumn() == null;
 
+            List<TablePosition> toRemove = new ArrayList<>();
             for (TablePosition pos : getSelectedCells()) {
-                if (! csMode) {
+                if (!csMode) {
                     if (pos.getRow() == row) {
-                        selectedCellsMap.remove(pos);
+                        toRemove.add(pos);
                         break;
                     }
                 } else {
-                    if (pos.equals(tp)) {
-                        selectedCellsMap.remove(tp);
+                    if (columnIsNull && pos.getRow() == row) {
+                        // if we are in cell selection mode and the column is null,
+                        // we remove all items in the row
+                        toRemove.add(pos);
+                    } else if (pos.equals(tp)) {
+                        toRemove.add(tp);
                         break;
                     }
                 }
             }
+            toRemove.stream().forEach(selectedCellsMap::remove);
 
             if (isEmpty() && ! isAtomic()) {
                 updateSelectedIndex(-1);
@@ -2762,13 +2765,22 @@ public class TableView<S> extends Control {
 
         @Override
         public boolean isSelected(int row, TableColumn<S,?> column) {
-            // When in cell selection mode, we currently do NOT support selecting
-            // entire rows, so a isSelected(row, null) should always return false.
+            // When in cell selection mode, if the column is null, then we interpret
+            // the users query to be asking if _all_ of the cells in the row are selected,
+            // rather than if _any_ of the cells in the row are selected.
             final boolean isCellSelectionEnabled = isCellSelectionEnabled();
-            if (isCellSelectionEnabled && column == null) return false;
-
-            int columnIndex = ! isCellSelectionEnabled || column == null ? -1 : tableView.getVisibleLeafIndex(column);
-            return selectedCellsMap.isSelected(row, columnIndex);
+            if (isCellSelectionEnabled && column == null) {
+                int columnCount = tableView.getVisibleLeafColumns().size();
+                for (int col = 0; col < columnCount; col++) {
+                    if (!selectedCellsMap.isSelected(row, col)) {
+                        return false;
+                    }
+                }
+                return true;
+            } else {
+                int columnIndex = !isCellSelectionEnabled || column == null ? -1 : tableView.getVisibleLeafIndex(column);
+                return selectedCellsMap.isSelected(row, columnIndex);
+            }
         }
 
         @Override public boolean isEmpty() {

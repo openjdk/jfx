@@ -4022,11 +4022,11 @@ public class TreeTableViewTest {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
         // select first row. This should be translated into selection of all
-        // cells in this row, but does not result in the row itself being
+        // cells in this row, and (as of JDK 9) _does_ result in the row itself being
         // considered selected.
         sm.select(0);
 
-        assertFalse(sm.isSelected(0));
+        assertTrue(sm.isSelected(0));
         assertTrue(sm.isSelected(0, table.getColumns().get(0)));
         assertTrue(sm.isSelected(0, table.getColumns().get(1)));
 
@@ -4042,13 +4042,13 @@ public class TreeTableViewTest {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
         // select first row. This should be translated into selection of all
-        // cells in this row, but does not result in the row itself being
+        // cells in this row, and (as of JDK 9) _does_ result in the row itself being
         // considered selected.
-        sm.select(0);               // select first row
+        sm.select(0);                            // select first row
         sm.select(0, table.getColumns().get(0)); // This line and the next should be no-ops
         sm.select(0, table.getColumns().get(1));
 
-        assertFalse(sm.isSelected(0));
+        assertTrue(sm.isSelected(0));
         assertTrue(sm.isSelected(0, table.getColumns().get(0)));
         assertTrue(sm.isSelected(0, table.getColumns().get(1)));
 

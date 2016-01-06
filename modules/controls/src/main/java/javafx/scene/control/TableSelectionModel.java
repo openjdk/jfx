@@ -39,25 +39,37 @@ public abstract class TableSelectionModel<T> extends MultipleSelectionModelBase<
     
     /**
      * Convenience function which tests whether the given row and column index
-     * is currently selected in this table instance.
+     * is currently selected in this table instance. If the table control is in its
+     * 'cell selection' mode (where individual cells can be selected, rather than
+     * entire rows), and if the column argument is null, this method should return
+     * true only if all cells in the given row are selected.
      */
     public abstract boolean isSelected(int row, TableColumnBase<T,?> column);
 
     /**
-     * Selects the cell at the given row/column intersection.
+     * Selects the cell at the given row/column intersection. If the table control is in its
+     * 'cell selection' mode (where individual cells can be selected, rather than
+     * entire rows), and if the column argument is null, this method should select
+     * all cells in the given row.
      */
     public abstract void select(int row, TableColumnBase<T,?> column);
 
     /**
      * Clears all selection, and then selects the cell at the given row/column
-     * intersection.
+     * intersection. If the table control is in its
+     * 'cell selection' mode (where individual cells can be selected, rather than
+     * entire rows), and if the column argument is null, this method should select
+     * all cells in the given row.
      */
     public abstract void clearAndSelect(int row, TableColumnBase<T,?> column);
 
     /**
      * Removes selection from the specified row/column position (in view indexes).
      * If this particular cell (or row if the column value is -1) is not selected,
-     * nothing happens.
+     * nothing happens. If the table control is in its
+     * 'cell selection' mode (where individual cells can be selected, rather than
+     * entire rows), and if the column argument is null, this method should deselect
+     * all cells in the given row.
      */
     public abstract void clearSelection(int row, TableColumnBase<T,?> column);
 
