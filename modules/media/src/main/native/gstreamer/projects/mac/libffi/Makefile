@@ -13,12 +13,10 @@ DIRLIST = src src/x86
 TARGET_NAME = lib$(BASE_NAME).a
 TARGET = $(BUILD_DIR)/$(TARGET_NAME)
 
-CFLAGS = -c \
-         -arch x86_64 \
+CFLAGS += -c \
          -Werror=implicit-function-declaration \
          -fPIC \
-         -DGSTREAMER_LITE \
-	 -mmacosx-version-min=10.7
+         -DGSTREAMER_LITE
 
 ifeq ($(BUILD_TYPE), Release)
     CFLAGS += -Os
@@ -46,10 +44,10 @@ OBJECTS  = $(patsubst %.c,$(OBJBASE_DIR)/%.o,$(C_SOURCES))\
 default: $(TARGET)
 
 $(OBJBASE_DIR)/%.o: $(SRCBASE_DIR)/%.c
-	$(CC) $(CFLAGS) -arch x86_64 $(INCLUDES) -c $< -o $@
+	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 $(OBJBASE_DIR)/%.o: $(SRCBASE_DIR)/%.S
-	$(CC) $(CFLAGS) -arch x86_64 $(INCLUDES) -c $< -o $@
+	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 $(OBJECTS): | $(OBJ_DIRS) $(TARGET_DIRS)
 

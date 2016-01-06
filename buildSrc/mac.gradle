@@ -51,7 +51,7 @@ def defaultSdkPath = "/Applications/Xcode.app/Contents/Developer/Platforms/MacOS
 
 // Set the minimum API version that we require (developers do not need to override this)
 // Note that this is not necessarily the same as the preferred SDK version
-defineProperty("MACOSX_MIN_VERSION", "10.7");
+defineProperty("MACOSX_MIN_VERSION", "10.9");
 
 // Create $buildDir/mac_tools.properties file and load props from it
 setupTools("mac_tools",
@@ -99,9 +99,11 @@ if (!file(MACOSX_SDK_PATH).isDirectory()) {
     throw new GradleException("FAIL: Cannot find $MACOSX_SDK_PATH")
 }
 
+// NOTE: There is no space between -iframework and the specified path
 def commonParams = [
         "-mmacosx-version-min=$MACOSX_MIN_VERSION",
         "-isysroot", "$MACOSX_SDK_PATH",
+        "-iframework$MACOSX_SDK_PATH/System/Library/Frameworks",
         "-arch", "x86_64"]
 
 def ccBaseFlags = [
@@ -126,8 +128,8 @@ def linkFlags = [
         "-dynamiclib", "-lobjc"].flatten();
 
 
-def compiler = IS_COMPILE_PARFAIT ? "parfait-gcc" : "gcc";
-def linker = IS_COMPILE_PARFAIT ? "parfait-g++" : "g++";
+def compiler = IS_COMPILE_PARFAIT ? "parfait-clang" : "clang";
+def linker = IS_COMPILE_PARFAIT ? "parfait-clang++" : "clang++";
 
 MAC.glass = [:]
 MAC.glass.javahInclude = [
@@ -182,10 +184,7 @@ MAC.launcherlibrary.ccFlags = [
         "-c",
         ccBaseFlags,
         IS_DEBUG_NATIVE ? ["-DDEBUG", "-O0"] : ["-O3", "-DNDEBUG"]].flatten()
-// 10.7 doesn't have libstdc++ as an option for stdlib, so filter it out
-if (!(MACOSX_MIN_VERSION in ['10.7', '10.8'])) {
     MAC.launcherlibrary.ccFlags += "-stdlib=libstdc++"
-}
 MAC.launcherlibrary.linker = linker
 MAC.launcherlibrary.linkFlags = ["-ldl", "-dynamiclib",
         "-framework", "Cocoa",
@@ -239,6 +238,8 @@ MAC.fontT2K.linkFlags = [linkFlags].flatten()
 MAC.fontT2K.lib = "javafx_font_t2k"
 
 MAC.media = [:]
-MAC.media.compiler = compiler
-MAC.media.linker = linker
+MAC.media.compiler = "${compiler} ${ccBaseFlags.join(" ")}"
+//MAC.media.ccFlags = ccBaseFlags
+MAC.media.linker = "${linker} ${commonParams.join(" ")}"
+//MAC.media.linkFlags = commonParams
 MAC.media.ar = "libtool"
