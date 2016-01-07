@@ -301,7 +301,7 @@ public class CssInternal {
         } else {
             Styleable styleable = fxObject instanceof Styleable ? (Styleable) fxObject : null;
             if (styleable != null) {
-                node = Deprecation.getNode(styleable);
+                node = styleable.getStyleableNode();
             }
         }
         if (node != null) {

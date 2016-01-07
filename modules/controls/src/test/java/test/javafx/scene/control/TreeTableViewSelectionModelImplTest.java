@@ -160,8 +160,8 @@ public class TreeTableViewSelectionModelImplTest {
 
         assertTrue(model.isSelected(1, col0));
         assertTrue(model.isSelected(3, col0));
-        assertFalse(model.isSelected(3, null));
-        assertFalse(model.isSelected(3));
+        assertTrue(model.isSelected(3, null)); // we are in cell selection mode and all cells are selected
+        assertTrue(model.isSelected(3));       // this is equivalent to the previous line, so is also true
         assertEquals(6, model.getSelectedCells().size());
     }
 
@@ -840,5 +840,98 @@ public class TreeTableViewSelectionModelImplTest {
         model.clearAndSelect(3);
         model.clearAndSelect(0);
         model.clearAndSelect(3);
+    }
+
+    @Test public void test_cellSelection_nullColumn_isSelected_noCellsSelected() {
+        model.setSelectionMode(SelectionMode.MULTIPLE);
+        model.setCellSelectionEnabled(true);
+        assertFalse(model.isSelected(0, null));
+    }
+
+    @Test public void test_cellSelection_nullColumn_isSelected_oneCellSelected() {
+        model.setSelectionMode(SelectionMode.MULTIPLE);
+        model.setCellSelectionEnabled(true);
+
+        model.select(0, col0);
+        assertTrue(model.isSelected(0, col0));
+        assertFalse(model.isSelected(0, null));
+    }
+
+    @Test public void test_cellSelection_nullColumn_isSelected_allCellsSelected() {
+        model.setSelectionMode(SelectionMode.MULTIPLE);
+        model.setCellSelectionEnabled(true);
+
+        // when null is passed in for the column, all cells in the row are selected
+        model.select(0, null);
+
+        // when null is passed in to isSelected, all cells in the row must be selected.
+        assertTrue(model.isSelected(0, null));
+    }
+
+    @Test public void test_cellSelection_nullColumn_selectAllCellsInRow() {
+        model.setSelectionMode(SelectionMode.MULTIPLE);
+        model.setCellSelectionEnabled(true);
+
+        // when null is passed in for the column, all cells in the row are selected
+        model.select(0, null);
+        assertTrue(model.isSelected(0, col0));
+        assertTrue(model.isSelected(0, col1));
+        assertTrue(model.isSelected(0, col2));
+        assertEquals(3, model.getSelectedCells().size());
+    }
+
+    @Test public void test_cellSelection_nullColumn_clearAndSelectAllCellsInRow() {
+        model.setSelectionMode(SelectionMode.MULTIPLE);
+        model.setCellSelectionEnabled(true);
+
+        model.select(1, col1);
+
+        // when null is passed in for the column, all cells in the row are selected
+        model.clearAndSelect(0, null);
+        assertTrue(model.isSelected(0, col0));
+        assertTrue(model.isSelected(0, col1));
+        assertTrue(model.isSelected(0, col2));
+        assertEquals(3, model.getSelectedCells().size());
+    }
+
+    @Test public void test_cellSelection_nullColumn_clearSelection_noCellsSelected() {
+        model.setSelectionMode(SelectionMode.MULTIPLE);
+        model.setCellSelectionEnabled(true);
+
+        // when null is passed in for the column, all cells in the row are unselected
+        model.clearSelection(0, null);
+        assertFalse(model.isSelected(0, col0));
+        assertFalse(model.isSelected(0, col1));
+        assertFalse(model.isSelected(0, col2));
+        assertEquals(0, model.getSelectedCells().size());
+    }
+
+    @Test public void test_cellSelection_nullColumn_clearSelection_allCellsSelected() {
+        model.setSelectionMode(SelectionMode.MULTIPLE);
+        model.setCellSelectionEnabled(true);
+
+        model.select(0, col1);
+        assertTrue(model.isSelected(0, col1));
+
+        // when null is passed in for the column, all cells in the row are unselected
+        model.clearSelection(0, null);
+        assertFalse(model.isSelected(0, col0));
+        assertFalse(model.isSelected(0, col1));
+        assertFalse(model.isSelected(0, col2));
+        assertEquals(0, model.getSelectedCells().size());
+    }
+
+    @Test public void test_cellSelection_nullColumn_clearSelection_oneCellSelected() {
+        model.setSelectionMode(SelectionMode.MULTIPLE);
+        model.setCellSelectionEnabled(true);
+
+        model.select(0, null);
+
+        // when null is passed in for the column, all cells in the row are unselected
+        model.clearSelection(0, null);
+        assertFalse(model.isSelected(0, col0));
+        assertFalse(model.isSelected(0, col1));
+        assertFalse(model.isSelected(0, col2));
+        assertEquals(0, model.getSelectedCells().size());
     }
 }

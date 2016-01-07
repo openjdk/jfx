@@ -45,9 +45,10 @@ import javafx.event.EventHandler;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.scene.Node;
+import javafx.scene.control.skin.*;
 import javafx.util.Callback;
 import javafx.css.Styleable;
-import javafx.scene.control.skin.TableViewSkinBase;
+
 /**
  * A {@link TreeTableView} is made up of a number of TreeTableColumn instances. Each
  * TreeTableColumn in a {@link TreeTableView} is responsible for displaying
@@ -607,45 +608,51 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
     
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return Collections.emptyList();
-    }                
+    }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated    
-    // TODO implement
-    // SB-dependency: RT-21094 has been filed to track this
-    public Node impl_styleableGetNode() {
-//        if (! (getTableView().getSkin() instanceof TableViewSkin)) return null;
-//        TableViewSkin skin = (TableViewSkin) getTableView().getSkin();
-//
-//        TableHeaderRow tableHeader = skin.getTableHeaderRow();
-//        NestedTreeTableColumnHeader rootHeader = tableHeader.getRootHeader();
-//
-//        // we now need to do a search for the header. We'll go depth-first.
-//        return scan(rootHeader);
-            return null;
+    /** {@inheritDoc} */
+    @Override public Node getStyleableNode() {
+        if (! (getTreeTableView().getSkin() instanceof TreeTableViewSkin)) return null;
+        TreeTableViewSkin<?> skin = (TreeTableViewSkin<?>) getTreeTableView().getSkin();
+
+        TableHeaderRow tableHeader = null;
+        for (Node n : skin.getChildren()) {
+            if (n instanceof TableHeaderRow) {
+                tableHeader = (TableHeaderRow)n;
+            }
         }
 
-//    private TreeTableColumnHeader scan(TreeTableColumnHeader header) {
-//        // firstly test that the parent isn't what we are looking for
-//        if (TreeTableColumn.this.equals(header.getTreeTableColumn())) {
-//            return header;
-//        }
-//
-//        if (header instanceof NestedTreeTableColumnHeader) {
-//            NestedTreeTableColumnHeader parent = (NestedTreeTableColumnHeader) header;
-//            for (int i = 0; i < parent.getColumnHeaders().size(); i++) {
-//                TreeTableColumnHeader result = scan(parent.getColumnHeaders().get(i));
-//                if (result != null) {
-//                    return result;
-//                }
-//            }
-//        }
-//
-//        return null;
-//    }   
+        NestedTableColumnHeader rootHeader = null;
+        for (Node n : tableHeader.getChildren()) {
+            if (n instanceof NestedTableColumnHeader) {
+                rootHeader = (NestedTableColumnHeader) n;
+            }
+        }
+
+        // we now need to do a search for the header. We'll go depth-first.
+        return scan(rootHeader);
+    }
+
+    private TableColumnHeader scan(TableColumnHeader header) {
+        // firstly test that the parent isn't what we are looking for
+        if (TreeTableColumn.this.equals(header.getTableColumn())) {
+            return header;
+        }
+
+        if (header instanceof NestedTableColumnHeader) {
+            NestedTableColumnHeader parent = (NestedTableColumnHeader) header;
+            for (int i = 0; i < parent.getColumnHeaders().size(); i++) {
+                TableColumnHeader result = scan(parent.getColumnHeaders().get(i));
+                if (result != null) {
+                    return result;
+                }
+            }
+        }
+
+        return null;
+    }
+
+
     
     /***************************************************************************
      *                                                                         *

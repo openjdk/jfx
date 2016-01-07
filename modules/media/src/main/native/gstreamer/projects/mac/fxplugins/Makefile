@@ -22,9 +22,8 @@ DIRLIST = audioconverter       \
 TARGET_NAME = lib$(BASE_NAME).dylib
 TARGET = $(BUILD_DIR)/$(TARGET_NAME)
 
-CFLAGS = -arch x86_64              \
-	 -fPIC                     \
-	 -Werror=implicit-function-declaration \
+CFLAGS += -fPIC                     \
+         -Werror=implicit-function-declaration \
          -DENABLE_SOURCE_SEEKING=1 \
          -DENABLE_PULL_MODE=1      \
          -DGST_DISABLE_GST_DEBUG   \
@@ -33,8 +32,7 @@ CFLAGS = -arch x86_64              \
          -DGSTREAMER_LITE          \
          -DG_DISABLE_DEPRECATED    \
          -DOSX                     \
-         -msse2                    \
-         -mmacosx-version-min=10.7
+         -msse2
 
 ifeq ($(BUILD_TYPE), Release)
     CFLAGS += -Os
@@ -43,18 +41,23 @@ else
 endif
 
 INCLUDES = $(addprefix -I$(SRCBASE_DIR)/,$(DIRLIST))   \
-	   -I$(SRCBASE_DIR)                            \
-	   -I$(BASE_DIR)/gstreamer-lite/gstreamer      \
-	   -I$(BASE_DIR)/gstreamer-lite/gstreamer/libs \
+	       -I$(SRCBASE_DIR)                            \
+	       -I$(BASE_DIR)/gstreamer-lite/gstreamer      \
+	       -I$(BASE_DIR)/gstreamer-lite/gstreamer/libs \
            -I$(GLIB_DIR)                               \
            -I$(GLIB_DIR)/glib                          \
            -I$(GLIB_DIR)/gmodule                       \
            -I$(GLIB_DIR)/build/osx
 
-LDFLAGS = -mmacosx-version-min=10.7 -arch x86_64 \
-          -L$(BUILD_DIR) -Wl,-install_name,@rpath/$(TARGET_NAME) \
-	  -lgstreamer-lite -lglib-lite -framework ApplicationServices \
-          -framework QuartzCore -framework VideoDecodeAcceleration -framework AudioToolbox -framework CoreFoundation
+LDFLAGS += -L$(BUILD_DIR) \
+           -Wl,-install_name,@rpath/$(TARGET_NAME) \
+           -lgstreamer-lite \
+           -lglib-lite \
+           -framework ApplicationServices \
+           -framework QuartzCore \
+           -framework VideoDecodeAcceleration \
+           -framework AudioToolbox \
+           -framework CoreFoundation
 
 C_SOURCES = fxplugins.c                        \
             audioconverter/audioconverter.c    \

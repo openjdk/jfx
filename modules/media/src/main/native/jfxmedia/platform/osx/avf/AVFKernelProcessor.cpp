@@ -52,7 +52,7 @@ public:
         return NULL;
     }
 
-	virtual	OSStatus ChangeStreamFormat(AudioUnitScope inScope,
+    virtual OSStatus ChangeStreamFormat(AudioUnitScope inScope,
                                         AudioUnitElement inElement,
                                         const CAStreamBasicDescription &inPrevFormat,
                                         const CAStreamBasicDescription &inNewFormat) {
@@ -87,7 +87,7 @@ public:
         return noErr; // ??? just in case
     }
 
-	virtual OSStatus SetProperty(AudioUnitPropertyID inID,
+    virtual OSStatus SetProperty(AudioUnitPropertyID inID,
                                  AudioUnitScope inScope,
                                  AudioUnitElement inElement,
                                  const void *inData,

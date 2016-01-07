@@ -17,10 +17,6 @@ OSX_PLATFORM_BASE = $(SRCBASE_DIR)/platform/osx
 TARGET_NAME = lib$(BASE_NAME).dylib
 TARGET = $(BUILD_DIR)/$(TARGET_NAME)
 
-# separate library for QTKit based platform
-QTK_NAME = lib$(BASE_NAME)_qtkit.dylib
-QTK_LIB = $(BUILD_DIR)/$(QTK_NAME)
-
 AVF_NAME = lib$(BASE_NAME)_avf.dylib
 AVF_LIB = $(BUILD_DIR)/$(AVF_NAME)
 
@@ -30,14 +26,12 @@ VPATH = $(SRCBASE_DIR):$(GENERATED_HEADERS_DIR):$(JAVA_HOME)/include:$(JAVA_HOME
 # ------------------------------------------------------------------
 # Base compile/link flags
 
-CFLAGS = -arch x86_64 \
-         -pipe \
+CFLAGS += -pipe \
          -fPIC                     \
          -Werror=implicit-function-declaration \
          -DTARGET_OS_MAC=1         \
          -D_GNU_SOURCE             \
-         -msse2                    \
-         -mmacosx-version-min=10.7
+         -msse2
 
 ifeq ($(BUILD_TYPE), Release)
     CFLAGS += -Os
@@ -52,10 +46,7 @@ INCLUDES = -I$(JAVA_HOME)/include \
            -I$(SRCBASE_DIR)/jni \
            -I$(GENERATED_HEADERS_DIR)
 
-
-LDFLAGS = -mmacosx-version-min=10.7 \
-          -arch x86_64 \
-          -L$(BUILD_DIR) \
+LDFLAGS += -L$(BUILD_DIR) \
           -lobjc \
           -framework Cocoa \
           -framework CoreVideo
@@ -147,7 +138,7 @@ JFXMEDIA_OBJECTS = \
 
 .PHONY: default, checklibs
 
-default: $(TARGET) $(QTK_LIB) $(AVF_LIB)
+default: $(TARGET) $(AVF_LIB)
 	@echo "Ensuring $(TARGET_NAME) does not link against QuickTime..."
 	! nm -m "$(TARGET)" | grep -E "(QTKit|QuickTime)"
 	@echo "Ensuring $(AVF_NAME) does not link against QuickTime..."
@@ -184,36 +175,9 @@ $(TARGET): $(JFXMEDIA_OBJECTS)
 # ------------------------------------------------------------------
 # AVFoundation platform lib rules
 
-ifeq ($(BUILD_TYPE), Release)
-    AVF_XCRUN_FLAGS =
-else
-    # add a -v flag to show the build environment when xcrun is invoked
-    AVF_XCRUN_FLAGS = -v
-endif
-
-# The AVFoundation code uses ARC which is only supported by the clang compiler, so we'll
-# force the use of clang for this module.
-ifeq ($(COMPILE_PARFAIT), true)
-  # call xcrun so we wrap the correct clang++ executable
-  CLANG_PATH = $(shell xcrun -find clang++)
-  AVF_CPP = parfait-clang++ --nativecxx "$(CLANG_PATH)"
-else
-  # add -l to show the full command line used to invoke clang++ (for debugging purposes)
-  AVF_CPP = xcrun -l $(AVF_XCRUN_FLAGS) clang++
-endif
-
 AVF_OBJBASE = $(OBJBASE_DIR)/avf
 
-# We need a full path to the right SDK
-# We use --sdk macosx to force it to use the latest macosx SDK, which should be 10.8 or later
-AVF_SYSROOT = $(shell xcodebuild -sdk macosx -version | grep '^Path: ' | sed 's/Path: //')
-
-# we have to remove -mmacosx-version-min=% from CFLAGS and LDFLAGS and set it to
-# 10.8 since this module requires features only in 10.8 and later
-AVF_LDFLAGS = $(filter-out -mmacosx-version-min=%, $(LDFLAGS)) \
-              -isysroot "$(AVF_SYSROOT)" \
-              -iframework"$(AVF_SYSROOT)/System/Library/Frameworks" \
-              -mmacosx-version-min=10.8 \
+AVF_LDFLAGS = $(LDFLAGS) \
               -Wl,-install_name,@rpath/$(AVF_NAME) \
               -framework AVFoundation \
               -framework CoreMedia \
@@ -221,10 +185,7 @@ AVF_LDFLAGS = $(filter-out -mmacosx-version-min=%, $(LDFLAGS)) \
               -framework AudioUnit \
               -framework MediaToolbox
 
-AVF_CFLAGS = $(filter-out -mmacosx-version-min=%, $(CFLAGS)) \
-             -isysroot "$(AVF_SYSROOT)" \
-             -iframework"$(AVF_SYSROOT)/System/Library/Frameworks" \
-             -mmacosx-version-min=10.8 \
+AVF_CFLAGS = $(CFLAGS) \
              -DCA_AU_USE_FAST_DISPATCH=1 \
              -DCA_BASIC_AU_FEATURES=1 \
              -DCA_NO_AU_HOST_CALLBACKS=1 \
@@ -275,34 +236,12 @@ AVF_INCLUDES = \
 
 $(AVF_OBJBASE)/%.o: %.cpp
 	@mkdir -p $(dir $@)
-	$(AVF_CPP) $(AVF_CFLAGS) $(AVF_INCLUDES) -MD -MF $(AVF_OBJBASE)/$*.d -x c++ -c $< -o $@
+	$(CC) $(AVF_CFLAGS) $(AVF_INCLUDES) -MD -MF $(AVF_OBJBASE)/$*.d -x c++ -c $< -o $@
 
 $(AVF_OBJBASE)/%.o: %.mm
 	@mkdir -p $(dir $@)
-	$(AVF_CPP) $(AVF_CFLAGS) $(AVF_INCLUDES) -MD -MF $(AVF_OBJBASE)/$*.d -x objective-c++ -c $< -o $@
+	$(CC) $(AVF_CFLAGS) $(AVF_INCLUDES) -MD -MF $(AVF_OBJBASE)/$*.d -x objective-c++ -c $< -o $@
 
 $(AVF_LIB): $(TARGET) $(AVF_OBJECTS)
 	@mkdir -p $(dir $@)
-	$(AVF_CPP)  $(AVF_LDFLAGS) -dynamiclib $(AVF_OBJECTS) -l$(BASE_NAME) -o $@
-
-
-# ------------------------------------------------------------------
-# QTKit platform lib rules
-
-QTK_OBJBASE = $(OBJBASE_DIR)/qtk
-QTK_LDFLAGS = $(LDFLAGS) \
-          -Wl,-install_name,@rpath/$(QTK_NAME) \
-          -framework QTKit
-
-QTK_SOURCES = platform/osx/QTKMediaPlayer.mm
-QTK_OBJECTS = $(patsubst %.mm,$(QTK_OBJBASE)/%.o,$(QTK_SOURCES))
-
--include $(QTK_OBJECTS:.o=.d)
-
-$(QTK_OBJBASE)/%.o: %.mm
-	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) $(INCLUDES) -MD -MF $(QTK_OBJBASE)/$*.d -x objective-c++ -c $< -o $@
-
-$(QTK_LIB): $(TARGET) $(QTK_OBJECTS)
-	@mkdir -p $(dir $@)
-	$(LINKER)  $(QTK_LDFLAGS) -dynamiclib $(QTK_OBJECTS) -l$(BASE_NAME) -o $@
+	$(LINKER)  $(AVF_LDFLAGS) -dynamiclib $(AVF_OBJECTS) -l$(BASE_NAME) -o $@

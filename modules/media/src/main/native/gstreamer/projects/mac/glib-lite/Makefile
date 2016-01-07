@@ -20,13 +20,12 @@ DIRLIST = glib \
 TARGET_NAME = lib$(BASE_NAME).dylib
 TARGET = $(BUILD_DIR)/$(TARGET_NAME)
 
-CFLAGS = -arch x86_64 \
-	 -fPIC \
-	 -Werror=implicit-function-declaration \
-	 -DG_DISABLE_CAST_CHECKS \
-	 -DGLIB_COMPILATION \
+CFLAGS += -fPIC \
+         -Werror=implicit-function-declaration \
+         -DG_DISABLE_CAST_CHECKS \
+         -DGLIB_COMPILATION \
          -DGOBJECT_COMPILATION \
-	 -DLIBDIR=\"/irrelevant/lib\" \
+         -DLIBDIR=\"/irrelevant/lib\" \
          -DG_LOG_DOMAIN=\"GLib\" \
          -DGSTREAMER_LITE \
          -DG_DISABLE_DEPRECATED \
@@ -38,8 +37,7 @@ CFLAGS = -arch x86_64 \
          -DNEWLINE=-1 \
          -DPOSIX_MALLOC_THRESHOLD=10 \
          -DMATCH_LIMIT=10000000 \
-         -DMATCH_LIMIT_RECURSION=10000000 \
-	 -mmacosx-version-min=10.7
+         -DMATCH_LIMIT_RECURSION=10000000
 
 ifeq ($(BUILD_TYPE), Release)
     CFLAGS += -Os
@@ -53,8 +51,11 @@ INCLUDES = -I$(SRCBASE_DIR) \
 	   -I$(LIBFFI_DIR)/include \
 	   -I$(LIBFFI_DIR)/include/x64
 
-LDFLAGS = -mmacosx-version-min=10.7 -arch x86_64 \
-          -Wl,-install_name,@rpath/$(TARGET_NAME) -Wl,-framework -Wl,CoreServices -liconv -lffi
+LDFLAGS += -Wl,-install_name,@rpath/$(TARGET_NAME) \
+           -Wl,-framework \
+           -Wl,CoreServices \
+           -liconv \
+           -lffi
 
 C_SOURCES = glib/garray.c \
             glib/gasyncqueue.c \
