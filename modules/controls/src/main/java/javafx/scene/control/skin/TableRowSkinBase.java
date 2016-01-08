@@ -42,9 +42,7 @@ import javafx.css.StyleableObjectProperty;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
-import javafx.scene.control.Control;
-import javafx.scene.control.IndexedCell;
-import javafx.scene.control.TableColumnBase;
+import javafx.scene.control.*;
 import javafx.util.Duration;
 
 import com.sun.javafx.tk.Toolkit;
@@ -187,6 +185,12 @@ public abstract class TableRowSkinBase<T,
             });
             fixedCellSize = fixedCellSizeProperty().get();
             fixedCellSizeEnabled = fixedCellSize > 0;
+
+            // JDK-8144500:
+            // When in fixed cell size mode, we must listen to the width of the virtual flow, so
+            // that when it changes, we can appropriately add / remove cells that may or may not
+            // be required (because we remove all cells that are not visible).
+            registerChangeListener(getVirtualFlow().widthProperty(), e -> control.requestLayout());
         }
     }
 
@@ -436,14 +440,14 @@ public abstract class TableRowSkinBase<T,
                 // This does not appear to impact performance...
                 tableCell.requestLayout();
             } else {
+                width = snapSize(tableCell.prefWidth(-1)) - snapSize(horizontalPadding);
+
                 if (fixedCellSizeEnabled) {
                     // we only add/remove to the scenegraph if the fixed cell
                     // length support is enabled - otherwise we keep all
                     // TableCells in the scenegraph
                     getChildren().remove(tableCell);
                 }
-
-                width = snapSize(tableCell.prefWidth(-1)) - snapSize(horizontalPadding);
             }
 
             x += width;
@@ -543,7 +547,19 @@ public abstract class TableRowSkinBase<T,
         }
 
         // update children of each row
-        if (!fixedCellSizeEnabled && (resetChildren || cellsEmpty)) {
+        if (fixedCellSizeEnabled) {
+            // we leave the adding / removing up to the layoutChildren method mostly,
+            // but here we remove any children cells that refer to columns that are
+            // not visible
+            List<Node> toRemove = new ArrayList<>();
+            for (Node cell : getChildren()) {
+                if (! (cell instanceof IndexedCell)) continue;
+                if (!getTableColumnBase((R)cell).isVisible()) {
+                    toRemove.add(cell);
+                }
+            }
+            getChildren().removeAll(toRemove);
+        } else if (!fixedCellSizeEnabled && (resetChildren || cellsEmpty)) {
             getChildren().setAll(cells);
         }
     }
@@ -637,6 +653,7 @@ public abstract class TableRowSkinBase<T,
         if (isDirty) {
             updateCells(true);
             isDirty = false;
+            updateCells = false;
         } else if (updateCells) {
             updateCells(false);
             updateCells = false;
