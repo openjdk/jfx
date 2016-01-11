@@ -226,7 +226,11 @@ public class TableColumnHeader extends Region {
             new WeakListChangeListener<String>(styleClassListener);
     
     private static final EventHandler<MouseEvent> mousePressedHandler = me -> {
+        if (me.isConsumed()) return;
+        me.consume();
+
         TableColumnHeader header = (TableColumnHeader) me.getSource();
+        header.getTableHeaderRow().columnDragLock = true;
 
         // pass focus to the table, so that the user immediately sees
         // the focus rectangle around the table control.
@@ -235,22 +239,27 @@ public class TableColumnHeader extends Region {
         if (me.isPrimaryButtonDown() && header.isColumnReorderingEnabled()) {
             header.columnReorderingStarted(me.getX());
         }
-        me.consume();
     };
     
     private static final EventHandler<MouseEvent> mouseDraggedHandler = me -> {
+        if (me.isConsumed()) return;
+        me.consume();
+
         TableColumnHeader header = (TableColumnHeader) me.getSource();
 
         if (me.isPrimaryButtonDown() && header.isColumnReorderingEnabled()) {
             header.columnReordering(me.getSceneX(), me.getSceneY());
         }
-        me.consume();
     };
     
     private static final EventHandler<MouseEvent> mouseReleasedHandler = me -> {
         if (me.isPopupTrigger()) return;
+        if (me.isConsumed()) return;
+        me.consume();
 
         TableColumnHeader header = (TableColumnHeader) me.getSource();
+        header.getTableHeaderRow().columnDragLock = false;
+
         TableColumnBase tableColumn = header.getTableColumn();
 
         ContextMenu menu = tableColumn.getContextMenu();
@@ -260,7 +269,6 @@ public class TableColumnHeader extends Region {
         } else if (me.isStillSincePress()) {
             header.sortColumn(me.isShiftDown());
         }
-        me.consume();
     };
     
     private static final EventHandler<ContextMenuEvent> contextMenuRequestedHandler = me -> {
@@ -684,10 +692,20 @@ public class TableColumnHeader extends Region {
 
         int actualNewColumnPos = newColumnPos;
 
-        // Fix for RT-35141: We need to account for hidden columns
-        final int max = actualNewColumnPos;
-        for (int i = 0; i <= max && i < columnsCount; i++) {
-            actualNewColumnPos += columns.get(i).isVisible() ? 0 : 1;
+        // Fix for RT-35141: We need to account for hidden columns.
+        // We keep iterating until we see 'requiredVisibleColumns' number of visible columns
+        final int requiredVisibleColumns = actualNewColumnPos;
+        int visibleColumnsSeen = 0;
+        for (int i = 0; i < columnsCount; i++) {
+            if (visibleColumnsSeen == (requiredVisibleColumns + 1)) {
+                break;
+            }
+
+            if (columns.get(i).isVisible()) {
+                visibleColumnsSeen++;
+            } else {
+                actualNewColumnPos++;
+            }
         }
         // --- end of RT-35141 fix
 
