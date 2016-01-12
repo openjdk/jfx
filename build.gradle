@@ -466,6 +466,8 @@ if (jfxReleasePatchVersion == "0") {
     relVer = "${jfxReleaseMajorVersion}.${jfxReleaseMinorVersion}.${jfxReleaseSecurityVersion}.${jfxReleasePatchVersion}"
 }
 defineProperty("RELEASE_VERSION", relVer)
+defineProperty("RELEASE_VERSION_PADDED", "${jfxReleaseMajorVersion}.${jfxReleaseMinorVersion}.${jfxReleaseSecurityVersion}.${jfxReleasePatchVersion}")
+
 def buildDate = new java.util.Date()
 def buildTimestamp = new java.text.SimpleDateFormat("yyyy-MM-dd-HHmmss").format(buildDate)
 defineProperty("BUILD_TIMESTAMP", buildTimestamp)
@@ -866,6 +868,7 @@ logger.quiet("RELEASE_VERSION: $RELEASE_VERSION")
 logger.quiet("RELEASE_SUFFIX: $RELEASE_SUFFIX")
 logger.quiet("RELEASE_VERSION_SHORT: $RELEASE_VERSION_SHORT")
 logger.quiet("RELEASE_VERSION_LONG: $RELEASE_VERSION_LONG")
+logger.quiet("RELEASE_VERSION_PADDED: $RELEASE_VERSION_PADDED")
 
 if (UPDATE_STUB_CACHE) {
     logger.quiet("UPDATE_STUB_CACHE: $UPDATE_STUB_CACHE")
@@ -2028,9 +2031,8 @@ project(":fxpackager") {
                     mkdir "$buildDir/native/javapackager"
                     from file("src/main/native/javapackager/win/javapackager.manifest")
                     into file("$buildDir/native/javapackager")
-                    // FIXME: the following is wrong and needs to be fixed
                     filter { line->
-                        line = line.replace("FXVERSION", "${RELEASE_VERSION}.${HUDSON_BUILD_NUMBER}");
+                        line = line.replace("FXVERSION", RELEASE_VERSION_PADDED)
                     }
                 }
             }
