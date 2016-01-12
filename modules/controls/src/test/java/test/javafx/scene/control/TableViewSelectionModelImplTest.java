@@ -25,14 +25,11 @@
 
 package test.javafx.scene.control;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
 import java.util.Arrays;
 import java.util.Collection;
 
 import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.SelectionMode;
@@ -51,6 +48,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+
+import static org.junit.Assert.*;
 
 /**
  * Unit tests that are specific for the TableViewSelectionModel API. Other tests
@@ -836,5 +835,21 @@ public class TableViewSelectionModelImplTest {
         assertFalse(model.isSelected(0, col1));
         assertFalse(model.isSelected(0, col2));
         assertEquals(0, model.getSelectedCells().size());
+    }
+
+    @Test public void test_jdk_8144501() {
+        model.setSelectionMode(SelectionMode.MULTIPLE);
+        model.select(2);
+        model.select(3);
+        ListChangeListener<String> listener = change -> {
+            while (change.next()) {
+                assertNotNull(change.getList());
+                assertEquals(1, change.getList().size());
+                assertNotNull(change.getList().get(0));
+            }
+        };
+        model.getSelectedItems().addListener(listener);
+        model.clearSelection(2);
+        model.getSelectedItems().removeListener(listener);
     }
 }
