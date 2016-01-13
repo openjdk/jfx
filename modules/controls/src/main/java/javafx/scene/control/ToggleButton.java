@@ -273,13 +273,14 @@ import javafx.css.StyleableProperty;
     private static final PseudoClass PSEUDO_CLASS_SELECTED =
             PseudoClass.getPseudoClass("selected");
 
-     /**
-      * Not everything uses the default value of false for alignment. 
-      * This method provides a way to have them return the correct initial value.
-      * @treatAsPrivate implementation detail
-      */
-    @Deprecated @Override
-    protected Pos impl_cssGetAlignmentInitialValue() {
+    /**
+     * Returns the initial alignment state of this control, for use
+     * by the JavaFX CSS engine to correctly set its initial value. This method
+     * is overridden to use Pos.CENTER initially.
+     *
+     * @since 9
+     */
+    @Override protected Pos getInitialAlignment() {
         return Pos.CENTER;
     }
 

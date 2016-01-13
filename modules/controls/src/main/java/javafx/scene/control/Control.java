@@ -878,12 +878,14 @@ public abstract class Control extends Region implements Skinnable {
     }
 
     /**
-      * Most Controls return true for focusTraversable initial value.
-      * This method is called from CSS code to get the correct initial value.
-      * @treatAsPrivate implementation detail
-      */
-    @Deprecated @Override
-    protected /*do not make final*/ Boolean impl_cssGetFocusTraversableInitialValue() {
+     * Returns the initial focus traversable state of this control, for use
+     * by the JavaFX CSS engine to correctly set its initial value. By default all
+     * UI controls are focus traversable, so this method is overridden in Control
+     * to set the initial traversable state to true.
+     *
+     * @since 9
+     */
+    @Override protected Boolean getInitialFocusTraversable() {
         return Boolean.TRUE;
     }
 

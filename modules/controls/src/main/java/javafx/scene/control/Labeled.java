@@ -802,13 +802,14 @@ public abstract class Labeled extends Control {
      *                                                                         *
      **************************************************************************/
 
-     /**
-      * Not everything uses the default value of false for alignment. 
-      * This method provides a way to have them return the correct initial value.
-      * @treatAsPrivate implementation detail
-      */
-    @Deprecated
-    protected Pos impl_cssGetAlignmentInitialValue() {
+    /**
+     * Returns the initial alignment state of this control, for use
+     * by the JavaFX CSS engine to correctly set its initial value. This method
+     * is overridden to use Pos.CENTER_LEFT initially.
+     *
+     * @since 9
+     */
+    protected Pos getInitialAlignment() {
         return Pos.CENTER_LEFT;
     }
     
@@ -846,7 +847,7 @@ public abstract class Labeled extends Control {
             
             @Override
             public Pos getInitialValue(Labeled n) {
-                return n.impl_cssGetAlignmentInitialValue();
+                return n.getInitialAlignment();
             }
         };
         

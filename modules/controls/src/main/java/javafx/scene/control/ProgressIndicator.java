@@ -226,16 +226,16 @@ public class ProgressIndicator extends Control {
      */
     private static final PseudoClass PSEUDO_CLASS_INDETERMINATE =
             PseudoClass.getPseudoClass("indeterminate");
-    
+
     /**
-      * Most Controls return true for focusTraversable, so Control overrides
-      * this method to return true, but ProgressIndicator returns false for
-      * focusTraversable's initial value; hence the override of the override. 
-      * This method is called from CSS code to get the correct initial value.
-      * @treatAsPrivate implementation detail
-      */
-    @Deprecated @Override
-    protected /*do not make final*/ Boolean impl_cssGetFocusTraversableInitialValue() {
+     * Returns the initial focus traversable state of this control, for use
+     * by the JavaFX CSS engine to correctly set its initial value. This method
+     * is overridden as by default UI controls have focus traversable set to true,
+     * but that is not appropriate for this control.
+     *
+     * @since 9
+     */
+    @Override protected Boolean getInitialFocusTraversable() {
         return Boolean.FALSE;
     }
 

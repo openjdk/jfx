@@ -170,13 +170,14 @@ public class Hyperlink extends ButtonBase {
     private static final PseudoClass PSEUDO_CLASS_VISITED =
             PseudoClass.getPseudoClass("visited");
 
-     /**
-      * Hyperlink uses HAND as the default value for cursor. 
-      * This method provides a way for css to get the correct initial value.
-      * @treatAsPrivate implementation detail
-      */
-    @Deprecated @Override
-    protected /*do not make final*/ Cursor impl_cssGetCursorInitialValue() {
+    /**
+     * Returns the initial cursor state of this control, for use
+     * by the JavaFX CSS engine to correctly set its initial value. This method
+     * is overridden to use the HAND cursor initially.
+     *
+     * @since 9
+     */
+    @Override protected Cursor getInitialCursor() {
         return Cursor.HAND;
     }
 
