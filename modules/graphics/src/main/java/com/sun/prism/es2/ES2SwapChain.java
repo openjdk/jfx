@@ -179,6 +179,10 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
     }
 
     public ES2Graphics createGraphics() {
+        if (drawable.getNativeWindow() != pState.getNativeWindow()) {
+            drawable = ES2Pipeline.glFactory.createGLDrawable(
+                    pState.getNativeWindow(), context.getPixelFormat());
+        }
         context.makeCurrent(drawable);
 
         nativeDestHandle = pState.getNativeFrameBuffer();
