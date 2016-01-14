@@ -1789,17 +1789,17 @@ project(":jmx") {
 // not pop up any windows or use audio). As such, they are only enabled
 // when FULL_TEST is specified, and each test runs in its own JVM
 project(":systemTests") {
+
+    dependencies {
+        testCompile project(":graphics").sourceSets.test.output
+        testCompile project(":base").sourceSets.test.output
+    }
+
     test {
         enabled = IS_FULL_TEST
         if (!IS_USE_ROBOT) {
             // Disable all robot-based visual tests
-            exclude("**/helloworld/*.*");
-            exclude("**/javafx/embed/swing/*.*");
-            exclude("**/javafx/scene/layout/*.*");
-            exclude("**/test3d/*.*");
-            exclude("**/scenegraph/*.*");
-            exclude("**/painttest/*.*");
-            exclude("**/renderlock/*.*");
+            exclude("test/robot/**");
         }
         if (!IS_AWT_TEST) {
             // Disable all AWT-based tests

@@ -34,6 +34,10 @@ import java.util.List;
 
 public class TestLog {
 
+    private static final boolean verbose = Boolean.getBoolean("verbose");
+    private static final double timeScale = Double.parseDouble(
+            System.getProperty("timeScale", "1"));
+
     private static final long DEFAULT_TIMEOUT = 3000l;
 
     private static final List<String> log = new ArrayList<>();
@@ -43,7 +47,7 @@ public class TestLog {
 
     public static void log(String s) {
         synchronized (lock) {
-            if (TestApplication.isVerbose()) {
+            if (verbose) {
                 System.out.println(timestamp() + " TestLog: " + s);
             }
             log.add(s);
@@ -155,7 +159,7 @@ public class TestLog {
         synchronized (lock) {
             if (!checkLog(s)) {
                 String err = "No line '" + s + "' in log";
-                if (TestApplication.isVerbose()) {
+                if (verbose) {
                     System.out.println(err);
                 }
                 throw new AssertionFailedError(err);
@@ -167,7 +171,7 @@ public class TestLog {
         synchronized (lock) {
             if (!checkLogContaining(s)) {
                 String err = "No line containing '" + s + "' in log";
-                if (TestApplication.isVerbose()) {
+                if (verbose) {
                     System.out.println(err);
                 }
                 throw new AssertionFailedError(err);
@@ -178,7 +182,7 @@ public class TestLog {
     private static String waitForLog(String[] s, long timeout, boolean exact) throws InterruptedException {
         long startTime = System.currentTimeMillis();
         long timeNow = startTime;
-        long endTime = timeNow + (long) (timeout * TestApplication.getTimeScale());
+        long endTime = timeNow + (long) (timeout * timeScale);
         String line;
         String logString = Arrays.toString(s).substring(1, Arrays.toString(s).length() - 1);
         synchronized (lock) {
@@ -192,7 +196,7 @@ public class TestLog {
                 if (timeNow >= endTime) {
                     String message = "Timed out after " + (timeNow - startTime)
                             + "ms waiting for '" + logString + "'";
-                    if (!TestApplication.isVerbose()) {
+                    if (!verbose) {
                         System.out.flush();
                         System.err.flush();
                         for (String logLine: log) {
@@ -205,7 +209,7 @@ public class TestLog {
             }
         }
         long matchTime = System.currentTimeMillis() - startTime;
-        if (TestApplication.isVerbose()) {
+        if (verbose) {
             if (exact) {
                 System.out.println("TestLog matched '"
                         + logString + "' in "
