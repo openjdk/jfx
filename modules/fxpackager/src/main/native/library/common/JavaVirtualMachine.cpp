@@ -459,23 +459,25 @@ bool JavaVirtualMachine::StartJVM() {
     // will treat them as command line args provided by the user ...
     // Only propagate original set of args first time.
 
-    options.AppendValue(Helpers::ConvertPathToId(mainClassName), _T(""));
-
     std::list<TString> vmargs;
     vmargs.push_back(package.GetCommandName());
 
+    if (package.HasSplashScreen() == true) {
+        options.AppendValue(TString(_T("-splash:")) + package.GetSplashScreenFileName(), _T(""));
+    }
+    options.AppendValue(Helpers::ConvertJavaPathToId(mainClassName), _T(""));
+
+#ifdef MAC
     // Mac adds a ProcessSerialNumber to args when launched from .app
     // filter out the psn since they it's not expected in the app
     if (platform.IsMainThread() == false) {
-        //TODO shows a splash screen, does not work on Windows, and it does not go away and
-        // it hangs the process.
-        if (package.HasSplashScreen() == true) {
-            options.AppendValue(TString(_T("-splash:")) + package.GetSplashScreenFileName(), _T(""));
-        }
-
         std::list<TString> loptions = options.ToList();
         vmargs.splice(vmargs.end(), loptions, loptions.begin(), loptions.end());
     }
+#else
+    std::list<TString> loptions = options.ToList();
+    vmargs.splice(vmargs.end(), loptions, loptions.begin(), loptions.end());
+#endif
 
     std::list<TString> largs = package.GetArgs();
     vmargs.splice(vmargs.end(), largs, largs.begin(), largs.end());

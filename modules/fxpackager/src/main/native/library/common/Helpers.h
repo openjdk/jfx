@@ -56,7 +56,7 @@ public:
                                  const TString& replace);
     static TString ConvertIdToFilePath(TString Value);
     static TString ConvertIdToJavaPath(TString Value);
-    static TString ConvertPathToId(TString Value);
+    static TString ConvertJavaPathToId(TString Value);
 
     static OrderedMap<TString, TString> GetJVMArgsFromConfig(IPropertyContainer* config);
     static OrderedMap<TString, TString> GetJVMUserArgsFromConfig(IPropertyContainer* config);

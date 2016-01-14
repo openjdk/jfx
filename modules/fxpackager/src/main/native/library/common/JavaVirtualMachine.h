@@ -40,7 +40,7 @@
 
 
 #ifdef WINDOWS
-//#define USE_JLI_LAUNCH
+#define USE_JLI_LAUNCH
 #endif //WINDOWS
 
 #ifdef MAC
