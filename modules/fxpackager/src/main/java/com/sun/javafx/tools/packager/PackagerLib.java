@@ -82,7 +82,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 public class PackagerLib {
-    public static final String JAVAFX_VERSION = "8.0";
+    public static final String JAVAFX_VERSION = System.getProperty("java.version");
 
     private static final ResourceBundle bundle =
             ResourceBundle.getBundle("com/sun/javafx/tools/packager/Bundle");
