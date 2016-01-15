@@ -34,14 +34,14 @@ static HistoryItem* getItem(jlong jitem)
     return static_cast<HistoryItem*>(jlong_to_ptr(jitem));
 }
 
-static jmethodID initMethod(JNIEnv* env, jclass cls, char* name, const char* signature)
+static jmethodID initMethod(JNIEnv* env, jclass cls, char* name, char* signature)
 {
     jmethodID mid = env->GetMethodID(cls, name, signature);
     ASSERT(mid);
     return mid;
 }
 
-static jmethodID initCtor(JNIEnv* env, jclass cls, const char* signature)
+static jmethodID initCtor(JNIEnv* env, jclass cls, char* signature)
 {
     return initMethod(env, cls, "<init>", signature);
 }
