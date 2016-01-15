@@ -95,7 +95,7 @@ public class SwingFXUtilsTest {
     }
 
     static void testFromFXImg(String imgfilename) {
-        Image img = new Image("javafx/embed/swing/"+imgfilename);
+        Image img = new Image("test/javafx/embed/swing/"+imgfilename);
         boolean rgbrequired = (img.getPixelReader().getPixelFormat().getType() == PixelFormat.Type.BYTE_RGB);
         BufferedImage bimg = SwingFXUtils.fromFXImage(img, null);
         checkBimg(img, bimg);
