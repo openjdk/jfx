@@ -1783,34 +1783,6 @@ project(":jmx") {
     }
 }
 
-// This project is for system tests that need to run with a full SDK.
-// Most of them display a stage or do other things that preclude running
-// them in a shared JVM or as part of the "smoke test" run (which must
-// not pop up any windows or use audio). As such, they are only enabled
-// when FULL_TEST is specified, and each test runs in its own JVM
-project(":systemTests") {
-
-    dependencies {
-        testCompile project(":graphics").sourceSets.test.output
-        testCompile project(":base").sourceSets.test.output
-    }
-
-    test {
-        enabled = IS_FULL_TEST
-        if (!IS_USE_ROBOT) {
-            // Disable all robot-based visual tests
-            exclude("test/robot/**");
-        }
-        if (!IS_AWT_TEST) {
-            // Disable all AWT-based tests
-            exclude("**/javafx/embed/swing/*.*");
-            exclude("**/com/sun/javafx/application/Swing*.*");
-        }
-        
-        forkEvery = 1
-    }
-}
-
 project(":fxpackager") {
     tasks.all {
         if (!COMPILE_FXPACKAGER) it.enabled = false
@@ -2718,6 +2690,34 @@ load(qt_config)""")
 
     if (IS_COMPILE_WEBKIT) {
         jar.dependsOn compileGenerated, drtJar
+    }
+}
+
+// This project is for system tests that need to run with a full SDK.
+// Most of them display a stage or do other things that preclude running
+// them in a shared JVM or as part of the "smoke test" run (which must
+// not pop up any windows or use audio). As such, they are only enabled
+// when FULL_TEST is specified, and each test runs in its own JVM
+project(":systemTests") {
+
+    dependencies {
+        testCompile project(":graphics").sourceSets.test.output
+        testCompile project(":base").sourceSets.test.output
+    }
+
+    test {
+        enabled = IS_FULL_TEST
+        if (!IS_USE_ROBOT) {
+            // Disable all robot-based visual tests
+            exclude("test/robot/**");
+        }
+        if (!IS_AWT_TEST) {
+            // Disable all AWT-based tests
+            exclude("**/javafx/embed/swing/*.*");
+            exclude("**/com/sun/javafx/application/Swing*.*");
+        }
+        
+        forkEvery = 1
     }
 }
 
