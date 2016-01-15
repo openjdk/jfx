@@ -25,7 +25,7 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import com.sun.glass.ui.monocle.TestLog;
+import com.sun.glass.ui.monocle.TestLogShim;
 import test.robot.com.sun.glass.ui.monocle.TestApplication;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
@@ -56,22 +56,22 @@ public class RapidTapTest extends ParameterizedTestBase {
         for (int i = 0; i < 20; i++) {
             int p = device.addPoint(width / 2, height / 2);
             device.sync();
-            TestLog.waitForLogContaining("TouchPoint: PRESSED", 3000);
-            TestLog.waitForLogContaining("Mouse pressed", 3000);
+            TestLogShim.waitForLogContaining("TouchPoint: PRESSED", 3000);
+            TestLogShim.waitForLogContaining("Mouse pressed", 3000);
             device.removePoint(p);
             device.sync();
         }
         TestRunnable.invokeAndWaitUntilSuccess(() -> {
-            Assert.assertEquals(20, TestLog.countLogContaining(
+            Assert.assertEquals(20, TestLogShim.countLogContaining(
                     "TouchPoint: PRESSED"));
-            Assert.assertEquals(20, TestLog.countLogContaining(
+            Assert.assertEquals(20, TestLogShim.countLogContaining(
                     "TouchPoint: RELEASED"));
             Assert.assertEquals(20,
-                                TestLog.countLogContaining("Mouse pressed"));
+                                TestLogShim.countLogContaining("Mouse pressed"));
             Assert.assertEquals(20,
-                                TestLog.countLogContaining("Mouse released"));
+                                TestLogShim.countLogContaining("Mouse released"));
             Assert.assertEquals(20,
-                                TestLog.countLogContaining("Mouse clicked"));
+                                TestLogShim.countLogContaining("Mouse clicked"));
         }, 3000);
     }
 
@@ -96,17 +96,17 @@ public class RapidTapTest extends ParameterizedTestBase {
             for (int i = 0; i < 20; i++) {
                 int p = device.addPoint(width / 2, height / 2);
                 device.sync();
-                TestLog.waitForLogContaining("TouchPoint: PRESSED", 3000);
-                TestLog.waitForLogContaining("Mouse pressed", 3000);
+                TestLogShim.waitForLogContaining("TouchPoint: PRESSED", 3000);
+                TestLogShim.waitForLogContaining("Mouse pressed", 3000);
                 device.removePoint(p);
                 device.sync();
             }
             TestRunnable.invokeAndWaitUntilSuccess(() -> {
-                Assert.assertEquals(20, TestLog.countLogContaining("TouchPoint: PRESSED"));
-                Assert.assertEquals(20, TestLog.countLogContaining("TouchPoint: RELEASED"));
-                Assert.assertEquals(20, TestLog.countLogContaining("Mouse pressed"));
-                Assert.assertEquals(20, TestLog.countLogContaining("Mouse released"));
-                Assert.assertEquals(20, TestLog.countLogContaining("Mouse clicked"));
+                Assert.assertEquals(20, TestLogShim.countLogContaining("TouchPoint: PRESSED"));
+                Assert.assertEquals(20, TestLogShim.countLogContaining("TouchPoint: RELEASED"));
+                Assert.assertEquals(20, TestLogShim.countLogContaining("Mouse pressed"));
+                Assert.assertEquals(20, TestLogShim.countLogContaining("Mouse released"));
+                Assert.assertEquals(20, TestLogShim.countLogContaining("Mouse clicked"));
             }, 10000);
         } finally {
             Platform.runLater(a::stop);

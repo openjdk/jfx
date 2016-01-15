@@ -25,7 +25,7 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import com.sun.glass.ui.monocle.TestLog;
+import com.sun.glass.ui.monocle.TestLogShim;
 import test.robot.com.sun.glass.ui.monocle.TestApplication;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
 import javafx.application.Platform;
@@ -78,16 +78,16 @@ public abstract class ParameterizedTestBase {
     @Before
     public void createDevice() throws Exception {
         TestApplication.showScene(stageBounds);
-        TestLog.log("Starting " + name.getMethodName() + "[" + device + "]");
+        TestLogShim.log("Starting " + name.getMethodName() + "[" + device + "]");
         Rectangle2D r = TestApplication.getScreenBounds();
         width = r.getWidth();
         height = r.getHeight();
-        TestLog.reset();
+        TestLogShim.reset();
         device.create();
         TestApplication.addMouseListeners();
         TestApplication.addTouchListeners();
         TestApplication.addGestureListeners();
-        TestLog.reset();
+        TestLogShim.reset();
         Platform.runLater(
                 () -> Thread.currentThread().setUncaughtExceptionHandler(
                         (t, e) -> exception = e));

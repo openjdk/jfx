@@ -25,7 +25,7 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import com.sun.glass.ui.monocle.TestLog;
+import com.sun.glass.ui.monocle.TestLogShim;
 import test.robot.com.sun.glass.ui.monocle.TestApplication;
 import javafx.geometry.Rectangle2D;
 import javafx.stage.Screen;
@@ -39,7 +39,7 @@ public class CreateDeviceTest {
     private UInput ui;
 
     @Before public void initDevice() {
-        TestLog.reset();
+        TestLogShim.reset();
         ui = new UInput();
     }
 
@@ -67,14 +67,14 @@ public class CreateDeviceTest {
         ui.processLine("EV_SYN");
         ui.processLine("EV_KEY KEY_LEFTSHIFT 0");
         ui.processLine("EV_SYN");
-        TestLog.waitForLog("Key pressed: SHIFT", 3000);
-        TestLog.clear();
+        TestLogShim.waitForLog("Key pressed: SHIFT", 3000);
+        TestLogShim.clear();
 
         ui.processLine("EV_KEY KEY_A 1");
         ui.processLine("EV_SYN");
         ui.processLine("EV_KEY KEY_A 0");
         ui.processLine("EV_SYN");
-        TestLog.waitForLog("Key typed: a", 3000);
+        TestLogShim.waitForLog("Key typed: a", 3000);
         ui.processLine("EV_KEY KEY_LEFTSHIFT 1");
         ui.processLine("EV_SYN");
         ui.processLine("EV_KEY KEY_A 1");
@@ -83,10 +83,10 @@ public class CreateDeviceTest {
         ui.processLine("EV_SYN");
         ui.processLine("EV_KEY KEY_LEFTSHIFT 0");
         ui.processLine("EV_SYN");
-        TestLog.waitForLog("Key typed: A", 3000);
+        TestLogShim.waitForLog("Key typed: A", 3000);
         // make sure only two key typed events were received
         Assert.assertEquals("Expected two typed events", 2,
-                             TestLog.getLog().stream().filter(s -> s.startsWith("Key typed")).count());
+                             TestLogShim.getLog().stream().filter(s -> s.startsWith("Key typed")).count());
     }
 
     @Test
@@ -103,16 +103,16 @@ public class CreateDeviceTest {
         ui.processLine("RELBIT REL_Y");
         ui.processLine("PROPERTY ID_INPUT_MOUSE 1");
         ui.processLine("CREATE");
-        TestLog.clear();
+        TestLogShim.clear();
         ui.processLine("EV_KEY BTN_LEFT 1");
         ui.processLine("EV_SYN");
         ui.processLine("EV_KEY BTN_LEFT 0");
         ui.processLine("EV_SYN");
-        TestLog.waitForLog("Mouse pressed: 300, 300", 3000);
+        TestLogShim.waitForLog("Mouse pressed: 300, 300", 3000);
         ui.processLine("EV_REL REL_X -10");
         ui.processLine("EV_REL REL_Y -5");
         ui.processLine("EV_SYN");
-        TestLog.waitForLog("Mouse moved: 290, 295", 3000);
+        TestLogShim.waitForLog("Mouse moved: 290, 295", 3000);
     }
 
     @Test
@@ -143,7 +143,7 @@ public class CreateDeviceTest {
         ui.processLine("EV_ABS ABS_Y 2048");
         ui.processLine("EV_SYN");
         Rectangle2D r = Screen.getPrimary().getBounds();
-        TestLog.waitForLog("Mouse pressed: "
+        TestLogShim.waitForLog("Mouse pressed: "
                         + (int) r.getWidth() / 2 + ", " + (int) r.getHeight() / 2   , 3000);
     }
 

@@ -25,7 +25,7 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import com.sun.glass.ui.monocle.TestLog;
+import com.sun.glass.ui.monocle.TestLogShim;
 import test.robot.com.sun.glass.ui.monocle.TestApplication;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
@@ -57,7 +57,7 @@ public class TouchEventLookaheadTest extends ParameterizedTestBase {
         TestApplication.showFullScreenScene();
         TestApplication.addMouseListeners();
         TestApplication.addTouchListeners();
-        TestLog.reset();
+        TestLogShim.reset();
         Rectangle2D r = Screen.getPrimary().getBounds();
         final int width = (int) r.getWidth();
         final int height = (int) r.getHeight();
@@ -86,15 +86,15 @@ public class TouchEventLookaheadTest extends ParameterizedTestBase {
             device.sync();
         });
         // Check that the initial point reported is correct
-        TestLog.waitForLog("Mouse pressed: " + x1 + ", " + y1, 3000);
-        TestLog.waitForLog("Touch pressed: " + x1 + ", " + y1, 3000);
+        TestLogShim.waitForLog("Mouse pressed: " + x1 + ", " + y1, 3000);
+        TestLogShim.waitForLog("Touch pressed: " + x1 + ", " + y1, 3000);
         // Check that the final point reported is correct
-        TestLog.waitForLog("Mouse released: " + x3 + ", " + y3, 3000);
-        TestLog.waitForLog("Touch released: " + x3 + ", " + y3, 3000);
+        TestLogShim.waitForLog("Mouse released: " + x3 + ", " + y3, 3000);
+        TestLogShim.waitForLog("Touch released: " + x3 + ", " + y3, 3000);
         // Check that moves in between were filtered
-        TestLog.waitForLog("Mouse dragged: " + x3 + ", " + y3, 3000);
-        TestLog.waitForLog("Touch moved: " + x3 + ", " + y3, 3000);
-        Assert.assertTrue(TestLog.countLogContaining("Mouse dragged") <= 3);
-        Assert.assertTrue(TestLog.countLogContaining("Touch moved") <= 3);
+        TestLogShim.waitForLog("Mouse dragged: " + x3 + ", " + y3, 3000);
+        TestLogShim.waitForLog("Touch moved: " + x3 + ", " + y3, 3000);
+        Assert.assertTrue(TestLogShim.countLogContaining("Mouse dragged") <= 3);
+        Assert.assertTrue(TestLogShim.countLogContaining("Touch moved") <= 3);
     }
 }

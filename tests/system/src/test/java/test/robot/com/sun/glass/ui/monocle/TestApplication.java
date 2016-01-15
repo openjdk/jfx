@@ -25,7 +25,7 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import com.sun.glass.ui.monocle.TestLog;
+import com.sun.glass.ui.monocle.TestLogShim;
 import com.sun.glass.ui.Robot;
 import com.sun.glass.ui.monocle.TouchInputShim;
 import javafx.animation.AnimationTimer;
@@ -206,61 +206,61 @@ public class TestApplication extends Application {
     }
 
     public static void addKeyListeners() throws Exception {
-        getStage().getScene().setOnKeyTyped((e) -> TestLog.log(
+        getStage().getScene().setOnKeyTyped((e) -> TestLogShim.log(
                 "Key typed: " + e.getCharacter()));
-        getStage().getScene().setOnKeyPressed((e) -> TestLog.log("Key pressed: " + e.getCode()));
-        getStage().getScene().setOnKeyReleased((e) -> TestLog.log("Key released: " + e.getCode()));
+        getStage().getScene().setOnKeyPressed((e) -> TestLogShim.log("Key pressed: " + e.getCode()));
+        getStage().getScene().setOnKeyReleased((e) -> TestLogShim.log("Key released: " + e.getCode()));
     }
 
     public static void addMouseListeners() throws Exception {
-        getStage().getScene().setOnMousePressed((e) -> TestLog.log("Mouse pressed: "
+        getStage().getScene().setOnMousePressed((e) -> TestLogShim.log("Mouse pressed: "
                 + (int) e.getScreenX() + ", " + (int) e.getScreenY()));
-        getStage().getScene().setOnMouseMoved((e) -> TestLog.log("Mouse moved: "
+        getStage().getScene().setOnMouseMoved((e) -> TestLogShim.log("Mouse moved: "
                 + (int) e.getScreenX() + ", " + (int) e.getScreenY()));
-        getStage().getScene().setOnMouseDragged((e) -> TestLog.log("Mouse dragged: "
+        getStage().getScene().setOnMouseDragged((e) -> TestLogShim.log("Mouse dragged: "
                 + (int) e.getScreenX() + ", " + (int) e.getScreenY()));
-        getStage().getScene().setOnMouseReleased((e) -> TestLog.log("Mouse released: "
+        getStage().getScene().setOnMouseReleased((e) -> TestLogShim.log("Mouse released: "
                 + (int) e.getScreenX() + ", " + (int) e.getScreenY()));
-        getStage().getScene().setOnMouseClicked((e) -> TestLog.log("Mouse clicked: "
+        getStage().getScene().setOnMouseClicked((e) -> TestLogShim.log("Mouse clicked: "
                 + (int) e.getScreenX() + ", " + (int) e.getScreenY()));
-        getStage().getScene().setOnMouseEntered((e) -> TestLog.log("Mouse entered: "
+        getStage().getScene().setOnMouseEntered((e) -> TestLogShim.log("Mouse entered: "
                             + (int) e.getScreenX() + ", " + (int) e.getScreenY()));
-        getStage().getScene().setOnMouseExited((e) -> TestLog.log("Mouse exited: "
+        getStage().getScene().setOnMouseExited((e) -> TestLogShim.log("Mouse exited: "
                             + (int) e.getScreenX() + ", " + (int) e.getScreenY()));
     }
 
     public static void addTouchListeners() throws Exception {
         Consumer<List<TouchPoint>> logTouchPoints = (tps) -> {
-            TestLog.log("Touch points count: [" + tps.size() +"]"); 
+            TestLogShim.log("Touch points count: [" + tps.size() +"]"); 
             for (TouchPoint tp : tps) {
-                TestLog.log("TouchPoint: " + tp.getState() + " "
+                TestLogShim.log("TouchPoint: " + tp.getState() + " "
                         + (int) tp.getScreenX() + ", " + (int) tp.getScreenY()
                         + " id=" + tp.getId());
             }
         };
         getStage().getScene().setOnTouchPressed((e) -> {
-            TestLog.log("Touch pressed: "
+            TestLogShim.log("Touch pressed: "
                     + (int) e.getTouchPoint().getScreenX()
                     + ", "
                     + (int) e.getTouchPoint().getScreenY());
             logTouchPoints.accept(e.getTouchPoints());
         });
         getStage().getScene().setOnTouchReleased((e) -> {
-            TestLog.log("Touch released: "
+            TestLogShim.log("Touch released: "
                     + (int) e.getTouchPoint().getScreenX()
                     + ", "
                     + (int) e.getTouchPoint().getScreenY());
             logTouchPoints.accept(e.getTouchPoints());
         });
         getStage().getScene().setOnTouchMoved((e) -> {
-            TestLog.log("Touch moved: "
+            TestLogShim.log("Touch moved: "
                     + (int) e.getTouchPoint().getScreenX()
                     + ", "
                     + (int) e.getTouchPoint().getScreenY());
             logTouchPoints.accept(e.getTouchPoints());
         });
         getStage().getScene().setOnTouchStationary((e) -> {
-            TestLog.log("Touch stationary: "
+            TestLogShim.log("Touch stationary: "
                     + (int) e.getTouchPoint().getScreenX()
                     + ", "
                     + (int) e.getTouchPoint().getScreenY());
@@ -270,47 +270,47 @@ public class TestApplication extends Application {
 
     public static void addGestureListeners() throws Exception {
         //Zoom
-        getStage().getScene().setOnZoom((e) -> TestLog.log("Zoom, factor: " + e.getZoomFactor()
+        getStage().getScene().setOnZoom((e) -> TestLogShim.log("Zoom, factor: " + e.getZoomFactor()
                 + ", total factor: " + e.getTotalZoomFactor()
                 + ", inertia value: " + e.isInertia()));
 
-        getStage().getScene().setOnZoomStarted((e) -> TestLog.log("Zoom started, factor: " + e.getZoomFactor()
+        getStage().getScene().setOnZoomStarted((e) -> TestLogShim.log("Zoom started, factor: " + e.getZoomFactor()
                 + ", total factor: " + e.getTotalZoomFactor()
                 + ", inertia value: " + e.isInertia()));
 
-        getStage().getScene().setOnZoomFinished((e) -> TestLog.log("Zoom finished, factor: " + e.getZoomFactor()
+        getStage().getScene().setOnZoomFinished((e) -> TestLogShim.log("Zoom finished, factor: " + e.getZoomFactor()
                 + ", total factor: " + e.getTotalZoomFactor()
                 + ", inertia value: " + e.isInertia()));
 
         //Rotate
-        getStage().getScene().setOnRotate((e) -> TestLog.log("Rotation, angle: " + Math.round(e.getAngle())
+        getStage().getScene().setOnRotate((e) -> TestLogShim.log("Rotation, angle: " + Math.round(e.getAngle())
                 + ", total angle: " + Math.round(e.getTotalAngle())
                 + ", inertia value: " + e.isInertia()));
 
-        getStage().getScene().setOnRotationStarted((e) -> TestLog.log("Rotation started, angle: " + Math.round(e.getAngle())
+        getStage().getScene().setOnRotationStarted((e) -> TestLogShim.log("Rotation started, angle: " + Math.round(e.getAngle())
                 + ", total angle: " + Math.round(e.getTotalAngle())
                 + ", inertia value: " + e.isInertia()));
 
-        getStage().getScene().setOnRotationFinished((e) -> TestLog.log("Rotation finished, angle: " + Math.round(e.getAngle())
+        getStage().getScene().setOnRotationFinished((e) -> TestLogShim.log("Rotation finished, angle: " + Math.round(e.getAngle())
                 + ", total angle: " + Math.round(e.getTotalAngle())
                 + ", inertia value: " + e.isInertia()));
 
         //Scroll
-        getStage().getScene().setOnScroll((e) -> TestLog.log("Scroll, DeltaX: " + Math.round(e.getDeltaX())
+        getStage().getScene().setOnScroll((e) -> TestLogShim.log("Scroll, DeltaX: " + Math.round(e.getDeltaX())
                 + ", DeltaY: " + Math.round(e.getDeltaY())
                 + ", totalDeltaX: " + Math.round(e.getTotalDeltaX())
                 + ", totalDeltaY: " + Math.round(e.getTotalDeltaY())
                 + ", touch points: " + e.getTouchCount()
                 + ", inertia value: " + e.isInertia()));
 
-        getStage().getScene().setOnScrollStarted((e) -> TestLog.log("Scroll started, DeltaX: " + Math.round(e.getDeltaX())
+        getStage().getScene().setOnScrollStarted((e) -> TestLogShim.log("Scroll started, DeltaX: " + Math.round(e.getDeltaX())
                 + ", DeltaY: " + Math.round(e.getDeltaY())
                 + ", totalDeltaX: " + Math.round(e.getTotalDeltaX())
                 + ", totalDeltaY: " + Math.round(e.getTotalDeltaY())
                 + ", touch points: " + e.getTouchCount()
                 + ", inertia value: " + e.isInertia()));
 
-        getStage().getScene().setOnScrollFinished((e) -> TestLog.log("Scroll finished, DeltaX: " + Math.round(e.getDeltaX())
+        getStage().getScene().setOnScrollFinished((e) -> TestLogShim.log("Scroll finished, DeltaX: " + Math.round(e.getDeltaX())
                 + ", DeltaY: " + Math.round(e.getDeltaY())
                 + ", totalDeltaX: " + Math.round(e.getTotalDeltaX())
                 + ", totalDeltaY: " + Math.round(e.getTotalDeltaY())
@@ -362,10 +362,10 @@ public class TestApplication extends Application {
             TestRunnable.invokeAndWait(() -> {
                 Robot robot = com.sun.glass.ui.Application.GetApplication().createRobot();
                 try {
-                    TestLog.log("x = " + robot.getMouseX());
-                    TestLog.log("y = " + robot.getMouseY());
-                    TestLog.log("targetX = " + targetX);
-                    TestLog.log("targetY = " + targetY);
+                    TestLogShim.log("x = " + robot.getMouseX());
+                    TestLogShim.log("y = " + robot.getMouseY());
+                    TestLogShim.log("targetX = " + targetX);
+                    TestLogShim.log("targetY = " + targetY);
                     Assert.assertEquals(targetX, robot.getMouseX());
                     Assert.assertEquals(targetY, robot.getMouseY());
                 } finally {

@@ -25,7 +25,7 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import com.sun.glass.ui.monocle.TestLog;
+import com.sun.glass.ui.monocle.TestLogShim;
 import test.robot.com.sun.glass.ui.monocle.ParameterizedTestBase;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
@@ -58,11 +58,11 @@ public class FuzzyTapTest extends ParameterizedTestBase {
         device.sync();
         device.setAndRemovePoint(p, x1, y1);
         device.sync();
-        TestLog.waitForLog("Mouse pressed: " + x + ", " + y, 3000);
-        TestLog.waitForLog("Mouse clicked: " + x + ", " + y, 3000);
-        TestLog.waitForLog("Mouse released: " + x + ", " + y, 3000);
-        Assert.assertEquals(0, TestLog.countLogContaining("Mouse dragged:"));
-        Assert.assertEquals(0, TestLog.countLogContaining("Touch moved:"));
+        TestLogShim.waitForLog("Mouse pressed: " + x + ", " + y, 3000);
+        TestLogShim.waitForLog("Mouse clicked: " + x + ", " + y, 3000);
+        TestLogShim.waitForLog("Mouse released: " + x + ", " + y, 3000);
+        Assert.assertEquals(0, TestLogShim.countLogContaining("Mouse dragged:"));
+        Assert.assertEquals(0, TestLogShim.countLogContaining("Touch moved:"));
     }
 
     /** Touch down, small move, touch up */
@@ -79,10 +79,10 @@ public class FuzzyTapTest extends ParameterizedTestBase {
         device.sync();
         device.removePoint(p);
         device.sync();
-        TestLog.waitForLog("Mouse clicked: " + x + ", " + y, 3000);
-        TestLog.waitForLog("Mouse released: " + x + ", " + y, 3000);
-        Assert.assertEquals(0, TestLog.countLogContaining("Mouse dragged:"));
-        Assert.assertEquals(0, TestLog.countLogContaining("Touch moved:"));
+        TestLogShim.waitForLog("Mouse clicked: " + x + ", " + y, 3000);
+        TestLogShim.waitForLog("Mouse released: " + x + ", " + y, 3000);
+        Assert.assertEquals(0, TestLogShim.countLogContaining("Mouse dragged:"));
+        Assert.assertEquals(0, TestLogShim.countLogContaining("Touch moved:"));
     }
 
     /** Touch down, touch up outside the tap radius */
@@ -97,12 +97,12 @@ public class FuzzyTapTest extends ParameterizedTestBase {
         device.sync();
         device.setAndRemovePoint(p, x1, y1);
         device.sync();
-        TestLog.waitForLog("Mouse pressed: " + x + ", " + y, 3000);
-        TestLog.waitForLog("Mouse released: " + x + ", " + y, 3000);
-        TestLog.waitForLog("Mouse clicked: " + x + ", " + y, 3000);
-        TestLog.waitForLog("Touch pressed: " + x + ", " + y, 3000);
-        TestLog.waitForLog("Touch released: " + x + ", " + y, 3000);
-        Assert.assertEquals(1, TestLog.countLogContaining("Mouse clicked:"));
+        TestLogShim.waitForLog("Mouse pressed: " + x + ", " + y, 3000);
+        TestLogShim.waitForLog("Mouse released: " + x + ", " + y, 3000);
+        TestLogShim.waitForLog("Mouse clicked: " + x + ", " + y, 3000);
+        TestLogShim.waitForLog("Touch pressed: " + x + ", " + y, 3000);
+        TestLogShim.waitForLog("Touch released: " + x + ", " + y, 3000);
+        Assert.assertEquals(1, TestLogShim.countLogContaining("Mouse clicked:"));
     }
 
     /** Touch down, move outside touch radius, touch up */
@@ -119,14 +119,14 @@ public class FuzzyTapTest extends ParameterizedTestBase {
         device.sync();
         device.removePoint(p);
         device.sync();
-        TestLog.waitForLog("Mouse pressed: " + x + ", " + y, 3000);
-        TestLog.waitForLog("Mouse dragged: " + x1 + ", " + y1, 3000);
-        TestLog.waitForLog("Mouse released: " + x1 + ", " + y1, 3000);
-        TestLog.waitForLog("Mouse clicked: " + x1 + ", " + y1, 3000);
-        TestLog.waitForLog("Touch pressed: " + x + ", " + y, 3000);
-        TestLog.waitForLog("Touch moved: " + x1 + ", " + y1, 3000);
-        TestLog.waitForLog("Touch released: " + x1 + ", " + y1, 3000);
-        Assert.assertEquals(1, TestLog.countLogContaining("Mouse clicked: " + x1 + ", " + y1));
+        TestLogShim.waitForLog("Mouse pressed: " + x + ", " + y, 3000);
+        TestLogShim.waitForLog("Mouse dragged: " + x1 + ", " + y1, 3000);
+        TestLogShim.waitForLog("Mouse released: " + x1 + ", " + y1, 3000);
+        TestLogShim.waitForLog("Mouse clicked: " + x1 + ", " + y1, 3000);
+        TestLogShim.waitForLog("Touch pressed: " + x + ", " + y, 3000);
+        TestLogShim.waitForLog("Touch moved: " + x1 + ", " + y1, 3000);
+        TestLogShim.waitForLog("Touch released: " + x1 + ", " + y1, 3000);
+        Assert.assertEquals(1, TestLogShim.countLogContaining("Mouse clicked: " + x1 + ", " + y1));
     }
 
     /** Touch down, drift outside touch radius, touch up */
@@ -154,13 +154,13 @@ public class FuzzyTapTest extends ParameterizedTestBase {
         // and release
         device.removePoint(p);
         device.sync();
-        TestLog.waitForLog("Mouse pressed: " + x + ", " + y, 3000);
-        TestLog.waitForLog("Mouse dragged: " + x2 + ", " + y2, 3000);
-        TestLog.waitForLog("Mouse released: " + x2 + ", " + y2, 3000);
-        TestLog.waitForLog("Mouse clicked: " + x2 + ", " + y2, 3000);
-        TestLog.waitForLog("Touch pressed: " + x + ", " + y, 3000);
-        TestLog.waitForLog("Touch moved: " + x2 + ", " + y2, 3000);
-        TestLog.waitForLog("Touch released: " + x2 + ", " + y2, 3000);
-        Assert.assertEquals(1, TestLog.countLogContaining("Mouse clicked: " + x2 + ", " + y2));
+        TestLogShim.waitForLog("Mouse pressed: " + x + ", " + y, 3000);
+        TestLogShim.waitForLog("Mouse dragged: " + x2 + ", " + y2, 3000);
+        TestLogShim.waitForLog("Mouse released: " + x2 + ", " + y2, 3000);
+        TestLogShim.waitForLog("Mouse clicked: " + x2 + ", " + y2, 3000);
+        TestLogShim.waitForLog("Touch pressed: " + x + ", " + y, 3000);
+        TestLogShim.waitForLog("Touch moved: " + x2 + ", " + y2, 3000);
+        TestLogShim.waitForLog("Touch released: " + x2 + ", " + y2, 3000);
+        Assert.assertEquals(1, TestLogShim.countLogContaining("Mouse clicked: " + x2 + ", " + y2));
     }
 }

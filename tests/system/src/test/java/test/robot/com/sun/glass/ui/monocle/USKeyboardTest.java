@@ -25,7 +25,7 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import com.sun.glass.ui.monocle.TestLog;
+import com.sun.glass.ui.monocle.TestLogShim;
 import test.robot.com.sun.glass.ui.monocle.TestApplication;
 import org.junit.After;
 import org.junit.Assert;
@@ -46,7 +46,7 @@ public class USKeyboardTest {
 
     @Before
     public void initDevice() {
-        TestLog.reset();
+        TestLogShim.reset();
         ui = new UInput();
     }
 
@@ -113,9 +113,9 @@ public class USKeyboardTest {
         if (shiftPressed) {
             ui.processLine("EV_KEY KEY_LEFTSHIFT 0");
             ui.processLine("EV_SYN");
-            TestLog.waitForLog("Key released: SHIFT");
+            TestLogShim.waitForLog("Key released: SHIFT");
         }
-        TestLog.waitForLog("Key typed: %0$c", new Object[] { c });
+        TestLogShim.waitForLog("Key typed: %0$c", new Object[] { c });
     }
 
     /**
@@ -169,7 +169,7 @@ public class USKeyboardTest {
         ui.processLine("EV_SYN");
         ui.processLine("EV_KEY KEY_CAPSLOCK 0");
         ui.processLine("EV_SYN");
-        TestLog.waitForLog("Key released: CAPS");
+        TestLogShim.waitForLog("Key released: CAPS");
     }
 
     /** Key presses and releases are allowed to overlap. RT-37425. */
@@ -190,32 +190,32 @@ public class USKeyboardTest {
 
         ui.processLine("EV_KEY KEY_1 1");
         ui.processLine("EV_SYN");
-        TestLog.waitForLog("Key pressed: DIGIT1");
-        TestLog.waitForLog("Key typed: 1");
+        TestLogShim.waitForLog("Key pressed: DIGIT1");
+        TestLogShim.waitForLog("Key typed: 1");
         ui.processLine("EV_KEY KEY_2 1");
         ui.processLine("EV_SYN");
-        TestLog.waitForLog("Key pressed: DIGIT2");
-        TestLog.waitForLog("Key typed: 2");
+        TestLogShim.waitForLog("Key pressed: DIGIT2");
+        TestLogShim.waitForLog("Key typed: 2");
         ui.processLine("EV_KEY KEY_1 0");
         ui.processLine("EV_SYN");
-        TestLog.waitForLog("Key released: DIGIT1");
+        TestLogShim.waitForLog("Key released: DIGIT1");
         ui.processLine("EV_KEY KEY_3 1");
         ui.processLine("EV_SYN");
-        TestLog.waitForLog("Key pressed: DIGIT3");
-        TestLog.waitForLog("Key typed: 3");
+        TestLogShim.waitForLog("Key pressed: DIGIT3");
+        TestLogShim.waitForLog("Key typed: 3");
         ui.processLine("EV_KEY KEY_2 0");
         ui.processLine("EV_SYN");
-        TestLog.waitForLog("Key released: DIGIT2");
+        TestLogShim.waitForLog("Key released: DIGIT2");
         ui.processLine("EV_KEY KEY_4 1");
         ui.processLine("EV_SYN");
-        TestLog.waitForLog("Key pressed: DIGIT4");
-        TestLog.waitForLog("Key typed: 4");
+        TestLogShim.waitForLog("Key pressed: DIGIT4");
+        TestLogShim.waitForLog("Key typed: 4");
         ui.processLine("EV_KEY KEY_3 0");
         ui.processLine("EV_SYN");
-        TestLog.waitForLog("Key released: DIGIT3");
+        TestLogShim.waitForLog("Key released: DIGIT3");
         ui.processLine("EV_KEY KEY_4 0");
         ui.processLine("EV_SYN");
-        TestLog.waitForLog("Key released: DIGIT3");
+        TestLogShim.waitForLog("Key released: DIGIT3");
     }
 
     @Test
@@ -233,43 +233,43 @@ public class USKeyboardTest {
 
         ui.processLine("EV_KEY KEY_BACKSPACE 1");
         ui.processLine("EV_SYN");
-        TestLog.waitForLog("Key pressed: BACK_SPACE");
+        TestLogShim.waitForLog("Key pressed: BACK_SPACE");
         ui.processLine("EV_KEY KEY_BACKSPACE 0");
         ui.processLine("EV_SYN");
-        TestLog.waitForLog("Key released: BACK_SPACE");
-        Assert.assertEquals(0l, TestLog.countLogContaining("Key typed"));
+        TestLogShim.waitForLog("Key released: BACK_SPACE");
+        Assert.assertEquals(0l, TestLogShim.countLogContaining("Key typed"));
 
-        TestLog.reset();
+        TestLogShim.reset();
         ui.processLine("EV_KEY KEY_LEFTSHIFT 1");
         ui.processLine("EV_SYN");
         ui.processLine("EV_KEY KEY_BACKSPACE 1");
         ui.processLine("EV_SYN");
-        TestLog.waitForLog("Key pressed: BACK_SPACE");
+        TestLogShim.waitForLog("Key pressed: BACK_SPACE");
         ui.processLine("EV_KEY KEY_BACKSPACE 0");
         ui.processLine("EV_SYN");
         ui.processLine("EV_KEY KEY_LEFTSHIFT 0");
         ui.processLine("EV_SYN");
-        TestLog.waitForLog("Key released: BACK_SPACE");
-        Assert.assertEquals(0l, TestLog.countLogContaining("Key typed"));
+        TestLogShim.waitForLog("Key released: BACK_SPACE");
+        Assert.assertEquals(0l, TestLogShim.countLogContaining("Key typed"));
 
-        TestLog.reset();
+        TestLogShim.reset();
         ui.processLine("EV_KEY KEY_CAPSLOCK 1");
         ui.processLine("EV_SYN");
         ui.processLine("EV_KEY KEY_CAPSLOCK 0");
         ui.processLine("EV_SYN");
         ui.processLine("EV_KEY KEY_BACKSPACE 1");
         ui.processLine("EV_SYN");
-        TestLog.waitForLog("Key pressed: BACK_SPACE");
+        TestLogShim.waitForLog("Key pressed: BACK_SPACE");
         ui.processLine("EV_KEY KEY_BACKSPACE 0");
         ui.processLine("EV_SYN");
         ui.processLine("EV_KEY KEY_CAPSLOCK 1");
         ui.processLine("EV_SYN");
         ui.processLine("EV_KEY KEY_CAPSLOCK 0");
         ui.processLine("EV_SYN");
-        TestLog.waitForLog("Key released: BACK_SPACE");
-        Assert.assertEquals(0l, TestLog.countLogContaining("Key typed"));
+        TestLogShim.waitForLog("Key released: BACK_SPACE");
+        Assert.assertEquals(0l, TestLogShim.countLogContaining("Key typed"));
 
-        TestLog.reset();
+        TestLogShim.reset();
         ui.processLine("EV_KEY KEY_CAPSLOCK 1");
         ui.processLine("EV_SYN");
         ui.processLine("EV_KEY KEY_CAPSLOCK 0");
@@ -278,7 +278,7 @@ public class USKeyboardTest {
         ui.processLine("EV_SYN");
         ui.processLine("EV_KEY KEY_BACKSPACE 1");
         ui.processLine("EV_SYN");
-        TestLog.waitForLog("Key pressed: BACK_SPACE");
+        TestLogShim.waitForLog("Key pressed: BACK_SPACE");
         ui.processLine("EV_KEY KEY_BACKSPACE 0");
         ui.processLine("EV_SYN");
         ui.processLine("EV_KEY KEY_LEFTSHIFT 0");
@@ -287,7 +287,7 @@ public class USKeyboardTest {
         ui.processLine("EV_SYN");
         ui.processLine("EV_KEY KEY_CAPSLOCK 0");
         ui.processLine("EV_SYN");
-        TestLog.waitForLog("Key released: BACK_SPACE");
-        Assert.assertEquals(0l, TestLog.countLogContaining("Key typed"));
+        TestLogShim.waitForLog("Key released: BACK_SPACE");
+        Assert.assertEquals(0l, TestLogShim.countLogContaining("Key typed"));
     }
 }

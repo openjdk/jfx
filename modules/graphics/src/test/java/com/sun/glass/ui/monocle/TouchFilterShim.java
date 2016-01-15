@@ -106,7 +106,7 @@ public class TouchFilterShim  implements TouchFilter {
         @Override
         public boolean filter(TouchState state) {
             for (int i = 0; i < state.getPointCount(); i++) {
-                TestLog.format("Touch point id=%d at %d,%d",
+                TestLogShim.format("Touch point id=%d at %d,%d",
                                state.getPoint(i).id,
                                state.getPoint(i).x,
                                state.getPoint(i).y);

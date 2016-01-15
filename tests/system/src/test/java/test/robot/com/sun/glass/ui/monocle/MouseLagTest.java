@@ -25,7 +25,7 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import com.sun.glass.ui.monocle.TestLog;
+import com.sun.glass.ui.monocle.TestLogShim;
 import test.robot.com.sun.glass.ui.monocle.TestApplication;
 import org.junit.After;
 import org.junit.Assert;
@@ -40,8 +40,8 @@ public class MouseLagTest {
     @Rule public TestName name = new TestName();
 
     @Before public void setUpScreen() throws Exception {
-        TestLog.reset();
-        TestLog.log(name.getMethodName());
+        TestLogShim.reset();
+        TestLogShim.log(name.getMethodName());
         TestApplication.showFullScreenScene();
         TestApplication.addMouseListeners();
         TestApplication.movePointerTo(300, 300);
@@ -104,12 +104,12 @@ public class MouseLagTest {
         long t = System.currentTimeMillis() - startTime;
         // Make sure events could be sent in the required time
         Assert.assertTrue("Took " + t + "ms to send 3000 events, of which "
-                          + TestLog.countLogContaining("moved")
+                          + TestLogShim.countLogContaining("moved")
                           + " were received",
                           t < 6000l * TestApplication.getTimeScale());
-        TestLog.log("Sent 3000 events in " + t + "ms");
+        TestLogShim.log("Sent 3000 events in " + t + "ms");
         // Make sure events could be delivered in the required time
-        TestLog.waitForLog("Mouse moved: 300, 310", 6000l - t);
+        TestLogShim.waitForLog("Mouse moved: 300, 310", 6000l - t);
     }
 
 }

@@ -25,7 +25,7 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import com.sun.glass.ui.monocle.TestLog;
+import com.sun.glass.ui.monocle.TestLogShim;
 import test.robot.com.sun.glass.ui.monocle.TestApplication;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
@@ -121,7 +121,7 @@ public class SwipeTest extends ParameterizedTestBase {
     public SwipeTest(TestTouchDevice device, SwipeTestCase testCase) throws Exception {
         super(device);
         this.testCase = testCase;
-        TestLog.format("Starting test with %s, %s", device, testCase);
+        TestLogShim.format("Starting test with %s, %s", device, testCase);
         TestApplication.getStage();
         TestRunnable.invokeAndWait(() -> {
             Assume.assumeTrue(
@@ -146,7 +146,7 @@ public class SwipeTest extends ParameterizedTestBase {
     public void addListener() throws Exception {
         TestApplication.getStage().getScene().addEventHandler(
                 GestureEvent.ANY,
-                e -> TestLog.format("%s at %.0f, %.0f",
+                e -> TestLogShim.format("%s at %.0f, %.0f",
                                     e.getEventType(),
                                     e.getScreenX(),
                                     e.getScreenY()));
@@ -233,16 +233,16 @@ public class SwipeTest extends ParameterizedTestBase {
         // release
         device.removePoint(p);
         device.sync();
-        TestLog.waitForLog("Mouse pressed: %d, %d", x, y);
-        TestLog.waitForLogContaining("Mouse released");
-        TestLog.waitForLogContaining("Mouse clicked");
-        TestLog.waitForLogContaining("Touch pressed");
-        TestLog.waitForLogContaining("Touch released");
+        TestLogShim.waitForLog("Mouse pressed: %d, %d", x, y);
+        TestLogShim.waitForLogContaining("Mouse released");
+        TestLogShim.waitForLogContaining("Mouse clicked");
+        TestLogShim.waitForLogContaining("Touch pressed");
+        TestLogShim.waitForLogContaining("Touch released");
         if (testCase.expectedSwipe == null) {
-            Assert.assertEquals(0, TestLog.countLogContaining("SWIPE"));
+            Assert.assertEquals(0, TestLogShim.countLogContaining("SWIPE"));
         } else {
-            TestLog.waitForLogContaining(testCase.expectedSwipe);
-            Assert.assertEquals(1, TestLog.countLogContaining("SWIPE"));
+            TestLogShim.waitForLogContaining(testCase.expectedSwipe);
+            Assert.assertEquals(1, TestLogShim.countLogContaining("SWIPE"));
         }
     }
 

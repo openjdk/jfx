@@ -25,7 +25,7 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import com.sun.glass.ui.monocle.TestLog;
+import com.sun.glass.ui.monocle.TestLogShim;
 import test.robot.com.sun.glass.ui.monocle.ParameterizedTestBase;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
@@ -76,7 +76,7 @@ public class RotateTest extends ParameterizedTestBase {
     @After
     public void releaseAll() throws Exception {
         if (device.getPressedPoints() == 2) {
-            TestLog.reset();
+            TestLogShim.reset();
             device.removePoint(p1);
             device.removePoint(p2);
             device.sync();
@@ -113,13 +113,13 @@ public class RotateTest extends ParameterizedTestBase {
         int totalAngle = angleStep;
         updateNewTouchPoint(startAngle, radius, x2, y2);
 
-        TestLog.reset();
+        TestLogShim.reset();
         p1 = device.addPoint(newX1, newY1);
         p2 = device.addPoint(x2, y2);
         device.sync();
         //verify pressing two fingers
-        TestLog.waitForLogContaining("TouchPoint: PRESSED %d, %d", newX1, newY1);
-        TestLog.waitForLogContaining("TouchPoint: PRESSED %d, %d", x2, y2);
+        TestLogShim.waitForLogContaining("TouchPoint: PRESSED %d, %d", newX1, newY1);
+        TestLogShim.waitForLogContaining("TouchPoint: PRESSED %d, %d", x2, y2);
 
         //saving previous coordinates:
         int previousX = newX1;
@@ -131,33 +131,33 @@ public class RotateTest extends ParameterizedTestBase {
                 > device.getTapRadius());
 
         //start the rotation
-        TestLog.reset();
+        TestLogShim.reset();
         device.setPoint(p1, newX1, newY1);
         device.sync();
-        TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", newX1, newY1);
-        TestLog.waitForLogContaining("TouchPoint: STATIONARY %d, %d", x2, y2);
+        TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d", newX1, newY1);
+        TestLogShim.waitForLogContaining("TouchPoint: STATIONARY %d, %d", x2, y2);
 
         if (Math.abs(angleStep) >= getRotateThreshold()) {
-            TestLog.waitForLogContaining("Rotation started, angle: " + ZERO_ANGLE
+            TestLogShim.waitForLogContaining("Rotation started, angle: " + ZERO_ANGLE
                 + ", total angle: " + ZERO_ANGLE + ", inertia value: false");
-            TestLog.waitForLogContaining("Rotation, angle: " + angleStep
+            TestLogShim.waitForLogContaining("Rotation, angle: " + angleStep
                 + ", total angle: " + totalAngle
                 + ", inertia value: false");
         } else {
-            Assert.assertEquals(0, TestLog.countLogContaining("Rotation started"));
-            Assert.assertEquals(0, TestLog.countLogContaining("Rotation, angle"));
+            Assert.assertEquals(0, TestLogShim.countLogContaining("Rotation started"));
+            Assert.assertEquals(0, TestLogShim.countLogContaining("Rotation, angle"));
         }
         boolean passedTheThreshold =false;
         if (numOfIterations >= 2) {
             for (int i = 2; i <= numOfIterations; i++) {
                 updateNewTouchPoint(angleStep * i + startAngle, radius, x2, y2);
                 totalAngle += angleStep;
-                TestLog.reset();
+                TestLogShim.reset();
                 device.setPoint(p1, newX1, newY1);
                 device.sync();
 
-                TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", newX1, newY1);
-                TestLog.waitForLogContaining("TouchPoint: STATIONARY %d, %d", x2, y2);
+                TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d", newX1, newY1);
+                TestLogShim.waitForLogContaining("TouchPoint: STATIONARY %d, %d", x2, y2);
 
                 String expectedLog;
                 if (Math.abs(angleStep) < getRotateThreshold()) {
@@ -180,37 +180,37 @@ public class RotateTest extends ParameterizedTestBase {
                             + ", total angle: " + totalAngle
                             + ", inertia value: false";
                 }
-                TestLog.waitForLogContaining(expectedLog);
+                TestLogShim.waitForLogContaining(expectedLog);
             }
         }
-        TestLog.reset();
+        TestLogShim.reset();
         device.removePoint(p1);
         device.removePoint(p2);
         device.sync();
         //verify fingers release
-        TestLog.waitForLogContaining("TouchPoint: RELEASED %d, %d", newX1, newY1);
-        TestLog.waitForLogContaining("TouchPoint: RELEASED %d, %d", x2, y2);
+        TestLogShim.waitForLogContaining("TouchPoint: RELEASED %d, %d", newX1, newY1);
+        TestLogShim.waitForLogContaining("TouchPoint: RELEASED %d, %d", x2, y2);
         if (Math.abs(totalAngle) >= getRotateThreshold()) {
-            TestLog.waitForLogContaining("Rotation finished, angle: " + ZERO_ANGLE
+            TestLogShim.waitForLogContaining("Rotation finished, angle: " + ZERO_ANGLE
                     + ", total angle: " + totalAngle + ", inertia value: false");
-            Assert.assertEquals(1, TestLog.countLogContaining("Rotation "
+            Assert.assertEquals(1, TestLogShim.countLogContaining("Rotation "
                     + "finished, " + "angle: " + ZERO_ANGLE
                     + ", total angle: " + totalAngle
                     + ", inertia value: false"));
         } else {
-            Assert.assertEquals(0, TestLog.countLogContaining("Rotation finished, "
+            Assert.assertEquals(0, TestLogShim.countLogContaining("Rotation finished, "
                     + "angle: " + ZERO_ANGLE + ", total angle: " + totalAngle
                     + ", inertia value: false"));
         }
-        if (TestLog.countLogContaining("Rotation finished") > 0) {
-            TestLog.waitForLogContainingSubstrings("Rotation", "inertia value: true");
+        if (TestLogShim.countLogContaining("Rotation finished") > 0) {
+            TestLogShim.waitForLogContainingSubstrings("Rotation", "inertia value: true");
         }
-        TestLog.reset();
+        TestLogShim.reset();
         p2 = device.addPoint(x2, y2);
         device.sync();
         device.removePoint(p2);
         device.sync();
-        TestLog.waitForLogContaining("TouchPoint: RELEASED %d, %d", x2, y2);
+        TestLogShim.waitForLogContaining("TouchPoint: RELEASED %d, %d", x2, y2);
     }
 
     private void Rotate(int radius, int x2, int y2, int angleStep,

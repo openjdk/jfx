@@ -25,7 +25,7 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import com.sun.glass.ui.monocle.TestLog;
+import com.sun.glass.ui.monocle.TestLogShim;
 import test.robot.com.sun.glass.ui.monocle.TestApplication;
 import javafx.geometry.Rectangle2D;
 import javafx.stage.Screen;
@@ -42,8 +42,8 @@ public class TouchLagTest {
     @Rule public TestName name = new TestName();
 
     @Before public void setUpScreen() throws Exception {
-        TestLog.reset();
-        TestLog.log(name.getMethodName());
+        TestLogShim.reset();
+        TestLogShim.log(name.getMethodName());
         TestApplication.showFullScreenScene();
         TestApplication.addTouchListeners();
         TestApplication.addMouseListeners();
@@ -99,7 +99,7 @@ public class TouchLagTest {
      */
     @Test
     public void testTouchLag() throws Exception {
-        TestLog.reset();
+        TestLogShim.reset();
         ui.processLine("EV_ABS ABS_X 300");
         ui.processLine("EV_ABS ABS_Y 300");
         ui.processLine("EV_KEY BTN_TOUCH 1");
@@ -107,7 +107,7 @@ public class TouchLagTest {
         ui.processLine("EV_ABS ABS_MT_POSITION_Y 300");
         ui.processLine("EV_SYN SYN_MT_REPORT 0");
         ui.processLine("EV_SYN SYN_REPORT 0");
-        TestLog.waitForLogContaining("TouchPoint: PRESSED", 3000l);
+        TestLogShim.waitForLogContaining("TouchPoint: PRESSED", 3000l);
         // pre-process move event data into a byte array. That way we don't
         // have to count the time it takes to convert string event descriptions
         // into a byte stream.
@@ -148,7 +148,7 @@ public class TouchLagTest {
         // Make sure events could be sent in the required time
         Assert.assertTrue("Took " + t + "ms to send 3000 events",
                           t < (long) (3000l * TestApplication.getTimeScale()));
-        TestLog.log("Sent 3000 events in " + t + "ms");
+        TestLogShim.log("Sent 3000 events in " + t + "ms");
         // move to 400, 410
         ui.writeValue(b, xs[0], 400);
         ui.writeValue(b, xs[1], 400);
@@ -160,7 +160,7 @@ public class TouchLagTest {
         ui.processLine("EV_SYN SYN_MT_REPORT 0");
         ui.processLine("EV_SYN SYN_REPORT 0");
         // Make sure events could be delivered in the required time
-        TestLog.waitForLog("Touch moved: 400, 410", 3000l - t);
+        TestLogShim.waitForLog("Touch moved: 400, 410", 3000l - t);
     }
 
     /** Make sure we can process 1000 multitouch move events per second. We are
@@ -168,7 +168,7 @@ public class TouchLagTest {
      */
     @Test
     public void testMultitouchLag() throws Exception {
-        TestLog.reset();
+        TestLogShim.reset();
         ui.processLine("EV_ABS ABS_X 300");
         ui.processLine("EV_ABS ABS_Y 300");
         ui.processLine("EV_KEY BTN_TOUCH 1");
@@ -176,7 +176,7 @@ public class TouchLagTest {
         ui.processLine("EV_ABS ABS_MT_POSITION_Y 300");
         ui.processLine("EV_SYN SYN_MT_REPORT 0");
         ui.processLine("EV_SYN SYN_REPORT 0");
-        TestLog.waitForLogContaining("TouchPoint: PRESSED", 3000);
+        TestLogShim.waitForLogContaining("TouchPoint: PRESSED", 3000);
         // pre-process move event data into a byte array. That way we don't
         // have to count the time it takes to convert string event descriptions
         // into a byte stream.
@@ -227,7 +227,7 @@ public class TouchLagTest {
         // Make sure events could be sent in the required time
         Assert.assertTrue("Took " + t + "ms to send 3000 events",
                           t < (long) (3000l * TestApplication.getTimeScale()));
-        TestLog.log("Sent 3000 events in " + t + "ms");
+        TestLogShim.log("Sent 3000 events in " + t + "ms");
         // move to (400, 410), (350, 360);
         ui.writeValue(b, baseX, 400);
         ui.writeValue(b, baseY, 410);
@@ -250,6 +250,6 @@ public class TouchLagTest {
         ui.processLine("EV_SYN SYN_MT_REPORT 0");
         ui.processLine("EV_SYN SYN_REPORT 0");
         // Make sure events could be delivered in the required time
-        TestLog.waitForLog("Touch released: 400, 410", 3000l - t);
+        TestLogShim.waitForLog("Touch released: 400, 410", 3000l - t);
     }
 }

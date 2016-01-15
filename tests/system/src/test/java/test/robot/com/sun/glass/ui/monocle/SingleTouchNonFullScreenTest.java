@@ -25,7 +25,7 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import com.sun.glass.ui.monocle.TestLog;
+import com.sun.glass.ui.monocle.TestLogShim;
 import test.robot.com.sun.glass.ui.monocle.TestApplication;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
@@ -74,7 +74,7 @@ public class SingleTouchNonFullScreenTest extends ParameterizedTestBase {
     {
         super(device, testCase.stageBounds);
         this.testCase = testCase;
-        TestLog.format("Starting test with %s, %s", device, testCase);
+        TestLogShim.format("Starting test with %s, %s", device, testCase);
     }
 
     @Parameterized.Parameters
@@ -93,20 +93,20 @@ public class SingleTouchNonFullScreenTest extends ParameterizedTestBase {
     public void addListener() throws Exception {
         TestApplication.getStage().getScene().addEventHandler(
                 TouchEvent.TOUCH_PRESSED,
-                e -> TestLog.format("Touch pressed [relative]: %.0f, %.0f",
+                e -> TestLogShim.format("Touch pressed [relative]: %.0f, %.0f",
                         e.getTouchPoint().getX(),
                         e.getTouchPoint().getY())
         );
 
         TestApplication.getStage().getScene().addEventHandler(
                 TouchEvent.TOUCH_RELEASED,
-                        e -> TestLog.format("Touch released [relative]: %.0f, %.0f",
+                        e -> TestLogShim.format("Touch released [relative]: %.0f, %.0f",
                                 e.getTouchPoint().getX(),
                                 e.getTouchPoint().getY()));
 
         TestApplication.getStage().getScene().addEventHandler(
                 TouchEvent.TOUCH_MOVED,
-                        e -> TestLog.format("Touch moved [relative]: %.0f, %.0f",
+                        e -> TestLogShim.format("Touch moved [relative]: %.0f, %.0f",
                                 e.getTouchPoint().getX(),
                                 e.getTouchPoint().getY()));
 
@@ -128,17 +128,17 @@ public class SingleTouchNonFullScreenTest extends ParameterizedTestBase {
         // release
         device.removePoint(p);
         device.sync();
-        TestLog.waitForLog("Mouse pressed: %d, %d", x1, y1);
-        TestLog.waitForLog("Mouse released: %d, %d", x1, y1);
-        TestLog.waitForLog("Mouse clicked: %d, %d", x1, y1);
-        TestLog.waitForLog("Touch pressed [relative]: %d, %d", relX1, relY1);
-        TestLog.waitForLog("Touch pressed: %d, %d", x1, y1);
-        TestLog.waitForLog("Touch released [relative]: %d, %d", relX1, relY1);
-        TestLog.waitForLog("Touch released: %d, %d", x1, y1);
+        TestLogShim.waitForLog("Mouse pressed: %d, %d", x1, y1);
+        TestLogShim.waitForLog("Mouse released: %d, %d", x1, y1);
+        TestLogShim.waitForLog("Mouse clicked: %d, %d", x1, y1);
+        TestLogShim.waitForLog("Touch pressed [relative]: %d, %d", relX1, relY1);
+        TestLogShim.waitForLog("Touch pressed: %d, %d", x1, y1);
+        TestLogShim.waitForLog("Touch released [relative]: %d, %d", relX1, relY1);
+        TestLogShim.waitForLog("Touch released: %d, %d", x1, y1);
 
         // Check that the touch event has one touch point.
         Assert.assertEquals("Expected only one touch point", 0,
-                            TestLog.getLog().stream()
+                            TestLogShim.getLog().stream()
                             .filter(s -> s.startsWith("Touch points count"))
                             .filter(s -> !s.startsWith("Touch points count: [1]")).count());
     }
@@ -165,19 +165,19 @@ public class SingleTouchNonFullScreenTest extends ParameterizedTestBase {
         // release
         device.removePoint(p);
         device.sync();
-        TestLog.waitForLog("Mouse pressed: %d, %d", x1, y1);
-        TestLog.waitForLog("Mouse dragged: %d, %d", x2, y2);
-        TestLog.waitForLog("Mouse released: %d, %d", x2, y2);
-        TestLog.waitForLog("Mouse clicked: %d, %d", x2, y2);
-        TestLog.waitForLog("Touch pressed [relative]: %d, %d", relX1, relY1);
-        TestLog.waitForLog("Touch pressed: %d, %d", x1, y1);
-        TestLog.waitForLog("Touch moved [relative]: %d, %d", relX2, relY2);
-        TestLog.waitForLog("Touch moved: %d, %d", x2, y2);
-        TestLog.waitForLog("Touch released [relative]: %d, %d", relX2, relY2);
-        TestLog.waitForLog("Touch released: %d, %d", x2, y2);
+        TestLogShim.waitForLog("Mouse pressed: %d, %d", x1, y1);
+        TestLogShim.waitForLog("Mouse dragged: %d, %d", x2, y2);
+        TestLogShim.waitForLog("Mouse released: %d, %d", x2, y2);
+        TestLogShim.waitForLog("Mouse clicked: %d, %d", x2, y2);
+        TestLogShim.waitForLog("Touch pressed [relative]: %d, %d", relX1, relY1);
+        TestLogShim.waitForLog("Touch pressed: %d, %d", x1, y1);
+        TestLogShim.waitForLog("Touch moved [relative]: %d, %d", relX2, relY2);
+        TestLogShim.waitForLog("Touch moved: %d, %d", x2, y2);
+        TestLogShim.waitForLog("Touch released [relative]: %d, %d", relX2, relY2);
+        TestLogShim.waitForLog("Touch released: %d, %d", x2, y2);
         // Check that the touch event has one touch point.
         Assert.assertEquals("Expected only one touch point", 0,
-                            TestLog.getLog().stream()
+                            TestLogShim.getLog().stream()
                             .filter(s -> s.startsWith("Touch points count"))
                             .filter(s -> !s.startsWith("Touch points count: [1]")).count());
     }

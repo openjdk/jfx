@@ -25,7 +25,7 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import com.sun.glass.ui.monocle.TestLog;
+import com.sun.glass.ui.monocle.TestLogShim;
 import test.robot.com.sun.glass.ui.monocle.TestApplication;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
@@ -51,10 +51,10 @@ public class DoubleClickTest extends ParameterizedTestBase {
     public void testDoubleClick1() throws Exception {
         int x = (int) Math.round(width / 2.0);
         int y = (int) Math.round(height / 2.0);
-        TestApplication.getStage().getScene().setOnMouseClicked((e) -> TestLog.format("Mouse clicked: %d, %d: clickCount %d",
+        TestApplication.getStage().getScene().setOnMouseClicked((e) -> TestLogShim.format("Mouse clicked: %d, %d: clickCount %d",
                        (int) e.getScreenX(), (int) e.getScreenY(),
                        e.getClickCount()));
-        TestLog.reset();
+        TestLogShim.reset();
         int p = device.addPoint(x, y);
         device.sync();
         device.removePoint(p);
@@ -63,8 +63,8 @@ public class DoubleClickTest extends ParameterizedTestBase {
         device.sync();
         device.removePoint(p);
         device.sync();
-        TestLog.waitForLog("Mouse clicked: " + x + ", " + y + ": clickCount 1", 3000l);
-        TestLog.waitForLog("Mouse clicked: " + x + ", " + y + ": clickCount 2", 3000l);
+        TestLogShim.waitForLog("Mouse clicked: " + x + ", " + y + ": clickCount 1", 3000l);
+        TestLogShim.waitForLog("Mouse clicked: " + x + ", " + y + ": clickCount 2", 3000l);
     }
 
     @Test
@@ -74,10 +74,10 @@ public class DoubleClickTest extends ParameterizedTestBase {
         int x2 = x1 + device.getTapRadius();
         int y2 = y1 + device.getTapRadius();
 
-        TestApplication.getStage().getScene().setOnMouseClicked((e) -> TestLog.format("Mouse clicked: %d, %d: clickCount %d",
+        TestApplication.getStage().getScene().setOnMouseClicked((e) -> TestLogShim.format("Mouse clicked: %d, %d: clickCount %d",
                        (int) e.getScreenX(), (int) e.getScreenY(),
                        e.getClickCount()));
-        TestLog.reset();
+        TestLogShim.reset();
         int p = device.addPoint(x1, y1);
         device.sync();
         device.removePoint(p);
@@ -86,8 +86,8 @@ public class DoubleClickTest extends ParameterizedTestBase {
         device.sync();
         device.removePoint(p);
         device.sync();
-        TestLog.waitForLog("Mouse clicked: " + x1 + ", " + y1 + ": clickCount 1", 3000l);
-        TestLog.waitForLog("Mouse clicked: " + x2 + ", " + y2 + ": clickCount 2", 3000l);
+        TestLogShim.waitForLog("Mouse clicked: " + x1 + ", " + y1 + ": clickCount 1", 3000l);
+        TestLogShim.waitForLog("Mouse clicked: " + x2 + ", " + y2 + ": clickCount 2", 3000l);
     }
 
 }

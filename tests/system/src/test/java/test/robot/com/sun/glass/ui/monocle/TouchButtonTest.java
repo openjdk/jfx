@@ -25,7 +25,7 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import com.sun.glass.ui.monocle.TestLog;
+import com.sun.glass.ui.monocle.TestLogShim;
 import test.robot.com.sun.glass.ui.monocle.TestApplication;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
@@ -67,11 +67,11 @@ public class TouchButtonTest extends ParameterizedTestBase {
         button.setOnMousePressed((e) -> button.requestFocus());
         if (setListeners) {
             button.addEventHandler(MouseEvent.ANY, e ->
-                TestLog.log(e.getEventType().getName() +": " 
+                TestLogShim.log(e.getEventType().getName() +": " 
                                                      + (int) e.getScreenX()
                                                      + ", " + (int) e.getScreenY()));
             button.focusedProperty().addListener((observable, oldValue, newValue) ->
-                    TestLog.log(button.getId() + " isFocused=" + newValue));
+                    TestLogShim.log(button.getId() + " isFocused=" + newValue));
         }
 
         return button;
@@ -125,7 +125,7 @@ public class TouchButtonTest extends ParameterizedTestBase {
     @Test
     public void tapOutAndInButton() throws Exception {
         tapOutSideButton();
-        TestLog.reset();
+        TestLogShim.reset();
         Point2D clickAt = tapInsideButton(button1);
         waitForMouseClickAt(clickAt);
         waitForFocusGainOn("button1");
@@ -134,7 +134,7 @@ public class TouchButtonTest extends ParameterizedTestBase {
     @Test
     public void tapOutInAndOutButton() throws Exception {
         tapOutSideButton();
-        TestLog.reset();
+        TestLogShim.reset();
         Point2D clickAt = tapInsideButton(button1);
         waitForMouseClickAt(clickAt);
         waitForFocusGainOn("button1");
@@ -147,11 +147,11 @@ public class TouchButtonTest extends ParameterizedTestBase {
     @Test
     public void tapInAndOutLoop() throws Exception {
         tapOutSideButton();
-        TestLog.reset();
+        TestLogShim.reset();
         for (int i = 0 ; i < 2 ; i++) {
             tapOutSideButton();
             tapInsideButton(button3);
-            TestLog.reset();
+            TestLogShim.reset();
             Point2D clickAt = tapInsideButton(button1);
             waitForFocusGainOn("button1");
             waitForMouseEnteredAt(clickAt);
@@ -160,14 +160,14 @@ public class TouchButtonTest extends ParameterizedTestBase {
             tapOutSideButton();
             tapInsideButton(button3);
             waitForFocusLostOn("button1");
-            TestLog.reset();
+            TestLogShim.reset();
 
             clickAt = tapInsideButton(button2);
             waitForFocusGainOn("button2");
             waitForMouseEnteredAt(clickAt);
 
             waitForMouseClickAt(clickAt);
-            TestLog.reset();
+            TestLogShim.reset();
             tapOutSideButton();
             tapInsideButton(button3);
             waitForFocusLostOn("button2");
@@ -201,8 +201,8 @@ public class TouchButtonTest extends ParameterizedTestBase {
         //release inside the button
         device.removePoint(p);
         device.sync();
-        TestLog.waitForLogContaining("MOUSE_CLICKED:", 3000l);
-        TestLog.waitForLogContaining("MOUSE_RELEASED:", 3000l);
+        TestLogShim.waitForLogContaining("MOUSE_CLICKED:", 3000l);
+        TestLogShim.waitForLogContaining("MOUSE_RELEASED:", 3000l);
     }
 
     /**
@@ -239,7 +239,7 @@ public class TouchButtonTest extends ParameterizedTestBase {
         //release outside the button
         device.removePoint(p);
         device.sync();
-        TestLog.waitForLogContaining("MOUSE_CLICKED:", 3000l);
+        TestLogShim.waitForLogContaining("MOUSE_CLICKED:", 3000l);
     }
 
     @Test
@@ -256,7 +256,7 @@ public class TouchButtonTest extends ParameterizedTestBase {
         for (int i = 0; i < 5; i++) {
             Point2D clickAt = tapInsideButton(buttonRef.get());
             waitForMouseClickAt(clickAt);
-            TestLog.reset();
+            TestLogShim.reset();
         }
     }
     
@@ -268,7 +268,7 @@ public class TouchButtonTest extends ParameterizedTestBase {
                     new BoundingBox(0, 0,
                                     button.getBoundsInParent().getWidth(),
                                     button.getBoundsInParent().getHeight())));
-            TestLog.log("Bounds for " + button.getId() + " are " + ref.get());
+            TestLogShim.log("Bounds for " + button.getId() + " are " + ref.get());
         });
         return ref.get();
     }
@@ -289,7 +289,7 @@ public class TouchButtonTest extends ParameterizedTestBase {
         //release
         device.removePoint(p);
         device.sync();
-        TestLog.waitForLog("Mouse clicked: %.0f, %.0f", clickAt.getX(), clickAt.getY());
+        TestLogShim.waitForLog("Mouse clicked: %.0f, %.0f", clickAt.getX(), clickAt.getY());
         return clickAt;
     }
 
@@ -303,23 +303,23 @@ public class TouchButtonTest extends ParameterizedTestBase {
         //release
         device.removePoint(p);
         device.sync();
-        TestLog.waitForLog("Mouse clicked: %.0f, %.0f", x, y);
+        TestLogShim.waitForLog("Mouse clicked: %.0f, %.0f", x, y);
     }
 
     public void waitForMouseClickAt(Point2D clickAt) throws Exception{
-        TestLog.waitForLog("MOUSE_CLICKED: %d, %d",
+        TestLogShim.waitForLog("MOUSE_CLICKED: %d, %d",
                            Math.round(clickAt.getX()),
                            Math.round(clickAt.getY()));
     }
 
     public void waitForMouseEnteredAt(Point2D clickAt) throws Exception{
-        TestLog.waitForLog("MOUSE_ENTERED: %d, %d",
+        TestLogShim.waitForLog("MOUSE_ENTERED: %d, %d",
                            Math.round(clickAt.getX()),
                            Math.round(clickAt.getY()));
     }
 
     public void waitForFocus(String id, boolean focusState) throws Exception {
-        TestLog.waitForLog("%s isFocused=%b", id, focusState);
+        TestLogShim.waitForLog("%s isFocused=%b", id, focusState);
     }
 
     public void waitForFocusGainOn(String id) throws Exception{

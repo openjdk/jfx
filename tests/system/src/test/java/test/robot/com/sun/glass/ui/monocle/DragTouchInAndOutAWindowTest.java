@@ -25,7 +25,7 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import com.sun.glass.ui.monocle.TestLog;
+import com.sun.glass.ui.monocle.TestLogShim;
 import test.robot.com.sun.glass.ui.monocle.TestApplication;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
@@ -69,7 +69,7 @@ public class DragTouchInAndOutAWindowTest extends ParameterizedTestBase {
         device.sync();
         device.removePoint(p);
         device.sync();
-        TestLog.reset();
+        TestLogShim.reset();
     }
 
     /**
@@ -105,9 +105,9 @@ public class DragTouchInAndOutAWindowTest extends ParameterizedTestBase {
         //check that tested window didn't recive any notifications
 
         //wait for results and make sure no event received
-        Assert.assertEquals(0, TestLog.countLogContaining("TouchPoint: PRESSED"));
-        Assert.assertEquals(0, TestLog.countLogContaining("TouchPoint: MOVED"));
-        Assert.assertEquals(0, TestLog.countLogContaining("TouchPoint: RELEASED"));
+        Assert.assertEquals(0, TestLogShim.countLogContaining("TouchPoint: PRESSED"));
+        Assert.assertEquals(0, TestLogShim.countLogContaining("TouchPoint: MOVED"));
+        Assert.assertEquals(0, TestLogShim.countLogContaining("TouchPoint: RELEASED"));
     }
 
     @Test
@@ -132,13 +132,13 @@ public class DragTouchInAndOutAWindowTest extends ParameterizedTestBase {
         }
 
         //wait for results
-        TestLog.waitForLogContaining("TouchPoint: PRESSED", 3000);
+        TestLogShim.waitForLogContaining("TouchPoint: PRESSED", 3000);
 
         //release outside the window
         device.removePoint(p);
         device.sync();
         //check that we get the event
-        TestLog.waitForLogContaining("TouchPoint: RELEASED", 3000);
+        TestLogShim.waitForLogContaining("TouchPoint: RELEASED", 3000);
     }
 
      @Test
@@ -164,8 +164,8 @@ public class DragTouchInAndOutAWindowTest extends ParameterizedTestBase {
         }
 
         //wait for results
-        TestLog.waitForLogContaining("TouchPoint: PRESSED", 3000);
-        TestLog.waitForLogContaining("TouchPoint: MOVED", 3000);
+        TestLogShim.waitForLogContaining("TouchPoint: PRESSED", 3000);
+        TestLogShim.waitForLogContaining("TouchPoint: MOVED", 3000);
 
         //continue from where we stopped and drag point back to window
         for (; i >= windowMiddleWidth  ; i -= 10) {
@@ -177,7 +177,7 @@ public class DragTouchInAndOutAWindowTest extends ParameterizedTestBase {
         device.removePoint(p);
         device.sync();
         //check that we get the event
-        TestLog.waitForLogContaining("TouchPoint: RELEASED", 3000);
+        TestLogShim.waitForLogContaining("TouchPoint: RELEASED", 3000);
     }
 
      @Test
@@ -222,9 +222,9 @@ public class DragTouchInAndOutAWindowTest extends ParameterizedTestBase {
         device.sync();
 
         //wait for results and make sure no event received
-        Assert.assertEquals(0, TestLog.countLogContaining("TouchPoint: PRESSED"));
-        Assert.assertEquals(0, TestLog.countLogContaining("TouchPoint: MOVED"));
-        Assert.assertEquals(0, TestLog.countLogContaining("TouchPoint: RELEASED"));
+        Assert.assertEquals(0, TestLogShim.countLogContaining("TouchPoint: PRESSED"));
+        Assert.assertEquals(0, TestLogShim.countLogContaining("TouchPoint: MOVED"));
+        Assert.assertEquals(0, TestLogShim.countLogContaining("TouchPoint: RELEASED"));
     }
     @Ignore("RT-38482")
     @Test
@@ -282,14 +282,14 @@ public class DragTouchInAndOutAWindowTest extends ParameterizedTestBase {
         device.removePoint(p);
         device.sync();
         //verify events press/release were received
-        TestLog.waitForLogContaining("TouchPoint: PRESSED %d, %d", x3, y3);
-        TestLog.waitForLogContaining("TouchPoint: RELEASED %d, %d", x3, y3);
+        TestLogShim.waitForLogContaining("TouchPoint: PRESSED %d, %d", x3, y3);
+        TestLogShim.waitForLogContaining("TouchPoint: RELEASED %d, %d", x3, y3);
 
         //Verify press/release events were received only once
-        Assert.assertEquals(1, TestLog.countLogContaining("TouchPoint: PRESSED"));
-        Assert.assertEquals(1, TestLog.countLogContaining("TouchPoint: RELEASED"));
+        Assert.assertEquals(1, TestLogShim.countLogContaining("TouchPoint: PRESSED"));
+        Assert.assertEquals(1, TestLogShim.countLogContaining("TouchPoint: RELEASED"));
 
         //make sure no move event was received
-        Assert.assertEquals(0, TestLog.countLogContaining("TouchPoint: MOVED"));
+        Assert.assertEquals(0, TestLogShim.countLogContaining("TouchPoint: MOVED"));
     }
 }

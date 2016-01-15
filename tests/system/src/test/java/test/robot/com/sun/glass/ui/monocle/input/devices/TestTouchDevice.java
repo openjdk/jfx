@@ -26,7 +26,7 @@
 package test.robot.com.sun.glass.ui.monocle.input.devices;
 
 import test.robot.com.sun.glass.ui.monocle.TestApplication;
-import com.sun.glass.ui.monocle.TestLog;
+import com.sun.glass.ui.monocle.TestLogShim;
 import javafx.geometry.Rectangle2D;
 
 import java.util.HashMap;
@@ -103,7 +103,7 @@ public abstract class TestTouchDevice extends TestDevice {
         if (point == -1) {
             throw new IllegalStateException("Cannot add any more points");
         }
-        TestLog.format("TestTouchDevice: addPoint %d, %.0f, %.0f\n",
+        TestLogShim.format("TestTouchDevice: addPoint %d, %.0f, %.0f\n",
                        point, x, y);
         xs[point] = x;
         ys[point] = y;
@@ -115,7 +115,7 @@ public abstract class TestTouchDevice extends TestDevice {
     }
 
     public void removePoint(int point) {
-        TestLog.format("TestTouchDevice: removePoint %d\n", point);
+        TestLogShim.format("TestTouchDevice: removePoint %d\n", point);
         if (!points[point]) {
             throw new IllegalStateException("Point not pressed");
         }
@@ -125,7 +125,7 @@ public abstract class TestTouchDevice extends TestDevice {
     }
 
     public void setPoint(int point, double x, double y) {
-        TestLog.format("TestTouchDevice: setPoint %d, %.0f, %.0f\n",
+        TestLogShim.format("TestTouchDevice: setPoint %d, %.0f, %.0f\n",
                        point, x, y);
         if (!points[point]) {
             throw new IllegalStateException("Point not pressed");
@@ -137,7 +137,7 @@ public abstract class TestTouchDevice extends TestDevice {
     }
 
     public void setAndRemovePoint(int point, double x, double y) {
-        TestLog.format("TestTouchDevice: setAndRemovePoint %d, %.0f, %.0f\n",
+        TestLogShim.format("TestTouchDevice: setAndRemovePoint %d, %.0f, %.0f\n",
                        point, x, y);
         setPoint(point, x, y);
         removePoint(point);
@@ -145,13 +145,13 @@ public abstract class TestTouchDevice extends TestDevice {
 
     @Override
     public void sync() {
-        TestLog.log("TestTouchDevice: sync");
+        TestLogShim.log("TestTouchDevice: sync");
         super.sync();
         previousPressedPoints = pressedPoints;
     }
 
     public void resendStateAndSync() {
-        TestLog.log("TestTouchDevice: sync");
+        TestLogShim.log("TestTouchDevice: sync");
         sync();
     }
 

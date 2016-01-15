@@ -25,7 +25,7 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import com.sun.glass.ui.monocle.TestLog;
+import com.sun.glass.ui.monocle.TestLogShim;
 import test.robot.com.sun.glass.ui.monocle.ParameterizedTestBase;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
@@ -55,12 +55,12 @@ public class ZoomTest extends ParameterizedTestBase {
         int point1X = (int) Math.round(width * 0.1);
         int point1Y = (int) Math.round(height * 0.3);
         Assert.assertEquals(0, device.getPressedPoints());
-        TestLog.reset();
+        TestLogShim.reset();
         int p = device.addPoint(point1X, point1Y);
         device.sync();
         device.removePoint(p);
         device.sync();
-        TestLog.waitForLog("Mouse clicked: %d, %d", point1X, point1Y);
+        TestLogShim.waitForLog("Mouse clicked: %d, %d", point1X, point1Y);
     }
 
     /**
@@ -85,77 +85,77 @@ public class ZoomTest extends ParameterizedTestBase {
         }
         Assume.assumeTrue(((y2 - y1) * threshold) > smallStep);
 
-        TestLog.reset();
+        TestLogShim.reset();
         //tap two fingers
         int p1 = device.addPoint(x1, y1);
         int p2 = device.addPoint(x2, y2);
         device.sync();
 
         //verify pressing two fingers
-        TestLog.waitForLogContaining("TouchPoint: PRESSED %d, %d", x1, y1);
-        TestLog.waitForLogContaining("TouchPoint: PRESSED %d, %d", x2, y2);
+        TestLogShim.waitForLogContaining("TouchPoint: PRESSED %d, %d", x1, y1);
+        TestLogShim.waitForLogContaining("TouchPoint: PRESSED %d, %d", x2, y2);
 
         //drag upper finger up in order move but not enough for zooming
         int newy1 = y1 - smallStep;
         int newy2 = 0;
-        TestLog.reset();
+        TestLogShim.reset();
         device.setPoint(p1, x1, newy1);
         device.sync();
 
-        TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x1, newy1);
-        TestLog.waitForLogContaining("TouchPoint: STATIONARY %d, %d", x2, y2);
-        Assert.assertEquals(0, TestLog.countLogContaining("Zoom started"));
+        TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d", x1, newy1);
+        TestLogShim.waitForLogContaining("TouchPoint: STATIONARY %d, %d", x2, y2);
+        Assert.assertEquals(0, TestLogShim.countLogContaining("Zoom started"));
 
         //drag upper finger up and lower down in order to zoom in
         newy1 = y1 - step;
         newy2 = y2 + step;
-        TestLog.reset();
+        TestLogShim.reset();
         device.setPoint(p1, x1, newy1);
         device.setPoint(p2, x2, newy2);
         device.sync();
         double factor0 = 1.0;
         double factor1 = (double) (newy2 - newy1)/(y2 - y1);
 
-        TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x1, newy1);
-        TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x2, newy2);
-        TestLog.waitForLogContaining("Zoom started, factor: " + factor0
+        TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d", x1, newy1);
+        TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d", x2, newy2);
+        TestLogShim.waitForLogContaining("Zoom started, factor: " + factor0
                 + ", total factor: " + factor0  + ", inertia value: false");
-        TestLog.waitForLogContaining("Zoom, factor: " + factor1
+        TestLogShim.waitForLogContaining("Zoom, factor: " + factor1
                 + ", total factor: " + factor1 + ", inertia value: false");
 
         step = step * 2;
         newy1 = y1 - step;
         newy2 = y2 + step;
-        TestLog.reset();
+        TestLogShim.reset();
         device.setPoint(p1, x1, newy1);
         device.setPoint(p2, x2, newy2);
         device.sync();
         double factor2 = (double) (newy2 - newy1)/(y2 - y1 + step);
 
-        TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x1, newy1);
-        TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x2, newy2);
-        TestLog.waitForLogContaining("Zoom, factor: " + factor2
+        TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d", x1, newy1);
+        TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d", x2, newy2);
+        TestLogShim.waitForLogContaining("Zoom, factor: " + factor2
                 + ", total factor: " + (factor1 * factor2)
                 + ", inertia value: false");
 
         //release first finger
-        TestLog.reset();
+        TestLogShim.reset();
         device.removePoint(p1);
         device.sync();
-        TestLog.waitForLogContaining("TouchPoint: RELEASED %d, %d", x1, newy1);
-        TestLog.waitForLogContaining("TouchPoint: STATIONARY %d, %d", x2, newy2);
-        TestLog.waitForLogContaining("Zoom finished, factor: " + factor0
+        TestLogShim.waitForLogContaining("TouchPoint: RELEASED %d, %d", x1, newy1);
+        TestLogShim.waitForLogContaining("TouchPoint: STATIONARY %d, %d", x2, newy2);
+        TestLogShim.waitForLogContaining("Zoom finished, factor: " + factor0
                 + ", total factor: " + (factor1 * factor2)
                 + ", inertia value: false");
         //release second finger
-        TestLog.reset();
+        TestLogShim.reset();
         device.removePoint(p2);
         device.sync();
-        TestLog.waitForLogContaining("Touch released: %d, %d", x2, newy2);
-        TestLog.waitForLogContaining("TouchPoint: RELEASED %d, %d", x2, newy2);
-        TestLog.waitForLog("Mouse released: %d, %d", x2, newy2);
-        TestLog.waitForLog("Mouse clicked: %d, %d", x2, newy2);
-        Assert.assertEquals(1, TestLog.countLogContaining("Mouse clicked: "
+        TestLogShim.waitForLogContaining("Touch released: %d, %d", x2, newy2);
+        TestLogShim.waitForLogContaining("TouchPoint: RELEASED %d, %d", x2, newy2);
+        TestLogShim.waitForLog("Mouse released: %d, %d", x2, newy2);
+        TestLogShim.waitForLog("Mouse clicked: %d, %d", x2, newy2);
+        Assert.assertEquals(1, TestLogShim.countLogContaining("Mouse clicked: "
                 + x2 +", " + newy2));
         tapToStopInertia();
     }
@@ -171,70 +171,70 @@ public class ZoomTest extends ParameterizedTestBase {
         int y2 = (int) Math.round(height * 0.7);
         int step = (int) Math.round(height * 0.1);
 
-        TestLog.reset();
+        TestLogShim.reset();
         //tap two fingers
         int p1 = device.addPoint(x1, y1);
         int p2 = device.addPoint(x2, y2);
         device.sync();
 
         //verify pressing two fingers
-        TestLog.waitForLogContaining("TouchPoint: PRESSED %d, %d", x1, y1);
-        TestLog.waitForLogContaining("TouchPoint: PRESSED %d, %d", x2, y2);
+        TestLogShim.waitForLogContaining("TouchPoint: PRESSED %d, %d", x1, y1);
+        TestLogShim.waitForLogContaining("TouchPoint: PRESSED %d, %d", x2, y2);
 
         //drag upper finger up and lower down in order to zoom in
         int newy1 = y1 - step;
         int newy2 = y2 + step;
-        TestLog.reset();
+        TestLogShim.reset();
         device.setPoint(p1, x1, newy1);
         device.setPoint(p2, x2, newy2);
         device.sync();
         double factor0 = 1.0;
         double factor1 = (double) (newy2 - newy1)/(y2 - y1);
 
-        TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x1, newy1);
-        TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x2, newy2);
-        TestLog.waitForLogContaining("Zoom started, factor: " + factor0
+        TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d", x1, newy1);
+        TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d", x2, newy2);
+        TestLogShim.waitForLogContaining("Zoom started, factor: " + factor0
                 + ", total factor: " + factor0 + ", inertia value: false");
-        TestLog.waitForLogContaining("Zoom, factor: " + factor1
+        TestLogShim.waitForLogContaining("Zoom, factor: " + factor1
                 + ", total factor: " + factor1  + ", inertia value: false");
 
         step = step * 2;
         newy1 = y1 - step;
         newy2 = y2 + step;
-        TestLog.reset();
+        TestLogShim.reset();
         device.setPoint(p1, x1, newy1);
         device.setPoint(p2, x2, newy2);
         device.sync();
         double factor2 = (double) (newy2 - newy1)/(y2 - y1 + step);
 
-        TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x1, newy1);
-        TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x2, newy2);
-        TestLog.waitForLogContaining("Zoom, factor: " + factor2
+        TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d", x1, newy1);
+        TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d", x2, newy2);
+        TestLogShim.waitForLogContaining("Zoom, factor: " + factor2
                 + ", total factor: " + (factor1 * factor2)
                 + ", inertia value: false");
 
         //release first finger
-        TestLog.reset();
+        TestLogShim.reset();
         device.removePoint(p1);
         device.sync();
-        TestLog.waitForLogContaining("TouchPoint: RELEASED %d, %d",
+        TestLogShim.waitForLogContaining("TouchPoint: RELEASED %d, %d",
                 x1, newy1);
-        TestLog.waitForLogContaining("TouchPoint: STATIONARY %d, %d",
+        TestLogShim.waitForLogContaining("TouchPoint: STATIONARY %d, %d",
                 x2, newy2);
-        TestLog.waitForLogContaining("Zoom finished, factor: " + factor0
+        TestLogShim.waitForLogContaining("Zoom finished, factor: " + factor0
                 + ", total factor: " + (factor1 * factor2)
                 + ", inertia value: false");
 
         //release second finger
-        TestLog.reset();
+        TestLogShim.reset();
         device.removePoint(p2);
         device.sync();
-        TestLog.waitForLogContaining("Touch released: %d, %d", x2, newy2);
-        TestLog.waitForLogContaining("TouchPoint: RELEASED %d, %d",
+        TestLogShim.waitForLogContaining("Touch released: %d, %d", x2, newy2);
+        TestLogShim.waitForLogContaining("TouchPoint: RELEASED %d, %d",
                 x2, newy2);
-        TestLog.waitForLog("Mouse released: %d, %d", x2, newy2);
-        TestLog.waitForLog("Mouse clicked: %d, %d", x2, newy2);
-        Assert.assertEquals(1, TestLog.countLogContaining("Mouse clicked: "
+        TestLogShim.waitForLog("Mouse released: %d, %d", x2, newy2);
+        TestLogShim.waitForLog("Mouse clicked: %d, %d", x2, newy2);
+        Assert.assertEquals(1, TestLogShim.countLogContaining("Mouse clicked: "
                 + x2 +", " + newy2));
         tapToStopInertia();
     }
@@ -252,17 +252,17 @@ public class ZoomTest extends ParameterizedTestBase {
         double factor0 = 1.0;
 
         //tap two fingers
-        TestLog.reset();
+        TestLogShim.reset();
         int p1 = device.addPoint(x1, y1);
         int p2 = device.addPoint(x2, y2);
         device.sync();
 
         //verify pressing two fingers
-        TestLog.waitForLogContaining("TouchPoint: PRESSED %d, %d", x1, y1);
-        TestLog.waitForLogContaining("TouchPoint: PRESSED %d, %d", x2, y2);
+        TestLogShim.waitForLogContaining("TouchPoint: PRESSED %d, %d", x1, y1);
+        TestLogShim.waitForLogContaining("TouchPoint: PRESSED %d, %d", x2, y2);
 
         //drag upper finger down and lower - up, in order to zoom out
-        TestLog.reset();
+        TestLogShim.reset();
         int newy1 = y1 + step;
         int newy2 = y2 - step;
         device.setPoint(p1, x1, newy1);
@@ -270,14 +270,14 @@ public class ZoomTest extends ParameterizedTestBase {
         device.sync();
         double factor1 = (double) (newy2 - newy1)/(y2 - y1);
 
-        TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x1, newy1);
-        TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x2, newy2);
-        TestLog.waitForLogContaining("Zoom started, factor: " + factor0
+        TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d", x1, newy1);
+        TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d", x2, newy2);
+        TestLogShim.waitForLogContaining("Zoom started, factor: " + factor0
                 + ", total factor: " + factor0 + ", inertia value: false");
-        TestLog.waitForLogContaining("Zoom, factor: " + factor1
+        TestLogShim.waitForLogContaining("Zoom, factor: " + factor1
                 + ", total factor: " + factor1 + ", inertia value: false");
 
-        TestLog.reset();
+        TestLogShim.reset();
         y1 = y1 + step;
         y2 = y2 - step;
         newy1 = y1 + step;
@@ -288,13 +288,13 @@ public class ZoomTest extends ParameterizedTestBase {
         device.sync();
         double factor2 = (double) (newy2 - newy1)/(y2 - y1);
 
-        TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x1, newy1);
-        TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x2, newy2);
-        TestLog.waitForLogContaining("Zoom, factor: " + factor2
+        TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d", x1, newy1);
+        TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d", x2, newy2);
+        TestLogShim.waitForLogContaining("Zoom, factor: " + factor2
                 + ", total factor: " + (factor1 * factor2)
                 + ", inertia value: false");
 
-        TestLog.reset();
+        TestLogShim.reset();
         y1 = y1 + step;
         y2 = y2 - step;
         newy1 = y1 + step;
@@ -305,34 +305,34 @@ public class ZoomTest extends ParameterizedTestBase {
         device.sync();
         double factor3 = (double) (newy2 - newy1)/(y2 - y1);
 
-        TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x1, newy1);
-        TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x2, newy2);
-        TestLog.waitForLogContaining("Zoom, factor: " + factor3
+        TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d", x1, newy1);
+        TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d", x2, newy2);
+        TestLogShim.waitForLogContaining("Zoom, factor: " + factor3
                 + ", total factor: " + (factor1 * factor2 * factor3)
                 + ", inertia value: false");
 
         //release first finger
-        TestLog.reset();
+        TestLogShim.reset();
         device.removePoint(p1);
         device.sync();
-        TestLog.waitForLogContaining("TouchPoint: RELEASED %d, %d",
+        TestLogShim.waitForLogContaining("TouchPoint: RELEASED %d, %d",
                 x1, newy1);
-        TestLog.waitForLogContaining("TouchPoint: STATIONARY %d, %d",
+        TestLogShim.waitForLogContaining("TouchPoint: STATIONARY %d, %d",
                 x2, newy2);
-        TestLog.waitForLogContaining("Zoom finished, factor: " + factor0
+        TestLogShim.waitForLogContaining("Zoom finished, factor: " + factor0
                 + ", total factor: " + (factor1 * factor2 * factor3)
                 + ", inertia value: false");
 
         //release second finger
-        TestLog.reset();
+        TestLogShim.reset();
         device.removePoint(p2);
         device.sync();
-        TestLog.waitForLogContaining("Touch released: %d, %d", x2, newy2);
-        TestLog.waitForLogContaining("TouchPoint: RELEASED %d, %d",
+        TestLogShim.waitForLogContaining("Touch released: %d, %d", x2, newy2);
+        TestLogShim.waitForLogContaining("TouchPoint: RELEASED %d, %d",
                 x2, newy2);
-        TestLog.waitForLog("Mouse released: %d, %d", x2, newy2);
-        TestLog.waitForLog("Mouse clicked: %d, %d", x2, newy2);
-        Assert.assertEquals(1, TestLog.countLogContaining("Mouse clicked: "
+        TestLogShim.waitForLog("Mouse released: %d, %d", x2, newy2);
+        TestLogShim.waitForLog("Mouse clicked: %d, %d", x2, newy2);
+        Assert.assertEquals(1, TestLogShim.countLogContaining("Mouse clicked: "
                 + x2 +", " + newy2));
         tapToStopInertia();
     }
@@ -360,30 +360,30 @@ public class ZoomTest extends ParameterizedTestBase {
         Assume.assumeTrue(((y2 - y1) * threshold) > smallStep);
         double factor0 = 1.0;
 
-        TestLog.reset();
+        TestLogShim.reset();
         //tap two fingers
         int p1 = device.addPoint(x1, y1);
         int p2 = device.addPoint(x2, y2);
         device.sync();
 
         //verify pressing two fingers
-        TestLog.waitForLogContaining("TouchPoint: PRESSED %d, %d", x1, y1);
-        TestLog.waitForLogContaining("TouchPoint: PRESSED %d, %d", x2, y2);
+        TestLogShim.waitForLogContaining("TouchPoint: PRESSED %d, %d", x1, y1);
+        TestLogShim.waitForLogContaining("TouchPoint: PRESSED %d, %d", x2, y2);
 
         //drag upper finger down in order move but not enough for zooming
-        TestLog.reset();
+        TestLogShim.reset();
         int newy1 = y1 + smallStep;
         int newy2 = 0;
 
         device.setPoint(p1, x1, newy1);
         device.sync();
 
-        TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x1, newy1);
-        TestLog.waitForLogContaining("TouchPoint: STATIONARY %d, %d", x2, y2);
-        Assert.assertEquals(0, TestLog.countLogContaining("Zoom started"));
+        TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d", x1, newy1);
+        TestLogShim.waitForLogContaining("TouchPoint: STATIONARY %d, %d", x2, y2);
+        Assert.assertEquals(0, TestLogShim.countLogContaining("Zoom started"));
 
         //drag upper finger up and lower down in order to zoom in
-        TestLog.reset();
+        TestLogShim.reset();
         newy1 = y1 + step;
         newy2 = y2 - step;
         device.setPoint(p1, x1, newy1);
@@ -391,13 +391,13 @@ public class ZoomTest extends ParameterizedTestBase {
         device.sync();
         double factor1 = (double) (newy2 - newy1)/(y2 - y1);
 
-        TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x1, newy1);
-        TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x2, newy2);
-        TestLog.waitForLogContaining("Zoom started, factor: " + factor0
+        TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d", x1, newy1);
+        TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d", x2, newy2);
+        TestLogShim.waitForLogContaining("Zoom started, factor: " + factor0
                 + ", total factor: " + factor0 + ", inertia value: false");
-        TestLog.waitForLogContaining("Zoom, factor: " + factor1
+        TestLogShim.waitForLogContaining("Zoom, factor: " + factor1
                 + ", total factor: " + factor1 + ", inertia value: false");
-        TestLog.reset();
+        TestLogShim.reset();
         y1 = y1 + step;
         y2 = y2 - step;
         newy1 = y1 + step;
@@ -407,13 +407,13 @@ public class ZoomTest extends ParameterizedTestBase {
         device.sync();
         double factor2 = (double) (newy2 - newy1)/(y2 - y1);
 
-        TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x1, newy1);
-        TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x2, newy2);
-        TestLog.waitForLogContaining("Zoom, factor: " + factor2
+        TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d", x1, newy1);
+        TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d", x2, newy2);
+        TestLogShim.waitForLogContaining("Zoom, factor: " + factor2
                 + ", total factor: " + (factor1 * factor2)
                 + ", inertia value: false");
 
-        TestLog.reset();
+        TestLogShim.reset();
         y1 = y1 + step;
         y2 = y2 - step;
         newy1 = y1 + step;
@@ -423,34 +423,34 @@ public class ZoomTest extends ParameterizedTestBase {
         device.sync();
         double factor3 = (double) (newy2 - newy1)/(y2 - y1);
 
-        TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x1, newy1);
-        TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x2, newy2);
-        TestLog.waitForLogContaining("Zoom, factor: " + factor3
+        TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d", x1, newy1);
+        TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d", x2, newy2);
+        TestLogShim.waitForLogContaining("Zoom, factor: " + factor3
                 + ", total factor: " + (factor1 * factor2 * factor3)
                 + ", inertia value: false");
 
         //release first finger
-        TestLog.reset();
+        TestLogShim.reset();
         device.removePoint(p1);
         device.sync();
-        TestLog.waitForLogContaining("TouchPoint: RELEASED %d, %d",
+        TestLogShim.waitForLogContaining("TouchPoint: RELEASED %d, %d",
                 x1, newy1);
-        TestLog.waitForLogContaining("TouchPoint: STATIONARY %d, %d",
+        TestLogShim.waitForLogContaining("TouchPoint: STATIONARY %d, %d",
                 x2, newy2);
-        TestLog.waitForLogContaining("Zoom finished, factor: " + factor0
+        TestLogShim.waitForLogContaining("Zoom finished, factor: " + factor0
                 + ", total factor: " + (factor1 * factor2 * factor3)
                 + ", inertia value: false");
 
         //release second finger
-        TestLog.reset();
+        TestLogShim.reset();
         device.removePoint(p2);
         device.sync();
-        TestLog.waitForLogContaining("Touch released: %d, %d", x2, newy2);
-        TestLog.waitForLogContaining("TouchPoint: RELEASED %d, %d",
+        TestLogShim.waitForLogContaining("Touch released: %d, %d", x2, newy2);
+        TestLogShim.waitForLogContaining("TouchPoint: RELEASED %d, %d",
                 x2, newy2);
-        TestLog.waitForLog("Mouse released: %d, %d", x2, newy2);
-        TestLog.waitForLog("Mouse clicked: %d, %d", x2, newy2);
-        Assert.assertEquals(1, TestLog.countLogContaining("Mouse clicked: "
+        TestLogShim.waitForLog("Mouse released: %d, %d", x2, newy2);
+        TestLogShim.waitForLog("Mouse clicked: %d, %d", x2, newy2);
+        Assert.assertEquals(1, TestLogShim.countLogContaining("Mouse clicked: "
                 + x2 +", " + newy2));
         tapToStopInertia();
     }

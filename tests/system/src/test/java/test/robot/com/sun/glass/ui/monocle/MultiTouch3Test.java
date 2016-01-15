@@ -25,7 +25,7 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import com.sun.glass.ui.monocle.TestLog;
+import com.sun.glass.ui.monocle.TestLogShim;
 import test.robot.com.sun.glass.ui.monocle.ParameterizedTestBase;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
@@ -67,93 +67,93 @@ public class MultiTouch3Test extends ParameterizedTestBase {
         // first finger
         int p1 = device.addPoint(x1, y1);
         device.sync();
-        TestLog.waitForLogContaining("TouchPoint: PRESSED %d, %d", x1, y1);
+        TestLogShim.waitForLogContaining("TouchPoint: PRESSED %d, %d", x1, y1);
         // add a second finger
         int p2 = device.addPoint(x2, y2);
         device.sync();
-        TestLog.waitForLogContaining("TouchPoint: STATIONARY %d, %d", x1, y1);
-        TestLog.waitForLogContaining("TouchPoint: PRESSED %d, %d", x2, y2);
+        TestLogShim.waitForLogContaining("TouchPoint: STATIONARY %d, %d", x1, y1);
+        TestLogShim.waitForLogContaining("TouchPoint: PRESSED %d, %d", x2, y2);
         // drag both fingers
         for (int i = 1; i < 10; i++) {
-            TestLog.reset();
+            TestLogShim.reset();
             device.setPoint(p1, x1 + dx * i, y1 + dy * i);
             device.setPoint(p2, x2 + dx * i, y2 + dy * i);
             device.sync();
-            TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d",
+            TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d",
                                          x1 + dx * i, y1 + dy * i);
-            TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d",
+            TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d",
                                          x2 + dx * i, y2 + dy * i);
         }
         for (int i = 8; i >= 0; i--) {
-            TestLog.reset();
+            TestLogShim.reset();
             device.setPoint(p1, x1 + dx * i, y1 + dy * i);
             device.setPoint(p2, x2 + dx * i, y2 + dy * i);
             device.sync();
-            TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d",
+            TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d",
                                          x1 + dx * i, y1 + dy * i);
-            TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d",
+            TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d",
                                          x2 + dx * i, y2 + dy * i);
         }
-        TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x1, y1);
-        TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x2, y2);
+        TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d", x1, y1);
+        TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d", x2, y2);
         // add a third finger
         int p3 = device.addPoint(x3, y3);
         device.sync();
-        TestLog.waitForLogContaining("TouchPoint: STATIONARY %d, %d", x1, y1);
-        TestLog.waitForLogContaining("TouchPoint: STATIONARY %d, %d", x2, y2);
-        TestLog.waitForLogContaining("TouchPoint: PRESSED %d, %d", x3, y3);
+        TestLogShim.waitForLogContaining("TouchPoint: STATIONARY %d, %d", x1, y1);
+        TestLogShim.waitForLogContaining("TouchPoint: STATIONARY %d, %d", x2, y2);
+        TestLogShim.waitForLogContaining("TouchPoint: PRESSED %d, %d", x3, y3);
 
         // drag three fingers
         for (int i = 1; i < 10; i++) {
-            TestLog.reset();
+            TestLogShim.reset();
             device.setPoint(p1, x1 + dx * i, y1 + dy * i);
             device.setPoint(p2, x2 + dx * i, y2 + dy * i);
             device.setPoint(p3, x3 + dx * i, y3 + dy * i);
             device.sync();
-            TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d",
+            TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d",
                                          x1 + dx * i, y1 + dy * i);
-            TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d",
+            TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d",
                                          x2 + dx * i, y2 + dy * i);
-            TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d",
+            TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d",
                                          x3 + dx * i, y3 + dy * i);
         }
         for (int i = 8; i >= 0; i--) {
-            TestLog.reset();
+            TestLogShim.reset();
             device.setPoint(p1, x1 + dx * i, y1 + dy * i);
             device.setPoint(p2, x2 + dx * i, y2 + dy * i);
             device.setPoint(p3, x3 + dx * i, y3 + dy * i);
             device.sync();
-            TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d",
+            TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d",
                                          x1 + dx * i, y1 + dy * i);
-            TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d",
+            TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d",
                                          x2 + dx * i, y2 + dy * i);
-            TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d",
+            TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d",
                                          x3 + dx * i, y3 + dy * i);
         }
-        TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x1, y1);
-        TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x2, y2);
-        TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x3, y3);
+        TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d", x1, y1);
+        TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d", x2, y2);
+        TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d", x3, y3);
 
         //release first finger
-        TestLog.reset();
+        TestLogShim.reset();
         device.removePoint(p1);
         device.sync();
-        TestLog.waitForLogContaining("Touch released: %d, %d", x1, y1);
-        TestLog.waitForLogContaining("TouchPoint: RELEASED %d, %d", x1, y1);
-        TestLog.waitForLogContaining("TouchPoint: STATIONARY %d, %d", x2, y2);
-        TestLog.waitForLogContaining("TouchPoint: STATIONARY %d, %d", x3, y3);
+        TestLogShim.waitForLogContaining("Touch released: %d, %d", x1, y1);
+        TestLogShim.waitForLogContaining("TouchPoint: RELEASED %d, %d", x1, y1);
+        TestLogShim.waitForLogContaining("TouchPoint: STATIONARY %d, %d", x2, y2);
+        TestLogShim.waitForLogContaining("TouchPoint: STATIONARY %d, %d", x3, y3);
         //release second finger
-        TestLog.reset();
+        TestLogShim.reset();
         device.removePoint(p2);
         device.sync();
-        TestLog.waitForLogContaining("Touch released: %d, %d", x2, y2);
-        TestLog.waitForLogContaining("TouchPoint: RELEASED %d, %d", x2, y2);
-        TestLog.waitForLogContaining("TouchPoint: STATIONARY %d, %d", x3, y3);
+        TestLogShim.waitForLogContaining("Touch released: %d, %d", x2, y2);
+        TestLogShim.waitForLogContaining("TouchPoint: RELEASED %d, %d", x2, y2);
+        TestLogShim.waitForLogContaining("TouchPoint: STATIONARY %d, %d", x3, y3);
         //release third finger
         device.removePoint(p3);
         device.sync();
-        TestLog.waitForLog("Touch released: %d, %d", x3, y3);
-        TestLog.waitForLogContaining("TouchPoint: RELEASED %d, %d", x3, y3);
+        TestLogShim.waitForLog("Touch released: %d, %d", x3, y3);
+        TestLogShim.waitForLogContaining("TouchPoint: RELEASED %d, %d", x3, y3);
     }
 
 }

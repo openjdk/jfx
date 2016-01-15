@@ -25,7 +25,7 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import com.sun.glass.ui.monocle.TestLog;
+import com.sun.glass.ui.monocle.TestLogShim;
 import test.robot.com.sun.glass.ui.monocle.TestApplication;
 import javafx.geometry.Rectangle2D;
 import javafx.stage.Screen;
@@ -44,8 +44,8 @@ public class SimpleMouseTest {
     @Rule public TestName name = new TestName();
 
     @Before public void setUpScreen() throws Exception {
-        TestLog.reset();
-        TestLog.log(name.getMethodName());
+        TestLogShim.reset();
+        TestLogShim.log(name.getMethodName());
         TestApplication.showFullScreenScene();
         TestApplication.addMouseListeners();
         TestApplication.movePointerTo(300, 300);
@@ -82,7 +82,7 @@ public class SimpleMouseTest {
         ui.processLine("EV_REL REL_X -100");
         ui.processLine("EV_REL REL_Y -50");
         ui.processLine("EV_SYN");
-        TestLog.waitForLog("Mouse moved: 200, 250", 3000);
+        TestLogShim.waitForLog("Mouse moved: 200, 250", 3000);
     }
 
     @Test
@@ -94,35 +94,35 @@ public class SimpleMouseTest {
         ui.processLine("EV_SYN");
         ui.processLine("EV_KEY BTN_LEFT 0");
         ui.processLine("EV_SYN");
-        TestLog.waitForLog("Mouse pressed: 300, 300", 3000);
-        TestLog.waitForLog("Mouse dragged: 200, 250", 3000);
-        TestLog.waitForLog("Mouse released: 200, 250", 3000);
+        TestLogShim.waitForLog("Mouse pressed: 300, 300", 3000);
+        TestLogShim.waitForLog("Mouse dragged: 200, 250", 3000);
+        TestLogShim.waitForLog("Mouse released: 200, 250", 3000);
     }
 
     @Test
     public void testWheel() throws Exception {
         TestApplication.getStage().getScene().setOnScroll(
-                (e) -> TestLog.format("Scroll: %.0g",
+                (e) -> TestLogShim.format("Scroll: %.0g",
                                       Math.signum(e.getDeltaY())));
         ui.processLine("EV_SYN");
         ui.processLine("EV_REL REL_WHEEL 1");
         ui.processLine("EV_SYN");
         ui.processLine("EV_REL REL_WHEEL 0");
         ui.processLine("EV_SYN");
-        TestLog.waitForLog("Scroll: 1");
-        TestLog.reset();
+        TestLogShim.waitForLog("Scroll: 1");
+        TestLogShim.reset();
 
         ui.processLine("EV_REL REL_WHEEL -1");
         ui.processLine("EV_SYN");
         ui.processLine("EV_REL REL_WHEEL 0");
         ui.processLine("EV_SYN");
-        TestLog.waitForLog("Scroll: -1");
+        TestLogShim.waitForLog("Scroll: -1");
     }
 
     @Test
     public void testWheelSequence() throws Exception {
         TestApplication.getStage().getScene().setOnScroll(
-                (e) -> TestLog.format("Scroll: %.0g",
+                (e) -> TestLogShim.format("Scroll: %.0g",
                                       Math.signum(e.getDeltaY())));
         ui.processLine("EV_REL REL_WHEEL 1");
         ui.processLine("EV_SYN");
@@ -133,10 +133,10 @@ public class SimpleMouseTest {
         new TestRunnable() {
             @Override
             public void test() {
-                Assert.assertEquals(3, TestLog.countLogContaining("Scroll: 1"));
+                Assert.assertEquals(3, TestLogShim.countLogContaining("Scroll: 1"));
             }
         }.invokeAndWaitUntilSuccess(3000l);
-        TestLog.reset();
+        TestLogShim.reset();
 
         ui.processLine("EV_REL REL_WHEEL -1");
         ui.processLine("EV_SYN");
@@ -147,7 +147,7 @@ public class SimpleMouseTest {
         new TestRunnable() {
             @Override
             public void test() {
-                Assert.assertEquals(3, TestLog.countLogContaining("Scroll: -1"));
+                Assert.assertEquals(3, TestLogShim.countLogContaining("Scroll: -1"));
             }
         }.invokeAndWaitUntilSuccess(3000l);
     }
@@ -158,9 +158,9 @@ public class SimpleMouseTest {
         ui.processLine("EV_SYN SYN_REPORT 0");
         ui.processLine("EV_KEY BTN_LEFT 0");
         ui.processLine("EV_SYN SYN_REPORT 0");
-        TestLog.waitForLogContaining("Mouse pressed: 300, 300");
-        TestLog.waitForLogContaining("Mouse released: 300, 300");
-        TestLog.waitForLogContaining("Mouse clicked: 300, 300");
+        TestLogShim.waitForLogContaining("Mouse pressed: 300, 300");
+        TestLogShim.waitForLogContaining("Mouse released: 300, 300");
+        TestLogShim.waitForLogContaining("Mouse clicked: 300, 300");
     }
 
     @Test
@@ -169,9 +169,9 @@ public class SimpleMouseTest {
         ui.processLine("EV_SYN SYN_REPORT 0");
         ui.processLine("EV_KEY BTN_RIGHT 0");
         ui.processLine("EV_SYN SYN_REPORT 0");
-        TestLog.waitForLogContaining("Mouse pressed: 300, 300");
-        TestLog.waitForLogContaining("Mouse released: 300, 300");
-        TestLog.waitForLogContaining("Mouse clicked: 300, 300");
+        TestLogShim.waitForLogContaining("Mouse pressed: 300, 300");
+        TestLogShim.waitForLogContaining("Mouse released: 300, 300");
+        TestLogShim.waitForLogContaining("Mouse clicked: 300, 300");
     }
 
     @Test
@@ -179,7 +179,7 @@ public class SimpleMouseTest {
         Assume.assumeTrue(TestApplication.isMonocle());
         TestApplication.showFullScreenScene();
         TestApplication.addMouseListeners();
-        TestLog.reset();
+        TestLogShim.reset();
         Rectangle2D r = Screen.getPrimary().getBounds();
         final int width = (int) r.getWidth();
         final int height = (int) r.getHeight();
@@ -194,12 +194,12 @@ public class SimpleMouseTest {
         ui.processLine("EV_REL REL_X " + -width);
         ui.processLine("EV_REL REL_Y " + -height);
         ui.processLine("EV_SYN");
-        TestLog.waitForLog("Mouse moved: 0, 0");
+        TestLogShim.waitForLog("Mouse moved: 0, 0");
         // Move to x1, y1
         ui.processLine("EV_REL REL_X " + x1);
         ui.processLine("EV_REL REL_Y " + y1);
         ui.processLine("EV_SYN");
-        TestLog.waitForLog("Mouse moved: %d, %d", x1, y1);
+        TestLogShim.waitForLog("Mouse moved: %d, %d", x1, y1);
         // Push events while on the event thread, making sure that events
         // will be buffered up and enabling filtering to take place
         TestRunnable.invokeAndWait(() -> {
@@ -217,12 +217,12 @@ public class SimpleMouseTest {
             ui.processLine("EV_SYN");
         });
         // Check that the initial point reported is correct
-        TestLog.waitForLog("Mouse pressed: %d, %d", x1, y1);
+        TestLogShim.waitForLog("Mouse pressed: %d, %d", x1, y1);
         // Check that the final point reported is correct
-        TestLog.waitForLog("Mouse released: %d, %d", x3, y3);
-        TestLog.waitForLog("Mouse dragged: %d, %d", x3, y3);
+        TestLogShim.waitForLog("Mouse released: %d, %d", x3, y3);
+        TestLogShim.waitForLog("Mouse dragged: %d, %d", x3, y3);
         // Check that moves in between were filtered
-        Assert.assertTrue(TestLog.countLogContaining("Mouse dragged") <= (x2 - x1) / 10);
+        Assert.assertTrue(TestLogShim.countLogContaining("Mouse dragged") <= (x2 - x1) / 10);
     }
 
     @Test
@@ -230,7 +230,7 @@ public class SimpleMouseTest {
         Assume.assumeTrue(TestApplication.isMonocle());
         TestApplication.showFullScreenScene();
         TestApplication.addMouseListeners();
-        TestLog.reset();
+        TestLogShim.reset();
         Rectangle2D r = Screen.getPrimary().getBounds();
         final int width = (int) r.getWidth();
         final int height = (int) r.getHeight();
@@ -245,12 +245,12 @@ public class SimpleMouseTest {
         ui.processLine("EV_REL REL_X " + -width);
         ui.processLine("EV_REL REL_Y " + -height);
         ui.processLine("EV_SYN");
-        TestLog.waitForLog("Mouse moved: 0, 0");
+        TestLogShim.waitForLog("Mouse moved: 0, 0");
         // Move to x1, y1
         ui.processLine("EV_REL REL_X " + x1);
         ui.processLine("EV_REL REL_Y " + y1);
         ui.processLine("EV_SYN");
-        TestLog.waitForLog("Mouse moved: %d, %d", x1, y1);
+        TestLogShim.waitForLog("Mouse moved: %d, %d", x1, y1);
         // Push events while on the event thread, making sure that events
         // will be buffered up and enabling filtering to take place
         TestRunnable.invokeAndWait(() -> {
@@ -264,13 +264,13 @@ public class SimpleMouseTest {
             ui.processLine("EV_SYN");
         });
         // Check that the final point reported is correct
-        TestLog.waitForLog("Mouse moved: %d, %d", x3, y3);
+        TestLogShim.waitForLog("Mouse moved: %d, %d", x3, y3);
         // Check that moves in between were filtered
-        Assert.assertTrue(TestLog.countLogContaining("Mouse moved") <= (x2 - x1) / 10);
+        Assert.assertTrue(TestLogShim.countLogContaining("Mouse moved") <= (x2 - x1) / 10);
         // Check that we didn't get any other events
-        Assert.assertEquals(0, TestLog.countLogContaining("Mouse pressed"));
-        Assert.assertEquals(0, TestLog.countLogContaining("Mouse released"));
-        Assert.assertEquals(0, TestLog.countLogContaining("Mouse clicked"));
+        Assert.assertEquals(0, TestLogShim.countLogContaining("Mouse pressed"));
+        Assert.assertEquals(0, TestLogShim.countLogContaining("Mouse released"));
+        Assert.assertEquals(0, TestLogShim.countLogContaining("Mouse clicked"));
     }
 
     @Test
@@ -294,24 +294,24 @@ public class SimpleMouseTest {
         ui.processLine("EV_REL REL_X " + (x2 - x1));
         ui.processLine("EV_REL REL_Y " + (y2 - y1));
         ui.processLine("EV_SYN");
-        TestLog.waitForLog("Mouse dragged: %d, %d", x2, y2);
+        TestLogShim.waitForLog("Mouse dragged: %d, %d", x2, y2);
         // drag to x3, y3
         ui.processLine("EV_REL REL_X " + (x3 - x2));
         ui.processLine("EV_REL REL_Y " + (y3 - y2));
         ui.processLine("EV_SYN");
-        TestLog.waitForLog("Mouse dragged: %d, %d", x3, y3);
-        TestLog.waitForLog("Mouse exited: %d, %d", x3, y3);
+        TestLogShim.waitForLog("Mouse dragged: %d, %d", x3, y3);
+        TestLogShim.waitForLog("Mouse exited: %d, %d", x3, y3);
         // drag to x2, y2
         ui.processLine("EV_REL REL_X " + (x2 - x3));
         ui.processLine("EV_REL REL_Y " + (y2 - y3));
         ui.processLine("EV_SYN");
-        TestLog.waitForLog("Mouse dragged: %d, %d", x2, y2);
-        TestLog.waitForLog("Mouse entered: %d, %d", x2, y2);
+        TestLogShim.waitForLog("Mouse dragged: %d, %d", x2, y2);
+        TestLogShim.waitForLog("Mouse entered: %d, %d", x2, y2);
         // release
         ui.processLine("EV_KEY BTN_LEFT 0");
         ui.processLine("EV_SYN");
-        TestLog.waitForLog("Mouse released: %d, %d", x2, y2);
-        TestLog.waitForLog("Mouse clicked: %d, %d", x2, y2);
+        TestLogShim.waitForLog("Mouse released: %d, %d", x2, y2);
+        TestLogShim.waitForLog("Mouse clicked: %d, %d", x2, y2);
     }
 
     @Test
@@ -336,17 +336,17 @@ public class SimpleMouseTest {
         ui.processLine("EV_REL REL_X " + (x2 - x1));
         ui.processLine("EV_REL REL_Y " + (y2 - y1));
         ui.processLine("EV_SYN");
-        TestLog.waitForLog("Mouse dragged: %d, %d", x2, y2);
+        TestLogShim.waitForLog("Mouse dragged: %d, %d", x2, y2);
         // drag to x3, y3
         ui.processLine("EV_REL REL_X " + (x3 - x2));
         ui.processLine("EV_REL REL_Y " + (y3 - y2));
         ui.processLine("EV_SYN");
-        TestLog.waitForLog("Mouse dragged: %d, %d", x3, y3);
-        TestLog.waitForLog("Mouse exited: %d, %d", x3, y3);
+        TestLogShim.waitForLog("Mouse dragged: %d, %d", x3, y3);
+        TestLogShim.waitForLog("Mouse exited: %d, %d", x3, y3);
         // release
         ui.processLine("EV_KEY BTN_LEFT 0");
         ui.processLine("EV_SYN");
-        TestLog.waitForLog("Mouse released: %d, %d", x3, y3);
+        TestLogShim.waitForLog("Mouse released: %d, %d", x3, y3);
     }
 
 }

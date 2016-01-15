@@ -25,14 +25,12 @@
 
 package com.sun.glass.ui.monocle;
 
-import junit.framework.AssertionFailedError;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Formatter;
 import java.util.List;
 
-public class TestLog {
+public class TestLogShim {
 
     private static final boolean verbose = Boolean.getBoolean("verbose");
     private static final double timeScale = Double.parseDouble(
@@ -44,6 +42,12 @@ public class TestLog {
     private static final Object lock = new Object();
 
     private static long startTime = System.currentTimeMillis();
+
+    public static class TestLogAssertion extends Exception {
+        public TestLogAssertion(String message) {
+            super(message);
+        }
+    }
 
     public static void log(String s) {
         synchronized (lock) {
@@ -155,31 +159,31 @@ public class TestLog {
         return checkLog(new String[] {s}, 0, false) != null;
     }
 
-    public static void assertLog(String s) {
+    public static void assertLog(String s) throws TestLogAssertion {
         synchronized (lock) {
             if (!checkLog(s)) {
                 String err = "No line '" + s + "' in log";
                 if (verbose) {
                     System.out.println(err);
                 }
-                throw new AssertionFailedError(err);
+                throw new TestLogAssertion(err);
             }
         }
     }
 
-    public static void assertLogContaining(String s) {
+    public static void assertLogContaining(String s) throws TestLogAssertion {
         synchronized (lock) {
             if (!checkLogContaining(s)) {
                 String err = "No line containing '" + s + "' in log";
                 if (verbose) {
                     System.out.println(err);
                 }
-                throw new AssertionFailedError(err);
+                throw new TestLogAssertion(err);
             }
         }
     }
 
-    private static String waitForLog(String[] s, long timeout, boolean exact) throws InterruptedException {
+    private static String waitForLog(String[] s, long timeout, boolean exact) throws InterruptedException, TestLogAssertion {
         long startTime = System.currentTimeMillis();
         long timeNow = startTime;
         long endTime = timeNow + (long) (timeout * timeScale);
@@ -204,7 +208,7 @@ public class TestLog {
                         }
                     }
                     System.out.println(message);
-                    throw new AssertionFailedError(message);
+                    throw new TestLogAssertion(message);
                 }
             }
         }
@@ -225,25 +229,25 @@ public class TestLog {
         return line;
     }
 
-    public static String waitForLog(String s, long timeout) throws InterruptedException {
+    public static String waitForLog(String s, long timeout) throws InterruptedException, TestLogAssertion {
         return waitForLog(new String [] {s}, timeout, true);
     }
 
-    public static String waitForLogContaining(String s, long timeout) throws InterruptedException {
+    public static String waitForLogContaining(String s, long timeout) throws InterruptedException, TestLogAssertion {
         return waitForLog(new String [] {s}, timeout, false);
     }
 
-    public static String waitForLog(String format, Object... args) throws InterruptedException {
+    public static String waitForLog(String format, Object... args) throws InterruptedException, TestLogAssertion {
         return waitForLog(new Formatter().format(format, args).toString(),
                           DEFAULT_TIMEOUT);
     }
 
-    public static String waitForLogContaining(String format, Object... args) throws InterruptedException {
+    public static String waitForLogContaining(String format, Object... args) throws InterruptedException, TestLogAssertion {
         return waitForLogContaining(new Formatter().format(format, args).toString(),
                           DEFAULT_TIMEOUT);
     }
 
-    public static String waitForLogContainingSubstrings(String... s) throws InterruptedException {
+    public static String waitForLogContainingSubstrings(String... s) throws InterruptedException, TestLogAssertion {
         return waitForLog(s, DEFAULT_TIMEOUT, false);
     }
 }

@@ -25,7 +25,7 @@ package test.robot.com.sun.glass.ui.monocle;
  * questions.
  */
 
-import com.sun.glass.ui.monocle.TestLog;
+import com.sun.glass.ui.monocle.TestLogShim;
 import test.robot.com.sun.glass.ui.monocle.TestApplication;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
@@ -61,37 +61,37 @@ public class DragAndDropTest extends ParameterizedTestBase {
             TestApplication.getRootGroup().getChildren().add(n1);
             TestApplication.getRootGroup().getChildren().add(n2);
             n1.setOnDragDetected((event) -> {
-                TestLog.log("Drag detected on n1");
+                TestLogShim.log("Drag detected on n1");
                 Dragboard db = n1.startDragAndDrop(TransferMode.ANY);
                 ClipboardContent content = new ClipboardContent();
                 content.putString("");
                 db.setContent(content);
             });
-            n2.setOnDragEntered((e) -> TestLog.log("Drag entered on n2"));
+            n2.setOnDragEntered((e) -> TestLogShim.log("Drag entered on n2"));
             n2.setOnDragOver((event) -> {
-                TestLog.log("Drag over on n2");
+                TestLogShim.log("Drag over on n2");
                 event.acceptTransferModes(TransferMode.COPY_OR_MOVE);
             });
-            n2.setOnDragDropped((e) -> TestLog.log("Drag dropped on n2"));
-            n1.setOnDragDone((e) -> TestLog.log("Drag done on n1"));
-            n1.addEventHandler(InputEvent.ANY, (e) -> TestLog.log(e.toString()));
-            n2.addEventHandler(InputEvent.ANY, (e) -> TestLog.log(e.toString()));
+            n2.setOnDragDropped((e) -> TestLogShim.log("Drag dropped on n2"));
+            n1.setOnDragDone((e) -> TestLogShim.log("Drag done on n1"));
+            n1.addEventHandler(InputEvent.ANY, (e) -> TestLogShim.log(e.toString()));
+            n2.addEventHandler(InputEvent.ANY, (e) -> TestLogShim.log(e.toString()));
         });
         try {
             int p = device.addPoint(15, 15);
             device.sync();
             device.setPoint(p, 110, 15);
             device.sync();
-            TestLog.waitForLogContaining("Drag detected on n1");
-            TestLog.clear();
+            TestLogShim.waitForLogContaining("Drag detected on n1");
+            TestLogShim.clear();
             device.setPoint(p, 215, 15);
             device.sync();
-            TestLog.waitForLogContaining("Drag entered on n2");
-            TestLog.waitForLogContaining("Drag over on n2");
+            TestLogShim.waitForLogContaining("Drag entered on n2");
+            TestLogShim.waitForLogContaining("Drag over on n2");
             device.removePoint(p);
             device.sync();
-            TestLog.waitForLogContaining("Drag dropped on n2");
-            TestLog.waitForLogContaining("Drag done on n1");
+            TestLogShim.waitForLogContaining("Drag dropped on n2");
+            TestLogShim.waitForLogContaining("Drag done on n1");
         } finally {
             TestRunnable.invokeAndWait(() -> TestApplication.getRootGroup().getChildren().clear());
         }

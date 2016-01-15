@@ -26,7 +26,7 @@
 package test.robot.com.sun.glass.ui.monocle.input.devices;
 
 import test.robot.com.sun.glass.ui.monocle.TestApplication;
-import com.sun.glass.ui.monocle.TestLog;
+import com.sun.glass.ui.monocle.TestLogShim;
 import test.robot.com.sun.glass.ui.monocle.UInput;
 import org.junit.Assume;
 
@@ -194,7 +194,7 @@ public class EGalaxMultiTouchDeviceBase extends TestTouchDevice {
 
     @Override
     public void resendStateAndSync() {
-        TestLog.log("TestTouchDevice: sync");
+        TestLogShim.log("TestTouchDevice: sync");
         for (int p = 0; p < points.length; p++) {
             if (points[p]) {
                 ui.processLine("EV_ABS ABS_MT_TRACKING_ID " + p);

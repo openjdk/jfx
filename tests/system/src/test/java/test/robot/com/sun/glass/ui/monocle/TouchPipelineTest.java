@@ -25,7 +25,7 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import com.sun.glass.ui.monocle.TestLog;
+import com.sun.glass.ui.monocle.TestLogShim;
 import test.robot.com.sun.glass.ui.monocle.TestApplication;
 import com.sun.glass.ui.monocle.TouchFilterShim.FlushingFilter;
 import com.sun.glass.ui.monocle.TouchFilterShim.LoggingFilter;
@@ -51,7 +51,7 @@ public class TouchPipelineTest extends TouchTestBase {
         TestApplication.showFullScreenScene();
         TestApplication.addMouseListeners();
         TestApplication.addTouchListeners();
-        TestLog.reset();
+        TestLogShim.reset();
         System.setProperty("monocle.input.ca/fe/ba/be.touchFilters",
                            TranslateFilter.class.getName() + ","
                            + OverrideIDFilter.class.getName() + ","
@@ -90,17 +90,17 @@ public class TouchPipelineTest extends TouchTestBase {
         ui.processLine("EV_ABS ABS_X 200");
         ui.processLine("EV_ABS ABS_Y 200");
         ui.processLine("EV_SYN");
-        TestLog.waitForLog("Touch pressed: 203, 195");
-        TestLog.waitForLog("Touch point id=5 at 203,195");
+        TestLogShim.waitForLog("Touch pressed: 203, 195");
+        TestLogShim.waitForLog("Touch point id=5 at 203,195");
         // Check for events send by the flushing filter
-        TestLog.waitForLog("Touch moved: 413, 95");
-        TestLog.waitForLog("Touch moved: 313, 95");
-        TestLog.waitForLog("Touch moved: 213, 95");
+        TestLogShim.waitForLog("Touch moved: 413, 95");
+        TestLogShim.waitForLog("Touch moved: 313, 95");
+        TestLogShim.waitForLog("Touch moved: 213, 95");
         // This one should have been filtered out
-        Assert.assertEquals(0, TestLog.countLog("Touch Pressed: 208, 195"));
+        Assert.assertEquals(0, TestLogShim.countLog("Touch Pressed: 208, 195"));
         ui.processLine("EV_KEY BTN_TOUCH 0");
         ui.processLine("EV_SYN");
-        TestLog.waitForLog("Touch released: 213, 95");
+        TestLogShim.waitForLog("Touch released: 213, 95");
     }
 
 }

@@ -25,7 +25,7 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import com.sun.glass.ui.monocle.TestLog;
+import com.sun.glass.ui.monocle.TestLogShim;
 import com.sun.glass.events.KeyEvent;
 import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Robot;
@@ -45,15 +45,15 @@ public class RobotTest {
 
     @Before
     public void setUpScreen() throws Exception {
-        TestLog.reset();
-        TestLog.log(name.getMethodName());
+        TestLogShim.reset();
+        TestLogShim.log(name.getMethodName());
         TestApplication.showFullScreenScene();
     }
 
     @Test
     public void clickTest() throws Exception {
         TestApplication.getStage().getScene().setOnMouseClicked(
-                (e) -> TestLog.format("Clicked at %.0f, %.0f",
+                (e) -> TestLogShim.format("Clicked at %.0f, %.0f",
                                       e.getScreenX(), e.getScreenY()));
         Platform.runLater(() -> {
             Robot robot = Application.GetApplication().createRobot();
@@ -61,19 +61,19 @@ public class RobotTest {
             robot.mousePress(Robot.MOUSE_LEFT_BTN);
             robot.mouseRelease(Robot.MOUSE_LEFT_BTN);
         });
-        TestLog.waitForLog("Clicked at 300, 400");
+        TestLogShim.waitForLog("Clicked at 300, 400");
     }
 
     @Test
     public void typeTest() throws Exception {
         TestApplication.getStage().getScene().setOnKeyTyped(
-                (e) ->TestLog.format("Typed '%s'", e.getCharacter()));
+                (e) ->TestLogShim.format("Typed '%s'", e.getCharacter()));
         Platform.runLater(() -> {
             Robot robot = Application.GetApplication().createRobot();
             robot.keyPress(KeyEvent.VK_A);
             robot.keyRelease(KeyEvent.VK_A);
         });
-        TestLog.waitForLog("Typed 'a'");
+        TestLogShim.waitForLog("Typed 'a'");
         Platform.runLater(() -> {
             Robot robot = Application.GetApplication().createRobot();
             robot.keyPress(KeyEvent.VK_SHIFT);
@@ -81,13 +81,13 @@ public class RobotTest {
             robot.keyRelease(KeyEvent.VK_B);
             robot.keyRelease(KeyEvent.VK_SHIFT);
         });
-        TestLog.waitForLog("Typed 'B'");
+        TestLogShim.waitForLog("Typed 'B'");
     }
 
     @Test
     public void scrollTest() throws Exception {
         TestApplication.getStage().getScene().setOnScroll(
-                (e) -> TestLog.format("Scroll: %.0f at %.0f, %.0f",
+                (e) -> TestLogShim.format("Scroll: %.0f at %.0f, %.0f",
                                       Math.signum(e.getDeltaY()),
                                       e.getScreenX(),
                                       e.getScreenY()));
@@ -96,13 +96,13 @@ public class RobotTest {
             robot.mouseMove(300, 300);
             robot.mouseWheel(10);
         });
-        TestLog.waitForLog("Scroll: 1 at 300, 300");
+        TestLogShim.waitForLog("Scroll: 1 at 300, 300");
         Platform.runLater(() -> {
             Robot robot = Application.GetApplication().createRobot();
             robot.mouseMove(310, 320);
             robot.mouseWheel(-10);
         });
-        TestLog.waitForLog("Scroll: -1 at 310, 320");
+        TestLogShim.waitForLog("Scroll: -1 at 310, 320");
     }
 
 }

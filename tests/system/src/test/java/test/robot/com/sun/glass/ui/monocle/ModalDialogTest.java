@@ -25,7 +25,7 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import com.sun.glass.ui.monocle.TestLog;
+import com.sun.glass.ui.monocle.TestLogShim;
 import test.robot.com.sun.glass.ui.monocle.TestApplication;
 import javafx.application.Platform;
 import javafx.scene.Group;
@@ -45,8 +45,8 @@ public class ModalDialogTest {
 
     @Before
     public void setUpScreen() throws Exception {
-        TestLog.reset();
-        TestLog.log(name.getMethodName());
+        TestLogShim.reset();
+        TestLogShim.log(name.getMethodName());
         TestApplication.showFullScreenScene();
     }
 
@@ -54,7 +54,7 @@ public class ModalDialogTest {
     public void test1() throws Exception {
         Stage rootStage = TestApplication.getStage();
         rootStage.getScene().setOnMouseClicked(
-                (e) -> TestLog.format("Clicked at %.0f, %.0f",
+                (e) -> TestLogShim.format("Clicked at %.0f, %.0f",
                         e.getScreenX(), e.getScreenY()));
         Platform.runLater(() -> {
             final Stage p = new Stage();
@@ -66,11 +66,11 @@ public class ModalDialogTest {
             p.setHeight(200);
             p.setScene(new Scene(new Group()));
             p.getScene().setOnMouseClicked(
-                    (e) -> TestLog.format("Clicked at %.0f, %.0f",
+                    (e) -> TestLogShim.format("Clicked at %.0f, %.0f",
                             e.getScreenX(), e.getScreenY()));
             p.show();
         });
-        TestLog.clear();
+        TestLogShim.clear();
         Platform.runLater(() -> {
             Robot robot = com.sun.glass.ui.Application.GetApplication().createRobot();
             robot.mouseMove(300, 400);
@@ -80,8 +80,8 @@ public class ModalDialogTest {
             robot.mousePress(Robot.MOUSE_LEFT_BTN);
             robot.mouseRelease(Robot.MOUSE_LEFT_BTN);
         });
-        TestLog.waitForLog("Clicked at 100, 100");
-        if (TestLog.countLog("Clicked at 300, 400") != 0) {
+        TestLogShim.waitForLog("Clicked at 100, 100");
+        if (TestLogShim.countLog("Clicked at 300, 400") != 0) {
             throw new AssertionFailedError("Disabled window should not receive mouse events!");
         }
     }

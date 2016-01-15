@@ -25,7 +25,7 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import com.sun.glass.ui.monocle.TestLog;
+import com.sun.glass.ui.monocle.TestLogShim;
 import test.robot.com.sun.glass.ui.monocle.ScrollTestBase;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
 import org.junit.Assert;
@@ -212,31 +212,31 @@ public class ScrollTest extends ScrollTestBase {
                 point1X, point1Y) &&
                 paramsValid(0, deltaY2, numOfIterations,
                         point2X, point2Y));
-        TestLog.reset();
+        TestLogShim.reset();
         p1 = device.addPoint(point1X, point1Y);
         p2 = device.addPoint(point2X, point2Y);
         device.sync();
         //verify fingers pressed
-        TestLog.waitForLogContaining("TouchPoint: PRESSED %d, %d", point1X, point1Y);
-        TestLog.waitForLogContaining("TouchPoint: PRESSED %d, %d", point2X, point2Y);
+        TestLogShim.waitForLogContaining("TouchPoint: PRESSED %d, %d", point1X, point1Y);
+        TestLogShim.waitForLogContaining("TouchPoint: PRESSED %d, %d", point2X, point2Y);
         point1Y += deltaY1;
         point2Y += deltaY2;
         int avgDelta = (deltaY1 + deltaY2) / 2;
         //scroll fingers
-        TestLog.reset();
+        TestLogShim.reset();
         device.setPoint(p1, point1X, point1Y);
         device.setPoint(p2, point2X, point2Y);
         device.sync();
-        TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", point1X, point1Y);
-        TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", point2X, point2Y);
+        TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d", point1X, point1Y);
+        TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d", point2X, point2Y);
         totalDeltaY = avgDelta;
-        TestLog.waitForLogContaining("Scroll started, DeltaX: " + 0
+        TestLogShim.waitForLogContaining("Scroll started, DeltaX: " + 0
                 + ", DeltaY: " + 0
                 + ", totalDeltaX: " + 0
                 + ", totalDeltaY: " + 0
                 + ", touch points: " + 2
                 + ", inertia value: false");
-        TestLog.waitForLogContaining("Scroll, DeltaX: " + 0
+        TestLogShim.waitForLogContaining("Scroll, DeltaX: " + 0
                 + ", DeltaY: " + avgDelta
                 + ", totalDeltaX: " + 0
                 + ", totalDeltaY: " + totalDeltaY
@@ -246,18 +246,18 @@ public class ScrollTest extends ScrollTestBase {
         for (int i = 2; i <= numOfIterations; i++) {
             point1Y += deltaY1;
             point2Y += deltaY2;
-            TestLog.reset();
+            TestLogShim.reset();
             device.setPoint(p1, point1X, point1Y);
             device.setPoint(p2, point2X, point2Y);
             device.sync();
-            TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", point1X, point1Y);
-            TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", point2X, point2Y);
+            TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d", point1X, point1Y);
+            TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d", point2X, point2Y);
             totalDeltaY = avgDelta * i;
             expectedLog = "Scroll, DeltaX: " + 0 + ", DeltaY: " + avgDelta
                     + ", totalDeltaX: " + 0
                     + ", totalDeltaY: " + totalDeltaY
                     + ", touch points: " + 2 + ", inertia value: false";
-            TestLog.waitForLogContaining(expectedLog);
+            TestLogShim.waitForLogContaining(expectedLog);
         }
         releaseAllFingers();
     }

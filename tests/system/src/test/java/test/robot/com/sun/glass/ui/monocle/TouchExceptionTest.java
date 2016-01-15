@@ -25,7 +25,7 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import com.sun.glass.ui.monocle.TestLog;
+import com.sun.glass.ui.monocle.TestLogShim;
 import test.robot.com.sun.glass.ui.monocle.TestApplication;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
@@ -52,7 +52,7 @@ public class TouchExceptionTest extends ParameterizedTestBase {
     public void testRuntimeException() throws Exception {
         Platform.runLater(
                 () -> Thread.currentThread()
-                        .setUncaughtExceptionHandler((t, e) -> TestLog.log(e.toString()))
+                        .setUncaughtExceptionHandler((t, e) -> TestLogShim.log(e.toString()))
         );
         TestApplication.getStage().getScene().addEventHandler(
                 InputEvent.ANY,
@@ -65,7 +65,7 @@ public class TouchExceptionTest extends ParameterizedTestBase {
         // release
         device.removePoint(p);
         device.sync();
-        TestLog.waitForLog("Touch pressed: %d, %d", x, y);
-        TestLog.waitForLog("Touch released: %d, %d", x, y);
+        TestLogShim.waitForLog("Touch pressed: %d, %d", x, y);
+        TestLogShim.waitForLog("Touch released: %d, %d", x, y);
     }
 }
