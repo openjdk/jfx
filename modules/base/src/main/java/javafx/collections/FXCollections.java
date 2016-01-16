@@ -1667,17 +1667,22 @@ public class FXCollections {
                 public E next() {
                     return i.next();
                 }
-
-                @Override
-                public void remove() {
-                    throw new UnsupportedOperationException();
-                }
             };
         }
 
         @Override
         public int size() {
             return backingSet.size();
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return backingSet.isEmpty();
+        }
+
+        @Override
+        public boolean contains(Object o) {
+            return backingSet.contains(o);
         }
 
         @Override

@@ -8475,23 +8475,29 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
 
-     /**
-      * Not everything uses the default value of false for focusTraversable.
-      * This method provides a way to have them return the correct initial value.
-      * @treatAsPrivate implementation detail
-      */
-    @Deprecated
-    protected /*do not make final*/ Boolean impl_cssGetFocusTraversableInitialValue() {
+    /**
+     * Returns the initial focus traversable state of this node, for use
+     * by the JavaFX CSS engine to correctly set its initial value. This method
+     * can be overridden by subclasses in instances where focus traversable should
+     * initially be true (as the default implementation of this method is to return
+     * false).
+     *
+     * @since 9
+     */
+    protected Boolean getInitialFocusTraversable() {
         return Boolean.FALSE;
     }
 
-     /**
-      * Not everything uses the default value of null for cursor.
-      * This method provides a way to have them return the correct initial value.
-      * @treatAsPrivate implementation detail
-      */
-    @Deprecated
-    protected /*do not make final*/ Cursor impl_cssGetCursorInitialValue() {
+    /**
+     * Returns the initial cursor state of this node, for use
+     * by the JavaFX CSS engine to correctly set its initial value. This method
+     * can be overridden by subclasses in instances where the cursor should
+     * initially be non-null (as the default implementation of this method is to return
+     * null).
+     *
+     * @since 9
+     */
+    protected Cursor getInitialCursor() {
         return null;
     }
 
@@ -8518,7 +8524,7 @@ public abstract class Node implements EventTarget, Styleable {
                 public Cursor getInitialValue(Node node) {
                     // Most controls default focusTraversable to true.
                     // Give a way to have them return the correct default value.
-                    return node.impl_cssGetCursorInitialValue();
+                    return node.getInitialCursor();
                 }
 
             };
@@ -8553,7 +8559,7 @@ public abstract class Node implements EventTarget, Styleable {
                 public Boolean getInitialValue(Node node) {
                     // Most controls default focusTraversable to true.
                     // Give a way to have them return the correct default value.
-                    return node.impl_cssGetFocusTraversableInitialValue();
+                    return node.getInitialFocusTraversable();
                 }
 
             };

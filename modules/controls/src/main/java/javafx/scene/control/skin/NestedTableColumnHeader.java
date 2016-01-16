@@ -155,6 +155,13 @@ public class NestedTableColumnHeader extends TableColumnHeader {
 
         if (! header.isColumnResizingEnabled()) return;
 
+        // column reordering takes precedence over column resizing, but sometimes the mouse dragged events
+        // can be received by both nodes, leading to less than ideal UX, hence the check here.
+        if (header.getTableHeaderRow().columnDragLock) return;
+
+        if (me.isConsumed()) return;
+        me.consume();
+
         if (me.getClickCount() == 2 && me.isPrimaryButtonDown()) {
             // the user wants to resize the column such that its
             // width is equal to the widest element in the column
@@ -167,7 +174,6 @@ public class NestedTableColumnHeader extends TableColumnHeader {
             header.dragAnchorX = me.getSceneX();
             header.columnResizingStarted(startX);
         }
-        me.consume();
     };
 
     private static final EventHandler<MouseEvent> rectMouseDragged = me -> {
@@ -177,8 +183,14 @@ public class NestedTableColumnHeader extends TableColumnHeader {
 
         if (! header.isColumnResizingEnabled()) return;
 
-        header.columnResizing(column, me);
+        // column reordering takes precedence over column resizing, but sometimes the mouse dragged events
+        // can be received by both nodes, leading to less than ideal UX, hence the check here.
+        if (header.getTableHeaderRow().columnDragLock) return;
+
+        if (me.isConsumed()) return;
         me.consume();
+
+        header.columnResizing(column, me);
     };
 
     private static final EventHandler<MouseEvent> rectMouseReleased = me -> {
@@ -188,14 +200,24 @@ public class NestedTableColumnHeader extends TableColumnHeader {
 
         if (! header.isColumnResizingEnabled()) return;
 
-        header.columnResizingComplete(column, me);
+        // column reordering takes precedence over column resizing, but sometimes the mouse dragged events
+        // can be received by both nodes, leading to less than ideal UX, hence the check here.
+        if (header.getTableHeaderRow().columnDragLock) return;
+
+        if (me.isConsumed()) return;
         me.consume();
+
+        header.columnResizingComplete(column, me);
     };
 
     private static final EventHandler<MouseEvent> rectCursorChangeListener = me -> {
         Rectangle rect = (Rectangle) me.getSource();
         TableColumnBase column = (TableColumnBase) rect.getProperties().get(TABLE_COLUMN_KEY);
         NestedTableColumnHeader header = (NestedTableColumnHeader) rect.getProperties().get(TABLE_COLUMN_HEADER_KEY);
+
+        // column reordering takes precedence over column resizing, but sometimes the mouse dragged events
+        // can be received by both nodes, leading to less than ideal UX, hence the check here.
+        if (header.getTableHeaderRow().columnDragLock) return;
 
         if (header.getCursor() == null) { // If there's a cursor for the whole header, don't override it
             rect.setCursor(header.isColumnResizingEnabled() && rect.isHover() &&

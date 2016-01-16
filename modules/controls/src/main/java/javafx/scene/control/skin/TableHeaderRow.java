@@ -113,6 +113,17 @@ public class TableHeaderRow extends StackPane {
      */
     private ContextMenu columnPopupMenu;
 
+    /**
+     * There are two different mouse dragged event handlers in the header code.
+     * Firstly, the column reordering functionality, and secondly, the column
+     * resizing functionality. Because these are handled in separate classes and
+     * with separate event handlers, we occasionally run into the issue where
+     * both event handlers were being called, resulting in bad UX. To remove this
+     * issue, we lock when the column dragging happens, and prevent resize operations
+     * from taking place.
+     */
+    boolean columnDragLock = false;
+
 
 
     /***************************************************************************
@@ -201,6 +212,7 @@ public class TableHeaderRow extends StackPane {
         dragHeader.setVisible(false);
         dragHeader.getStyleClass().setAll("column-drag-header");
         dragHeader.setManaged(false);
+        dragHeader.setMouseTransparent(true);
         dragHeader.getChildren().add(dragHeaderLabel);
 
         // the header lives inside a NestedTableColumnHeader

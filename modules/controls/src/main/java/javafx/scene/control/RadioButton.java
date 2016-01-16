@@ -129,16 +129,15 @@ import javafx.scene.AccessibleRole;
     private static final String DEFAULT_STYLE_CLASS = "radio-button";
 
     /**
-      * Labeled return CENTER_LEFT for alignment, but ToggleButton returns
-      * CENTER. RadioButton also returns CENTER_LEFT so we have to override
-      * the override in ToggleButton. 
-      * @treatAsPrivate implementation detail
-      */
-    @Deprecated @Override
-    protected Pos impl_cssGetAlignmentInitialValue() {
+     * Returns the initial alignment state of this control, for use
+     * by the JavaFX CSS engine to correctly set its initial value. This method
+     * is overridden to use Pos.CENTER_LEFT initially.
+     *
+     * @since 9
+     */
+    @Override protected Pos getInitialAlignment() {
         return Pos.CENTER_LEFT;
     }
-
 
     /***************************************************************************
      *                                                                         *

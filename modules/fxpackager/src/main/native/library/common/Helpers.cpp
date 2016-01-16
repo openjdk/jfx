@@ -122,9 +122,9 @@ TString Helpers::ConvertIdToJavaPath(TString Value) {
     return result;
 }
 
-TString Helpers::ConvertPathToId(TString Value) {
+TString Helpers::ConvertJavaPathToId(TString Value) {
     TString search;
-    search = TRAILING_PATHSEPARATOR;
+    search = '/';
     TString replace;
     replace = '.';
     TString result = ReplaceString(Value, search, replace);

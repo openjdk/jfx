@@ -722,7 +722,7 @@ public abstract class MapExpressionHelper<K, V> extends ExpressionHelperBase {
             StringBuilder builder = new StringBuilder();
             if (addOp) {
                 if (removeOp) {
-                    builder.append("replaced ").append(old).append("by ").append(added);
+                    builder.append("replaced ").append(old).append(" by ").append(added);
                 } else {
                     builder.append("added ").append(added);
                 }

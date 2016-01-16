@@ -415,7 +415,7 @@ public class JavaScriptBridgeTest extends TestBase {
             bind("alist", alist);
             Integer[] iarr = new Integer[4];
             bind("iarr", iarr);
-            Object r = web.executeScript("alist.toArray(iarr)");
+            Object r = web.executeScript("alist['toArray(Object[])'](iarr)");
             assertSame(iarr, r);
             assertEquals("98/87/76/null",
                          iarr[0]+"/"+iarr[1]+"/"+iarr[2]+"/"+iarr[3]);

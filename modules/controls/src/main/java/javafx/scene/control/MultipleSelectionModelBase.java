@@ -66,7 +66,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         
         selectedIndices = new BitSet();
 
-        selectedIndicesSeq = createListFromBitSet(selectedIndices);
+        selectedIndicesSeq = new BitSetReadOnlyUnbackedObservableList(selectedIndices);
         
         final MappingChange.Map<Integer,T> map = f -> getModelItem(f);
         
@@ -143,7 +143,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
 
     final BitSet selectedIndices;
-    final ReadOnlyUnbackedObservableList<Integer> selectedIndicesSeq;
+    final BitSetReadOnlyUnbackedObservableList selectedIndicesSeq;
     @Override public ObservableList<Integer> getSelectedIndices() {
         return selectedIndicesSeq;
     }
@@ -369,7 +369,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         BitSet selectedIndicesCopy = new BitSet();
         selectedIndicesCopy.or(selectedIndices);
         selectedIndicesCopy.clear(row);
-        List<Integer> previousSelectedIndices = createListFromBitSet(selectedIndicesCopy);
+        List<Integer> previousSelectedIndices = new BitSetReadOnlyUnbackedObservableList(selectedIndicesCopy);
 
         // RT-32411 We used to call quietClearSelection() here, but this
         // resulted in the selectedItems and selectedIndices lists never
@@ -702,7 +702,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
     }
 
     @Override public void clearSelection() {
-        List<Integer> removed = createListFromBitSet((BitSet) selectedIndices.clone());
+        List<Integer> removed = new BitSetReadOnlyUnbackedObservableList((BitSet) selectedIndices.clone());
 
         quietClearSelection();
 
@@ -774,55 +774,66 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
      *                                                                     *
      **********************************************************************/
 
-    private ReadOnlyUnbackedObservableList<Integer> createListFromBitSet(final BitSet bitset) {
-        return new ReadOnlyUnbackedObservableList<Integer>() {
-            private int lastGetIndex = -1;
-            private int lastGetValue = -1;
+    class BitSetReadOnlyUnbackedObservableList extends ReadOnlyUnbackedObservableList<Integer> {
+        private final BitSet bitset;
 
-            @Override public Integer get(int index) {
-                final int itemCount = getItemCount();
-                if (index < 0 || index >= itemCount) return -1;
+        private int lastGetIndex = -1;
+        private int lastGetValue = -1;
 
-                if (index == (lastGetIndex + 1) && lastGetValue < itemCount) {
-                    // we're iterating forward in order, short circuit for
-                    // performance reasons (RT-39776)
-                    lastGetIndex++;
-                    lastGetValue = bitset.nextSetBit(lastGetValue + 1);
-                    return lastGetValue;
-                } else if (index == (lastGetIndex - 1) && lastGetValue > 0) {
-                    // we're iterating backward in order, short circuit for
-                    // performance reasons (RT-39776)
-                    lastGetIndex--;
-                    lastGetValue = bitset.previousSetBit(lastGetValue - 1);
-                    return lastGetValue;
-                } else {
-                    for (lastGetIndex = 0, lastGetValue = bitset.nextSetBit(0);
-                         lastGetValue >= 0 || lastGetIndex == index;
-                         lastGetIndex++, lastGetValue = bitset.nextSetBit(lastGetValue + 1)) {
-                        if (lastGetIndex == index) {
-                            return lastGetValue;
-                        }
-                    }
-                }
+        public BitSetReadOnlyUnbackedObservableList(BitSet bitset) {
+            this.bitset = bitset;
+        }
 
+        @Override public Integer get(int index) {
+            final int itemCount = getItemCount();
+            if (index < 0 || index >= itemCount)  {
                 return -1;
             }
 
-            @Override public int size() {
-                return bitset.cardinality();
-            }
-
-            @Override public boolean contains(Object o) {
-                if (o instanceof Number) {
-                    Number n = (Number) o;
-                    int index = n.intValue();
-
-                    return index >= 0 && index < bitset.length() &&
-                            bitset.get(index);
+            if (index == (lastGetIndex + 1) && lastGetValue < itemCount) {
+                // we're iterating forward in order, short circuit for
+                // performance reasons (RT-39776)
+                lastGetIndex++;
+                lastGetValue = bitset.nextSetBit(lastGetValue + 1);
+                return lastGetValue;
+            } else if (index == (lastGetIndex - 1) && lastGetValue > 0) {
+                // we're iterating backward in order, short circuit for
+                // performance reasons (RT-39776)
+                lastGetIndex--;
+                lastGetValue = bitset.previousSetBit(lastGetValue - 1);
+                return lastGetValue;
+            } else {
+                for (lastGetIndex = 0, lastGetValue = bitset.nextSetBit(0);
+                     lastGetValue >= 0 || lastGetIndex == index;
+                     lastGetIndex++, lastGetValue = bitset.nextSetBit(lastGetValue + 1)) {
+                    if (lastGetIndex == index) {
+                        return lastGetValue;
+                    }
                 }
-
-                return false;
             }
-        };
+
+            return -1;
+        }
+
+        @Override public int size() {
+            return bitset.cardinality();
+        }
+
+        @Override public boolean contains(Object o) {
+            if (o instanceof Number) {
+                Number n = (Number) o;
+                int index = n.intValue();
+
+                return index >= 0 && index < bitset.length() &&
+                        bitset.get(index);
+            }
+
+            return false;
+        }
+
+        public void reset() {
+            this.lastGetIndex = -1;
+            this.lastGetValue = -1;
+        }
     }
 }
