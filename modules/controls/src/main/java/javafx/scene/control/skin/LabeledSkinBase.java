@@ -953,8 +953,8 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
                     if (mnemonicIndex == -1 ||
                             (bindings != null && !bindings.getMnemonicKeyCombination().equals(mnemonicCode))) {
                         removeMnemonic();
+                        containsMnemonic = false;
                     }
-                    containsMnemonic = false;
                 }
             }
             else {

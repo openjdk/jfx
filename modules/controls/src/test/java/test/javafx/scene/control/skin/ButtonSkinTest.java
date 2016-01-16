@@ -26,7 +26,6 @@
 package test.javafx.scene.control.skin;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Insets;
@@ -40,7 +39,9 @@ import javafx.collections.ObservableList;
 import javafx.scene.input.KeyCombination;
 
 import com.sun.javafx.scene.control.behavior.TextBinding.MnemonicKeyCombination;
+import javafx.scene.Node;
 import javafx.scene.control.skin.ButtonSkin;
+import javafx.scene.shape.Rectangle;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -71,10 +72,20 @@ public class ButtonSkinTest {
         assertEquals(500, button.maxHeight(-1), 0);
     }
 
+    private long countMnemonicNodes(Scene scene, KeyCombination mnemonicKeyCombo, Node node) {
+        ObservableList<Mnemonic> mnemonicsList = scene.getMnemonics().get(mnemonicKeyCombo);
+        if (mnemonicsList != null) {
+            return mnemonicsList
+                    .stream()
+                    .filter(m -> m.getNode() == node)
+                    .count();
+        }
+        return 0;        
+    }
+
     @Test
     public void testMnemonicAutoParseAddition() {
         if(!com.sun.javafx.PlatformUtil.isMac()) {
-            boolean nodeFound = false;
             Stage stage = new Stage();
             Scene scene = new Scene(new Group(), 500, 500);
             stage.setScene(scene);
@@ -87,16 +98,7 @@ public class ButtonSkinTest {
             stage.show();
         
             KeyCombination mnemonicKeyCombo = new MnemonicKeyCombination("M");
-
-            ObservableList<Mnemonic> mnemonicsList = scene.getMnemonics().get(mnemonicKeyCombo);
-            if (mnemonicsList != null) {
-                for (int i = 0 ; i < mnemonicsList.size() ; i++) {
-                    if (mnemonicsList.get(i).getNode() == button) {
-                        nodeFound = true;
-                    }
-                }
-            }
-            assertTrue(nodeFound);
+            assertEquals(1, countMnemonicNodes(scene, mnemonicKeyCombo, button));
         }
     }
 
@@ -104,7 +106,6 @@ public class ButtonSkinTest {
     @Test
     public void testMnemonicAutoParseAdditionRemovalOnParentChange() {
         if(!com.sun.javafx.PlatformUtil.isMac()) {
-            boolean nodeFound = false;
             Stage stage = new Stage();
             Scene scene = new Scene(new Group(), 500, 500);
             stage.setScene(scene);
@@ -117,30 +118,37 @@ public class ButtonSkinTest {
             stage.show();
         
             KeyCombination mnemonicKeyCombo = new MnemonicKeyCombination("A");
-
-            ObservableList<Mnemonic> mnemonicsList = scene.getMnemonics().get(mnemonicKeyCombo);
-            if (mnemonicsList != null) {
-                for (int i = 0 ; i < mnemonicsList.size() ; i++) {
-                    if (mnemonicsList.get(i).getNode() == button) {
-                        nodeFound = true;
-                    }
-                }
-            }
-            assertTrue(nodeFound);
-
-            nodeFound = false;
+            assertEquals(1, countMnemonicNodes(scene, mnemonicKeyCombo, button));
 
             ((Group)scene.getRoot()).getChildren().remove(button);
-  
-            mnemonicsList = scene.getMnemonics().get(mnemonicKeyCombo);
-            if (mnemonicsList != null) {
-                for (int i = 0 ; i < mnemonicsList.size() ; i++) {
-                    if (mnemonicsList.get(i).getNode() == button) {
-                        nodeFound = true;
-                    }
-                }
-            }
-            assertTrue(!nodeFound);
+            assertEquals(0, countMnemonicNodes(scene, mnemonicKeyCombo, button));
+        }
+    }
+
+    @Test
+    public void testMnemonicDoesntDuplicateOnGraphicsChange() {
+        if(!com.sun.javafx.PlatformUtil.isMac()) {
+            Stage stage = new Stage();
+            Scene scene = new Scene(new Group(), 500, 500);
+            stage.setScene(scene);
+
+            button.setMnemonicParsing(true);
+            button.setText("_Mnemonic");
+            Rectangle graphic = new Rectangle(10, 10);
+            button.setGraphic(graphic);
+
+            ((Group)scene.getRoot()).getChildren().add(button);
+
+            stage.show();
+
+            KeyCombination mnemonicKeyCombo = new MnemonicKeyCombination("M");
+
+            assertEquals(1, countMnemonicNodes(scene, mnemonicKeyCombo, button));
+
+            graphic.setWidth(20); // force graphic layoutBounds invalidation
+            button.layout();
+
+            assertEquals(1, countMnemonicNodes(scene, mnemonicKeyCombo, button));
         }
     }
 
