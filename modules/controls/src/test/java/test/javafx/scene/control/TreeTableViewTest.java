@@ -3612,9 +3612,9 @@ public class TreeTableViewTest {
         // pushed down, but this should not result in an item permutation event,
         // as it remains unchanged
         two.setExpanded(true);
-        assertEquals(0, rt_37395_index_removeCount);
-        assertEquals(1, rt_37395_index_addCount);
-        assertEquals(1, rt_37395_index_permutationCount);
+        assertEquals(1, rt_37395_index_removeCount);
+        assertEquals(2, rt_37395_index_addCount);
+        assertEquals(0, rt_37395_index_permutationCount);
         assertEquals(0, rt_37395_item_removeCount);
         assertEquals(1, rt_37395_item_addCount);
         assertEquals(0, rt_37395_item_permutationCount);
@@ -3623,9 +3623,9 @@ public class TreeTableViewTest {
         // Same argument as in step two above: no addition or removal, just a
         // permutation on the index
         two.setExpanded(false);
-        assertEquals(0, rt_37395_index_removeCount);
-        assertEquals(1, rt_37395_index_addCount);
-        assertEquals(2, rt_37395_index_permutationCount);
+        assertEquals(2, rt_37395_index_removeCount);
+        assertEquals(3, rt_37395_index_addCount);
+        assertEquals(0, rt_37395_index_permutationCount);
         assertEquals(0, rt_37395_item_removeCount);
         assertEquals(1, rt_37395_item_addCount);
         assertEquals(0, rt_37395_item_permutationCount);

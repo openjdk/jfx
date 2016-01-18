@@ -30,7 +30,9 @@ import com.sun.javafx.collections.NonIterableChange;
 import static javafx.scene.control.SelectionMode.SINGLE;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
+import com.sun.javafx.scene.control.MultipleAdditionAndRemovedChange;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.ListChangeListener.Change;
@@ -82,8 +84,13 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
                 // items list, as a index permutation implies the items list is
                 // unchanged, not changed!
                 boolean hasRealChangeOccurred = false;
-                while (c.next() && ! hasRealChangeOccurred) {
-                    hasRealChangeOccurred = c.wasAdded() || c.wasRemoved();
+
+                if (c instanceof MultipleAdditionAndRemovedChange) {
+                    hasRealChangeOccurred = false;
+                } else {
+                    while (!hasRealChangeOccurred && c.next()) {
+                        hasRealChangeOccurred = c.wasAdded() || c.wasRemoved();
+                    }
                 }
 
                 if (hasRealChangeOccurred) {
@@ -91,7 +98,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
                         selectedItemsSeq.callObservers(selectedItemChange);
                     } else {
                         c.reset();
-                        selectedItemsSeq.callObservers(new MappingChange<Integer, T>(c, map, selectedItemsSeq));
+                        selectedItemsSeq.callObservers(new MappingChange<>(c, map, selectedItemsSeq));
                     }
                 }
                 c.reset();
@@ -245,10 +252,16 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         Collections.sort(shifts, (s1, s2) -> Integer.compare(s2.getKey(), s1.getKey()));
         final int lowestShiftPosition = shifts.get(shifts.size() - 1).getKey();
 
-        boolean hasPermutated = false;
+        // make a copy of the selectedIndices before so we can compare to it afterwards
+        BitSet selectedIndicesCopy = (BitSet) selectedIndices.clone();
+
         for (Pair<Integer, Integer> shift : shifts) {
-            hasPermutated = doShift(shift, callback, perm) || hasPermutated;
+            doShift(shift, callback, perm);
         }
+
+        // strip out all useless -1 default values from the perm array
+        final int[] prunedPerm = Arrays.stream(perm).filter(value -> value > -1).toArray();
+        final boolean hasSelectionChanged = prunedPerm.length > 0;
 
         // This ensure that the selection remains accurate when a shift occurs.
         final int selectedIndex = getSelectedIndex();
@@ -272,7 +285,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             // changed to check if hasPermutated, and to call select(..) for RT-40010.
             // This forces the selection event to go through the system and fire
             // the necessary events.
-            if (hasPermutated) {
+            if (hasSelectionChanged) {
                 selectedIndices.set(newSelectionLead, true);
             } else {
                 select(newSelectionLead);
@@ -282,26 +295,32 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 //            focus(newSelectionLead);
         }
 
-        if (hasPermutated) {
-            selectedIndicesSeq.callObservers(
-                new NonIterableChange.SimplePermutationChange<>(
-                        0, 
-                        selectedIndicesCardinality, 
-                        perm, 
-                        selectedIndicesSeq));
+        if (hasSelectionChanged) {
+            // work out what indices were removed and added
+            BitSet removed = (BitSet) selectedIndicesCopy.clone();
+            removed.andNot(selectedIndices);
+
+            BitSet added = (BitSet) selectedIndices.clone();
+            added.andNot(selectedIndicesCopy);
+
+            selectedIndicesSeq.reset();
+            selectedIndicesSeq.callObservers(new MultipleAdditionAndRemovedChange<>(
+                    added.stream().boxed().collect(Collectors.toList()),
+                    removed.stream().boxed().collect(Collectors.toList()),
+                    selectedIndicesSeq
+            ));
         }
     }
 
-    private boolean doShift(Pair<Integer, Integer> shiftPair, final Callback<ShiftParams, Void> callback, int[] perm) {
+    private void doShift(Pair<Integer, Integer> shiftPair, final Callback<ShiftParams, Void> callback, int[] perm) {
         final int position = shiftPair.getKey();
         final int shift = shiftPair.getValue();
 
         // with no check here, we get RT-15024
-        if (position < 0) return false;
-        if (shift == 0) return false;
+        if (position < 0) return;
+        if (shift == 0) return;
 
         int idx = (int) Arrays.stream(perm).filter(value -> value > -1).count();
-        boolean hasPermutated = false;
 
         int selectedIndicesSize = selectedIndices.size() - idx;   // number of bits reserved
 
@@ -318,7 +337,6 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
                 if (selected) {
                     perm[idx++] = i + 1;
-                    hasPermutated = true;
                 }
             }
             selectedIndices.clear(position);
@@ -337,12 +355,9 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
                 if (selected) {
                     perm[idx++] = i;
-                    hasPermutated = true;
                 }
             }
         }
-
-        return hasPermutated;
     }
 
     @Override public void clearAndSelect(int row) {

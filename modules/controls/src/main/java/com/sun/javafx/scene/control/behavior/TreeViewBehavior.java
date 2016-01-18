@@ -96,10 +96,13 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     private boolean selectionChanging = false;
     
     private final ListChangeListener<Integer> selectedIndicesListener = c -> {
+        int newAnchor = getAnchor();
+
         while (c.next()) {
             if (c.wasReplaced()) {
                 if (TreeCellBehavior.hasDefaultAnchor(getNode())) {
                     TreeCellBehavior.removeAnchor(getNode());
+                    continue;
                 }
             }
 
@@ -110,18 +113,22 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
             // there are no selected items, so lets clear out the anchor
             if (! selectionChanging) {
                 if (sm.isEmpty()) {
-                    setAnchor(-1);
+                    newAnchor = -1;
                 } else if (hasAnchor() && ! sm.isSelected(getAnchor() + shift)) {
-                    setAnchor(-1);
+                    newAnchor = -1;
                 }
             }
 
-            int addedSize = c.getAddedSize();
-            if (addedSize > 0 && ! hasAnchor()) {
-                List<? extends Integer> addedSubList = c.getAddedSubList();
-                int index = addedSubList.get(addedSize - 1);
-                setAnchor(index);
+            // we care about the situation where the selection changes, and there is no anchor. In this
+            // case, we set a new anchor to be the selected index
+            if (newAnchor == -1) {
+                int addedSize = c.getAddedSize();
+                newAnchor = addedSize > 0 ? c.getAddedSubList().get(addedSize - 1) : newAnchor;
             }
+        }
+
+        if (newAnchor > -1) {
+            setAnchor(newAnchor);
         }
     };
     

@@ -1316,7 +1316,7 @@ public class ListViewTest {
         assertEquals("a", fm.getFocusedItem());
         assertEquals(0, fm.getFocusedIndex());
 
-        int anchor = ListCellBehavior.getAnchor(stringListView, null);
+        int anchor = ListCellBehavior.getAnchor(stringListView, -1);
         assertTrue(ListCellBehavior.hasNonDefaultAnchor(stringListView));
         assertEquals(0, anchor);
 
@@ -1336,7 +1336,7 @@ public class ListViewTest {
 
         // The second bug was that the anchor was not being pushed down as well
         // (when it should).
-        anchor = ListCellBehavior.getAnchor(stringListView, null);
+        anchor = ListCellBehavior.getAnchor(stringListView, -1);
         assertTrue(ListCellBehavior.hasNonDefaultAnchor(stringListView));
         assertEquals(1, anchor);
     }
