@@ -111,6 +111,21 @@ public class MiscellaneousTest extends TestBase {
                 "</script>");
     }
 
+    @Test public void testWebViewWithoutSceneGraph() {
+        submit(() -> {
+             WebEngine engine = new WebView().getEngine();
+             engine.getLoadWorker().stateProperty().addListener(
+                    (observable, oldValue, newValue) -> {
+                        if (State.SUCCEEDED == newValue) {
+                            engine.executeScript(
+                                "window.scrollTo" +
+                                "(0, document.documentElement.scrollHeight)");
+                        }
+                    });
+             engine.loadContent("<body> <a href=#>hello</a></body>");
+        });
+    }
+
     private WebEngine createWebEngine() {
         return submit(() -> new WebEngine());
     }
