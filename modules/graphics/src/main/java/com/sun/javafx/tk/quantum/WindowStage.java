@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -75,8 +75,8 @@ class WindowStage extends GlassStage {
     private boolean isInFullScreen = false;
 
     // A flag to indicate whether a call was generated from
-    // an input event handler.
-    private boolean inEventHandler = false;
+    // an allowed input event handler.
+    private boolean inAllowedEventHandler = false;
 
     // An active window is visible && enabled && focusable.
     // The list is maintained in the z-order, so that the last element
@@ -714,8 +714,8 @@ class WindowStage extends GlassStage {
         }
 
        // Set a flag indicating whether this method was called from
-        // an input event handler.
-        if (isInEventHandler()) {
+        // an allowed input event handler.
+        if (isInAllowedEventHandler()) {
             fullScreenFromUserEvent = true;
         }
 
@@ -876,12 +876,12 @@ class WindowStage extends GlassStage {
         }
     }
 
-    public void setInEventHandler(boolean inEventHandler) {
-        this.inEventHandler = inEventHandler;
+    public void setInAllowedEventHandler(boolean inAllowedEventHandler) {
+        this.inAllowedEventHandler = inAllowedEventHandler;
     }
 
-    public boolean isInEventHandler() {
-        return inEventHandler;
+    private boolean isInAllowedEventHandler() {
+        return inAllowedEventHandler;
     }
 
     @Override
