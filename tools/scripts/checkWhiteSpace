@@ -79,7 +79,7 @@ fix_file() {
     match_extension "${file}"
     if [ $? -eq 0 ]
     then
-        egrep -q -e $'\t'  -e '[[:blank:]]$' -e $'\r' ${file}
+        grep -U -q -e $'\t'  -e '[[:blank:]]$' -e $'\r' ${file}
         if [ $? -eq 0 ]
         then
             expand -4 < "${file}" | tr -d "\r" | sed -e 's/[[:blank:]]*$//' > "${file}.fws"
@@ -111,16 +111,16 @@ check_file() {
     match_extension "${file}"
     if [ $? -eq 0 ]
     then
-        grep -qs -e $'\t'  -e '[[:blank:]]$' -e $'\r' "${file}"
+        grep -Uqs -e $'\t'  -e '[[:blank:]]$' -e $'\r' "${file}"
         if [ $? -eq 0 ]
         then
-            grep -qs -e $'\t' "${file}"
+            grep -Uqs -e $'\t' "${file}"
             [ $? -eq 0 ] &&
                 message="${message}tabs:"
-            grep -qs -e '[[:blank:]]$' "${file}"
+            grep -Uqs -e '[[:blank:]]$' "${file}"
             [ $? -eq 0 ] &&
                 message="${message}trailingWhitespace:"
-            grep -qs -e $'\r' "${file}"
+            grep -Uqs -e $'\r' "${file}"
             [ $? -eq 0 ] &&
                 message="${message}DOS:"
         fi
@@ -156,7 +156,7 @@ process_files() {
         echo "Found $fails whitespace or executable issues"
         echo
         echo "To correct, use"
-        echo "   bash tools/bin/checkWhiteSpace -F"
+        echo "   bash ${MYDIR}/checkWhiteSpace -F"
         echo
         exit 1
     elif [ "$fails" -ne 0 -a "$fixfiles" ]
