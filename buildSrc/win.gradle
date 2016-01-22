@@ -288,7 +288,7 @@ WIN.fxpackager = [:]
 WIN.fxpackager.nativeSource = [
     file("modules/fxpackager/src/main/native/javapackager/win")]
 WIN.fxpackager.compiler = compiler
-WIN.fxpackager.ccFlags = ["/nologo", "/W3", "/EHsc", "/MT", "/GS",
+WIN.fxpackager.ccFlags = ["/nologo", "/W3", "/EHsc", "/MT", "/GS",  "/DUNICODE", "/D_UNICODE",
                     "/DWIN32", "/D_LITTLE_ENDIAN", "/DWIN32_LEAN_AND_MEAN",
                     "/D_WIN32_WINDOWS=0X0500", "/D_WIN32_WINNT=0X0500",
                     "/I$JDK_HOME/include", "/I$JDK_HOME/include/win32",

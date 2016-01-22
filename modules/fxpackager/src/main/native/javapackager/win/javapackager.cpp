@@ -54,15 +54,7 @@ bool from_string (int &result, string &str) {
         res = res * 10 + (c - '0');
     }
 }
-/*
-template <class T>
-bool from_string(T& t,
-const std::string& s,
-std::ios_base& (*f)(std::ios_base&)) {
-    std::istringstream iss(s);
-    return !(iss >> f >> t).fail();
-};
-*/
+
 void PrintCSBackupAPIErrorMessage(DWORD dwErr) {
 
     char wszMsgBuff[512]; // Buffer for text.
@@ -122,8 +114,8 @@ public:
     int v1;
     int v2;
     int v3;
-    string home;
-    string path;
+    std::wstring home;
+    std::wstring path;
 
     JavaVersion(int pv1, int pv2, int pv3) {
         v1 = pv1;
@@ -186,12 +178,12 @@ bool checkJavaHome(HKEY key, const char * sKey, const char * jv, JavaVersion *ve
             ) {
         DWORD ot = REG_SZ;
         DWORD size = 255;
-        char data[MAX_PATH] = {0};
-        if ((res = RegQueryValueExA(hKey, "JavaHome", NULL, &ot, (BYTE *) data, &size)) == ERROR_SUCCESS) {
+        wchar_t data[MAX_PATH] = {0};
+        if ((res = RegQueryValueEx(hKey, L"JavaHome", NULL, &ot, (BYTE *)data, &size)) == ERROR_SUCCESS) {
             version->home = data;
-            strcat_s(data, sizeof(data) - strlen(data), "\\bin\\java.exe");
+            std::wstring ldata = std::wstring(data) + L"\\bin\\java.exe";
             version->path = data;
-            result = GetFileAttributesA(data) != 0xFFFFFFFF;
+            result = GetFileAttributes(data) != 0xFFFFFFFF;
         } else {
             PrintCSBackupAPIErrorMessage(res);
             result = false;
@@ -217,7 +209,6 @@ JavaVersion * parseName(const char * jName) {
     string n;
     string::size_type pos;
 
-
     pos = s.find_first_of(".");
     if (pos != string::npos) {
         n = s.substr(0, pos);
@@ -231,7 +222,6 @@ JavaVersion * parseName(const char * jName) {
 
     if (n.length() > 0) {
         if (!from_string(v1, n))
-//        if (!from_string<int>(v1, n, std::dec))
             return NULL;
     }
 
@@ -249,17 +239,15 @@ JavaVersion * parseName(const char * jName) {
 
     if (n.length() > 0) {
         if (!from_string(v2, n))
-//        if (!from_string<int>(v2, n, std::dec))
             return NULL;
     }
 
 
-    int nn = s.length();
-    for (int i = 0; i < s.length(); i++) {
+    unsigned int nn = s.length();
+    for (unsigned int i = 0; i < s.length(); i++) {
         string c = s.substr(i, 1);
         int tmp;
         if (!from_string(tmp, c)) {
-//        if (!from_string<int>(tmp, c, std::dec)) {
             nn = i;
             break;
         }
@@ -274,7 +262,6 @@ JavaVersion * parseName(const char * jName) {
 
     if (n.length() > 0) {
         if (!from_string(v3, n))
-//        if (!from_string<int>(v3, n, std::dec))
             v3 = 0;
     }
 
@@ -283,11 +270,10 @@ JavaVersion * parseName(const char * jName) {
     //update version
     if (s.length() > 0) {
         nn = s.length();
-        for (int i = 0; i < s.length(); i++) {
+        for (unsigned int i = 0; i < s.length(); i++) {
             string c = s.substr(i, 1);
             int tmp;
             if (!from_string(tmp, c)) {
-//            if (!from_string<int>(tmp, c, std::dec)) {
                 nn = i;
                 break;
             }
@@ -297,7 +283,6 @@ JavaVersion * parseName(const char * jName) {
 
         if (n.length() > 0) {
             if (!from_string(v4, n))
-//            if (!from_string<int>(v4, n, std::dec))
                 v4 = 0;
         }
     }
@@ -364,7 +349,7 @@ JavaVersion * GetMaxVersion(HKEY key, const char * sKey) {
 
                     bool isHome = checkJavaHome(key, sKey, achKey, nv);
 #ifdef _DEBUG
-                    cout << nv->home << " " << isHome << endl;
+                    wcout << nv->home << " " << isHome << endl;
 #endif
 
                     if (isHome)
@@ -403,74 +388,76 @@ JavaVersion * GetMaxVersion(HKEY key, const char * sKey) {
 }
 // *****************************************************************************
 
-int fileExists (const std::string& path) {
+int fileExists(const std::wstring& path) {
     WIN32_FIND_DATA ffd;
     HANDLE hFind;
 
-    hFind = FindFirstFile (path.c_str(), &ffd);
+    hFind = FindFirstFile(path.data(), &ffd);
     if (hFind == INVALID_HANDLE_VALUE)
         return FALSE;
 
-    FindClose (hFind);
+    FindClose(hFind);
     return (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0;
 }
 
-bool hasEnding (std::string const &fullString, std::string const &ending) {
-    if (fullString.length() >= ending.length())
-        return (0 == fullString.compare (fullString.length() - ending.length(), ending.length(), ending));
-    else
+bool hasEnding(std::wstring const &fullString, std::wstring const &ending) {
+    if (fullString.length() >= ending.length()) {
+        return (0 == fullString.compare(fullString.length() - ending.length(), ending.length(), ending));
+    }
+    else {
         return false;
+    }
 }
 
-int main(int argc, char** argv) {
-    char buf[MAX_PATH];
+int wmain(int argc, wchar_t* argv[]) {
+    wchar_t buf[MAX_PATH];
     GetModuleFileName (NULL, buf, MAX_PATH);
-    std::string javafxhome = buf;
-    std::string ending = "javafxpackager.exe";
+    std::wstring javafxhome = buf;
+    std::wstring ending = L"javafxpackager.exe";
 
-    if (hasEnding (javafxhome, ending)) {
+    if (hasEnding(javafxhome, ending)) {
         fprintf(stderr, "javafxpackager.exe has been renamed javapackager.exe.\nThe original file may be removed in a future release in lieu of javapackager.\nPlease update your scripts.\n\n");
     }
 
-    javafxhome.erase (javafxhome.rfind ("\\"));
+    javafxhome.erase(javafxhome.rfind (L"\\"));
 
-    std::string fxlib = javafxhome + "\\..\\lib\\";
+    std::wstring fxlib = javafxhome + L"\\..\\lib\\";
 
-    const char *s = getenv ("JAVA_HOME");
-    std::string javacmd;
-    std::string javahome;
+    const wchar_t *s = _wgetenv(L"JAVA_HOME");
+    std::wstring javacmd;
+    std::wstring javahome;
     if (s != NULL) {
         javahome = s;
-        javacmd = javahome + "\\bin\\java.exe";
-        std::string javaccmd = javahome + "\\bin\\javac.exe";
-        if (! fileExists (javacmd.c_str ())  ||  ! fileExists (javaccmd.c_str ())) {
-            javacmd = "";
-            javahome = "";
+        javacmd = javahome + L"\\bin\\java.exe";
+        std::wstring javaccmd = javahome + L"\\bin\\javac.exe";
+        if (!fileExists(javacmd) || !fileExists(javaccmd)) {
+            javacmd = L"";
+            javahome = L"";
         }
-    } else
-        javacmd = "";
+    }
+    else {
+        javacmd = L"";
+    }
 
     if (javacmd.length() <= 0) {
-        //JavaVersion * jv = NULL;//GetMaxVersion(HKEY_LOCAL_MACHINE, "SOFTWARE\\JavaSoft\\Java Runtime Environment");
         JavaVersion * jv2 = GetMaxVersion(HKEY_LOCAL_MACHINE, "SOFTWARE\\JavaSoft\\Java Development Kit");
         if (jv2 != NULL) {
             javacmd = jv2->path;
             javahome = jv2->home;
         } else
-            javacmd = "java.exe";
+            javacmd = L"java.exe";
     }
 
-    std::string cmd = "\"" + javacmd + "\"";
+    std::wstring cmd = L"\"" + javacmd + L"\"";
     if (javahome.length() > 0) {
-//        cmd += " \"-Djava.home=" + javahome + "\"";
-        SetEnvironmentVariable ("JAVA_HOME", javahome.c_str ());
+        SetEnvironmentVariable(L"JAVA_HOME", javahome.c_str ());
     }
-    cmd += " -Xmx256M \"-Djavafx.home=" + javafxhome
-            + "\" -classpath \"" + fxlib + "ant-javafx.jar;"
-            + "\" com.sun.javafx.tools.packager.Main";
+    cmd += L" -Xmx256M \"-Djavafx.home=" + javafxhome
+            + L"\" -classpath \"" + fxlib + L"ant-javafx.jar;"
+            + L"\" com.sun.javafx.tools.packager.Main";
 
     for (int i = 1; i < argc; i ++) {
-        cmd = cmd + " \"" + argv[i] + "\"";
+        cmd = cmd + L" \"" + argv[i] + L"\"";
     }
 
 #ifdef _DEBUG
@@ -480,22 +467,22 @@ int main(int argc, char** argv) {
     STARTUPINFO start;
     PROCESS_INFORMATION pi;
     memset (&start, 0, sizeof (start));
-    start.cb = sizeof (start);
+    start.cb = sizeof(start);
 
-    if (! CreateProcess (NULL, (char *) cmd.c_str (),
+    if (!CreateProcess(NULL, (wchar_t *) cmd.data(),
             NULL, NULL, TRUE, NORMAL_PRIORITY_CLASS, NULL, NULL, &start, &pi)) {
 #ifdef _DEBUG
-        fprintf (stderr, "Cannot start java.exe");
+        fprintf(stderr, "Cannot start java.exe");
 #endif
         return EXIT_FAILURE;
     }
 
-    WaitForSingleObject (pi.hProcess, INFINITE);
+    WaitForSingleObject(pi.hProcess, INFINITE);
     unsigned long exitCode;
-    GetExitCodeProcess (pi.hProcess, &exitCode);
+    GetExitCodeProcess(pi.hProcess, &exitCode);
 
-    CloseHandle (pi.hProcess);
-    CloseHandle (pi.hThread);
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
 
     return exitCode;
 }
